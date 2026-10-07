@@ -49,6 +49,7 @@ export const GroupSection = (props: GroupSectionProps) => {
       onDrop={canDragIn ? onGroupDrop : undefined}
     >
       <HStack
+        data-board-pan-ignore
         px="xs"
         py="2xs"
         gap="2xs"

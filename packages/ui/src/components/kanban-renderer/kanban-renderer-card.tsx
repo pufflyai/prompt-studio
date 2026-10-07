@@ -65,6 +65,7 @@ export const KanbanRendererCard = (props: KanbanRendererCardProps) => {
       onClick={onClick ? handleClick : undefined}
       data-selected={isSelected ? "true" : undefined}
       data-testid="renderer-card"
+      data-board-pan-ignore
     >
       {eyebrow || workspaceBadge ? (
         <HStack minW="0" gap="2xs">

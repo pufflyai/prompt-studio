@@ -6,6 +6,8 @@ Planner adds a ticket board and a page for each ticket to the Prompt Studio dash
 
 Open **Tickets** in the project sidebar. The board shows one column for each [status](0001-tags-and-statuses.md#statuses), in status order. Newest tickets come first.
 
+To reach off-screen columns, hold the primary mouse button and drag empty board space or a column heading. You can also use the horizontal scrollbar or your trackpad. Dragging a card moves the ticket instead.
+
 ### Cards
 
 Each card shows the ticket's title and these properties:
@@ -23,6 +25,7 @@ You can also create tickets from a terminal with [`pst tickets create`](0004-cli
 ### Move and change tickets
 
 - Drag a card to another column to change its status.
+- Hold a dragged card near either side of the board to scroll toward hidden columns. Move closer to the edge to scroll faster.
 - Choose **Manual** ordering in the display menu, then drag cards within a column to change their order.
 - In the Done column, choose **Archive all** to archive every ticket in it.
 - Select a card to open the ticket page.
