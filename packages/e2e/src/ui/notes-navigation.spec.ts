@@ -21,7 +21,7 @@ const executeNoteCommand = async (
   return body.outcome.value as { id: string; title: string };
 };
 
-test("opens notes in their Sidenav level and follows the active note through navigation and deletion", async ({
+test("opens notes in the project Sidenav tree and follows the active note through navigation and deletion", async ({
   page,
   request,
 }) => {
@@ -52,9 +52,9 @@ test("opens notes in their Sidenav level and follows the active note through nav
     const secondRow = sidebar.getByRole("option", { name: second.title, exact: true });
     await expect(firstRow).toHaveCount(0);
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
-    // The Notes level replaces the project rows with the notes themselves.
-    await expect(firstRow).toHaveAttribute("aria-level", "1");
-    await expect(sidebar.getByRole("option", { name: "Tickets", exact: true })).toHaveCount(0);
+    // Notes stay nested in the same project navigation.
+    await expect(firstRow).toHaveAttribute("aria-level", "2");
+    await expect(sidebar.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: first.title, exact: true })).toHaveAttribute("aria-selected", "true");
@@ -97,6 +97,7 @@ test("keeps note titles independent of the body and renames them through the con
     await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     const row = sidebar.getByRole("option", { name: note.title, exact: true });
+    await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await row.click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
     await expect(editor).toBeEmpty();
