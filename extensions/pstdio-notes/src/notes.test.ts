@@ -39,6 +39,13 @@ describe("notes", () => {
     expect(await listNotes(mount)).toMatchObject([{ title: "New note" }]);
   });
 
+  test("preserves punctuation literally when renaming a saved title", async () => {
+    const mount = createNotesMount();
+    const note = await createNote(mount, "Original");
+    await renameNote(mount, note.id, '$& budget: "Ideas"');
+    expect(await listNotes(mount)).toMatchObject([{ title: '$& budget: "Ideas"' }]);
+  });
+
   test("stores the title in Markdown front matter and honors file edits", async () => {
     const mount = createNotesMount();
     const note = await createNote(mount, "Saved title");
