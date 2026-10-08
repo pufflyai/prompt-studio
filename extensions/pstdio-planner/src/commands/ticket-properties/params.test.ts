@@ -142,7 +142,7 @@ describe("buildTicketPropertiesControls", () => {
     expect(reviewLinks.options[0].href).toBe("https://example.com/pr/1");
   });
 
-  test("shows the created and updated timestamps as read-only property rows", async () => {
+  test("sends the created and updated timestamps unformatted so the viewer's browser formats them", async () => {
     const { statuses, tags } = await seed();
     const ticket = baseTicket({
       createdAt: "2023-05-06T00:00:00.000Z",
@@ -151,12 +151,18 @@ describe("buildTicketPropertiesControls", () => {
 
     const { params } = buildTicketPropertiesControls({ ticket, statuses, tags, dependencies: [], parent: null });
 
-    const created = propertyParam(params, "created");
-    expect(created.name).toEqual(l10n("ticketDetail.createdAt", "Created at"));
-    expect(created.value).toContain("2023");
-
-    const updated = propertyParam(params, "updated");
-    expect(updated.value).toContain("2024");
+    expect(params.find((entry) => entry.id === "created")).toEqual({
+      id: "created",
+      name: l10n("ticketDetail.createdAt", "Created at"),
+      type: "date",
+      readOnly: true,
+      defaultValue: "2023-05-06T00:00:00.000Z",
+    });
+    expect(params.find((entry) => entry.id === "updated")).toMatchObject({
+      type: "date",
+      readOnly: true,
+      defaultValue: "2024-07-08T00:00:00.000Z",
+    });
   });
 
   test("includes archived and blocked-reason rows only when set", async () => {
