@@ -1,7 +1,12 @@
 import { moveNote } from "./folders";
 import { listNotes, type NotesMount, noteExists, noteOrderPath } from "./notes";
 
-export const moveTreeNote = async (mount: NotesMount, sourceId: string, targetId: string) => {
+export const moveTreeNote = async (
+  mount: NotesMount,
+  sourceId: string,
+  targetId: string,
+  position: "before" | "after" | "inside",
+) => {
   if (sourceId === targetId) return;
   if (!(await noteExists(mount, sourceId))) throw new Error("Note not found.");
   const notes = await listNotes(mount);
@@ -14,7 +19,7 @@ export const moveTreeNote = async (mount: NotesMount, sourceId: string, targetId
   }
   await moveNote(mount, sourceId, folderId);
   const order = notes.filter((note) => note.id !== sourceId).map((note) => note.id);
-  const index = target ? order.indexOf(target.id) : order.length;
+  const index = target ? order.indexOf(target.id) + (position === "after" ? 1 : 0) : order.length;
   order.splice(index, 0, sourceId);
   await mount.writeText(noteOrderPath, JSON.stringify(order));
 };

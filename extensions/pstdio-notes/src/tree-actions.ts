@@ -1,6 +1,6 @@
 import { l10n, params, type TreeAction } from "@pstdio/sdk/extensions";
 import { createNoteCommand, deleteNoteCommand, renameNoteCommand } from "./commands";
-import { createFolderCommand, deleteFolderCommand, moveNoteCommand, renameFolderCommand } from "./folder-commands";
+import { createFolderCommand, deleteFolderCommand, renameFolderCommand } from "./folder-commands";
 import type { listFolders } from "./folders";
 import type { listNotes } from "./notes";
 
@@ -26,7 +26,7 @@ export const newFolderAction = (writable: boolean) => ({
   submitLabel: "Create",
 });
 
-export const noteActions = (note: Note, writable: boolean, folders: Folder[]) => {
+export const noteActions = (note: Note, writable: boolean) => {
   const actions: TreeAction[] = [
     {
       id: "rename",
@@ -38,29 +38,6 @@ export const noteActions = (note: Note, writable: boolean, folders: Folder[]) =>
       input: { title: params.text({ label: l10n("params.title", "Title"), required: true, defaultValue: note.title }) },
       submitLabel: "Rename",
     },
-    ...(folders.length
-      ? [
-          {
-            id: "move",
-            label: l10n("tree.actions.moveNote", "Move note"),
-            icon: "folder-input",
-            command: moveNoteCommand.ref,
-            disabled: !writable,
-            params: { noteId: note.id },
-            input: {
-              folderId: params.select({
-                label: l10n("params.folder", "Folder"),
-                defaultValue: note.folderId ?? "notes",
-                options: [
-                  { label: "Notes", value: "notes" },
-                  ...folders.map((folder) => ({ label: folder.title, value: folder.id })),
-                ],
-              }),
-            },
-            submitLabel: "Move",
-          },
-        ]
-      : []),
     {
       id: "delete",
       label: l10n("tree.actions.deleteNote", "Delete"),
