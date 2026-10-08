@@ -53,6 +53,7 @@ export { isNavigationTarget, qualifyNavigationTarget } from "./navigation";
 export { packageAsset } from "./package-asset";
 export { commandRef, eventRef } from "./refs";
 export { defineSlot } from "./slots";
+export { isFileSourcePosition } from "./source-position";
 export type * from "./types";
 export { VIEW_FILTER_CONDITIONS } from "./types/collection-view";
 export { dockedWorkbenchRegions, extensionPanelRegions } from "./types/composition";

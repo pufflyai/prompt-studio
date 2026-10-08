@@ -20,7 +20,12 @@ export const createPageResourceRemover =
     if (!current.projectId || !current.location) return;
     const next = removePageResource(current, resource, input.resources, retained);
     if (!next.location) return;
-    const changed = !workbenchPageLocationsEqual(current.location, next.location, input.resources);
+    const changed = !workbenchPageLocationsEqual(
+      current.location,
+      next.location,
+      input.resources,
+      Object.values(current.pages),
+    );
     const resolved = normalizeWorkbenchPageLocation({
       location: next.location,
       pages: Object.values(current.pages),

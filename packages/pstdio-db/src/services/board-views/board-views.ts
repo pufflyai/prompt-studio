@@ -4,6 +4,7 @@ import { board_default_views, board_views } from "../../db/schemas.pg";
 
 type BoardScope = Pick<typeof board_views.$inferSelect, "project_id" | "extension_instance_id" | "board_id">;
 type ViewInput = Pick<typeof board_views.$inferSelect, "title" | "settings" | "filter" | "sorts">;
+type ViewsTransaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 const scopeWhere = (table: typeof board_views | typeof board_default_views, scope: BoardScope) =>
   and(
     eq(table.project_id, scope.project_id),
@@ -13,6 +14,12 @@ const scopeWhere = (table: typeof board_views | typeof board_default_views, scop
     eq(table.board_id, scope.board_id),
   );
 const viewWhere = (projectId: string, id: string) => and(eq(board_views.project_id, projectId), eq(board_views.id, id));
+
+export class LastBoardViewError extends Error {
+  constructor() {
+    super("A board must keep at least one view");
+  }
+}
 
 export const createBoardViewsDBService = (db: DbClient) => {
   const list = (scope: BoardScope) =>
@@ -26,6 +33,41 @@ export const createBoardViewsDBService = (db: DbClient) => {
     (await db.select().from(board_views).where(viewWhere(projectId, id)))[0] ?? null;
   const getDefault = async (scope: BoardScope) =>
     (await db.select().from(board_default_views).where(scopeWhere(board_default_views, scope)))[0] ?? null;
+  const initialize = (scope: BoardScope, views: ViewInput[], defaultIndex: number) =>
+    db.transaction(async (tx) => {
+      const existing = await tx.select().from(board_views).where(scopeWhere(board_views, scope));
+      if (existing.length) return [];
+      const now = new Date().toISOString();
+      const rows = await tx
+        .insert(board_views)
+        .values(
+          views.map((view, sort_order) => ({
+            ...scope,
+            ...view,
+            id: crypto.randomUUID(),
+            sort_order,
+            created_at: now,
+            updated_at: now,
+          })),
+        )
+        .returning();
+      await tx
+        .insert(board_default_views)
+        .values({
+          ...scope,
+          default_view_id: rows[defaultIndex].id,
+          updated_at: now,
+        })
+        .onConflictDoUpdate({
+          target: [
+            board_default_views.project_id,
+            board_default_views.extension_instance_id,
+            board_default_views.board_id,
+          ],
+          set: { default_view_id: rows[defaultIndex].id, updated_at: now },
+        });
+      return rows;
+    });
   const create = async (input: BoardScope & ViewInput) => {
     const now = new Date().toISOString();
     return db.transaction(async (tx) => {
@@ -85,15 +127,23 @@ export const createBoardViewsDBService = (db: DbClient) => {
         .returning()
     )[0];
   };
+  const deleteView = async (tx: ViewsTransaction, projectId: string, id: string) => {
+    const [view] = await tx.delete(board_views).where(viewWhere(projectId, id)).returning();
+    if (!view) return null;
+    const [defaultView] = await tx
+      .delete(board_default_views)
+      .where(and(scopeWhere(board_default_views, view), eq(board_default_views.default_view_id, id)))
+      .returning();
+    return { view, defaultView: defaultView ?? null };
+  };
+  const removeOrphaned = (projectId: string, id: string) => db.transaction((tx) => deleteView(tx, projectId, id));
   const remove = (projectId: string, id: string) =>
     db.transaction(async (tx) => {
-      const [view] = await tx.delete(board_views).where(viewWhere(projectId, id)).returning();
-      if (!view) return null;
-      const [defaultView] = await tx
-        .delete(board_default_views)
-        .where(and(scopeWhere(board_default_views, view), eq(board_default_views.default_view_id, id)))
-        .returning();
-      return { view, defaultView: defaultView ?? null };
+      const [current] = await tx.select().from(board_views).where(viewWhere(projectId, id));
+      if (!current) return null;
+      const remaining = await tx.select().from(board_views).where(scopeWhere(board_views, current));
+      if (remaining.length === 1) throw new LastBoardViewError();
+      return deleteView(tx, projectId, id);
     });
   const reorder = (scope: BoardScope, ids: string[]) =>
     db.transaction(async (tx) => {
@@ -111,5 +161,18 @@ export const createBoardViewsDBService = (db: DbClient) => {
       }
       return updated;
     });
-  return { list, listProject, get, getDefault, create, update, clean, setDefault, remove, reorder };
+  return {
+    list,
+    listProject,
+    get,
+    getDefault,
+    initialize,
+    create,
+    update,
+    clean,
+    setDefault,
+    remove,
+    removeOrphaned,
+    reorder,
+  };
 };

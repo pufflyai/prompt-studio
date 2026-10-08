@@ -1,4 +1,5 @@
-import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { getWriter } from "@/lib/sync/collections";
+import { seedWorkspaceViewsStory } from "../workspaces/collections/workspace-views-story";
 
 export const seedSidenavStory = (projectId: string) => {
   getWriter("settings")?.truncateAndWrite([
@@ -51,9 +52,7 @@ export const seedSidenavStory = (projectId: string) => {
       expires_at: null,
     },
   ]);
-  getWriter("board_views")?.truncateAndWrite([]);
-  getWriter("board_default_views")?.truncateAndWrite([]);
-  markInitialCollectionsSyncComplete();
+  seedWorkspaceViewsStory(projectId);
 };
 const sessionRow = (
   projectId: string,

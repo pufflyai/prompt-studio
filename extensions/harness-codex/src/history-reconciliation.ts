@@ -67,7 +67,16 @@ export const recoverCodexMessages = (input: HarnessRecoveryInput) =>
       const b = tool(native);
       if (!a || !b) return mergeHistoryMetadata(known, native);
       if (a.state?.output !== undefined) return known;
-      return { ...known, parts: [{ ...a, status: b.status, state: { ...a.state, output: b.state?.output } }] };
+      return {
+        ...known,
+        parts: [
+          {
+            ...a,
+            status: b.status,
+            state: { ...a.state, output: b.state?.output, metadata: b.state?.metadata ?? a.state?.metadata },
+          },
+        ],
+      };
     },
     isGenerated: (message) =>
       message.role === "system" &&

@@ -1,4 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { BROWSER_LOGIN_FRAGMENT_PARAM } from "pstdio-api-contracts";
 import type { AppBindings } from "../../types";
 import {
   type BrowserSessions,
@@ -59,20 +60,21 @@ const readJson = async (request: Request) => {
   }
 };
 
-// The browser redeems a login code with a plain navigation, so this route runs before the API's
-// auth middleware. The single-use code is the credential.
-export const createBrowserLoginRoutes = (deps: RuntimeRouteDeps) => {
+// The dashboard redeems a login code before it has a session, so this route runs before the
+// API's auth middleware. The single-use code is the credential.
+export const createBrowserSessionRoutes = (deps: RuntimeRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
-  routes.get("/browser-login", (c) => {
-    const code = c.req.query("code");
-    // The cookie only works on the exact runtime origin, so a code is not spent anywhere else.
-    if (code && new URL(c.req.url).origin === deps.host.origin() && deps.browserSessions.redeemLoginCode(code)) {
-      c.header("set-cookie", deps.browserSessions.cookie());
+  routes.post("/browser-session", async (c) => {
+    if (!isRuntimeOriginAllowed(c.req.raw, { origin: deps.host.origin, token: deps.host.token })) {
+      return c.json({ error: "Forbidden" }, 403);
     }
+    const body = await readJson(c.req.raw);
+    const code = typeof body === "object" && body !== null ? (body as Record<string, unknown>).code : undefined;
+    const secret = typeof code === "string" ? deps.browserSessions.redeemLoginCode(code) : null;
     c.header("cache-control", "no-store");
-    // A used or unknown code still opens the dashboard, which explains how to sign in.
-    return c.redirect("/", 302);
+    if (!secret) return c.json({ error: "Unauthorized" }, 401);
+    return c.json({ secret });
   });
 
   return routes;
@@ -84,23 +86,18 @@ export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
 
   routes.use("*", async (c, next) => {
     if (!isRuntimeOriginAllowed(c.req.raw, security)) return c.json({ error: "Forbidden" }, 403);
-    // Only bearer holders, the desktop shell and the CLI, may give a browser its credential.
-    const issuesBrowserCredential = c.req.path.endsWith("/browser-session") || c.req.path.endsWith("/browser-login");
-    const authorized = issuesBrowserCredential
+    // Only runtime token holders, the desktop shell and the CLI, may sign a browser in.
+    const authorized = c.req.path.endsWith("/browser-login")
       ? isRuntimeBearerAuthorized(c.req.raw, security)
       : isRuntimeRequestAuthorized(c.req.raw, security);
     if (!authorized) return c.json({ error: "Unauthorized" }, 401);
     await next();
   });
 
-  routes.post("/browser-session", (c) => {
-    c.header("set-cookie", deps.browserSessions.cookie());
-    return c.body(null, 204);
-  });
-
+  // The code travels in the fragment, so it never reaches a server, a request log, or a Referer.
   routes.post("/browser-login", (c) => {
     const code = deps.browserSessions.createLoginCode();
-    return c.json({ url: `${deps.host.origin()}/runtime/browser-login?code=${code}` });
+    return c.json({ url: `${deps.host.origin()}/#${BROWSER_LOGIN_FRAGMENT_PARAM}=${code}` });
   });
 
   routes.get("/ready", (c) =>

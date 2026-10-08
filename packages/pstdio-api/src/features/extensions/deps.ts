@@ -6,6 +6,7 @@ export type ExtensionsRouteDeps = Pick<
   RouteDeps,
   | "harnessRegistry"
   | "eventBus"
+  | "resourceLinksService"
   | "extensionService"
   | "extensionRuntimeCatalog"
   | "extensionResourceSequencesService"

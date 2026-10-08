@@ -5,6 +5,7 @@ const buildDeps = () => {
   const workspacesDb = {
     create: mock(async (input: Record<string, unknown>) => ({
       id: "ws_1",
+      anchors_json: [],
       project_id: input.project_id,
     })),
     archive: mock(async (id: string) => ({
@@ -19,7 +20,7 @@ const buildDeps = () => {
       display_path: null,
       root_path: null,
     })),
-    softDelete: mock(async (_id: string) => {}),
+    softDelete: mock(async (_id: string) => []),
     rename: mock(async (id: string, name: string) => ({
       id,
       project_id: "project_1",
@@ -53,6 +54,7 @@ const buildDeps = () => {
   return {
     deps: {
       workspacesDb,
+      sessionsDb: { get: async () => null },
       eventBus,
       reposService: { listByProject: mock(async () => []) },
     } as unknown as Parameters<typeof createWorkspaceService>[0],
@@ -71,7 +73,7 @@ describe("WorkspaceService", () => {
       const result = await service.create(input);
 
       expect(result).toMatchObject({ id: "ws_1" });
-      expect(workspacesDb.create).toHaveBeenCalledWith(input);
+      expect(workspacesDb.create).toHaveBeenCalledWith(input, expect.any(Function));
       expect(emitted).toContainEqual(["workspaces", "set", expect.objectContaining({ id: "ws_1" })]);
     });
   });

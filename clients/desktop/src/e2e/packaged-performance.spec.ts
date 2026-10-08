@@ -221,7 +221,10 @@ test("streams a long tool-heavy conversation within budget and shares the snapsh
     const session = await app.page.evaluate(async (projectId) => {
       const response = await fetch("/v1/sessions", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+        },
         body: JSON.stringify({
           project_id: projectId,
           title: "Long replay",
@@ -236,7 +239,14 @@ test("streams a long tool-heavy conversation within budget and shares the snapsh
 
     const status = () =>
       app!.page.evaluate(
-        async (id) => ((await (await fetch(`/v1/sessions/${id}`)).json()) as { status: string }).status,
+        async (id) =>
+          (
+            (await (
+              await fetch(`/v1/sessions/${id}`, {
+                headers: { authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}` },
+              })
+            ).json()) as { status: string }
+          ).status,
         session.id,
       );
     const measured = await measureRenderers("streaming-replay", { workbench }, () =>

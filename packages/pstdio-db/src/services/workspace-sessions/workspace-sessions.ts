@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { sessions, workspace_sessions, workspaces } from "../../db/schemas.pg";
+import { sessionColumns, workspaceColumns } from "../legacy-resource-links";
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -19,7 +20,7 @@ export const createWorkspaceSessionsDBService = (db: DbClient) => {
 
   const getWorkspaceBySessionId = async (sessionId: string) => {
     const [row] = await db
-      .select({ workspace: workspaces })
+      .select({ workspace: workspaceColumns })
       .from(workspace_sessions)
       .innerJoin(workspaces, eq(workspace_sessions.workspace_id, workspaces.id))
       .where(eq(workspace_sessions.session_id, sessionId));
@@ -29,7 +30,7 @@ export const createWorkspaceSessionsDBService = (db: DbClient) => {
 
   const listByWorkspace = async (workspaceId: string) => {
     const rows = await db
-      .select({ session: sessions })
+      .select({ session: sessionColumns })
       .from(workspace_sessions)
       .innerJoin(sessions, eq(workspace_sessions.session_id, sessions.id))
       .where(eq(workspace_sessions.workspace_id, workspaceId))

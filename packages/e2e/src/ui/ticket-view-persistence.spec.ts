@@ -37,7 +37,7 @@ test("shares saved ticket views while keeping active views local", async ({
     await page.getByRole("button", { name: "Rename", exact: true }).click();
     await expect(second.getByRole("tab", { name: "Shared default", exact: true })).toBeVisible();
     const listed = await (await request.get(boardPath)).json();
-    const saved = listed.views.find((view: { builtIn: boolean }) => !view.builtIn);
+    const saved = listed.views.find((view: { title: string }) => view.title === "Shared default");
     const defaultResponse = await request.put(`${boardPath}/default`, { data: { viewId: saved.id } });
     expect(defaultResponse.ok(), await defaultResponse.text()).toBe(true);
     await expect.poll(async () => (await (await request.get(boardPath)).json()).defaultViewId).toBe(saved.id);
@@ -52,7 +52,7 @@ test("shares saved ticket views while keeping active views local", async ({
       "aria-selected",
       "true",
     );
-    await second.getByRole("button", { name: "Remove Archived filter", exact: true }).click();
+    await second.getByRole("button", { name: "Remove Ticket filter", exact: true }).click();
     await expect(second.getByRole("button", { name: "Save view", exact: true })).toBeVisible();
     const edited = await request.patch(`/v1/projects/${project.id}/board-views/${saved.id}`, {
       data: { title: "Agent edit" },
@@ -68,17 +68,27 @@ test("shares saved ticket views while keeping active views local", async ({
       await expect(client.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
     }
     await page.getByRole("tab", { name: "All", exact: true }).click({ button: "right" });
-    await expect(page.getByRole("menuitem", { name: "Rename", exact: true })).toHaveAttribute("data-disabled", "");
+    await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+    await page.getByRole("textbox", { name: "View name" }).fill("Everything");
+    await page.getByRole("button", { name: "Rename", exact: true }).click();
+    await expect(second.getByRole("tab", { name: "Everything", exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Everything", exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Duplicate", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(second.getByRole("tab", { name: "All copy", exact: true })).toBeVisible();
-    await page.getByRole("tab", { name: "All copy", exact: true }).click({ button: "right" });
+    await expect(page.getByRole("tab", { name: "Everything copy", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(second.getByRole("tab", { name: "Everything copy", exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Everything copy", exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Delete view", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Remove Archived filter", exact: true }).click();
-    await page.getByRole("button", { name: "Save as new view", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("button", { name: "Save as new view", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Everything copy", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Remove Ticket filter", exact: true }).click();
+    await page.getByRole("button", { name: "Save view", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Everything", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("button", { name: "Save view", exact: true })).toHaveCount(0);
+    await second.reload();
+    await second.getByRole("tab", { name: "Everything", exact: true }).click();
+    await expect(second.getByRole("button", { name: "Remove Ticket filter", exact: true })).toHaveCount(0);
     const cli = spawnSync(
       "bun",
       [

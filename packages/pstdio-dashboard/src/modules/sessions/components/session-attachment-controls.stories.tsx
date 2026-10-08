@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import type { Meta, StoryObj } from "@storybook/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { useState } from "react";
 import { SessionAttachmentControls } from "./session-attachment-controls";
@@ -34,10 +35,13 @@ const meta: Meta<typeof SessionAttachmentControls> = {
   component: SessionAttachmentControls,
   parameters: { layout: "padded" },
   decorators: [
+    // Attachment previews load API files through the query cache.
     (Story) => (
-      <Box maxW="560px">
-        <Story />
-      </Box>
+      <QueryClientProvider client={new QueryClient()}>
+        <Box maxW="560px">
+          <Story />
+        </Box>
+      </QueryClientProvider>
     ),
   ],
 };

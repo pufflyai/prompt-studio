@@ -2,20 +2,15 @@ import { strToU8, unzipSync, zipSync } from "fflate";
 
 const collectCredentials = (value: unknown, secrets: Set<string>) => {
   if (typeof value === "string") {
-    for (const match of value.matchAll(/(?:pstdio_runtime_session=|Bearer )([^;\s"\\]+)/g)) {
+    // The runtime token and the browser session travel as a bearer header or a WebSocket protocol.
+    for (const match of value.matchAll(/(?:Bearer |pstdio\.bearer\.)([^;,\s"\\]+)/g)) {
       if (match[1]) secrets.add(match[1]);
     }
     return;
   }
   if (!value || typeof value !== "object") return;
-  if (
-    "name" in value &&
-    value.name === "pstdio_runtime_session" &&
-    "value" in value &&
-    typeof value.value === "string"
-  ) {
-    secrets.add(value.value);
-  }
+  // `POST /runtime/browser-session` returns the browser session secret in its body.
+  if ("secret" in value && typeof value.secret === "string") secrets.add(value.secret);
   for (const child of Object.values(value)) collectCredentials(child, secrets);
 };
 

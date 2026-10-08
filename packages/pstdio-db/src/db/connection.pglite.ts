@@ -6,6 +6,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
+import { removeArchivedWorkspaces } from "./archived-workspaces-migration";
 import { finishBoardViewRules, prepareBoardViewRules } from "./board-view-rules-migration";
 import {
   ensureLegacyTemplateOwners,
@@ -133,6 +134,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       await prepareWorkspaceLocations(openedPglite);
       await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
       await prepareBoardViewRules(openedPglite);
+      await removeArchivedWorkspaces(openedPglite);
       await migrate(db, { migrationsFolder });
       await finishBoardViewRules(openedPglite);
     }

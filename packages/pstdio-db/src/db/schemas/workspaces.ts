@@ -3,7 +3,6 @@ import { boolean, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core"
 import { files } from "./files";
 import { projects } from "./projects";
 import { sessions } from "./sessions";
-import type { ResourceRef } from "./types";
 
 type JsonObject = Record<string, unknown>;
 
@@ -27,6 +26,7 @@ export type WorkspaceCapabilities = {
   diff: boolean;
   merge: boolean;
   rebase: boolean;
+  /** @deprecated Use delete. */
   archive: boolean;
   delete: boolean;
 };
@@ -89,7 +89,6 @@ export const workspaces = pgTable(
     initializing: boolean("initializing").notNull().default(false),
     setup_error: text("setup_error"),
     startup_log_file_id: text("startup_log_file_id").references(() => files.id, { onDelete: "set null" }),
-    anchors_json: jsonb("anchors_json").$type<ResourceRef[]>().notNull().default([]),
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
     deleted_at: text("deleted_at"),
@@ -99,7 +98,7 @@ export const workspaces = pgTable(
     uniqueIndex("workspaces_project_default_idx").on(table.project_id).where(sql`${table.is_default} = true`),
     uniqueIndex("workspaces_project_active_name_idx")
       .on(table.project_id, table.name)
-      .where(sql`${table.archived} = false and ${table.deleted_at} is null`),
+      .where(sql`${table.deleted_at} is null`),
     // A folder holds one .pstdio/config.json, so it can belong to only one workspace.
     uniqueIndex("workspaces_active_root_path_idx").on(table.root_path).where(sql`${table.deleted_at} is null`),
   ],

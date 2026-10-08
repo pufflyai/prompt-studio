@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import type { Page } from "@playwright/test";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 export type RuntimeDescriptor = {
@@ -18,17 +19,21 @@ export const runtimeAuthorization = (descriptor: RuntimeDescriptor) => ({
 });
 
 // Page loads never sign a browser in (ADR 0054). Sign in the way `pst` does: open a single-use
-// login link that a bearer holder created.
-export const signInBrowser = async (
-  page: { goto: (url: string) => Promise<unknown> },
-  descriptor: RuntimeDescriptor,
-) => {
+// login link that a bearer holder created. The dashboard stores the session before checking
+// runtime readiness. Wait for that authenticated check before navigating away (ADR 0057).
+export const signInBrowser = async (page: Page, descriptor: RuntimeDescriptor) => {
   const response = await fetch(`${descriptor.origin}/runtime/browser-login`, {
     method: "POST",
     headers: runtimeAuthorization(descriptor),
   });
   if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
+  const redeemed = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/browser-session");
+  const ready = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/ready");
   await page.goto(((await response.json()) as { url: string }).url);
+  const session = await redeemed;
+  if (!session.ok()) throw new Error(`Browser session redemption failed with HTTP ${session.status()}`);
+  const runtime = await ready;
+  if (!runtime.ok()) throw new Error(`Browser authentication failed with HTTP ${runtime.status()}`);
 };
 
 const waitForReady = async (descriptorPath: string, child: ChildProcess, timeoutMs = 10_000) => {

@@ -26,8 +26,8 @@
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",
     "@hono/zod-openapi": "^1.1.5",
-    "drizzle-orm": "^0.45.1",
-    "hono": "^4.10.7",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.34",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-api-runtime-host": "workspace:*",
     "pstdio-db": "workspace:*",

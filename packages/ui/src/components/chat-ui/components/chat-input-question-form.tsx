@@ -1,3 +1,4 @@
+import { Button } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import type { ChatInputAction } from "./chat-input-actions";
@@ -10,6 +11,7 @@ import {
   toQuestionResponse,
 } from "./chat-input-question-prompt";
 import { ChatInputToolbar } from "./chat-input-toolbar";
+import { useQuestionNavigation } from "./chat-question-navigation";
 import { useQuestionPromptState } from "./use-question-prompt-state";
 
 interface ChatInputQuestionFormProps {
@@ -23,6 +25,7 @@ interface ChatInputQuestionFormProps {
 export const ChatInputQuestionForm = (props: ChatInputQuestionFormProps) => {
   const { prompt, actions, disabled, onSubmit } = props;
   const question = useQuestionPromptState(prompt);
+  const navigation = useQuestionNavigation();
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false);
   const submit = async (skip = false) => {
@@ -57,7 +60,16 @@ export const ChatInputQuestionForm = (props: ChatInputQuestionFormProps) => {
         onCustomAnswerChange={question.setCustomAnswer}
       />
       <ChatInputToolbar
-        actions={actions}
+        actions={
+          <>
+            {prompt.delivery === "async" && navigation ? (
+              <Button size="xs" variant="ghost" disabled={submitting} onClick={navigation.close}>
+                Back to message
+              </Button>
+            ) : null}
+            {actions}
+          </>
+        }
         questionPrompt
         skipDisabled={disabled || submitting}
         skipTitle="Skip this question and let the agent continue"

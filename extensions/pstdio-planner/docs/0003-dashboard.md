@@ -6,6 +6,8 @@ Planner adds a ticket board and a page for each ticket to the Prompt Studio dash
 
 Open **Tickets** in the project sidebar. The board shows one column for each [status](0001-tags-and-statuses.md#statuses), in status order. Newest tickets come first.
 
+To reach off-screen columns, hold the primary mouse button and drag empty board space or a column heading. You can also use the horizontal scrollbar or your trackpad. Dragging a card moves the ticket instead.
+
 ### Cards
 
 Each card shows the ticket's title and these properties:
@@ -23,6 +25,7 @@ You can also create tickets from a terminal with [`pst tickets create`](0004-cli
 ### Move and change tickets
 
 - Drag a card to another column to change its status.
+- Hold a dragged card near either side of the board to scroll toward hidden columns. Move closer to the edge to scroll faster.
 - Choose **Manual** ordering in the display menu, then drag cards within a column to change their order.
 - In the Done column, choose **Archive all** to archive every ticket in it.
 - Select a card to open the ticket page.
@@ -31,7 +34,9 @@ You can also create tickets from a terminal with [`pst tickets create`](0004-cli
 
 The display menu switches between **Board** and **List**. It also sets the grouping, the sub-grouping, the ordering, and the properties shown on each card.
 
-The board shows active tickets only. Use the filter menu to show archived tickets, or to filter by status, parent, or tag.
+Every view, including **All**, can be edited and renamed. Save your filter and display changes with **Save view**. Right-click a view to rename, duplicate, or delete it. At least one view must remain.
+
+The board starts with a **Ticket is Active** filter. Remove it to show both active and archived tickets, or choose **Archived** to show only archived tickets. Use the filter menu to filter by status, parent, or tag.
 
 To find a ticket quickly, search for it in the command palette. Tickets have their own group there.
 
@@ -72,7 +77,7 @@ The ticket's actions menu, in the page header, has these actions:
 
 Run attempt, Refine ticket, and Break into sub-tickets let you choose the agent. Refine ticket and Break into sub-tickets open their new session when it starts.
 
-Archiving a ticket also archives a linked workspace once every ticket linked to that workspace is archived. The project workspace, and workspaces whose provider does not support archiving, stay available. Unarchiving keeps the ticket's status, tags, order, and content. Workspaces that were archived with the ticket stay archived.
+Archiving or deleting a ticket deletes linked workspaces once no active ticket uses them and the project setting **Delete linked workspaces** (`tickets.deleteLinkedWorkspaces`) is on. The setting is on by default. Deletion removes the worktree, its branch, and any uncommitted changes. The default project workspace and providers without deletion support stay available. Unarchiving restores the ticket, but does not restore deleted workspaces.
 
 ## Notifications
 
@@ -89,3 +94,9 @@ Planner adds these settings for each project:
 - **Settings → Project → Ticket tags** edits the project's [tags](0001-tags-and-statuses.md#tags).
 - **Settings → Project → Statuses** edits the project's [statuses](0001-tags-and-statuses.md#statuses).
 - **Settings → Project → Templates** edits Planner's ticket, prompt, and document templates. The prompt templates hold the instructions Planner gives agents, for example when it runs an attempt or a review. Edit them to change how agents work on your tickets.
+
+## Ticket cleanup and merge settings
+
+Archiving or deleting a ticket deletes linked workspaces once no active ticket uses them and the project setting **Delete linked workspaces** (`tickets.deleteLinkedWorkspaces`) is on. The setting is on by default. Deletion removes the worktree, its branch, and any uncommitted changes. The default project workspace and providers without deletion support stay available. Unarchiving restores the ticket, but does not restore deleted workspaces.
+
+The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to Done. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.

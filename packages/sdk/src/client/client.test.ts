@@ -34,14 +34,14 @@ describe("createClient", () => {
     expect(client.runtime).toBeDefined();
   });
 
-  it("client.runtime provisions browser cookie auth without putting the token in the URL", async () => {
+  it("client.runtime creates a browser login link without putting the token in the URL", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://127.0.0.1:43123", fetch: fetchFn, token: "runtime-secret" });
 
-    await client.runtime.provisionBrowserSession();
+    await client.runtime.createBrowserLogin();
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://127.0.0.1:43123/runtime/browser-session");
+    expect(calls[0]!.url).toBe("http://127.0.0.1:43123/runtime/browser-login");
     expect(calls[0]!.url).not.toContain("runtime-secret");
     expect(calls[0]!.method).toBe("POST");
   });

@@ -1,4 +1,5 @@
 import { isNavigationHref } from "./navigation-href";
+import { isFileSourcePosition } from "./source-position";
 import type { NavigationTarget } from "./types/navigation-target";
 import type { ResourceRef } from "./types/resources";
 
@@ -18,6 +19,8 @@ const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean =
   if (ancestors.has(value)) return false;
   if (value.resource !== undefined && !isResource(value.resource)) return false;
   if (value.section !== undefined && !isRecord(value.section)) return false;
+  if (value.position !== undefined && (!isFileSourcePosition(value.position) || value.section !== undefined))
+    return false;
   if (!isOpenIntent(value.open)) return false;
   if (value.parent === undefined) return true;
   const next = new Set(ancestors);

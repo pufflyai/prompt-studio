@@ -12,6 +12,10 @@ import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { $addUpdateTag, $getRoot } from "lexical";
 import { useRef } from "react";
+import { ChatCodeLinkNode } from "@/components/chat-ui/links/chat-code-link-node";
+import type { ChatLinkProps } from "@/components/chat-ui/links/chat-link";
+import { ChatLinkProvider, useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context";
+import { ChatLinkPlugin } from "@/components/chat-ui/links/chat-link-plugin";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
 import { createMarkdownSourceDocument } from "../shared/markdown-source-document";
@@ -26,7 +30,7 @@ import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
 import { splitFrontmatter } from "../utils/markdown";
 
-export interface RichMessageProps {
+export interface RichMessageProps extends ChatLinkProps {
   debug?: boolean;
   defaultState: string;
   fullWidth?: boolean;
@@ -38,6 +42,15 @@ export interface RichMessageProps {
 const SOURCE_IMPORT_TAG = "markdown-source-import";
 
 export function RichMessage(props: RichMessageProps) {
+  const inherited = useChatLinkHandler();
+  return (
+    <ChatLinkProvider handler={props.linkHandler ?? inherited}>
+      <RichMessageContent {...props} />
+    </ChatLinkProvider>
+  );
+}
+
+function RichMessageContent(props: RichMessageProps) {
   const {
     debug = false,
     defaultState = "",
@@ -53,7 +66,7 @@ export function RichMessage(props: RichMessageProps) {
 
   const initialConfig = {
     namespace: "RICH_MESSAGE",
-    nodes: editorNodes,
+    nodes: [...editorNodes, ChatCodeLinkNode],
     editorState: () => {
       $addUpdateTag(SOURCE_IMPORT_TAG);
       sourceDocumentRef.current?.importToLexical();
@@ -87,6 +100,7 @@ export function RichMessage(props: RichMessageProps) {
             }}
           />
           <LinkPlugin />
+          <ChatLinkPlugin />
           <ClickableLinkPlugin newTab />
           <ListPlugin />
           <ListMarkerWidthPlugin />

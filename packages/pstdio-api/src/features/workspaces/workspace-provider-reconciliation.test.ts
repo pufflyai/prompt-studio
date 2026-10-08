@@ -233,40 +233,6 @@ describe("reconcileProviderWorkspaces lifecycle operations", () => {
     expect(softDelete).toHaveBeenCalledWith("ws-1");
   });
 
-  test("recovers the accepted create before running its deferred archive", async () => {
-    const create = mock(async () => readyRemoteResult("ready"));
-    const archive = mock(async () => readyRemoteResult("archived"));
-    const workspace = makeWorkspace({
-      provider_ref_json: null,
-      provider_state: "archiving",
-      provider_operation_id: "op-create-before-archive",
-      provider_operation_kind: "archive",
-    });
-    const { deps } = makeDeps({ create, archive }, workspace);
-
-    await reconcileProviderWorkspaces(deps, "project-1");
-
-    expect(create).toHaveBeenCalledTimes(1);
-    expect(archive).toHaveBeenCalledTimes(1);
-  });
-
-  test("settles an interrupted archive when the provider has no archive method", async () => {
-    const workspace = makeWorkspace({
-      provider_state: "archiving",
-      provider_operation_id: "op-archive-1",
-      provider_operation_kind: "archive",
-    });
-    const { deps, updateProviderProjection } = makeDeps({}, workspace);
-
-    await reconcileProviderWorkspaces(deps, "project-1");
-
-    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
-      provider_state: "archived",
-      provider_operation_id: null,
-      provider_operation_kind: null,
-    });
-  });
-
   test("records a retryable failure when a provider call times out", async () => {
     const resolve = mock(() => new Promise<WorkspaceProviderResult>(() => {}));
     const workspace = makeWorkspace({ provider_state: "provisioning" });

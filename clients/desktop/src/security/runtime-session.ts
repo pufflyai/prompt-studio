@@ -1,32 +1,18 @@
-type RuntimeSession = {
-  clearStorageData: (options: { storages: Array<"cookies"> }) => Promise<unknown>;
-  fetch: (input: string, init: RequestInit) => Promise<Response>;
-  cookies: {
-    get: (filter: {
-      name: string;
-      url: string;
-    }) => Promise<Array<{ httpOnly?: boolean; sameSite?: string; secure?: boolean; value: string }>>;
-  };
-};
-
 type RuntimeCredential = {
   origin: string;
   token: string;
 };
 
-const COOKIE_NAME = "pstdio_runtime_session";
+type Fetch = (input: string, init: RequestInit) => Promise<Response>;
 
-export const provisionRuntimeSession = async (session: RuntimeSession, runtime: RuntimeCredential) => {
-  await session.clearStorageData({ storages: ["cookies"] });
-  const response = await session.fetch(`${runtime.origin}/runtime/browser-session`, {
+// The desktop signs its workbench in like `pst` does: it loads a single-use login link, and the
+// dashboard redeems it for a browser session secret in its own per-origin storage (ADR 0057).
+export const createRuntimeLoginUrl = async (fetchFn: Fetch, runtime: RuntimeCredential) => {
+  const response = await fetchFn(`${runtime.origin}/runtime/browser-login`, {
     method: "POST",
     headers: { authorization: `Bearer ${runtime.token}` },
   });
-  if (!response.ok) throw new Error(`Runtime browser session provisioning failed with status ${response.status}`);
-
-  // The runtime chooses the cookie value. It is its own browser session secret, not the token.
-  const [cookie] = await session.cookies.get({ name: COOKIE_NAME, url: runtime.origin });
-  if (!cookie?.httpOnly || cookie.sameSite?.toLowerCase() !== "strict") {
-    throw new Error("Runtime did not provision the expected protected runtime session cookie");
-  }
+  if (!response.ok) throw new Error(`Runtime browser login failed with status ${response.status}`);
+  const { url } = (await response.json()) as { url: string };
+  return url;
 };

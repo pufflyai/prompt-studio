@@ -36,8 +36,18 @@ export const expectPlannerProperties = async (
   const controls = controlsQueryResultSchema.parse(properties.outcome.value);
   expect(controls.params).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ id: "created", type: "readOnly", value: expect.any(String) }),
-      expect.objectContaining({ id: "updated", type: "readOnly", value: expect.any(String) }),
+      expect.objectContaining({
+        id: "created",
+        type: "date",
+        readOnly: true,
+        defaultValue: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      }),
+      expect.objectContaining({
+        id: "updated",
+        type: "date",
+        readOnly: true,
+        defaultValue: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      }),
       expect.objectContaining({ id: "status", type: "resource", editable: true }),
     ]),
   );

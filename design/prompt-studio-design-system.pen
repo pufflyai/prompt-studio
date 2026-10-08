@@ -32095,7 +32095,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 658
+                  "y": 665
                 },
                 {
                   "type": "frame",
@@ -47227,6 +47227,167 @@
                       "fill": "$btn-fill"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LLeUN",
+              "name": "Async question bubbles · PS-546",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PsqbB",
+                  "name": "Section title",
+                  "fill": "$ds-fg",
+                  "content": "Async question · conversation summary",
+                  "fontFamily": "$font-label",
+                  "fontSize": 18,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "PzOXU",
+                  "name": "cmp/ChatQuestionBubble",
+                  "context": "One button per question. Shows question → first offered answer before submission. It never submits automatically. Clicking a pending bubble opens that exact question in the composer, preserving the chat draft. Answered bubbles show the accepted answer and are read-only. Keep short questions inline. When the question is long or multiline, place the arrow and answer together on a row below the full question.",
+                  "reusable": true,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "LCEHH",
+                      "name": "Question",
+                      "fill": "$ds-fg",
+                      "content": "Which color?",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jMcbw",
+                      "name": "Arrow and answer",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "O0luR",
+                          "name": "Answer direction",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZZwpl",
+                          "name": "Answer",
+                          "fill": "$ds-fg-muted",
+                          "content": "Blue",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wvRuZ",
+                  "name": "Question bubble states",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "B1KYN",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Hover",
+                      "fill": "$ds-surface-hover"
+                    },
+                    {
+                      "id": "u4Wbbw",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Open / keyboard focus",
+                      "fill": "$ds-bg-active",
+                      "stroke": "$ds-border-accent"
+                    },
+                    {
+                      "id": "h6lM8Y",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Answered",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Green",
+                          "fill": "$ds-fg"
+                        }
+                      }
+                    },
+                    {
+                      "id": "ienPl",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Free text",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Your answer",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Jjbeg",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Skipped",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Skipped",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "id": "tdfam",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Long multiline question · answer underneath",
+                      "layout": "vertical",
+                      "alignItems": "start",
+                      "width": 560,
+                      "descendants": {
+                        "LCEHH": {
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Should I validate the full release workflow in the browser, including onboarding, selecting a project, opening a session, submitting an async answer, and restoring the draft and attachments afterward?\nOr should I only run the targeted tests for the changed question controls before preparing the pull request?"
+                        },
+                        "ZZwpl": {
+                          "content": "Browser checks"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -74674,7 +74835,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95303,7 +95464,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124289,7 +124450,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 40,
+                                          "y": 41,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -128235,7 +128396,7 @@
                               }
                             },
                             {
-                              "id": "YPRoY",
+                              "id": "tZXPj",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Connection",
@@ -128634,7 +128795,7 @@
                               }
                             },
                             {
-                              "id": "nCLDE",
+                              "id": "iRnZJ",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Connection",
@@ -150785,7 +150946,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -150807,7 +150968,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151535,7 +151696,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151557,7 +151718,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152173,7 +152334,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152195,7 +152356,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153546,7 +153707,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 45,
+                                  "x": 44,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153568,7 +153729,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 155,
+                                  "x": 157,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153599,8 +153760,8 @@
       "id": "yDXFi",
       "x": 17200,
       "y": 8001,
-      "name": "Conversation · Next async question · PS-459",
-      "context": "The first request has been answered. The next independent asynchronous question now occupies the composer. New arrivals queue without changing current selections. Each request uses its own native identity and response channel. The same saved draft stays intact until all blocking requests finish.",
+      "name": "Conversation · Async question opened · PS-546",
+      "context": "A pending async question stays as a conversation bubble while the agent works. Clicking that bubble opens its question in the composer. Pending async arrivals never replace the open question. The draft and attachments return after send, skip, or close.",
       "theme": {
         "mode": "dark"
       },
@@ -153729,32 +153890,34 @@
                   }
                 },
                 {
-                  "id": "C0B2xh",
+                  "id": "sqiIG",
                   "type": "ref",
-                  "ref": "CQVFo",
-                  "name": "Answer to first async question",
-                  "width": "fill_container",
+                  "ref": "PzOXU",
+                  "name": "Validation answered bubble",
                   "descendants": {
-                    "ZdoE8": {
-                      "content": "Browser checks"
+                    "LCEHH": {
+                      "content": "Which validation should I run?"
                     },
-                    "b60X5h": {
-                      "content": "19:43"
+                    "ZZwpl": {
+                      "content": "Browser checks",
+                      "fill": "$ds-fg"
                     }
                   }
                 },
                 {
-                  "id": "K4hItM",
+                  "id": "meVRH",
                   "type": "ref",
-                  "ref": "X7Yj6",
-                  "name": "Next async question in conversation",
-                  "width": "fill_container",
+                  "ref": "PzOXU",
+                  "name": "Files question bubble · open",
+                  "fill": "$ds-bg-active",
+                  "stroke": "$ds-border-accent",
                   "descendants": {
-                    "EiVAs": {
+                    "LCEHH": {
                       "content": "Which files should I include?"
                     },
-                    "p3bQE": {
-                      "content": "19:44"
+                    "ZZwpl": {
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
                     }
                   }
                 },
@@ -154003,6 +154166,25 @@
                           "gap": 6,
                           "alignItems": "center",
                           "children": [
+                            {
+                              "id": "XVe5P",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Close question · restore draft",
+                              "height": 28,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Back to message"
+                                }
+                              }
+                            },
                             {
                               "id": "TQY2z",
                               "type": "ref",
@@ -164350,7 +164532,456 @@
     },
     {
       "type": "frame",
-      "id": "a3pIl",
+      "id": "M5BcB",
+      "x": 19360,
+      "y": 8001,
+      "name": "Conversation · Async question pending · PS-546",
+      "context": "Async questions do not take over the composer. The bubble shows question → first offered option. The agent keeps working and the unsent message and attachments stay editable. Clicking any pending bubble opens that exact question in the existing composer.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "Xk89F",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "w1kCnv",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "lR6or",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "ak1A9",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "a1pu0O",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "YGZWf",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "LcV8b",
+                  "type": "ref",
+                  "ref": "PzOXU",
+                  "name": "Validation question bubble · pending",
+                  "descendants": {
+                    "LCEHH": {
+                      "content": "Which validation should I run?"
+                    },
+                    "ZZwpl": {
+                      "content": "Browser checks",
+                      "fill": "$ds-fg-muted"
+                    }
+                  }
+                },
+                {
+                  "id": "CiUrn",
+                  "type": "ref",
+                  "ref": "PzOXU",
+                  "name": "Files question bubble · pending",
+                  "descendants": {
+                    "LCEHH": {
+                      "content": "Which files should I include?"
+                    },
+                    "ZZwpl": {
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
+                    }
+                  }
+                },
+                {
+                  "id": "M4MHM",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Agent continues independent work",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "The browser checks are ready. I am checking the release script while you choose the files."
+                    },
+                    "p3bQE": {
+                      "content": "19:45"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "EWJ5R",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eMim8",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "G8hPw",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "FOYGR",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LShZp",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "RVsQ3",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HrIbW",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "oYq03",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "A7Jm5F",
+                  "name": "Restored original draft and attachments",
+                  "context": "Async questions remain in the chat until opened. Keep this original unsent draft and its files editable. Question replies never include the draft or its files.",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "oagy8",
+                      "name": "Draft attachments · preserved",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "oSR4w",
+                          "type": "ref",
+                          "ref": "kNQoL",
+                          "name": "release-notes.md · draft attachment",
+                          "descendants": {
+                            "XgLPG": {
+                              "content": "release-notes.md"
+                            },
+                            "n6amuf": {
+                              "content": "4 KB"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nE3WW",
+                      "name": "Draft editor · stays editable",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cMhWj",
+                          "name": "Unsent message",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Also update the release notes and include the migration steps.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kkae7",
+                          "name": "Editing cursor",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "I am still writing this message… |",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QKMWI",
+                      "name": "Message toolbar",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "rArtx",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Attach",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "paperclip",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        },
+                        {
+                          "id": "kI1Rm",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Model",
+                          "height": 28,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 0,
+                          "strokeAlignment": "inner",
+                          "theme": {
+                            "trig": "default",
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": false
+                            },
+                            "l7dix": {
+                              "padding": 0
+                            },
+                            "sefGB": {
+                              "content": "gpt-5.5",
+                              "fontSize": 12,
+                              "fill": "$btn-fg"
+                            },
+                            "Tpujq": {
+                              "fill": "$btn-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "m5NrFI",
+                          "type": "ref",
+                          "ref": "HXArk",
+                          "name": "Plan tag",
+                          "height": 28,
+                          "descendants": {
+                            "rfQui": {
+                              "content": "Plan"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cbMZk",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "kBjuR",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send draft · enabled",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs",
+                            "btn-interaction": "default"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 16,
+                              "width": 16
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "uQ78Q",
       "x": 27245,
       "y": 0,
       "name": "Developer Tools · Connection Status · Production",
@@ -164368,7 +164999,7 @@
       "children": [
         {
           "type": "text",
-          "id": "dr0gZ",
+          "id": "YX35U",
           "name": "Title",
           "fill": "$ds-fg",
           "content": "Connection status · device preference",
@@ -164378,14 +165009,14 @@
         },
         {
           "type": "frame",
-          "id": "emsLF",
+          "id": "C4Od4m",
           "name": "Connection settings",
           "width": "fill_container",
           "gap": 20,
           "children": [
             {
               "type": "frame",
-              "id": "hftmD",
+              "id": "TaIjw",
               "name": "Connection · Off",
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
@@ -164396,7 +165027,7 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "zRV8M",
+                  "id": "JxYIw",
                   "name": "H",
                   "width": "fill_container",
                   "layout": "vertical",
@@ -164404,7 +165035,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "SpjFs",
+                      "id": "cbnuk",
                       "name": "T",
                       "fill": "$ds-fg",
                       "content": "connection · off · default",
@@ -164414,7 +165045,7 @@
                     },
                     {
                       "type": "text",
-                      "id": "OZuCn",
+                      "id": "zeVO3",
                       "name": "D",
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
@@ -164429,7 +165060,7 @@
                 },
                 {
                   "type": "frame",
-                  "id": "H7Kx9",
+                  "id": "M808Kc",
                   "name": "Settings Surface",
                   "clip": true,
                   "width": "fill_container",
@@ -164443,7 +165074,7 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "ERP3x",
+                      "id": "pEN1W",
                       "name": "Head",
                       "width": "fill_container",
                       "height": 48,
@@ -164462,7 +165093,7 @@
                       "children": [
                         {
                           "type": "icon",
-                          "id": "NtQHn",
+                          "id": "Ir7Tp",
                           "name": "I",
                           "width": 16,
                           "height": 16,
@@ -164472,7 +165103,7 @@
                         },
                         {
                           "type": "text",
-                          "id": "TMDYy",
+                          "id": "XnBUK",
                           "name": "T",
                           "fill": "$ds-fg",
                           "content": "Settings",
@@ -164482,13 +165113,13 @@
                         },
                         {
                           "type": "frame",
-                          "id": "fJmYO",
+                          "id": "lSeCO",
                           "name": "Sp",
                           "width": "fill_container",
                           "height": 2
                         },
                         {
-                          "id": "a3Lm2",
+                          "id": "QNrRM",
                           "type": "ref",
                           "ref": "nvvgg",
                           "name": "Close",
@@ -164506,14 +165137,14 @@
                     },
                     {
                       "type": "frame",
-                      "id": "CTxR8",
+                      "id": "xxnwP",
                       "name": "Body",
                       "width": "fill_container",
                       "height": "fill_container",
                       "children": [
                         {
                           "type": "frame",
-                          "id": "CcWJQ",
+                          "id": "AC7pE",
                           "name": "Sections",
                           "width": 220,
                           "height": "fill_container",
@@ -164529,7 +165160,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "P7Zz1Q",
+                              "id": "X20LaD",
                               "name": "L",
                               "fill": "$ds-fg-subtle",
                               "content": "WORKBENCH",
@@ -164539,7 +165170,7 @@
                               "letterSpacing": 1
                             },
                             {
-                              "id": "u1uCZf",
+                              "id": "NoEqz",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Runtime",
@@ -164562,14 +165193,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "mEHop",
+                              "id": "Fohw5",
                               "name": "G",
                               "width": "fill_container",
                               "height": 10
                             },
                             {
                               "type": "text",
-                              "id": "PtaqH",
+                              "id": "gguqX",
                               "name": "L",
                               "fill": "$ds-fg-subtle",
                               "content": "DEVELOPER TOOLS",
@@ -164579,7 +165210,7 @@
                               "letterSpacing": 1
                             },
                             {
-                              "id": "m2nn5",
+                              "id": "Va2vY",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "theme": {
@@ -164601,7 +165232,7 @@
                               }
                             },
                             {
-                              "id": "VZqwd",
+                              "id": "daLwx",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Connection",
@@ -164624,14 +165255,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "RxlLj",
+                              "id": "HRVXb",
                               "name": "G",
                               "width": "fill_container",
                               "height": 10
                             },
                             {
                               "type": "text",
-                              "id": "MsAPG",
+                              "id": "vqiOq",
                               "name": "L",
                               "fill": "$ds-fg-subtle",
                               "content": "EXPERIMENTAL",
@@ -164641,7 +165272,7 @@
                               "letterSpacing": 1
                             },
                             {
-                              "id": "i8G3a",
+                              "id": "x0RNUO",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Beta features",
@@ -164666,7 +165297,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "pE1tz",
+                          "id": "ksrtK",
                           "name": "Content",
                           "width": "fill_container",
                           "height": "fill_container",
@@ -164676,7 +165307,7 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "OoVOC",
+                              "id": "c4uln",
                               "name": "Intro",
                               "width": "fill_container",
                               "layout": "vertical",
@@ -164684,7 +165315,7 @@
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "MRt9s",
+                                  "id": "NqGPb",
                                   "name": "Title",
                                   "fill": "$ds-fg",
                                   "content": "Connection status",
@@ -164694,7 +165325,7 @@
                                 },
                                 {
                                   "type": "text",
-                                  "id": "gX2OF",
+                                  "id": "XWyIR",
                                   "name": "Description",
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
@@ -164709,7 +165340,7 @@
                             },
                             {
                               "type": "frame",
-                              "id": "E0M6d",
+                              "id": "r1JNK8",
                               "name": "Switch Card",
                               "width": "fill_container",
                               "cornerRadius": 6,
@@ -164722,7 +165353,7 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "O4OBQA",
+                                  "id": "WS7Lx",
                                   "name": "Row",
                                   "width": "fill_container",
                                   "gap": 12,
@@ -164730,7 +165361,7 @@
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "TjTih",
+                                      "id": "YThYK",
                                       "name": "Label",
                                       "width": "fill_container",
                                       "layout": "vertical",
@@ -164738,7 +165369,7 @@
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "TJlFs",
+                                          "id": "wrQ0u",
                                           "name": "Name",
                                           "fill": "$ds-fg",
                                           "content": "Show connection status",
@@ -164748,7 +165379,7 @@
                                         },
                                         {
                                           "type": "text",
-                                          "id": "Q3FPw",
+                                          "id": "B3uor0",
                                           "name": "Helper",
                                           "fill": "$ds-fg-muted",
                                           "textGrowth": "fixed-width",
@@ -164762,7 +165393,7 @@
                                       ]
                                     },
                                     {
-                                      "id": "z9wkvh",
+                                      "id": "L8m1Z",
                                       "type": "ref",
                                       "ref": "ZVbcE",
                                       "name": "Switch",
@@ -164784,7 +165415,7 @@
             },
             {
               "type": "frame",
-              "id": "G06oYn",
+              "id": "G7CiA",
               "name": "Connection · On",
               "width": "fill_container",
               "fill": "$ds-bg-subtle",
@@ -164795,7 +165426,7 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "mdbJ0",
+                  "id": "WlY17",
                   "name": "H",
                   "width": "fill_container",
                   "layout": "vertical",
@@ -164803,7 +165434,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "id": "htHJJ",
+                      "id": "Q5UYq",
                       "name": "T",
                       "fill": "$ds-fg",
                       "content": "connection · on",
@@ -164813,7 +165444,7 @@
                     },
                     {
                       "type": "text",
-                      "id": "SKU48",
+                      "id": "ocYBe",
                       "name": "D",
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
@@ -164828,7 +165459,7 @@
                 },
                 {
                   "type": "frame",
-                  "id": "rWje4",
+                  "id": "gcom6",
                   "name": "Settings Surface",
                   "clip": true,
                   "width": "fill_container",
@@ -164842,7 +165473,7 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "LC6I7",
+                      "id": "fmBA5",
                       "name": "Head",
                       "width": "fill_container",
                       "height": 48,
@@ -164861,7 +165492,7 @@
                       "children": [
                         {
                           "type": "icon",
-                          "id": "Rguwq",
+                          "id": "Ti656",
                           "name": "I",
                           "width": 16,
                           "height": 16,
@@ -164871,7 +165502,7 @@
                         },
                         {
                           "type": "text",
-                          "id": "HsThS",
+                          "id": "QrWBW",
                           "name": "T",
                           "fill": "$ds-fg",
                           "content": "Settings",
@@ -164881,13 +165512,13 @@
                         },
                         {
                           "type": "frame",
-                          "id": "pLz2i",
+                          "id": "Y09yR",
                           "name": "Sp",
                           "width": "fill_container",
                           "height": 2
                         },
                         {
-                          "id": "wg5Tn",
+                          "id": "i7psEk",
                           "type": "ref",
                           "ref": "nvvgg",
                           "name": "Close",
@@ -164905,14 +165536,14 @@
                     },
                     {
                       "type": "frame",
-                      "id": "bqPdY",
+                      "id": "YHYSo",
                       "name": "Body",
                       "width": "fill_container",
                       "height": "fill_container",
                       "children": [
                         {
                           "type": "frame",
-                          "id": "P90S4u",
+                          "id": "CTeX3",
                           "name": "Sections",
                           "width": 220,
                           "height": "fill_container",
@@ -164928,7 +165559,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "unPg0",
+                              "id": "dmJRB",
                               "name": "L",
                               "fill": "$ds-fg-subtle",
                               "content": "WORKBENCH",
@@ -164938,7 +165569,7 @@
                               "letterSpacing": 1
                             },
                             {
-                              "id": "tfSYL",
+                              "id": "X1DLA",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Runtime",
@@ -164961,14 +165592,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "QguAG",
+                              "id": "IUoaD",
                               "name": "G",
                               "width": "fill_container",
                               "height": 10
                             },
                             {
                               "type": "text",
-                              "id": "Slxa7",
+                              "id": "n0Vgr",
                               "name": "L",
                               "fill": "$ds-fg-subtle",
                               "content": "DEVELOPER TOOLS",
@@ -164978,7 +165609,7 @@
                               "letterSpacing": 1
                             },
                             {
-                              "id": "pH04b",
+                              "id": "K5wAh",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "theme": {
@@ -165000,7 +165631,7 @@
                               }
                             },
                             {
-                              "id": "xPTV2",
+                              "id": "cTU3I",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Connection",
@@ -165023,14 +165654,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "PXMSt",
+                              "id": "KbsVM",
                               "name": "G",
                               "width": "fill_container",
                               "height": 10
                             },
                             {
                               "type": "text",
-                              "id": "WU7oF",
+                              "id": "acT9h",
                               "name": "L",
                               "fill": "$ds-fg-subtle",
                               "content": "EXPERIMENTAL",
@@ -165040,7 +165671,7 @@
                               "letterSpacing": 1
                             },
                             {
-                              "id": "rVKK2",
+                              "id": "smDWU",
                               "type": "ref",
                               "ref": "t5G2s8",
                               "name": "Beta features",
@@ -165065,7 +165696,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "padCZ",
+                          "id": "W3hSGk",
                           "name": "Content",
                           "width": "fill_container",
                           "height": "fill_container",
@@ -165075,7 +165706,7 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "UsH7D",
+                              "id": "l21hD",
                               "name": "Intro",
                               "width": "fill_container",
                               "layout": "vertical",
@@ -165083,7 +165714,7 @@
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "w2OT3g",
+                                  "id": "memyL",
                                   "name": "Title",
                                   "fill": "$ds-fg",
                                   "content": "Connection status",
@@ -165093,7 +165724,7 @@
                                 },
                                 {
                                   "type": "text",
-                                  "id": "Epfn4",
+                                  "id": "wdFCw",
                                   "name": "Description",
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
@@ -165108,7 +165739,7 @@
                             },
                             {
                               "type": "frame",
-                              "id": "vH0QT",
+                              "id": "R17md",
                               "name": "Switch Card",
                               "width": "fill_container",
                               "cornerRadius": 6,
@@ -165121,7 +165752,7 @@
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "mlQ1t",
+                                  "id": "ENQGs",
                                   "name": "Row",
                                   "width": "fill_container",
                                   "gap": 12,
@@ -165129,7 +165760,7 @@
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "u7Kf8x",
+                                      "id": "L4JSC",
                                       "name": "Label",
                                       "width": "fill_container",
                                       "layout": "vertical",
@@ -165137,7 +165768,7 @@
                                       "children": [
                                         {
                                           "type": "text",
-                                          "id": "aM4mo",
+                                          "id": "fEXEo",
                                           "name": "Name",
                                           "fill": "$ds-fg",
                                           "content": "Show connection status",
@@ -165147,7 +165778,7 @@
                                         },
                                         {
                                           "type": "text",
-                                          "id": "OqpKK",
+                                          "id": "PWJrU",
                                           "name": "Helper",
                                           "fill": "$ds-fg-muted",
                                           "textGrowth": "fixed-width",
@@ -165161,7 +165792,7 @@
                                       ]
                                     },
                                     {
-                                      "id": "x42FG",
+                                      "id": "bWSGA",
                                       "type": "ref",
                                       "ref": "ZVbcE",
                                       "name": "Switch",
@@ -165185,7 +165816,7 @@
         },
         {
           "type": "frame",
-          "id": "bo60d",
+          "id": "CPMmL",
           "name": "Outage warning · trailing status",
           "width": "fill_container",
           "height": 32,
@@ -165198,7 +165829,8 @@
           "children": [
             {
               "type": "text",
-              "id": "mOcAC",
+              "id": "dQVrq",
+              "name": "text",
               "fill": "$ds-fg-muted",
               "content": "Loaded navigation stays visible",
               "fontFamily": "$font-body",
@@ -165207,13 +165839,14 @@
             },
             {
               "type": "frame",
-              "id": "gsxnK",
+              "id": "jSpHq",
+              "name": "frame",
               "width": "fill_container",
               "height": 2
             },
             {
               "type": "frame",
-              "id": "N4Eijx",
+              "id": "K8XAhY",
               "name": "Backend connection warning",
               "height": 20,
               "gap": 4,
@@ -165225,7 +165858,7 @@
               "children": [
                 {
                   "type": "icon",
-                  "id": "pavY8",
+                  "id": "Y8emD",
                   "name": "Warning",
                   "width": 12,
                   "height": 12,
@@ -165235,7 +165868,7 @@
                 },
                 {
                   "type": "text",
-                  "id": "p8tx9B",
+                  "id": "SsXhN",
                   "name": "Label",
                   "fill": "$ds-warning",
                   "content": "Reconnecting",
@@ -165249,7 +165882,7 @@
         },
         {
           "type": "text",
-          "id": "fqWmQ",
+          "id": "EANSh",
           "name": "Interaction",
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",

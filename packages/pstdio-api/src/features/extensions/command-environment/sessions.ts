@@ -3,6 +3,7 @@ import type {
   ExtensionSessionsApi,
   ResourceAnchor,
 } from "pstdio-api-contracts/extension-kernel";
+import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
@@ -12,6 +13,8 @@ import { resolveSessionAttachments } from "../../sessions/session-attachments";
 import { createSessionScheduler } from "../../sessions/session-scheduler";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolveExtensionPrompt, resolveHarnessInput } from "./prompt";
+import { validateLegacyAnchors } from "./resource-link-policy";
+import { createResourceLinksApi } from "./resource-links";
 
 const toExtensionSession = (session: unknown) => session as Awaited<ReturnType<ExtensionSessionsApi["get"]>>;
 
@@ -155,11 +158,19 @@ export const createSessionsApi = (
     },
     addAnchors: async (id, anchors) => {
       await requireProjectSession(id);
+      await validateLegacyAnchors(
+        deps,
+        { type: "session", id, projectId: input.projectId, extensionId: "pstdio" },
+        anchors,
+      );
       await deps.sessionService.addAnchors(id, anchors);
     },
     removeAnchors: async (id, refs) => {
       await requireProjectSession(id);
-      await deps.sessionService.removeAnchors(id, refs);
+      await createResourceLinksApi(deps, input).removeAnchors(
+        { type: "session", id, extensionId: "pstdio" },
+        refs.map((ref) => ({ ...ref, extensionId: legacyResourceOwner(ref) })),
+      );
     },
   };
 };

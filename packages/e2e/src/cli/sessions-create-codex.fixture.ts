@@ -16,14 +16,12 @@ for await (const line of createInterface({ input: process.stdin })) {
     });
   if (request.method === "thread/start")
     emit({ id: request.id, result: { thread: { id: "codex-e2e-thread", path: null } } });
-  // Session creation reads the model list to resolve harness parameters.
-  if (request.method === "model/list") emit({ id: request.id, result: { data: [{ id: "gpt-5.5", isDefault: true }] } });
   if (request.method !== "turn/start") continue;
   appendFileSync(
     process.env.CODEX_E2E_PROMPTS!,
     `${request.params.input.map((part: { text: string }) => part.text).join("\n")}\n`,
   );
-  emit({ id: request.id, result: {} });
+  emit({ id: request.id, result: { turn: { id: "turn-e2e" } } });
   emit({ method: "item/completed", params: { item: { id: "item_0", type: "agentMessage", text: "done" } } });
-  emit({ method: "turn/completed", params: { turn: { status: "completed" } } });
+  emit({ method: "turn/completed", params: { turn: { id: "turn-e2e", status: "completed" } } });
 }

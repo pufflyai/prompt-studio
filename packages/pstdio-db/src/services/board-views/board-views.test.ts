@@ -69,6 +69,37 @@ test("rejects incomplete ordering without changing any saved order", async () =>
   expect((await service.list(scope)).map((row) => row.id)).toEqual([first.id, second.id]);
 });
 
+test("initializes starting views once and leaves user edits unchanged", async () => {
+  const views = [
+    { title: "All", settings, ...unfiltered },
+    { title: "Todo", settings, ...statusIs("todo") },
+  ];
+  const initialized = await Promise.all([service.initialize(scope, views, 1), service.initialize(scope, views, 1)]);
+  expect(initialized.map((rows) => rows.length).sort()).toEqual([0, 2]);
+  const saved = await service.list(scope);
+  expect(saved).toHaveLength(2);
+  expect((await service.getDefault(scope))?.default_view_id).toBe(saved[1].id);
+  await service.update(scope.project_id, saved[0].id, { title: "My tasks" });
+  await service.remove(scope.project_id, saved[1].id);
+  expect(await service.initialize(scope, views, 1)).toEqual([]);
+  expect(await service.list(scope)).toMatchObject([{ id: saved[0].id, title: "My tasks" }]);
+});
+
+test("keeps the last view when competing deletions target the same board", async () => {
+  const first = await service.create({ ...scope, title: "First", settings, ...unfiltered });
+  const second = await service.create({ ...scope, title: "Second", settings, ...unfiltered });
+  const results = await Promise.allSettled([
+    service.remove(scope.project_id, first.id),
+    service.remove(scope.project_id, second.id),
+  ]);
+  expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+  expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+  const [remaining] = await service.list(scope);
+  expect(remaining).toBeDefined();
+  await expect(service.remove(scope.project_id, remaining.id)).rejects.toThrow("at least one view");
+  expect(await service.list(scope)).toHaveLength(1);
+});
+
 test("treats views and built-in defaults as extension user data and cascades project deletion", async () => {
   const userData = createExtensionUserDataDBService(connection.db);
   await service.setDefault(scope, "builtin");

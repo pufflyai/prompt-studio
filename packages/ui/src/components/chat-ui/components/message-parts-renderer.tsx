@@ -3,16 +3,22 @@ import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { RichMessage } from "@/components/rich-text";
+import { ChatImageSourcesContext, indexChatImageSources, useChatImageHistory } from "../links/chat-image-sources";
+import type { ChatLinkProps } from "../links/chat-link";
+import { ChatLinkProvider, useChatLinkHandler } from "../links/chat-link-context";
+import { parseQuestionPrompt } from "../tool-rendering/question-prompt";
 import { Response } from "./ai-response";
+import { ChatQuestionBubble } from "./chat-question-bubble";
 import type { AlertPart, ChatMessagePart, ErrorPart, FilePart, SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
 
 type ToolInvocationTimelineComponent = (props: ToolInvocationTimelineProps) => ReactNode;
 
-export interface MessagePartsProps {
+export interface MessagePartsProps extends ChatLinkProps {
   message: SessionMessage;
   streaming?: boolean;
   hideQuestionForms?: boolean;
+  /** @deprecated Use linkHandler for workspace file references. */
   onOpenFile?: (filePath: string) => void;
   toolInvocationTimeline?: ToolInvocationTimelineComponent;
 }
@@ -82,7 +88,7 @@ const collectToolInvocations = (parts: ChatMessagePart[], startIndex: number) =>
 
   while (lookahead < parts.length) {
     const nextPart = parts[lookahead];
-    if (!isToolPart(nextPart)) break;
+    if (!isToolPart(nextPart) || (nextPart.tool === "question" && parseQuestionPrompt(nextPart.state?.input))) break;
     invocations.push(nextPart);
     lookahead += 1;
   }
@@ -91,7 +97,19 @@ const collectToolInvocations = (parts: ChatMessagePart[], startIndex: number) =>
 };
 
 export function MessagePartsRenderer(props: MessagePartsProps) {
+  const inherited = useChatLinkHandler();
+  return (
+    <ChatLinkProvider handler={props.linkHandler ?? inherited}>
+      <MessagePartsContent {...props} />
+    </ChatLinkProvider>
+  );
+}
+
+function MessagePartsContent(props: MessagePartsProps) {
   const { message, hideQuestionForms = false, onOpenFile, toolInvocationTimeline } = props;
+  const linkHandler = useChatLinkHandler();
+  const imageHistory = useChatImageHistory();
+  const localImages = indexChatImageSources([message], linkHandler);
   const RenderToolInvocationTimeline = toolInvocationTimeline ?? ToolInvocationTimeline;
   const parts = message.parts ?? [];
   const nodes: ReactNode[] = [];
@@ -103,9 +121,11 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
     switch (part.type) {
       case "text":
         nodes.push(
-          <div key={key}>
-            <Response>{part.text}</Response>
-          </div>,
+          <ChatImageSourcesContext key={key} value={imageHistory.get(part) ?? localImages.get(part)!}>
+            <div>
+              <Response>{part.text}</Response>
+            </div>
+          </ChatImageSourcesContext>,
         );
         break;
       case "reasoning":
@@ -126,12 +146,17 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
         );
         break;
       case "tool": {
+        if (part.tool === "question" && parseQuestionPrompt(part.state?.input)) {
+          nodes.push(<ChatQuestionBubble key={key} part={part} />);
+          break;
+        }
         const { invocations, nextIndex } = collectToolInvocations(parts, partIndex);
         partIndex = nextIndex;
         nodes.push(
           <Box key={key} width="full">
             <RenderToolInvocationTimeline
               invocations={invocations}
+              linkHandler={linkHandler}
               labeledBlocks
               hideQuestionForms={hideQuestionForms}
               onOpenFile={onOpenFile}
