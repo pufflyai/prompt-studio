@@ -5,5 +5,8 @@
   },
   "connection": {
     "lost": "서버 연결이 끊어졌습니다. 자동으로 다시 연결하는 중입니다."
+  },
+  "states": {
+    "reconnecting": "다시 연결 중"
   }
 }

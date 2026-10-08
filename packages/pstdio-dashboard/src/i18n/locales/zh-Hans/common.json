@@ -5,5 +5,8 @@
   },
   "connection": {
     "lost": "与服务器的连接已断开，正在自动重新连接。"
+  },
+  "states": {
+    "reconnecting": "正在重新连接"
   }
 }

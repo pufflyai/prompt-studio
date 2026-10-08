@@ -5,5 +5,8 @@
   },
   "connection": {
     "lost": "Se perdió la conexión con el servidor. Reconectando automáticamente."
+  },
+  "states": {
+    "reconnecting": "Reconectando"
   }
 }

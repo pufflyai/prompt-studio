@@ -26,7 +26,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Disconnected: Story = {};
+export const Disconnected: Story = {
+  play: async ({ canvasElement }) => {
+    const status = within(canvasElement).getByRole("status");
+    await expect(status).toBeVisible();
+    await expect(status).not.toHaveTextContent("states.reconnecting");
+  },
+};
 export const Recovered: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

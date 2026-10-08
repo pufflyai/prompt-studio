@@ -15,8 +15,15 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     await expect(toggle).toBeChecked();
     await page.reload();
     await expect(toggle).toBeChecked();
+    await page.context().setOffline(true);
+    await page.evaluate(() => window.stop());
+    const warning = page.getByRole("status", { name: /backend connection lost/i, includeHidden: true });
+    await expect(warning).toBeVisible();
+    await expect(warning).not.toHaveText("states.reconnecting");
     await toggle.focus();
     await toggle.press("Space");
+    await expect(warning).not.toBeVisible();
+    await page.context().setOffline(false);
     await page.reload();
     await expect(toggle).not.toBeChecked();
   } finally {

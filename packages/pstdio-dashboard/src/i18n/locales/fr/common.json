@@ -5,5 +5,8 @@
   },
   "connection": {
     "lost": "Connexion au serveur perdue. Reconnexion automatique en cours."
+  },
+  "states": {
+    "reconnecting": "Reconnexion"
   }
 }
