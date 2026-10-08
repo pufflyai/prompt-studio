@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Add a connection badge and saved drag and keyboard ordering for status bar items.
+Add a ghost connection indicator and saved widget dragging and keyboard ordering in the status bar.

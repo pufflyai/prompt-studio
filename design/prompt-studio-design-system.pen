@@ -165823,16 +165823,17 @@
               "id": "j8CGB",
               "name": "Backend connection status",
               "context": "Green connection dot. Hover or keyboard focus: Connected to backend.",
-              "height": 20,
-              "fill": "$ds-bg-subtle",
-              "cornerRadius": 4,
+              "width": 24,
+              "height": 24,
+              "fill": "#00000000",
+              "cornerRadius": "$btn-radius",
               "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "gap": 4,
+              "gap": "$btn-gap",
               "padding": [
                 0,
                 6
               ],
+              "justifyContent": "center",
               "alignItems": "center",
               "children": [
                 {
@@ -165882,16 +165883,16 @@
               "id": "K8XAhY",
               "name": "Backend connection warning",
               "context": "Red connection dot and Backend unavailable. Hover or keyboard focus: Backend connection lost. Reconnecting automatically.",
-              "height": 20,
-              "fill": "$ds-bg-subtle",
-              "cornerRadius": 4,
+              "height": 24,
+              "fill": "#00000000",
+              "cornerRadius": "$btn-radius",
               "stroke": "$ds-border",
-              "strokeWidth": 1,
-              "gap": 4,
+              "gap": "$btn-gap",
               "padding": [
                 0,
                 6
               ],
+              "justifyContent": "center",
               "alignItems": "center",
               "children": [
                 {
@@ -165910,7 +165911,7 @@
                   "content": "Backend unavailable",
                   "fontFamily": "$font-label",
                   "fontSize": 12,
-                  "fontWeight": "normal"
+                  "fontWeight": "500"
                 }
               ]
             }
@@ -165932,7 +165933,7 @@
           "type": "frame",
           "id": "IpczA",
           "name": "Reorder status bar items",
-          "context": "Hover or focus an item to reveal its grip. Grips use a 24 px hit area and stay visible on touch screens. A side with only one item has no grip. Drag within the leading or trailing side; the source stays at 50% opacity and the 2 px accent line marks the insertion edge. Alt+Left/Right on a grip reorders with keyboard focus. Save the order on this device, including temporarily disabled items.",
+          "context": "Drag a status widget directly, like a tab, to reorder it within its side. No grip controls. A 2 px placement line marks the drop edge and the source stays at 50% opacity. Focus the item or its control and use Alt+Left/Right to reorder. Normal clicks still open widget controls. Save the order on this device, including temporarily disabled items. The bar is 32 px tall with 12 px padding on both sides. Ghost connection controls use a 24 px height and a centered 6 px dot.",
           "width": "fill_container",
           "height": 32,
           "padding": [
@@ -165951,31 +165952,10 @@
             {
               "type": "frame",
               "id": "mRBTb",
-              "name": "Performance status item with grip",
+              "name": "Performance status item",
               "height": 32,
               "alignItems": "center",
               "children": [
-                {
-                  "type": "frame",
-                  "id": "AKKyD",
-                  "name": "Performance drag grip hit area",
-                  "width": 24,
-                  "height": 24,
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "id": "h1IFy",
-                      "name": "Performance drag handle",
-                      "width": 12,
-                      "height": 12,
-                      "icon": "grip-vertical",
-                      "library": "lucide",
-                      "fill": "$ds-fg-muted"
-                    }
-                  ]
-                },
                 {
                   "id": "OpCkS",
                   "type": "ref",
@@ -166002,40 +165982,20 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "LufzX",
-                  "name": "Connection drag grip hit area",
-                  "width": 24,
-                  "height": 24,
-                  "justifyContent": "center",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "id": "vb2rX",
-                      "name": "Connection drag handle",
-                      "width": 12,
-                      "height": 12,
-                      "icon": "grip-vertical",
-                      "library": "lucide",
-                      "fill": "$ds-fg-muted"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
                   "id": "b2Rpf",
                   "name": "Connection badge while dragging",
                   "context": "Green connection dot. Hover or keyboard focus: Connected to backend.",
-                  "height": 20,
-                  "fill": "$ds-bg-subtle",
-                  "cornerRadius": 4,
+                  "width": 24,
+                  "height": 24,
+                  "fill": "#00000000",
+                  "cornerRadius": "$btn-radius",
                   "stroke": "$ds-border",
-                  "strokeWidth": 1,
-                  "gap": 4,
+                  "gap": "$btn-gap",
                   "padding": [
                     0,
                     6
                   ],
+                  "justifyContent": "center",
                   "alignItems": "center",
                   "children": [
                     {

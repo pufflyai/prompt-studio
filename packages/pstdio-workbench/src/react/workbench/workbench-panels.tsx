@@ -92,6 +92,7 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
         display={chrome ? "none" : "flex"}
         alignItems="stretch"
         justifyContent="space-between"
+        px="sm"
         h="full"
         minW="0"
         w="full"

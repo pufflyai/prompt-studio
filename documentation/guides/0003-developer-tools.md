@@ -10,7 +10,7 @@ The switch is off by default and is saved on this device. Turning it off hides t
 
 ## Reorder status bar items
 
-When a side has several items, hover an item to reveal its grip, then drag the grip to place the item before or after another item. On a touch screen, the grips stay visible. You can also focus a grip and press **Alt+Left** or **Alt+Right**. Items stay on their leading or trailing side.
+When a side has several items, drag a widget directly, like a tab, to place it before or after another widget. You can also focus a widget or its control and press **Alt+Left** or **Alt+Right**. A normal click still opens the widget's controls. Items stay on their leading or trailing side.
 
 The order is saved on this device. It survives reloads, connection recovery, and turning an indicator off and on.
 

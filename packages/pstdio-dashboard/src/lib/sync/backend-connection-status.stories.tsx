@@ -8,7 +8,7 @@ const ConnectionStatus = () => {
   const [connected, setConnected] = useState(false);
   return (
     <Stack gap="md">
-      <Box as="footer" bg="bg" h="7" display="flex" alignItems="center" justifyContent="flex-end" px="sm">
+      <Box as="footer" bg="bg" h="xl" display="flex" alignItems="center" justifyContent="flex-end" px="sm">
         <BackendConnectionStatus connected={connected} />
       </Box>
       <Button size="sm" onClick={() => setConnected(!connected)}>

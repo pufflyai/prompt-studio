@@ -1,4 +1,4 @@
-import { Badge, Icon } from "@chakra-ui/react";
+import { Button, Icon } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { Circle } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -14,9 +14,10 @@ export const BackendConnectionStatus = (props: BackendConnectionStatusProps) => 
 
   return (
     <Tooltip content={description} openDelay={300} closeDelay={150} positioning={{ placement: "top-end" }}>
-      <Badge
-        variant="chip"
-        size="sm"
+      <Button
+        as="span"
+        variant="ghost"
+        size="2xs"
         color={connected ? "fg.success" : "fg.error"}
         tabIndex={0}
         role="status"
@@ -24,7 +25,7 @@ export const BackendConnectionStatus = (props: BackendConnectionStatusProps) => 
       >
         <Icon as={Circle} boxSize="status-dot" fill="currentColor" strokeWidth={0} aria-hidden="true" />
         {!connected && t("connection.unavailable")}
-      </Badge>
+      </Button>
     </Tooltip>
   );
 };

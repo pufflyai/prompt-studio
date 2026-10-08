@@ -128,20 +128,20 @@ export const ReorderableItems: Story = {
     docs: {
       description: {
         story:
-          "Hover an item to reveal its drag handle. Focus the handle and use Alt+Left or Alt+Right to reorder with the keyboard. Items keep their leading or trailing slot.",
+          "Drag a widget directly, like a tab, to reorder it. Focus a widget or its control and use Alt+Left or Alt+Right to reorder with the keyboard. Items keep their leading or trailing slot.",
       },
     },
   },
   play: async ({ canvas }) => {
     reorderWorkbench.statusBar.reorderItem("Connection", { beforeItemId: "Performance" });
-    const handle = canvas.getByRole("button", { name: "Reorder Connection" });
-    handle.focus();
+    const item = canvas.getByRole("group", { name: "Connection" });
+    item.focus();
     await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
     await expect(reorderWorkbench.statusBar.listVisibleItems("trailing").map((item) => item.id)).toEqual([
       "Performance",
       "Connection",
     ]);
-    await expect(handle).toHaveFocus();
+    await expect(item).toHaveFocus();
     await userEvent.keyboard("{Alt>}{ArrowLeft}{/Alt}");
     await expect(reorderWorkbench.statusBar.listVisibleItems("trailing").map((item) => item.id)).toEqual([
       "Connection",

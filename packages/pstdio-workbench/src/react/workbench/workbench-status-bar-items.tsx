@@ -1,4 +1,4 @@
-import { Box, IconButton } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import {
   DndContext,
   type DragOverEvent,
@@ -11,12 +11,11 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { DropIndicator, Tooltip } from "@pstdio/ui";
+import { DropIndicator } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarSlot, WorkbenchWidgetPlacement } from "../../core";
 import { useRetainedViewPlacements } from "../region/use-retained-view-placements";
 import { WorkbenchWidgetHost } from "../region/widget-host";
-import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -55,42 +54,36 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
   const title = placement.title ?? id;
   return (
     <Box
-      ref={target.setNodeRef}
+      ref={(node: HTMLDivElement | null) => {
+        drag.setNodeRef(node);
+        target.setNodeRef(node);
+      }}
+      {...drag.listeners}
+      tabIndex={sortable ? 0 : undefined}
+      role="group"
+      aria-label={title}
+      aria-describedby={sortable ? drag.attributes["aria-describedby"] : undefined}
+      aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
       data-status-bar-item={id}
+      data-sortable={sortable || undefined}
       data-dragging={activeId === id || undefined}
       layerStyle="statusBarItem"
       alignItems="center"
       display={order < 0 ? "none" : "flex"}
       inert={order < 0}
       order={order}
+      touchAction={sortable ? "pan-y" : undefined}
+      onKeyDown={(event) => {
+        if (!sortable || !event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const left = event.key === "ArrowLeft";
+        const neighbor = ids[order + (left ? -1 : 1)];
+        if (neighbor) {
+          workbench.statusBar.reorderItem(id, left ? { beforeItemId: neighbor } : { afterItemId: neighbor });
+        }
+      }}
     >
-      {sortable ? (
-        <Tooltip content={reorderInstructions} openDelay={300} closeDelay={150} positioning={{ placement: "top" }}>
-          <IconButton
-            ref={drag.setNodeRef}
-            {...drag.attributes}
-            {...drag.listeners}
-            data-status-drag-handle
-            aria-label={`Reorder ${title}`}
-            aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
-            size="2xs"
-            variant="ghost"
-            touchAction="none"
-            onKeyDown={(event) => {
-              if (!event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-              event.preventDefault();
-              event.stopPropagation();
-              const left = event.key === "ArrowLeft";
-              const neighbor = ids[order + (left ? -1 : 1)];
-              if (neighbor) {
-                workbench.statusBar.reorderItem(id, left ? { beforeItemId: neighbor } : { afterItemId: neighbor });
-              }
-            }}
-          >
-            <WorkbenchIcon name="grip-vertical" />
-          </IconButton>
-        </Tooltip>
-      ) : null}
       <WorkbenchWidgetHost workbench={workbench} region="status" placement={placement} />
       {/* A drag must keep its pointer events in the host, even over an extension iframe. */}
       {activeId ? <Box position="absolute" inset="0" /> : null}
