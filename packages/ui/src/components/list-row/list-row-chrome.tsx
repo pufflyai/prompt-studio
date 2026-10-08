@@ -5,7 +5,9 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem } from "./list-row.types";
 import { ListRowMenu } from "./list-row-menu";
 
-const createResourceContextActions = (items: NonNullable<ListRowItem["contextMenuItems"]>): ResourceContextAction[] =>
+export const createResourceContextActions = (
+  items: NonNullable<ListRowItem["contextMenuItems"]>,
+): ResourceContextAction[] =>
   items.map((entry) => ({
     key: entry.id,
     label: entry.label,
@@ -30,6 +32,7 @@ export const ListRowChrome = (props: ListRowChromeProps) => {
   if (item.menuItems && item.menuItems.length > 0) {
     return (
       <ListRowMenu
+        triggerId={item.id}
         items={item.menuItems}
         open={menuOpen}
         placement={item.menuPlacement}

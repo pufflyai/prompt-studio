@@ -222,6 +222,7 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   ).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(ticketUrl);
   await row("Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await expect(page.getByRole("menuitem", { name: "Reset to default", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Open session panel", exact: true })).toHaveCount(0);
 });
