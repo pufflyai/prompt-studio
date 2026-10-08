@@ -165822,6 +165822,7 @@
               "type": "frame",
               "id": "j8CGB",
               "name": "Backend connection status",
+              "context": "Green connection dot. Hover or keyboard focus: Connected to backend.",
               "height": 20,
               "gap": 4,
               "padding": [
@@ -165831,24 +165832,12 @@
               "alignItems": "center",
               "children": [
                 {
-                  "type": "icon",
-                  "id": "nduiI",
-                  "name": "Connected",
-                  "width": 12,
-                  "height": 12,
-                  "icon": "wifi",
-                  "library": "lucide",
-                  "fill": "$ds-fg-muted"
-                },
-                {
-                  "type": "text",
-                  "id": "Ub5pb",
-                  "name": "Label",
-                  "fill": "$ds-fg-muted",
-                  "content": "Connected",
-                  "fontFamily": "$font-label",
-                  "fontSize": 12,
-                  "fontWeight": "500"
+                  "type": "ellipse",
+                  "id": "cvXVO",
+                  "name": "Connected dot",
+                  "fill": "$ds-success",
+                  "width": 6,
+                  "height": 6
                 }
               ]
             }
@@ -165888,6 +165877,7 @@
               "type": "frame",
               "id": "K8XAhY",
               "name": "Backend connection warning",
+              "context": "Red connection dot and Backend unavailable. Hover or keyboard focus: Backend connection lost. Reconnecting automatically.",
               "height": 20,
               "gap": 4,
               "padding": [
@@ -165897,21 +165887,19 @@
               "alignItems": "center",
               "children": [
                 {
-                  "type": "icon",
-                  "id": "Y8emD",
-                  "name": "Warning",
-                  "width": 12,
-                  "height": 12,
-                  "icon": "triangle-alert",
-                  "library": "lucide",
-                  "fill": "$ds-warning"
+                  "type": "ellipse",
+                  "id": "A0XXZ",
+                  "name": "Disconnected dot",
+                  "fill": "$ds-error",
+                  "width": 6,
+                  "height": 6
                 },
                 {
                   "type": "text",
                   "id": "SsXhN",
                   "name": "Label",
-                  "fill": "$ds-warning",
-                  "content": "Reconnecting",
+                  "fill": "$ds-error",
+                  "content": "Backend unavailable",
                   "fontFamily": "$font-label",
                   "fontSize": 12,
                   "fontWeight": "500"
@@ -165927,7 +165915,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "When enabled, show Connected in muted text while live sync is connected. Show amber Reconnecting after connection loss. Tooltips explain connection health on hover and keyboard focus. Loaded navigation stays visible. Recovery restores Connected.",
+          "content": "When enabled, show a green dot while connected. After connection loss, show a red dot and Backend unavailable. Tooltips explain connection health on hover and keyboard focus. Loaded navigation stays visible. Recovery restores the green dot.",
           "fontFamily": "$font-body",
           "fontSize": 12,
           "fontWeight": "normal"

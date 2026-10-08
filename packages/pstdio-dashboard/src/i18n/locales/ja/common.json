@@ -5,10 +5,7 @@
   },
   "connection": {
     "lost": "サーバーとの接続が切れました。自動的に再接続しています。",
-    "connected": "バックエンドに接続しています。"
-  },
-  "states": {
-    "reconnecting": "再接続中",
-    "connected": "接続済み"
+    "connected": "バックエンドに接続しています。",
+    "unavailable": "バックエンドに接続できません"
   }
 }

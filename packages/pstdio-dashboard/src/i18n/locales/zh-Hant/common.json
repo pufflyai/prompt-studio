@@ -5,10 +5,7 @@
   },
   "connection": {
     "lost": "與伺服器的連線已中斷，正在自動重新連線。",
-    "connected": "已連線至後端。"
-  },
-  "states": {
-    "reconnecting": "正在重新連線",
-    "connected": "已連線"
+    "connected": "已連線至後端。",
+    "unavailable": "後端無法使用"
   }
 }

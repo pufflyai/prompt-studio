@@ -15,6 +15,7 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     await expect(toggle).toBeChecked();
     const connected = page.getByRole("status", { name: /connected to backend/i, includeHidden: true });
     await expect(connected).toBeVisible();
+    await expect(connected).toHaveText("");
     await page.reload();
     await expect(toggle).toBeChecked();
     await expect(connected).toBeVisible();
@@ -22,18 +23,27 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     await page.evaluate(() => window.stop());
     const warning = page.getByRole("status", { name: /backend connection lost/i, includeHidden: true });
     await expect(warning).toBeVisible();
-    await expect(warning).not.toHaveText("states.reconnecting");
+    await expect(warning).not.toHaveText("");
     await toggle.focus();
     await toggle.press("Space");
     await expect(warning).not.toBeVisible();
+    await toggle.press("Space");
+    await expect(warning).toBeVisible();
+    await page.keyboard.press("Escape");
+    await warning.focus();
+    await expect(page.getByRole("tooltip")).toHaveText((await warning.getAttribute("aria-label")) ?? "");
     await page.context().setOffline(false);
     await page.reload();
-    await expect(toggle).not.toBeChecked();
+    await expect(connected).toBeVisible();
+    await connected.hover();
+    await expect(page.getByRole("tooltip")).toHaveText((await connected.getAttribute("aria-label")) ?? "");
+    await page.getByText("Settings", { exact: true }).click();
+    await page.getByText("Connection", { exact: true }).click();
     await toggle.focus();
     await toggle.press("Space");
-    await expect(connected).toBeVisible();
-    await toggle.press("Space");
     await expect(connected).not.toBeVisible();
+    await page.reload();
+    await expect(toggle).not.toBeChecked();
   } finally {
     await browser.close();
   }

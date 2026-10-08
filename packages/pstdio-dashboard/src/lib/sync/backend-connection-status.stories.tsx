@@ -31,10 +31,20 @@ export const Disconnected: Story = {
   play: async ({ canvasElement }) => {
     const status = within(canvasElement).getByRole("status");
     await expect(status).toBeVisible();
-    await expect(status).not.toHaveTextContent("states.reconnecting");
+    await expect(status).not.toHaveTextContent(/^$/);
   },
 };
-export const Connected: Story = { args: { connected: true } };
+export const Connected: Story = {
+  args: { connected: true },
+  play: async ({ canvasElement }) => {
+    const status = within(canvasElement).getByRole("status");
+    await expect(status).toHaveTextContent(/^$/);
+    await userEvent.tab();
+    await expect(status).toHaveFocus();
+    const tooltip = await within(document.body).findByRole("tooltip");
+    await expect(tooltip).toHaveTextContent(status.getAttribute("aria-label") ?? "");
+  },
+};
 export const Recovered: Story = {
   render: () => <ConnectionStatus />,
   play: async ({ canvasElement }) => {
@@ -42,6 +52,7 @@ export const Recovered: Story = {
     await expect(canvas.getByRole("status")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Reconnect" }));
     await expect(canvas.getByRole("status")).toBeVisible();
+    await expect(canvas.getByRole("status")).toHaveTextContent(/^$/);
     await expect(canvas.queryByRole("status", { name: /connection lost/i })).not.toBeInTheDocument();
   },
 };

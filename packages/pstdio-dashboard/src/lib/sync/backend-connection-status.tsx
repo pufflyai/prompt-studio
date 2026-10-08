@@ -1,6 +1,6 @@
 import { Badge, Icon } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { TriangleAlert, Wifi } from "lucide-react";
+import { Circle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface BackendConnectionStatusProps {
@@ -17,13 +17,13 @@ export const BackendConnectionStatus = (props: BackendConnectionStatusProps) => 
       <Badge
         variant="plain"
         size="sm"
-        color={connected ? "fg.muted" : "fg.warning"}
+        color={connected ? "fg.success" : "fg.error"}
         tabIndex={0}
         role="status"
         aria-label={description}
       >
-        <Icon as={connected ? Wifi : TriangleAlert} boxSize="3" aria-hidden="true" />
-        {t(connected ? "states.connected" : "states.reconnecting")}
+        <Icon as={Circle} boxSize="status-dot" fill="currentColor" strokeWidth={0} aria-hidden="true" />
+        {!connected && t("connection.unavailable")}
       </Badge>
     </Tooltip>
   );

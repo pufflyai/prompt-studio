@@ -5,10 +5,7 @@
   },
   "connection": {
     "lost": "Se perdió la conexión con el servidor. Reconectando automáticamente.",
-    "connected": "Conectado al servidor."
-  },
-  "states": {
-    "reconnecting": "Reconectando",
-    "connected": "Conectado"
+    "connected": "Conectado al servidor.",
+    "unavailable": "Servidor no disponible"
   }
 }

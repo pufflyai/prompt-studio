@@ -5,10 +5,7 @@
   },
   "connection": {
     "lost": "Backend connection lost. Reconnecting automatically.",
-    "connected": "Connected to backend."
-  },
-  "states": {
-    "reconnecting": "Reconnecting",
-    "connected": "Connected"
+    "connected": "Connected to backend.",
+    "unavailable": "Backend unavailable"
   }
 }
