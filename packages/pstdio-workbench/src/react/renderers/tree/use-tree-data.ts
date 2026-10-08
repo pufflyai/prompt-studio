@@ -9,6 +9,8 @@ import {
   loadExpandedTreeChildren,
   loadTreeData,
 } from "./tree-view-load";
+import { canMoveTreeNode, createMoveTreeNode } from "./tree-view-move";
+import { useTreeMovement } from "./use-tree-movement";
 
 export const useTreeData = (
   workbench: WorkbenchCore,
@@ -17,6 +19,7 @@ export const useTreeData = (
   viewId?: string,
   filter?: string,
   ownerKey = JSON.stringify(["tree", treeViewId, viewId]),
+  onMoveError?: (error: unknown) => void,
 ) => {
   const trees = getWorkbenchRenderers(workbench);
   useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
@@ -79,14 +82,35 @@ export const useTreeData = (
       }));
     });
   };
+  const savedBody = read.value?.body ?? [];
+  const savedChildren = {
+    ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
+    ...read.value?.children,
+  };
+  const renderer = trees.getTreeRenderer(treeViewId);
+  const movement = useTreeMovement({
+    scope: queryKey,
+    body: savedBody,
+    childrenByNodeId: savedChildren,
+    canMove: (sourceId, targetId) =>
+      canMoveTreeNode({ sections: savedBody, childrenByNodeId: savedChildren }, sourceId, targetId),
+    persist: renderer
+      ? createMoveTreeNode({
+          workbench,
+          renderer,
+          resource,
+          viewId,
+          sections: savedBody,
+          childrenByNodeId: savedChildren,
+          onError: onMoveError,
+        })
+      : undefined,
+    refresh: read.retry,
+  });
   return {
-    body: read.value?.body ?? [],
+    ...movement,
     header: read.value?.header ?? [],
     footer: read.value?.footer ?? [],
-    childrenByNodeId: {
-      ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
-      ...read.value?.children,
-    },
     loadChildren,
     error: read.error ?? null,
     loading: read.loading && !read.value,

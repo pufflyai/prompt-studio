@@ -83,6 +83,7 @@ export const MovableFiles: Story = {
 const MovableNotes = () => {
   const [inFolder, setInFolder] = useState(false);
   const [order, setOrder] = useState(["note", "second"]);
+  const [navigationOrder, setNavigationOrder] = useState(["workspaces", "notes"]);
   const note = { id: "note", label: "Research note", canDrag: true, canDrop: true };
   const second = { id: "second", label: "Meeting notes", canDrag: true, canDrop: true };
   return (
@@ -106,9 +107,10 @@ const MovableNotes = () => {
                 }),
               ],
             },
-          ],
+          ].sort((a, b) => navigationOrder.indexOf(a.id) - navigationOrder.indexOf(b.id)),
         },
       ]}
+      onReorderNodes={(_, ids) => setNavigationOrder(ids)}
       onMoveNode={(source, target, position) => {
         if (source !== "note" || !target) return;
         setInFolder(target === "folder");
@@ -162,5 +164,16 @@ export const NotesInSortableNavigation: Story = {
     await waitFor(() =>
       expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "2"),
     );
+  },
+};
+
+export const ExpandedNavigation: Story = {
+  render: () => <MovableNotes />,
+  parameters: {
+    docs: {
+      description: {
+        story: "Drag Workspaces below expanded Notes. The placement line appears after the last visible descendant.",
+      },
+    },
   },
 };

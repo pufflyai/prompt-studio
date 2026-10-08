@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbench, getWorkbenchRenderers, type ResourceRef, type TreeNode } from "../../../core";
 import { toTreeListSection } from "./tree-list-adapter";
-import { createMoveTreeNode } from "./tree-view-move";
+import { canMoveTreeNode, createMoveTreeNode } from "./tree-view-move";
 
 const resource = {
   type: "workspace",
@@ -39,4 +39,23 @@ describe("movable tree nodes", () => {
       expect.objectContaining({ resource, viewId: undefined, state: expect.any(Object) }),
     );
   });
+});
+
+test("rejects resource previews across contributions that share navigation arrangement scope", async () => {
+  const workbench = createWorkbench();
+  const owner = { kind: "mode" as const, extensionId: "host", id: "project" };
+  for (const id of ["notes", "files"]) {
+    workbench.navigationTrees.registerContribution({
+      id,
+      idScope: id,
+      owner,
+      sourceExtensionId: id,
+      declarationIndex: 0,
+      getSections: () => [{ id: "root", nodes: [file, folder] }],
+    });
+  }
+  const sections = await workbench.navigationTrees.getSections(owner);
+  const context = { sections, childrenByNodeId: {} };
+  expect(canMoveTreeNode(context, "notes:README.md", "notes:docs")).toBe(true);
+  expect(canMoveTreeNode(context, "notes:README.md", "files:docs")).toBe(false);
 });
