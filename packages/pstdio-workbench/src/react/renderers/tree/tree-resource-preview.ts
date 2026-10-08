@@ -1,13 +1,17 @@
-import type { ResourceRegistry, TreeNode, TreeViewSection } from "../../../core";
+import type { TreeNode, TreeViewSection } from "../../../core";
+import {
+  type ResourcePreviewChanges,
+  resolveResourcePreview,
+} from "../../../core/registries/resources/resource-preview";
 
 export const previewTreeResources = (
   sections: TreeViewSection[],
   childrenByNodeId: Record<string, TreeNode[]>,
-  resources: ResourceRegistry,
+  changes: ResourcePreviewChanges,
 ) => {
   const previewNodes = (nodes: TreeNode[]): TreeNode[] =>
     nodes.flatMap((node) => {
-      const resource = node.resource ? resources.preview.resolve(node.resource) : undefined;
+      const resource = node.resource ? resolveResourcePreview(node.resource, changes) : undefined;
       if (node.resource && !resource) return [];
       const children = childrenByNodeId[node.id] ?? node.children;
       return [

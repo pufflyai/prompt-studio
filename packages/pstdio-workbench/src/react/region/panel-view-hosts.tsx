@@ -3,6 +3,7 @@ import { createContext, type ReactNode, useContext, useLayoutEffect, useState } 
 import { createPortal } from "react-dom";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { workbenchPanelRegions } from "../../core";
+import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { movePanelHost } from "./move-panel-host";
 import { isPlacementEligibleForRegion } from "./region-tabs-visibility-hooks";
@@ -72,7 +73,7 @@ const PanelViewPortal = (props: {
 
 export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; children: ReactNode }) => {
   const { workbench, children } = props;
-  useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
+  const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.pages.store, (state) => state.location);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
@@ -86,7 +87,11 @@ export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; child
   }));
   const current = workbenchPanelRegions.flatMap((region) => {
     const state = layout.regions[region];
-    const eligible = state.widgets.filter((p) => isPlacementEligibleForRegion(workbench, region, p));
+    const eligible = state.widgets.filter(
+      (p) =>
+        (!p.resource || Boolean(resolveResourcePreview(p.resource, changes))) &&
+        isPlacementEligibleForRegion(workbench, region, p),
+    );
     const selected = eligible.find((p) => p.widgetId === state.activeWidgetId) ?? eligible[0];
     return eligible.filter((p) => p.widgetId === selected?.widgetId || p.mountStrategy === "keep-mounted");
   });
@@ -99,7 +104,11 @@ export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; child
           layout.regions[id].widgets.some((p) => p.widgetId === placement.widgetId),
         );
         const peers = region
-          ? layout.regions[region].widgets.filter((p) => isPlacementEligibleForRegion(workbench, region, p))
+          ? layout.regions[region].widgets.filter(
+              (p) =>
+                (!p.resource || Boolean(resolveResourcePreview(p.resource, changes))) &&
+                isPlacementEligibleForRegion(workbench, region, p),
+            )
           : [];
         const selected = region
           ? (peers.find((p) => p.widgetId === layout.regions[region].activeWidgetId) ?? peers[0])
