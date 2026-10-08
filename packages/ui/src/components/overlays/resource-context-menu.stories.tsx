@@ -1,6 +1,7 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Input, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Eye } from "lucide-react";
+import { useState } from "react";
 import { expect, fireEvent, screen, userEvent, waitFor, within } from "storybook/test";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 
@@ -19,6 +20,26 @@ const menuTarget = (
     <Text textStyle="label/S/regular">Right-click here</Text>
   </Box>
 );
+
+const InlineActionMenu = () => {
+  const [editing, setEditing] = useState(false);
+  const [shown, setShown] = useState(true);
+  return (
+    <Stack>
+      <ResourceContextMenu
+        closeOnSelect={false}
+        actions={[
+          { key: "toggle", label: "Toggle visibility", onClick: () => setShown(!shown) },
+          { key: "rename", label: "Rename inline", closeOnSelect: true, onClick: () => setEditing(true) },
+        ]}
+      >
+        {menuTarget}
+      </ResourceContextMenu>
+      <Text>{shown ? "Shown" : "Hidden"}</Text>
+      {editing ? <Input autoFocus size="xs" aria-label="Name" onBlur={() => setEditing(false)} /> : null}
+    </Stack>
+  );
+};
 
 const meta: Meta<typeof ResourceContextMenu> = {
   title: "Components/Overlays/Resource Context Menu",
@@ -40,6 +61,20 @@ type Story = StoryObj<typeof ResourceContextMenu>;
 
 export const Default: Story = {
   render: () => <ResourceContextMenu actions={createActions(4)}>{menuTarget}</ResourceContextMenu>,
+};
+
+export const InlineAction: Story = {
+  render: () => <InlineActionMenu />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    fireEvent.contextMenu(canvas.getByText("Right-click here"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Toggle visibility" }));
+    await expect(canvas.getByText("Hidden")).toBeVisible();
+    await expect(screen.getByRole("menu")).toBeVisible();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename inline" }));
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    await expect(canvas.getByRole("textbox", { name: "Name" })).toHaveFocus();
+  },
 };
 
 export const KeyboardAndTouch: Story = {

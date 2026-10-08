@@ -5,7 +5,9 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem } from "./list-row.types";
 import { ListRowMenu } from "./list-row-menu";
 
-const createResourceContextActions = (items: NonNullable<ListRowItem["contextMenuItems"]>): ResourceContextAction[] =>
+export const createResourceContextActions = (
+  items: NonNullable<ListRowItem["contextMenuItems"]>,
+): ResourceContextAction[] =>
   items.map((entry) => ({
     key: entry.id,
     label: entry.label,

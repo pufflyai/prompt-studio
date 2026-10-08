@@ -14,6 +14,8 @@ export interface ResourceContextAction {
   icon?: ReactNode;
   endContent?: ReactNode;
   separatorBefore?: boolean;
+  /** Override the menu's selection behavior for this action. */
+  closeOnSelect?: boolean;
 }
 
 interface ResourceContextMenuProps {
@@ -41,8 +43,9 @@ const ResourceMenuContent = (props: {
   actions: ResourceContextAction[];
   contentMinWidth: string;
   contentBackground: string;
+  onSelect: (action: ResourceContextAction) => void;
 }) => {
-  const { actions, contentBackground, contentMinWidth } = props;
+  const { actions, contentBackground, contentMinWidth, onSelect } = props;
 
   return (
     <Portal>
@@ -53,7 +56,7 @@ const ResourceMenuContent = (props: {
             {actions.map((action) => (
               <Fragment key={action.key}>
                 {action.separatorBefore ? <Menu.Separator /> : null}
-                <Menu.Item value={action.key} disabled={action.isDisabled} asChild>
+                <Menu.Item value={action.key} disabled={action.isDisabled} closeOnSelect={action.closeOnSelect} asChild>
                   <ListRow
                     asChild
                     variant="full-width"
@@ -61,7 +64,7 @@ const ResourceMenuContent = (props: {
                     icon={action.icon}
                     endContent={action.endContent}
                     disabled={action.isDisabled}
-                    onActivate={action.onClick}
+                    onActivate={() => onSelect(action)}
                   />
                 </Menu.Item>
               </Fragment>
@@ -73,6 +76,22 @@ const ResourceMenuContent = (props: {
   );
 };
 
+const useResourceMenuActions = (closeOnSelect: boolean | undefined) => {
+  const pendingAction = useRef<ResourceContextAction | null>(null);
+  return {
+    onSelect: (action: ResourceContextAction) => {
+      if (action.closeOnSelect ?? closeOnSelect ?? true) pendingAction.current = action;
+      else void action.onClick();
+    },
+    onExitComplete: () => {
+      const action = pendingAction.current;
+      pendingAction.current = null;
+      // Closing menus finish their scheduled focus changes before an action focuses an input or dialog.
+      void action?.onClick();
+    },
+  };
+};
+
 export const ResourceActionMenu = (props: ResourceActionMenuProps) => {
   const {
     actions,
@@ -82,13 +101,19 @@ export const ResourceActionMenu = (props: ResourceActionMenuProps) => {
     positioning = { placement: "bottom-start" },
     closeOnSelect,
   } = props;
+  const { onSelect, onExitComplete } = useResourceMenuActions(closeOnSelect);
 
   if (actions.length === 0) return children;
 
   return (
-    <Menu.Root positioning={positioning} closeOnSelect={closeOnSelect}>
+    <Menu.Root positioning={positioning} closeOnSelect={closeOnSelect} onExitComplete={onExitComplete}>
       <Menu.Trigger asChild>{children}</Menu.Trigger>
-      <ResourceMenuContent actions={actions} contentMinWidth={contentMinWidth} contentBackground={contentBackground} />
+      <ResourceMenuContent
+        actions={actions}
+        contentMinWidth={contentMinWidth}
+        contentBackground={contentBackground}
+        onSelect={onSelect}
+      />
     </Menu.Root>
   );
 };
@@ -103,6 +128,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
     closeOnSelect,
     keepMountedWhenEmpty = false,
   } = props;
+  const { onSelect, onExitComplete } = useResourceMenuActions(closeOnSelect);
   const keyboardTrigger = useRef<HTMLElement | null>(null);
   const menu = useMenu({
     positioning,
@@ -156,12 +182,13 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
         {children}
       </chakra.div>
       {/* Descendant resource menus are independent menus, not submenus. */}
-      <Menu.RootProvider value={menu} lazyMount unmountOnExit>
+      <Menu.RootProvider value={menu} lazyMount unmountOnExit onExitComplete={onExitComplete}>
         {actions.length > 0 ? (
           <ResourceMenuContent
             actions={actions}
             contentMinWidth={contentMinWidth}
             contentBackground={contentBackground}
+            onSelect={onSelect}
           />
         ) : null}
       </Menu.RootProvider>

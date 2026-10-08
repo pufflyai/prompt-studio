@@ -23,7 +23,7 @@ import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
 import { createMoveTreeNode } from "./tree-view-move";
-import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
+import { createToggleTreeSection, shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
 import { useTreeData } from "./use-tree-data";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
@@ -41,6 +41,12 @@ interface WorkbenchTreeViewProps {
 }
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
+
+const treeCustomizationOptions = (body: TreeViewSection[], isSidenav: boolean) => ({
+  suppressNodeContextMenus: isSidenav,
+  pinnedOnlyNodeIds: pinnedOnlyNodeIds(body),
+  allowGroups: isSidenav,
+});
 
 const useSidenavContextActions = (
   actions: ResourceContextAction[],
@@ -177,7 +183,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
       resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
     },
-    { suppressNodeContextMenus: Boolean(onSidenavContextActionsChange), pinnedOnlyNodeIds: pinnedOnlyNodeIds(body) },
+    treeCustomizationOptions(body, Boolean(onSidenavContextActionsChange)),
   );
   useSidenavContextActions(backgroundContextActions, customizationRevision, onSidenavContextActionsChange);
   if (!treeRenderer) {
@@ -201,11 +207,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     loadChildren,
   });
 
-  const toggleSection = (sectionId: string) => {
-    const expanded = treeState.expandedSectionIds.includes(sectionId);
-
-    getWorkbenchRenderers(workbench).setSectionExpanded(treeViewId, sectionId, !expanded);
-  };
+  const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
   const moveNode = createMoveTreeNode({
     workbench,
     renderer: treeRenderer,
