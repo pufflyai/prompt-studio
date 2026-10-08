@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { SessionMessage } from "../components/message-types";
-import { resolveActiveQuestionPrompt } from "./question-prompt";
+import { getQuestionBubbleAnswer, resolveActiveQuestionPrompt, resolveQuestionPrompt } from "./question-prompt";
 
 const openCodeQuestionMessages = (questionState: Record<string, unknown>): SessionMessage[] => [
   {
@@ -28,6 +28,26 @@ const openCodeQuestionMessages = (questionState: Record<string, unknown>): Sessi
 ];
 
 describe("resolveActiveQuestionPrompt", () => {
+  it("leaves explicit async requests in chat until the person opens one", () => {
+    const messages = openCodeQuestionMessages({
+      input: { delivery: "async", questions: [{ question: "First?", options: ["Yes", "No"] }] },
+    });
+    messages[1].parts[0] = { ...messages[1].parts[0], callId: "async-1" };
+    expect(resolveActiveQuestionPrompt(messages)).toBeUndefined();
+    expect(resolveQuestionPrompt(messages, "async-1")).toMatchObject({ callId: "async-1", delivery: "async" });
+  });
+  it("shows each accepted answer or skip instead of the default", () => {
+    const part = {
+      type: "tool" as const,
+      tool: "question",
+      callId: "first",
+      status: "completed" as const,
+      state: { output: { answers: [["Åsa"], ["Green"]] } },
+    };
+    expect(getQuestionBubbleAnswer(part, 0)).toBe("Åsa");
+    expect(getQuestionBubbleAnswer(part, 1)).toBe("Green");
+    expect(getQuestionBubbleAnswer({ ...part, state: { output: { answers: [] } } }, 0)).toBe("Skipped");
+  });
   it("promotes an unanswered OpenCode question into the chat input", () => {
     const prompt = resolveActiveQuestionPrompt(
       openCodeQuestionMessages({

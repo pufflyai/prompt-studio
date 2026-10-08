@@ -44,7 +44,7 @@ describe("resource menu slot ownership", () => {
     ]);
 
     expect(runtime.commands.find((command) => command.localId === "intrude")?.menus).toEqual([
-      expect.objectContaining({ slot: expect.objectContaining({ id: "ticket.public" }) }),
+      expect.objectContaining({ slot: expect.objectContaining({ id: "pstdio.owner.resource-kind.ticket.public" }) }),
     ]);
     expect(runtime.diagnostics).toContainEqual(
       expect.objectContaining({
@@ -55,7 +55,7 @@ describe("resource menu slot ownership", () => {
     );
   });
 
-  test("keeps the first resource kind when another extension declares the same id", () => {
+  test("keeps resource kinds with the same local id under different owners", () => {
     const first = defineResourceKind({
       id: "recipe",
       menuSlots: [{ id: "first", placement: "header-overflow", access: "owner" }],
@@ -70,18 +70,12 @@ describe("resource menu slot ownership", () => {
       source("intruder", defineExtension({ resourceKinds: [duplicate] })),
     ]);
 
-    expect(runtime.resourceKinds).toHaveLength(1);
+    expect(runtime.resourceKinds).toHaveLength(2);
     expect(runtime.resourceKinds[0]).toMatchObject({
       extensionId: "pstdio.owner",
       contribution: { menuSlots: { first: {} } },
     });
-    expect(runtime.diagnostics).toContainEqual(
-      expect.objectContaining({
-        code: "extension_resource_kind_duplicate",
-        extensionId: "pstdio.intruder",
-        metadata: expect.objectContaining({ failedReference: "recipe" }),
-      }),
-    );
+    expect(runtime.resourceKinds[1]?.extensionId).toBe("pstdio.intruder");
   });
 
   test("rejects extension declarations of host resource kinds", () => {
@@ -101,4 +95,40 @@ describe("resource menu slot ownership", () => {
       }),
     );
   });
+});
+
+test("same-kind owners retain their own private slots and resolve explicit public slots", () => {
+  const kind = defineResourceKind({
+    id: "item",
+    menuSlots: [
+      { id: "private", placement: "header-overflow", access: "owner" },
+      { id: "public", placement: "header-overflow", access: "public" },
+    ],
+  });
+  const command = defineCommand({
+    id: "action",
+    title: "Action",
+    menus: [{ slot: resourceMenuSlotRef(kind.ref, "private") }],
+    async run() {},
+  });
+  const external = defineCommand({
+    id: "external",
+    title: "External",
+    menus: [{ slot: resourceMenuSlotRef({ ...kind.ref, extensionId: "pstdio.owner" }, "public") }],
+    async run() {},
+  });
+  const runtime = normalizeExtensionSources([
+    source("owner", defineExtension({ resourceKinds: [kind], commands: [command] })),
+    source("other", defineExtension({ resourceKinds: [kind], commands: [command, external] })),
+  ]);
+  expect(runtime.commands.find((entry) => entry.extensionId === "pstdio.owner")?.menus[0]?.slot.id).toBe(
+    "pstdio.owner.resource-kind.item.private",
+  );
+  expect(
+    runtime.commands.find((entry) => entry.extensionId === "pstdio.other" && entry.localId === "action")?.menus[0]?.slot
+      .id,
+  ).toBe("pstdio.other.resource-kind.item.private");
+  expect(runtime.commands.find((entry) => entry.localId === "external")?.menus[0]?.slot.id).toBe(
+    "pstdio.owner.resource-kind.item.public",
+  );
 });

@@ -12,7 +12,6 @@ import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } fro
 const workspaceActionCommandIds = new Set<string>([
   dashboardCommandIds.openWorkspaceTerminal,
   dashboardCommandIds.renameWorkspace,
-  dashboardCommandIds.archiveWorkspace,
   dashboardCommandIds.deleteWorkspace,
 ]);
 

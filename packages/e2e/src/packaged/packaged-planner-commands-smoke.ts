@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { expectPlannerArchiveFilters } from "./packaged-planner-archive-filter-smoke";
 
 export const expectPlannerCommands = async (
   baseUrl: string,
@@ -31,4 +32,5 @@ export const expectPlannerCommands = async (
       ],
     },
   });
+  await expectPlannerArchiveFilters(baseUrl, projectId, headers);
 };

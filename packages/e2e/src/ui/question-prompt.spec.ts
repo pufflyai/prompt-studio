@@ -54,7 +54,7 @@ test("answers a hydrated question tool call from the session composer", async ({
   const sendButton = page.getByTestId("send-message-button");
   await expect(answerOption).toBeEnabled();
   await expect(sendButton).toBeDisabled();
-  await page.getByText("TypeScript", { exact: true }).click();
+  await page.getByRole("form", { name: "Question form" }).getByText("TypeScript", { exact: true }).click();
   await expect(sendButton).toBeEnabled();
 
   const followUpRequestPromise = page.waitForRequest(
@@ -118,12 +118,17 @@ test("async question replies preserve the draft and files until every request is
   await page.getByTestId("send-message-button").focus();
   const asked = await request.post(`${url}/follow-up`, { data: { prompt: "__fake_async_questions__" } });
   expect(asked.ok()).toBe(true);
+  const firstBubble = page.getByRole("button", { name: "Which language? → TypeScript. Open question", exact: true });
+  await expect(firstBubble).toBeVisible();
+  await expect(editor).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await firstBubble.click();
   const first = page.getByRole("radio", { name: "TypeScript", exact: true });
   await expect(first).toBeVisible();
   await expect(editor).toBeHidden();
   await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeHidden();
-  await expect(page.getByTestId("send-message-button")).toBeDisabled();
-  await page.getByText("TypeScript", { exact: true }).click();
+  await expect(first).toBeChecked();
+  await expect(page.getByTestId("send-message-button")).toBeEnabled();
   await expect
     .poll(async () => {
       const history = await (await request.get(`${url}/conversation`)).json();
@@ -154,10 +159,18 @@ test("async question replies preserve the draft and files until every request is
     question_response: { callId: "first-question", answers: [["TypeScript"]] },
   });
   expect((await reply).postDataJSON().attachments ?? []).toEqual([]);
-  await expect(page.getByRole("radio", { name: "Browser", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Which language? → TypeScript", exact: true })).toBeDisabled();
+  await expect(editor).toHaveText("Keep my draft");
+  const secondBubble = page.getByRole("button", { name: "Which validation? → Browser. Open question", exact: true });
+  await secondBubble.click();
+  await expect(page.getByRole("radio", { name: "Browser", exact: true })).toBeChecked();
+  await page.getByRole("button", { name: "Back to message", exact: true }).click();
+  await expect(editor).toHaveText("Keep my draft");
+  await expect(page.getByText("draft.txt", { exact: true })).toBeVisible();
+  await secondBubble.click();
   await expect(editor).toBeHidden();
   await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeHidden();
-  await expect(page.getByTestId("send-message-button")).toBeDisabled();
+  await expect(page.getByTestId("send-message-button")).toBeEnabled();
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(editor).toHaveText("Keep my draft");
   await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeVisible();

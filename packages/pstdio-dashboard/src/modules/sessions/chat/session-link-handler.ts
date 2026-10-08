@@ -6,8 +6,10 @@ import {
 } from "@pstdio/sdk/extensions";
 import { type ChatLinkCandidate, type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
+import { dashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
+import { workspaceFileQueryOptions } from "@/shared/workspaces/workspace-file-query";
 import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
 import { workspaceLinkPath } from "@/shared/workspaces/workspace-link-path";
 import {
@@ -23,12 +25,7 @@ interface SessionLinkHandlerInput {
   onError(message: string): void;
 }
 
-const resolveWorkspaceFile = (
-  input: SessionLinkHandlerInput,
-  parsed: Extract<ReturnType<typeof parseChatLink>, { kind: "file" }>,
-  pages: ReturnType<WorkbenchCore["pages"]["listPages"]>,
-  resources: typeof defaultPageResourceCodec,
-) => {
+const sessionWorkspace = (input: SessionLinkHandlerInput) => {
   if (!input.workspaceId) throw new Error("The conversation has no workspace.");
   const workspace = createDashboardWorkspaceOptions(input.projectId).find(
     (workspace) => workspace.id === input.workspaceId,
@@ -36,6 +33,16 @@ const resolveWorkspaceFile = (
   if (!workspace) throw new Error("The conversation workspace is unavailable.");
   if (workspace.executionKind !== "local") throw new Error("Remote workspace files are unavailable.");
   if (!workspace.supportsFiles) throw new Error("This workspace does not support files.");
+  return workspace;
+};
+
+const resolveWorkspaceFile = (
+  input: SessionLinkHandlerInput,
+  parsed: Extract<ReturnType<typeof parseChatLink>, { kind: "file" }>,
+  pages: ReturnType<WorkbenchCore["pages"]["listPages"]>,
+  resources: typeof defaultPageResourceCodec,
+) => {
+  const workspace = sessionWorkspace(input);
   const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
   const resource = workspaceFileResource(createDashboardWorkspaceOptionResource(workspace, input.projectId), path);
   const target = { kind: "page" as const, page: workbenchPages.workspace, resource, position: parsed.position };
@@ -84,6 +91,18 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
     return resolveWorkspaceFile(input, parsed, pages, resources);
   };
   return {
+    async resolveImageSource(source) {
+      try {
+        const parsed = parseChatLink({ source, origin: "markdown" }, input.origin);
+        if (parsed?.kind !== "file" || parsed.position) return null;
+        const workspace = sessionWorkspace(input);
+        const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
+        const file = await dashboardQueryClient.fetchQuery(workspaceFileQueryOptions(workspace.id, path));
+        return file.encoding === "base64" ? (file.data_url ?? null) : null;
+      } catch {
+        return null;
+      }
+    },
     describe(candidate) {
       const workspace = createDashboardWorkspaceOptions(input.projectId).find(
         (workspace) => workspace.id === input.workspaceId,

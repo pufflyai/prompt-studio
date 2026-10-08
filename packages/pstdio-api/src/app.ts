@@ -1,6 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
-import { sessionEvents } from "pstdio-api-contracts/extension-kernel";
 import { createFilesStorageService, ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase } from "./app-database";
@@ -9,17 +8,17 @@ import { registerApi } from "./app-routing";
 import {
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
-  sessionStatusEventsFor,
   startAppExtensionScheduler,
   startAppLifecycle,
   startNotificationWakeTimer,
 } from "./app-runtime";
 import { createAutomationService } from "./features/automation/automation-service";
 import type { RouteDeps } from "./features/deps";
+import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
-import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
+import type { SessionHookDeps } from "./features/hooks/session-hooks";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
@@ -29,6 +28,7 @@ import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
+import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
 import { createSettingsService } from "./services/settings-service";
@@ -48,6 +48,7 @@ export { closeBeforeFatalExit } from "./app-runtime";
 export { assertListenHostAllowed } from "./listen-host";
 
 const createCoreDomainServices = (input: {
+  getCommandDeps: () => RouteDeps;
   db: Parameters<typeof createAppDatabaseServices>[0];
   dbs: ReturnType<typeof createAppDatabaseServices>;
   eventBus: EventBus;
@@ -81,7 +82,12 @@ const createCoreDomainServices = (input: {
       workspaceSessionsDBService: dbs.workspaceSessionsDBService,
       eventBus,
     }),
-    workspaceService: createWorkspaceService({ workspacesDb: dbs.workspacesDBService, eventBus }),
+    workspaceService: createWorkspaceService({
+      workspacesDb: dbs.workspacesDBService,
+      sessionsDb: dbs.sessionsDBService,
+      eventBus,
+      validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(input.getCommandDeps(), source, anchors),
+    }),
   };
 };
 
@@ -153,6 +159,7 @@ const buildApp = async (
     workspaceSessionService,
     workspaceService,
   } = createCoreDomainServices({
+    getCommandDeps: () => deps,
     db,
     dbs,
     eventBus,
@@ -200,6 +207,7 @@ const buildApp = async (
   const sessionHookDeps = (): SessionHookDeps => ({
     automationService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesService,
+    resourceLinksService: dbs.resourceLinksService,
     activityEventsService,
     eventBus,
     extensionAutomationPreferencesService,
@@ -228,18 +236,9 @@ const buildApp = async (
 
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
+    validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(deps, source, anchors),
     eventBus,
-    onSessionStarted: (session) => {
-      fireSessionLifecycleEventAsync(sessionHookDeps(), sessionEvents.started, session);
-    },
-    onSessionStatusChanged: (session) => {
-      for (const event of sessionStatusEventsFor(session.status)) {
-        fireSessionLifecycleEventAsync(sessionHookDeps(), event, session);
-      }
-    },
-    onSessionResumed: (session) => {
-      fireSessionLifecycleEventAsync(sessionHookDeps(), sessionEvents.resumed, session);
-    },
+    ...createSessionLifecycleCallbacks(sessionHookDeps),
     onCapacityAvailable: (input) => drainSessionQueue(input),
   });
   await settingsDBService.get();
@@ -252,6 +251,7 @@ const buildApp = async (
   const terminalSupervisor = createAppTerminalSupervisor();
 
   deps = {
+    resourceLinksService: dbs.resourceLinksService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesService,
     extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },

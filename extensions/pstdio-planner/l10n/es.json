@@ -13,7 +13,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "Desarchivar",
   "kanbanRenderers.tickets.title": "Tareas",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "Archivado",
+  "displayMenu.propertyOptions.archived": "Ticket",
   "displayMenu.propertyOptions.createdAt": "Creado",
   "displayMenu.propertyOptions.status": "Estado",
   "displayMenu.propertyOptions.updatedAt": "Actualizado",
@@ -32,5 +32,9 @@
   "commands.refinementPolicy.title": "Leer las opciones de refinamiento de tickets",
   "settings.uxPrototype.title": "Generar un prototipo de artefacto para funciones de UX",
   "settings.uxPrototype.description": "Exigir un prototipo interactivo al refinar una nueva función de UX si Artifacts está disponible.",
-  "ticketWorkspaces.project": "Carpeta del proyecto"
+  "ticketWorkspaces.project": "Carpeta del proyecto",
+  "settings.tickets.deleteLinkedWorkspaces.title": "Eliminar espacios de trabajo vinculados",
+  "settings.tickets.deleteLinkedWorkspaces.description": "Al archivar o eliminar un ticket, elimina sus espacios de trabajo cuando ningún ticket activo los use. Esto elimina el árbol de trabajo, su rama y los cambios sin confirmar.",
+  "settings.tickets.markDoneOnMerge.title": "Marcar como terminado al fusionar",
+  "settings.tickets.markDoneOnMerge.description": "Mueve un ticket a Terminado cuando se fusiona la rama de su espacio de trabajo o una solicitud de incorporación vinculada."
 }

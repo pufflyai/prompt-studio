@@ -3,7 +3,11 @@ import { type ExtensionWorkspace, worktreeEvents } from "pstdio-api-contracts/ex
 import type { AppRouteHandler } from "../../../types";
 import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
-import { assertWorkspaceDeleteAllowed, deleteProviderBackedWorkspace } from "../workspace-provider-lifecycle";
+import {
+  assertWorkspaceDeleteAllowed,
+  deleteProviderBackedWorkspace,
+  finalizeWorkspaceDelete,
+} from "../workspace-provider-lifecycle";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
 
@@ -70,7 +74,7 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
       }
     }
 
-    await deps.workspaceService.softDelete(id);
+    if (workspace) await finalizeWorkspaceDelete(deps, workspace);
 
     if (workspace && removed) fireWorkspaceRemovedEvent(deps, workspace);
 

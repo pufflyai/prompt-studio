@@ -1,0 +1,2 @@
+DROP INDEX "workspaces_project_active_name_idx";--> statement-breakpoint
+CREATE UNIQUE INDEX "workspaces_project_active_name_idx" ON "workspaces" USING btree ("project_id","name") WHERE "workspaces"."deleted_at" is null;

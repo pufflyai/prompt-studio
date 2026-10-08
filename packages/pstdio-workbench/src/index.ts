@@ -266,6 +266,7 @@ export {
   workbenchRegionTabLeadingMenuPath,
   workbenchResourceIdContextKey,
   workbenchResourceMetadataContextKey,
+  workbenchResourceOwnerContextKey,
   workbenchResourceTypeContextKey,
   workbenchSelectionResourceKeyMetadataKey,
   workbenchTopHeaderLeadingMenuPath,

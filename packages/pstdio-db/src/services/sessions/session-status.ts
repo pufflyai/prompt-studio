@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
+import { sessionColumns } from "../legacy-resource-links";
 import { nextSessionRunStart } from "./session-run-start";
 
 export type SessionStatusGuards = {
@@ -16,7 +17,7 @@ export const updateSessionStatus = async (
   options?: SessionStatusGuards,
 ) =>
   db.transaction(async (tx) => {
-    const [current] = await tx.select().from(sessions).where(eq(sessions.id, id)).for("update");
+    const [current] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, id)).for("update");
     if (!current) return null;
     if (
       options?.expectedLastRequestStarted !== undefined &&
@@ -39,7 +40,7 @@ export const updateSessionStatus = async (
         ...(terminal && { last_request_ended: timestamp }),
       })
       .where(eq(sessions.id, id))
-      .returning();
+      .returning(sessionColumns);
 
     // Cleanup shares the guarded transition's row lock, so it cannot delete a replacement run's work.
     if (status === "cancelled" || (current.status === "queued" && (terminal || status === "disconnected"))) {

@@ -10,6 +10,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../module";
+import { seedWorkspaceViewsStory } from "./workspace-views-story";
 
 const PROJECT_ID = "storybook-workspace-list";
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
@@ -86,6 +87,7 @@ const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
   useDiffSummaryResponses();
   const [workbench] = useState(() => {
     seedWorkspaces();
+    seedWorkspaceViewsStory(PROJECT_ID);
     const next = createWorkbench();
     next.registerModule(createWorkspacesModule());
     selectDashboardProject(next, { id: PROJECT_ID, name: "Prompt Studio" });

@@ -106,7 +106,7 @@ test("refreshes ticket files after creating a file", async ({ page, fixture }) =
   await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
 });
 
-for (const action of ["Archive workspace", "Delete workspace"]) {
+for (const action of ["Delete workspace"]) {
   test(`${action} removes the linked workspace from the ticket`, async ({ page, request, fixture }) => {
     const { workspace } = await executePlannerCommand<{ workspace: { id: string; workspace_shorthand: string } }>(
       request,
@@ -124,12 +124,10 @@ for (const action of ["Archive workspace", "Delete workspace"]) {
     await expect(page.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Workspaces", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: `Actions for ${workspace.workspace_shorthand}`, exact: true }).click();
-    await expect(page.getByRole("menuitem", { name: "Archive workspace", exact: true })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Delete workspace", exact: true })).toBeVisible();
     const response = page.waitForResponse(
       (response) =>
-        response.url().includes(`/v1/workspaces/${workspace.id}`) &&
-        response.request().method() === (action === "Archive workspace" ? "POST" : "DELETE"),
+        response.url().includes(`/v1/workspaces/${workspace.id}`) && response.request().method() === "DELETE",
     );
     await page.getByRole("menuitem", { name: action, exact: true }).click();
     expect((await response).ok()).toBe(true);

@@ -32095,7 +32095,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -47227,6 +47227,167 @@
                       "fill": "$btn-fill"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LLeUN",
+              "name": "Async question bubbles · PS-546",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PsqbB",
+                  "name": "Section title",
+                  "fill": "$ds-fg",
+                  "content": "Async question · conversation summary",
+                  "fontFamily": "$font-label",
+                  "fontSize": 18,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "PzOXU",
+                  "name": "cmp/ChatQuestionBubble",
+                  "context": "One button per question. Shows question → first offered answer before submission. It never submits automatically. Clicking a pending bubble opens that exact question in the composer, preserving the chat draft. Answered bubbles show the accepted answer and are read-only. Keep short questions inline. When the question is long or multiline, place the arrow and answer together on a row below the full question.",
+                  "reusable": true,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "LCEHH",
+                      "name": "Question",
+                      "fill": "$ds-fg",
+                      "content": "Which color?",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jMcbw",
+                      "name": "Arrow and answer",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "O0luR",
+                          "name": "Answer direction",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZZwpl",
+                          "name": "Answer",
+                          "fill": "$ds-fg-muted",
+                          "content": "Blue",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wvRuZ",
+                  "name": "Question bubble states",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "B1KYN",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Hover",
+                      "fill": "$ds-surface-hover"
+                    },
+                    {
+                      "id": "u4Wbbw",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Open / keyboard focus",
+                      "fill": "$ds-bg-active",
+                      "stroke": "$ds-border-accent"
+                    },
+                    {
+                      "id": "h6lM8Y",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Answered",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Green",
+                          "fill": "$ds-fg"
+                        }
+                      }
+                    },
+                    {
+                      "id": "ienPl",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Free text",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Your answer",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Jjbeg",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Skipped",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Skipped",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "id": "tdfam",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Long multiline question · answer underneath",
+                      "layout": "vertical",
+                      "alignItems": "start",
+                      "width": 560,
+                      "descendants": {
+                        "LCEHH": {
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Should I validate the full release workflow in the browser, including onboarding, selecting a project, opening a session, submitting an async answer, and restoring the draft and attachments afterward?\nOr should I only run the targeted tests for the changed question controls before preparing the pull request?"
+                        },
+                        "ZZwpl": {
+                          "content": "Browser checks"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -74674,7 +74835,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95303,7 +95464,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124289,7 +124450,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -150741,7 +150902,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -150763,7 +150924,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151491,7 +151652,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151513,7 +151674,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152129,7 +152290,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152151,7 +152312,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153502,7 +153663,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153524,7 +153685,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153555,8 +153716,8 @@
       "id": "yDXFi",
       "x": 17200,
       "y": 8001,
-      "name": "Conversation · Next async question · PS-459",
-      "context": "The first request has been answered. The next independent asynchronous question now occupies the composer. New arrivals queue without changing current selections. Each request uses its own native identity and response channel. The same saved draft stays intact until all blocking requests finish.",
+      "name": "Conversation · Async question opened · PS-546",
+      "context": "A pending async question stays as a conversation bubble while the agent works. Clicking that bubble opens its question in the composer. Pending async arrivals never replace the open question. The draft and attachments return after send, skip, or close.",
       "theme": {
         "mode": "dark"
       },
@@ -153685,32 +153846,34 @@
                   }
                 },
                 {
-                  "id": "C0B2xh",
+                  "id": "sqiIG",
                   "type": "ref",
-                  "ref": "CQVFo",
-                  "name": "Answer to first async question",
-                  "width": "fill_container",
+                  "ref": "PzOXU",
+                  "name": "Validation answered bubble",
                   "descendants": {
-                    "ZdoE8": {
-                      "content": "Browser checks"
+                    "LCEHH": {
+                      "content": "Which validation should I run?"
                     },
-                    "b60X5h": {
-                      "content": "19:43"
+                    "ZZwpl": {
+                      "content": "Browser checks",
+                      "fill": "$ds-fg"
                     }
                   }
                 },
                 {
-                  "id": "K4hItM",
+                  "id": "meVRH",
                   "type": "ref",
-                  "ref": "X7Yj6",
-                  "name": "Next async question in conversation",
-                  "width": "fill_container",
+                  "ref": "PzOXU",
+                  "name": "Files question bubble · open",
+                  "fill": "$ds-bg-active",
+                  "stroke": "$ds-border-accent",
                   "descendants": {
-                    "EiVAs": {
+                    "LCEHH": {
                       "content": "Which files should I include?"
                     },
-                    "p3bQE": {
-                      "content": "19:44"
+                    "ZZwpl": {
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
                     }
                   }
                 },
@@ -153959,6 +154122,25 @@
                           "gap": 6,
                           "alignItems": "center",
                           "children": [
+                            {
+                              "id": "XVe5P",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Close question · restore draft",
+                              "height": 28,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Back to message"
+                                }
+                              }
+                            },
                             {
                               "id": "TQY2z",
                               "type": "ref",
@@ -164299,6 +164481,455 @@
               "fontFamily": "$font-label",
               "fontSize": 14,
               "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "M5BcB",
+      "x": 19360,
+      "y": 8001,
+      "name": "Conversation · Async question pending · PS-546",
+      "context": "Async questions do not take over the composer. The bubble shows question → first offered option. The agent keeps working and the unsent message and attachments stay editable. Clicking any pending bubble opens that exact question in the existing composer.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "Xk89F",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "w1kCnv",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "lR6or",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "ak1A9",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "a1pu0O",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "YGZWf",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "LcV8b",
+                  "type": "ref",
+                  "ref": "PzOXU",
+                  "name": "Validation question bubble · pending",
+                  "descendants": {
+                    "LCEHH": {
+                      "content": "Which validation should I run?"
+                    },
+                    "ZZwpl": {
+                      "content": "Browser checks",
+                      "fill": "$ds-fg-muted"
+                    }
+                  }
+                },
+                {
+                  "id": "CiUrn",
+                  "type": "ref",
+                  "ref": "PzOXU",
+                  "name": "Files question bubble · pending",
+                  "descendants": {
+                    "LCEHH": {
+                      "content": "Which files should I include?"
+                    },
+                    "ZZwpl": {
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
+                    }
+                  }
+                },
+                {
+                  "id": "M4MHM",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Agent continues independent work",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "The browser checks are ready. I am checking the release script while you choose the files."
+                    },
+                    "p3bQE": {
+                      "content": "19:45"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "EWJ5R",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eMim8",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "G8hPw",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "FOYGR",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LShZp",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "RVsQ3",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HrIbW",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "oYq03",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "A7Jm5F",
+                  "name": "Restored original draft and attachments",
+                  "context": "Async questions remain in the chat until opened. Keep this original unsent draft and its files editable. Question replies never include the draft or its files.",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "oagy8",
+                      "name": "Draft attachments · preserved",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "oSR4w",
+                          "type": "ref",
+                          "ref": "kNQoL",
+                          "name": "release-notes.md · draft attachment",
+                          "descendants": {
+                            "XgLPG": {
+                              "content": "release-notes.md"
+                            },
+                            "n6amuf": {
+                              "content": "4 KB"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nE3WW",
+                      "name": "Draft editor · stays editable",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cMhWj",
+                          "name": "Unsent message",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Also update the release notes and include the migration steps.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kkae7",
+                          "name": "Editing cursor",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "I am still writing this message… |",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QKMWI",
+                      "name": "Message toolbar",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "rArtx",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Attach",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "paperclip",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        },
+                        {
+                          "id": "kI1Rm",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Model",
+                          "height": 28,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 0,
+                          "strokeAlignment": "inner",
+                          "theme": {
+                            "trig": "default",
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": false
+                            },
+                            "l7dix": {
+                              "padding": 0
+                            },
+                            "sefGB": {
+                              "content": "gpt-5.5",
+                              "fontSize": 12,
+                              "fill": "$btn-fg"
+                            },
+                            "Tpujq": {
+                              "fill": "$btn-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "m5NrFI",
+                          "type": "ref",
+                          "ref": "HXArk",
+                          "name": "Plan tag",
+                          "height": 28,
+                          "descendants": {
+                            "rfQui": {
+                              "content": "Plan"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cbMZk",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "kBjuR",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send draft · enabled",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs",
+                            "btn-interaction": "default"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 16,
+                              "width": 16
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }

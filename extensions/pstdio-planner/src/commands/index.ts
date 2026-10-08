@@ -12,6 +12,7 @@ import {
 import { attemptReadinessCommand } from "./attempt-readiness";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
+import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
 import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 import { getTicketCommand } from "./get-ticket";
@@ -92,6 +93,7 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  checkMergedPullRequestsCommand,
   openTicketsCommand,
   linkTicketCommand,
   unlinkTicketCommand,

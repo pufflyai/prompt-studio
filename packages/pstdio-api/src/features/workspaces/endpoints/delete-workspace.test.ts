@@ -7,6 +7,11 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 
 let app: OpenAPIHono<AppBindings>;
 let appHandle: Awaited<ReturnType<typeof createTestApp>>;
@@ -52,7 +57,11 @@ beforeAll(async () => {
   previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-  appHandle = await createTestApp({ databasePath: ":memory:", storageRoot: join(tempRoot, "storage") });
+  appHandle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
+    harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("echo")]),
+  });
   app = appHandle.app;
 
   const projectRes = await app.request("/v1/projects", {
@@ -114,4 +123,46 @@ describe("DELETE /v1/workspaces/:id", () => {
     const stillPresent = await appHandle.deps.workspaceService.getDefault(projectId);
     expect(stillPresent!.id).toBe(defaultWorkspace!.id);
   });
+});
+
+test("deletes a managed folder that git no longer lists as a worktree", async () => {
+  const repoRoot = createGitRepo("unregistered-worktree");
+  const { workspace } = await createWorkspaceAttempt(repoRoot);
+  execSync(`git worktree remove "${workspace.root_path}" --force`, { cwd: repoRoot, stdio: "pipe" });
+  mkdirSync(join(workspace.root_path!, ".agents"), { recursive: true });
+  const response = await app.request(`/v1/workspaces/${workspace.id}`, { method: "DELETE" });
+  expect(response.status).toBe(200);
+  expect(existsSync(workspace.root_path!)).toBe(false);
+  expect(execSync(`git branch --list ${workspace.branch}`, { cwd: repoRoot, encoding: "utf8" }).trim()).toBe("");
+  expect((await appHandle.deps.workspaceService.get(workspace.id))?.deleted_at).toBeTruthy();
+});
+test("archives all sessions within the workspace", async () => {
+  const repoRoot = createGitRepo("archive-sessions-repo");
+  const attempt = await createWorkspaceAttempt(repoRoot);
+  const { workspace } = attempt;
+
+  // Create a session linked to the workspace
+  const sessionRes = await app.request("/v1/sessions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      project_id: projectId,
+      title: "test session",
+      prompt: "hello",
+      agent: testHarnessId("echo"),
+      workspace_id: workspace.id,
+    }),
+  });
+  expect(sessionRes.status).toBe(201);
+  const session = await sessionRes.json();
+  expect(session.archived).toBe(false);
+
+  // Archive the workspace
+  const res = await app.request(`/v1/workspaces/${workspace.id}`, { method: "DELETE" });
+  expect(res.status).toBe(200);
+
+  // Verify the session is now archived
+  const updatedSessionRes = await app.request(`/v1/sessions/${session.id}`);
+  const updatedSession = await updatedSessionRes.json();
+  expect(updatedSession.archived).toBe(true);
 });

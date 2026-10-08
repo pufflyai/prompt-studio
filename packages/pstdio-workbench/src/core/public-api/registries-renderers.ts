@@ -124,6 +124,7 @@ export {
   scopeWorkbenchResourceContextValues,
   workbenchResourceIdContextKey,
   workbenchResourceMetadataContextKey,
+  workbenchResourceOwnerContextKey,
   workbenchResourceTypeContextKey,
   workbenchSelectionResourceKeyMetadataKey,
 } from "../registries/resources/resource-registry";

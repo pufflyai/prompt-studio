@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createCodexHarness } from "./harness";
 
@@ -23,6 +25,29 @@ const ctx: HarnessContext = {
   logger: { info: () => {}, warn: () => {}, error: () => {} },
   state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
 };
+
+test("recovers relative image previews from the session directory", async () => {
+  const root = mkdtempSync(join(tmpdir(), "codex-relative-image-"));
+  try {
+    writeFileSync(join(root, "preview.png"), Buffer.from("aGVsbG8=", "base64"));
+    const transcript = join(root, "rollout.jsonl");
+    writeFileSync(
+      transcript,
+      JSON.stringify({
+        type: "event_msg",
+        payload: { type: "item_completed", item: { type: "ImageView", id: "image-1", path: "preview.png" } },
+      }),
+    );
+    const harness = createCodexHarness({ readTranscript: async () => readFileSync(transcript, "utf8") });
+    const messages = await harness.getMessages!(ctx, { agentSessionId: "image-thread", cwd: root });
+    expect(messages[0].parts[0]).toMatchObject({
+      tool: "view_image",
+      state: { output: [{ source: "preview.png", src: "data:image/png;base64,aGVsbG8=" }] },
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("codex harness detection", () => {
   test("declares discrete run params", () => {

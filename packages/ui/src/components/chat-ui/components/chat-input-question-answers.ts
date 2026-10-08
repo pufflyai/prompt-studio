@@ -17,6 +17,8 @@ export interface ChatInputQuestion {
 export interface ChatInputQuestionPrompt {
   questions: ChatInputQuestion[];
   callId?: string;
+  /** Async requests open from their chat bubble and preselect their first offered options. */
+  delivery?: "async";
 }
 
 export interface ChatInputQuestionResponse {
@@ -96,6 +98,7 @@ export const getQuestionPromptSignature = (questionPrompt: ChatInputQuestionProm
 
   return JSON.stringify({
     callId: questionPrompt.callId,
+    delivery: questionPrompt.delivery,
     questions: questionPrompt.questions.map((question, index) => ({
       id: getQuestionSelectionKey(question, index),
       question: question.question,

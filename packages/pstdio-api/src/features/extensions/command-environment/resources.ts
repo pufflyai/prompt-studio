@@ -1,10 +1,12 @@
 import type { ExtensionResourcesApi } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionsRouteDeps } from "../deps";
+import { createResourceLinksApi } from "./resource-links";
 
 export const createResourcesApi = (
-  deps: Pick<ExtensionsRouteDeps, "extensionRuntimeCatalog" | "extensionResourceSequencesService" | "eventBus">,
+  deps: ExtensionsRouteDeps,
   input: { projectId: string; extensionId: string },
 ): ExtensionResourcesApi => ({
+  ...createResourceLinksApi(deps, input),
   removed: async (resource) => {
     if (resource.projectId && resource.projectId !== input.projectId)
       throw new Error("Resource belongs to another project.");
@@ -15,6 +17,11 @@ export const createResourcesApi = (
       (record) => record.extensionId === input.extensionId && record.localId === resource.type,
     );
     if (!declaration) throw new Error(`Resource kind "${resource.type}" is not owned by ${input.extensionId}.`);
+    await createResourceLinksApi(deps, input).removedLinks({
+      ...resource,
+      extensionId: input.extensionId,
+      projectId: input.projectId,
+    });
     deps.eventBus.emit("resource_events", "set", {
       id: crypto.randomUUID(),
       resource: { ...resource, extensionId: input.extensionId, projectId: input.projectId },

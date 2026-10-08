@@ -111,3 +111,52 @@ describe("open extension resource sync", () => {
     expect(workbench.getPrimaryResource()).toMatchObject({ id: "n2", label: "Second" });
   });
 });
+
+test("same-kind open resources resolve through their own extension and refresh when the owner changes", async () => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.views.registerView({ id: "note", title: "Note", body: { kind: "react", render: () => null } });
+  workbench.pages.registerPage({
+    id: "note",
+    ref: page,
+    path: "note",
+    modeId: "project",
+    resource: { kinds: [{ kind: "resource-kind", id: "note" }] },
+    main: { kind: "panels", empty: { kind: "view", id: "note" } },
+    slots: [],
+  });
+  const calls: string[] = [];
+  const owners = ["acme.notes", "acme.art"];
+  watchOpenExtensionResource(workbench, {
+    projectId,
+    metadata: {
+      resourceKinds: owners.map((extensionId) => ({
+        id: "note",
+        localId: "note",
+        extensionId,
+        resolveCommand: extensionId + ".command.resolve",
+        menuSlots: [],
+      })),
+    },
+    executeCommand: async (_project, commandId, body) => {
+      calls.push(commandId);
+      const resource = (body as { resource: ResourceRef }).resource;
+      return {
+        commandId,
+        extensionId: resource.extensionId,
+        outcome: { ok: true, status: "success", value: { ...resource, label: commandId } },
+      } as CommandExecuteResponse;
+    },
+  });
+  workbench.pageLocations.setProject(projectId);
+  for (const extensionId of owners) {
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page,
+      resource: { type: "note", id: "same", projectId, extensionId },
+    });
+    await settle();
+    expect(workbench.getPrimaryResource()?.label).toBe(extensionId + ".command.resolve");
+  }
+  expect(calls).toEqual(owners.map((owner) => owner + ".command.resolve"));
+});

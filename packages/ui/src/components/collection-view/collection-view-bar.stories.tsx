@@ -14,6 +14,43 @@ export default meta;
 
 type Story = StoryObj;
 
+export const UserOwnedViews: Story = {
+  render: () => <Bar storageKey="storybook-user-owned-views" filter={storyFilter} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.pointer({ keys: "[MouseRight]", target: canvas.getByRole("tab", { name: "All tickets" }) });
+    await userEvent.click(await body.findByRole("menuitem", { name: "Rename", exact: true }));
+    await userEvent.clear(body.getByRole("textbox", { name: "View name" }));
+    await userEvent.type(body.getByRole("textbox", { name: "View name" }), "Team tickets");
+    await userEvent.click(body.getByRole("button", { name: "Rename", exact: true }));
+    await expect(await canvas.findByRole("tab", { name: "Team tickets" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Remove Status filter", exact: true }));
+    await userEvent.click(canvas.getByRole("button", { name: "Save view", exact: true }));
+    await waitFor(() => expect(canvas.queryByLabelText("Unsaved view changes")).not.toBeInTheDocument());
+    await userEvent.pointer({ keys: "[MouseRight]", target: canvas.getByRole("tab", { name: "Team tickets" }) });
+    await userEvent.click(await body.findByRole("menuitem", { name: "Delete view", exact: true }));
+    await waitFor(() => expect(canvas.queryByRole("tab", { name: "Team tickets" })).not.toBeInTheDocument());
+    await userEvent.pointer({ keys: "[MouseRight]", target: canvas.getByRole("tab", { name: "My work" }) });
+    await expect(await body.findByRole("menuitem", { name: "Delete view", exact: true })).toHaveAttribute(
+      "data-disabled",
+      "",
+    );
+    await expect(body.getByRole("menuitem", { name: "Rename", exact: true })).not.toHaveAttribute("data-disabled");
+    await userEvent.keyboard("{Escape}");
+  },
+};
+
+/** Persisted JSON can return sort keys in a different order without changing the view. */
+export const SavedSorts: Story = {
+  render: () => <Bar storageKey="storybook-saved-sorts" editedSorts={[{ attributeId: "title", direction: "asc" }]} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Save view", exact: true }));
+    await waitFor(() => expect(canvas.queryByLabelText("Unsaved view changes")).not.toBeInTheDocument());
+  },
+};
+
 /** Text editing stays centered in the bubble, including characters with descenders. */
 export const TextFilterEditing: Story = {
   render: () => <Bar storageKey="storybook-text-filter-editing" />,
@@ -129,7 +166,7 @@ export const UnsavedChanges: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByLabelText("Unsaved view changes")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Save as new view" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Save view" })).toBeVisible();
   },
 };
 

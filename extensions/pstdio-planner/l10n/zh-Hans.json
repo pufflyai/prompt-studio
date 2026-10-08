@@ -13,7 +13,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "取消归档",
   "kanbanRenderers.tickets.title": "工单",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "已归档",
+  "displayMenu.propertyOptions.archived": "工单",
   "displayMenu.propertyOptions.createdAt": "创建时间",
   "displayMenu.propertyOptions.status": "状态",
   "displayMenu.propertyOptions.updatedAt": "更新时间",
@@ -32,5 +32,9 @@
   "commands.refinementPolicy.title": "读取工单细化选项",
   "settings.uxPrototype.title": "为 UX 功能生成制品原型",
   "settings.uxPrototype.description": "当 Artifacts 可用时，细化新的 UX 功能必须提供交互式原型。",
-  "ticketWorkspaces.project": "项目文件夹"
+  "ticketWorkspaces.project": "项目文件夹",
+  "settings.tickets.deleteLinkedWorkspaces.title": "删除关联工作区",
+  "settings.tickets.deleteLinkedWorkspaces.description": "归档或删除工单时，删除没有活动工单使用的关联工作区。这会删除工作树、分支和未提交的更改。",
+  "settings.tickets.markDoneOnMerge.title": "合并时标记为完成",
+  "settings.tickets.markDoneOnMerge.description": "工作区分支或关联的拉取请求合并后，将工单移至完成。"
 }

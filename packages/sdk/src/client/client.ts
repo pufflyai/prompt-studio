@@ -7,6 +7,7 @@ import { createNotificationsClient, type NotificationsClient } from "./notificat
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
+import { createResourceAnchorsClient, type ResourceAnchorsClient } from "./resource-anchors";
 import { createRuntimeClient, type RuntimeClient } from "./runtime";
 import { createSessionClient, type SessionClient } from "./sessions";
 import { createSettingsClient, type SettingsClient } from "./settings";
@@ -15,6 +16,7 @@ import { createSyncClient, type SyncClient } from "./sync";
 import { createWorkspaceClient, type WorkspaceClient } from "./workspaces";
 
 export type PstdioClient = {
+  resources: ResourceAnchorsClient;
   views: BoardViewsClient;
   projects: ProjectClient;
   filesystem: FilesystemClient;
@@ -33,6 +35,7 @@ export type PstdioClient = {
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
   const request = createRequest(options);
   return {
+    resources: createResourceAnchorsClient(request),
     views: createBoardViewsClient(request),
     projects: createProjectClient(request),
     filesystem: createFilesystemClient(request),

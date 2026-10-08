@@ -66,7 +66,9 @@ Each project runs one copy of an extension ID. If two folders provide the same I
 
 ## Trust
 
-Extension commands run inside the Prompt Studio runtime on your computer, with the access your user account has. Install extensions from sources you trust.
+Installing an extension gives it the access of your user account. Its code runs inside the Prompt Studio runtime on your computer. It can read your files, the API keys in the environment that started Prompt Studio, and the connection secrets Prompt Studio stores. Install extensions only from sources you trust.
+
+A repo extension in a project folder runs as soon as you open that folder in Prompt Studio. Open folders from people you trust, or check `.pstdio/extensions` first. A trust step that asks before running this code is planned in [ADR 0059](../../adrs/0059-trust-step-for-repo-extensions.md). Running each extension in its own process is planned in [ADR 0058](../../adrs/0058-isolate-extension-backends.md).
 
 Some limits still apply. A webview, which is a custom web page inside the dashboard, can only call the host features it declares. Through a host-managed connection, a tool can request allowed methods and paths without receiving the credential. This connection policy is not a sandbox for extension code running inside the host process.
 

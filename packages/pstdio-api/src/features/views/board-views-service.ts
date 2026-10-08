@@ -5,6 +5,7 @@ import {
   boardDefaultSyncRow,
   EMPTY_VIEW_FILTER,
 } from "pstdio-api-contracts";
+import { LastBoardViewError } from "pstdio-db";
 import { type BoardViewsDeps, getBoards, type ResolvedBoard, requireBoard, resolveBoardFields } from "./resolve-board";
 import { cleanBoardView } from "./view-cleanup";
 import { BoardViewError, validateBoardView } from "./view-rules";
@@ -30,6 +31,27 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     fields: await resolveBoardFields(deps, board),
   });
   const listResolved = async (board: ResolvedBoard) => {
+    const declaredDefault =
+      board.body.defaultActiveViewId ??
+      (board.kind === "kanban" ? board.body.defaultViews?.find((view) => view.isDefault)?.id : undefined);
+    const defaultIndex = Math.max(
+      0,
+      board.startingViews.findIndex((view) => view.id === declaredDefault),
+    );
+    const initialized = await db.initialize(board.scope, board.startingViews, defaultIndex);
+    for (const row of initialized) emitView(row);
+    if (initialized.length) {
+      const initial = initialized[defaultIndex];
+      deps.eventBus.emit(
+        "board_default_views",
+        "set",
+        boardDefaultSyncRow({
+          ...board.scope,
+          default_view_id: initial.id,
+          updated_at: initial.updated_at,
+        }),
+      );
+    }
     let rows: (Awaited<ReturnType<typeof db.list>>[number] | null)[] = await db.list(board.scope);
     // A failed extension query, or a table that cannot describe its columns yet, is never
     // evidence that a saved field disappeared.
@@ -44,22 +66,15 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
         return updated ?? (await db.get(board.scope.project_id, row.id));
       }),
     );
-    const views = [...board.builtIns, ...rows.filter((row) => row !== null).map((row) => savedView(board, row))];
+    const views = rows.filter((row) => row !== null).map((row) => savedView(board, row));
     const chosen = (await db.getDefault(board.scope))?.default_view_id;
-    const flagged = board.kind === "kanban" ? board.body.defaultViews?.find((view) => view.isDefault)?.id : undefined;
-    const defaultViewId = [chosen, board.body.defaultActiveViewId, flagged, views[0].id].find((id) =>
-      views.some((view) => view.id === id),
-    )!;
+    const defaultViewId = [chosen, views[0].id].find((id) => views.some((view) => view.id === id))!;
     return { views, defaultViewId };
   };
   const getSaved = async (projectId: string, id: string, allowOrphan = false) => {
     const boards = await getBoards(deps, projectId);
     const row = await db.get(projectId, id);
-    if (!row) {
-      if (boards.some((board) => board.builtIns.some((view) => view.id === id)))
-        throw new BoardViewError("Built-in views are read-only; duplicate the view to edit it", 409);
-      throw new BoardViewError("View not found", 404);
-    }
+    if (!row) throw new BoardViewError("View not found", 404);
     const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
     if (
       row.extension_instance_id !== null &&
@@ -111,9 +126,8 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     },
     create: async (projectId: string, boardId: string, input: BoardViewCreate) => {
       const board = await requireBoard(deps, projectId, boardId);
-      const source = input.copyFrom
-        ? (await listResolved(board)).views.find((view) => view.id === input.copyFrom)
-        : undefined;
+      const current = await listResolved(board);
+      const source = input.copyFrom ? current.views.find((view) => view.id === input.copyFrom) : undefined;
       if (input.copyFrom && !source) throw new BoardViewError("View to copy was not found", 404);
       const draft = {
         settings: { ...(source?.settings ?? board.settings), ...input.settings },
@@ -142,8 +156,12 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
       return savedView(board!, updated);
     },
     remove: async (projectId: string, id: string) => {
-      await getSaved(projectId, id, true);
-      const removed = await db.remove(projectId, id);
+      const { board } = await getSaved(projectId, id, true);
+      const remove = board ? db.remove : db.removeOrphaned;
+      const removed = await remove(projectId, id).catch((error) => {
+        if (error instanceof LastBoardViewError) throw new BoardViewError(error.message, 409);
+        throw error;
+      });
       if (removed) {
         emitView(removed.view, "delete");
         if (removed.defaultView)
@@ -153,6 +171,7 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     },
     reorder: async (projectId: string, boardId: string, ids: string[]) => {
       const board = await requireBoard(deps, projectId, boardId);
+      await listResolved(board);
       try {
         for (const row of await db.reorder(board.scope, ids)) emitView(row);
       } catch (error) {
