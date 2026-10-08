@@ -30,7 +30,7 @@ export const deleteNoteCommand = defineCommand({
   cli: true,
   mutating: true,
   params: {
-    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true }),
+    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true, resolvedFrom: "resource" }),
   },
   async run(ctx, commandParams) {
     const mount = notesMount(ctx);
@@ -48,7 +48,7 @@ export const renameNoteCommand = defineCommand({
   cli: true,
   mutating: true,
   params: {
-    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true }),
+    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true, resolvedFrom: "resource" }),
     title: params.text({ label: l10n("params.title", "Title"), required: true }),
   },
   async run(ctx, commandParams) {

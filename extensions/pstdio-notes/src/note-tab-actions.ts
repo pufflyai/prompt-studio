@@ -1,6 +1,6 @@
 import { commandRef, l10n, type PlacementTabMenuGroup } from "@pstdio/sdk/extensions";
 
-export const noteTabActions = (noteId: string, writable: boolean): PlacementTabMenuGroup[] => [
+export const noteTabActions = (noteId: string, writable: boolean, title: string): PlacementTabMenuGroup[] => [
   {
     id: "note-actions",
     rows: [
@@ -13,7 +13,7 @@ export const noteTabActions = (noteId: string, writable: boolean): PlacementTabM
           kind: "command",
           target: {
             command: commandRef({ extensionId: "pstdio.pstdio-notes", id: "notes.rename" }),
-            params: { noteId },
+            params: { noteId, title },
           },
         },
       },
