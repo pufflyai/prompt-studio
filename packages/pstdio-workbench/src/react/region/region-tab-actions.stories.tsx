@@ -106,7 +106,8 @@ export const EditableTitleAndBoundResource: StoryObj<typeof meta> = {
     const canvas = within(canvasElement);
     const body = within(document.body);
     await userEvent.click(canvas.getByRole("button", { name: "Note actions" }));
-    await userEvent.click(await body.findByRole("menuitem", { name: "Rename note" }));
+    await body.findByRole("menuitem", { name: "Rename note" });
+    await userEvent.keyboard("{Home}{Enter}");
     const dialog = await body.findByRole("dialog", { name: "Rename note" });
     const title = within(dialog).getByRole("textbox", { name: "Title" });
     await expect(title).toHaveValue("Existing title");

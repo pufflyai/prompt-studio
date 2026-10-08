@@ -22,7 +22,6 @@ import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
-import { createMoveTreeNode } from "./tree-view-move";
 import { createToggleTreeSection, shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
 import { useTreeData } from "./use-tree-data";
@@ -145,13 +144,14 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
     resolveTreeActiveResource(state.layout, activePage),
   );
-  const { body, childrenByNodeId, error, footer, header, loadChildren, loading, retry } = useTreeData(
+  const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry } = useTreeData(
     workbench,
     treeViewId,
     resource,
     viewId,
     treeRenderer?.searchable ? filter.trim() || undefined : undefined,
     props.readOwnerKey,
+    onOpenResourceError,
   );
   const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
 
@@ -218,15 +218,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   });
 
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
-  const moveNode = createMoveTreeNode({
-    workbench,
-    renderer: treeRenderer,
-    resource,
-    viewId,
-    sections: body,
-    childrenByNodeId,
-    onError: onOpenResourceError,
-  });
 
   const navigationContext = { workbench, treeViewId, onOpenResourceError };
 

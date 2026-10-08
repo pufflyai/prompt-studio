@@ -4,31 +4,10 @@ import { useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import type { WorkbenchCommandParamsRequest } from "../../core/controllers/command-palette/command-palette-controller";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
-import { runUserAction } from "../../core/shared/run-user-action";
-import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { WorkbenchIcon } from "../shared/icon";
+import { runPlacementAction } from "../shared/run-placement-action";
 import { getPanelLabel } from "./panel-widget-open";
 
-const activate = (
-  workbench: WorkbenchCore,
-  action: NonNullable<WorkbenchTabMenuGroup["rows"][number]["action"]>,
-  requestParams: (request: WorkbenchCommandParamsRequest) => void,
-) => {
-  const target = action.kind === "navigation" ? action.target : action;
-  if (target.kind === "command") {
-    const command = workbench.commands.getCommand(target.commandId)?.command;
-    if (command && hasCommandParameters(command.params)) {
-      requestParams({
-        record: { command },
-        label: command.label,
-        args: target.args,
-      });
-    } else
-      void runUserAction(workbench, command?.label ?? "Command", () =>
-        workbench.commands.executeCommand(target.commandId, target.args),
-      );
-  } else void runUserAction(workbench, "Open", () => workbench.navigation.openTarget(target));
-};
 const SharedAction = (props: { value: string; label: string; icon: string; onActivate(): void }) => {
   const { value, label, icon, onActivate } = props;
   return (
@@ -36,7 +15,6 @@ const SharedAction = (props: { value: string; label: string; icon: string; onAct
       <ListRow
         asChild
         variant="full-width"
-        id={value}
         label={label}
         icon={<WorkbenchIcon name={icon} size={14} />}
         onActivate={onActivate}
@@ -92,7 +70,6 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
                       <ListRow
                         asChild
                         variant="full-width"
-                        id={row.id}
                         label={row.label}
                         icon={row.icon ? <WorkbenchIcon name={row.icon} size={14} /> : undefined}
                         iconColor={row.iconColor}
@@ -101,7 +78,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
                         onActivate={
                           row.action
                             ? () => {
-                                activate(workbench, row.action!, (request) => {
+                                runPlacementAction(workbench, row.action!, (request) => {
                                   pendingRequest.current = request;
                                 });
                               }
