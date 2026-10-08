@@ -154,7 +154,7 @@ test.describe("packaged extension webviews", () => {
             runtimeAuthorization(started.descriptor),
           );
 
-          await page.getByText("Settings", { exact: true }).last().click();
+          await page.getByRole("option", { name: "Settings", exact: true }).click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           const settingsFrame = page.frameLocator('iframe[title="Lab (project)"]');
           expect(await page.locator('iframe[title="Lab (project)"]').getAttribute("sandbox")).not.toContain(

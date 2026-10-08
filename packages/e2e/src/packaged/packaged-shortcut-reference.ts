@@ -22,4 +22,5 @@ export const verifyPackagedShortcutReference = async (
   await expect(dialog.getByRole("menuitem", { name: /Open shortcut destination/ })).toContainText(/J/i);
   await expect(dialog.getByText("https://example.com/shortcuts", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
 };
