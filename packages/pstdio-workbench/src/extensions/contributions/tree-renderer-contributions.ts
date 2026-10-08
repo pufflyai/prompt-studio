@@ -255,7 +255,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         ? async (source, target, ctx) => {
             const originalSource = mapper.originalNodes.get(source);
             const originalTarget = target ? mapper.originalNodes.get(target) : undefined;
-            if (!originalSource?.canDrag || !originalTarget?.canDrop) return;
+            if (!originalSource?.canDrag || (target && !originalTarget?.canDrop)) return;
             await executeCallback(input, record, record.moveHandlerId!, {
               ...createQueryParams(input, record, ctx),
               source: originalSource,
