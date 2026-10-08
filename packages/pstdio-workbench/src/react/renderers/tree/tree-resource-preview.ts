@@ -17,7 +17,7 @@ export const previewTreeResources = (
       return [
         {
           ...node,
-          label: resource?.label ?? node.label,
+          label: resource && resource !== node.resource ? (resource.label ?? node.label) : node.label,
           ...(resource ? { resource } : {}),
           ...(children ? { children: previewNodes(children) } : {}),
         },
