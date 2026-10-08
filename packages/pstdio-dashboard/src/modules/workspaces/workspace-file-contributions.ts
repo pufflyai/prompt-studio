@@ -3,6 +3,7 @@ import { getApiClient } from "@/lib/api";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { workspaceFileQueryOptions } from "@/shared/workspaces/workspace-file-query";
 import {
   workspaceFileResource,
   workspaceFilesUnavailableState,
@@ -10,7 +11,7 @@ import {
   workspaceMetadataString,
   workspaceRootResource,
 } from "@/shared/workspaces/workspace-file-resource";
-import { invalidateWorkspaceFileData, workspaceFileQueryOptions } from "./data/workspace-queries";
+import { invalidateWorkspaceFileData } from "./data/workspace-queries";
 import { loadWorkspaceFileEntries, type WorkspaceFileTreeActions } from "./workspace-file-tree";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";

@@ -11,7 +11,10 @@ import {
   type SerializedLexicalNode,
   type Spread,
 } from "lexical";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { capturedChatImageSource, useChatImageSources } from "@/components/chat-ui/links/chat-image-sources";
+import type { ChatLinkHandler } from "@/components/chat-ui/links/chat-link";
+import { useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context";
 import { resolveMarkdownUrl } from "../markdown-url";
 import { useMarkdownUrlResolver } from "../markdown-url-context";
 
@@ -30,7 +33,28 @@ interface MarkdownImageProps {
 export const MarkdownImage = (props: MarkdownImageProps) => {
   const { source, alt, title, onLoad } = props;
   const resolver = useMarkdownUrlResolver();
-  const resolved = resolveMarkdownUrl(source, "image", resolver);
+  const handler = useChatLinkHandler();
+  const captured = capturedChatImageSource(useChatImageSources(), source, handler);
+  const [loaded, setLoaded] = useState<{ source: string; handler: ChatLinkHandler; value: string | null }>();
+  const direct = captured ?? resolveMarkdownUrl(source, "image", resolver);
+  const resolved =
+    direct ??
+    (loaded?.source === source && loaded.handler === handler && loaded.value
+      ? resolveMarkdownUrl(loaded.value, "image")
+      : null);
+  useEffect(() => {
+    if (direct || !handler?.resolveImageSource) return;
+    let current = true;
+    void handler
+      .resolveImageSource(source)
+      .catch(() => null)
+      .then((value) => {
+        if (current) setLoaded({ source, handler, value });
+      });
+    return () => {
+      current = false;
+    };
+  }, [direct, source, handler]);
 
   if (!resolved) {
     return (

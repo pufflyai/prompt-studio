@@ -50,6 +50,25 @@ for await (const line of createInterface({ input: process.stdin })) {
       });
       continue;
     }
+    if (process.env.PSTDIO_TEST_MODE?.startsWith("async")) {
+      emit({
+        method: "item/completed",
+        params: {
+          item: {
+            id: "async-1",
+            type: "agentMessage",
+            text: "Which greeting?",
+            delivery: "async",
+            questions: [
+              { title: "Which greeting?", options: ["Hi", "Hello"] },
+              { title: "Who is it for?", options: null },
+            ],
+          },
+        },
+      });
+      if (process.env.PSTDIO_TEST_MODE === "async-complete") complete();
+      continue;
+    }
     emit({
       id: 0,
       method: "item/tool/requestUserInput",
@@ -80,6 +99,20 @@ for await (const line of createInterface({ input: process.stdin })) {
         ],
       },
     });
+  }
+  if (message.method === "turn/steer") {
+    if (process.env.PSTDIO_TEST_MODE === "async-reject") {
+      emit({ id: message.id, error: { code: -32600, message: "Steer rejected" } });
+      continue;
+    }
+    if (message.params?.threadId !== "thread-fixture" || message.params?.expectedTurnId !== "turn-1") process.exit(2);
+    emit({
+      method: "item/completed",
+      params: { item: { id: "steer", type: "agentMessage", text: JSON.stringify(message) } },
+    });
+    await setTimeout(20);
+    emit({ id: message.id, result: { turnId: "turn-1" } });
+    complete();
   }
   if (message.id === 0 && !message.method) {
     const expected = {
