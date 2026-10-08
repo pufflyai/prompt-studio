@@ -116,6 +116,7 @@ const createRegistry = () => {
   registry.registerPage({
     id: "workspaces",
     ref: workspaceRef,
+    document: { metadataKey: "workspaceFilePath" },
     title: "Workspaces",
     path: "workspaces",
     modeId: "project",

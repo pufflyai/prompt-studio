@@ -1,4 +1,5 @@
 import type { RpcMessage } from "./app-server-rpc";
+import { type AsyncUserInputQuestion, asyncQuestionItem } from "./async-question-items";
 import type { CodexThreadItem, CodexUsage } from "./types";
 
 interface NativeItem {
@@ -21,11 +22,20 @@ interface NativeItem {
   success?: boolean | null;
   name?: string;
   output?: unknown;
+  delivery?: string | null;
+  questions?: AsyncUserInputQuestion[] | null;
+  clientId?: string | null;
+  content?: Array<string | { type: string; text?: string }>;
+  path?: string;
 }
 
 export const toThreadItem = (native: NativeItem) => {
+  if (native.type === "agentMessage" && native.delivery === "async" && native.questions?.length) {
+    return asyncQuestionItem(native.id, native.questions);
+  }
   const types: Record<string, string> = {
     agentMessage: "agent_message",
+    userMessage: "user_message",
     reasoning: "reasoning",
     commandExecution: "command_execution",
     fileChange: "file_change",
@@ -34,6 +44,7 @@ export const toThreadItem = (native: NativeItem) => {
     plan: "agent_message",
     dynamicToolCall: "mcp_tool_call",
     functionCallOutput: "mcp_tool_call",
+    imageView: "image_view",
   };
   if (!types[native.type]) return undefined;
   let output = native.aggregatedOutput ?? undefined;
@@ -44,7 +55,11 @@ export const toThreadItem = (native: NativeItem) => {
   return {
     id: native.id,
     type: types[native.type],
-    text: native.type === "reasoning" ? native.summary?.join("\n") : native.text,
+    text:
+      native.type === "reasoning"
+        ? native.summary?.join("\n")
+        : (native.text ??
+          native.content?.map((part) => (typeof part === "string" ? part : (part.text ?? ""))).join("")),
     command: native.command,
     aggregated_output: output,
     exit_code: native.exitCode,
@@ -57,6 +72,7 @@ export const toThreadItem = (native: NativeItem) => {
     tool: native.tool ?? native.name,
     input: native.arguments,
     query: native.query,
+    path: native.path,
   };
 };
 
@@ -70,9 +86,18 @@ const planItem = (params: Record<string, unknown>) => {
   };
 };
 
-export const createAppServerItems = (publish: (item: CodexThreadItem) => void) => {
+export const createAppServerItems = (publish: (item: CodexThreadItem) => void, initialUserMessageId?: string) => {
   const items = new Map<string, CodexThreadItem>();
   let usage: CodexUsage | undefined;
+  const publishNativeItem = (native: NativeItem, completed: boolean) => {
+    if (native.type === "imageView") native = { ...native, status: completed ? "completed" : "in_progress" };
+    // The initial prompt already carries host attachments; only later native user messages are added.
+    if (native.type === "userMessage" && initialUserMessageId && native.clientId === initialUserMessageId) return;
+    const item = toThreadItem(native);
+    if (!item) return;
+    items.set(item.id, item);
+    publish(item);
+  };
   const receive = (message: RpcMessage) => {
     const params = message.params ?? {};
     if (message.method === "turn/plan/updated") {
@@ -90,10 +115,7 @@ export const createAppServerItems = (publish: (item: CodexThreadItem) => void) =
         };
     }
     if (message.method === "item/started" || message.method === "item/completed") {
-      const item = toThreadItem(params.item as NativeItem);
-      if (!item) return;
-      items.set(item.id, item);
-      publish(item);
+      publishNativeItem(params.item as NativeItem, message.method === "item/completed");
     }
     const deltaFields: Record<string, "text" | "aggregated_output"> = {
       "item/agentMessage/delta": "text",

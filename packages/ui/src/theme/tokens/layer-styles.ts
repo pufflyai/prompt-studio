@@ -1,6 +1,15 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  statusBarItem: {
+    value: {
+      position: "relative",
+      minWidth: "0",
+      height: "full",
+      "&[data-sortable]": { cursor: "grab" },
+      "&[data-dragging]": { opacity: 0.5 },
+    },
+  },
   dropIndicator: {
     value: {
       position: "absolute",

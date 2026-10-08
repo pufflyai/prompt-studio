@@ -1,6 +1,6 @@
 import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import type { WorkspacesRouteDeps } from "./deps";
-import { finalizeWorkspaceArchive } from "./workspace-provider-lifecycle";
+import { finalizeWorkspaceDelete } from "./workspace-provider-lifecycle";
 import { InvalidWorkspaceParamsError } from "./workspace-provider-params";
 import {
   failedOperationPatch,
@@ -45,7 +45,7 @@ const updateResult = async (deps: WorkspacesRouteDeps, workspace: WorkspaceRecor
         providerRef: workspace.provider_ref_json as unknown as WorkspaceProviderRef,
       }),
     )) ?? workspace;
-  if (updated.provider_state === "archived") await finalizeWorkspaceArchive(deps, updated);
+  if (updated.provider_state === "archived") await finalizeWorkspaceDelete(deps, updated);
 };
 
 const settleWithoutProviderMethod = async (
@@ -61,7 +61,7 @@ const settleWithoutProviderMethod = async (
       provider_operation_kind: null,
       provider_error_json: null,
     })) ?? workspace;
-  if (state === "archived") await finalizeWorkspaceArchive(deps, updated);
+  if (state === "archived") await finalizeWorkspaceDelete(deps, updated);
 };
 
 const reconcileCancellation = async (
@@ -163,26 +163,7 @@ const reconcileStoredOperation = async (
     return true;
   }
 
-  if (kind === "archive") {
-    if (!handle.provider.archive) {
-      await settleWithoutProviderMethod(deps, workspace, "archived");
-      return true;
-    }
-    const result = await runWorkspaceProviderCall(
-      () =>
-        handle.provider.archive!(handle.context, {
-          operationId,
-          projectId: workspace.project_id,
-          workspaceId: workspace.id,
-          providerRef: workspace.provider_ref_json as WorkspaceProviderRef,
-        }),
-      { signal: options.signal, timeoutMs: options.providerTimeoutMs },
-    );
-    await updateResult(deps, workspace, result);
-    return true;
-  }
-
-  if (kind !== "delete") return false;
+  if (kind !== "delete" && kind !== "archive") return false;
   if (!handle.provider.delete || !workspace.provider_ref_json) {
     throw new Error(`Workspace provider cannot finish remote deletion: ${workspace.provider_id}`);
   }
@@ -196,7 +177,7 @@ const reconcileStoredOperation = async (
       }),
     { signal: options.signal, timeoutMs: options.providerTimeoutMs },
   );
-  await deps.workspaceService.softDelete(workspace.id);
+  await finalizeWorkspaceDelete(deps, workspace);
   return true;
 };
 

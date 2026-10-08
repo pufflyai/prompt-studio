@@ -10,7 +10,7 @@ import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/wor
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { archiveDashboardWorkspace, deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
+import { deleteDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 import {
   createDashboardWorkspaceOptionResource,
   createDashboardWorkspaceOptions,
@@ -54,19 +54,6 @@ const resolveWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource:
 // The table, selected-resource breadcrumb, and tree resource menus all run the same
 // action, so a workspace behaves identically wherever it is surfaced. These views
 // listen to synced rows, so the action only needs to fire the write.
-export const archiveWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  if (!resource.id) return;
-  try {
-    await archiveDashboardWorkspace(resource.id);
-    ctx.notifications.show({ level: "success", title: `Archived workspace ${workspaceLabel(resource)}` });
-  } catch (error) {
-    ctx.notifications.show({
-      level: "error",
-      title: "Failed to archive workspace",
-      message: error instanceof Error ? error.message : String(error),
-    });
-  }
-};
 export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
   try {
@@ -152,7 +139,6 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, res
 // right-clicked resource is the default workspace.
 const mutableWorkspaceWhen = `${workbenchResourceTypeContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
 const workspaceTerminalActionWhen = `${workbenchResourceTypeContextKey} == "workspace" && ${workbenchResourceMetadataContextKey("workspaceExecutionKind")} == "local" && ${workbenchResourceMetadataContextKey("workspaceProviderState")} == "ready"`;
-const workspaceArchiveActionWhen = `${mutableWorkspaceWhen} && ${workbenchResourceMetadataContextKey("workspaceSupportsArchive")}`;
 const workspaceDeleteActionWhen = `${mutableWorkspaceWhen} && ${workbenchResourceMetadataContextKey("workspaceSupportsDelete")}`;
 const workspaceActions = [
   {
@@ -161,13 +147,6 @@ const workspaceActions = [
     icon: "Pencil",
     order: 10,
     when: mutableWorkspaceWhen,
-  },
-  {
-    commandId: dashboardCommandIds.archiveWorkspace,
-    label: "Archive workspace",
-    icon: "Archive",
-    order: 20,
-    when: workspaceArchiveActionWhen,
   },
   {
     commandId: dashboardCommandIds.deleteWorkspace,
@@ -198,10 +177,6 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContext) =>
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.renameWorkspace, label: "Rename workspace", category: "Workspace", icon: "Pencil" },
     { execute: (_args, context) => context?.resource && openRenameWorkspaceResource(ctx, context.resource) },
-  );
-  ctx.commands.registerCommand(
-    { id: dashboardCommandIds.archiveWorkspace, label: "Archive workspace", category: "Workspace", icon: "Archive" },
-    { execute: (_args, context) => context?.resource && archiveWorkspaceResource(ctx, context.resource) },
   );
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.deleteWorkspace, label: "Delete workspace", category: "Workspace", icon: "Trash2" },

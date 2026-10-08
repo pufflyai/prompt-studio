@@ -1,5 +1,6 @@
 import type { Disposable, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
@@ -11,9 +12,9 @@ interface WatchOpenExtensionResourceInput {
   projectId: string;
 }
 
-const identityOf = (resource: ResourceRef | undefined) => (resource ? `${resource.type}:${resource.id}` : undefined);
-
 const sameReference = (left: ResourceRef, right: ResourceRef) =>
+  left.extensionId === right.extensionId &&
+  left.projectId === right.projectId &&
   left.label === right.label &&
   left.icon === right.icon &&
   left.shorthand === right.shorthand &&
@@ -30,10 +31,30 @@ export const watchOpenExtensionResource = (
   const resolvers = new Map(
     input.metadata.resourceKinds.flatMap((kind) =>
       kind.resolveCommand
-        ? [[kind.id, { commandId: kind.resolveCommand, extensionId: kind.extensionId }] as const]
+        ? [
+            [
+              JSON.stringify([kind.extensionId, kind.id]),
+              { kind: kind.id, commandId: kind.resolveCommand, extensionId: kind.extensionId },
+            ] as const,
+          ]
         : [],
     ),
   );
+  const resolverOf = (resource: ResourceRef | undefined) => {
+    if (!resource) return undefined;
+    if (resource.extensionId) return resolvers.get(JSON.stringify([resource.extensionId, resource.type]));
+    const ref = canonicalDashboardResource(resource, input.projectId, input.metadata.resourceKinds);
+    return ref.extensionId ? resolvers.get(JSON.stringify([ref.extensionId, ref.type])) : undefined;
+  };
+  const identityOf = (resource: ResourceRef | undefined) =>
+    resource
+      ? JSON.stringify([
+          resource.projectId ?? input.projectId,
+          resource.extensionId ?? resolverOf(resource)?.extensionId,
+          resource.type,
+          resource.id,
+        ])
+      : undefined;
   let openIdentity: string | undefined;
   let pending: AbortController | undefined;
 
@@ -41,7 +62,7 @@ export const watchOpenExtensionResource = (
     pending?.abort();
     pending = undefined;
     const open = ctx.getPrimaryResource();
-    const resolver = open ? resolvers.get(open.type) : undefined;
+    const resolver = resolverOf(open);
     if (!open || !resolver) return;
     const request = new AbortController();
     pending = request;
@@ -54,12 +75,21 @@ export const watchOpenExtensionResource = (
       );
       if (request.signal.aborted) return;
       if (response.outcome.status !== "success") throw new Error(response.outcome.reason ?? "Resolver failed.");
-      const resolved = toDashboardExtensionResource(response.outcome.value, input.projectId);
+      const resolved = toDashboardExtensionResource(
+        response.outcome.value,
+        input.projectId,
+        input.metadata.resourceKinds,
+      );
       const latest = ctx.getPrimaryResource();
-      if (!resolved || !latest || identityOf(resolved) !== identityOf(latest)) return;
+      if (
+        !resolved ||
+        !latest ||
+        identityOf({ ...resolved, extensionId: resolved.extensionId ?? resolver.extensionId }) !== identityOf(latest)
+      )
+        return;
       // The resolver describes the resource; the open page keeps its identity and route.
       const current = {
-        ...latest,
+        ...canonicalDashboardResource(latest, input.projectId, input.metadata.resourceKinds),
         label: resolved.label,
         icon: resolved.icon,
         shorthand: resolved.shorthand,
@@ -84,7 +114,7 @@ export const watchOpenExtensionResource = (
   const primarySubscription = ctx.onDidChangePrimaryResource(onPrimaryResourceChange);
   const unsubscribeEvents = subscribeToExtensionEventFeed((event) => {
     const open = ctx.getPrimaryResource();
-    const resolver = open ? resolvers.get(open.type) : undefined;
+    const resolver = resolverOf(open);
     if (event.projectId !== input.projectId || !resolver) return;
     if (event.id.startsWith(`${resolver.extensionId}.event.`)) void resolveOpenResource();
   });

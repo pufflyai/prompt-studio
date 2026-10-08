@@ -3,9 +3,9 @@ import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { workspaceDeleteResource, workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
 import { createWorkspacesModule } from "./module";
 import { deleteWorkspaceEntry } from "./workspace-file-contributions";
-import { workspaceDeleteResource, workspaceFileResource } from "./workspace-file-resource";
 
 const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
 let server: ReturnType<typeof Bun.serve>;

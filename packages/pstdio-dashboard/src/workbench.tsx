@@ -46,6 +46,7 @@ interface CreateDashboardWorkbenchInput {
 }
 
 type CreateDashboardModulesInput = {
+  initialProjectId?: string;
   projectTabs?: DesktopProjectTabsController;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
@@ -57,6 +58,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createWorkspacesModule(),
   createExtensionsModule(),
   createProjectsModule({
+    initialProjectId: input.initialProjectId,
     projectSelectionPersistence: input.projectSelectionPersistence,
     projectTabs: input.projectTabs,
   }),
@@ -120,6 +122,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   });
 
   const modules = createDashboardModules({
+    initialProjectId: urlProjectId,
     projectTabs: input.projectTabs,
     projectSelectionPersistence,
     sessionDraftPersistence,

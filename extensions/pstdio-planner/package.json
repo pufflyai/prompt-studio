@@ -1,6 +1,6 @@
 {
   "name": "pstdio-planner",
-  "version": "0.40.0",
+  "version": "0.41.0",
   "displayName": "Prompt Studio Planner",
   "description": "Built-in Prompt Studio planner: tickets, managed attempts, reviews, and templates.",
   "publisher": "pstdio",
@@ -26,9 +26,11 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@storybook/react": "^10.6.0",
     "@types/bun": "1.4.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "storybook": "^10.6.0",
     "typescript": "6.0.2"
   }
 }

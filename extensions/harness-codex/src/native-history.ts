@@ -1,4 +1,4 @@
-import type { HarnessEventSink, HarnessRecoveryInput, SessionMessage } from "@pstdio/sdk/extensions";
+import type { HarnessEventSink, HarnessRecoveryInput, SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
 import { toThreadItem } from "./app-server-items";
 import { errorMessage, itemToMessage } from "./items";
 import { nativeHistoryAfterLegacyBoundary } from "./legacy-history";
@@ -27,6 +27,7 @@ export const nativeItemMessage = (item: ThreadItem, turnId: string) => {
     return { id, role: "assistant" as const, parts: [{ type: "text" as const, text: item.text }] };
   const adapted = toThreadItem(item);
   if (!adapted) return null;
+  if (item.type === "imageView") adapted.status = "completed";
   return itemToMessage(adapted, `codex-${turnId}`);
 };
 
@@ -59,7 +60,15 @@ export const recoverNativeHistory = (input: Pick<HarnessRecoveryInput, "knownMes
     const known = messages[position];
     // Host metadata and visible messages survive provider compaction.
     const files = known.parts.filter((part) => part.type === "file");
-    messages[position] = { ...message, ...known, parts: [...message.parts, ...files] };
+    const parts = message.parts.map((part) => {
+      if (part.type !== "tool") return part;
+      const saved = known.parts.find(
+        (candidate): candidate is ToolPart => candidate.type === "tool" && candidate.callId === part.callId,
+      );
+      if (saved?.state?.output !== undefined) return saved;
+      return part;
+    });
+    messages[position] = { ...message, ...known, parts: [...parts, ...files] };
   }
   return { kind: "recovered" as const, messages };
 };

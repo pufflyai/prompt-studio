@@ -1,4 +1,5 @@
 import { createClient, createRequest, PstdioApiError, type PstdioClient } from "@pstdio/sdk/client";
+import { readBrowserSession } from "./browser-session";
 
 type ApiRequestOptions = {
   method?: string;
@@ -79,14 +80,18 @@ export const buildAbsoluteApiUrl = (path: string, baseHref = globalThis.location
   return apiUrl;
 };
 
+// The browser session secret is a bearer credential. A server without auth ignores it.
+export const apiClientOptions = () => ({ baseUrl: resolveApiBaseUrl(), token: readBrowserSession() });
+
 let apiClientInstance: PstdioClient | null = null;
-let apiClientBaseUrl: string | null = null;
+let apiClientKey: string | null = null;
 
 export const getApiClient = () => {
-  const baseUrl = resolveApiBaseUrl();
-  if (!apiClientInstance || apiClientBaseUrl !== baseUrl) {
-    apiClientInstance = createClient({ baseUrl });
-    apiClientBaseUrl = baseUrl;
+  const options = apiClientOptions();
+  const key = JSON.stringify(options);
+  if (!apiClientInstance || apiClientKey !== key) {
+    apiClientInstance = createClient(options);
+    apiClientKey = key;
   }
 
   return apiClientInstance;
@@ -94,7 +99,7 @@ export const getApiClient = () => {
 
 export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {}) => {
   const { allowNotFound, ...requestOptions } = options;
-  const request = createRequest({ baseUrl: resolveApiBaseUrl() });
+  const request = createRequest(apiClientOptions());
 
   try {
     return await request<T>(path, requestOptions);

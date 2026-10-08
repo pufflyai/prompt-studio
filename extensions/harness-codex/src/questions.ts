@@ -88,6 +88,7 @@ export const createQuestionChannel = (
           ...entry.item,
           status: "completed",
           aggregated_output: questionAnswerText(entry.questions, answers),
+          metadata: { answers: response.answers },
         });
       } catch (error) {
         unavailable(entry);

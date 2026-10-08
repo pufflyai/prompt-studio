@@ -188,17 +188,9 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
                   size="2xs"
                   variant="primary"
                   disabled={!viewsSource || busy}
-                  onClick={() =>
-                    viewsSource &&
-                    activeView &&
-                    run(() =>
-                      activeView.builtIn
-                        ? createView({ title: `${activeView.title} copy`, ...state })
-                        : viewsSource.onUpdateView(activeView.id, state),
-                    )
-                  }
+                  onClick={() => viewsSource && activeView && run(() => viewsSource.onUpdateView(activeView.id, state))}
                 >
-                  {activeView?.builtIn ? "Save as new view" : "Save view"}
+                  Save view
                 </Button>
               </>
             ) : null}

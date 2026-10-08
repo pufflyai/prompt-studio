@@ -78,7 +78,9 @@ test("workspace views share create edit default reorder and delete within their 
   const path = `/boards/${boardId}/views`;
   const initial = await request(id, path);
   expect(initial.status).toBe(200);
-  expect(await initial.json()).toMatchObject({ defaultViewId: "default", views: [{ builtIn: true }] });
+  const initialViews = await initial.json();
+  const initialId = initialViews.views[0].id;
+  expect(initialViews).toMatchObject({ defaultViewId: initialId, views: [{ builtIn: false }] });
   const filter = { conjunction: "and", rules: [{ attributeId: "name", condition: "contains", value: "release" }] };
   const create = await request(id, path, "POST", {
     title: "Release",
@@ -93,14 +95,16 @@ test("workspace views share create edit default reorder and delete within their 
   expect((await (await request(other, path)).json()).views).toHaveLength(1);
   expect((await request(id, `/board-views/${view.id}`, "PATCH", { title: "Release workspaces" })).status).toBe(200);
   expect((await (await request(id, `/board-views/${view.id}`)).json()).title).toBe("Release workspaces");
-  for (const viewId of [view.id, "default", view.id]) {
+  for (const viewId of [view.id, initialId, view.id]) {
     const response = await request(id, `${path}/default`, "PUT", { viewId });
     expect(response.status).toBe(200);
     expect((await response.json()).defaultViewId).toBe(viewId);
   }
-  expect((await request(id, `${path}/order`, "PUT", { viewIds: [view.id] })).status).toBe(200);
+  expect((await request(id, `${path}/order`, "PUT", { viewIds: [view.id, initialId] })).status).toBe(200);
   expect((await request(id, `/board-views/${view.id}`, "DELETE")).status).toBe(200);
-  expect(await (await request(id, path)).json()).toMatchObject({ defaultViewId: "default" });
+  expect(await (await request(id, path)).json()).toMatchObject({ defaultViewId: initialId });
+  expect((await request(id, `/board-views/${initialId}`, "PATCH", { title: "All workspaces" })).status).toBe(200);
+  expect((await request(id, `/board-views/${initialId}`, "DELETE")).status).toBe(409);
   const bad = await request(id, path, "POST", { title: "Wrong kind", settings: { viewMode: "board" } });
   expect(bad.status).toBe(400);
 });

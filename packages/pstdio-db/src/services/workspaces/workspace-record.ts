@@ -1,23 +1,23 @@
 import { and, eq, sql } from "drizzle-orm";
+import type { ResourceAnchor } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   defaultLocalWorkspaceCapabilities,
   folderWorkspaceCapabilities,
-  type ResourceRef,
   type WorkspaceCapabilities,
   type WorkspaceProviderError,
   type WorkspaceProviderRef,
   type WorkspaceProviderState,
   workspaces,
 } from "../../db/schemas.pg";
+import { workspaceColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
 
-export type WorkspaceRecord = typeof workspaces.$inferSelect;
 export type JsonObject = Record<string, unknown>;
 
 export type CreateInput = {
   project_id: string;
   shorthand_base: string;
-  anchors?: ResourceRef[];
+  anchors?: ResourceAnchor[];
   name?: string;
   branch?: string;
   root_path?: string;
@@ -78,7 +78,7 @@ export const buildWorkspaceRecord = (input: {
   branch?: string;
   root_path?: string;
   is_default?: boolean;
-  anchors?: ResourceRef[];
+  anchors?: ResourceAnchor[];
   provider_id?: string;
   provider_params_json?: JsonObject;
   provider_ref_json?: WorkspaceProviderRef | null;
@@ -89,7 +89,7 @@ export const buildWorkspaceRecord = (input: {
   provider_error_json?: WorkspaceProviderError | null;
   provider_capabilities_json?: WorkspaceCapabilities;
   display_path?: string | null;
-}): WorkspaceRecord => {
+}) => {
   const timestamp = nowTimestamp();
   return {
     id: crypto.randomUUID(),
@@ -117,7 +117,6 @@ export const buildWorkspaceRecord = (input: {
     initializing: false,
     setup_error: null,
     startup_log_file_id: null,
-    anchors_json: input.anchors ?? [],
     created_at: timestamp,
     updated_at: timestamp,
     deleted_at: null,
@@ -134,13 +133,18 @@ export const insertDefaultWorkspace = async (db: DbClient, input: DefaultWorkspa
     is_default: true,
     root_path: input.root_path,
   });
-  await db.insert(workspaces).values(record);
-  return record;
+  const created = await db.transaction(async (tx) => {
+    await tx.insert(workspaces).values(record);
+    await writeLegacyResourceLinks(tx, "workspace", record, []);
+    const [row] = await tx.select(workspaceColumns).from(workspaces).where(eq(workspaces.id, record.id));
+    return row!;
+  });
+  return created;
 };
 
 export const selectDefaultWorkspace = async (db: DbClient, projectId: string) => {
   const rows = await db
-    .select()
+    .select(workspaceColumns)
     .from(workspaces)
     .where(
       and(eq(workspaces.project_id, projectId), eq(workspaces.is_default, true), sql`${workspaces.deleted_at} is null`),

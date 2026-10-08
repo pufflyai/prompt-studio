@@ -1,7 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { WorkspacesRouteDeps } from "./deps";
-import { archiveWorkspaceHandler, archiveWorkspaceRoute } from "./endpoints/archive-workspace";
 import { createWorkspaceHandler, createWorkspaceRoute } from "./endpoints/create-workspace";
 import { deleteWorkspaceHandler, deleteWorkspaceRoute } from "./endpoints/delete-workspace";
 import { getStartupLogHandler, getStartupLogRoute } from "./endpoints/get-startup-log";
@@ -59,7 +58,6 @@ export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   routes.openapi(moveWorkspaceEntryRoute, moveWorkspaceEntryHandler(deps));
   routes.openapi(deleteWorkspaceEntryRoute, deleteWorkspaceEntryHandler(deps));
   routes.openapi(deleteWorkspaceRoute, deleteWorkspaceHandler(deps));
-  routes.openapi(archiveWorkspaceRoute, archiveWorkspaceHandler(deps));
   routes.openapi(removeWorkspaceWorktreeRoute, removeWorkspaceWorktreeHandler(deps));
   routes.openapi(setStartupLogRoute, setStartupLogHandler(deps));
   routes.openapi(getStartupLogRoute, getStartupLogHandler(deps));

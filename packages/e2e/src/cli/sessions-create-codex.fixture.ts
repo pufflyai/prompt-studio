@@ -2,7 +2,7 @@ import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
 if (process.argv.includes("--version")) {
-  console.log("codex-cli 0.159.3");
+  console.log("codex-cli 0.160.1");
   process.exit(0);
 }
 const threadId = "codex-e2e-thread";

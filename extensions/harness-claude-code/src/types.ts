@@ -34,6 +34,8 @@ export type ClaudeCodeTranscriptEntry = {
   toolUseResult?: unknown;
   /** Claude tags entries it wrote itself, such as the note that wakes it when a background task ends. */
   origin?: { kind?: string };
+  /** Set on synthetic replies that stand for an API failure, such as `authentication_failed`. */
+  error?: string;
 };
 
 export type RawLogEvent =

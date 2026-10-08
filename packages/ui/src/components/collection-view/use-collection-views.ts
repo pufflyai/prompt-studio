@@ -38,7 +38,11 @@ export const isCollectionViewDirty = <TSettings>(
 ) => {
   if (!view) return false;
   const comparable = (value: CollectionViewState<TSettings>) =>
-    JSON.stringify([comparableSettings(value.settings), comparableFilter(normalFilter(value.filter)), value.sorts]);
+    JSON.stringify([
+      comparableSettings(value.settings),
+      comparableFilter(normalFilter(value.filter)),
+      value.sorts.map((sort) => [sort.attributeId, sort.direction]),
+    ]);
   return comparable(view) !== comparable(state);
 };
 

@@ -5,7 +5,7 @@ import { DESKTOP_CHANNELS, type DesktopStartupAppearance } from "../desktop-api"
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import type { OwnedFrame } from "../performance/process-attribution";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
-import { provisionRuntimeSession } from "../security/runtime-session";
+import { createRuntimeLoginUrl } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
 import type { TitleBarAppearance } from "./title-bar-appearance";
@@ -180,8 +180,7 @@ export class DesktopWindowController {
     // Its remaining resources can continue loading alongside the workbench.
     await this.#shown;
     const view = this.#workbench ?? this.createWorkbench();
-    await provisionRuntimeSession(view.webContents.session, descriptor);
-    await view.webContents.loadURL(descriptor.origin);
+    await view.webContents.loadURL(await createRuntimeLoginUrl(fetch, descriptor));
     view.setVisible(true);
     view.webContents.focus();
   }

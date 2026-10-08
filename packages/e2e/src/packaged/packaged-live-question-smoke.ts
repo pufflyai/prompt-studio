@@ -21,6 +21,8 @@ export const registerLiveQuestionSmokeTests = () => {
       let child: ChildProcess | undefined;
       try {
         const sourcePath = join(root, "question-extension");
+        const imageSrc =
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9i8AAAAASUVORK5CYII=";
         mkdirSync(sourcePath);
         writeFileSync(
           join(sourcePath, "package.json"),
@@ -42,8 +44,9 @@ export const registerLiveQuestionSmokeTests = () => {
           start(_ctx, input) {
             let finish;
             const done = new Promise(resolve => { finish = resolve; });
-            const part = { type: "tool", tool: "question", callId: "request-1", status: "pending", state: { input: { questions: [{ id: "greeting", question: "Which greeting?", options: [{ label: "Hi" }] }] } } };
-            input.events.push({ op: "add", path: "/messages/0", value: { id: "question", role: "assistant", parts: [part] } });
+            const part = { type: "tool", tool: "question", callId: "request-1", status: "pending", state: { input: { delivery: "async", questions: [{ id: "greeting", question: "Which greeting?", options: [{ label: "Hi" }] }] } } };
+            const image = { type: "tool", tool: "view_image", callId: "image-1", status: "completed", state: { input: { path: "/tmp/preview.png" }, output: [{ type: "image", source: "/tmp/preview.png", src: ${JSON.stringify(imageSrc)}, mimeType: "image/png" }] } };
+            input.events.push({ op: "add", path: "/messages/0", value: { id: "question", role: "assistant", parts: [part, image] } });
             const hostPart = { ...part, callId: "request-2" };
             input.events.push({ op: "add", path: "/messages/1", value: { id: "host-question", role: "assistant", parts: [hostPart] } });
             void input.questions.ask({ id: "host-question", toolUseId: "request-2", questions: [{ question: "Which color?", options: [{ label: "Blue" }] }] }).then(async response => {
@@ -57,7 +60,7 @@ export const registerLiveQuestionSmokeTests = () => {
                 if (response.callId === "broken-provider") throw new Error("Provider failed");
                 if (response.callId !== "request-1") throw Object.assign(new Error("Stale request"), { questionRejected: true });
                 writeFileSync(${JSON.stringify(evidence)}, JSON.stringify(response));
-                input.events.push({ op: "replace", path: "/messages/0", value: { id: "question", role: "assistant", parts: [{ ...part, status: "completed", state: { ...part.state, output: response.answers.flat().join(", ") } }] } });
+                input.events.push({ op: "replace", path: "/messages/0", value: { id: "question", role: "assistant", parts: [{ ...part, status: "completed", state: { ...part.state, output: { answers: response.answers } } }, image] } });
               }
             };
           },
@@ -169,7 +172,11 @@ export const registerLiveQuestionSmokeTests = () => {
         expect((await request(`/sessions/${session.id}`)).agent_session_id).toBe("native-thread");
         expect((await request(`/sessions/${session.id}/conversation`)).messages[0].parts[0]).toMatchObject({
           status: "completed",
-          state: { output: scenario.native.flat().join(", ") },
+          state: { input: { delivery: "async" }, output: { answers: scenario.native } },
+        });
+        expect((await request(`/sessions/${session.id}/conversation`)).messages[0].parts[1]).toMatchObject({
+          tool: "view_image",
+          state: { output: [{ type: "image", source: "/tmp/preview.png", src: imageSrc }] },
         });
       } finally {
         if (child) await stopProcess(child);

@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createCodexRuntime } from "./codex-runtime";
 import { createCodexHarness } from "./harness";
+import { nativeItemMessage } from "./native-history";
 
 const ctx: HarnessContext = {
   extensionId: "pstdio.harness-codex",
@@ -15,7 +19,7 @@ const ctx: HarnessContext = {
     },
   },
   process: {
-    run: async () => ({ exitCode: 0, stdout: "codex-cli 0.159.3\n", stderr: "" }),
+    run: async () => ({ exitCode: 0, stdout: "codex-cli 0.160.1\n", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     spawnDetached: async () => ({}),
   },
@@ -23,6 +27,28 @@ const ctx: HarnessContext = {
   logger: { info: () => {}, warn: () => {}, error: () => {} },
   state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
 };
+
+test("recovers relative image previews from the session directory", async () => {
+  const root = mkdtempSync(join(tmpdir(), "codex-relative-image-"));
+  try {
+    writeFileSync(join(root, "preview.png"), Buffer.from("aGVsbG8=", "base64"));
+    const runtime = createCodexRuntime();
+    runtime.readMessages = async () => [
+      {
+        ...nativeItemMessage({ type: "imageView", id: "image-1", path: "preview.png" }, "image-turn")!,
+        createdAt: undefined,
+      },
+    ];
+    const harness = createCodexHarness({ runtime });
+    const messages = await harness.getMessages!(ctx, { agentSessionId: "image-thread", cwd: root });
+    expect(messages[0].parts[0]).toMatchObject({
+      tool: "view_image",
+      state: { output: [{ source: "preview.png", src: "data:image/png;base64,aGVsbG8=" }] },
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("codex harness detection", () => {
   test("declares discrete run params", () => {
@@ -55,7 +81,7 @@ describe("codex harness detection", () => {
 
   test("reports availability with the CLI version", async () => {
     const harness = createCodexHarness();
-    expect(await harness.detect!(ctx)).toEqual({ available: true, version: "codex-cli 0.159.3" });
+    expect(await harness.detect!(ctx)).toEqual({ available: true, version: "codex-cli 0.160.1" });
   });
   test("refuses a CLI whose live item identities do not survive native history reads", async () => {
     const harness = createCodexHarness();

@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import { createTerminalSupervisor } from "../extensions/extension-terminal-runtime";
-import { createRuntimeRoutes, type RuntimeActivitySummary, type RuntimeHost } from "./routes";
+import {
+  createBrowserSessionRoutes,
+  createRuntimeRoutes,
+  type RuntimeActivitySummary,
+  type RuntimeHost,
+} from "./routes";
 import { createBrowserSessions } from "./runtime-auth";
 
 const emptyActivity = (): RuntimeActivitySummary => ({ jobs: [], sessions: [], terminals: [] });
@@ -44,6 +49,7 @@ const createHarness = (
     },
   };
   const app = new OpenAPIHono<AppBindings>();
+  app.route("/runtime", createBrowserSessionRoutes(deps));
   app.route("/runtime", createRuntimeRoutes(deps));
   const request = (path: string, init: RequestInit = {}) =>
     app.request(path, { ...init, headers: { authorization: "Bearer runtime-secret", ...init.headers } });
@@ -131,23 +137,32 @@ describe("runtime control routes", () => {
     });
   });
 
-  test("provisions browser cookie auth without exposing the bearer token to JavaScript", async () => {
-    const { app } = createHarness();
-    const provision = await app.request("http://127.0.0.1:43123/runtime/browser-session", {
+  test("signs a browser in through a login link that only the runtime token can create", async () => {
+    const { app, request } = createHarness();
+    const created = await request("/runtime/browser-login", { method: "POST" });
+    const { url } = (await created.json()) as { url: string };
+    expect(url).toStartWith("http://127.0.0.1:43123/#browser-login=");
+    const code = new URLSearchParams(new URL(url).hash.slice(1)).get("browser-login");
+
+    const redeemed = await app.request("http://127.0.0.1:43123/runtime/browser-session", {
       method: "POST",
-      headers: { authorization: "Bearer runtime-secret", origin: "http://127.0.0.1:43123" },
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:43123" },
+      body: JSON.stringify({ code }),
     });
+    expect(redeemed.status).toBe(200);
+    expect(redeemed.headers.get("cache-control")).toBe("no-store");
+    expect(redeemed.headers.get("set-cookie")).toBeNull();
+    const { secret } = (await redeemed.json()) as { secret: string };
 
-    expect(provision.status).toBe(204);
-    expect(await provision.text()).toBe("");
-    const cookie = provision.headers.get("set-cookie")!;
-    expect(cookie).toContain("HttpOnly");
-    expect(cookie).toContain("SameSite=Strict");
-
-    const authenticated = await app.request("http://127.0.0.1:43123/runtime/ready", {
-      headers: { cookie: cookie.split(";", 1)[0]!, origin: "http://127.0.0.1:43123" },
+    const ready = await app.request("http://127.0.0.1:43123/runtime/ready", {
+      headers: { authorization: `Bearer ${secret}` },
     });
-    expect(authenticated.status).toBe(200);
+    expect(ready.status).toBe(200);
+    const login = await app.request("http://127.0.0.1:43123/runtime/browser-login", {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    expect(login.status).toBe(401);
   });
 
   test("promotes desktop ownership atomically and never demotes", async () => {

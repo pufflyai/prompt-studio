@@ -7,21 +7,41 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { apiRequest } from "@/lib/api";
+import { storeBrowserSession, takeBrowserLoginCode } from "@/lib/browser-session";
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
 import { dashboardQueryClient } from "@/lib/query-client";
+import { createConnectionStatusSettings } from "@/lib/sync/connection-status-settings";
 import { SyncProvider } from "@/lib/sync/sync-provider";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
 import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appearance";
 import { DesktopProjectTabs } from "@/modules/projects/components/desktop-project-tabs";
 import { openDashboardSidePanel } from "@/modules/sessions/bubble/open-side-panel";
+import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { BrowserSignInRequired } from "@/shared/components/browser-sign-in-required";
 
 import { createDashboardWorkbench } from "./workbench";
 import "./i18n";
+
+// `pst` and the desktop app open a login link with a single-use code in the fragment (ADR 0057).
+// The code leaves the address bar first, so a reload or a copied URL never carries it.
+const signInFromLoginLink = async () => {
+  const { code, hash } = takeBrowserLoginCode(window.location.hash);
+  if (!code) return;
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hash}`);
+  try {
+    const { secret } = await apiRequest<{ secret: string }>("/runtime/browser-session", {
+      method: "POST",
+      body: { code },
+    });
+    storeBrowserSession(secret);
+  } catch {
+    // A used or expired code leaves the browser signed out, and the sign-in page explains what to do.
+  }
+};
 
 // A runtime accepts a browser only with the session that `pst` or the desktop app gives it.
 // A server without auth has no runtime routes and answers 404.
@@ -36,6 +56,11 @@ const isBrowserSignedOut = async () => {
 
 const renderDashboard = async () => {
   const root = createRoot(document.getElementById("root")!);
+  // Login links must work when an old dashboard remains mounted after its runtime restarts.
+  window.addEventListener("hashchange", () => {
+    if (takeBrowserLoginCode(window.location.hash).code) window.location.reload();
+  });
+  await signInFromLoginLink();
   if (await isBrowserSignedOut()) {
     root.render(
       <StrictMode>
@@ -48,6 +73,7 @@ const renderDashboard = async () => {
   }
 
   const storage = await createDesktopWorkbenchStorage(window.promptStudioDesktop);
+  const connectionStatusSettings = createConnectionStatusSettings(resolveDashboardStorage(storage));
   const projectTabs = await createDesktopProjectTabs(window.promptStudioDesktop);
   const desktopLifecycle = resolveDesktopLifecycleBridge(window.promptStudioDesktop);
   const dashboardWorkbench = createDashboardWorkbench({
@@ -70,7 +96,7 @@ const renderDashboard = async () => {
     <StrictMode>
       <QueryClientProvider client={dashboardQueryClient}>
         <HostStorageProvider storage={storage}>
-          <SyncProvider>
+          <SyncProvider workbench={dashboardWorkbench} connectionStatusSettings={connectionStatusSettings}>
             <Workbench
               workbench={dashboardWorkbench}
               themeStorage={storage}

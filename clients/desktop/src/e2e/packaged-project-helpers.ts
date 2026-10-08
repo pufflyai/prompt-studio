@@ -29,7 +29,10 @@ export const createPackagedProject = async (app: Pick<PackagedApp, "page" | "hom
   const result = await app.page.evaluate(async (projectPath) => {
     const response = await fetch("/v1/projects", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+      },
       body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path: projectPath } } }),
     });
     return {

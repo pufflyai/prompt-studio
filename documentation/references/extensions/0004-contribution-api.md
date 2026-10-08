@@ -298,7 +298,7 @@ Each field kind accepts a fixed list of conditions. `VIEW_FILTER_CONDITIONS` in 
 
 A date value is a day (`2026-10-02`) or a day relative to today (`today`, `today-7`, `today+7`). Relative days resolve against the viewer's date each time the view renders. Option values are compared by value ID. The board title is a built-in `string` field with ID `title`.
 
-Declare the starting view with `defaultFilter`, `defaultSorts`, and `defaultSettings`, and read-only built-in views with `defaultViews`:
+Declare the starting view with `defaultFilter`, `defaultSorts`, and `defaultSettings`, and multiple starting views with `defaultViews`:
 
 ```ts
 defineView({
@@ -343,11 +343,11 @@ The host keeps sending `params.filters`, derived from root `is-any-of` and `has-
 
 ## Shared views
 
-`defaultViews` defines extension-owned, read-only built-ins. `defaultActiveViewId` chooses the extension fallback. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. The project's shared default takes precedence over both. Do not copy or save built-ins into extension storage.
+`defaultViews` defines the starting views for a collection with no saved views. The host saves them as ordinary project views that people and agents can edit, rename, reorder, and delete. At least one view must remain. `defaultActiveViewId` chooses the initial default. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. Saved project views and their shared default take precedence after initialization. Do not store a second copy in extension storage.
 
 The host saves user-created views for kanban and data table views per project, extension instance and local view ID. Query-returned attributes, columns, and status options are used to validate settings, rules, and sorts. Keep field IDs stable across releases. A successful query can clean rules for removed fields and options from saved views; a failed query never removes them.
 
-Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` and `DataTableViewsSource` supply shared views and asynchronous mutations to the UI renderers. The workbench accepts a subscribable views provider from its host; standalone callers without one show their built-ins read-only.
+Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflows. `KanbanRendererViewsSource` and `DataTableViewsSource` supply shared views and asynchronous mutations to the UI renderers. The workbench accepts a subscribable views provider from its host. Standalone callers need a views source to persist view changes.
 
 ## Sidenav levels
 

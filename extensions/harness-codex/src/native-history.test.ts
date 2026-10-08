@@ -80,3 +80,27 @@ test("native history restores a failed turn even without an item checkpoint", ()
     { id: "codex-failed-error", parts: [{ type: "error", message: "Native failure" }] },
   ]);
 });
+
+test("native failed turns show the readable message from a JSON error body", () => {
+  const message = "The selected model is not supported when using Codex with a ChatGPT account.";
+  const turns: Parameters<typeof nativeThreadMessages>[0] = [
+    {
+      id: "failed",
+      status: "failed",
+      items: [],
+      error: {
+        message: JSON.stringify({ type: "error", status: 400, error: { type: "invalid_request_error", message } }),
+        codexErrorInfo: null,
+        additionalDetails: null,
+        misalignment: null,
+      },
+      startedAt: 2,
+      completedAt: 3,
+      durationMs: 1000,
+      itemsView: "full",
+    },
+  ];
+  expect(nativeThreadMessages(turns)).toMatchObject([
+    { id: "codex-failed-error", parts: [{ type: "error", message }] },
+  ]);
+});

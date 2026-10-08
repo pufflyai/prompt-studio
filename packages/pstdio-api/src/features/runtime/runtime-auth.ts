@@ -1,6 +1,5 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
-
-export const RUNTIME_AUTH_COOKIE = "pstdio_runtime_session";
+import { WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX } from "pstdio-api-contracts";
 
 const LOGIN_CODE_TTL_MS = 60_000;
 
@@ -25,31 +24,26 @@ const bearerToken = (request: Request) => {
   return authorization.replace(/^bearer\s+/i, "").trim();
 };
 
-const cookieToken = (request: Request, cookieName: string) => {
-  const cookie = request.headers.get("cookie");
-  if (!cookie) return undefined;
+const webSocketCredential = (request: Request) =>
+  request.headers
+    .get("sec-websocket-protocol")
+    ?.split(",")
+    .map((protocol) => protocol.trim())
+    .find((protocol) => protocol.startsWith(WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX))
+    ?.slice(WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX.length);
 
-  for (const pair of cookie.split(";")) {
-    const [name, ...parts] = pair.trim().split("=");
-    if (name === cookieName) return decodeURIComponent(parts.join("="));
-  }
-  return undefined;
-};
+const requestCredential = (request: Request) => bearerToken(request) ?? webSocketCredential(request);
 
 const randomSecret = () => randomBytes(32).toString("base64url");
 
-const runtimeSessionCookie = (secret: string) =>
-  `${RUNTIME_AUTH_COOKIE}=${encodeURIComponent(secret)}; Path=/; HttpOnly; SameSite=Strict`;
-
-// The browser cookie has its own secret, never the runtime token, so a cookie sent to another
-// local server grants no bearer access (ADR 0054). Only bearer holders can give a browser this
-// cookie: directly, or through a single-use login code that the browser redeems.
+// The browser session has its own secret, never the runtime token. The browser keeps it in
+// per-origin storage and sends it as a header, so other servers on 127.0.0.1 never receive it
+// (ADR 0057). Only bearer holders can sign a browser in, through a single-use login code.
 export const createBrowserSessions = (now = Date.now) => {
   const secret = randomSecret();
   const loginCodes = new Map<string, number>();
 
   return {
-    cookie: () => runtimeSessionCookie(secret),
     matches: (candidate: string | undefined) => tokenMatches(candidate, secret),
     createLoginCode: () => {
       for (const [code, expiresAt] of loginCodes) {
@@ -62,7 +56,7 @@ export const createBrowserSessions = (now = Date.now) => {
     redeemLoginCode: (code: string) => {
       const expiresAt = loginCodes.get(code);
       loginCodes.delete(code);
-      return expiresAt !== undefined && expiresAt > now();
+      return expiresAt !== undefined && expiresAt > now() ? secret : null;
     },
   };
 };
@@ -80,9 +74,7 @@ export const isRuntimeBearerAuthorized = (request: Request, security: RuntimeSec
 
 export const isRuntimeRequestAuthorized = (request: Request, security: RuntimeSecurity) => {
   if (!isRuntimeOriginAllowed(request, security)) return false;
-  if (isRuntimeBearerAuthorized(request, security)) return true;
-
-  const expectedOrigin = runtimeOrigin(security);
-  if (!expectedOrigin || new URL(request.url).origin !== expectedOrigin) return false;
-  return security.browserSessions?.matches(cookieToken(request, RUNTIME_AUTH_COOKIE)) ?? false;
+  const credential = requestCredential(request);
+  if (tokenMatches(credential, security.token)) return true;
+  return security.browserSessions?.matches(credential) ?? false;
 };

@@ -140,7 +140,7 @@ test.each(["DOC-7", undefined])("creates an anchored cloud workspace with shorth
   const project = await createProject();
   const home = await handle.deps.workspaceService.getDefault(project.id);
   const anchors = [
-    { type: "document", id: "doc-7", role: "primary", label: "Document 7", metadata: { section: "intro" } },
+    { type: "project", id: project.id, role: "primary", label: "Project", metadata: { section: "intro" } },
   ] satisfies ResourceAnchor[];
   const params = { image: "documents" };
   const response = await app.request("/v1/workspaces", {

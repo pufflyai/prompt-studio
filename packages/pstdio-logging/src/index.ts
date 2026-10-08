@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { chmodSync, closeSync, mkdirSync, openSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import pino, { type Logger } from "pino";
@@ -190,7 +190,11 @@ const createStreams = (targets: ReturnType<typeof resolveTargets>) =>
       return { stream: process.stdout };
     }
 
-    mkdirSync(dirname(target.path), { recursive: true });
+    // Logs can hold paths, prompts, and error details, so only the user may read them. The file
+    // mode is also applied to a log file an older release created with the default umask.
+    mkdirSync(dirname(target.path), { recursive: true, mode: 0o700 });
+    closeSync(openSync(target.path, "a", 0o600));
+    chmodSync(target.path, 0o600);
     return {
       stream: pino.destination({
         dest: target.path,

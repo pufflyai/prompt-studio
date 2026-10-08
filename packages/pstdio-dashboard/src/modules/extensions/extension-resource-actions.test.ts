@@ -27,7 +27,7 @@ test("extension workspace resources use current host capabilities and keep their
     provider_state: "ready",
     execution_kind: "local",
     is_default: false,
-    provider_capabilities_json: { archive: true, delete: true, files: "write", diff: true },
+    provider_capabilities_json: { delete: true, files: "write", diff: true },
   };
   const parent = { type: "ticket", id: "parent-ticket", label: "Parent ticket" };
   const resource = { type: "workspace", id: workspaceId, metadata: { resourceParent: parent } };
@@ -39,15 +39,13 @@ test("extension workspace resources use current host capabilities and keep their
     label: row.name,
     metadata: {
       resourceParent: parent,
-      workspaceSupportsArchive: true,
       workspaceSupportsDelete: true,
       workspaceIsDefault: false,
     },
   });
 
-  getWriter("workspaces")!.upsert({ ...row, is_default: true, provider_capabilities_json: { archive: false } });
+  getWriter("workspaces")!.upsert({ ...row, is_default: true, provider_capabilities_json: { delete: false } });
   expect(toDashboardExtensionResource(resource, projectId)?.metadata).toMatchObject({
-    workspaceSupportsArchive: false,
     workspaceSupportsDelete: false,
     workspaceIsDefault: true,
   });

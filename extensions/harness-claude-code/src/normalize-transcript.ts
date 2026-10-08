@@ -1,6 +1,6 @@
 import type { SessionMessage, SessionMessageRole } from "@pstdio/sdk/extensions";
 import { visibleClaudePrompt } from "./literal-prompt";
-import { mergeToolResultMessage, toolResultPart, toolUsePart } from "./message-parts";
+import { apiErrorPart, mergeToolResultMessage, toolResultPart, toolUsePart } from "./message-parts";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./types";
 import { parseTimestamp } from "./utils";
 
@@ -67,6 +67,10 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
         createdAt,
       } satisfies SessionMessage,
     ];
+  }
+
+  if (typeof entry.error === "string") {
+    return [{ id: entry.uuid, role, parts: [apiErrorPart(entry.error, content)], createdAt } satisfies SessionMessage];
   }
 
   if (typeof content === "string") {

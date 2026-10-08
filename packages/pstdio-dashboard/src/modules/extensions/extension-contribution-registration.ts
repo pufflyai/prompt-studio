@@ -139,6 +139,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         },
         kanbanAdapter: kanban,
         dataTableAdapter: {
+          resolveRowResource: (_record, row) =>
+            toDashboardExtensionResource(row.resource, input.projectId, input.metadata.resourceKinds),
           createViewsProvider: (record) => createSharedTableViews(input.projectId, record, input.metadata),
         },
         menuSlotsById: menuResult.menuSlotsById,
@@ -154,7 +156,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             uploadFile: uploadExtensionCommandFile,
           }),
         projectId: input.projectId,
-        resolveTreeNodeResource: (resource) => toDashboardExtensionResource(resource, input.projectId)!,
+        resolveTreeNodeResource: (resource) =>
+          toDashboardExtensionResource(resource, input.projectId, input.metadata.resourceKinds)!,
         renderWebview: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
         settingsSectionId: "project",
         settingsSectionTitle: "Project",

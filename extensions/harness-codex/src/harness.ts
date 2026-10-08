@@ -2,6 +2,7 @@ import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/ex
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { createCodexRuntime } from "./codex-runtime";
 import { codexCommandState, prepareCodexOperation } from "./commands";
+import { snapshotCodexMessageImages } from "./image-items";
 import { discoverCodexModels } from "./models";
 import { recoverNativeHistory } from "./native-history";
 import { approvedPlanKey, readCodexProposedPlan } from "./plan-approval";
@@ -13,7 +14,7 @@ const detectCodex = async (ctx: HarnessContext) => {
     if (result.exitCode !== 0) return { available: false };
     const version = result.stdout.trim();
     const number = version.match(/\d+\.\d+\.\d+/)?.[0];
-    return { available: Boolean(number && Bun.semver.satisfies(number, "^0.159.3")), version };
+    return { available: Boolean(number && Bun.semver.satisfies(number, "^0.160.1")), version };
   } catch {
     // A missing binary makes process.run throw rather than exit non-zero.
     return { available: false };
@@ -138,7 +139,11 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
         questionResponse: input.questionResponse,
       }),
 
-    getMessages: (ctx, input) => deps.runtime.readMessages({ ...input, env: sessionEnv(ctx, input.agentSessionId) }),
+    getMessages: async (ctx, input) =>
+      snapshotCodexMessageImages(
+        await deps.runtime.readMessages({ ...input, env: sessionEnv(ctx, input.agentSessionId) }),
+        input.cwd,
+      ),
     recoverMessages: (_ctx, input) => recoverNativeHistory(input),
     dispose: (ctx) => deps.runtime.disposeScope(ctx.projectId),
   };

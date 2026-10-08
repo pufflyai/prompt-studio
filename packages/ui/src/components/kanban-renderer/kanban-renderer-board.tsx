@@ -7,6 +7,8 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { ColumnHeader } from "./kanban-renderer-board-column-header";
 import { GroupSection } from "./kanban-renderer-board-group-section";
 import { KanbanRendererCard } from "./kanban-renderer-card";
+import { useBoardDragScroll } from "./use-board-drag-scroll";
+import { useBoardPan } from "./use-board-pan";
 
 type KanbanRendererCardProps = ComponentProps<typeof KanbanRendererCard>;
 
@@ -62,10 +64,13 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
 
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const panViewportProps = useBoardPan();
+  const dragScroll = useBoardDragScroll();
 
   const handleDragStart = (itemId: string) => (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData("text/plain", itemId);
     event.dataTransfer.effectAllowed = "move";
+    dragScroll.startDrag(event);
   };
 
   const handleDragEnd = () => {
@@ -100,6 +105,8 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
       size="xs"
       showHorizontalScrollbar
       showVerticalScrollbar={false}
+      viewportRef={dragScroll.viewportRef}
+      viewportProps={panViewportProps}
       contentProps={{ display: "flex", alignItems: "stretch", gap: "xs", padding: "xs", minH: "100%" }}
     >
       {columns.map((column) => (

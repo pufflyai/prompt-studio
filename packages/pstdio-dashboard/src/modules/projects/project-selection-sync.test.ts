@@ -70,3 +70,31 @@ test("project tabs preserve each extension page when switching, closing, and reo
     for (const id of ["first", "second"]) clearCachedDashboardExtensionMetadata(id);
   }
 });
+
+test("selects the URL project before the persisted project when opening a document", () => {
+  const workbench = createWorkbench();
+  let persistedProjectId: string | undefined = "source";
+  getWriter("projects")?.truncateAndWrite([
+    { id: "source", name: "Source" },
+    { id: "destination", name: "Destination" },
+  ]);
+  markInitialCollectionsSyncComplete();
+  const projects = workbench.registerModule(
+    createProjectsModule({
+      initialProjectId: "destination",
+      projectSelectionPersistence: {
+        getSelectedProjectId: () => persistedProjectId,
+        setSelectedProjectId: (id) => {
+          persistedProjectId = id;
+        },
+      },
+    }),
+  );
+  try {
+    expect(workbench.context.get("dashboard.project.id")).toBe("destination");
+    expect(persistedProjectId).toBe("destination");
+  } finally {
+    projects.dispose();
+    getWriter("projects")?.truncateAndWrite([]);
+  }
+});

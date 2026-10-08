@@ -85,5 +85,11 @@
     "description": "選擇 Prompt Studio 的外觀。也可以按 Alt+Shift+T 變更主題。",
     "theme": "主題",
     "themeHelper": "套用至所有專案。"
+  },
+  "connectionStatus": {
+    "title": "連線狀態",
+    "description": "在狀態列中顯示後端連線狀態。",
+    "enable": "顯示連線狀態",
+    "saveError": "無法變更連線狀態顯示。"
   }
 }

@@ -98,5 +98,11 @@
     "description": "Choose how Prompt Studio looks. You can also change the theme with Alt+Shift+T.",
     "theme": "Theme",
     "themeHelper": "Applies to every project."
+  },
+  "connectionStatus": {
+    "title": "Connection status",
+    "description": "Show the backend connection status in the status bar.",
+    "enable": "Show connection status",
+    "saveError": "Could not change connection status display."
   }
 }

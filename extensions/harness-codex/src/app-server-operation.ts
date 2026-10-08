@@ -1,6 +1,7 @@
 import type { HarnessExit } from "@pstdio/sdk/extensions";
 import { createAppServerItems } from "./app-server-items";
 import type { RpcMessage } from "./app-server-rpc";
+import { snapshotCodexImage } from "./image-items";
 import { errorMessage, itemToMessage, usageMessage } from "./items";
 import { createNativeProjection } from "./native-history";
 import type { ThreadItem } from "./protocol/v2/ThreadItem";
@@ -40,9 +41,26 @@ export const createAppServerOperation = (
   let goalUpdates = 0;
   let idleExit: HarnessExit | undefined;
   const earlyEvents: RpcMessage[] = [];
+  let pendingImages = Promise.resolve();
   const publish = (item: import("./types").CodexThreadItem) => {
-    const message = itemToMessage(item, `codex-${item.turnId ?? turnId}`);
-    if (message) projection.publish(message);
+    const prefix = `codex-${item.turnId ?? turnId}`;
+    const message = itemToMessage(item, prefix);
+    try {
+      if (message) projection.publish(message);
+    } catch (error) {
+      finish({ status: "failed" });
+      throw error;
+    }
+    if (item.type === "image_view" && item.status === "completed") {
+      pendingImages = pendingImages.then(async () => {
+        const captured = itemToMessage(await snapshotCodexImage(item, input.cwd), prefix);
+        if (captured) projection.publish(captured);
+      });
+      void pendingImages.catch((error) => {
+        finish({ status: "failed" });
+        options.onProtocolError(error);
+      });
+    }
   };
   const items = createAppServerItems(publish);
   const questions = createQuestionChannel(options.write, publish, (callId, answers, signal) =>
@@ -51,8 +69,17 @@ export const createAppServerOperation = (
   const finish = (exit: HarnessExit) => {
     if (finished) return;
     finished = true;
-    options.onFinish();
-    void questions.close().finally(() => completion.resolve(exit));
+    void (async () => {
+      try {
+        await questions.close();
+        await pendingImages;
+      } catch {
+        exit = { status: "failed" };
+      } finally {
+        options.onFinish();
+        completion.resolve(exit);
+      }
+    })();
   };
   const finishIfIdle = () => {
     if (!turnId && !goalActive && !goalUpdates && (ownsGoal || idleExit))
@@ -140,6 +167,7 @@ export const createAppServerOperation = (
     finish,
     receive,
     replyQuestion: questions.replyQuestion,
+    activeTurnId: () => (finished || stopping ? undefined : turnId),
     canUpdateGoal: () => sent && acknowledged && !finished && !stopping,
     startDelivery: () => {
       sent = true;

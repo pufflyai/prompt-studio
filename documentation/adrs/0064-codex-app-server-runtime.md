@@ -8,7 +8,7 @@ Status: Accepted for PS-433 and PS-459, subject to release review.
 
 Use one local stdio worker per project, session, and working directory. Keep it alive between turns. Codex owns execution and model history. The host owns scheduling, session status, attachments, and checkpoints. Public harness lifecycle disposal closes workers on extension retirement and host shutdown.
 
-Support Codex `^0.159.3` and generate protocol types from 0.159.3. The Docker development image pins that version. Read native snapshots and normalize their item identities through the same mapper as live events. Resume recorded exec-created threads. Preserve host checkpoint metadata, including content removed by native compaction. The legacy checkpoint identity limit is recorded in [ADR 0062](0062-temporary-codex-history-identity-migration.md).
+Support Codex `^0.160.1` and generate protocol types from 0.160.1. The Docker development image pins that version. Read native snapshots and normalize their item identities through the same mapper as live events. Resume recorded exec-created threads. Preserve host checkpoint metadata, including content removed by native compaction. The legacy checkpoint identity limit is recorded in [ADR 0062](0062-temporary-codex-history-identity-migration.md).
 
 After lost delivery, retain a known thread ID and report disconnection. Read and resume that thread before another submission. An unresolved native turn blocks new execution. Never replay a mutation because its reply was lost. Stop interrupts the native turn; an autonomous goal is also paused. Idle workers do not own a running host slot.
 

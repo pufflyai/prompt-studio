@@ -38,6 +38,39 @@ afterEach(() => {
 });
 
 describe("sync client", () => {
+  it("reconnects after missed heartbeats and announces recovery", async () => {
+    let requests = 0;
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        requests++;
+        const stream = createSseStream();
+        stream.send("init", { tables: {}, seq: 5 });
+        return stream.response;
+      },
+    });
+    let connected = 0;
+    let lost = 0;
+    const connection = createClient({ baseUrl: server.url.origin }).sync.start({
+      getWriter: () => undefined,
+      heartbeatIntervalMs: 20,
+      heartbeatThreshold: 3,
+      reconnectDelayMs: 1,
+      onConnected: () => connected++,
+      onConnectionLost: () => lost++,
+    });
+    try {
+      await waitFor(() => connected === 1);
+      await waitFor(() => lost > 0);
+      await waitFor(() => connected > 1);
+      expect(requests).toBeGreaterThan(1);
+      expect(connection.connected).toBe(true);
+    } finally {
+      connection.close();
+      await server.stop(true);
+    }
+  });
+
   it("announces a cursor reconnect before any replay event and only once per connection", async () => {
     const streams = [createSseStream(), createSseStream()];
     const paths: string[] = [];

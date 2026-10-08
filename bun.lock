@@ -132,7 +132,7 @@
     },
     "clients/desktop": {
       "name": "@pstdio/desktop",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
@@ -202,7 +202,7 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -223,9 +223,9 @@
     },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.40.0",
+        "@pstdio/sdk": "^0.41.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -234,9 +234,9 @@
     },
     "extensions/harness-codex": {
       "name": "harness-codex",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.40.0",
+        "@pstdio/sdk": "^0.41.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -245,9 +245,9 @@
     },
     "extensions/harness-open-code": {
       "name": "harness-open-code",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.36.0",
+        "@pstdio/sdk": "^0.41.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -256,7 +256,7 @@
     },
     "extensions/pstdio-artifacts": {
       "name": "pstdio-artifacts",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -276,7 +276,7 @@
     },
     "extensions/pstdio-base-themes": {
       "name": "pstdio-base-themes",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -287,7 +287,7 @@
     },
     "extensions/pstdio-notes": {
       "name": "pstdio-notes",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -298,7 +298,7 @@
     },
     "extensions/pstdio-planner": {
       "name": "pstdio-planner",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -310,15 +310,17 @@
         "react-dom": "^19.0.0",
       },
       "devDependencies": {
+        "@storybook/react": "^10.6.0",
         "@types/bun": "1.4.2",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
+        "storybook": "^10.6.0",
         "typescript": "6.0.2",
       },
     },
     "extensions/pstdio-reports": {
       "name": "pstdio-reports",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -329,7 +331,7 @@
     },
     "extensions/pstdio-skills": {
       "name": "pstdio-skills",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -347,7 +349,7 @@
     },
     "extensions/remote-workspaces": {
       "name": "remote-workspaces",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -390,7 +392,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -414,12 +416,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.40.0",
-        "@pstdio/cli-darwin-x64": "0.40.0",
-        "@pstdio/cli-linux-arm64": "0.40.0",
-        "@pstdio/cli-linux-x64": "0.40.0",
-        "@pstdio/cli-win-arm64": "0.40.0",
-        "@pstdio/cli-win-x64": "0.40.0",
+        "@pstdio/cli-darwin-arm64": "0.41.0",
+        "@pstdio/cli-darwin-x64": "0.41.0",
+        "@pstdio/cli-linux-arm64": "0.41.0",
+        "@pstdio/cli-linux-x64": "0.41.0",
+        "@pstdio/cli-win-arm64": "0.41.0",
+        "@pstdio/cli-win-x64": "0.41.0",
       },
     },
     "packages/pstdio-api": {
@@ -427,8 +429,8 @@
       "dependencies": {
         "@hono/swagger-ui": "^0.5.2",
         "@hono/zod-openapi": "^1.1.5",
-        "drizzle-orm": "^0.45.1",
-        "hono": "^4.10.7",
+        "drizzle-orm": "^0.45.2",
+        "hono": "^4.12.34",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-api-runtime-host": "workspace:*",
         "pstdio-db": "workspace:*",
@@ -509,7 +511,7 @@
       "name": "pstdio-db",
       "dependencies": {
         "@electric-sql/pglite": "^0.3.15",
-        "drizzle-orm": "^0.45.1",
+        "drizzle-orm": "^0.45.2",
         "drizzle-zod": "^0.8.3",
         "pg": "^8.20.0",
         "pstdio-api-contracts": "workspace:*",
@@ -614,7 +616,7 @@
     },
     "packages/pstdio-workbench": {
       "name": "@pstdio/workbench",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@pstdio/sdk": "workspace:^",
@@ -668,7 +670,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "mustache": "^4.2.0",
         "zod": "^4.3.6",
@@ -695,7 +697,7 @@
     },
     "packages/ui": {
       "name": "@pstdio/ui",
-      "version": "0.40.0",
+      "version": "0.41.0",
       "dependencies": {
         "@chakra-ui/charts": "^3.36.0",
         "@dnd-kit/core": "^6.3.1",
@@ -1668,18 +1670,6 @@
     "@posthog/types": ["@posthog/types@1.411.1", "", {}, "sha512-Gd7tnSYctcSXup3naVlAgavvenByRao6rsSYdMgWgP35KE9jFn+rMHNRJeI5LNjJuLzMXHEVcgzAN7xcATefdw=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
-
-    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.40.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-0adHeN9TzjarSrXpIFMA0BsqzpFSYwSafSmP13IADKAX2jyuUdHClDnwmfPU9IUT83P747PImjaSShGCSnXGzg=="],
-
-    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.40.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-4vYqaqoXrZIAK1tIaUeB/Vt1XdvZpmBpncFym+GLBfSXGz/EVFBX3O32AY2vFx2+tV/5g/M9Z1b5dEA+2qpD7Q=="],
-
-    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.40.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-cBsmrVP7glAyRrFURW43glqRo3EWRGCHLW/zjb41H3RxyUs2RmhDdIhAEFgJORe4oenkyr1rlWERGIdLl4ivqQ=="],
-
-    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.40.0", "", { "os": "linux", "cpu": "x64" }, "sha512-DUWXNdCqcFlTdDFwL/QpFuGocoiif0ubaN4xX9auHB4YMTy26aUuuPcsrPsyYLMyty6xRqK1syg4tPw8Nd3LSg=="],
-
-    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.40.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-QIh9s6ZwLGFxXaZyFOo9wOedJZ1w9hUkJZZlslsqcBURfis5X3GWLOfwgeuQjq1/eKLLc1gFrF1awqs6hJCl2Q=="],
-
-    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.40.0", "", { "os": "win32", "cpu": "x64" }, "sha512-j4dF39HIF06DIu5Fm/8PTx5RwcTo6R2LKmgZqEuEVLwRB9xmvhUJVAn7gIK7YKWnAtYVPD4bHZ4/B2fk9xJ7EA=="],
 
     "@pstdio/desktop": ["@pstdio/desktop@workspace:clients/desktop"],
 
@@ -2889,7 +2879,7 @@
 
     "drizzle-kit": ["drizzle-kit@0.31.9", "", { "dependencies": { "@drizzle-team/brocli": "^0.10.2", "@esbuild-kit/esm-loader": "^2.5.5", "esbuild": "^0.25.4", "esbuild-register": "^3.5.0" }, "bin": { "drizzle-kit": "bin.cjs" } }, "sha512-GViD3IgsXn7trFyBUUHyTFBpH/FsHTxYJ66qdbVggxef4UBPHRYxQaRzYLTuekYnk9i5FIEL9pbBIwMqX/Uwrg=="],
 
-    "drizzle-orm": ["drizzle-orm@0.45.1", "", { "peerDependencies": { "@aws-sdk/client-rds-data": ">=3", "@cloudflare/workers-types": ">=4", "@electric-sql/pglite": ">=0.2.0", "@libsql/client": ">=0.10.0", "@libsql/client-wasm": ">=0.10.0", "@neondatabase/serverless": ">=0.10.0", "@op-engineering/op-sqlite": ">=2", "@opentelemetry/api": "^1.4.1", "@planetscale/database": ">=1.13", "@prisma/client": "*", "@tidbcloud/serverless": "*", "@types/better-sqlite3": "*", "@types/pg": "*", "@types/sql.js": "*", "@upstash/redis": ">=1.34.7", "@vercel/postgres": ">=0.8.0", "@xata.io/client": "*", "better-sqlite3": ">=7", "bun-types": "*", "expo-sqlite": ">=14.0.0", "gel": ">=2", "knex": "*", "kysely": "*", "mysql2": ">=2", "pg": ">=8", "postgres": ">=3", "sql.js": ">=1", "sqlite3": ">=5" }, "optionalPeers": ["@aws-sdk/client-rds-data", "@cloudflare/workers-types", "@electric-sql/pglite", "@libsql/client", "@libsql/client-wasm", "@neondatabase/serverless", "@op-engineering/op-sqlite", "@opentelemetry/api", "@planetscale/database", "@prisma/client", "@tidbcloud/serverless", "@types/better-sqlite3", "@types/pg", "@types/sql.js", "@upstash/redis", "@vercel/postgres", "@xata.io/client", "better-sqlite3", "bun-types", "expo-sqlite", "gel", "knex", "kysely", "mysql2", "pg", "postgres", "sql.js", "sqlite3"] }, "sha512-Te0FOdKIistGNPMq2jscdqngBRfBpC8uMFVwqjf6gtTVJHIQ/dosgV/CLBU2N4ZJBsXL5savCba9b0YJskKdcA=="],
+    "drizzle-orm": ["drizzle-orm@0.45.3", "", { "peerDependencies": { "@aws-sdk/client-rds-data": ">=3", "@cloudflare/workers-types": ">=4", "@electric-sql/pglite": ">=0.2.0", "@libsql/client": ">=0.10.0", "@libsql/client-wasm": ">=0.10.0", "@neondatabase/serverless": ">=0.10.0", "@netlify/db": ">=0.4.0", "@op-engineering/op-sqlite": ">=2", "@opentelemetry/api": "^1.4.1", "@planetscale/database": ">=1.13", "@prisma/client": "*", "@tidbcloud/serverless": "*", "@types/better-sqlite3": "*", "@types/pg": "*", "@types/sql.js": "*", "@upstash/redis": ">=1.34.7", "@vercel/postgres": ">=0.8.0", "@xata.io/client": "*", "better-sqlite3": ">=7", "bun-types": "*", "expo-sqlite": ">=14.0.0", "gel": ">=2", "knex": "*", "kysely": "*", "mysql2": ">=2", "pg": ">=8", "postgres": ">=3", "prisma": "*", "sql.js": ">=1", "sqlite3": ">=5" }, "optionalPeers": ["@aws-sdk/client-rds-data", "@cloudflare/workers-types", "@electric-sql/pglite", "@libsql/client", "@libsql/client-wasm", "@neondatabase/serverless", "@netlify/db", "@op-engineering/op-sqlite", "@opentelemetry/api", "@planetscale/database", "@prisma/client", "@tidbcloud/serverless", "@types/better-sqlite3", "@types/pg", "@types/sql.js", "@upstash/redis", "@vercel/postgres", "@xata.io/client", "better-sqlite3", "bun-types", "expo-sqlite", "gel", "knex", "kysely", "mysql2", "pg", "postgres", "prisma", "sql.js", "sqlite3"] }, "sha512-CAloER21cDdcgZ1OmjrZX82EeRNsdP+y0onX/eyoYDaYzki/adrAa91lzM5jWh7zZPK4qUbw/6LGv9J+A+uizA=="],
 
     "drizzle-zod": ["drizzle-zod@0.8.3", "", { "peerDependencies": { "drizzle-orm": ">=0.36.0", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-66yVOuvGhKJnTdiqj1/Xaaz9/qzOdRJADpDa68enqS6g3t0kpNkwNYjUuaeXgZfO/UWuIM9HIhSlJ6C5ZraMww=="],
 
@@ -3223,7 +3213,7 @@
 
     "homedir-polyfill": ["homedir-polyfill@1.0.3", "", { "dependencies": { "parse-passwd": "^1.0.0" } }, "sha512-eSmmWE5bZTK2Nou4g0AI3zZ9rswp7GRKoKXS1BLUkvPviOqs4YTN1djQIqrXy9k5gEtdLPy86JjRwsNM9tnDcA=="],
 
-    "hono": ["hono@4.12.7", "", {}, "sha512-jq9l1DM0zVIvsm3lv9Nw9nlJnMNPOcAtsbsgiUhWcFzPE99Gvo6yRTlszSLLYacMeQ6quHD6hMfId8crVHvexw=="],
+    "hono": ["hono@4.13.13", "", {}, "sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA=="],
 
     "hosted-git-info": ["hosted-git-info@9.0.2", "", { "dependencies": { "lru-cache": "^11.1.0" } }, "sha512-M422h7o/BR3rmCQ8UHi7cyyMqKltdP9Uo+J2fXK+RSAY+wTcKOIRyhTuKv4qn+DJf3g+PL890AzId5KZpX+CBg=="],
 
@@ -5167,8 +5157,6 @@
 
     "globby/slash": ["slash@5.1.0", "", {}, "sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg=="],
 
-    "harness-open-code/@pstdio/sdk": ["@pstdio/sdk@0.36.1", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-RPbA9LI6Ue4jjAMewx6RsMoRP3Sart8j6gg8KwqhmVdJfKdm5sigP+KCrZTcliQ97dIMIlkeOMd25kfhPCrQeg=="],
-
     "hasha/type-fest": ["type-fest@0.8.1", "", {}, "sha512-4dbzIzqvjtgiM5rw1k5rEHtBANKmdudhGyBEajN01fEyhaAIhsoKNy6y7+IN93IfpFtwY9iqi7kD+xwKhQsNJA=="],
 
     "hast-util-to-html/@types/hast": ["@types/hast@3.0.4", "", { "dependencies": { "@types/unist": "*" } }, "sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ=="],
@@ -5582,6 +5570,10 @@
     "slice-ansi/ansi-styles": ["ansi-styles@6.2.3", "", {}, "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="],
 
     "slice-ansi/is-fullwidth-code-point": ["is-fullwidth-code-point@4.0.0", "", {}, "sha512-O4L094N2/dZ7xqVdrXhh9r1KODPJpFms8B5sGdJLPy664AgvXsreZUyCQQNItZRDlYug4xStLjNp/sz3HvBowQ=="],
+
+    "social-radar/@pstdio/sdk": ["@pstdio/sdk@0.40.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-wCOPC8yL97Hr51yRBN6EIpp1KcYwcxIXI9s7805nuzcCwisolM+qLRec/inuxjg4uYAWhx1YCycpBeTK7JrhHQ=="],
+
+    "social-radar/@pstdio/ui": ["@pstdio/ui@0.40.0", "", { "dependencies": { "@chakra-ui/charts": "^3.36.0", "@dnd-kit/core": "^6.3.1", "@dnd-kit/sortable": "^10.0.0", "@dnd-kit/utilities": "^3.2.2", "@fontsource/inter": "^5.2.8", "@fontsource/onest": "^5.2.11", "@fontsource/playfair-display": "^5.2.8", "@git-diff-view/file": "^0.1.3", "@git-diff-view/react": "^0.1.3", "@lexical/code": "^0.40.0", "@lexical/link": "^0.40.0", "@lexical/list": "^0.40.0", "@lexical/mark": "^0.40.0", "@lexical/markdown": "^0.40.0", "@lexical/react": "^0.40.0", "@lexical/rich-text": "^0.40.0", "@lexical/selection": "^0.40.0", "@lexical/utils": "^0.40.0", "@lexical/yjs": "^0.40.0", "@monaco-editor/react": "^4.7.0", "@pstdio/sdk": "0.40.0", "@tanstack/react-table": "^8.21.3", "@tanstack/react-virtual": "^3.13.19", "@types/mdast": "^4.0.4", "@xterm/addon-fit": "^0.10.0", "@xterm/addon-web-links": "^0.11.0", "@xterm/xterm": "^5.5.0", "diff": "^8.0.3", "dompurify": "^3.4.13", "katex": "^0.16.33", "lexical": "^0.40.0", "lucide-react": "^0.556.0", "mdast-util-from-markdown": "^2.0.3", "mdast-util-gfm": "^3.1.0", "mdast-util-math": "^3.0.0", "mdast-util-to-markdown": "^2.1.2", "mermaid": "11.16.1", "micromark-extension-gfm": "^3.0.0", "micromark-extension-math": "^3.1.0", "monaco-editor": "^0.55.1", "prismjs": "^1.30.0", "recharts": "^3.9.2", "use-stick-to-bottom": "^1.1.3", "y-protocols": "^1.0.7", "y-websocket": "^3.0.0", "yjs": "^13.6.29", "zustand": "^5.0.8" }, "peerDependencies": { "@chakra-ui/react": "^3.0.0", "@emotion/react": "^11.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" } }, "sha512-JMxbnjzKL7SYzuwo5BQq0TRrWxvtJWSuqvfPUJD6uocqXoiYamFzk7MXkIR/sejzJNnF520YYOGc8w/FaHYUrg=="],
 
     "social-radar/lucide-react": ["lucide-react@0.556.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-iOb8dRk7kLaYBZhR2VlV1CeJGxChBgUthpSP8wom9jfj79qovgG6qcSdiy6vkoREKPnbUYzJsCn4o4PtG3Iy+A=="],
 

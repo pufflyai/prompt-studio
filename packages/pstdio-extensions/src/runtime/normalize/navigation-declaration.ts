@@ -1,4 +1,5 @@
 import type { NavigationTarget } from "@pstdio/sdk/extensions";
+import { type FileSourcePosition, isFileSourcePosition } from "@pstdio/sdk/extensions";
 import {
   commandSourceSchema,
   extensionResourceRefSchema,
@@ -33,9 +34,11 @@ const pageTarget: z.ZodType<Extract<NavigationTarget, { kind: "page" }>> = z.laz
         })
         .strict()
         .optional(),
+      position: z.custom<FileSourcePosition>(isFileSourcePosition).optional(),
       parent: pageTarget.optional(),
     })
-    .strict(),
+    .strict()
+    .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
 );
 const panelTarget = z
   .object({

@@ -1,6 +1,7 @@
-import type { HarnessSession } from "@pstdio/sdk/extensions";
+import type { HarnessSession, QuestionResponse } from "@pstdio/sdk/extensions";
 import { createAppServerOperation, type NativeOperation } from "./app-server-operation";
 import { CodexRequestRejectedError, createAppServerRpc } from "./app-server-rpc";
+import { createAsyncQuestionReplies } from "./async-question-replies";
 import type { SpawnDeps } from "./codex-process";
 import { nativeThreadMessages } from "./native-history";
 import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
@@ -21,6 +22,13 @@ const acknowledgedModel = (
   next: string | undefined,
   command: NativeOperation | undefined,
 ) => (command ? current : (next ?? current));
+const prepareQuestionRun = (
+  input: StartSpawnInput & Partial<ResumeSpawnInput>,
+  questions: ReturnType<typeof createAsyncQuestionReplies>,
+) => {
+  const answer = input.questionResponse ? questions.prepare(input.questionResponse) : undefined;
+  return { input: answer ? { ...input, prompt: answer.text } : input, accept: answer?.accept };
+};
 export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
   const child = deps.spawnProcess(
     ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
@@ -37,9 +45,10 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     active?.receive(message);
   });
   const lost = () => {
+    if (closed) return;
     closed = true;
-    active?.finish({ status: "disconnected" });
     child.kill();
+    void child.onExit.then(({ code }) => active?.finish({ status: code ? "failed" : "disconnected" }));
   };
   child.onExit.then(lost);
   rpc.finished.then(lost, lost);
@@ -85,8 +94,10 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     return threadId;
   };
   const run = async (runInput: StartSpawnInput & Partial<ResumeSpawnInput>, command?: NativeOperation) => {
-    if (runInput.questionResponse) throw questionReplyError("Codex question request is no longer pending.");
     if (active) throw new Error("Codex already has an active operation.");
+    const asyncQuestions = createAsyncQuestionReplies(runInput.events);
+    const questionRun = prepareQuestionRun(runInput, asyncQuestions);
+    runInput = questionRun.input;
     let acknowledged = false;
     let deliveryAttempted = false;
     const abort = () => {
@@ -114,7 +125,19 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
         agentSessionId: id,
         done: operation.done,
         stop: () => operation.stop(rpc.request, id),
-        replyQuestion: operation.replyQuestion,
+        replyQuestion: (response: QuestionResponse) => {
+          if (!asyncQuestions.find(response)) return operation.replyQuestion(response);
+          const expectedTurnId = operation.activeTurnId();
+          if (!expectedTurnId)
+            return Promise.reject(questionReplyError("Codex question request is no longer pending."));
+          return asyncQuestions.reply(response, (text) =>
+            rpc.request("turn/steer", {
+              threadId: id,
+              expectedTurnId,
+              input: [{ type: "text", text, text_elements: [] }],
+            }),
+          );
+        },
         timeoutStrategy: "provider",
         pid: child.pid,
       }) satisfies HarnessSession;
@@ -137,6 +160,7 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
       model = acknowledgedModel(model, turnInput.model, command);
       acknowledged = true;
       operation.acknowledge(result.turn?.id);
+      questionRun.accept?.();
       return session(id);
     } catch (error) {
       operation.fail(error);

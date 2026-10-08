@@ -92,7 +92,12 @@ export const defineResourceKind = defineContribution("resource-kind") as <
 ) => Definition & ContributionDefinition<"resource-kind">;
 
 export const resourceMenuSlotRef = (resourceKind: ResourceKindRef, id: string) =>
-  defineSlot(`${resourceKind.id}.${id}`, { kind: "menu" });
+  defineSlot(
+    resourceKind.extensionId
+      ? `${resourceKind.extensionId}.resource-kind.${resourceKind.id}.${id}`
+      : `${resourceKind.id}.${id}`,
+    { kind: "menu" },
+  );
 
 type NavigationItemDefinition = Omit<NavigationItemContribution, "ref">;
 export const defineNavigationItem = defineContribution("navigation-item") as <

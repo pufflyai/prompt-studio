@@ -7,6 +7,7 @@ import {
   type SyncWriterProvider,
 } from "@pstdio/sdk/client";
 import type { ResourceRemovedEvent } from "@pstdio/sdk/extensions";
+import { readBrowserSession } from "@/lib/browser-session";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { publishResourceRemoval } from "@/shared/extensions/resource-removal-feed";
 import { getWriter, type SyncedTable } from "./collections";
@@ -49,7 +50,7 @@ const resourceEventWriter: SyncWriter = {
 };
 
 export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncClient =>
-  createClient({ baseUrl: apiUrl }).sync.start({
+  createClient({ baseUrl: apiUrl, token: readBrowserSession() }).sync.start({
     ...createDashboardSyncWriterProvider(),
     heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS,
     heartbeatThreshold: HEARTBEAT_THRESHOLD,

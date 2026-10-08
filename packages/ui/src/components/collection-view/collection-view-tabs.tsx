@@ -83,7 +83,7 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
           {
             key: "rename",
             label: "Rename",
-            isDisabled: view.builtIn || busy,
+            isDisabled: busy,
             icon: <Icon as={Pencil} boxSize="0.875rem" />,
             onClick: () => setRenameTarget(view),
           },
@@ -107,7 +107,7 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
             key: "delete",
             label: "Delete view",
             icon: <Icon as={Trash2} boxSize="0.875rem" />,
-            isDisabled: view.builtIn || busy,
+            isDisabled: views.length === 1 || busy,
             separatorBefore: true,
             onClick: () => run(() => viewsSource.onDeleteView(view.id)),
           },

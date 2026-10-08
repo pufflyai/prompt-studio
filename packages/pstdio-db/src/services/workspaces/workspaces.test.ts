@@ -241,7 +241,6 @@ describe("createWorkspacesDBService lookups and mutations", () => {
       initializing: false,
       setup_error: null,
       startup_log_file_id: null,
-      anchors_json: [ticketAnchor],
       created_at: timestamp,
       updated_at: timestamp,
       deleted_at: null,

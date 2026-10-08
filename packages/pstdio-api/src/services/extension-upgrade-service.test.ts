@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
-import { resolveExtensionReleaseCommit } from "./extension-source-ref";
+import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
 import { createExtensionUpgradeService } from "./extension-upgrade-service";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 
@@ -76,6 +76,43 @@ describe("extension upgrade service", () => {
       expect.arrayContaining(["https://example.com/extensions.git"]),
       expect.any(Object),
     );
+  });
+
+  test("ends git options before the remote URL and allows only https and file transport", async () => {
+    const run = mock(async () => ({ exitCode: 0, stderr: "", stdout: `${"c".repeat(40)}\trefs/heads/main\n` }));
+
+    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", run);
+
+    expect(run).toHaveBeenCalledWith(
+      "git",
+      [
+        "-c",
+        "protocol.allow=never",
+        "-c",
+        "protocol.https.allow=always",
+        "-c",
+        "protocol.file.allow=always",
+        "ls-remote",
+        "--",
+        "https://example.com/extensions.git",
+        "refs/tags/main^{}",
+        "refs/tags/main",
+        "refs/heads/main",
+      ],
+      expect.any(Object),
+    );
+  });
+
+  test("ignores a recorded source whose origin is not an https or file URL", () => {
+    const commit = "d".repeat(40);
+
+    expect(parseExtensionSourceRef(`--upload-pack=touch /tmp/probe;@${commit}#extensions/x`)).toBeNull();
+    expect(parseExtensionSourceRef(`ext::sh -c touch% /tmp/probe@${commit}#extensions/x`)).toBeNull();
+    expect(parseExtensionSourceRef(`https://example.com/extensions.git@${commit}#extensions/x`)).toEqual({
+      commit,
+      path: "extensions/x",
+      url: "https://example.com/extensions.git",
+    });
   });
 
   test("does not offer an upgrade when the installed source matches the host release", async () => {

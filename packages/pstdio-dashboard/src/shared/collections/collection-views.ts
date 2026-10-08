@@ -12,24 +12,21 @@ import {
   subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
 
-interface CollectionViewsInput<TSettings> {
+interface CollectionViewsInput {
   projectId: string;
   extensionInstanceId: string | null | undefined;
   localId: string;
   record: {
     id: string;
-    defaultActiveViewId?: string;
-    defaultViews?: { id: string; isDefault?: boolean }[];
     refreshEventIds?: string[];
   };
-  builtIns: CollectionViewsSource<TSettings>["views"];
 }
 
 /** Native and extension collections share storage, sync, defaults, and mutation actions. */
 export const createSharedCollectionViews = <TSettings>(
-  input: CollectionViewsInput<TSettings>,
+  input: CollectionViewsInput,
 ): CollectionViewsProvider<TSettings> => {
-  const { projectId, extensionInstanceId: instanceId, localId, record, builtIns } = input;
+  const { projectId, extensionInstanceId: instanceId, localId, record } = input;
   const path = `/v1/projects/${encodeURIComponent(projectId)}/boards/${encodeURIComponent(record.id)}/views`;
   const viewPath = (id: string) =>
     `/v1/projects/${encodeURIComponent(projectId)}/board-views/${encodeURIComponent(id)}`;
@@ -64,7 +61,8 @@ export const createSharedCollectionViews = <TSettings>(
             String(a.created_at).localeCompare(String(b.created_at)) ||
             a.id.localeCompare(b.id),
         );
-      const saved = rows.map((row) => ({
+      if (!rows.length) return undefined;
+      const views = rows.map((row) => ({
         id: row.id,
         title: String(row.title),
         settings: row.settings as TSettings,
@@ -72,14 +70,8 @@ export const createSharedCollectionViews = <TSettings>(
         sorts: row.sorts as BoardView["sorts"],
         builtIn: false,
       }));
-      const views = [...builtIns, ...saved];
       const chosen = getIndexedRows("board_default_views", "project_id", projectId).find(matches)?.default_view_id;
-      const defaultViewId = [
-        chosen,
-        record.defaultActiveViewId,
-        record.defaultViews?.find((view) => view.isDefault)?.id,
-        views[0]?.id,
-      ].find((id) => views.some((view) => view.id === id)) as string;
+      const defaultViewId = [chosen, views[0]?.id].find((id) => views.some((view) => view.id === id)) as string;
       version = current;
       cached = { views, defaultViewId, ...actions };
       return cached;

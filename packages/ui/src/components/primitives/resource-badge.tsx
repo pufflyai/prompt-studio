@@ -111,13 +111,14 @@ export interface ResourceBadgeProps extends Omit<HTMLChakraProps<"span">, "onSel
   size?: ResourceBadgeSize;
   tone?: ResourceBadgeTone;
   icon?: ReactNode;
+  tooltip?: string;
 }
 
 const DEFAULT_SIZE: ResourceBadgeSize = "md";
 const DEFAULT_TONE: ResourceBadgeTone = "neutral";
 
 export const ResourceBadge = (props: ResourceBadgeProps) => {
-  const { fileName, onSelect, onRemove, size = DEFAULT_SIZE, tone = DEFAULT_TONE, icon, ...rest } = props;
+  const { fileName, onSelect, onRemove, size = DEFAULT_SIZE, tone = DEFAULT_TONE, icon, tooltip, ...rest } = props;
   const IconComp: LucideIcon = getFileTypeIcon(fileName);
   const sizeStyles = SIZE_STYLES[size];
   const toneStyles = TONE_STYLES[tone];
@@ -142,7 +143,7 @@ export const ResourceBadge = (props: ResourceBadgeProps) => {
       <chakra.span display="inline-flex" flexShrink={0}>
         {icon ?? <IconComp size={sizeStyles.iconSize} />}
       </chakra.span>
-      <Tooltip content={fileName}>
+      <Tooltip content={tooltip ?? fileName}>
         <Text
           maxW={{ base: "14rem" }}
           textOverflow="ellipsis"

@@ -1,6 +1,7 @@
 import { type LinkAttributes, LinkNode, type SerializedLinkNode } from "@lexical/link";
 import {
   $applyNodeReplacement,
+  type EditorConfig,
   type LexicalNode,
   type NodeKey,
   type SerializedLexicalNode,
@@ -34,8 +35,26 @@ export class MarkdownLinkNode extends LinkNode {
     this.__source = source;
   }
 
+  createDOM(config: EditorConfig) {
+    const anchor = super.createDOM(config);
+    anchor.dataset.chatSource = this.__source;
+    anchor.dataset.chatOrigin = "markdown";
+    return anchor;
+  }
+
+  updateDOM(previous: this, anchor: HTMLAnchorElement, config: EditorConfig) {
+    const changed = super.updateDOM(previous, anchor, config);
+    anchor.dataset.chatSource = this.__source;
+    return changed;
+  }
+
   getSource() {
     return this.__source;
+  }
+
+  setResolvedURL(url: string) {
+    if (this.getURL() !== url) this.getWritable().__url = url;
+    return this;
   }
 
   setURL(url: string) {
