@@ -13,18 +13,29 @@ import {
   toggleQuestionOtherAnswer,
 } from "./chat-input-question-prompt";
 
+const defaultSelections = (prompt: ChatInputQuestionPrompt | undefined) =>
+  Object.fromEntries(
+    (prompt?.questions ?? []).flatMap((question, index) =>
+      prompt?.delivery === "async" && question.options.length
+        ? [[getQuestionSelectionKey(question, index), [question.options[0].label]]]
+        : [],
+    ),
+  );
+
 /**
  * Holds what the person picked for the open question and derives what the form would send.
  * `resetToken` clears the picks whenever the composer itself is reset, such as a new draft.
  */
 export const useQuestionPromptState = (questionPrompt: ChatInputQuestionPrompt | undefined, resetToken?: unknown) => {
-  const [selectedOptionsByQuestion, setSelectedOptionsByQuestion] = useState<Record<string, string[]>>({});
+  const [selectedOptionsByQuestion, setSelectedOptionsByQuestion] = useState<Record<string, string[]>>(() =>
+    defaultSelections(questionPrompt),
+  );
   const [customAnswersByQuestion, setCustomAnswersByQuestion] = useState<ChatInputQuestionCustomAnswers>({});
   const signature = getQuestionPromptSignature(questionPrompt);
   const previousResetRef = useRef(JSON.stringify([signature, resetToken ?? null]));
 
   const reset = () => {
-    setSelectedOptionsByQuestion({});
+    setSelectedOptionsByQuestion(defaultSelections(questionPrompt));
     setCustomAnswersByQuestion({});
   };
 
@@ -32,9 +43,9 @@ export const useQuestionPromptState = (questionPrompt: ChatInputQuestionPrompt |
     const current = JSON.stringify([signature, resetToken ?? null]);
     if (previousResetRef.current === current) return;
     previousResetRef.current = current;
-    setSelectedOptionsByQuestion({});
+    setSelectedOptionsByQuestion(defaultSelections(questionPrompt));
     setCustomAnswersByQuestion({});
-  }, [signature, resetToken]);
+  }, [signature, resetToken, questionPrompt]);
 
   const toggleOption = (question: ChatInputQuestion, questionIndex: number, optionLabel: string) => {
     setSelectedOptionsByQuestion((current) =>

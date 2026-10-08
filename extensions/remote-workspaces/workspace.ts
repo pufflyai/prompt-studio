@@ -34,13 +34,13 @@ const states: Record<PocketCoderWorkspace["state"], WorkspaceProviderState> = {
   provisioning: "provisioning",
   connected: "provisioning",
   ready: "ready",
-  preserving: "archiving",
+  preserving: "provisioning",
   terminating: "deleting",
-  succeeded: "archived",
+  succeeded: "cancelled",
   failed: "failed",
   canceled: "cancelled",
   expired: "failed",
-  preserved: "archived",
+  preserved: "cancelled",
 };
 
 const projectWorkspace = (extensionId: string, workspace: PocketCoderWorkspace) => {

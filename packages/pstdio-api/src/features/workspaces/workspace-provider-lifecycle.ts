@@ -16,13 +16,6 @@ import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
 
 export type WorkspaceProviderLifecycleDeps = WorkspacesRouteDeps;
 
-export const assertWorkspaceArchiveAllowed = (workspace: WorkspaceRecord) => {
-  if (workspace.is_default) throw new Error("Default workspace cannot be archived.");
-  if (!workspace.provider_capabilities_json.archive) {
-    throw new Error("Workspace provider does not allow archiving.");
-  }
-};
-
 export const assertWorkspaceDeleteAllowed = (workspace: WorkspaceRecord) => {
   if (workspace.is_default) throw new Error("Default workspace cannot be deleted.");
   if (!workspace.provider_capabilities_json.delete) {
@@ -125,58 +118,12 @@ const runProviderMutation = async (
   }
 };
 
-export const finalizeWorkspaceArchive = async (deps: WorkspaceProviderLifecycleDeps, workspace: WorkspaceRecord) => {
+export const finalizeWorkspaceDelete = async (deps: WorkspaceProviderLifecycleDeps, workspace: WorkspaceRecord) => {
   const sessions = await deps.workspaceSessionService.listByWorkspace(workspace.id);
   await Promise.all(
     sessions.filter((session) => !session.archived).map((session) => deps.sessionService.archive(session.id)),
   );
-  return (await deps.workspaceService.archive(workspace.id)) ?? workspace;
-};
-
-export const archiveProviderBackedWorkspace = async (
-  deps: WorkspaceProviderLifecycleDeps,
-  workspace: WorkspaceRecord,
-) => {
-  assertWorkspaceArchiveAllowed(workspace);
-  await cancelWorkspaceSessions(deps, workspace.id);
-  let updated: WorkspaceRecord;
-  if (isBuiltInProviderId(workspace.provider_id)) {
-    await cleanupWorkspaceWorktree(deps, workspace);
-    updated =
-      (await deps.workspaceService.updateProviderProjection(workspace.id, {
-        ...projectionBase(workspace),
-        provider_state: "archived",
-        provider_operation_id: null,
-        provider_operation_kind: null,
-        provider_error_json: null,
-      })) ?? workspace;
-  } else {
-    const pending = await persistOperation(deps, workspace, "archive", "archiving");
-    const operationId = pending.provider_operation_id!;
-    const handle = await providerHandle(deps, pending);
-    if (!handle) return (await updateMissingProvider(deps, pending)) ?? pending;
-    if (!pending.provider_ref_json) return pending;
-    if (!handle.provider.archive) {
-      updated =
-        (await deps.workspaceService.updateProviderProjection(pending.id, {
-          ...projectionBase(pending),
-          provider_state: "archived",
-          provider_operation_id: null,
-          provider_operation_kind: null,
-          provider_error_json: null,
-        })) ?? pending;
-    } else {
-      updated = await runProviderMutation(deps, pending, {
-        kind: "archive",
-        pendingState: "archiving",
-        mutate: (input) => handle.provider.archive!(handle.context, input),
-        fallbackState: "archived",
-        operationId,
-      });
-    }
-  }
-
-  return updated.provider_state === "archived" ? finalizeWorkspaceArchive(deps, updated) : updated;
+  await deps.workspaceService.softDelete(workspace.id);
 };
 
 export const cancelProviderBackedWorkspace = async (

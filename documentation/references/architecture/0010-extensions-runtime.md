@@ -26,6 +26,10 @@ A completed or failed webview build invalidates the relevant projected metadata 
 
 `pst extensions dev` is an explicit authoring loop. A successful refresh publishes the current validated source. A failed candidate must not be described as adopted. Report its diagnostics and keep the previous valid development runtime according to the refresh contract.
 
+## Isolation
+
+Extension backends run inside the API process. They are not isolated from the host: extension code can read the host environment, the connection secret files (ADR 0034), `runtime.json`, and the database. The extension context hides secret values, but that is an API boundary, not a security boundary. Child processes and terminals started through the context get an allowlisted environment, and connection requests pin their base URL. The target model, one process per extension backend with a filtered environment and a narrow message channel, is in [ADR 0058](../../adrs/0058-isolate-extension-backends.md).
+
 ## Shared catalog
 
 One application-owned catalog supplies project snapshots. Consumers do not independently discover and import the same enabled packages on every request. Concurrent reads share source imports and snapshot loading. A snapshot carries one consistent runtime, enabled-source set, diagnostics, project identity, and publication generation.

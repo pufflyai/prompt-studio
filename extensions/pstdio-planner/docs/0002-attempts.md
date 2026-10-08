@@ -102,3 +102,9 @@ Extensions and agents drive attempts through Planner's commands. Each ID below i
 In `workspace-activity`, each session carries a phase: `implementation`, `review`, or `other`. The statuses `queued`, `in_progress`, and `awaiting_input` count as running.
 
 Use these commands for workflow state. Workspace and session records only describe what is running. They do not store review results or ticket statuses.
+
+## Ticket cleanup and merge settings
+
+Archiving or deleting a ticket deletes linked workspaces once no active ticket uses them and the project setting **Delete linked workspaces** (`tickets.deleteLinkedWorkspaces`) is on. The setting is on by default. Deletion removes the worktree, its branch, and any uncommitted changes. The default project workspace and providers without deletion support stay available. Unarchiving restores the ticket, but does not restore deleted workspaces.
+
+The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to Done. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.

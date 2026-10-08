@@ -19,7 +19,6 @@ export interface DashboardWorkspaceOption {
   providerState: string;
   supportsFiles: boolean;
   supportsDiff: boolean;
-  supportsArchive: boolean;
   supportsDelete: boolean;
   workspacePath: string | null;
   updatedAt: string;
@@ -27,13 +26,12 @@ export interface DashboardWorkspaceOption {
 
 type DashboardWorkspaceCapabilities = Pick<
   DashboardWorkspaceOption,
-  "executionKind" | "providerState" | "supportsArchive" | "supportsDelete" | "supportsDiff" | "supportsFiles"
+  "executionKind" | "providerState" | "supportsDelete" | "supportsDiff" | "supportsFiles"
 >;
 
 export const createDashboardWorkspaceCapabilityMetadata = (workspace: DashboardWorkspaceCapabilities) => ({
   workspaceExecutionKind: workspace.executionKind,
   workspaceProviderState: workspace.providerState,
-  workspaceSupportsArchive: workspace.supportsArchive,
   workspaceSupportsDelete: workspace.supportsDelete,
   workspaceSupportsFiles: workspace.supportsFiles,
   workspaceSupportsDiff: workspace.supportsDiff,
@@ -42,7 +40,7 @@ export const createDashboardWorkspaceCapabilityMetadata = (workspace: DashboardW
 const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): DashboardWorkspaceOption => {
   const executionKind = workspace.execution_kind === "remote" ? "remote" : "local";
   const capabilities = workspace.provider_capabilities_json as
-    | { archive?: boolean; delete?: boolean; files?: string; diff?: boolean }
+    | { delete?: boolean; files?: string; diff?: boolean }
     | undefined;
   const workspacePath = executionKind === "remote" ? null : ((workspace.root_path as string | null) ?? null);
 
@@ -57,7 +55,6 @@ const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): Dash
     providerState: workspaceState(workspace),
     supportsFiles: capabilities ? capabilities.files !== "none" : executionKind === "local",
     supportsDiff: capabilities?.diff === true,
-    supportsArchive: capabilities?.archive === true,
     supportsDelete: capabilities?.delete === true,
     workspacePath,
     updatedAt: (workspace.updated_at as string) ?? (workspace.created_at as string) ?? "",

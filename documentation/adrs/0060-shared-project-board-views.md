@@ -12,7 +12,7 @@ Saved board views live in client storage (browser local storage or the desktop s
 
 ## Decision
 
-Saved views are project data owned by the core API. They are stored in the `board_views` table per project and board, shared by everyone in the project, synced through the existing event bus, and managed through one REST API that both the dashboard and `pst views` use. Extension `defaultViews` stay extension-owned and are shown as read-only built-ins. They are never copied into the table. Any available view, saved or built-in, can be the board's default, so the default is stored per board in `board_default_views` rather than as a flag on a view. Both tables are extension user data and follow the extension's disable and uninstall rules.
+Saved views are project data owned by the core API. They are stored in the `board_views` table per project and board, shared by everyone in the project, synced through the existing event bus, and managed through one REST API that both the dashboard and `pst views` use. Extension `defaultViews` define starting views. When a board has no saved views, the API saves these starting views as ordinary project views. Users can edit, rename, reorder, and delete them. A board must retain at least one view; storage enforces this inside the deletion transaction. Existing saved views remain the board's views, and deleted starting views do not reappear. Any saved view can be the board's default, stored per board in `board_default_views` rather than as a flag on a view. Both tables are extension user data and follow the extension's disable and uninstall rules.
 
 ## Options considered
 
@@ -31,5 +31,7 @@ Saved views are project data owned by the core API. They are stored in the `boar
 - Tree view customization has the same problem and should follow this decision.
 
 ## Corrections
+
+- 2026-10-08 (PS-548): starting views now become user-owned saved views. Read-only built-ins prevented people from changing their own board. The only view management constraint is keeping at least one view.
 
 - 2026-10-06 (PS-505): renumbered from 0048 to 0060, because [Motion Lab runtime studies](0048-motion-lab-runtime-studies.md) also used 0048. The context claimed the kanban renderer was "used by several extensions". Only the planner ships a kanban board. The decision still holds because saved views also serve data tables, including the core Workspaces table. Whether the kanban and status contracts stay in core is proposed in PS-521.

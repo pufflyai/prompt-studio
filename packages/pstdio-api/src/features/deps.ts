@@ -8,6 +8,7 @@ import type {
   createExtensionStorageDBService,
   createInstalledExtensionSourcesDBService,
   createNotificationsDBService,
+  createResourceLinksDBService,
   createSessionQueueEntriesDBService,
 } from "pstdio-db";
 import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
@@ -64,6 +65,7 @@ export interface RouteDeps {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesService>;
+  resourceLinksService: ReturnType<typeof createResourceLinksDBService>;
   extensionResourceSequencesService: ReturnType<typeof createExtensionResourceSequencesDBService>;
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionConnectionService: ReturnType<typeof createExtensionConnectionService>;

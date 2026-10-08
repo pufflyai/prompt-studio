@@ -103,8 +103,8 @@ test("boards search, edit filter parts, and save one sort that agents can build 
     await page.getByRole("button", { name: "Sort direction" }).click();
     await page.getByRole("menuitem", { name: "A → Z", exact: true }).click();
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Save as new view", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("button", { name: "Save view", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.reload();
     await page.getByRole("button", { name: "Display settings" }).click();
     await expect(page.getByRole("button", { name: "Ordering" })).toHaveText(/Title/);
@@ -172,12 +172,12 @@ test("data tables sort from the header and share saved views", async ({ page, re
     await page.getByTestId("data-table-display-menu").getByText("Row numbers").click();
     await page.keyboard.press("Escape");
     await expect(page.locator('[data-column-id="rowIndex"]')).toHaveCount(0);
-    await page.getByRole("button", { name: "Save as new view", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("button", { name: "Save view", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
 
     const listed = views(project.origin, "list", "--project-id", project.id, "--board", artifactsTable);
     expect(listed.status, listed.stderr).toBe(0);
-    const saved = JSON.parse(listed.stdout).views.find((view: { title: string }) => view.title === "All copy");
+    const saved = JSON.parse(listed.stdout).views.find((view: { title: string }) => view.title === "All");
     expect(saved).toMatchObject({
       sorts: [{ attributeId: "trustSignal", direction: "desc" }],
       settings: { rowNumbers: false },

@@ -13,7 +13,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "アーカイブを解除",
   "kanbanRenderers.tickets.title": "チケット",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "アーカイブ",
+  "displayMenu.propertyOptions.archived": "チケット",
   "displayMenu.propertyOptions.createdAt": "作成日",
   "displayMenu.propertyOptions.status": "ステータス",
   "displayMenu.propertyOptions.updatedAt": "更新日",
@@ -32,5 +32,9 @@
   "commands.refinementPolicy.title": "チケットの詳細化オプションを読み取る",
   "settings.uxPrototype.title": "UX 機能のアーティファクトプロトタイプを生成する",
   "settings.uxPrototype.description": "Artifacts が利用可能な場合、新しい UX 機能の詳細化時にインタラクティブなプロトタイプを必須にします。",
-  "ticketWorkspaces.project": "プロジェクトフォルダー"
+  "ticketWorkspaces.project": "プロジェクトフォルダー",
+  "settings.tickets.deleteLinkedWorkspaces.title": "リンクされたワークスペースを削除",
+  "settings.tickets.deleteLinkedWorkspaces.description": "チケットをアーカイブまたは削除したとき、アクティブなチケットが使用していないワークスペースを削除します。作業ツリー、ブランチ、未コミットの変更が削除されます。",
+  "settings.tickets.markDoneOnMerge.title": "マージ時に完了にする",
+  "settings.tickets.markDoneOnMerge.description": "ワークスペースのブランチまたはリンクされたプルリクエストがマージされると、チケットを完了に移動します。"
 }

@@ -1,5 +1,5 @@
 import type { CommandPaletteResourceContribution } from "@pstdio/sdk/extensions";
-import { TICKET_RESOURCE_ICON } from "../data/mappers";
+import { TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { runTicketsQuery } from "../data/query";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import { getTicketCommand } from "./get-ticket";
@@ -11,7 +11,11 @@ const matchesQuery = (haystack: string, query: string) => {
 
 export const queryTicketResources: CommandPaletteResourceContribution["query"] = async (ctx, input) => {
   const query = input.query ?? "";
-  const { rows } = await runTicketsQuery({ storage: ctx.storage, projectId: ctx.projectId });
+  const { rows } = await runTicketsQuery({
+    storage: ctx.storage,
+    projectId: ctx.projectId,
+    filters: { [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: [TICKET_ARCHIVE_STATE_ACTIVE] },
+  });
 
   const items = rows
     .filter((row) => matchesQuery(row.title, query))

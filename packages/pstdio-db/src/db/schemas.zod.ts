@@ -1,4 +1,5 @@
 import { createSelectSchema } from "drizzle-zod";
+import { resourceAnchorSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 import {
   activity_events,
@@ -12,9 +13,11 @@ import {
 
 export const sessionSelectSchema = createSelectSchema(sessions, {
   status: z.enum(["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"]),
-});
+}).extend({ anchors_json: z.array(resourceAnchorSchema) });
 
-export const workspaceSelectSchema = createSelectSchema(workspaces);
+export const workspaceSelectSchema = createSelectSchema(workspaces).extend({
+  anchors_json: z.array(resourceAnchorSchema),
+});
 export const activityEventSelectSchema = createSelectSchema(activity_events, {
   resource_type: z.string(),
   actor_type: z.enum(["user", "agent", "system"]),
