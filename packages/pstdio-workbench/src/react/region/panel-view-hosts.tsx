@@ -72,6 +72,7 @@ const PanelViewPortal = (props: {
 
 export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; children: ReactNode }) => {
   const { workbench, children } = props;
+  useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.pages.store, (state) => state.location);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);

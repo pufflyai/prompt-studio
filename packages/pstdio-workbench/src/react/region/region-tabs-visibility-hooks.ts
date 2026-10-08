@@ -43,6 +43,7 @@ export const isPlacementEligibleForRegion = (
   resource = workbench.getPrimaryResource(),
   modeId = workbench.modes.getActiveModeId(),
 ) => {
+  if (placement.resource && !workbench.resources.preview.resolve(placement.resource)) return false;
   const widget = workbench.layout.getWidget(placement.contributionId);
   return widget
     ? isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement, {
@@ -58,6 +59,7 @@ export const useWorkbenchRegionTabsState = (
   visibilityStorageKey?: string,
   hasPanelMenuOpeners = false,
 ) => {
+  useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -81,7 +83,9 @@ export const useWorkbenchRegionTabsState = (
   );
   const visibleSubPanelIds = new Set(visibleSubPanels.map((placement) => placement.widgetId));
   const visiblePlacements = regionState.widgets.filter(
-    (placement) => visibleSubPanelIds.has(placement.widgetId) || placement.role === "location",
+    (placement) =>
+      (visibleSubPanelIds.has(placement.widgetId) || placement.role === "location") &&
+      (!placement.resource || Boolean(workbench.resources.preview.resolve(placement.resource))),
   );
   const leadingItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },

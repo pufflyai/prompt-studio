@@ -305,3 +305,14 @@ Navigation and resource removal use explicit context APIs. The host no longer in
 - Call `ctx.navigation.open(target)` from commands and interaction callbacks. Table and kanban row activation callbacks return void. Navigation still uses the existing target types and dispatcher, applies only after successful UI execution, and does not affect dashboards during headless execution.
 - After deleting data, call `await ctx.resources.removed(resource)`. This reports the committed removal to every connected client, independently of command success. Keep missing-resource handling and update-only writes so a stale save cannot recreate deleted data.
 - Remove imports of the workbench's `toWorkbenchNavigationTargetResult` and `isExtensionNavigationTarget` aliases. Use the SDK's `isNavigationTarget` for explicit target validation and `toWorkbenchNavigationTarget` when adapting a target to the workbench.
+
+## Resource mutation previews
+
+A command can declare `resourceMutation` for a dashboard resource rename or removal. It names the resource type and the parameter containing its ID. A rename also names the parameter containing the new label.
+
+```ts
+resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", labelParam: "title" }
+// Removal uses: { kind: "remove", resourceType: "note", idParam: "noteId" }
+```
+
+The dashboard previews the change in navigation, tabs, and breadcrumbs while the command saves. Removal asks for confirmation first. Failure restores the affected resource. Writes for the same resource are ordered, and a failed earlier action cannot undo a newer preview. The preview stays until the mounted resource views refresh. The command still owns validation, persistence, and refresh events. API and CLI calls run the command directly, without a UI preview or confirmation. Commands without this declaration keep their existing behavior.
