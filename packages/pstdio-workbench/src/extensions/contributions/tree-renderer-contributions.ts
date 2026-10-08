@@ -151,8 +151,6 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       contextValue: node.contextValue,
       hiddenByDefault: node.hiddenByDefault,
       canHide: node.canHide,
-      canDrag: node.canDrag,
-      canDrop: node.canDrop,
     };
     originalNodes.set(mapped, node);
     return mapped;
@@ -251,19 +249,6 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         const extensionFooter = isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
         return [...extensionFooter, ...hostNodeSection(`${record.id}:host-footer`, hostFooter)];
       },
-      moveNode: record.moveHandlerId
-        ? async (source, target, ctx) => {
-            const originalSource = mapper.originalNodes.get(source);
-            const originalTarget = target ? mapper.originalNodes.get(target) : undefined;
-            if (!originalSource?.canDrag || (target && !originalTarget?.canDrop)) return;
-            await executeCallback(input, record, record.moveHandlerId!, {
-              ...createQueryParams(input, record, ctx),
-              source: originalSource,
-              target: originalTarget,
-            });
-            ctx.refresh();
-          }
-        : undefined,
       getChildren: async (node, ctx) => {
         if (!record.childrenHandlerId) return node.children ?? [];
         const originalNode = mapper.originalNodes.get(node);

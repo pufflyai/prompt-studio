@@ -56,8 +56,6 @@ export interface ExtensionTreeNode {
   contextValue?: string;
   hiddenByDefault?: boolean;
   canHide?: boolean;
-  canDrag?: boolean;
-  canDrop?: boolean;
 }
 
 export interface ExtensionTreeSection {

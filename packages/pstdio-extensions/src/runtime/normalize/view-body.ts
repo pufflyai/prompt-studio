@@ -45,7 +45,6 @@ export const normalizeViewBody = (input: {
       bodyHandlerId: handler({ ...input, kind: "tree", operation: "body", value: body.body }),
       childrenHandlerId: handler({ ...input, kind: "tree", operation: "children", value: body.children }),
       footerHandlerId: handler({ ...input, kind: "tree", operation: "footer", value: body.footer }),
-      moveHandlerId: handler({ ...input, kind: "tree", operation: "onMove", value: body.onMove }),
     };
   }
   if (body.kind === "file") {

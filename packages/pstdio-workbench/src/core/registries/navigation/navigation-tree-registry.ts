@@ -37,12 +37,6 @@ export interface CreateNavigationTreeRegistryInput {
   getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
   getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
-  moveViewNode?(
-    viewId: string,
-    source: TreeNode,
-    target: TreeNode | undefined,
-    context: NavigationTreeContext,
-  ): Promise<void> | void;
 }
 
 export interface NavigationTreeRegistry {
@@ -59,7 +53,6 @@ export interface NavigationTreeRegistry {
     context?: NavigationTreeContext,
   ): Promise<TreeViewSection[]>;
   getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
-  moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeContext): Promise<void>;
   getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
   onDidChange(listener: () => void): Disposable;
 }
@@ -224,17 +217,6 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
         : await source.contribution.getChildren?.(source.node, query);
       if (!children) return node.children ?? [];
       return children.map((child) => projectNode(child, source.contribution, moveScope, source.resource));
-    },
-
-    async moveNode(sourceNode, targetNode, context = {}) {
-      const source = nodeSources.get(sourceNode);
-      const target = targetNode ? nodeSources.get(targetNode) : undefined;
-      if (!source?.contribution.viewId || !source.node.canDrag) return;
-      if (targetNode && (!target || source.contribution !== target.contribution || !target.node.canDrop)) return;
-      await input.moveViewNode?.(source.contribution.viewId, source.node, target?.node, {
-        ...context,
-        resource: source.resource,
-      });
     },
 
     getDefaultExpandedSectionIds(owner, selectedSlot) {

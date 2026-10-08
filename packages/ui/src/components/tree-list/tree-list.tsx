@@ -312,7 +312,6 @@ export const TreeList = (props: TreeListProps) => {
       onSectionContextMenu={props.onSectionContextMenu}
       onReorderSections={props.onReorderSections}
       onReorderNodes={props.onReorderNodes}
-      onMoveNode={props.onMoveNode}
       canMove={props.canMove}
     />
   ) : (
