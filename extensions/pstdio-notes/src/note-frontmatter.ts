@@ -14,7 +14,7 @@ export const parseNoteDocument = (source: string) => {
 
 export const buildNoteDocument = (body: string, title: string, fields = "") => {
   const titleField = `title: ${quoteYamlScalar(title)}`;
-  const nextFields = /^title:/m.test(fields) ? fields.replace(/^title:.*$/m, titleField) : `${titleField}\n${fields}`;
+  const nextFields = /^title:/m.test(fields) ? fields.replace(/^title:.*$/m, () => titleField) : `${titleField}\n${fields}`;
   const header = `---\n${nextFields.trimEnd()}\n---`;
   return body ? `${header}\n\n${body}` : header;
 };
