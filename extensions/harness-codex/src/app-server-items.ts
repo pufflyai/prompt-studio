@@ -20,6 +20,7 @@ interface NativeItem {
   questions?: AsyncUserInputQuestion[] | null;
   clientId?: string | null;
   content?: Array<{ type: string; text?: string }>;
+  path?: string;
 }
 
 const toThreadItem = (native: NativeItem) => {
@@ -34,6 +35,7 @@ const toThreadItem = (native: NativeItem) => {
     fileChange: "file_change",
     mcpToolCall: "mcp_tool_call",
     webSearch: "web_search",
+    imageView: "image_view",
   };
   if (!types[native.type]) return undefined;
   return {
@@ -54,6 +56,7 @@ const toThreadItem = (native: NativeItem) => {
     server: native.server,
     tool: native.tool,
     query: native.query,
+    path: native.path,
   };
 };
 
@@ -70,7 +73,8 @@ const planItem = (params: Record<string, unknown>) => {
 export const createAppServerItems = (publish: (item: CodexThreadItem) => void, initialUserMessageId?: string) => {
   const items = new Map<string, CodexThreadItem>();
   let usage: CodexUsage | undefined;
-  const publishNativeItem = (native: NativeItem) => {
+  const publishNativeItem = (native: NativeItem, completed: boolean) => {
+    if (native.type === "imageView") native = { ...native, status: completed ? "completed" : "in_progress" };
     // The initial prompt already carries host attachments; only later native user messages are added.
     if (native.type === "userMessage" && initialUserMessageId && native.clientId === initialUserMessageId) return;
     const item = toThreadItem(native);
@@ -95,7 +99,7 @@ export const createAppServerItems = (publish: (item: CodexThreadItem) => void, i
         };
     }
     if (message.method === "item/started" || message.method === "item/completed") {
-      publishNativeItem(params.item as NativeItem);
+      publishNativeItem(params.item as NativeItem, message.method === "item/completed");
     }
     const deltaFields: Record<string, "text" | "aggregated_output"> = {
       "item/agentMessage/delta": "text",

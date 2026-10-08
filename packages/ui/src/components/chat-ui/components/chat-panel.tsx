@@ -3,6 +3,7 @@ import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
 import type { PromptCommand } from "@/components/rich-text";
+import { ChatImageHistoryContext, indexChatImageSources } from "../links/chat-image-sources";
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider } from "../links/chat-link-context";
 import { resolveActiveQuestionPrompt } from "../tool-rendering/question-prompt";
@@ -161,69 +162,71 @@ export const ChatPanel = (props: ChatPanelProps) => {
   };
 
   return (
-    <ChatLinkProvider handler={linkHandler}>
-      <ChatQuestionNavigationContext value={questionNavigation.value}>
-        <Flex position="relative" direction="column" w="full" h="full" overflow="hidden">
-          <ChatPrimitives.Root>
-            <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
-            <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
-              {hasMessages ? (
-                <>
-                  <ChatMessageList
-                    key={messageListIdentity}
-                    leadingResponses={leadingResponses}
-                    groups={groups}
-                    streaming={streaming}
-                    hideActiveQuestionForms={hideActiveQuestionForms}
-                    expandedStickyMessageIds={expandedStickyMessageIds}
-                    onToggleStickyMessage={toggleStickyMessageExpanded}
-                    onReady={() => setReadyMessageListKey(messageListIdentity)}
-                  />
-                  {conversationNotices}
-                </>
-              ) : (
-                <>
-                  {conversationNotices}
-                  {emptyContent}
-                </>
-              )}
-            </ChatPrimitives.Viewport>
-            {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
-          </ChatPrimitives.Root>
-          {approvalPrompt}
-          {streaming ? (
-            <WorkingIndicator key={messageListKey} startedAt={streamingStartedAt} hidden={!showThinkingIndicator} />
-          ) : null}
-          <ChatPanelComposer
-            conversationKey={conversationKey ?? messages[0]?.id}
-            recentUserMessages={getRecentUserPrompts(messages)}
-            actions={actions}
-            attachmentActions={attachmentActions}
-            composerHeader={composerHeader}
-            attachedResources={attachedResources}
-            attachmentList={attachmentList}
-            chatInputAutoFocus={chatInputAutoFocus}
-            chatInputPlaceholder={chatInputPlaceholder}
-            chatInputQuestionPrompt={activeQuestionPrompt}
-            composerDecision={questionNavigation.prompt ? undefined : composerDecision}
-            chatInputCommands={chatInputCommands}
-            hasWorkspaceHub={hasWorkspaceHub}
-            inputDisabled={inputDisabled}
-            submitDisabled={submitDisabled}
-            onAttachFiles={onAttachFiles}
-            onAttachText={onAttachText}
-            onClearAttachments={onClearAttachments}
-            onInterrupt={onInterrupt}
-            onQueuedFollowUpMove={onQueuedFollowUpMove}
-            onQueuedFollowUpRemove={onQueuedFollowUpRemove}
-            onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
-            queuedComposer={queuedComposer}
-            queuedFollowUps={queuedFollowUps}
-            streaming={streaming}
-            workspaceHub={workspaceHub}
-          />
-        </Flex>
-      </ChatQuestionNavigationContext>
-    </ChatLinkProvider>
+    <ChatImageHistoryContext value={indexChatImageSources(messages, linkHandler)}>
+      <ChatLinkProvider handler={linkHandler}>
+        <ChatQuestionNavigationContext value={questionNavigation.value}>
+          <Flex position="relative" direction="column" w="full" h="full" overflow="hidden">
+            <ChatPrimitives.Root>
+              <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
+              <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
+                {hasMessages ? (
+                  <>
+                    <ChatMessageList
+                      key={messageListIdentity}
+                      leadingResponses={leadingResponses}
+                      groups={groups}
+                      streaming={streaming}
+                      hideActiveQuestionForms={hideActiveQuestionForms}
+                      expandedStickyMessageIds={expandedStickyMessageIds}
+                      onToggleStickyMessage={toggleStickyMessageExpanded}
+                      onReady={() => setReadyMessageListKey(messageListIdentity)}
+                    />
+                    {conversationNotices}
+                  </>
+                ) : (
+                  <>
+                    {conversationNotices}
+                    {emptyContent}
+                  </>
+                )}
+              </ChatPrimitives.Viewport>
+              {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
+            </ChatPrimitives.Root>
+            {approvalPrompt}
+            {streaming ? (
+              <WorkingIndicator key={messageListKey} startedAt={streamingStartedAt} hidden={!showThinkingIndicator} />
+            ) : null}
+            <ChatPanelComposer
+              conversationKey={conversationKey ?? messages[0]?.id}
+              recentUserMessages={getRecentUserPrompts(messages)}
+              actions={actions}
+              attachmentActions={attachmentActions}
+              composerHeader={composerHeader}
+              attachedResources={attachedResources}
+              attachmentList={attachmentList}
+              chatInputAutoFocus={chatInputAutoFocus}
+              chatInputPlaceholder={chatInputPlaceholder}
+              chatInputQuestionPrompt={activeQuestionPrompt}
+              composerDecision={questionNavigation.prompt ? undefined : composerDecision}
+              chatInputCommands={chatInputCommands}
+              hasWorkspaceHub={hasWorkspaceHub}
+              inputDisabled={inputDisabled}
+              submitDisabled={submitDisabled}
+              onAttachFiles={onAttachFiles}
+              onAttachText={onAttachText}
+              onClearAttachments={onClearAttachments}
+              onInterrupt={onInterrupt}
+              onQueuedFollowUpMove={onQueuedFollowUpMove}
+              onQueuedFollowUpRemove={onQueuedFollowUpRemove}
+              onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
+              queuedComposer={queuedComposer}
+              queuedFollowUps={queuedFollowUps}
+              streaming={streaming}
+              workspaceHub={workspaceHub}
+            />
+          </Flex>
+        </ChatQuestionNavigationContext>
+      </ChatLinkProvider>
+    </ChatImageHistoryContext>
   );
 };

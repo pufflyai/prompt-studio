@@ -9,6 +9,7 @@ import { createAppServerItems } from "./app-server-items";
 import { createAppServerRpc } from "./app-server-rpc";
 import { createAsyncQuestionReplies } from "./async-question-replies";
 import { defaultSpawnProcess, type SpawnDeps } from "./codex-process";
+import { snapshotCodexImage } from "./image-items";
 import { createCodexStreamPipeline } from "./normalize-stream";
 import { confirmQuestionReply } from "./question-confirmation";
 import { createQuestionChannel, questionReplyError } from "./questions";
@@ -44,7 +45,13 @@ const runCodexSession = async (input: StartSpawnInput & Partial<ResumeSpawnInput
     initialMessages: [initialUserMessage],
     indexOffset: input.messageOffset ?? 0,
   });
-  const publish = (item: import("./types").CodexThreadItem) => pipeline.handleEvent({ type: "item.updated", item });
+  let pendingItems = Promise.resolve();
+  const publish = (item: import("./types").CodexThreadItem) => {
+    pendingItems = pendingItems.then(async () => {
+      pipeline.handleEvent({ type: "item.updated", item: await snapshotCodexImage(item, input.cwd) });
+    });
+    void pendingItems.catch(() => finish({ status: "failed" }));
+  };
   const items = createAppServerItems(publish, initialUserMessage.id);
   const completion = Promise.withResolvers<HarnessExit>();
   let ended = false;
@@ -53,11 +60,18 @@ const runCodexSession = async (input: StartSpawnInput & Partial<ResumeSpawnInput
   const finish = (exit: HarnessExit, event?: CodexThreadEvent) => {
     if (ended) return;
     ended = true;
-    void questions.close().finally(() => {
-      if (event) pipeline.handleEvent(event);
-      completion.resolve(exit);
-      child.kill();
-    });
+    void (async () => {
+      try {
+        await questions.close();
+        await pendingItems;
+        if (event) pipeline.handleEvent(event);
+      } catch {
+        exit = { status: "failed" };
+      } finally {
+        completion.resolve(exit);
+        child.kill();
+      }
+    })();
   };
   const rpc = createAppServerRpc(child, (message) => {
     if (ended) return;

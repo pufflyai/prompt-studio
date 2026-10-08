@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Fix Codex async question delivery and show clickable question and default-answer bubbles in chat.
+Fix Codex async questions, clickable question summaries, and local image previews in chat.

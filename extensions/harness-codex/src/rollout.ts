@@ -226,6 +226,7 @@ export const normalizeRollout = (content: string): SessionMessage[] => {
         (part) =>
           part.type === "tool" &&
           part.tool === "question" &&
+          (part.state?.input as { delivery?: string })?.delivery !== "async" &&
           !turn.items?.some((item) =>
             item.parts.some((candidate) => candidate.type === "tool" && candidate.callId === part.callId),
           ),

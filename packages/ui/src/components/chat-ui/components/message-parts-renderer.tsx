@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { RichMessage } from "@/components/rich-text";
+import { ChatImageSourcesContext, indexChatImageSources, useChatImageHistory } from "../links/chat-image-sources";
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider, useChatLinkHandler } from "../links/chat-link-context";
 import { parseQuestionPrompt } from "../tool-rendering/question-prompt";
@@ -107,6 +108,8 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
 function MessagePartsContent(props: MessagePartsProps) {
   const { message, hideQuestionForms = false, onOpenFile, toolInvocationTimeline } = props;
   const linkHandler = useChatLinkHandler();
+  const imageHistory = useChatImageHistory();
+  const localImages = indexChatImageSources([message], linkHandler);
   const RenderToolInvocationTimeline = toolInvocationTimeline ?? ToolInvocationTimeline;
   const parts = message.parts ?? [];
   const nodes: ReactNode[] = [];
@@ -118,9 +121,11 @@ function MessagePartsContent(props: MessagePartsProps) {
     switch (part.type) {
       case "text":
         nodes.push(
-          <div key={key}>
-            <Response>{part.text}</Response>
-          </div>,
+          <ChatImageSourcesContext key={key} value={imageHistory.get(part) ?? localImages.get(part)!}>
+            <div>
+              <Response>{part.text}</Response>
+            </div>
+          </ChatImageSourcesContext>,
         );
         break;
       case "reasoning":

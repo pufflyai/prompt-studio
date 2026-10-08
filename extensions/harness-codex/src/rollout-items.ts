@@ -20,6 +20,7 @@ export type RolloutItem = {
   query?: string;
   delivery?: string | null;
   questions?: AsyncUserInputQuestion[] | null;
+  path?: string;
 };
 
 const joinText = (content: RolloutText[] | undefined) => (content ?? []).map((part) => part.text ?? "").join("");
@@ -56,6 +57,8 @@ const toThreadItem = (item: RolloutItem): CodexThreadItem | null => {
       return { id, type: "mcp_tool_call", server: item.server, tool: item.tool, status: item.status };
     case "WebSearch":
       return { id, type: "web_search", query: item.query };
+    case "ImageView":
+      return { id, type: "image_view", path: item.path, status: "completed" };
     default:
       return null;
   }

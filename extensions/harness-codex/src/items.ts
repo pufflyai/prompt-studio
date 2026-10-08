@@ -30,7 +30,7 @@ const toolMessage = (item: CodexThreadItem, id: string, tool: string, input: unk
     status,
     state: {
       input,
-      output: item.aggregated_output,
+      output: item.output ?? item.aggregated_output,
       metadata: item.metadata,
       errorText: status === "failed" ? "Tool execution failed" : undefined,
     },
@@ -58,6 +58,7 @@ export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionM
   }
 
   if (item.type === "question") return toolMessage(item, id, "question", item.input);
+  if (item.type === "image_view") return toolMessage(item, id, "view_image", { path: item.path });
 
   if (item.type === "file_change") {
     return toolMessage(item, id, "apply_patch", { changes: item.changes });
