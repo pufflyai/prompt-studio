@@ -107,7 +107,8 @@ export const notesPage = definePage({
           const mount = notesMount(ctx);
           if (!id || !(await noteExists(mount, id))) return {};
           try {
-            return { label: await readNoteTitle(mount, id), menu: noteTabActions(id, writable) };
+            const label = await readNoteTitle(mount, id);
+            return { label, menu: noteTabActions(id, writable, label) };
           } catch (error) {
             if (await noteExists(mount, id)) throw error;
             return {};
