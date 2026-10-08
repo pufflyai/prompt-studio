@@ -177,6 +177,7 @@ test.describe("packaged extension webviews", () => {
               runtimeAuthorization(started.descriptor),
             );
             await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
+            await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
             const sidenav = page.locator('[data-workbench-region="sidenav"]');
             await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));
           }
