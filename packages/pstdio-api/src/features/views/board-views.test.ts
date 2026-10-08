@@ -51,10 +51,13 @@ let values=[{value:"todo",label:"To do"},{value:"gone",label:"Gone"}], fail=fals
 const legacySettings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",ordering:{attributeId:"manual",direction:"asc"},displayProperties:["state"]};
 const settings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",displayProperties:["state"]};
 const filter={conjunction:"and",rules:[]};
-export default {
+const extension = {
 commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}},{id:"empty",ref:{kind:"command",id:"empty"},title:"Empty",params:{},run:()=>{inbox=[];return null;}}],
 views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings:legacySettings,filters:{}},{id:"flagged",title:"Flagged",settings:legacySettings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true,filterable:false},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
-};`,
+};
+extension.views.push({id:"badges",ref:{kind:"view",id:"badges"},title:"Badges",body:{kind:"kanban",defaultSettings:{...settings,displayProperties:["badge"]},query:()=>({rows:[],attributes:[{id:"badge",label:"Badge",type:{kind:"enum",options:[{value:"mention",label:"Mention"}]}},{id:"private",label:"Private",type:{kind:"string"},displayable:false}]})}});
+export default extension;
+`,
   );
   handle = await createTestApp();
   const created = await handle.app.request("/v1/projects", {
@@ -148,6 +151,24 @@ test("initial views can be renamed edited and deleted while one view remains", a
   expect(current.defaultViewId).toBe(second.id);
   expect((await request(`/board-views/${second.id}`, "DELETE")).status).toBe(409);
   expect((await (await request(path)).json()).views).toHaveLength(1);
+});
+
+test("starting views retain displayed attributes unless display is explicitly disabled", async () => {
+  const path = "/boards/test.boards.view.badges/views";
+  const initial = (await (await request(path)).json()).views[0];
+  expect(initial.settings.displayProperties).toEqual(["badge"]);
+  const saved = await request(`/board-views/${initial.id}`, "PATCH", {
+    settings: { displayProperties: ["badge"] },
+  });
+  expect(saved.status).toBe(200);
+  expect((await (await request(path)).json()).views[0].settings.displayProperties).toEqual(["badge"]);
+  expect(
+    (
+      await request(`/board-views/${initial.id}`, "PATCH", {
+        settings: { displayProperties: ["private"] },
+      })
+    ).status,
+  ).toBe(400);
 });
 
 test("orphaned views can be fully removed after their board disappears", async () => {
