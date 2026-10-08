@@ -47,6 +47,7 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
         getBody: (context) => navigation.getSections("content", context.signal),
         getFooter: (context) => navigation.getSections("footer", context.signal),
         getChildren: (node, context) => ctx.navigationTrees.getChildren(node, context),
+        moveNode: (source, target, context) => ctx.navigationTrees.moveNode(source, target, context),
       },
     },
     { priority: 80 },
