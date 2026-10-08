@@ -72,3 +72,8 @@ list groups a visible page by command and resolves each group once. The existing
 single-resource `resolve` command continues to refresh open resource pages.
 Declare the owner data events in the discovery provider's `refreshEvents` so open
 lists refresh after edits. Command lifecycle events do not cause another lookup.
+
+Native owner views that show linked resources should include
+`viewDataEvents.resourceAnchorsChanged` in `refreshEvents`. The host delivers this
+project-scoped dependency after committed link changes, including changes made by
+another client or through the CLI.

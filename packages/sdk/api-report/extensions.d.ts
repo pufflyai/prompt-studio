@@ -3095,6 +3095,9 @@ export declare const projectEvents: {
   }>;
 };
 export declare const viewDataEvents: {
+  resourceAnchorsChanged: EventRef<{
+    projectId: string;
+  }>;
   sessionsChanged: EventRef<{
     projectId: string;
   }>;
