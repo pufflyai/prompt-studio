@@ -47,7 +47,11 @@ const run = async (command: readonly string[], prefix: string) => {
           }
           return result + decoder.decode();
         };
-        const [out, err, code] = await Promise.all([read(child.stdout), read(child.stderr), child.exited]);
+        const [out, err, code] = await Promise.all([
+          read(child.stdout as ReadableStream<Uint8Array>),
+          read(child.stderr as ReadableStream<Uint8Array>),
+          child.exited,
+        ]);
         console.log(JSON.stringify({ label, reader, exitCode: code, stdout: out, stderr: err }));
       }
     }
