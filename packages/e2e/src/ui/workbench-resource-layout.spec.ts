@@ -3,7 +3,7 @@ import { type APIRequestContext, expect, type Page, test } from "@playwright/tes
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
-import { getSidenavEntry } from "./helpers/sidenav-navigation";
+import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 const createProject = async (request: APIRequestContext, folderPath?: string) => {
@@ -61,7 +61,7 @@ test("restores each resource's panel state across navigation and reload", async 
 
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/`);
-    const workspacesNavigation = await getSidenavEntry(page, "Workspaces");
+    const workspacesNavigation = await showSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
 
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
