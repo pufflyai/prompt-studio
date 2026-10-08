@@ -25,6 +25,7 @@ export const createNoteCommand = defineCommand({
 
 export const deleteNoteCommand = defineCommand({
   id: "notes.delete",
+  resourceMutation: { kind: "remove", resourceType: "note", idParam: "noteId" },
   title: l10n("commands.deleteNote", "Delete note"),
   cli: true,
   mutating: true,
@@ -43,6 +44,7 @@ export const deleteNoteCommand = defineCommand({
 
 export const renameNoteCommand = defineCommand({
   id: "notes.rename",
+  resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", labelParam: "title" },
   title: l10n("commands.renameNote", "Rename note"),
   cli: true,
   mutating: true,
