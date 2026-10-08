@@ -166,20 +166,22 @@ describe("POST /v1/projects/:projectId/extensions/install", () => {
     const project = await createProject("Upload dependencies");
     const manifest = JSON.parse(packageJson("upload-deps"));
     manifest.dependencies = { demo: "file:./vendor/demo" };
-    const response = await addFolder(
-      project.id,
-      "upload-deps",
-      {
-        ...extensionFiles("upload-deps"),
-        "package.json": JSON.stringify(manifest),
-        "vendor/demo/package.json": JSON.stringify({ name: "demo", version: "1.0.0", main: "index.ts" }),
-        "vendor/demo/index.ts": "export default 1;",
-      },
-      { development: "true", skipInstall: "false" },
-    );
+    const files = {
+      ...extensionFiles("upload-deps"),
+      "extension.ts":
+        'import title from "demo"; export default { commands: [{ id: "hello", ref: {kind:"command",id:"hello"}, title, run() {return title;} }] };',
+      "package.json": JSON.stringify(manifest),
+      "vendor/demo/package.json": JSON.stringify({ name: "demo", version: "1.0.0", main: "index.ts" }),
+      "vendor/demo/index.ts": 'export default "Dependency";',
+    };
+    const response = await addFolder(project.id, "upload-deps", files, { development: "true", skipInstall: "false" });
     expect(response.status).toBe(201);
     const target = join(project.repoPath, ".pstdio/extensions/upload-deps");
-    expect(readFileSync(join(target, "node_modules/demo/index.ts"), "utf8")).toBe("export default 1;");
+    expect(readFileSync(join(target, "node_modules/demo/index.ts"), "utf8")).toContain("Dependency");
+    const refreshed = await addFolder(project.id, "upload-deps", files, { force: "true", skipInstall: "true" });
+    expect(refreshed.status).toBe(201);
+    const commands = await (await handle.app.request(`/v1/projects/${project.id}/extensions/commands`)).json();
+    expect(commands.commands.some((command: { title: string }) => command.title === "Dependency")).toBe(true);
   });
 
   test("refuses install names that can replace an installed root", async () => {
@@ -262,13 +264,40 @@ describe("POST /v1/projects/:projectId/extensions/install", () => {
       mkdirSync(join(source, path, ".."), { recursive: true });
       writeFileSync(join(source, path), content);
     }
+    const provider = join(project.repoPath, "tools/provider");
+    mkdirSync(provider);
+    writeFileSync(
+      join(provider, "package.json"),
+      JSON.stringify({ name: "provider", version: "1.0.0", main: "index.ts" }),
+    );
+    writeFileSync(join(provider, "index.ts"), 'export default "Sibling";');
+    const manifest = JSON.parse(packageJson("project-tool"));
+    manifest.dependencies = { provider: "file:../provider" };
+    writeFileSync(join(source, "package.json"), JSON.stringify(manifest));
+    writeFileSync(
+      join(source, "extension.ts"),
+      'import title from "provider"; export default { commands: [{ id:"hello", ref:{kind:"command",id:"hello"}, title, run() {return title;} }] };',
+    );
     const response = await handle.app.request(`/v1/projects/${project.id}/extensions/install`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: { kind: "project-folder", path: "tools/project-tool" }, skipInstall: true }),
+      body: JSON.stringify({ source: { kind: "project-folder", path: "tools/project-tool" } }),
     });
     expect(response.status).toBe(201);
     expect((await response.json()).source.targetPath).toBe(join(project.repoPath, ".pstdio/extensions/project-tool"));
+    const refresh = await handle.app.request(`/v1/projects/${project.id}/extensions/install`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        source: { kind: "project-folder", path: "tools/project-tool" },
+        force: true,
+        skipInstall: true,
+      }),
+    });
+    expect(refresh.status).toBe(201);
+    rmSync(source, { recursive: true });
+    const commands = await (await handle.app.request(`/v1/projects/${project.id}/extensions/commands`)).json();
+    expect(commands.commands.some((command: { title: string }) => command.title === "Sibling")).toBe(true);
     const escaping = await handle.app.request(`/v1/projects/${project.id}/extensions/install`, {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -1,8 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, isAbsolute, join, relative, resolve } from "node:path";
-import { createExtensionIgnoreMatcher, extensionDependencyInputNames } from "pstdio-extensions/authoring";
+import { basename, isAbsolute, resolve } from "node:path";
 import { expandHomePath } from "pstdio-paths";
+import { extensionUploadFiles } from "./upload-source-files";
 
 export const isLocalExtensionSource = (source: string) =>
   isAbsolute(source) || /^\.{1,2}[/\\]/.test(source) || /^~[/\\]/.test(source);
@@ -16,7 +16,7 @@ export const uploadExtensionSource = (
     development?: boolean;
   } = {},
 ) => {
-  const root = resolve(expandHomePath(source, homedir()));
+  const root = realpathSync(resolve(expandHomePath(source, homedir())));
   const body = new FormData();
   body.append("kind", "upload");
   body.append("folderName", basename(root));
@@ -24,19 +24,8 @@ export const uploadExtensionSource = (
   for (const key of ["force", "skipInstall", "development"] as const) {
     if (options[key] !== undefined) body.append(key, String(options[key]));
   }
-  const matcher = createExtensionIgnoreMatcher(root, { ignoreGit: false });
-  const visit = (dir: string) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      const rel = relative(root, path).replaceAll("\\", "/");
-      if (entry.name === "node_modules") continue;
-      const dependencyInput = extensionDependencyInputNames.includes(rel as never);
-      const git = rel === ".git" || rel.startsWith(".git/");
-      if (!git && !dependencyInput && matcher.ignores(rel)) continue;
-      if (entry.isDirectory()) visit(path);
-      else if (entry.isFile()) body.append("files", new File([readFileSync(path)], rel), rel);
-    }
-  };
-  visit(root);
+  for (const file of extensionUploadFiles(root)) {
+    body.append("files", new File([readFileSync(file.path)], file.name), file.name);
+  }
   return body;
 };

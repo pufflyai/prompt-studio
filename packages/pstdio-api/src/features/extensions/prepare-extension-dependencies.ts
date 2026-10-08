@@ -30,9 +30,10 @@ export const prepareInstallDependencies = async (input: {
   targetPath: string;
 }) => {
   const { installInput, installPath, source, targetPath } = input;
-  let linkedInstalledDependencies = installInput.reuseInstalledDependencies
-    ? linkInstalledDependencies(source.path, targetPath, installPath)
-    : false;
+  let linkedInstalledDependencies =
+    installInput.reuseInstalledDependencies || installInput.skipInstall
+      ? linkInstalledDependencies(source.path, targetPath, installPath)
+      : false;
 
   if (installInput.skipInstall && source.kind === "local") {
     linkUsableNodeModules(source.path, installPath);

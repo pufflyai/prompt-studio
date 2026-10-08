@@ -281,4 +281,4 @@ Consumers import `plannerCommands.publish`. They do not repeat the provider iden
 
 Installing never writes extensions or agent skills into the CLI machine's home. The host provisions local workspace skills. Install global agent skills separately with `pst agents install-skills` on the agent's machine.
 
-Uploads omit `node_modules`. `--skip-install` skips host dependency installation; it cannot reuse the client's installed dependencies. Local directory dependencies outside the uploaded folder need a source on the host with its surrounding project files. `pst extensions test --project-path <context>` preserves that context in its private host.
+Uploads omit `node_modules` and include confined source links as file content. `--skip-install` skips host dependency installation and can reuse matching dependencies already installed on the host. For a local API, CLI sources inside the host's local project use the project-folder input, preserving existing host dependencies and sibling packages. Uploads cannot reuse dependencies that exist only on another machine. `pst extensions test --project-path <context>` preserves dependency context in its private host.
