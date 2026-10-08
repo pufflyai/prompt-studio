@@ -44,17 +44,13 @@ export const prepareInstallDependencies = async (input: {
     unlinkSync(join(installPath, "node_modules"));
     linkedInstalledDependencies = false;
   }
-  if (
-    source.kind === "local" &&
-    (installInput.reuseInstalledDependencies || hasLocalDirectoryDependencies(source.path))
-  ) {
+  if (source.kind === "local" && hasLocalDirectoryDependencies(source.path)) {
     // Local dependencies belong to the source checkout. Bun resolves local
     // lockfile paths relative to that checkout. See ADR 0017 for the production case.
     await installDependencies(source.path, installInput);
-    if (installInput.reuseInstalledDependencies) linkUsableNodeModules(source.path, installPath);
-    else copyUsableNodeModules(source.path, installPath);
+    copyUsableNodeModules(source.path, installPath);
   } else {
-    await installDependencies(installPath, { ...installInput, production: true });
+    await installDependencies(installPath, { ...installInput, production: !installInput.reuseInstalledDependencies });
   }
   return linkedInstalledDependencies;
 };

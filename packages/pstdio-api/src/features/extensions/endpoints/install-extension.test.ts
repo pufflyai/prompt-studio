@@ -49,6 +49,7 @@ const packageJson = (name: string) =>
     displayName: "Dropped Extension",
     publisher: "test",
     main: "./extension.ts",
+    pstdio: { scope: "repo" },
     engines: { pstdio: `^${EXTENSION_API_VERSION}` },
   });
 
@@ -58,20 +59,29 @@ const extensionFiles = (name: string) => ({
   "src/title.ts": 'export const title = "Dropped";\n',
 });
 
-const addFolder = (projectId: string, name: string, files: Record<string, string>) => {
+const addFolder = (
+  projectId: string,
+  name: string,
+  files: Record<string, string>,
+  options: Record<string, string> = {},
+) => {
   const body = new FormData();
-  body.append("name", name);
+  body.append("kind", "upload");
+  body.append("installName", name);
+  body.append("folderName", name);
+  body.append("skipInstall", "true");
+  for (const [key, value] of Object.entries(options)) body.set(key, value);
   for (const [path, content] of Object.entries(files)) body.append("files", new File([content], path));
-  return handle.app.request(`/v1/projects/${projectId}/extensions/local`, { method: "POST", body });
+  return handle.app.request(`/v1/projects/${projectId}/extensions/install`, { method: "POST", body });
 };
 
-describe("POST /v1/projects/:projectId/extensions/local", () => {
+describe("POST /v1/projects/:projectId/extensions/install", () => {
   test("copies the folder into the project's extensions folder and enables it", async () => {
     const project = await createProject("Drop Project");
 
     const response = await addFolder(project.id, "dropped-extension", extensionFiles("dropped-extension"));
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     const target = join(project.repoPath, ".pstdio", "extensions", "dropped-extension");
     const body = await response.json();
     expect(body.extension).toMatchObject({
@@ -119,7 +129,7 @@ describe("POST /v1/projects/:projectId/extensions/local", () => {
       "extension.ts": "export default { label: 'Dropped' };\n",
     });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
     expect((await response.json()).error).toBe(
       'Extension "test.invalid-extension" declares unknown contribution "label"',
     );
@@ -135,13 +145,13 @@ describe("POST /v1/projects/:projectId/extensions/local", () => {
       "package.json": JSON.stringify(manifest),
     });
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
     expect((await response.json()).error).toContain(`add "^${EXTENSION_API_VERSION}" to engines.pstdio`);
   });
 
   test("refuses to replace a folder that already exists", async () => {
     const project = await createProject("Drop Conflict Project");
-    expect((await addFolder(project.id, "twice", extensionFiles("twice"))).status).toBe(200);
+    expect((await addFolder(project.id, "twice", extensionFiles("twice"))).status).toBe(201);
 
     const second = await addFolder(project.id, "twice", {
       ...extensionFiles("twice"),
@@ -151,5 +161,119 @@ describe("POST /v1/projects/:projectId/extensions/local", () => {
     expect(second.status).toBe(409);
     const target = join(project.repoPath, ".pstdio", "extensions", "twice");
     expect(readFileSync(join(target, "src", "title.ts"), "utf8")).toBe('export const title = "Dropped";\n');
+  });
+  test("keeps uploaded local dependencies after the scratch folder is removed", async () => {
+    const project = await createProject("Upload dependencies");
+    const manifest = JSON.parse(packageJson("upload-deps"));
+    manifest.dependencies = { demo: "file:./vendor/demo" };
+    const response = await addFolder(
+      project.id,
+      "upload-deps",
+      {
+        ...extensionFiles("upload-deps"),
+        "package.json": JSON.stringify(manifest),
+        "vendor/demo/package.json": JSON.stringify({ name: "demo", version: "1.0.0", main: "index.ts" }),
+        "vendor/demo/index.ts": "export default 1;",
+      },
+      { development: "true", skipInstall: "false" },
+    );
+    expect(response.status).toBe(201);
+    const target = join(project.repoPath, ".pstdio/extensions/upload-deps");
+    expect(readFileSync(join(target, "node_modules/demo/index.ts"), "utf8")).toBe("export default 1;");
+  });
+
+  test("refuses install names that can replace an installed root", async () => {
+    const project = await createProject("Invalid install name");
+    const response = await addFolder(project.id, "invalid-name", extensionFiles("invalid-name"), {
+      installName: ".",
+      force: "true",
+    });
+    expect(response.status).toBe(400);
+  });
+
+  test("uses the manifest scope and host home for user installs", async () => {
+    const project = await createProject("Host-owned upload");
+    const manifest = JSON.parse(packageJson("user-tool"));
+    delete manifest.pstdio;
+    const response = await addFolder(
+      project.id,
+      "user-tool",
+      {
+        ...extensionFiles("user-tool"),
+        "package.json": JSON.stringify(manifest),
+        ".git/config": "[core]\n",
+      },
+      { installName: "custom-user-tool" },
+    );
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    const target = join(tempRoot, "pstdio-home/extensions/custom-user-tool");
+    expect(body.source.targetPath).toBe(target);
+    expect(body.extension).toMatchObject({ enabled: true, scope: "global", sourcePath: target });
+    expect(existsSync(join(project.repoPath, ".pstdio/extensions/custom-user-tool"))).toBe(false);
+    expect(readFileSync(join(target, ".git/config"), "utf8")).toBe("[core]\n");
+    const diagnostics = await (
+      await handle.app.request(`/v1/projects/${project.id}/extensions/diagnostics?scope=user`)
+    ).json();
+    expect(diagnostics.roots).toHaveLength(1);
+    expect(diagnostics.roots[0].path).toBe(join(tempRoot, "pstdio-home/extensions"));
+    expect(
+      diagnostics.roots[0].check.extensions.some((entry: { id: string }) => entry.id === body.source.metadata.id),
+    ).toBe(true);
+  });
+
+  test("replaces only with force and preserves the installed source on invalid replacement", async () => {
+    const project = await createProject("Atomic replacement");
+    expect((await addFolder(project.id, "replace-tool", extensionFiles("replace-tool"))).status).toBe(201);
+    const target = join(project.repoPath, ".pstdio/extensions/replace-tool/src/title.ts");
+    const conflict = await addFolder(project.id, "replace-tool", extensionFiles("replace-tool"));
+    expect(conflict.status).toBe(409);
+    expect((await conflict.json()).source.targetPath).toBe(join(project.repoPath, ".pstdio/extensions/replace-tool"));
+    const invalid = await addFolder(
+      project.id,
+      "replace-tool",
+      {
+        ...extensionFiles("replace-tool"),
+        "extension.ts": "export default { broken: true };",
+      },
+      { force: "true" },
+    );
+    expect(invalid.status).toBe(422);
+    expect(readFileSync(target, "utf8")).toContain("Dropped");
+    const replacement = await addFolder(
+      project.id,
+      "replace-tool",
+      {
+        ...extensionFiles("replace-tool"),
+        "src/title.ts": 'export const title = "New";',
+      },
+      { force: "true" },
+    );
+    expect(replacement.status).toBe(201);
+    expect(readFileSync(target, "utf8")).toContain("New");
+  });
+
+  test("installs a source inside the host project while keeping sibling dependencies", async () => {
+    const project = await createProject("Host project source");
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const source = join(project.repoPath, "tools/project-tool");
+    mkdirSync(source, { recursive: true });
+    for (const [path, content] of Object.entries(extensionFiles("project-tool"))) {
+      mkdirSync(join(source, path, ".."), { recursive: true });
+      writeFileSync(join(source, path), content);
+    }
+    const response = await handle.app.request(`/v1/projects/${project.id}/extensions/install`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: { kind: "project-folder", path: "tools/project-tool" }, skipInstall: true }),
+    });
+    expect(response.status).toBe(201);
+    expect((await response.json()).source.targetPath).toBe(join(project.repoPath, ".pstdio/extensions/project-tool"));
+    const escaping = await handle.app.request(`/v1/projects/${project.id}/extensions/install`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: { kind: "project-folder", path: "../tool" } }),
+    });
+    expect(escaping.status).toBe(400);
   });
 });

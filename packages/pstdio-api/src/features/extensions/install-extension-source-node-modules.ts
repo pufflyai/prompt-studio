@@ -64,7 +64,7 @@ export const linkUsableNodeModules = (sourcePath: string, targetPath: string) =>
   mirrorNodeModules(sourceNodeModules, targetNodeModules);
 };
 
-const rebaseCopiedLink = (copied: string, source: string, target: string) => {
+const rebaseCopiedLink = (copied: string, source: string, target: string, sourcePath: string, targetPath: string) => {
   const original = join(source, relative(target, copied));
 
   let linkText: string;
@@ -79,7 +79,11 @@ const rebaseCopiedLink = (copied: string, source: string, target: string) => {
   const destination = resolve(dirname(original), linkText);
   const sourceRelative = relative(source, destination);
   const inside = !sourceRelative.startsWith("..") && !isAbsolute(sourceRelative);
-  const rebased = inside ? relative(dirname(copied), join(target, sourceRelative)) : destination;
+  const extensionRelative = relative(sourcePath, destination);
+  const insideExtension = !extensionRelative.startsWith("..") && !isAbsolute(extensionRelative);
+  let rebased = destination;
+  if (inside) rebased = relative(dirname(copied), join(target, sourceRelative));
+  else if (insideExtension) rebased = relative(dirname(copied), join(targetPath, extensionRelative));
 
   let isDirectory = true;
   try {
@@ -98,6 +102,7 @@ export const copyUsableNodeModules = (sourcePath: string, targetPath: string) =>
   const usable = findUsableNodeModules(sourcePath);
   if (!usable) return;
   const source = realpathSync(usable);
+  const extensionSource = realpathSync(sourcePath);
   const target = join(targetPath, "node_modules");
   if (existsSync(target) && realpathSync(target) === source) return;
   cpSync(source, target, { recursive: true, verbatimSymlinks: true });
@@ -105,7 +110,7 @@ export const copyUsableNodeModules = (sourcePath: string, targetPath: string) =>
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const copied = join(directory, entry.name);
       if (entry.isDirectory()) rebaseLinks(copied);
-      if (entry.isSymbolicLink()) rebaseCopiedLink(copied, source, target);
+      if (entry.isSymbolicLink()) rebaseCopiedLink(copied, source, target, extensionSource, targetPath);
     }
   };
   rebaseLinks(target);

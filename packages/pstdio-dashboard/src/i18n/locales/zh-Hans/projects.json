@@ -78,7 +78,7 @@
       },
       "dropZone": {
         "title": "将扩展文件夹拖放到此处",
-        "hint": "它会被复制到 .pstdio/extensions 并从那里加载。",
+        "hint": "主机将按扩展声明的范围安装。",
         "uploading": "正在添加 {{name}}…",
         "succeeded": "已添加 {{name}}",
         "failed": "无法添加扩展文件夹",
@@ -151,7 +151,12 @@
         "button": "删除",
         "notificationShared": "这将删除\"{{name}}\"的扩展文件并将其从所有使用它的项目中移除。其存储的数据会保留，重新安装后可恢复。"
       },
-      "enabledInProject": "在此项目中启用"
+      "enabledInProject": "在此项目中启用",
+      "replace": {
+        "title": "替换 {{name}}？",
+        "message": "这将替换已安装的文件。使用此扩展的其他项目也会使用新文件。",
+        "action": "替换"
+      }
     }
   },
   "list": {

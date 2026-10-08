@@ -29,7 +29,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-planner",
     "pstdio-skills",
   ],
-  pstdio: ["@pstdio/sdk", "pstdio-api", "pstdio-logging", "pstdio-paths", "pstdio-wt"],
+  pstdio: ["pstdio-extensions", "@pstdio/sdk", "pstdio-api", "pstdio-logging", "pstdio-paths", "pstdio-wt"],
   "@pstdio/ui": ["@pstdio/sdk", "pstdio-file-types"],
   "@pstdio/workbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions"],
   "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
@@ -94,11 +94,10 @@ export const FORBIDDEN_FOLDER_SPECIFIERS: Record<string, { folder: string; speci
 
 // Private packages expose their internals through export entries. Each entry is a way
 // around the package's own API, so the count may only go down; the checker asks for a
-// lower limit as soon as an entry is removed. pstdio-api exports
-// install internals for the CLI until `pst extensions add` calls the API (PS-504 item 3).
+// lower limit as soon as an entry is removed. The API exposes only its app and runtime.
 export const DEFAULT_PRIVATE_EXPORT_LIMIT = 2;
 export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
-  "pstdio-api": 9,
+  "pstdio-api": 2,
   "pstdio-api-contracts": 7,
-  "pstdio-extensions": 10,
+  "pstdio-extensions": 11,
 };

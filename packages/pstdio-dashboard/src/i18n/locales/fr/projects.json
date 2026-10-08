@@ -80,7 +80,7 @@
       },
       "dropZone": {
         "title": "Déposez un dossier d'extension ici",
-        "hint": "Il est copié dans .pstdio/extensions et chargé depuis cet emplacement.",
+        "hint": "Le serveur installe l’extension dans la portée qu’elle déclare.",
         "uploading": "Ajout de {{name}}…",
         "succeeded": "{{name}} ajoutée",
         "failed": "Impossible d'ajouter le dossier de l'extension",
@@ -153,7 +153,12 @@
         "button": "Supprimer",
         "notificationShared": "Cela supprime les fichiers d'extension de \"{{name}}\" et la retire de tous les projets qui l'utilisent. Ses données stockées sont conservées afin qu'une réinstallation les restaure."
       },
-      "enabledInProject": "Activée dans ce projet"
+      "enabledInProject": "Activée dans ce projet",
+      "replace": {
+        "title": "Remplacer {{name}} ?",
+        "message": "Les fichiers installés seront remplacés. Les autres projets qui utilisent cette extension utiliseront aussi les nouveaux fichiers.",
+        "action": "Remplacer"
+      }
     }
   },
   "list": {

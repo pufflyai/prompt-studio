@@ -68,18 +68,20 @@ type ExtensionsCheck = Awaited<ReturnType<typeof checkExtensionSource>>["check"]
 /** The message can be a full check report for the CLI; callers that show one line use `firstError`. */
 export class ExtensionValidationFailedError extends Error {
   firstError: string;
+  diagnostics?: ExtensionsCheck["diagnostics"];
 
-  constructor(message: string, firstError = message) {
+  constructor(message: string, firstError = message, diagnostics?: ExtensionsCheck["diagnostics"]) {
     super(message);
     this.name = "ExtensionValidationFailedError";
     this.firstError = firstError;
+    this.diagnostics = diagnostics;
   }
 }
 
 const checkFailed = (check: ExtensionsCheck) => {
   const report = `Extension validation failed:\n${formatExtensionsCheck(check)}`;
   const first = check.diagnostics.find((diagnostic) => diagnostic.severity === "error");
-  return new ExtensionValidationFailedError(report, first?.message ?? report);
+  return new ExtensionValidationFailedError(report, first?.message ?? report, check.diagnostics);
 };
 
 export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
@@ -114,7 +116,13 @@ const isLocalSource = (source: string) =>
   isAbsolute(source);
 
 const validateInstallName = (installName: string) => {
-  if (!installName.trim() || basename(installName) !== installName) {
+  if (
+    !installName.trim() ||
+    installName === "." ||
+    installName === ".." ||
+    /[\\/:]/.test(installName) ||
+    basename(installName) !== installName
+  ) {
     throw new Error(`Invalid extension install name: ${installName}`);
   }
 };

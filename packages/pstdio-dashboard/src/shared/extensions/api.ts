@@ -1,8 +1,7 @@
 import type {
-  AddLocalExtensionFolderResponse,
   CommandExecuteResponse,
   ExtensionSettingValueRecord,
-  InstallMarketplaceExtensionResponse,
+  InstallExtensionResponse,
   ListExtensionAppearanceResponse,
   ListProjectExtensionsResponse,
   ProjectExtensionInstance,
@@ -93,23 +92,27 @@ export const getExtensionArtifactImageUrl = (
 export const listProjectExtensions = (projectId: string) =>
   apiRequest<ListProjectExtensionsResponse>(`/v1/projects/${projectId}/extensions`);
 
-export const installMarketplaceExtension = (projectId: string, installName: string) =>
-  apiRequest<InstallMarketplaceExtensionResponse>(
-    `/v1/projects/${projectId}/extensions/marketplace/${encodeURIComponent(installName)}/install`,
-    { method: "POST" },
-  );
+export const installMarketplaceExtension = (projectId: string, installName: string, force = false) =>
+  apiRequest<InstallExtensionResponse>(`/v1/projects/${projectId}/extensions/install`, {
+    method: "POST",
+    body: { source: { kind: "catalog", name: installName }, force },
+  });
 
 export interface DroppedExtensionFolder {
   name: string;
+  force?: boolean;
   /** Each file's name is its path relative to the folder root. */
   files: File[];
 }
 
 export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder) => {
   const body = new FormData();
-  body.append("name", folder.name);
+  body.append("kind", "upload");
+  if (folder.force) body.append("force", "true");
+  body.append("folderName", folder.name);
+  body.append("installName", folder.name);
   for (const file of folder.files) body.append("files", file, file.name);
-  return apiRequest<AddLocalExtensionFolderResponse>(`/v1/projects/${projectId}/extensions/local`, {
+  return apiRequest<InstallExtensionResponse>(`/v1/projects/${projectId}/extensions/install`, {
     method: "POST",
     body,
   });

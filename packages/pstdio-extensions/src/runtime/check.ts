@@ -46,7 +46,9 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
     includeUserRoot: false,
     extensionRoots: [
       ...(input.extensionRoots ?? []),
-      ...(extensionsRootExists ? [{ path: extensionsRoot, sourceKind: "local_path" as const }] : []),
+      ...(extensionsRootExists && !input.extensionPackages
+        ? [{ path: extensionsRoot, sourceKind: "local_path" as const }]
+        : []),
     ],
     extensionPackages: input.extensionPackages,
   });

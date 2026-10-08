@@ -174,3 +174,6 @@ export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
 
   return routes;
 };
+
+export * from "../../lib/pglite-recovery-hint";
+export * from "../extensions/extension-request-timeout";
