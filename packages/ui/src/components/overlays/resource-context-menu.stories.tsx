@@ -97,8 +97,14 @@ export const VisibilitySubmenu: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     fireEvent.contextMenu(canvas.getByText("Right-click here"));
-    await userEvent.hover(await screen.findByRole("menuitem", { name: "Hide/show items" }));
+    const trigger = await screen.findByRole("menuitem", { name: "Hide/show items" });
+    await userEvent.hover(trigger);
     const toggle = await screen.findByRole("menuitem", { name: "Notes", exact: true });
+    await waitFor(() => {
+      const bounds = toggle.closest('[role="menu"]')!.getBoundingClientRect();
+      const anchor = trigger.getBoundingClientRect();
+      expect(Math.abs(bounds.top - anchor.top)).toBeLessThanOrEqual(anchor.height);
+    });
     await userEvent.click(toggle);
     await expect(canvas.getByText("Notes hidden")).toBeVisible();
     await userEvent.click(toggle);
