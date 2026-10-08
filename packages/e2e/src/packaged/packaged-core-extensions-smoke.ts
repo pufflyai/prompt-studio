@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { expectNotesResources } from "./packaged-notes-resources-smoke";
 import { expectPlannerCommands } from "./packaged-planner-commands-smoke";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
@@ -188,6 +189,12 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-tags" }),
           );
           await expectPlannerCommands(started.baseUrl, project.id, runtimeAuthorization(started.descriptor), metadata);
+          await expectNotesResources({
+            baseUrl: started.baseUrl,
+            projectId: project.id,
+            headers: runtimeAuthorization(started.descriptor),
+            metadata,
+          });
           const tagsRes = await fetch(
             `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.ticket-tag.read/execute`,
             {

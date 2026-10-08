@@ -27,6 +27,8 @@ The sidebar keeps your notes within reach while the open tab shows the note's bo
 - Choose **New folder** next to **Notes** to group notes. Right-click a note and choose **Move note** to select a folder or return it to the root.
 - Right-click a folder to rename it or remove it. Removing a folder keeps its notes at the root.
 - Right-click a note and choose **Delete** to delete it.
+- Drag a note onto another note to place it before that note, or onto a folder or Notes to change its folder. The order is saved with the notes.
+- Find notes by title or content from Search. Selecting a result opens its note tab.
 - Every note has its own ID, so two people can create notes with the same title at the same time.
 
 For a first check, create a note, type a heading and a short list, then close its tab. Select the note again from the sidebar to see the saved text. You can keep the note open beside an agent conversation while you describe the tool you want to build.
@@ -53,6 +55,6 @@ Each note is a folder in the project's default workspace. The title and the Mark
   folder.txt    # present when the note belongs to a folder
 ```
 
-An empty `title.txt` means the note uses its content as the title. Named folders are stored under `documents/.folders/<folder-id>/title.txt`. Notes keep their IDs when moved.
+An empty `title.txt` means the note uses its content as the title. Named folders are stored under `documents/.folders/<folder-id>/title.txt`. Notes keep their IDs when moved. Manual note order is stored in `documents/.order.json`.
 
 Git is optional. In a Git project, commit that folder to share notes with your team, or leave it out of Git to keep them on your computer.
