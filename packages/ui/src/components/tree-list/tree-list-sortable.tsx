@@ -15,7 +15,7 @@ import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tree-list-reorder";
 import { TreeListSectionHeader } from "./tree-list-section-header";
-import { SectionGap, SortableHost } from "./tree-list-sortable-host";
+import { DropLine, SectionGap, SortableHost } from "./tree-list-sortable-host";
 
 type TreeListRowVariant = "compact" | "tree";
 
@@ -161,7 +161,13 @@ const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
       onMoveNode={onMoveNode}
     />
   );
-  if (row.level > 0) return nodeRow;
+  if (row.level > 0)
+    return (
+      <Box position="relative" w="full" minW="0">
+        {nodeRow}
+        {indicator?.lineId === row.node.id ? <DropLine edge={indicator.edge} /> : null}
+      </Box>
+    );
   return (
     <SortableHost
       id={row.node.id}
@@ -194,7 +200,7 @@ const SortableSections = (props: SortableSectionsProps) => {
     onDragCancel: () => setPointerY(null),
   });
   const target = active && pointerY !== null ? dropTargetFor(String(active.id), over, pointerY) : null;
-  const indicator = treeListDropIndicator(sections, target);
+  const indicator = treeListDropIndicator(sections, target, expandedNodeIds);
   const rows = buildVirtualRows(sections, expandedSectionIds, expandedNodeIds);
   return (
     <SortableContext

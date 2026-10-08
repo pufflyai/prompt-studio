@@ -83,6 +83,7 @@ export const MovableFiles: Story = {
 const MovableNotes = () => {
   const [inFolder, setInFolder] = useState(false);
   const [order, setOrder] = useState(["note", "second"]);
+  const [navigationOrder, setNavigationOrder] = useState(["workspaces", "notes"]);
   const note = { id: "note", label: "Research note", canDrag: true, canDrop: true };
   const second = { id: "second", label: "Meeting notes", canDrag: true, canDrop: true };
   return (
@@ -106,9 +107,10 @@ const MovableNotes = () => {
                 }),
               ],
             },
-          ],
+          ].sort((a, b) => navigationOrder.indexOf(a.id) - navigationOrder.indexOf(b.id)),
         },
       ]}
+      onReorderNodes={(_, ids) => setNavigationOrder(ids)}
       onMoveNode={(source, target, position) => {
         if (source !== "note" || !target) return;
         setInFolder(target === "folder");
@@ -123,19 +125,15 @@ export const NotesInSortableNavigation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const transfer = new DataTransfer();
+    const drag = (type: string, element: HTMLElement, clientY = 0) =>
+      fireEvent(element, new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: transfer, clientY }));
     const moveAt = (after: boolean) => {
       const row = canvas.getByRole("option", { name: "Research note" });
       const second = canvas.getByRole("option", { name: "Meeting notes" });
       const bounds = second.parentElement!.getBoundingClientRect();
-      fireEvent.dragStart(row.parentElement!, { dataTransfer: transfer });
-      fireEvent.dragOver(second.parentElement!, {
-        dataTransfer: transfer,
-        clientY: after ? bounds.bottom - 1 : bounds.top + 1,
-      });
-      fireEvent.drop(second.parentElement!, {
-        dataTransfer: transfer,
-        clientY: after ? bounds.bottom - 1 : bounds.top + 1,
-      });
+      drag("dragstart", row.parentElement!);
+      drag("dragover", second.parentElement!, after ? bounds.bottom - 1 : bounds.top + 1);
+      drag("drop", second.parentElement!, after ? bounds.bottom - 1 : bounds.top + 1);
     };
     moveAt(true);
     await waitFor(() =>
@@ -156,19 +154,26 @@ export const NotesInSortableNavigation: Story = {
       ).toBeTruthy(),
     );
 
-    fireEvent.dragStart(canvas.getByRole("option", { name: "Research note" }).parentElement!, {
-      dataTransfer: transfer,
-    });
-    fireEvent.drop(canvas.getByRole("option", { name: "Ideas" }).parentElement!, { dataTransfer: transfer });
+    drag("dragstart", canvas.getByRole("option", { name: "Research note" }).parentElement!);
+    drag("drop", canvas.getByRole("option", { name: "Ideas" }).parentElement!);
     await waitFor(() =>
       expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "3"),
     );
-    fireEvent.dragStart(canvas.getByRole("option", { name: "Research note" }).parentElement!, {
-      dataTransfer: transfer,
-    });
-    fireEvent.drop(canvas.getByRole("option", { name: "Notes" }).parentElement!, { dataTransfer: transfer });
+    drag("dragstart", canvas.getByRole("option", { name: "Research note" }).parentElement!);
+    drag("drop", canvas.getByRole("option", { name: "Notes" }).parentElement!);
     await waitFor(() =>
       expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "2"),
     );
+  },
+};
+
+export const ExpandedNavigation: Story = {
+  render: () => <MovableNotes />,
+  parameters: {
+    docs: {
+      description: {
+        story: "Drag Workspaces below expanded Notes. The placement line appears after the last visible descendant.",
+      },
+    },
   },
 };

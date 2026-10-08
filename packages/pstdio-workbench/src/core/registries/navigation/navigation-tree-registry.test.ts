@@ -3,6 +3,33 @@ import { createNavigationTreeRegistry } from "./navigation-tree-registry";
 
 const project = { kind: "mode" as const, id: "project", extensionId: "pstdio" };
 
+test("does not delegate resource moves from another workbench registry", async () => {
+  let moves = 0;
+  const contribution = {
+    id: "notes",
+    owner: project,
+    sourceExtensionId: "notes",
+    declarationIndex: 0,
+    viewId: "notes-view",
+  };
+  const create = () =>
+    createNavigationTreeRegistry({
+      getViewSections: () => [{ id: "notes", nodes: [{ id: "note", label: "Note", canDrag: true }] }],
+      moveViewNode: () => {
+        moves++;
+      },
+    });
+  const first = create(),
+    second = create();
+  first.registerContribution(contribution);
+  second.registerContribution(contribution);
+  const [section] = await first.getSections(project);
+  await second.moveNode(section.nodes[0], undefined);
+  expect(moves).toBe(0);
+  await first.moveNode(section.nodes[0], undefined);
+  expect(moves).toBe(1);
+});
+
 describe("navigation tree registry", () => {
   test("cancelling composed navigation prevents later contribution reads", async () => {
     const controller = new AbortController();

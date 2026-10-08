@@ -5,4 +5,4 @@
 "@pstdio/workbench": minor
 ---
 
-Expose owner-handled resource drops with before/after/inside positions and placement feedback, preserving node identities and resource scopes within sortable navigation.
+Expose owner-handled resource drops with immediate previews and placement feedback, preserve identities and scopes within sortable navigation, and show selected panel resources and their actions in breadcrumbs.
