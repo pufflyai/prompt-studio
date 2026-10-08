@@ -45,9 +45,37 @@ export const expectNotesResources = async (input: {
     ],
   });
   const renderer = { rendererId: tree.id, projectId };
-  await execute(tree.body.moveHandlerId!, { renderer, source: { id: note.id }, target: { id: `folder:${folder.id}` } });
+  await execute(tree.body.moveHandlerId!, {
+    renderer,
+    source: { id: note.id },
+    target: { id: `folder:${folder.id}` },
+    position: "inside",
+  });
   const sections = (await execute(tree.body.bodyHandlerId, { renderer })) as TreeViewSection[];
   expect(sections[0]!.nodes[0]!.children!.find((child) => child.id === `folder:${folder.id}`)?.children).toMatchObject([
     { id: note.id, resource: { type: "note", id: note.id, extensionId: "pstdio.pstdio-notes", projectId } },
+  ]);
+  const next = (await execute("pstdio.pstdio-notes.command.notes.create", {})) as { id: string };
+  const editor = metadata.views.find((entry) => entry.id === "pstdio.pstdio-notes.view.note-editor")!;
+  if (editor.body.kind !== "file") throw new Error("Missing Notes editor");
+  const editorRenderer = { rendererId: editor.id, projectId, resource: { type: "note", id: next.id } };
+  await execute(editor.body.saveHandlerId!, { renderer: editorRenderer, content: "# First title\n\nBody" });
+  await execute(editor.body.saveHandlerId!, { renderer: editorRenderer, content: "A different opening" });
+  const page = metadata.pages.find((entry) => entry.id === "pstdio.pstdio-notes.page.notes")!;
+  const tab = page.slots[0]!.tab!;
+  expect(await execute(tab.queryHandlerId, { renderer: editorRenderer })).toMatchObject({
+    label: "First title",
+    menu: [{ rows: [{ id: "rename" }, { id: "delete" }] }],
+  });
+  await execute(tree.body.moveHandlerId!, {
+    renderer,
+    source: { id: note.id },
+    target: { id: next.id },
+    position: "after",
+  });
+  const ordered = (await execute(tree.body.bodyHandlerId, { renderer })) as TreeViewSection[];
+  expect(ordered[0]!.nodes[0]!.children!.filter((child) => !child.collapsible).map((child) => child.id)).toEqual([
+    next.id,
+    note.id,
   ]);
 };

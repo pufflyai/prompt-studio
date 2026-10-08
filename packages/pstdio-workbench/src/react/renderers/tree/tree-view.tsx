@@ -17,7 +17,7 @@ import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
 import type { TreeActionParamsRequest } from "./tree-actions";
-import { findNodeInSections, resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
+import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
@@ -25,6 +25,7 @@ import { createToggleTreeSection, shouldSelectTreeNodeForNavigationTarget } from
 import { TreeViewSearch } from "./tree-view-search";
 import { useTreeData } from "./use-tree-data";
 import { useTreeNavigationState } from "./use-tree-navigation-state";
+import { useTreeSelection } from "./use-tree-selection";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
 
 interface WorkbenchTreeViewProps {
@@ -179,6 +180,15 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     treeCustomizationOptions(body, Boolean(onSidenavContextActionsChange)),
   );
   useSidenavContextActions(backgroundContextActions, customizationRevision, onSidenavContextActionsChange);
+  const activeNodeSelection = useTreeSelection(workbench, treeViewId, {
+    sections: [...header, ...body, ...footer],
+    childrenByNodeId,
+    activeNodeId,
+    activeLocation,
+    activeResource,
+    selectedNodeId: treeState.selectedNodeId,
+  });
+
   if (!treeRenderer) {
     return (
       <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">
@@ -203,15 +213,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
 
   const navigationContext = { workbench, treeViewId, onOpenResourceError };
-
-  const activeNodeSelection = resolveTreeListSelection({
-    sections: [...header, ...body, ...footer],
-    childrenByNodeId,
-    activeNodeId,
-    activeLocation,
-    activeResource,
-    selectedNodeId: treeState.selectedNodeId,
-  });
 
   return (
     <TreeListDragProvider

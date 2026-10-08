@@ -11,24 +11,24 @@ describe("notes", () => {
     expect(await listNotes(mount)).toMatchObject([{ id: note.id, title: "New note" }]);
   });
 
-  test("uses the beginning of the content until the user renames the note", async () => {
+  test("saves the first content title and preserves it across later edits", async () => {
     const mount = createNotesMount();
     const note = await createNote(mount);
     await writeNote(mount, note.id, "\n# Meeting notes\n\nAgenda");
     expect(await listNotes(mount)).toMatchObject([{ id: note.id, title: "Meeting notes" }]);
     await writeNote(mount, note.id, "Updated opening\n\nMore content");
-    expect(await listNotes(mount)).toMatchObject([{ title: "Updated opening" }]);
+    expect(await listNotes(mount)).toMatchObject([{ title: "Meeting notes" }]);
     await renameNote(mount, note.id, "My title");
     await writeNote(mount, note.id, "A different opening");
     expect(await listNotes(mount)).toMatchObject([{ title: "My title" }]);
   });
 
-  test("returns to New note when automatically titled content is cleared", async () => {
+  test("keeps the saved title when note content is cleared", async () => {
     const mount = createNotesMount();
     const note = await createNote(mount);
     await writeNote(mount, note.id, "First line");
     await writeNote(mount, note.id, " \n ");
-    expect(await listNotes(mount)).toMatchObject([{ title: "New note" }]);
+    expect(await listNotes(mount)).toMatchObject([{ title: "First line" }]);
   });
 
   test("respects an explicit New note title", async () => {
@@ -37,6 +37,28 @@ describe("notes", () => {
     await renameNote(mount, note.id, "New note");
     await writeNote(mount, note.id, "Content should not rename this note");
     expect(await listNotes(mount)).toMatchObject([{ title: "New note" }]);
+  });
+
+  test("stores the title in Markdown front matter and honors file edits", async () => {
+    const mount = createNotesMount();
+    const note = await createNote(mount, "Saved title");
+    expect(await mount.readText(`${note.id}/content.md`)).toContain('title: "Saved title"');
+    await mount.updateText(`${note.id}/content.md`, '---\ntitle: "From the file"\ntags: [ideas]\n---\n\n# Body');
+    expect(await listNotes(mount)).toMatchObject([{ title: "From the file" }]);
+    await renameNote(mount, note.id, "Renamed");
+    expect(await mount.readText(`${note.id}/content.md`)).toContain("tags: [ideas]");
+    expect(await readNote(mount, note.id)).toBe("# Body");
+  });
+
+  test("preserves old sidecar titles when moving them into Markdown front matter", async () => {
+    const mount = createNotesMount();
+    await mount.writeText("existing/title.txt", "Existing title");
+    await mount.writeText("existing/content.md", "Original body");
+    await writeNote(mount, "existing", "Updated body");
+    expect(await listNotes(mount)).toMatchObject([{ title: "Existing title" }]);
+    expect(await readNote(mount, "existing")).toBe("Updated body");
+    expect(await mount.readText("existing/content.md")).toContain('title: "Existing title"');
+    expect(await mount.exists("existing/title.txt")).toBe(false);
   });
 
   test("rejects blank titles without creating a document", async () => {

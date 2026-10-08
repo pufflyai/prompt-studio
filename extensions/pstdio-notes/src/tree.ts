@@ -12,10 +12,10 @@ export const notesTree = defineView({
   body: {
     kind: "tree",
     refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
-    onMove: async (ctx, { source, target }) => {
+    onMove: async (ctx, { source, target, position }) => {
       if (!(await notesFileAccess(ctx)).writable) throw new Error("Notes are read-only.");
       if (!target) return;
-      await moveTreeNote(notesMount(ctx), source.id, target.id);
+      await moveTreeNote(notesMount(ctx), source.id, target.id, position);
       await ctx.events.emit(notesChanged, { noteId: source.id });
     },
     body: async (ctx) => {
@@ -31,7 +31,7 @@ export const notesTree = defineView({
         canDrop: writable,
         resource: noteResource(note.id, note.title, ctx),
         target: noteTarget(note.id, note.title, ctx),
-        contextMenuActions: noteActions(note, writable, folders),
+        contextMenuActions: noteActions(note, writable),
       });
       const folderIds = new Set(folders.map((folder) => folder.id));
       return [
