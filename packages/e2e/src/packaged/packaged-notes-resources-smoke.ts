@@ -20,6 +20,21 @@ export const expectNotesResources = async (input: {
     expect(result.outcome.status).toBe("success");
     return result.outcome.value;
   };
+  expect(
+    metadata.commands.find((command) => command.id === "pstdio.pstdio-notes.command.notes.rename")?.resourceMutation,
+  ).toEqual({
+    kind: "rename",
+    resourceType: "note",
+    idParam: "noteId",
+    labelParam: "title",
+  });
+  expect(
+    metadata.commands.find((command) => command.id === "pstdio.pstdio-notes.command.notes.delete")?.resourceMutation,
+  ).toEqual({
+    kind: "remove",
+    resourceType: "note",
+    idParam: "noteId",
+  });
   const provider = metadata.commandPaletteResources.find((entry) => entry.extensionId === "pstdio.pstdio-notes");
   expect(provider).toBeDefined();
   const tree = metadata.views.find((entry) => entry.id === "pstdio.pstdio-notes.view.note-list")!;
