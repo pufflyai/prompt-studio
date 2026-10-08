@@ -29,8 +29,8 @@ export const notesTree = defineView({
         icon: "file-text",
         canDrag: writable,
         canDrop: writable,
-        resource: { ...noteResource(note.id, note.title), extensionId: ctx.extensionId, projectId: ctx.projectId },
-        target: noteTarget(note.id, note.title),
+        resource: noteResource(note.id, note.title, ctx),
+        target: noteTarget(note.id, note.title, ctx),
         contextMenuActions: noteActions(note, writable, folders),
       });
       const folderIds = new Set(folders.map((folder) => folder.id));

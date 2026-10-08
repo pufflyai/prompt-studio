@@ -8,6 +8,8 @@ test("searches existing notes by title and content and opens their resource pane
   const note = await createNote(mount);
   await writeNote(mount, note.id, "# Research plan\nDiscuss sidebar accessibility");
   const ctx = {
+    extensionId: "pstdio.pstdio-notes",
+    projectId: "notes-project",
     artifacts: { mount: () => mount },
     workspaces: {
       getDefault: async () => ({
@@ -26,7 +28,13 @@ test("searches existing notes by title and content and opens their resource pane
         label: "Research plan",
         target: {
           kind: "compound",
-          targets: [{ kind: "page" }, { kind: "panel", resource: { type: "note", id: note.id } }],
+          targets: [
+            { kind: "page" },
+            {
+              kind: "panel",
+              resource: { type: "note", id: note.id, extensionId: "pstdio.pstdio-notes", projectId: "notes-project" },
+            },
+          ],
         },
       },
     ],

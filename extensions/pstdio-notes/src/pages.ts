@@ -108,16 +108,31 @@ export const notesPage = definePage({
   ],
 });
 
-export const noteResource = (id: string, label: string) => ({ type: note.id, id, label }) satisfies ResourceRef;
+export const noteResource = (
+  id: string,
+  label: string,
+  context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
+) =>
+  ({
+    type: note.id,
+    id,
+    label,
+    extensionId: context?.extensionId,
+    projectId: context?.projectId,
+  }) satisfies ResourceRef;
 
-export const noteTarget = (id: string, label: string) => ({
+export const noteTarget = (
+  id: string,
+  label: string,
+  context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
+) => ({
   kind: "compound" as const,
   targets: [
     { kind: "page" as const, page: notesPage.ref },
     {
       kind: "panel" as const,
       panel: notesPage.panels.note,
-      resource: noteResource(id, label),
+      resource: noteResource(id, label, context),
       open: "pin" as const,
     },
   ],
