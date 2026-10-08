@@ -60,6 +60,12 @@ export const registerBoardViewsSmokeTests = () => {
         return JSON.parse(result.stdout);
       };
       const boards = cli("boards");
+      const initial = cli("list", "--board", board).views[0];
+      expect(initial.builtIn).toBe(false);
+      expect(cli("update", "--id", initial.id, "--title", "My tickets", "--filter", "none")).toMatchObject({
+        title: "My tickets",
+        filter: { conjunction: "and", rules: [] },
+      });
       expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
       expect(boards).toContainEqual(expect.objectContaining({ id: WORKSPACES_COLLECTION_ID, extensionId: null }));
       const nativeFields = boards.find((entry: { id: string }) => entry.id === WORKSPACES_COLLECTION_ID).fields;
@@ -174,6 +180,7 @@ export const registerBoardViewsSmokeTests = () => {
       runtime = await startPackagedServe(root, env);
       child = runtime.child;
       const persisted = cli("list", "--board", board);
+      expect(persisted.views).toContainEqual(expect.objectContaining({ id: initial.id, title: "My tickets" }));
       expect(persisted.defaultViewId).toBe(created.id);
       expect(persisted.views).toContainEqual(
         expect.objectContaining({
@@ -212,12 +219,19 @@ export const registerBoardViewsSmokeTests = () => {
       );
       const copy = cli("create", "--board", board, "--title", "Copy", "--copy-from", created.id);
       expect(copy).toMatchObject({ filter, sorts: created.sorts });
-      const ordered = cli("reorder", "--board", board, "--ids", `${copy.id},${created.id}`);
+      const ordered = cli("reorder", "--board", board, "--ids", `${copy.id},${created.id},${initial.id}`);
       expect(
         ordered.views.filter((view: { builtIn: boolean }) => !view.builtIn).map((view: { id: string }) => view.id),
-      ).toEqual([copy.id, created.id]);
+      ).toEqual([copy.id, created.id, initial.id]);
+      cli("delete", "--id", initial.id);
       cli("delete", "--id", created.id);
-      expect(cli("list", "--board", board).defaultViewId).not.toBe(created.id);
+      expect(cli("list", "--board", board)).toMatchObject({ defaultViewId: copy.id, views: [{ id: copy.id }] });
+      const last = await fetch(`${runtime.baseUrl}/v1/projects/${projectId}/board-views/${copy.id}`, {
+        method: "DELETE",
+        headers: runtimeAuthorization(runtime.descriptor),
+      });
+      expect(last.status).toBe(409);
+      expect(cli("list", "--board", board).views).toHaveLength(1);
     } finally {
       if (child) await stopProcess(child);
       rmSync(root, { recursive: true, force: true });

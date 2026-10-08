@@ -87,15 +87,16 @@ afterEach(async () => {
 
 test("uses deprecated default flags only below explicit and project defaults", async () => {
   const path = "/boards/test.boards.view.legacy/views";
-  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: "flagged" });
-  expect(await (await request("/boards/test.boards.view.explicit/views")).json()).toMatchObject({
-    defaultViewId: "first",
-  });
-  expect((await request(`${path}/default`, "PUT", { viewId: "first" })).status).toBe(200);
-  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: "first" });
+  const legacy = await (await request(path)).json();
+  const first = legacy.views.find((view: { title: string }) => view.title === "First");
+  expect(legacy.views.find((view: { id: string }) => view.id === legacy.defaultViewId).title).toBe("Flagged");
+  const explicit = await (await request("/boards/test.boards.view.explicit/views")).json();
+  expect(explicit.views.find((view: { id: string }) => view.id === explicit.defaultViewId).title).toBe("First");
+  expect((await request(`${path}/default`, "PUT", { viewId: first.id })).status).toBe(200);
+  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: first.id });
 });
 
-test("exposes runtime fields, protects built-ins, and shares create/default/order/delete", async () => {
+test("exposes runtime fields and shares create/default/order/delete", async () => {
   const boards = await request(`/boards/${boardId}`);
   expect(boards.status).toBe(200);
   expect(await boards.json()).toMatchObject({
@@ -107,14 +108,13 @@ test("exposes runtime fields, protects built-ins, and shares create/default/orde
     ],
   });
   expect((await request("/boards")).status).toBe(503);
-  const builtIn = await request("/board-views/all", "PATCH", { title: "No" });
-  expect(builtIn.status).toBe(409);
+  const initial = (await (await request(`/boards/${boardId}/views`)).json()).views[0];
   const invalid = await request(`/boards/${boardId}/views`, "POST", { title: "Invalid", filter: stateIs("bad") });
   expect(invalid.status).toBe(400);
   expect(await invalid.text()).toContain("todo");
   const response = await request(`/boards/${boardId}/views`, "POST", {
     title: "Todo",
-    copyFrom: "all",
+    copyFrom: initial.id,
     filter: stateIs("todo"),
     sorts: [{ attributeId: "title", direction: "asc" }],
   });
@@ -130,7 +130,35 @@ test("exposes runtime fields, protects built-ins, and shares create/default/orde
   ).toBe(view.id);
   expect((await request(`/boards/${boardId}/views/order`, "PUT", { viewIds: [] })).status).toBe(400);
   expect((await request(`/board-views/${view.id}`, "DELETE")).status).toBe(200);
-  expect((await (await request(`/boards/${boardId}/views`)).json()).defaultViewId).toBe("all");
+  expect((await (await request(`/boards/${boardId}/views`)).json()).defaultViewId).toBe(initial.id);
+});
+
+test("initial views can be renamed edited and deleted while one view remains", async () => {
+  const path = `/boards/${boardId}/views`;
+  const initial = (await (await request(path)).json()).views[0];
+  expect(initial.builtIn).toBe(false);
+  const updated = await request(`/board-views/${initial.id}`, "PATCH", { title: "My tasks", filter: stateIs("todo") });
+  expect(updated.status).toBe(200);
+  expect(await updated.json()).toMatchObject({ title: "My tasks", filter: stateIs("todo") });
+  expect((await request(`/board-views/${initial.id}`, "DELETE")).status).toBe(409);
+  const second = await (await request(path, "POST", { title: "Second" })).json();
+  expect((await request(`/board-views/${initial.id}`, "DELETE")).status).toBe(200);
+  const current = await (await request(path)).json();
+  expect(current.views.map((view: { id: string }) => view.id)).toEqual([second.id]);
+  expect(current.defaultViewId).toBe(second.id);
+  expect((await request(`/board-views/${second.id}`, "DELETE")).status).toBe(409);
+  expect((await (await request(path)).json()).views).toHaveLength(1);
+});
+
+test("orphaned views can be fully removed after their board disappears", async () => {
+  const initial = (await (await request(`/boards/${boardId}/views`)).json()).views[0];
+  const row = (await handle.deps.boardViewsService.get(projectId, initial.id))!;
+  const orphan = await handle.deps.boardViewsService.create({ ...row, board_id: "removed-board", title: "Old view" });
+  expect(await (await request("/board-views?orphaned=true")).json()).toContainEqual(
+    expect.objectContaining({ id: orphan.id }),
+  );
+  expect((await request(`/board-views/${orphan.id}`, "DELETE")).status).toBe(200);
+  expect(await (await request("/board-views?orphaned=true")).json()).toEqual([]);
 });
 
 test("retains saved rules when the board query fails", async () => {
@@ -190,7 +218,7 @@ test("data table views resolve fields from columns and save shared views", async
   ).toBe(400);
   const builtIns = await (await request(`/boards/${tableId}/views`)).json();
   expect(builtIns.views).toMatchObject([
-    { id: "default", builtIn: true, settings: { grouping: "none" }, sorts: [{ attributeId: "score" }] },
+    { id: expect.any(String), builtIn: false, settings: { grouping: "none" }, sorts: [{ attributeId: "score" }] },
   ]);
   const score = (condition: string, value: unknown) => ({
     conjunction: "and",
@@ -212,7 +240,7 @@ test("data table views resolve fields from columns and save shared views", async
     sorts: [{ attributeId: "score", direction: "desc" }],
   });
   const listed = await (await request(`/boards/${tableId}/views`)).json();
-  expect(listed.views.map((saved: { id: string }) => saved.id)).toEqual(["default", view.id]);
+  expect(listed.views.map((saved: { id: string }) => saved.id)).toEqual([builtIns.views[0].id, view.id]);
   const wrongKind = await request(`/board-views/${view.id}`, "PATCH", { settings: { viewMode: "list" } });
   expect(wrongKind.status).toBe(400);
   expect(await wrongKind.text()).toContain("do not fit a data table view");

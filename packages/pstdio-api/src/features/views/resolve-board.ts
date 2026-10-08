@@ -46,7 +46,7 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
     };
     const localized = <TSettings>(declared: { settings: TSettings; views: DeclaredView[] }) => ({
       settings: declared.settings,
-      builtIns: declared.views.map(({ id, title, settings, filter, sorts }) => ({
+      startingViews: declared.views.map(({ id, title, settings, filter, sorts }) => ({
         id,
         boardId: view.id,
         title: text(title, id),
