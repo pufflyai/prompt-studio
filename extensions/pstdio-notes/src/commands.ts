@@ -19,7 +19,7 @@ export const createNoteCommand = defineCommand({
     if (commandParams.folderId) await moveNote(notesMount(ctx), note.id, commandParams.folderId);
     await ctx.events.emit(notesChanged, { noteId: note.id });
 
-    ctx.navigation.open(noteTarget(note.id, note.title));
+    ctx.navigation.open(noteTarget(note.id, note.title, ctx));
     return note;
   },
 });
