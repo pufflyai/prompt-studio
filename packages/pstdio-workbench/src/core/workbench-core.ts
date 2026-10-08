@@ -106,7 +106,7 @@ const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefi
   persistence?.dispose?.();
 };
 
-const createWorkbenchNavigationTrees = (renderers: ReturnType<typeof createTreeRendererRegistry>) =>
+const createWorkbenchNavigationTrees = (renderers: ReturnType<typeof createCoreRenderers>) =>
   createNavigationTreeRegistry({
     subscribeViewRefresh: (viewId, listener) =>
       renderers.onDidRefresh(({ treeId }) => {
@@ -119,7 +119,7 @@ const createWorkbenchNavigationTrees = (renderers: ReturnType<typeof createTreeR
   });
 
 const moveNavigationNode = async (
-  renderers: ReturnType<typeof createTreeRendererRegistry>,
+  renderers: ReturnType<typeof createCoreRenderers>,
   viewId: string,
   source: import("./registries/renderers/tree-renderer-types").TreeNode,
   target: import("./registries/renderers/tree-renderer-types").TreeNode,
