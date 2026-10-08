@@ -180,15 +180,8 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
           expect(metadata.navigationTrees).toContainEqual(
             expect.objectContaining({
               id: "pstdio.pstdio-notes.navigation-tree.note-list",
-              owner: expect.objectContaining({ kind: "page", id: "notes" }),
-              slot: "content",
-            }),
-          );
-          expect(metadata.navigationItems).toContainEqual(
-            expect.objectContaining({
-              id: "pstdio.pstdio-notes.navigation-item.notes",
               owner: expect.objectContaining({ kind: "mode", id: "project" }),
-              action: expect.objectContaining({ kind: "page", page: expect.objectContaining({ id: "notes" }) }),
+              slot: "content",
             }),
           );
           expect(metadata.settingsPanels).toContainEqual(

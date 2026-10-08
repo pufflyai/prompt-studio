@@ -195,7 +195,7 @@ const SortableSections = (props: SortableSectionsProps) => {
       items={sections.map((section) => toSectionDragId(section.id))}
       strategy={verticalListSortingStrategy}
     >
-      <Stack gap="0" w="full" minW="0" maxW="full">
+      <Stack gap="0" w="full" minW="0" maxW="full" position="relative">
         {sections.map((section, index) => (
           <Fragment key={section.id}>
             <SortableSectionGroup

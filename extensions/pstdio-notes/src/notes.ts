@@ -5,6 +5,10 @@ export type NotesMount = Pick<ArtifactMount, "exists" | "list" | "readText" | "w
 const CONTENT_PATH = "/content.md";
 const notePath = (id: string) => `${id}${CONTENT_PATH}`;
 const titlePath = (id: string) => `${id}/title.txt`;
+export const noteFolderPath = (id: string) => `${id}/folder.txt`;
+
+const readNoteFolder = async (mount: NotesMount, id: string) =>
+  (await mount.exists(noteFolderPath(id))) ? (await mount.readText(noteFolderPath(id))) || undefined : undefined;
 
 const noteTitle = (rawTitle: string) => {
   const title = rawTitle.trim();
@@ -14,7 +18,17 @@ const noteTitle = (rawTitle: string) => {
 
 export const noteExists = (mount: NotesMount, id: string) => mount.exists(notePath(id));
 export const readNote = (mount: NotesMount, id: string) => mount.readText(notePath(id));
-export const readNoteTitle = (mount: NotesMount, id: string) => mount.readText(titlePath(id));
+export const readNoteTitle = async (mount: NotesMount, id: string) => {
+  const title = await mount.readText(titlePath(id));
+  if (title) return title;
+  const opening = (await readNote(mount, id)).trimStart().split(/\r?\n/, 1)[0];
+  return (
+    opening
+      .replace(/^\s*(?:#{1,6}\s+|>\s+|[-*+]\s+|\d+[.)]\s+)/, "")
+      .trim()
+      .slice(0, 80) || "New note"
+  );
+};
 export const writeNote = (mount: NotesMount, id: string, content: string) => mount.updateText(notePath(id), content);
 export const deleteNote = (mount: NotesMount, id: string) => mount.delete(id);
 
@@ -31,7 +45,12 @@ export const listNotes = async (mount: NotesMount) => {
     files.map(async (file) => {
       const id = file.path.slice(0, -CONTENT_PATH.length);
       try {
-        return { id, title: await readNoteTitle(mount, id), updatedAt: file.updatedAt ?? "" };
+        return {
+          id,
+          title: await readNoteTitle(mount, id),
+          folderId: await readNoteFolder(mount, id),
+          updatedAt: file.updatedAt ?? "",
+        };
       } catch (error) {
         if (!(await noteExists(mount, id))) return undefined;
         throw error;
@@ -43,11 +62,12 @@ export const listNotes = async (mount: NotesMount) => {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title));
 };
 
-export const createNote = async (mount: NotesMount, rawTitle: string) => {
-  const title = noteTitle(rawTitle);
+export const createNote = async (mount: NotesMount, rawTitle?: string) => {
+  // An empty saved title means the content owns the title until the user renames it.
+  const title = rawTitle === undefined ? "" : noteTitle(rawTitle);
   const id = crypto.randomUUID();
   // Publish the body last so a listed note always has a title.
   await mount.writeText(titlePath(id), title);
   await mount.writeText(notePath(id), "");
-  return { id, title };
+  return { id, title: title || "New note" };
 };

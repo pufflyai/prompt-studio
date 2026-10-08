@@ -10,7 +10,11 @@ export const createNotesMount = () => {
     exists: async (path: string) => files.has(path),
     list: async (pattern?: string) =>
       [...files.entries()]
-        .filter(([path]) => !pattern || path.endsWith(pattern.replace("*", "")))
+        .filter(
+          ([path]) =>
+            !pattern ||
+            new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*")}$`).test(path),
+        )
         .map(([path, file]) => ({ path, updatedAt: file.updatedAt })),
     readText: async (path: string) => {
       const file = files.get(path);
