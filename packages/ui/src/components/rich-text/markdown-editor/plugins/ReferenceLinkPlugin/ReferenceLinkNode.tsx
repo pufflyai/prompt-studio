@@ -1,4 +1,3 @@
-import { Box } from "@chakra-ui/react";
 import {
   DecoratorNode,
   type EditorConfig,
@@ -9,7 +8,7 @@ import {
   type Spread,
 } from "lexical";
 import type { ReactElement } from "react";
-import { ResourceBadge } from "@/components/primitives/resource-badge";
+import { ReferenceLinkBadge } from "@/components/rich-text/shared/components/reference-link-badge";
 
 export type SerializedReferenceLinkNode = Spread<
   {
@@ -64,30 +63,7 @@ export class ReferenceLinkNode extends DecoratorNode<ReactElement> {
   }
 
   decorate(_editor: LexicalEditor, _config: EditorConfig): ReactElement {
-    const href = this.__href;
-    const fileName = href.split("/").pop();
-    const label = fileName || "unknown";
-    const isExternal = /^https?:\/\//i.test(href);
-    const isProjectFile = /^#?\$PROJECT\//i.test(href);
-
-    return (
-      <Box width="fit-content" display="inline-block">
-        <ResourceBadge
-          fileName={label}
-          onSelect={() => {
-            if (isExternal) {
-              window.open(href, "_blank", "noopener,noreferrer");
-            } else if (isProjectFile) {
-              const projectPath = href.replace(/^#?\$PROJECT\//i, "");
-              const event = new CustomEvent("ui:open-project-file", { detail: projectPath });
-              window.dispatchEvent(event);
-            } else {
-              window.location.assign(href);
-            }
-          }}
-        />
-      </Box>
-    );
+    return <ReferenceLinkBadge href={this.__href} />;
   }
 }
 

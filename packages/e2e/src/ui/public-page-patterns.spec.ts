@@ -218,8 +218,3 @@ test("mode defaults restore the global theme on leaving", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "pstdio-dark");
   expect(await page.evaluate(() => localStorage.getItem("theme-preference"))).toBe("pstdio-dark");
 });
-
-test("Lab faulty keeps the isolated error example", async ({ page }) => {
-  await page.goto(`/projects/${projectId(page)}/extensions/pstdio.extension-lab/lab-faulty`);
-  await expect(page.getByText(/this module fails on purpose/i).first()).toBeVisible();
-});

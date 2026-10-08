@@ -38,3 +38,13 @@ Remote providers supply their own source and environment. They do not upload or 
 `delete` asks the provider to clean up its resources and removes the workspace. Folders that you chose yourself stay on disk.
 
 Run `pst workspaces <command> --help` for current options.
+
+## File links
+
+Run inside a linked project:
+
+```sh
+pst workspaces file-link --workspace W-1 --path src/app.ts --line 12 --column 4
+```
+
+The command accepts a workspace shorthand or UUID and prints JSON containing `href`, a canonical dashboard path. Paths are workspace-root relative. The command does not read or change the file. A column requires a line; coordinates must be positive integers. Copied URLs restore the selected file after reload. Remote workspace file transport remains unavailable.

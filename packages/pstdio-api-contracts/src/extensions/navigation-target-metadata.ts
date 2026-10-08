@@ -1,7 +1,18 @@
 import { z } from "zod";
 import { isNavigationHref } from "../extension-kernel/navigation-href";
+import { isFileSourcePosition } from "../extension-kernel/source-position";
+import type { FileSourcePosition } from "../extension-kernel/types/pages";
 import { extensionResourceRefSchema } from "./resource-ref";
 import { commandTargetSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
+
+const sourcePositionSchema = z
+  .object({
+    line: z.number().int().positive(),
+    column: z.number().int().positive().optional(),
+    endLine: z.number().int().positive().optional(),
+    endColumn: z.number().int().positive().optional(),
+  })
+  .refine(isFileSourcePosition, "Expected ordered source coordinates");
 
 const sectionSchema = z.object({
   anchors: z.array(
@@ -15,19 +26,23 @@ export interface MetadataPageTarget {
   resource?: z.infer<typeof extensionResourceRefSchema>;
   open?: "preview" | "pin";
   section?: z.infer<typeof sectionSchema>;
+  position?: FileSourcePosition;
   parent?: MetadataPageTarget;
 }
 
 const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
   .lazy(() =>
-    z.object({
-      kind: z.literal("page"),
-      page: pageRefSchema,
-      resource: extensionResourceRefSchema.optional(),
-      open: z.enum(["preview", "pin"]).optional(),
-      section: sectionSchema.optional(),
-      parent: pageTargetSchema.optional(),
-    }),
+    z
+      .object({
+        kind: z.literal("page"),
+        page: pageRefSchema,
+        resource: extensionResourceRefSchema.optional(),
+        open: z.enum(["preview", "pin"]).optional(),
+        section: sectionSchema.optional(),
+        position: sourcePositionSchema.optional(),
+        parent: pageTargetSchema.optional(),
+      })
+      .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
   )
   .meta({ id: "WorkbenchMetadataPageTarget" });
 

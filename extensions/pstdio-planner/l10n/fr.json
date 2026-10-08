@@ -30,7 +30,7 @@
   "commands.setImplementationTarget.title": "Définir la branche cible par défaut",
   "settings.implementation.defaultTargetBranch.title": "Branche cible par défaut",
   "settings.implementation.defaultTargetBranch.description": "Branche distante visée par les nouveaux travaux. Effacez-la pour utiliser la branche par défaut du dépôt.",
-  "ticketWorkspaces.project": "Espace de travail du projet",
+  "ticketWorkspaces.project": "Dossier du projet",
   "commands.linkTicket": "Lier le ticket",
   "commands.unlinkTicket": "Délier le ticket",
   "commands.refinementPolicy.title": "Lire les options d’affinement des tickets",

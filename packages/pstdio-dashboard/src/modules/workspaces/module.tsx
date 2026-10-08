@@ -129,6 +129,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
   return ctx.pages.registerPage({
     id: workbenchPages.workspace.id,
     ref: workbenchPages.workspace,
+    document: { metadataKey: "workspaceFilePath" },
     title: "Workspace",
     icon: dashboardViews.workspaces.icon,
     path: "workspace",

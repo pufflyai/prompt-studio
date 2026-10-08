@@ -40,7 +40,7 @@ export interface CreateNavigationTreeRegistryInput {
   moveViewNode?(
     viewId: string,
     source: TreeNode,
-    target: TreeNode,
+    target: TreeNode | undefined,
     context: NavigationTreeContext,
   ): Promise<void> | void;
 }
@@ -229,9 +229,9 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     async moveNode(sourceNode, targetNode, context = {}) {
       const source = nodeSources.get(sourceNode);
       const target = targetNode ? nodeSources.get(targetNode) : undefined;
-      if (!source || !target || source.contribution !== target.contribution || !source.contribution.viewId) return;
-      if (!source.node.canDrag || !target.node.canDrop) return;
-      await input.moveViewNode?.(source.contribution.viewId, source.node, target.node, {
+      if (!source?.contribution.viewId || !source.node.canDrag) return;
+      if (targetNode && (!target || source.contribution !== target.contribution || !target.node.canDrop)) return;
+      await input.moveViewNode?.(source.contribution.viewId, source.node, target?.node, {
         ...context,
         resource: source.resource,
       });

@@ -31,5 +31,6 @@
   "settings.implementation.defaultTargetBranch.description": "新工作的目標遠端分支。清除後將使用儲存庫預設分支。",
   "commands.refinementPolicy.title": "讀取工單細化選項",
   "settings.uxPrototype.title": "為 UX 功能產生構件原型",
-  "settings.uxPrototype.description": "當 Artifacts 可用時，細化新的 UX 功能必須提供互動式原型。"
+  "settings.uxPrototype.description": "當 Artifacts 可用時，細化新的 UX 功能必須提供互動式原型。",
+  "ticketWorkspaces.project": "專案資料夾"
 }

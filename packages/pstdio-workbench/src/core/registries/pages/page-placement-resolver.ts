@@ -57,6 +57,8 @@ export const validateWorkbenchPage = (page: WorkbenchPageContribution) => {
     throw new Error(`Page "${page.id}" must declare a normalized path`);
   if (!page.main || (page.main.kind !== "view" && page.main.kind !== "panels"))
     throw new Error(`Page "${page.id}" must declare Main content or a panel collection`);
+  if (page.document && (!page.resource || !page.document.metadataKey.trim()))
+    throw new Error(`Page "${page.id}" requires a document metadata key and routed resource`);
   if (page.resource && page.resource.kinds.length === 0)
     throw new Error(`Page "${page.id}" must accept at least one resource kind`);
   if (page.main.kind === "view" && page.main.cardinality === "many" && !page.resource)

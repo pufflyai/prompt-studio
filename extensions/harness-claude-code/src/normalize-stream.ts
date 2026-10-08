@@ -1,5 +1,5 @@
 import type { SessionMessage } from "@pstdio/sdk/extensions";
-import { normalizeErrorPart, toolResultPart, toolUsePart } from "./message-parts";
+import { apiErrorPart, normalizeErrorPart, toolResultPart, toolUsePart } from "./message-parts";
 import type { ClaudeCodeContentBlock, ClaudeCodeToolResultBlock, ClaudeCodeToolUseBlock, RawLogEvent } from "./types";
 import { parseStdoutLine } from "./types";
 import { parseTimestamp } from "./utils";
@@ -117,6 +117,17 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
 const handleAssistant = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage[] => {
   const message = parsed.message as Record<string, unknown> | undefined;
   const content = message?.content;
+
+  if (typeof parsed.error === "string") {
+    return [
+      {
+        id: `stream-assistant-${ctx.index}`,
+        role: "assistant",
+        parts: [apiErrorPart(parsed.error, content)],
+        index: ctx.index,
+      },
+    ];
+  }
 
   if (typeof content === "string" && content.length > 0) {
     return [

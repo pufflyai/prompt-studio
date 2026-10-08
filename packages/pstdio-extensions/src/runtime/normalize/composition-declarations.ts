@@ -56,6 +56,10 @@ export const pageDeclarationSchema = z
     mode: localRefSchema("mode"),
     parent: localRefSchema("page").optional(),
     resource: resource.optional(),
+    document: z
+      .object({ metadataKey: z.string().refine((key) => key.trim().length > 0) })
+      .strict()
+      .optional(),
     main: z.discriminatedUnion("kind", [
       z
         .object({
@@ -70,7 +74,11 @@ export const pageDeclarationSchema = z
     slots: z.array(slot),
     panels: z.record(z.string(), z.unknown()),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.document && !value.resource)
+      ctx.addIssue({ code: "custom", path: ["document"], message: "a routed resource for document selection" });
+  });
 export const placementDeclarationSchema = z
   .object({
     id: z.string(),

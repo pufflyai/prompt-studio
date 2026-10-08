@@ -41,6 +41,19 @@ export interface PageSlotRef {
 
 export type PanelRef = PlacementRef | PageSlotRef;
 
+/** Projects the selected document from resource metadata into page URLs. */
+export interface PageDocumentDeclaration {
+  readonly metadataKey: string;
+}
+
+/** One-based source coordinates. Owners clamp them to the loaded document. */
+export interface FileSourcePosition {
+  readonly line: number;
+  readonly column?: number;
+  readonly endLine?: number;
+  readonly endColumn?: number;
+}
+
 export interface PageContribution extends ContributionDefinition<"page"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
@@ -48,6 +61,7 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly mode: ModeRef;
   readonly parent?: PageRef;
   readonly resource?: ResourceConstraint;
+  readonly document?: PageDocumentDeclaration;
   readonly main: PageMain;
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;
@@ -64,5 +78,6 @@ export interface PageLocation {
   readonly page: PageRef;
   readonly resource?: ResourceRef;
   readonly section?: FileRendererSectionTarget;
+  readonly position?: FileSourcePosition;
   readonly parent?: PageLocation;
 }

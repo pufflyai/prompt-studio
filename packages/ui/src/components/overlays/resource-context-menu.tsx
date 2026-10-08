@@ -59,9 +59,9 @@ const ResourceMenuContent = (props: {
             {actions.map((action) => (
               <Fragment key={action.key}>
                 {action.separatorBefore ? <Menu.Separator /> : null}
-                {action.items ? (
+                {action.items && !action.isDisabled ? (
                   <Menu.Root positioning={{ placement: "right-start", gutter: 2 }} closeOnSelect={false}>
-                    <Menu.TriggerItem disabled={action.isDisabled} asChild>
+                    <Menu.TriggerItem asChild>
                       <ListRow
                         asChild
                         variant="full-width"

@@ -2,6 +2,8 @@ import { Avatar, Link, Span } from "@chakra-ui/react";
 import type { MouseEvent } from "react";
 import { DiffBubble } from "@/components/diff-viewer/diff-bubble";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ChatLinkAnchor } from "../links/chat-link-anchor";
+import { useChatLinkHandler } from "../links/chat-link-context";
 import type { TitleSegment } from "./timeline";
 
 const handleTitleLinkClick = (
@@ -143,6 +145,19 @@ export function TitleInline({
   isClickable?: boolean;
   onOpenFile?: (filePath: string) => void;
 }) {
+  const handler = useChatLinkHandler();
+  if (handler && (seg.kind === "link" || seg.kind === "diff") && (seg.filePath || seg.kind === "diff")) {
+    const path = seg.filePath ?? (seg.kind === "diff" ? seg.fileName : seg.text);
+    return (
+      <ChatLinkAnchor candidate={{ source: path, origin: "tool" }}>
+        {seg.kind === "diff" ? (
+          <DiffBubble fileName={seg.fileName} additions={seg.additions ?? 0} deletions={seg.deletions ?? 0} />
+        ) : (
+          seg.text
+        )}
+      </ChatLinkAnchor>
+    );
+  }
   switch (seg.kind) {
     case "avatar":
       return <AvatarTitleSegment seg={seg} />;

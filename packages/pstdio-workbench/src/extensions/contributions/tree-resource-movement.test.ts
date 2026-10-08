@@ -58,4 +58,7 @@ test("routes projected sidebar drops to the owning extension with original node 
     nodes.find((node) => node.id === "external")!,
   );
   expect(calls).toHaveLength(1);
+  await workbench.navigationTrees.moveNode(nodes.find((node) => node.id.endsWith("note-1"))!, undefined);
+  expect(calls).toHaveLength(2);
+  expect(calls[1]).toMatchObject({ source: originalSource, target: undefined });
 });
