@@ -55,6 +55,7 @@ export { WorkbenchPreferencesForm } from "./renderers/settings/preferences-form"
 export type { TreeActionParamsRequest } from "./renderers/tree/tree-actions";
 export { createTreeContextMenuItems } from "./renderers/tree/tree-actions";
 export { WorkbenchTreeView } from "./renderers/tree/tree-view";
+export { WorkbenchConnectionProvider } from "./renderers/workbench-connection-provider";
 export type { WorkbenchSettingsModuleOptions } from "./settings/settings-module";
 export {
   createWorkbenchSettingsModule,

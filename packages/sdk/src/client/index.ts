@@ -10,6 +10,7 @@ export {
   type ClientOptions,
   createRequest,
   PstdioApiError,
+  PstdioConnectionError,
   type RequestFn,
   type RequestOptions,
 } from "./request";

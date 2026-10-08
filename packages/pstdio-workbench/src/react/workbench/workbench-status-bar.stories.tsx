@@ -1,6 +1,6 @@
 import { Box, Button, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect } from "storybook/test";
+import { expect, userEvent } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchStatusBar } from "./workbench-panels";
@@ -102,6 +102,52 @@ export const SeveralOwnersInOrder: Story = {
       </WorkbenchThemeProvider>
     ),
   ],
+};
+
+const reorderWorkbench = createWorkbench();
+for (const title of ["Connection", "Performance"]) {
+  reorderWorkbench.views.registerView({
+    id: title,
+    title,
+    body: {
+      kind: "react",
+      render: () => (
+        <Text textStyle="label/XS" px="xs">
+          {title}
+        </Text>
+      ),
+    },
+  });
+  reorderWorkbench.statusBar.registerItem({ id: title, viewId: title, slot: "trailing" });
+}
+
+export const ReorderableItems: Story = {
+  ...SeveralOwnersInOrder,
+  args: { workbench: reorderWorkbench },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Drag a widget directly, like a tab, to reorder it. Focus a widget or its control and use Alt+Left or Alt+Right to reorder with the keyboard. Items keep their leading or trailing slot.",
+      },
+    },
+  },
+  play: async ({ canvas }) => {
+    reorderWorkbench.statusBar.reorderItem("Connection", { beforeItemId: "Performance" });
+    const item = canvas.getByRole("group", { name: "Connection" });
+    item.focus();
+    await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
+    await expect(reorderWorkbench.statusBar.listVisibleItems("trailing").map((item) => item.id)).toEqual([
+      "Performance",
+      "Connection",
+    ]);
+    await expect(item).toHaveFocus();
+    await userEvent.keyboard("{Alt>}{ArrowLeft}{/Alt}");
+    await expect(reorderWorkbench.statusBar.listVisibleItems("trailing").map((item) => item.id)).toEqual([
+      "Connection",
+      "Performance",
+    ]);
+  },
 };
 
 const mixedWorkbench = createWorkbench();
