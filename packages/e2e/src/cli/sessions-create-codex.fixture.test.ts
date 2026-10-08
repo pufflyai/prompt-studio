@@ -19,7 +19,7 @@ test("the Codex fixture acknowledges the started turn before publishing its comp
     child.stdin.write(
       `${JSON.stringify({ id: 1, method: "turn/start", params: { input: [{ type: "text", text: "Inspect" }] } })}\n`,
     );
-    expect(JSON.parse((await started)[0])).toMatchObject({ id: 1, result: { turn: { id: "turn-e2e" } } });
+    expect(JSON.parse((await started)[0])).toMatchObject({ id: 1, result: { turn: { id: "turn-1" } } });
   } finally {
     replies.close();
     child.stdin.end();

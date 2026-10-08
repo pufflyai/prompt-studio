@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { HarnessStateApi, JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import { createCodexRuntime } from "./codex-runtime";
 import { codexCommandInput } from "./command-input";
@@ -33,7 +34,7 @@ afterEach(async () => {
 const fixtureRuntime = (mode = "plan-approval", onReadBlocked?: () => void) => {
   const runtime = createCodexRuntime({
     spawnProcess: () => {
-      const child = spawn(process.execPath, [new URL("./app-server-fixture.ts", import.meta.url).pathname], {
+      const child = spawn(process.execPath, [fileURLToPath(new URL("./app-server-fixture.ts", import.meta.url))], {
         stdio: ["pipe", "pipe", "pipe"],
         env: { ...process.env, PSTDIO_TEST_MODE: mode, BUN_BE_BUN: "1" },
       });
