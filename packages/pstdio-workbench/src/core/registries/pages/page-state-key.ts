@@ -7,7 +7,9 @@ export const pageStateKey = (
   location: PageLocation | undefined,
   resources: WorkbenchPageResourceCodec,
 ) =>
-  page.main.kind === "panels" && location ? `${page.id}|${workbenchPageLocationKey(location, resources)}` : page.id;
+  page.main.kind === "panels" && location
+    ? `${page.id}|${workbenchPageLocationKey({ ...location, position: undefined }, resources)}`
+    : page.id;
 
 export const removePageStates = <State>(states: Readonly<Record<string, State>>, pageId: string) =>
   Object.fromEntries(Object.entries(states).filter(([key]) => key !== pageId && !key.startsWith(`${pageId}|`)));

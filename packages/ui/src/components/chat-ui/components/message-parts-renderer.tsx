@@ -3,16 +3,19 @@ import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { RichMessage } from "@/components/rich-text";
+import type { ChatLinkProps } from "../links/chat-link";
+import { ChatLinkProvider, useChatLinkHandler } from "../links/chat-link-context";
 import { Response } from "./ai-response";
 import type { AlertPart, ChatMessagePart, ErrorPart, FilePart, SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
 
 type ToolInvocationTimelineComponent = (props: ToolInvocationTimelineProps) => ReactNode;
 
-export interface MessagePartsProps {
+export interface MessagePartsProps extends ChatLinkProps {
   message: SessionMessage;
   streaming?: boolean;
   hideQuestionForms?: boolean;
+  /** @deprecated Use linkHandler for workspace file references. */
   onOpenFile?: (filePath: string) => void;
   toolInvocationTimeline?: ToolInvocationTimelineComponent;
 }
@@ -91,7 +94,17 @@ const collectToolInvocations = (parts: ChatMessagePart[], startIndex: number) =>
 };
 
 export function MessagePartsRenderer(props: MessagePartsProps) {
+  const inherited = useChatLinkHandler();
+  return (
+    <ChatLinkProvider handler={props.linkHandler ?? inherited}>
+      <MessagePartsContent {...props} />
+    </ChatLinkProvider>
+  );
+}
+
+function MessagePartsContent(props: MessagePartsProps) {
   const { message, hideQuestionForms = false, onOpenFile, toolInvocationTimeline } = props;
+  const linkHandler = useChatLinkHandler();
   const RenderToolInvocationTimeline = toolInvocationTimeline ?? ToolInvocationTimeline;
   const parts = message.parts ?? [];
   const nodes: ReactNode[] = [];
@@ -132,6 +145,7 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
           <Box key={key} width="full">
             <RenderToolInvocationTimeline
               invocations={invocations}
+              linkHandler={linkHandler}
               labeledBlocks
               hideQuestionForms={hideQuestionForms}
               onOpenFile={onOpenFile}

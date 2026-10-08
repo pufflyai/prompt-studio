@@ -1,5 +1,5 @@
 import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, rendererReadKey } from "../../../core";
@@ -8,6 +8,7 @@ import {
   resolveFileSectionTargetId,
   shouldClearFileSectionSelection,
 } from "../../../core/registries/renderers/file-section-navigation";
+import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
   createFileEditController,
@@ -62,9 +63,29 @@ const getEditorSectionNavigation = (
     targetId: resolveFileSectionTargetId(navigation, selectedNodeId),
   };
 };
+const useFilePosition = (workbench: WorkbenchCore, resource?: ResourceRef) =>
+  useWorkbenchStore(workbench.pages.store, (state) => {
+    const location = state.location;
+    if (!location?.position || resourceKey(location.resource) !== resourceKey(resource)) return undefined;
+    const page = Object.values(state.pages).find(
+      (page) => page.ref.id === location.page.id && page.ref.extensionId === location.page.extensionId,
+    );
+    const key = page?.document?.metadataKey;
+    if (!key || location.resource?.metadata?.[key] !== resource?.metadata?.[key]) return undefined;
+    return location.position;
+  });
+
+const FileRendererHeader = (props: { file: LoadedFile }) => {
+  const { file } = props;
+  return file.filePath ? (
+    <FileRendererPathHeader fileName={file.fileName ?? file.filePath} filePath={file.filePath} />
+  ) : null;
+};
+
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
+  const position = useFilePosition(workbench, resource);
   const sectionNavigation = getFileSectionNavigation(resource);
   const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
   const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource });
@@ -242,13 +263,11 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     });
   }, [scrollResetKey, sectionNavigation]);
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
-  const retryLoad = () => retryReadRef.current?.();
-  const retrySave = () => controllerRef.current?.retry();
   if (loadError && !currentLoaded) {
     return (
       <Center h="full" minH="0" bg="bg" p="md" flexDirection="column" gap="sm">
         <Text color="fg.muted">{loadError}</Text>
-        <Button size="xs" variant="subtle" onClick={retryLoad}>
+        <Button size="xs" variant="subtle" onClick={() => retryReadRef.current?.()}>
           Retry
         </Button>
       </Center>
@@ -271,28 +290,27 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       <FileRendererErrorNotice message="This resource was removed. Your draft is kept here. Copy it before closing this tab." />
     );
   } else if (loadError) {
-    errorNotice = <FileRendererErrorNotice message={loadError} onRetry={retryLoad} />;
+    errorNotice = <FileRendererErrorNotice message={loadError} onRetry={() => retryReadRef.current?.()} />;
   } else if (editState.saveError) {
-    errorNotice = <FileRendererErrorNotice message={editState.saveError} onRetry={retrySave} />;
+    errorNotice = (
+      <FileRendererErrorNotice message={editState.saveError} onRetry={() => controllerRef.current?.retry()} />
+    );
   }
-  const handleActiveSectionChange = (sectionId: string | null) => {
-    syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId });
-  };
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
-      {currentLoaded.filePath ? (
-        <FileRendererPathHeader
-          fileName={currentLoaded.fileName ?? currentLoaded.filePath}
-          filePath={currentLoaded.filePath}
-        />
-      ) : null}
+      <FileRendererHeader file={currentLoaded} />
       <Box flex="1" minH="0">
         <FileRendererContentView
           content={currentLoaded}
+          position={position}
           editorKey={editorKey}
           errorNotice={errorNotice}
           contributionCanSave={Boolean(contribution.save)}
-          onActiveSectionChange={sectionNavigation ? handleActiveSectionChange : undefined}
+          onActiveSectionChange={
+            sectionNavigation
+              ? (sectionId) => syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId })
+              : undefined
+          }
           onChange={handleChange}
           rendererRef={rendererRef}
           sectionNavigation={editorSectionNavigation}

@@ -61,7 +61,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Cloud workspace ticket", { exact: true }).click();
-    await expect(page.getByRole("option", { name: /^Project (workspace|folder)$/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
     await page.getByText("Workspaces", { exact: true }).last().hover();
     await page.getByRole("button", { name: "Create workspace", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Create workspace", exact: true });

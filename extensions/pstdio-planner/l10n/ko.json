@@ -31,5 +31,6 @@
   "settings.implementation.defaultTargetBranch.description": "새 작업이 대상으로 하는 원격 브랜치입니다. 지우면 저장소 기본 브랜치를 사용합니다.",
   "commands.refinementPolicy.title": "티켓 구체화 옵션 읽기",
   "settings.uxPrototype.title": "UX 기능의 아티팩트 프로토타입 생성",
-  "settings.uxPrototype.description": "Artifacts를 사용할 수 있는 경우 새 UX 기능을 구체화할 때 대화형 프로토타입을 필수로 만듭니다."
+  "settings.uxPrototype.description": "Artifacts를 사용할 수 있는 경우 새 UX 기능을 구체화할 때 대화형 프로토타입을 필수로 만듭니다.",
+  "ticketWorkspaces.project": "프로젝트 폴더"
 }

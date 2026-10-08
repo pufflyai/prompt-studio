@@ -71,7 +71,11 @@ export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionM
   }
 
   if (item.type === "error") {
-    return { id, role: "system", parts: [{ type: "error", errorType: "other", message: item.message }] };
+    return {
+      id,
+      role: "system",
+      parts: [{ type: "error", errorType: "other", message: readableErrorMessage(item.message) }],
+    };
   }
 
   return null;
@@ -91,9 +95,21 @@ export const usageMessage = (usage: CodexUsage | undefined, id: string, createdA
   ],
 });
 
+// Codex passes some API failures through as the raw JSON response body. Show its message instead.
+const readableErrorMessage = (message: string | undefined) => {
+  if (!message?.trimStart().startsWith("{")) return message;
+  try {
+    const body = JSON.parse(message) as { message?: unknown; error?: { message?: unknown } };
+    const readable = body.error?.message ?? body.message;
+    return typeof readable === "string" && readable.trim() ? readable : message;
+  } catch {
+    return message;
+  }
+};
+
 export const errorMessage = (message: string | undefined, id: string, createdAt: number): SessionMessage => ({
   id,
   role: "system",
   createdAt,
-  parts: [{ type: "error", errorType: "other", message }],
+  parts: [{ type: "error", errorType: "other", message: readableErrorMessage(message) }],
 });

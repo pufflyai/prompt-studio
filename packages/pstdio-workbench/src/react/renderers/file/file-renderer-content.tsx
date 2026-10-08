@@ -1,5 +1,6 @@
 import { Box, Center, Flex, Image, Text } from "@chakra-ui/react";
-import { EmptyState } from "@pstdio/ui";
+import type { FileSourcePosition } from "@pstdio/sdk/extensions";
+import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import type { ReactNode, RefObject } from "react";
@@ -8,6 +9,7 @@ import { resolveFileRendererPresentation } from "./file-renderer-presentation";
 
 interface FileRendererContentViewProps {
   content: FileRendererContent;
+  position?: FileSourcePosition;
   editorKey: string;
   errorNotice: ReactNode;
   contributionCanSave: boolean;
@@ -24,6 +26,7 @@ interface FileRendererContentViewProps {
 export const FileRendererContentView = (props: FileRendererContentViewProps) => {
   const {
     content,
+    position,
     editorKey,
     errorNotice,
     contributionCanSave,
@@ -34,11 +37,18 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     title,
   } = props;
   const presentation = resolveFileRendererPresentation(content, contributionCanSave);
+  const positionNotice =
+    position && presentation.kind !== "code" && presentation.kind !== "empty" ? (
+      <AlertMessage status="info" title="Source location unavailable">
+        This preview does not support source line selection.
+      </AlertMessage>
+    ) : null;
 
   if (presentation.kind === "empty") {
     return (
       <Flex direction="column" h="full" minH="0" bg="bg">
         {errorNotice}
+        {positionNotice}
         <EmptyState
           flex="1"
           minH="0"
@@ -60,6 +70,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     return (
       <Flex direction="column" h="full" minH="0" bg="bg">
         {errorNotice}
+        {positionNotice}
         <Center ref={rendererRef} flex="1" minH="0" p="md" overflow="auto">
           <Image src={content.dataUrl} alt={content.fileName ?? title} maxW="100%" maxH="100%" objectFit="contain" />
         </Center>
@@ -71,10 +82,12 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
     return (
       <Flex direction="column" h="full" minH="0" bg="bg">
         {errorNotice}
+        {positionNotice}
         <Box flex="1" minH="0">
           <CodeEditor
             key={editorKey}
             language={presentation.language}
+            position={position}
             fileName={content.fileName}
             defaultCode={content.content ?? ""}
             isEditable={presentation.isEditable}
@@ -89,6 +102,7 @@ export const FileRendererContentView = (props: FileRendererContentViewProps) => 
   return (
     <Flex ref={rendererRef} direction="column" h="full" minH="0" overflow="hidden" bg="bg">
       {errorNotice}
+      {positionNotice}
       <Box flex="1" minH="0" overflowY="auto">
         <MarkdownEditor
           key={editorKey}

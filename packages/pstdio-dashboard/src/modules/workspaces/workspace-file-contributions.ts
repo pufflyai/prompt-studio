@@ -3,14 +3,14 @@ import { getApiClient } from "@/lib/api";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
-import { invalidateWorkspaceFileData, workspaceFileQueryOptions } from "./data/workspace-queries";
 import {
   workspaceFileResource,
   workspaceFilesUnavailableState,
   workspaceIdOf,
   workspaceMetadataString,
   workspaceRootResource,
-} from "./workspace-file-resource";
+} from "@/shared/workspaces/workspace-file-resource";
+import { invalidateWorkspaceFileData, workspaceFileQueryOptions } from "./data/workspace-queries";
 import { loadWorkspaceFileEntries, type WorkspaceFileTreeActions } from "./workspace-file-tree";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
@@ -167,7 +167,16 @@ const registerWorkspaceFileTree = (
       searchPlaceholder: "Search files",
       getBody: async (context) => {
         const selectedPath = workspaceMetadataString(context.resource, "workspaceFilePath");
-        if (selectedPath) context.setSelectedNode(selectedPath);
+        if (selectedPath) {
+          context.setSelectedNode(selectedPath);
+          const ancestors = selectedPath.split("/").slice(0, -1);
+          for (let depth = 1; depth <= ancestors.length; depth++)
+            ctx.treeViews.setNodeExpanded(
+              dashboardWidgetIds.workspaceFileTree,
+              ancestors.slice(0, depth).join("/"),
+              true,
+            );
+        }
         return loadWorkspaceFileEntries(ctx, context, treeActions, pendingCreation());
       },
       getChildren: (node, context) =>

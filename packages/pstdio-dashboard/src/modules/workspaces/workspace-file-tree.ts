@@ -9,15 +9,15 @@ import type {
 import { createElement } from "react";
 import { apiRequest, getApiClient } from "@/lib/api";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { WorkspaceFileChangeBadge, WorkspaceFileTreeIcon } from "./components/workspace-file-tree-presentation";
-import { resolveWorkspaceDiffRequest } from "./components/workspace-widget-state";
-import { type WorkspaceDiffFilesResponse, workspaceDiffFilePath } from "./data/workspace-queries";
 import {
   absoluteWorkspaceEntryPath,
   workspaceDeleteResource,
   workspaceFilesUnavailableState,
   workspaceIdOf,
-} from "./workspace-file-resource";
+} from "@/shared/workspaces/workspace-file-resource";
+import { WorkspaceFileChangeBadge, WorkspaceFileTreeIcon } from "./components/workspace-file-tree-presentation";
+import { resolveWorkspaceDiffRequest } from "./components/workspace-widget-state";
+import { type WorkspaceDiffFilesResponse, workspaceDiffFilePath } from "./data/workspace-queries";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
 const CREATE_WORKSPACE_FILE_ACTION = "workspace-file.create";

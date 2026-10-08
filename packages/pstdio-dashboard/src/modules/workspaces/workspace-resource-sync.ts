@@ -15,7 +15,13 @@ export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
     const resource = {
       ...primary,
       ...current.resource,
-      metadata: { ...primary.metadata, ...current.resource.metadata },
+      metadata: {
+        ...primary.metadata,
+        ...current.resource.metadata,
+        ...(location.resource.metadata?.workspaceFilePath
+          ? { workspaceView: "files", workspaceFilePath: location.resource.metadata.workspaceFilePath }
+          : {}),
+      },
     };
     if (
       primary.label === resource.label &&

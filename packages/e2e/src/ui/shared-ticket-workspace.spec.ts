@@ -47,10 +47,10 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     await page.unroute(providerRoute);
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Plain folder ticket", { exact: true }).click();
-    await expect(page.getByRole("option", { name: /^Project (workspace|folder)$/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
     await page.getByText("Workspaces", { exact: true }).last().hover();
     await expect(page.getByRole("button", { name: "Create workspace", exact: true })).toHaveCount(0);
-    await page.getByRole("option", { name: /^Project (workspace|folder)$/ }).click();
+    await page.getByRole("option", { name: "Project folder", exact: true }).click();
     await expect(page.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
     await expect(page.getByRole("tab")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Changes", exact: true })).toHaveCount(0);

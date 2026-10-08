@@ -1,6 +1,9 @@
 import { Box, Code, Link, Text } from "@chakra-ui/react";
 import type { PhrasingContent } from "mdast";
 import { Fragment, type ReactNode } from "react";
+import { parseChatLink } from "@/components/chat-ui/links/chat-link";
+import { ChatLinkAnchor } from "@/components/chat-ui/links/chat-link-anchor";
+import { useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context";
 import { parseMarkdownInline } from "./markdown-ast";
 import { resolveMarkdownUrl } from "./markdown-url";
 import { useMarkdownUrlResolver } from "./markdown-url-context";
@@ -18,6 +21,7 @@ interface InlineChildrenProps {
 const InlineChildren = (props: InlineChildrenProps) => {
   const { nodes } = props;
   const resolver = useMarkdownUrlResolver();
+  const handler = useChatLinkHandler();
 
   return nodes.map((node, index): ReactNode => {
     const key = `${node.type}-${index}`;
@@ -44,10 +48,22 @@ const InlineChildren = (props: InlineChildrenProps) => {
           </Box>
         );
       case "inlineCode":
-        return <Code key={key}>{node.value}</Code>;
+        return (
+          <ChatLinkAnchor key={key} candidate={{ source: node.value, origin: "inline-code" }}>
+            <Code>{node.value}</Code>
+          </ChatLinkAnchor>
+        );
       case "break":
         return <br key={key} />;
       case "link": {
+        const candidate = { source: node.url, origin: "markdown" as const };
+        const parsed = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
+        if (handler && parsed && (parsed.kind !== "external" || handler.resolveHref(candidate)))
+          return (
+            <ChatLinkAnchor key={key} candidate={candidate}>
+              <InlineChildren nodes={node.children} />
+            </ChatLinkAnchor>
+          );
         const href = resolveMarkdownUrl(node.url, "link", resolver);
         if (!href) return <InlineChildren key={key} nodes={node.children} />;
         return (
