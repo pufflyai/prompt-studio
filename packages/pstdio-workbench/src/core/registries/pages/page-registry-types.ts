@@ -1,6 +1,7 @@
 import type {
   FileRendererSectionTarget,
   Localizable,
+  PageDocumentDeclaration,
   PageLocation,
   PageMain,
   PageOpenIntent,
@@ -35,6 +36,7 @@ export interface WorkbenchPageContribution {
   modeId: string;
   parentId?: string;
   resource?: ResourceConstraint;
+  document?: PageDocumentDeclaration;
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
 }

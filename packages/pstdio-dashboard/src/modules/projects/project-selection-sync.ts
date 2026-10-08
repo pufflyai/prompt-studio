@@ -80,12 +80,13 @@ export const clearSelectedProject = (
   ctx.modes.setActiveMode("project-selection");
 };
 
-const selectPersistedProject = (
+const selectInitialProject = (
   ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
+  initialProjectId?: string,
 ) => {
-  const projectId = persistence?.getSelectedProjectId();
+  const projectId = initialProjectId ?? persistence?.getSelectedProjectId();
   if (!projectId || getDashboardSelectedProjectId(ctx)) return undefined;
 
   const project = findDashboardProject(projectId);
@@ -95,15 +96,16 @@ const selectPersistedProject = (
   return project;
 };
 
-export const registerPersistedProjectSelection = (
+export const registerInitialProjectSelection = (
   ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
+  initialProjectId?: string,
 ) => {
-  if (!persistence?.getSelectedProjectId()) return undefined;
-  if (selectPersistedProject(ctx, selectedProjectContext, persistence)) return undefined;
+  if (!initialProjectId && !persistence?.getSelectedProjectId()) return undefined;
+  if (selectInitialProject(ctx, selectedProjectContext, persistence, initialProjectId)) return undefined;
   if (isInitialCollectionsSyncComplete()) {
-    persistence.setSelectedProjectId(undefined);
+    persistence?.setSelectedProjectId(undefined);
     return undefined;
   }
 
@@ -113,13 +115,13 @@ export const registerPersistedProjectSelection = (
       return;
     }
 
-    if (selectPersistedProject(ctx, selectedProjectContext, persistence)) {
+    if (selectInitialProject(ctx, selectedProjectContext, persistence, initialProjectId)) {
       unsubscribeDashboardData();
       return;
     }
 
     if (isInitialCollectionsSyncComplete()) {
-      persistence.setSelectedProjectId(undefined);
+      persistence?.setSelectedProjectId(undefined);
       unsubscribeDashboardData();
     }
   });

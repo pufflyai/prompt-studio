@@ -33,6 +33,7 @@ export {
   EXTENSION_API_VERSION,
   extensionPanelRegions,
   gitEvents,
+  isFileSourcePosition,
   isLocalizedString,
   isNavigationTarget,
   isValidLocalContributionId,
