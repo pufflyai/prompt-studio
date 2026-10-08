@@ -32095,7 +32095,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -74835,7 +74835,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95464,7 +95464,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124450,7 +124450,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -150946,7 +150946,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -150968,7 +150968,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151696,7 +151696,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151718,7 +151718,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152334,7 +152334,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152356,7 +152356,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153707,7 +153707,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153729,7 +153729,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -165050,7 +165050,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Saved on this device. Hides the warning only. Live sync and recovery remain active.",
+                      "content": "Enables the status bar indicator for this device.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 12,
@@ -165330,7 +165330,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Show a warning in the status bar while this app reconnects to the backend. Live sync and automatic recovery stay active when this is off.",
+                                  "content": "Show the backend connection status in the status bar.",
                                   "lineHeight": 1.45,
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
@@ -165376,19 +165376,6 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 13,
                                           "fontWeight": "500"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "B3uor0",
-                                          "name": "Helper",
-                                          "fill": "$ds-fg-muted",
-                                          "textGrowth": "fixed-width",
-                                          "width": "fill_container",
-                                          "content": "Saved on this device only. Off by default.",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
                                         }
                                       ]
                                     },
@@ -165449,7 +165436,7 @@
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Saved on this device. Hides the warning only. Live sync and recovery remain active.",
+                      "content": "Enables the status bar indicator for this device.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 12,
@@ -165729,7 +165716,7 @@
                                   "fill": "$ds-fg-muted",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Show a warning in the status bar while this app reconnects to the backend. Live sync and automatic recovery stay active when this is off.",
+                                  "content": "Show the backend connection status in the status bar.",
                                   "lineHeight": 1.45,
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
@@ -165775,19 +165762,6 @@
                                           "fontFamily": "$font-label",
                                           "fontSize": 13,
                                           "fontWeight": "500"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "PWJrU",
-                                          "name": "Helper",
-                                          "fill": "$ds-fg-muted",
-                                          "textGrowth": "fixed-width",
-                                          "width": "fill_container",
-                                          "content": "Saved on this device only. Off by default.",
-                                          "lineHeight": 1.45,
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
                                         }
                                       ]
                                     },
@@ -165809,6 +165783,72 @@
                       ]
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R0Jge7",
+          "name": "Connected · trailing status",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 12,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "xsOCO",
+              "name": "text",
+              "fill": "$ds-fg-muted",
+              "content": "Loaded navigation stays visible",
+              "fontFamily": "$font-body",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "urRzk",
+              "name": "frame",
+              "width": "fill_container",
+              "height": 2
+            },
+            {
+              "type": "frame",
+              "id": "j8CGB",
+              "name": "Backend connection status",
+              "height": 20,
+              "gap": 4,
+              "padding": [
+                0,
+                4
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "nduiI",
+                  "name": "Connected",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "wifi",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                },
+                {
+                  "type": "text",
+                  "id": "Ub5pb",
+                  "name": "Label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Connected",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "500"
                 }
               ]
             }
@@ -165887,7 +165927,7 @@
           "fill": "$ds-fg-muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Warning appears only when enabled and disconnected. Tooltip: Connection lost. Retrying automatically. Loaded data stays visible until the connection returns. Opens after 300 ms on hover or keyboard focus. Recovery clears the warning.",
+          "content": "When enabled, show Connected in muted text while live sync is connected. Show amber Reconnecting after connection loss. Tooltips explain connection health on hover and keyboard focus. Loaded navigation stays visible. Recovery restores Connected.",
           "fontFamily": "$font-body",
           "fontSize": 12,
           "fontWeight": "normal"

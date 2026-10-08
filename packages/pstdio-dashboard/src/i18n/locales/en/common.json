@@ -4,9 +4,11 @@
     "description": "This browser is not signed in. Run this command in a terminal to open a signed-in dashboard."
   },
   "connection": {
-    "lost": "Backend connection lost. Reconnecting automatically."
+    "lost": "Backend connection lost. Reconnecting automatically.",
+    "connected": "Connected to backend."
   },
   "states": {
-    "reconnecting": "Reconnecting"
+    "reconnecting": "Reconnecting",
+    "connected": "Connected"
   }
 }

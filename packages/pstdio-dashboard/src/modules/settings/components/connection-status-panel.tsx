@@ -25,12 +25,9 @@ export const ConnectionStatusContent = (props: ConnectionStatusContentProps) => 
       {error ? <AlertMessage status="error" title={error} onClose={onDismissError} /> : null}
       <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
         <HStack gap="sm" alignItems="center">
-          <Stack gap="3xs" flex="1">
-            <Text textStyle="label/S/medium">{t("connectionStatus.enable")}</Text>
-            <Text textStyle="label/S/regular" color="fg.muted">
-              {t("connectionStatus.helper")}
-            </Text>
-          </Stack>
+          <Text textStyle="label/S/medium" flex="1">
+            {t("connectionStatus.enable")}
+          </Text>
           <Switch
             checked={enabled}
             inputProps={{ checked: enabled, "aria-label": t("connectionStatus.enable") }}

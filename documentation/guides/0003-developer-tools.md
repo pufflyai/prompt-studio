@@ -4,9 +4,9 @@ Developer tools helps you find out which part of Prompt Studio is using your com
 
 ## Show connection status
 
-Open **Settings → Developer tools → Connection** and turn on **Show connection status**. An amber **Reconnecting** warning appears at the trailing end of the status bar when the app loses contact with the backend. Hover or focus the warning for an explanation. Loaded navigation stays visible, and the warning clears when the connection returns.
+Open **Settings → Developer tools → Connection** and turn on **Show connection status**. A muted **Connected** indicator appears at the trailing end of the status bar. It changes to an amber **Reconnecting** warning when the app loses contact with the backend. Hover or focus the indicator for an explanation. Loaded navigation stays visible, and the indicator returns to **Connected** when the connection recovers.
 
-The switch is off by default and is saved on this device. Turning it off hides the warning. Live sync, retained navigation, and automatic recovery stay active.
+The switch is off by default and is saved on this device. Turning it off hides the indicator. Live sync, retained navigation, and automatic recovery stay active.
 
 ## Turn on performance monitoring
 

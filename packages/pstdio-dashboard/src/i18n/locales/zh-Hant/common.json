@@ -4,9 +4,11 @@
     "description": "此瀏覽器尚未登入。在終端機中執行此命令，即可開啟已登入的儀表板。"
   },
   "connection": {
-    "lost": "與伺服器的連線已中斷，正在自動重新連線。"
+    "lost": "與伺服器的連線已中斷，正在自動重新連線。",
+    "connected": "已連線至後端。"
   },
   "states": {
-    "reconnecting": "正在重新連線"
+    "reconnecting": "正在重新連線",
+    "connected": "已連線"
   }
 }

@@ -4,9 +4,11 @@
     "description": "Este navegador no ha iniciado sesión. Ejecuta este comando en una terminal para abrir un panel con la sesión iniciada."
   },
   "connection": {
-    "lost": "Se perdió la conexión con el servidor. Reconectando automáticamente."
+    "lost": "Se perdió la conexión con el servidor. Reconectando automáticamente.",
+    "connected": "Conectado al servidor."
   },
   "states": {
-    "reconnecting": "Reconectando"
+    "reconnecting": "Reconectando",
+    "connected": "Conectado"
   }
 }
