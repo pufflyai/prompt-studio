@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
@@ -15,8 +15,13 @@ test("detects an npm-installed OpenCode command and lists its models", async () 
   const prefix = join(root, "User Name & Tools", "AppData", "Roaming", "npm");
   const bin = join(prefix, "node_modules", "opencode-ai", "bin");
   const script = join(bin, "opencode.cjs");
+  const commandLog = join(root, "opencode-commands.jsonl");
   mkdirSync(bin, { recursive: true });
-  writeFileSync(script, 'console.log(process.argv[2] === "--version" ? "1.18.34" : "opencode/test-model");');
+  writeFileSync(
+    script,
+    `require("node:fs").appendFileSync(${JSON.stringify(commandLog)}, JSON.stringify(process.argv.slice(2)) + "\\n");
+console.log(process.argv[2] === "--version" ? "1.18.34" : "opencode/test-model");`,
+  );
   if (process.platform === "win32") {
     writeFileSync(
       join(prefix, "opencode.cmd"),
@@ -61,7 +66,10 @@ test("detects an npm-installed OpenCode command and lists its models", async () 
       { headers },
     );
     expect(models.status).toBe(200);
-    expect(await models.json()).toEqual([expect.objectContaining({ id: "opencode/test-model" })]);
+    const commands = existsSync(commandLog) ? readFileSync(commandLog, "utf8") : "No OpenCode commands ran.";
+    expect(await models.json(), `OpenCode command log:\n${commands}`).toEqual([
+      expect.objectContaining({ id: "opencode/test-model" }),
+    ]);
   } finally {
     if (child) await stopProcess(child);
     rmSync(root, { recursive: true, force: true });
