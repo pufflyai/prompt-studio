@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Fix Codex async questions, clickable question summaries, and local image previews in chat.
+Fix Codex async questions, clickable summaries with answers below long questions, and local image previews in chat.

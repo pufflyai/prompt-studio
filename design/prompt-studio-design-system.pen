@@ -47252,7 +47252,7 @@
                   "type": "frame",
                   "id": "PzOXU",
                   "name": "cmp/ChatQuestionBubble",
-                  "context": "One button per question. Shows question → first offered answer before submission. It never submits automatically. Clicking a pending bubble opens that exact question in the composer, preserving the chat draft. Answered bubbles show the accepted answer and are read-only.",
+                  "context": "One button per question. Shows question → first offered answer before submission. It never submits automatically. Clicking a pending bubble opens that exact question in the composer, preserving the chat draft. Answered bubbles show the accepted answer and are read-only. Keep short questions inline. When the question is long or multiline, place the arrow and answer together on a row below the full question.",
                   "reusable": true,
                   "fill": "$ds-bg-subtle",
                   "cornerRadius": 4,
@@ -47278,25 +47278,34 @@
                       "fontWeight": "normal"
                     },
                     {
-                      "type": "icon",
-                      "id": "O0luR",
-                      "name": "Answer direction",
-                      "width": 12,
-                      "height": 12,
-                      "icon": "arrow-right",
-                      "library": "lucide",
-                      "fill": "$ds-fg-muted"
-                    },
-                    {
-                      "type": "text",
-                      "id": "ZZwpl",
-                      "name": "Answer",
-                      "fill": "$ds-fg-muted",
-                      "content": "Blue",
-                      "lineHeight": 1.5,
-                      "fontFamily": "$font-label",
-                      "fontSize": 12,
-                      "fontWeight": "500"
+                      "type": "frame",
+                      "id": "jMcbw",
+                      "name": "Arrow and answer",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "O0luR",
+                          "name": "Answer direction",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZZwpl",
+                          "name": "Answer",
+                          "fill": "$ds-fg-muted",
+                          "content": "Blue",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -47313,13 +47322,7 @@
                       "type": "ref",
                       "ref": "PzOXU",
                       "name": "Hover",
-                      "fill": "$ds-surface-hover",
-                      "descendants": {
-                        "ZZwpl": {
-                          "content": "Blue",
-                          "fill": "$ds-fg-muted"
-                        }
-                      }
+                      "fill": "$ds-surface-hover"
                     },
                     {
                       "id": "u4Wbbw",
@@ -47327,13 +47330,7 @@
                       "ref": "PzOXU",
                       "name": "Open / keyboard focus",
                       "fill": "$ds-bg-active",
-                      "stroke": "$ds-border-accent",
-                      "descendants": {
-                        "ZZwpl": {
-                          "content": "Blue",
-                          "fill": "$ds-fg-muted"
-                        }
-                      }
+                      "stroke": "$ds-border-accent"
                     },
                     {
                       "id": "h6lM8Y",
@@ -47368,6 +47365,25 @@
                         "ZZwpl": {
                           "content": "Skipped",
                           "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "id": "tdfam",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Long multiline question · answer underneath",
+                      "layout": "vertical",
+                      "alignItems": "start",
+                      "width": 560,
+                      "descendants": {
+                        "LCEHH": {
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Should I validate the full release workflow in the browser, including onboarding, selecting a project, opening a session, submitting an async answer, and restoring the draft and attachments afterward?\nOr should I only run the targeted tests for the changed question controls before preparing the pull request?"
+                        },
+                        "ZZwpl": {
+                          "content": "Browser checks"
                         }
                       }
                     }
@@ -153856,7 +153872,8 @@
                       "content": "Which files should I include?"
                     },
                     "ZZwpl": {
-                      "content": "Release notes only"
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
                     }
                   }
                 },
@@ -164598,7 +164615,8 @@
                       "content": "Which validation should I run?"
                     },
                     "ZZwpl": {
-                      "content": "Browser checks"
+                      "content": "Browser checks",
+                      "fill": "$ds-fg-muted"
                     }
                   }
                 },
@@ -164612,7 +164630,8 @@
                       "content": "Which files should I include?"
                     },
                     "ZZwpl": {
-                      "content": "Release notes only"
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
                     }
                   }
                 },

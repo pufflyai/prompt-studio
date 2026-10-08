@@ -46,9 +46,26 @@ const initialMessages: SessionMessage[] = [
   },
 ];
 
-function AsyncQuestions(props: { decision?: boolean; terminal?: boolean }) {
-  const { decision, terminal } = props;
-  const [messages, setMessages] = useState(() => (terminal ? initialMessages.slice(0, 2) : initialMessages));
+const longQuestionMessages = [
+  initialMessages[0],
+  request("long", [
+    {
+      question:
+        "Should I validate the full release workflow in the browser, including onboarding, selecting a project, opening a session, submitting an async answer, and restoring the draft and attachments afterward? Or should I only run the targeted tests for the changed question controls before preparing the pull request?",
+      options: ["Browser checks", "Targeted tests"],
+    },
+    { question: "Which color?", options: ["Blue", "Green"] },
+    { question: "Which environment?\nChoose one.", options: ["Local", "CI"] },
+  ]),
+  initialMessages[3],
+];
+
+function AsyncQuestions(props: { decision?: boolean; terminal?: boolean; long?: boolean }) {
+  const { decision, terminal, long } = props;
+  const [messages, setMessages] = useState(() => {
+    if (long) return longQuestionMessages;
+    return terminal ? initialMessages.slice(0, 2) : initialMessages;
+  });
   const [lastReply, setLastReply] = useState("");
   const [failNext, setFailNext] = useState(false);
   return (
@@ -118,3 +135,4 @@ function AsyncQuestions(props: { decision?: boolean; terminal?: boolean }) {
 export const PendingAndAnswered: Story = { render: () => <AsyncQuestions /> };
 export const WithPlanDecision: Story = { render: () => <AsyncQuestions decision /> };
 export const QuestionOnlyTail: Story = { render: () => <AsyncQuestions terminal /> };
+export const LongMultilineQuestion: Story = { render: () => <AsyncQuestions long /> };

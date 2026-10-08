@@ -32,16 +32,18 @@ export const ChatQuestionBubble = (props: ChatQuestionBubbleProps) => {
           <chakra.button
             key={question.id}
             type="button"
-            css={recipe()}
+            css={recipe({ multiline: question.question.includes("\n") })}
             data-state={pending ? "pending" : "answered"}
             disabled={!canOpen}
             aria-expanded={canOpen ? expanded : undefined}
             aria-label={`${question.question} → ${answer}${canOpen ? ". Open question" : ""}`}
             onClick={() => navigation?.open(part, index)}
           >
-            <span>{question.question}</span>
-            <ArrowRight aria-hidden="true" />
-            <span data-question-answer>{answer}</span>
+            <span data-question-text>{question.question}</span>
+            <span data-question-answer-row>
+              <ArrowRight aria-hidden="true" />
+              <span data-question-answer>{answer}</span>
+            </span>
           </chakra.button>
         );
       })}
