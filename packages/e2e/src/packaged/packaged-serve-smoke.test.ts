@@ -15,6 +15,7 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
+import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
@@ -423,6 +424,7 @@ registerCoreDefaultExtensionSmokeTests();
 registerExtensionDiagnosticsSmokeTests();
 registerLinkedWebviewSmokeTests();
 registerRemoteExecutionSmokeTests();
+registerConcurrentHostsSmokeTests();
 
 test("packaged CLI includes automation and machine authentication", () => {
   const result = spawnSync(PACKAGED_BINARY_PATH, ["--help"], { encoding: "utf8" });

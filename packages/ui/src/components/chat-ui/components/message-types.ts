@@ -277,8 +277,3 @@ export const groupMessagesByTurn = (messages: SessionMessage[]) => {
 
   return { groups, leadingResponses };
 };
-
-export interface QueuedFollowUpMoveSelection {
-  source: QueuedFollowUp;
-  items: QueuedFollowUp[];
-}

@@ -70,13 +70,21 @@ export const resolveMigrationsFolder = async (
   const embedded = embeddedSource.filter((file) => normalizeEmbeddedFileName(file.name).startsWith(DRIZZLE_PREFIX));
 
   if (embedded.length > 0) {
-    const root = path.join(options.tmpDir ?? os.tmpdir(), DRIZZLE_EXTRACT_DIR);
-    fs.rmSync(root, { recursive: true, force: true });
+    const root = fs.mkdtempSync(path.join(options.tmpDir ?? os.tmpdir(), `${DRIZZLE_EXTRACT_DIR}-`));
     await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
     return root;
   }
 
   return path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle");
+};
+
+const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-migrations-"));
+  try {
+    await run(await resolveMigrationsFolder({ tmpDir: root }));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 };
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
@@ -116,8 +124,8 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
     console.log("[createDb] PGlite ready");
 
     const db = drizzle(openedPglite, { schema });
-    const migrationsFolder = await resolveMigrationsFolder();
-    if (fs.existsSync(migrationsFolder)) {
+    await withMigrationsFolder(async (migrationsFolder) => {
+      if (!fs.existsSync(migrationsFolder)) return;
       if (await hasLegacyTemplatesTable(openedPglite)) {
         const storage = await openedPglite.query<{ extension_files: string | null }>(
           "SELECT to_regclass('public.extension_files')::text AS extension_files",
@@ -139,7 +147,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       await migrate(db, { migrationsFolder });
       await finishBoardViewRules(openedPglite);
       await snapshotLegacyQueuedRequests(db);
-    }
+    });
 
     let closed = false;
     const close = async () => {
