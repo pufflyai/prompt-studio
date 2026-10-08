@@ -104,8 +104,9 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
     keepMountedWhenEmpty = false,
   } = props;
   const keyboardTrigger = useRef<HTMLElement | null>(null);
+  const contextAnchor = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const menu = useMenu({
-    positioning,
+    positioning: { ...positioning, strategy: "fixed", getAnchorRect: () => contextAnchor.current },
     closeOnSelect,
     onEscapeKeyDown: () => {
       // Positioned context menus do not restore trigger focus themselves.
@@ -130,6 +131,7 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
           keyboardTrigger.current = null;
           // Only the nearest populated menu starts the shared touch-hold gesture.
           event.stopPropagation();
+          contextAnchor.current = { x: event.clientX, y: event.clientY, width: 0, height: 0 };
           triggerProps.onPointerDown?.(event);
         }}
         onKeyDown={(event) => {
@@ -150,7 +152,11 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
         }}
         onContextMenu={(event) => {
           keyboardTrigger.current = null;
-          if (actions.length > 0 && !event.defaultPrevented) triggerProps.onContextMenu?.(event);
+          if (actions.length > 0 && !event.defaultPrevented) {
+            contextAnchor.current = { x: event.clientX, y: event.clientY, width: 0, height: 0 };
+            event.stopPropagation();
+            triggerProps.onContextMenu?.(event);
+          }
         }}
       >
         {children}
