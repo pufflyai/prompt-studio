@@ -120,11 +120,11 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     ensureActive();
 
     const resolved = resolveProcessCommand(input.command);
-    // Its own process group, so stopping the command also stops whatever it started. Killing
-    // the direct child alone leaves a shell's background jobs running with nobody to stop them.
+    // Unix needs a separate process group to stop descendants. Windows detachment
+    // disconnects the console instead and loses output from commands inside npm shims.
     const child = spawner(resolved.argv, {
       cwd: input.cwd,
-      detached: true,
+      detached: process.platform !== "win32",
       env: createExtensionProcessEnvironment(process.env, input.env),
       stderr: "pipe",
       stdout: "pipe",

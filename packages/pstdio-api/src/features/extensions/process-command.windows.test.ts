@@ -7,55 +7,16 @@ import { resolveProcessCommand } from "./process-command";
 
 const run = async (command: readonly string[], prefix: string) => {
   const resolved = resolveProcessCommand(command, (name) => Bun.which(name, { PATH: prefix }));
-  let spawnOptions: Parameters<typeof Bun.spawn>[1];
   // Bun.which reads the startup PATH. Route this call to the isolated fixture
   // while retaining the process API's environment, spawning and output handling.
   const api = createProcessApi({
-    spawner: ((_command, options) => {
-      spawnOptions = options;
-      return Bun.spawn(resolved.argv, {
+    spawner: ((_command, options) =>
+      Bun.spawn(resolved.argv, {
         ...options,
         windowsVerbatimArguments: resolved.windowsVerbatimArguments,
-      });
-    }) as typeof Bun.spawn,
+      })) as typeof Bun.spawn,
   });
   const { stdout, stderr, exitCode } = await api.run({ command: [...command] });
-  if (stdout === "") {
-    for (const [label, overrides] of [
-      ["same options", {}],
-      ["attached", { detached: false }],
-      ["visible", { windowsHide: false }],
-      ["host environment", { env: process.env }],
-    ] as const) {
-      for (const reader of ["response", "stream"] as const) {
-        const child = Bun.spawn(resolved.argv, {
-          ...spawnOptions,
-          ...overrides,
-          windowsVerbatimArguments: resolved.windowsVerbatimArguments,
-          stderr: "pipe",
-          stdout: "pipe",
-        });
-        const read = async (stream: ReadableStream<Uint8Array>) => {
-          if (reader === "response") return new Response(stream).text();
-          const output = stream.getReader();
-          const decoder = new TextDecoder();
-          let result = "";
-          while (true) {
-            const next = await output.read();
-            if (next.done) break;
-            result += decoder.decode(next.value, { stream: true });
-          }
-          return result + decoder.decode();
-        };
-        const [out, err, code] = await Promise.all([
-          read(child.stdout as ReadableStream<Uint8Array>),
-          read(child.stderr as ReadableStream<Uint8Array>),
-          child.exited,
-        ]);
-        console.log(JSON.stringify({ label, reader, exitCode: code, stdout: out, stderr: err }));
-      }
-    }
-  }
   return { exitCode, stdout: stdout.trim(), stderr: stderr.trim() };
 };
 
