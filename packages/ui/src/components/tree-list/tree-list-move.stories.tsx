@@ -82,7 +82,9 @@ export const MovableFiles: Story = {
 
 const MovableNotes = () => {
   const [inFolder, setInFolder] = useState(false);
-  const note = { id: "note", label: "Research note", canDrag: true };
+  const [order, setOrder] = useState(["note", "second"]);
+  const note = { id: "note", label: "Research note", canDrag: true, canDrop: true };
+  const second = { id: "second", label: "Meeting notes", canDrag: true, canDrop: true };
   return (
     <TreeList
       draggable
@@ -91,19 +93,27 @@ const MovableNotes = () => {
         {
           id: "navigation",
           nodes: [
+            { id: "workspaces", label: "Workspaces" },
             {
               id: "notes",
               label: "Notes",
               canDrop: true,
               children: [
                 { id: "folder", label: "Ideas", canDrop: true, isContainer: true, children: inFolder ? [note] : [] },
-                ...(inFolder ? [] : [note]),
+                ...order.flatMap((id) => {
+                  if (id === "second") return [second];
+                  return inFolder ? [] : [note];
+                }),
               ],
             },
           ],
         },
       ]}
-      onMoveNode={(_source, target) => setInFolder(target === "folder")}
+      onMoveNode={(source, target, position) => {
+        if (source !== "note" || !target) return;
+        setInFolder(target === "folder");
+        if (target === "second") setOrder(position === "after" ? ["second", "note"] : ["note", "second"]);
+      }}
     />
   );
 };
@@ -114,6 +124,31 @@ export const NotesInSortableNavigation: Story = {
     const canvas = within(canvasElement);
     const transfer = new DataTransfer();
     const note = canvas.getByRole("option", { name: "Research note" });
+    const second = canvas.getByRole("option", { name: "Meeting notes" });
+    const moveAt = (after: boolean) => {
+      const row = canvas.getByRole("option", { name: "Research note" });
+      const bounds = second.parentElement!.getBoundingClientRect();
+      fireEvent.dragStart(row.parentElement!, { dataTransfer: transfer });
+      fireEvent.dragOver(second.parentElement!, {
+        dataTransfer: transfer,
+        clientY: after ? bounds.bottom - 1 : bounds.top + 1,
+      });
+      fireEvent.drop(second.parentElement!, {
+        dataTransfer: transfer,
+        clientY: after ? bounds.bottom - 1 : bounds.top + 1,
+      });
+    };
+    moveAt(true);
+    await expect(
+      second.compareDocumentPosition(canvas.getByRole("option", { name: "Research note" })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    moveAt(false);
+    await expect(
+      canvas.getByRole("option", { name: "Research note" }).compareDocumentPosition(second) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
     fireEvent.dragStart(note.parentElement!, { dataTransfer: transfer });
     fireEvent.drop(canvas.getByRole("option", { name: "Ideas" }).parentElement!, { dataTransfer: transfer });
     await expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "3");

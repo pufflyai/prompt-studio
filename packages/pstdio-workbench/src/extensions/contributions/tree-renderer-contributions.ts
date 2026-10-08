@@ -260,6 +260,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
               ...createQueryParams(input, record, ctx),
               source: originalSource,
               target: originalTarget,
+              position: ctx.position ?? "inside",
             });
             ctx.refresh();
           }

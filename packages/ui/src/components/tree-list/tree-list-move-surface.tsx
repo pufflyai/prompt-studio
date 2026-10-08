@@ -4,7 +4,7 @@ import { readDraggedTreeNodeId } from "./tree-list-drag";
 
 interface TreeListMoveSurfaceProps {
   children: ReactNode;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
 }
 
 export const TreeListMoveSurface = (props: TreeListMoveSurfaceProps) => {
@@ -20,7 +20,7 @@ export const TreeListMoveSurface = (props: TreeListMoveSurfaceProps) => {
     if (!onMoveNode) return;
     event.preventDefault();
     const sourceNodeId = readDraggedTreeNodeId(event.dataTransfer);
-    if (sourceNodeId) onMoveNode(sourceNodeId);
+    if (sourceNodeId) onMoveNode(sourceNodeId, undefined, "inside");
   };
 
   return (

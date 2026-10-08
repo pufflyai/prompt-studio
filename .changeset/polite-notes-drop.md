@@ -5,4 +5,4 @@
 "@pstdio/workbench": minor
 ---
 
-Expose owner-handled resource drops through the SDK, preserving original node identities and resource scopes in composed navigation and native dragging within sortable trees.
+Expose owner-handled resource drops with before/after/inside positions and placement feedback, preserving node identities and resource scopes within sortable navigation.

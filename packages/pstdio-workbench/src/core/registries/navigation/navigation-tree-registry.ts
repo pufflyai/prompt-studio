@@ -16,6 +16,10 @@ export interface NavigationTreeContext {
   signal?: AbortSignal;
 }
 
+export interface NavigationTreeMoveContext extends NavigationTreeContext {
+  position?: "before" | "after" | "inside";
+}
+
 export interface NavigationTreeContribution {
   id: string;
   /** Prefix projected section and node ids when they come from an independent tree renderer. */
@@ -41,7 +45,7 @@ export interface CreateNavigationTreeRegistryInput {
     viewId: string,
     source: TreeNode,
     target: TreeNode | undefined,
-    context: NavigationTreeContext,
+    context: NavigationTreeMoveContext,
   ): Promise<void> | void;
 }
 
@@ -59,7 +63,7 @@ export interface NavigationTreeRegistry {
     context?: NavigationTreeContext,
   ): Promise<TreeViewSection[]>;
   getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
-  moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeContext): Promise<void>;
+  moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeMoveContext): Promise<void>;
   getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
   onDidChange(listener: () => void): Disposable;
 }

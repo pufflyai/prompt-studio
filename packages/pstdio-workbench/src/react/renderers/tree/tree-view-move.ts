@@ -21,7 +21,7 @@ interface MoveTreeNodeContext {
 
 export const createMoveTreeNode = (context: MoveTreeNodeContext) =>
   context.renderer.moveNode
-    ? async (sourceNodeId: string, targetNodeId?: string) => {
+    ? async (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => {
         const source = findNodeInSections(context.sections, sourceNodeId, context.childrenByNodeId);
         const target = targetNodeId
           ? (findNodeInSections(context.sections, targetNodeId, context.childrenByNodeId) ?? undefined)
@@ -32,6 +32,7 @@ export const createMoveTreeNode = (context: MoveTreeNodeContext) =>
           await context.renderer.moveNode?.(source, target, {
             resource: context.resource,
             viewId: context.viewId,
+            position,
             state: trees.getTreeState(context.renderer.id),
             refresh: () => trees.refresh(context.renderer.id),
             setSelectedNode: (nodeId) => trees.setSelectedNode(context.renderer.id, nodeId),
