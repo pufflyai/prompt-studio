@@ -10,7 +10,7 @@ if (provider === "codex") {
     if (request.method === "thread/start" || request.method === "thread/resume")
       emit({ id: request.id, result: { thread: { id: "quiet-thread", path: null } } });
     if (request.method !== "turn/start") continue;
-    emit({ id: request.id, result: {} });
+    emit({ id: request.id, result: { turn: { id: "quiet-turn", status: "inProgress" } } });
     await Bun.sleep(150);
     if (process.env.LIVENESS_STDERR)
       await new Promise<void>((resolve, reject) =>
