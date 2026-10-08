@@ -2,18 +2,23 @@ import { Box, Menu, Portal } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
 import { useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
+import type { WorkbenchCommandParamsRequest } from "../../core/controllers/command-palette/command-palette-controller";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { WorkbenchIcon } from "../shared/icon";
 import { getPanelLabel } from "./panel-widget-open";
 
-const activate = (workbench: WorkbenchCore, action: NonNullable<WorkbenchTabMenuGroup["rows"][number]["action"]>) => {
+const activate = (
+  workbench: WorkbenchCore,
+  action: NonNullable<WorkbenchTabMenuGroup["rows"][number]["action"]>,
+  requestParams: (request: WorkbenchCommandParamsRequest) => void,
+) => {
   const target = action.kind === "navigation" ? action.target : action;
   if (target.kind === "command") {
     const command = workbench.commands.getCommand(target.commandId)?.command;
     if (command && hasCommandParameters(command.params)) {
-      workbench.commandPalette.requestParams({
+      requestParams({
         record: { command },
         label: command.label,
         args: target.args,
@@ -50,7 +55,7 @@ interface RegionTabMenuProps {
 }
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { anchor, label, open, setOpen, groups, placement, workbench } = props;
-  const pendingAction = useRef<(() => void) | null>(null);
+  const pendingRequest = useRef<WorkbenchCommandParamsRequest | null>(null);
   const currentRegion = findPlacementByWidgetId(workbench.layout.getLayout(), placement.widgetId)?.regionId;
   const destinations = workbench.getPanelDestinations(placement.widgetId).filter((region) => region !== currentRegion);
   const pin = () => {
@@ -67,10 +72,10 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
       open={open}
       onOpenChange={(details) => setOpen(details.open)}
       onExitComplete={() => {
-        const action = pendingAction.current;
-        pendingAction.current = null;
-        // Finish the menu's focus restoration before an action opens a dialog or panel.
-        action?.();
+        const request = pendingRequest.current;
+        pendingRequest.current = null;
+        // Finish the menu's focus restoration before opening a dialog.
+        if (request) workbench.commandPalette.requestParams(request);
       }}
       positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
     >
@@ -96,7 +101,9 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
                         onActivate={
                           row.action
                             ? () => {
-                                pendingAction.current = () => activate(workbench, row.action!);
+                                activate(workbench, row.action!, (request) => {
+                                  pendingRequest.current = request;
+                                });
                               }
                             : undefined
                         }
