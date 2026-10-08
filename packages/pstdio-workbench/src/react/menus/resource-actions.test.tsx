@@ -34,7 +34,7 @@ describe("createWorkbenchResourceActions", () => {
     expect(ticketActions.map((action) => action.label)).toEqual(["Run attempt"]);
     expect(ticketActions.map((action) => action.commandId)).toEqual(["pstdio-planner.run-attempt"]);
     expect(workspaceActions).toEqual([]);
-    await ticketActions[0]?.onClick();
+    await ticketActions[0]?.onClick?.();
     expect(openedResource).toEqual(ticket);
   });
 
