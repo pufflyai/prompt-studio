@@ -2,7 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FileText, Folder } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, within } from "storybook/test";
+import { expect, fireEvent, waitFor, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
@@ -123,10 +123,9 @@ export const NotesInSortableNavigation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const transfer = new DataTransfer();
-    const note = canvas.getByRole("option", { name: "Research note" });
-    const second = canvas.getByRole("option", { name: "Meeting notes" });
     const moveAt = (after: boolean) => {
       const row = canvas.getByRole("option", { name: "Research note" });
+      const second = canvas.getByRole("option", { name: "Meeting notes" });
       const bounds = second.parentElement!.getBoundingClientRect();
       fireEvent.dragStart(row.parentElement!, { dataTransfer: transfer });
       fireEvent.dragOver(second.parentElement!, {
@@ -139,23 +138,37 @@ export const NotesInSortableNavigation: Story = {
       });
     };
     moveAt(true);
-    await expect(
-      second.compareDocumentPosition(canvas.getByRole("option", { name: "Research note" })) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        canvas
+          .getByRole("option", { name: "Meeting notes" })
+          .compareDocumentPosition(canvas.getByRole("option", { name: "Research note" })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy(),
+    );
     moveAt(false);
-    await expect(
-      canvas.getByRole("option", { name: "Research note" }).compareDocumentPosition(second) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        canvas
+          .getByRole("option", { name: "Research note" })
+          .compareDocumentPosition(canvas.getByRole("option", { name: "Meeting notes" })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy(),
+    );
 
-    fireEvent.dragStart(note.parentElement!, { dataTransfer: transfer });
+    fireEvent.dragStart(canvas.getByRole("option", { name: "Research note" }).parentElement!, {
+      dataTransfer: transfer,
+    });
     fireEvent.drop(canvas.getByRole("option", { name: "Ideas" }).parentElement!, { dataTransfer: transfer });
-    await expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "3");
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "3"),
+    );
     fireEvent.dragStart(canvas.getByRole("option", { name: "Research note" }).parentElement!, {
       dataTransfer: transfer,
     });
     fireEvent.drop(canvas.getByRole("option", { name: "Notes" }).parentElement!, { dataTransfer: transfer });
-    await expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "2");
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "2"),
+    );
   },
 };
