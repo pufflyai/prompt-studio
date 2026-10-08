@@ -16,7 +16,7 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 - Check published GitHub releases, excluding drafts. Read the target release's core, SDK, UI, workbench, and relevant extension changelogs.
 - Use the release's actual publication timestamp, not the date its changelog was prepared. Preserve an existing publication date when correcting or illustrating a post.
 - If the release is pending, label the post as a preview. Use the preview's publication date and links to pending changesets at a fixed commit. Never invent a release date or claim pending work has shipped.
-- Once the release ships, replace preview wording and sources with the release notes and changelogs at its tag, and use its actual publication timestamp.
+- Once the release ships, replace preview wording and sources with the release notes and changelogs at its tag. If versioned changelogs have landed before the GitHub release, link their fixed commit and preserve the post's publication date; do not invent a GitHub publication timestamp.
 - Include `title`, a short `description`, an unquoted `published` date or UTC timestamp, `author: aurelien-franky`, one supported `category`, and paired `image.light` and `image.dark` paths. Release posts use `category: release`.
 - Do not store reading time. Do not duplicate the shared alpha notice.
 - `AGENTS.md` is contributor guidance, not a post. Keep it excluded from the blog collection loader.

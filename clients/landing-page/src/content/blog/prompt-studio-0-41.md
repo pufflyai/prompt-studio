@@ -1,6 +1,6 @@
 ---
 title: "Prompt Studio 0.41: a more flexible workbench"
-description: "A preview of shared filters and saved views, movable tabs, performance monitoring, and smoother agent conversations."
+description: "Shared filters and saved views, movable tabs, performance monitoring, and smoother agent conversations."
 published: 2026-10-08
 author: aurelien-franky
 category: release
@@ -9,13 +9,17 @@ image:
   dark: ./images/blog-prompt-studio-0-41.png
 ---
 
-Find the work you need, arrange your tools around it, and keep the conversation moving. These are the main changes planned for Prompt Studio 0.41.
-
-*Preview: 0.41 has not been published yet. This post covers the pending release changes.*
+Find the work you need, arrange your tools around it, and keep the conversation moving. Prompt Studio 0.41 brings shared collection controls, movable tabs, and optional performance monitoring.
 
 ## Filter once, save your view
 
 Boards and tables now share search, filters, sorting, and saved views. Pick values first, combine rules with **AND** or **OR**, and save the result for your project. Workspaces gets the same controls as ticket boards.
+
+![Filtering the ticket board and saving a Ready to build view](../../../../../documentation/images/prompt-studio-0-41-views-light.gif)
+
+![Filtering the ticket board and saving a Ready to build view](../../../../../documentation/images/prompt-studio-0-41-views-dark.gif)
+
+Filter tickets, save the view, and return to it. Captured in an isolated development build with sample tickets. [Light video](../../../../../documentation/images/prompt-studio-0-41-views-light.mp4) · [Dark video](../../../../../documentation/images/prompt-studio-0-41-views-dark.mp4)
 
 Multiselect keeps your choices while you work. Clear empty-state messages explain when filters hide everything. Kanban boards also support panning and easier edge scrolling while you drag cards.
 
@@ -23,11 +27,23 @@ Multiselect keeps your choices while you work. Clear empty-state messages explai
 
 Move tabs between workbench panels, reorder them, and use grouped right-click actions to manage them. **Add** opens a tool in the panel you chose. You can rename sessions or reset the layout when you want a fresh arrangement.
 
+![Moving a live terminal between the Secondary and Side panels](../../../../../documentation/images/prompt-studio-0-41-tabs-light.gif)
+
+![Moving a live terminal between the Secondary and Side panels](../../../../../documentation/images/prompt-studio-0-41-tabs-dark.gif)
+
+Move a live terminal with its menu, then drag it back. [Light video](../../../../../documentation/images/prompt-studio-0-41-tabs-light.mp4) · [Dark video](../../../../../documentation/images/prompt-studio-0-41-tabs-dark.mp4)
+
 Sidebar order, placement, and visibility now survive desktop restarts. Status bar widgets can also be dragged or reordered with the keyboard, and their positions are saved.
 
 ## See what slows the app down
 
 Turn on **Settings → Developer tools → Performance** to add a frame-rate meter. Open it to inspect the workbench and extension views, pause an extension, or resume it when you need it again.
+
+![Enabling performance monitoring and opening the frame-rate popover](../../../../../documentation/images/prompt-studio-0-41-performance-light.gif)
+
+![Enabling performance monitoring and opening the frame-rate popover](../../../../../documentation/images/prompt-studio-0-41-performance-dark.gif)
+
+Enable monitoring and open the frame-rate popover. [Light video](../../../../../documentation/images/prompt-studio-0-41-performance-light.mp4) · [Dark video](../../../../../documentation/images/prompt-studio-0-41-performance-dark.mp4)
 
 CPU measurements are available in the desktop app. Agents can read them through `pst performance`. An optional connection indicator is also available in Developer tools. When the backend disconnects, the workbench keeps loaded navigation visible and reconnects stalled streams.
 
@@ -67,8 +83,6 @@ Browsers sign in through a single-use link opened by `pst`. Sessions are kept se
 
 The macOS installer gains a branded drag-to-Applications window. The desktop app also warns about running work in a dialog before closing.
 
-## Sources
+## Release notes
 
-This preview is based on the [pending changesets](https://github.com/pufflyai/prompt-studio/tree/ba05dcbf7def4ccbbbcd93b8841148520c890d1f/.changeset), especially [collection views](https://github.com/pufflyai/prompt-studio/blob/ba05dcbf7def4ccbbbcd93b8841148520c890d1f/.changeset/collection-view-controls.md), [movable tabs](https://github.com/pufflyai/prompt-studio/blob/ba05dcbf7def4ccbbbcd93b8841148520c890d1f/.changeset/small-olives-repair.md), [performance monitoring](https://github.com/pufflyai/prompt-studio/blob/ba05dcbf7def4ccbbbcd93b8841148520c890d1f/.changeset/opt-in-performance-monitoring.md), and [agent commands](https://github.com/pufflyai/prompt-studio/blob/ba05dcbf7def4ccbbbcd93b8841148520c890d1f/.changeset/dry-papayas-post.md).
-
-Check the [published releases](https://github.com/pufflyai/prompt-studio/releases) for availability. Once 0.41 ships, this post’s sources and date should be updated to the published release and its tagged changelogs.
+Read the [0.41 core changelog](https://github.com/pufflyai/prompt-studio/blob/fbde3ed96/packages/pstdio/CHANGELOG.md#0410), [SDK changelog](https://github.com/pufflyai/prompt-studio/blob/fbde3ed96/packages/sdk/CHANGELOG.md#0410), [UI changelog](https://github.com/pufflyai/prompt-studio/blob/fbde3ed96/packages/ui/CHANGELOG.md#0410), and [workbench changelog](https://github.com/pufflyai/prompt-studio/blob/fbde3ed96/packages/pstdio-workbench/CHANGELOG.md#0410). Extension changes are in the [Planner](https://github.com/pufflyai/prompt-studio/blob/fbde3ed96/extensions/pstdio-planner/CHANGELOG.md#0410), [Claude Code](https://github.com/pufflyai/prompt-studio/blob/fbde3ed96/extensions/harness-claude-code/CHANGELOG.md#0410), and [Codex](https://github.com/pufflyai/prompt-studio/blob/fbde3ed96/extensions/harness-codex/CHANGELOG.md#0410) changelogs.
