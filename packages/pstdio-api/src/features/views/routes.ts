@@ -19,7 +19,7 @@ const json = <T extends z.ZodType>(schema: T) => ({ "application/json": { schema
 const errors = {
   400: { description: "Invalid view", content: json(z.object({ error: z.string() })) },
   404: { description: "Board or view unavailable", content: json(z.object({ error: z.string() })) },
-  409: { description: "Built-in view is read-only", content: json(z.object({ error: z.string() })) },
+  409: { description: "A board must keep at least one view", content: json(z.object({ error: z.string() })) },
   503: { description: "Board fields unavailable", content: json(z.object({ error: z.string() })) },
 };
 const tags = ["Board views"];

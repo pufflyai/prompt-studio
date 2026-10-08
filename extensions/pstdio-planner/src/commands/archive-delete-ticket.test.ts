@@ -17,7 +17,7 @@ describe("archiveTicketCommand", () => {
     );
 
     expect((await ticketsCollection(storage).get(created.id))?.archived).toBe(true);
-    const result = await runTicketsQuery({ storage, projectId: "proj-1" });
+    const result = await runTicketsQuery({ storage, projectId: "proj-1", filters: { archived: ["active"] } });
     expect(result.rows).toHaveLength(0);
   });
 });

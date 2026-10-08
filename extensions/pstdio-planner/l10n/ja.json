@@ -13,7 +13,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "アーカイブを解除",
   "kanbanRenderers.tickets.title": "チケット",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "アーカイブ",
+  "displayMenu.propertyOptions.archived": "チケット",
   "displayMenu.propertyOptions.createdAt": "作成日",
   "displayMenu.propertyOptions.status": "ステータス",
   "displayMenu.propertyOptions.updatedAt": "更新日",

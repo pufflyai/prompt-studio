@@ -13,7 +13,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "Desarchivar",
   "kanbanRenderers.tickets.title": "Tareas",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "Archivado",
+  "displayMenu.propertyOptions.archived": "Ticket",
   "displayMenu.propertyOptions.createdAt": "Creado",
   "displayMenu.propertyOptions.status": "Estado",
   "displayMenu.propertyOptions.updatedAt": "Actualizado",

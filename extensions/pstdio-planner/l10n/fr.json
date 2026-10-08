@@ -14,7 +14,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "Désarchiver",
   "kanbanRenderers.tickets.title": "Tâches",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "Archivé",
+  "displayMenu.propertyOptions.archived": "Ticket",
   "displayMenu.propertyOptions.createdAt": "Créé",
   "displayMenu.propertyOptions.status": "Statut",
   "displayMenu.propertyOptions.updatedAt": "Mis à jour",

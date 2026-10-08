@@ -13,7 +13,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "보관 해제",
   "kanbanRenderers.tickets.title": "티켓",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "보관됨",
+  "displayMenu.propertyOptions.archived": "티켓",
   "displayMenu.propertyOptions.createdAt": "생성일",
   "displayMenu.propertyOptions.status": "상태",
   "displayMenu.propertyOptions.updatedAt": "업데이트",
