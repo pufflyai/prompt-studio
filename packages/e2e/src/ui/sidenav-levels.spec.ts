@@ -54,6 +54,7 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await expect(page.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Level note", exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
   await row("Level note").click();
   await expect(row("Level note")).toHaveAttribute("aria-selected", "true");
   await page.reload();
