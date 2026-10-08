@@ -23,6 +23,14 @@ const codeColors = {
   "--astro-code-token-punctuation": "{colors.fg.muted}",
 };
 
+const themedMedia = {
+  "& img[data-art-tone=dark], & p:has(> img[data-art-tone=dark])": { display: "none" },
+  _dark: {
+    "& img[data-art-tone=light], & p:has(> img[data-art-tone=light])": { display: "none" },
+    "& img[data-art-tone=dark], & p:has(> img[data-art-tone=dark])": { display: "block" },
+  },
+};
+
 // Documents come from markdown, so the typography targets plain tags instead of
 // components.
 export const landingDocSlotRecipe = defineSlotRecipe({
@@ -88,7 +96,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
       "& td": { textStyle: "paragraph/M/regular", color: "fg.muted", verticalAlign: "top" },
     },
     // Markdown HTML joins the article's flow, so headings and paragraphs keep its spacing.
-    html: { display: "contents" },
+    html: { display: "contents", ...themedMedia },
     outline: {
       display: { base: "none", xl: "flex" },
       flexDirection: "column",
@@ -126,11 +134,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
     postBanner: { display: "block", width: "full", height: "auto", borderRadius: "xs" },
     postArtwork: {
       display: "contents",
-      "& img[data-art-tone=dark]": { display: "none" },
-      _dark: {
-        "& img[data-art-tone=light]": { display: "none" },
-        "& img[data-art-tone=dark]": { display: "block" },
-      },
+      ...themedMedia,
     },
     postListItem: {
       display: "flex",
