@@ -1,8 +1,18 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, request } from "@playwright/test";
 import { installShortcutReferenceExtension } from "../ui/helpers/shortcut-reference-extension";
 
-export const verifyPackagedShortcutReference = async (page: Page, origin: string, projectId: string) => {
-  await installShortcutReferenceExtension(page.request, origin, projectId);
+export const verifyPackagedShortcutReference = async (
+  page: Page,
+  origin: string,
+  projectId: string,
+  headers: Record<string, string>,
+) => {
+  const api = await request.newContext({ extraHTTPHeaders: headers });
+  try {
+    await installShortcutReferenceExtension(api, origin, projectId);
+  } finally {
+    await api.dispose();
+  }
   await page.reload();
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();

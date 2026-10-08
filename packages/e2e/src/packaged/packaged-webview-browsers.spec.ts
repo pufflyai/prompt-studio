@@ -147,7 +147,12 @@ test.describe("packaged extension webviews", () => {
           await page.reload();
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
           await verifyPackagedWebviewRetention(page);
-          await verifyPackagedShortcutReference(page, started.baseUrl, project.id);
+          await verifyPackagedShortcutReference(
+            page,
+            started.baseUrl,
+            project.id,
+            runtimeAuthorization(started.descriptor),
+          );
 
           await page.getByText("Settings", { exact: true }).last().click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
