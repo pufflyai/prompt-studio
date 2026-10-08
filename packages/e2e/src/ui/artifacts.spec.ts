@@ -79,18 +79,19 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(preview.getByText("Network blocked")).toBeVisible();
     await preview.getByRole("button", { name: "Complete task" }).click();
     const breadcrumbs = page.getByRole("navigation", { name: "Breadcrumb" });
-    await expect(breadcrumbs).toHaveText("Artifacts");
+    await expect(breadcrumbs.getByText("First page", { exact: true })).toBeVisible();
     await breadcrumbs.getByRole("button", { name: "Artifacts", exact: true }).click();
     await expect(libraryTab).toHaveAttribute("aria-selected", "true");
+    await expect(breadcrumbs.getByText("First page", { exact: true })).toHaveCount(0);
 
     await frame.getByRole("button", { name: "Reference", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "Reference chart" })).toBeVisible();
     const referenceTab = page.getByRole("tab", { name: "Reference", exact: true });
     await expect(referenceTab).toHaveAttribute("aria-selected", "true");
-    await expect(breadcrumbs).toHaveText("Artifacts");
+    await expect(breadcrumbs.getByText("Reference", { exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "First page", exact: true }).click();
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
-    await expect(breadcrumbs).toHaveText("Artifacts");
+    await expect(breadcrumbs.getByText("First page", { exact: true })).toBeVisible();
     await page.evaluate(() => {
       const root = document.documentElement;
       root.classList.replace("light", "dark");
@@ -134,7 +135,8 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     // A published URL opens the same artifact tab from a fresh page location.
     await page.goto(first.url);
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
-    await expect(breadcrumbs).toHaveText("Artifacts");
+    const selectedTitle = await page.getByRole("tab", { name: /^(First|Second) page$/ }).innerText();
+    await expect(breadcrumbs.getByText(selectedTitle, { exact: true })).toBeVisible();
     await expect(referenceTab).toBeVisible();
     expect(await execute("revisions", { url: first.url })).toHaveLength(2);
     await artifactMenu.click();
