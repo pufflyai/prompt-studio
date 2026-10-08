@@ -11,8 +11,8 @@ import { createFilesystemRoutes } from "./features/filesystem/routes";
 import { createHealthRoutes } from "./features/health/routes";
 import { createNotificationsRoutes } from "./features/notifications/routes";
 import { createProjectRoutes } from "./features/projects/routes";
-import { createBrowserSessionRoutes, createRuntimeRoutes } from "./features/runtime/routes";
 import { createResourceAnchorRoutes } from "./features/resource-anchors/routes";
+import { createBrowserSessionRoutes, createRuntimeRoutes } from "./features/runtime/routes";
 import {
   isRuntimeOriginAllowed,
   isRuntimeRequestAuthorized,
