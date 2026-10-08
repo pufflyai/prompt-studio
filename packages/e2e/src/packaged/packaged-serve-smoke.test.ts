@@ -30,6 +30,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
+import { registerPackagedMigrationSmokeTests } from "./packaged-migrations-smoke";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
@@ -43,6 +44,8 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
+
+registerPackagedMigrationSmokeTests();
 
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;

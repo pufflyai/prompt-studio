@@ -1,7 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -14,6 +11,7 @@ import {
   migrateLegacyTemplates,
 } from "./legacy-template-migration";
 import { migrateThrough } from "./migrate-through";
+import { resolveMigrationsFolder } from "./migrations-folder";
 import { openPglite } from "./open-pglite";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
@@ -22,12 +20,6 @@ import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
 import { prepareWorkspaceLocations } from "./workspace-location-migration";
 
 type EmbeddedFile = Blob & { name: string };
-// Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
-// without depending on full Blob behavior that unit tests do not control.
-type EmbeddedMigrationFile = Pick<EmbeddedFile, "name" | "size" | "arrayBuffer">;
-
-const DRIZZLE_PREFIX = "../../pstdio-db/drizzle/";
-const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
 const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
@@ -41,41 +33,6 @@ const getEmbeddedFiles = (): EmbeddedFile[] => {
     // not available
   }
   return [];
-};
-
-const extractEmbeddedMigrations = async (
-  embeddedFiles: readonly EmbeddedMigrationFile[],
-  root: string,
-  logger: (message: string) => void,
-) => {
-  for (const file of embeddedFiles) {
-    const relativePath = normalizeEmbeddedFileName(file.name).slice(DRIZZLE_PREFIX.length);
-    const outPath = path.join(root, relativePath);
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    logger(`[drizzle] extracting ${relativePath} (${file.size} bytes)`);
-    const buf = await file.arrayBuffer();
-    fs.writeFileSync(outPath, Buffer.from(buf));
-  }
-};
-
-export const resolveMigrationsFolder = async (
-  options: {
-    embeddedFiles?: readonly EmbeddedMigrationFile[];
-    tmpDir?: string;
-    logger?: (message: string) => void;
-  } = {},
-) => {
-  const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
-  const embedded = embeddedSource.filter((file) => normalizeEmbeddedFileName(file.name).startsWith(DRIZZLE_PREFIX));
-
-  if (embedded.length > 0) {
-    const root = path.join(options.tmpDir ?? os.tmpdir(), DRIZZLE_EXTRACT_DIR);
-    fs.rmSync(root, { recursive: true, force: true });
-    await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
-    return root;
-  }
-
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle");
 };
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
@@ -115,28 +72,33 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
     console.log("[createDb] PGlite ready");
 
     const db = drizzle(openedPglite, { schema });
-    const migrationsFolder = await resolveMigrationsFolder();
-    if (fs.existsSync(migrationsFolder)) {
-      if (await hasLegacyTemplatesTable(openedPglite)) {
-        const storage = await openedPglite.query<{ extension_files: string | null }>(
-          "SELECT to_regclass('public.extension_files')::text AS extension_files",
-        );
-        if (!storage.rows[0]?.extension_files) {
-          await migrateThrough(db, migrationsFolder, LEGACY_TEMPLATE_STORAGE_MIGRATION);
+    const migrations = await resolveMigrationsFolder({ embeddedFiles: getEmbeddedFiles() });
+    const migrationsFolder = migrations.path;
+    try {
+      if (fs.existsSync(migrationsFolder)) {
+        if (await hasLegacyTemplatesTable(openedPglite)) {
+          const storage = await openedPglite.query<{ extension_files: string | null }>(
+            "SELECT to_regclass('public.extension_files')::text AS extension_files",
+          );
+          if (!storage.rows[0]?.extension_files) {
+            await migrateThrough(db, migrationsFolder, LEGACY_TEMPLATE_STORAGE_MIGRATION);
+          }
+          await ensureLegacyTemplateOwners(openedPglite);
         }
-        await ensureLegacyTemplateOwners(openedPglite);
+        await migrateLegacyTemplates(openedPglite);
+        const legacy = await openedPglite.query<{ legacy: boolean }>(
+          "SELECT to_regclass('public.projects') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'workspaces' AND column_name = 'root_path') AS legacy",
+        );
+        if (legacy.rows[0]?.legacy) await migrateThrough(db, migrationsFolder, 31);
+        await prepareWorkspaceLocations(openedPglite);
+        await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
+        await prepareBoardViewRules(openedPglite);
+        await removeArchivedWorkspaces(openedPglite);
+        await migrate(db, { migrationsFolder });
+        await finishBoardViewRules(openedPglite);
       }
-      await migrateLegacyTemplates(openedPglite);
-      const legacy = await openedPglite.query<{ legacy: boolean }>(
-        "SELECT to_regclass('public.projects') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'workspaces' AND column_name = 'root_path') AS legacy",
-      );
-      if (legacy.rows[0]?.legacy) await migrateThrough(db, migrationsFolder, 31);
-      await prepareWorkspaceLocations(openedPglite);
-      await removeSharedWorkspaceFolders(openedPglite, db, migrationsFolder);
-      await prepareBoardViewRules(openedPglite);
-      await removeArchivedWorkspaces(openedPglite);
-      await migrate(db, { migrationsFolder });
-      await finishBoardViewRules(openedPglite);
+    } finally {
+      migrations.cleanup();
     }
 
     let closed = false;

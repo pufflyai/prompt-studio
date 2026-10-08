@@ -23,6 +23,12 @@ Code that only repairs databases older than a given release may be deleted once 
 
 Generated Drizzle migrations (`pstdio-db/drizzle/*.sql`) stay. They are the schema history that new databases replay. Do not edit them by hand, including `0020_harness_id_namespacing.sql`, `0029_contribution_id_grammar.sql` and `0037_nebulous_galactus.sql`, which translate released first-party extension identities.
 
+## Packaged migration files
+
+Compiled runtimes extract their embedded SQL and journal into a unique, owner-only `pstdio-drizzle-*` folder under the configured Prompt Studio home (`PSTDIO_HOME`, or `~/.pstdio`). Each startup owns its folder. It never deletes or reuses another runtime's extraction or a shared system temporary path.
+
+The database startup removes this folder after migrations succeed or fail. A failed extraction also removes its partial files. A process killed before cleanup can leave its own folder behind; later startups do not adopt or delete it. Source-mode runtimes read the repository's Drizzle folder directly and leave it intact.
+
 ## Extension data belongs to extensions
 
 The core database does not own extension data, so new database code and new migrations must not name extension ids. The resource-anchor migration and `pstdio-db/src/services/legacy-resource-links.ts` translate the released anchor arrays under [ADR 0061](../../adrs/0061-project-resource-anchors.md). This is the only new exception: the public Extension API must preserve released anchor methods until their grouped breaking removal. Delete the legacy bridge with those methods; the generated schema migration stays. Generic resource-link storage must use explicit owners. `pstdio-db/src/db/extension-owned-ids.test.ts` fails when a file outside the legacy list above names a first-party extension id.

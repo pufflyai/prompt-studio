@@ -6,7 +6,8 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 
-import { createDb, resolveMigrationsFolder, resolvePgliteOptions } from "./connection.pglite";
+import { createDb, resolvePgliteOptions } from "./connection.pglite";
+import { resolveMigrationsFolder } from "./migrations-folder";
 import * as schema from "./schemas.pg";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
@@ -151,7 +152,7 @@ describe("createDb", () => {
       const pglite = new PGlite();
       await pglite.waitReady;
       const oldDb = drizzle(pglite, { schema });
-      const migrationsFolder = await resolveMigrationsFolder();
+      const { path: migrationsFolder } = await resolveMigrationsFolder();
       const oldMigrationsFolder = path.join(tempRoot, "old-migrations");
       fs.mkdirSync(path.join(oldMigrationsFolder, "meta"), { recursive: true });
       const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf8")) as {
@@ -277,73 +278,5 @@ describe("resolvePgliteOptions", () => {
   it("rejects an incomplete embedded database runtime", async () => {
     const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
     await expect(resolvePgliteOptions([wasmFile as never])).rejects.toThrow(/Partial PGlite embed/);
-  });
-});
-
-describe("resolveMigrationsFolder", () => {
-  const toEmbedded = (name: string, content: string) => ({
-    name: `../../pstdio-db/drizzle/${name}`,
-    size: content.length,
-    arrayBuffer: async () => new TextEncoder().encode(content).buffer,
-  });
-
-  it("extracts all embedded migrations to disk", async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-migrations-"));
-    const extractionRoot = path.join(tempRoot, "pstdio-drizzle");
-
-    const journal = '{"version":"7","entries":[{"idx":0,"tag":"0000_lush_corsair"}]}';
-
-    await resolveMigrationsFolder({
-      tmpDir: tempRoot,
-      embeddedFiles: [toEmbedded("0000_lush_corsair.sql", "-- migration"), toEmbedded("meta/_journal.json", journal)],
-      logger: () => {},
-    });
-
-    expect(fs.existsSync(path.join(extractionRoot, "0000_lush_corsair.sql"))).toBe(true);
-    expect(fs.existsSync(path.join(extractionRoot, "meta", "_journal.json"))).toBe(true);
-
-    fs.rmSync(tempRoot, { force: true, recursive: true });
-  });
-
-  it("extracts migrations with Windows-style embedded names", async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-migrations-windows-"));
-    const embedded = toEmbedded("0000_lush_corsair.sql", "-- migration");
-    embedded.name = embedded.name.replaceAll("/", "\\");
-
-    try {
-      const folder = await resolveMigrationsFolder({
-        tmpDir: tempRoot,
-        embeddedFiles: [embedded],
-        logger: () => {},
-      });
-
-      expect(folder).toBe(path.join(tempRoot, "pstdio-drizzle"));
-      expect(fs.existsSync(path.join(folder, "0000_lush_corsair.sql"))).toBe(true);
-    } finally {
-      fs.rmSync(tempRoot, { force: true, recursive: true });
-    }
-  });
-
-  it("cleans up stale files from previous extractions", async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-migrations-"));
-    const extractionRoot = path.join(tempRoot, "pstdio-drizzle");
-
-    // Simulate leftover from an older binary
-    fs.mkdirSync(extractionRoot, { recursive: true });
-    fs.writeFileSync(path.join(extractionRoot, "0000_old.sql"), "-- stale");
-
-    await resolveMigrationsFolder({
-      tmpDir: tempRoot,
-      embeddedFiles: [
-        toEmbedded("0001_new.sql", "-- new migration"),
-        toEmbedded("meta/_journal.json", '{"version":"7"}'),
-      ],
-      logger: () => {},
-    });
-
-    expect(fs.existsSync(path.join(extractionRoot, "0000_old.sql"))).toBe(false);
-    expect(fs.existsSync(path.join(extractionRoot, "0001_new.sql"))).toBe(true);
-
-    fs.rmSync(tempRoot, { force: true, recursive: true });
   });
 });
