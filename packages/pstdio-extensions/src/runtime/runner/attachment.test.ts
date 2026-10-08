@@ -23,8 +23,6 @@ const storage: CommandRunnerEnvironment["storage"] = {
   },
 };
 
-const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
-
 const environment: CommandRunnerEnvironment = {
   project: { id: "project-1", name: "Project One", shorthand: "PO" },
   storage,
@@ -44,15 +42,7 @@ const environment: CommandRunnerEnvironment = {
     createText: async () => ({ id: "" }),
     delete: async () => {},
   },
-  sessions: {
-    get: async () => null,
-    list: async () => [],
-    listByWorkspace: async () => [],
-    create: async () => createSessionResource(),
-    followup: async () => {},
-    addAnchors: async () => {},
-    removeAnchors: async () => {},
-  },
+  sessions: stubEnvironment(storage).sessions,
   workspaces: {
     addAnchors: async () => {},
     removeAnchors: async () => {},
