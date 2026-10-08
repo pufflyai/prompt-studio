@@ -1,5 +1,76 @@
 # pstdio
 
+## 0.41.0
+
+_2026-10-08_
+
+### Minor Changes
+
+- b94e9f1: Browsers sign in to the local runtime through a single-use link that `pst` opens, and a page load no longer hands out the runtime token.
+- bd5df55: Boards and data tables, including built-in Workspaces, share search, a value-first filter picker with shared Value panels, full-width Apply filter buttons, persistent multiselect selection and footer actions, readable editable bubbles, compact icons and checkboxes, advanced AND/OR bubbles, boolean predicates, one sort in Display, and project-scoped saved views with layers-plus creation and grouped context actions; collections use one toolbar Filter action and show feedback when filters hide every item and no columns or group rows remain visible and data tables use pagination without a filtered-row summary; popovers stay anchored, use subtle borders, and avoid separator overflow; filter pickers are taller and constrain their height to the viewport, date editors use one exact-date Value field, scalar filter panels use full-width parameter fields and borderless text bubbles, view menus omit default actions, and columns can disable filtering, including Workspaces Diff.
+- 576eb55: The desktop app remembers your theme between launches, opens its startup, recovery, and closing screens in that theme, and shows the warning about running work as a dialog over the workbench.
+- 3d8fcbd: Expose native harness commands, slash completion, and provider-owned composer tags with status indicators and actions.
+- 1fd5b6d: Add project-scoped resource links through the SDK, HTTP, and CLI with owner policies and legacy anchor migration.
+- 2bf353b: Add opt-in performance monitoring under Settings → Developer tools. A frame-rate meter in the status bar opens a popover with the frame rate, the CPU of the workbench and of extension processes, and Pause for an extension that slows the app down. Agents read the same snapshot with `pst performance`.
+- e47a873: Add movable workbench tabs, subtle panel drop feedback, grouped context actions, destination-aware Add, layout reset, and session rename while preserving live views and page ownership.
+- 1ff0825: Open chat file references through canonical document routes with source positions and workspace file links.
+
+### Patch Changes
+
+- 8542b56: Confirm question answers after their tool results arrive, reject repeated or cancelled replies, and refuse answers with files instead of dropping the files.
+- 3d8fcbd: Preserve message drafts while sequential questions and one-click plan decisions take over the composer.
+- b2f4cfb: Give the macOS DMG window a Prompt Studio background with the app and Applications icons on each side of a drag arrow.
+- ba05dcb: Add an optional connection status toggle with a green connected dot and a red Backend unavailable warning to Developer tools settings.
+- 54f25c0: Keep the browser session out of cookies, so other servers on `127.0.0.1` never receive it and two runtimes in one browser keep separate sessions.
+- 8542b56: Let Claude Code ask the person a question in the chat form and continue the same run with the answer or Skip.
+- b94e9f1: Creating a project no longer fails when two workspace provisioning runs create the same new folder.
+- 24916e8: Fix Codex async questions, clickable summaries with answers below long questions, and local image previews in chat.
+- 092a063: Keep Sidenav order, placement, and visibility choices after the desktop app restarts.
+- 7aaf64e: Refresh agent skill folders such as `.agents/skills` when you edit an installed extension's skills on disk, so new sessions read the current skill.
+- 8d9a1f5: Extension installs no longer run package lifecycle scripts and install exactly what a shipped `bun.lock` names.
+- c42c4d0: Keep the other extensions' pages, commands, and menus when one extension fails to register, and retry the failed extension on the next refresh.
+- 657dab6: Sessions that extensions start now use the model options they pass in `harness.params`, on top of the project's harness defaults.
+- b94e9f1: The runtime closes its database before a fatal exit, and extension watcher or session start cleanup errors no longer stop it.
+- 13cd617: Fix webview tab drops and show single panel tabs beside menu openers.
+- a2d2800: Deprecate workspace archive APIs in favor of deletion.
+- 42d62b5: Delete unused ticket workspaces, mark tickets done on merge, and replace workspace archiving with deletion.
+- ba05dcb: Show backend connection loss in the status bar, retain loaded navigation, and reconnect stalled sync streams.
+- 0d022e1: Restrict extension Git transports, protect log files, avoid shell URL opening, and update runtime dependencies.
+- 6f20714: Allow board panning and easier edge scrolling while dragging Kanban cards.
+- 70fd7a3: Update KaTeX to 0.19 so equation rendering no longer reads render options from a polluted object prototype.
+- 7b1d280: Move the Planner's implementation settings onto its extension page with a dropdown for the default target branch, list Ticket tags above Danger zone, and return `[{ branch }]` rows from `pst pstdio-planner implementation-targets`.
+- ba05dcb: Add a ghost connection indicator and saved widget dragging and keyboard ordering in the status bar.
+- 38ab7d1: Publish project default agent changes and every synced row a project delete removes, including sessions, workspace links and extension instances.
+- 122103b: Open the project named in a page link, add an Appearance setting, list extension tools in search, show Workspaces in the sidenav, say that extension toggles apply to the current project, and show catalog sources at the running release.
+- 8faa1c7: Preserve navigation rows and live views during resource changes while selecting the open workspace correctly.
+- d20bd9a: Keep a selection field's label visible when its selected values are long; the value now truncates in its button.
+- d1e047e: `pst` no longer starts a local API when `PSTDIO_API_URL` points at another machine that is down, and every CLI request uses the same default API address.
+- 662cf1b: Remove unused runtime dependencies.
+- 61bfc4f: Decide whether a ticket can start from its dependencies alone, and show why Run attempt cannot start a ticket in the dialog.
+- 1dc789a: The API refuses to listen beyond loopback without a token, never sends wildcard CORS, and refuses foreign origins and non-loopback hosts when it has no token.
+- c42c4d0: Keep each session's draft, attachments, and sent messages with that session when a Side Panel tab switches sessions, and keep the unsent draft after editing a queued follow-up.
+- dd246f7: Stop the session queue from retrying work in a workspace whose archive or delete failed, cancel queued and running sessions when they or their workspace are archived or deleted, send `session.completed` for every finished session, keep the terminal title probe from blocking the API, and make `pst` fail on mistyped extension commands and missing or invalid option values.
+- f130437: Point `pst sessions create --agent` help at `pst agents list` instead of a fixed list of agents.
+- 8d68e16: Let string extension settings load their dropdown choices from a command with the new `options` field in extension API 0.1.2.
+- 7691e04: Share one terminal session contract and one contribution id rule: the SDK exports `contributionRefId`, `commandRefId` and the renderer terminal types, and `@pstdio/ui`, `@pstdio/workbench` and the host use them instead of copies.
+- 558ea66: Restore session navigation resource menus and keyboard menu activation.
+- 4b23942: Show Sidenav rows as selected after users move them into the header or footer.
+- 7aaf64e: Remove the manual skill "Update" action and the `outdated` and `outdated_agents` skill fields, because agent skill folders now follow the extension source automatically.
+- bb62889: Report command failures once at the UI action that started them.
+- 3d8fcbd: Hide attachments during question takeover and advance first radio answers while preserving keyboard focus.
+- 0a558d6: Allow editing every board view while keeping at least one view per board.
+- 446aba7: The Start page now says when project setup did not finish, such as when the default extensions could not be downloaded without Git or a network, and offers Retry setup.
+- 2bf353b: Center status bar items in the space below the panels by removing the panel padding above the status bar.
+- 2bf353b: Show status bar items that register after the status bar first renders.
+- 4b23942: Show open panel toggles and other pressed controls as selected in color themes that set a background but no selection color.
+- 7e0a388: Restore composer focus after submission when the parent finishes reenabling the editor.
+- b64d71e: Clear the chat composer as soon as a message is sent.
+- 51b102b: Show Codex clarification questions in the shared composer and deliver correlated answers or Skip to the live run.
+- f130437: Add a `mono/S` text style for code in reading views.
+- 8863793: Show an accessible tooltip on the project open / create button.
+- b94e9f1: Extension webviews accept bridge messages only from the dashboard that hosts them.
+- 9315d41: Reconnect extension webviews whose frame is reattached while the runtime page is still loading, instead of leaving them on a spinner.
+
 ## 0.40.0
 
 _2026-10-02_

@@ -6,7 +6,7 @@ Install Artifacts once for your user, then turn it on in each project that shoul
 
 ## Install
 
-Artifacts is an optional extension. Its public package is named `pstdio-artifacts`; installing it does not make published pages public. Open **Settings → Project → Extensions**, find **Artifacts** under **Available**, and select **Install**. You can also run:
+Artifacts is an optional extension in the extension catalog. Its install name is `pstdio-artifacts`; installing it does not make published pages public. Open **Settings → Project → Extensions**, find **Artifacts** under **Available**, and select **Install**. You can also run:
 
 ```sh
 pst extensions add pstdio-artifacts

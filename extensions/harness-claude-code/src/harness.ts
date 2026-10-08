@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { claudeCommandState, prepareClaudeOperation } from "./commands";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
@@ -116,6 +117,17 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     label: l10n("harness.claudeCode", "Claude Code"),
     skills: { dir: ".claude/skills" },
     params: {
+      permission_mode: {
+        control: "command",
+        ...params.select({
+          label: "Permission mode",
+          defaultValue: "bypassPermissions",
+          options: [
+            { label: "Default", value: "bypassPermissions" },
+            { label: "Planning", value: "plan" },
+          ],
+        }),
+      },
       thinking: params.select({
         label: "Thinking",
         defaultValue: "high",
@@ -132,6 +144,8 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     capabilities: () => ["SessionFork", "ContextUsage", "Approvals"],
     detect: (ctx) => deps.detect(ctx),
     listModels,
+    getCommandState: (_ctx, input) => claudeCommandState(input),
+    prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
 
     start: (ctx, input) =>
       startClaudeCodeSession({

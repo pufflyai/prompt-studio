@@ -1,9 +1,8 @@
 import { expect, test } from "bun:test";
 import type { ToolPart } from "@pstdio/sdk/extensions";
 import { createAppServerItems } from "./app-server-items";
-import { recoverCodexMessages } from "./history-reconciliation";
 import { itemToMessage } from "./items";
-import { normalizeRollout } from "./rollout";
+import { nativeItemMessage, recoverNativeHistory } from "./native-history";
 import type { CodexThreadItem } from "./types";
 
 for (const result of [false, 0, "", null]) {
@@ -26,6 +25,28 @@ for (const result of [false, 0, "", null]) {
     expect(items[0].aggregated_output).toBe(JSON.stringify(result));
   });
 }
+test("Code Mode native calls retain their arguments and output in live and restored history", () => {
+  const native = {
+    id: "code",
+    type: "dynamicToolCall",
+    namespace: "functions",
+    tool: "exec",
+    arguments: { code: "return 42" },
+    status: "completed",
+    success: true,
+    contentItems: [{ type: "inputText", text: "42" }],
+    durationMs: 1,
+  } as const;
+  const items: CodexThreadItem[] = [];
+  const adapter = createAppServerItems((item) => items.push(item));
+  adapter.receive({ method: "item/completed", params: { item: native } });
+  const live = itemToMessage(items[0], "codex-turn")!;
+  expect(live.parts[0]).toMatchObject({
+    tool: "functions.exec",
+    state: { input: { code: "return 42" }, output: JSON.stringify(native.contentItems) },
+  });
+  expect(nativeItemMessage(native as unknown as Parameters<typeof nativeItemMessage>[0], "turn")).toEqual(live);
+});
 
 test("shows native plan progress and updates it within the same turn", () => {
   const items: CodexThreadItem[] = [];
@@ -63,22 +84,17 @@ test("recovers a native file change result onto the patch shown in the live stre
       },
     },
   });
-  const known = itemToMessage(items[0], "live")!;
-  const native = normalizeRollout(
-    JSON.stringify({
-      type: "event_msg",
-      payload: {
-        type: "item_completed",
-        item: {
-          id: "patch-1",
-          type: "FileChange",
-          status: "completed",
-          changes: { "/repo/notes.md": { type: "update" } },
-        },
-      },
-    }),
-  );
-  const result = recoverCodexMessages({ knownMessages: [known], nativeMessages: native });
+  const known = itemToMessage(items[0], "codex-turn-1")!;
+  const native = nativeItemMessage(
+    {
+      id: "patch-1",
+      type: "fileChange",
+      status: "completed",
+      changes: [{ path: "/repo/notes.md", kind: { type: "update", move_path: null }, diff: "@@ -1 +1 @@\n-a\n+b\n" }],
+    },
+    "turn-1",
+  )!;
+  const result = recoverNativeHistory({ knownMessages: [known], nativeMessages: [native] });
   expect(result.kind).toBe("recovered");
   if (result.kind !== "recovered") return;
   expect(result.messages).toHaveLength(1);
