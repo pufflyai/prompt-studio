@@ -35,6 +35,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
+import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
@@ -465,3 +466,5 @@ registerLiveQuestionSmokeTests();
 // Shared views persist flat filters and one ordering, and reject a second sort.
 registerBoardViewsSmokeTests();
 registerBoardPanningSmokeTests();
+
+registerResourceLinksSmokeTests();

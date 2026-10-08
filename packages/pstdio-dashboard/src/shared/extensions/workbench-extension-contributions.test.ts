@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  matchesContextExpression,
   resourceContextMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchTopHeaderTrailingMenuPath,
@@ -167,7 +168,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
           id: "pstdio-planner.run-attempt.menu.0",
           extensionId: "pstdio.pstdio-planner",
           commandId: "pstdio-planner.run-attempt",
-          slotId: "ticket.headerPrimary",
+          slotId: "pstdio.pstdio-planner.resource-kind.ticket.headerPrimary",
           label: "Run attempt",
         },
       ],
@@ -206,14 +207,14 @@ describe("dashboard workbench extension ticket menu contributions", () => {
           id: "pstdio-planner.refine-ticket.menu.0",
           extensionId: "pstdio.pstdio-planner",
           commandId: "pstdio-planner.refine-ticket",
-          slotId: "ticket.headerOverflow",
+          slotId: "pstdio.pstdio-planner.resource-kind.ticket.headerOverflow",
           label: "Refine ticket",
         },
         {
           id: "pstdio-planner.break-into-sub-tickets.menu.0",
           extensionId: "pstdio.pstdio-planner",
           commandId: "pstdio-planner.break-into-sub-tickets",
-          slotId: "ticket.headerOverflow",
+          slotId: "pstdio.pstdio-planner.resource-kind.ticket.headerOverflow",
           label: "Break into sub-tickets",
         },
       ],
@@ -228,7 +229,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
               group: "overflow",
               label: "Refine ticket",
               overflowLabel: "Ticket actions",
-              when: 'workbench.resource.type == "ticket"',
+              when: 'workbench.resource.type == "ticket" && workbench.resource.extensionId == "pstdio.pstdio-planner"',
             }),
           }),
         ],
@@ -241,11 +242,53 @@ describe("dashboard workbench extension ticket menu contributions", () => {
               group: "overflow",
               label: "Break into sub-tickets",
               overflowLabel: "Ticket actions",
-              when: 'workbench.resource.type == "ticket"',
+              when: 'workbench.resource.type == "ticket" && workbench.resource.extensionId == "pstdio.pstdio-planner"',
             }),
           }),
         ],
       }),
     ]);
   });
+});
+
+test("same-kind menu slots stay scoped to their resource owner", () => {
+  const owners = ["example.notes", "example.art"];
+  const result = buildDashboardExtensionMenuRegistrations({
+    ...metadata,
+    resourceKinds: owners.map((extensionId) => ({
+      id: "item",
+      localId: "item",
+      extensionId,
+      menuSlots: [{ id: "private", placement: "context-menu", access: "owner" }],
+    })),
+    commands: owners.map((extensionId) => ({ id: extensionId + ".command.action", extensionId, title: "Action" })),
+    menuContributions: owners.map((extensionId) => ({
+      id: extensionId + ".menu.action",
+      extensionId,
+      commandId: extensionId + ".command.action",
+      slotId: extensionId + ".resource-kind.item.private",
+      label: "Action",
+      when: { resourceType: ["item", "other"] },
+    })),
+  });
+  expect(result.registrations).toHaveLength(2);
+  for (const registration of result.registrations) {
+    const when = registration.menuItems[0]?.menuItem.when;
+    const owner = registration.contribution.extensionId;
+    expect(
+      matchesContextExpression({ "workbench.resource.type": "item", "workbench.resource.extensionId": owner }, when),
+    ).toBe(true);
+    expect(
+      matchesContextExpression(
+        {
+          "workbench.resource.type": "item",
+          "workbench.resource.extensionId": owners.find((candidate) => candidate !== owner),
+        },
+        when,
+      ),
+    ).toBe(false);
+    expect(
+      matchesContextExpression({ "workbench.resource.type": "other", "workbench.resource.extensionId": owner }, when),
+    ).toBe(false);
+  }
 });

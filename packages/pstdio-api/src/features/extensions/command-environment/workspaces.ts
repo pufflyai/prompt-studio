@@ -4,6 +4,7 @@ import {
   type WorkspaceProviderRef,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
+import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import { listWorkspaceProviders } from "../../workspaces/workspace-provider-catalog";
@@ -20,6 +21,8 @@ import {
 import { cleanupWorkspaceWorktree } from "../../workspaces/worktree-cleanup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { fireExtensionEventAsync } from "../extension-event-runtime";
+import { validateLegacyAnchors } from "./resource-link-policy";
+import { createResourceLinksApi } from "./resource-links";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["workspaceService"]["get"]>>>;
@@ -143,11 +146,19 @@ export const createWorkspacesApi = (
     },
     addAnchors: async (id, anchors) => {
       await requireScopedWorkspace(id);
+      await validateLegacyAnchors(
+        deps,
+        { type: "workspace", id, projectId: input.projectId, extensionId: "pstdio" },
+        anchors,
+      );
       await deps.workspaceService.addAnchors(id, anchors);
     },
     removeAnchors: async (id, refs) => {
       await requireScopedWorkspace(id);
-      await deps.workspaceService.removeAnchors(id, refs);
+      await createResourceLinksApi(deps, input).removeAnchors(
+        { type: "workspace", id, extensionId: "pstdio" },
+        refs.map((ref) => ({ ...ref, extensionId: legacyResourceOwner(ref) })),
+      );
     },
     resolve: async (id) => {
       const workspace = await read(() => requireScopedWorkspace(id));

@@ -1,7 +1,8 @@
-import { and, count, eq, inArray, ne } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
+import type { ResourceAnchor } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../../db/connection.pglite";
-import { type ResourceRef, session_queue_entries, sessions } from "../../db/schemas.pg";
-import { mergeResourceAnchors, removeResourceAnchors } from "../resource-anchors";
+import { session_queue_entries, sessions } from "../../db/schemas.pg";
+import { createLegacyAnchorMutations, sessionColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
 import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
 import {
   cancelQueued,
@@ -31,7 +32,7 @@ type CreateInput = {
   original_session_id?: string;
   cwd?: string;
   params_json?: HarnessParamsJson;
-  anchors?: ResourceRef[];
+  anchors?: ResourceAnchor[];
   status?: SessionStatus;
 };
 
@@ -70,7 +71,6 @@ type UpdateInput = Partial<
     | "session_file_id"
     | "cwd"
     | "params_json"
-    | "anchors_json"
   >
 >;
 
@@ -94,7 +94,6 @@ const buildRecord = (input: CreateInput) => {
     original_session_id: input.original_session_id ?? null,
     cwd: input.cwd ?? null,
     params_json: input.params_json ?? null,
-    anchors_json: input.anchors ?? [],
     created_at: timestamp,
     updated_at: timestamp,
   };
@@ -103,19 +102,33 @@ const buildRecord = (input: CreateInput) => {
 };
 
 export const createSessionsDBService = (db: DbClient) => {
-  const create = async (input: CreateInput) => {
+  const create = async (
+    input: CreateInput,
+    beforeInsert?: (row: { id: string; project_id: string | null }) => Promise<void>,
+  ) => {
     const record = buildRecord(input);
 
-    await db.insert(sessions).values(record);
-    return record;
+    await beforeInsert?.(record);
+    const created = await db.transaction(async (tx) => {
+      await tx.insert(sessions).values(record);
+      await writeLegacyResourceLinks(tx, "session", record, input.anchors ?? []);
+      const [row] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, record.id));
+      return row!;
+    });
+    return created;
   };
 
-  const createQueuedWithEntry = async (input: CreateQueuedInput) => {
+  const createQueuedWithEntry = async (
+    input: CreateQueuedInput,
+    beforeInsert?: (row: { id: string; project_id: string | null }) => Promise<void>,
+  ) => {
     const record = buildRecord({ ...input, status: "queued" });
     const timestamp = nowTimestamp();
 
-    await db.transaction(async (tx) => {
+    await beforeInsert?.(record);
+    const created = await db.transaction(async (tx) => {
       await tx.insert(sessions).values(record);
+      await writeLegacyResourceLinks(tx, "session", record, input.anchors ?? []);
       await tx.insert(session_queue_entries).values({
         session_id: record.id,
         prompt: input.prompt,
@@ -127,9 +140,11 @@ export const createSessionsDBService = (db: DbClient) => {
         created_at: timestamp,
         updated_at: timestamp,
       });
+      const [row] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, record.id));
+      return row!;
     });
 
-    return record;
+    return created;
   };
 
   const queueExistingWithEntry = async (input: QueueExistingInput) => {
@@ -140,7 +155,7 @@ export const createSessionsDBService = (db: DbClient) => {
         .update(sessions)
         .set({ status: "queued", updated_at: timestamp })
         .where(eq(sessions.id, input.id))
-        .returning();
+        .returning(sessionColumns);
       const updated = row ?? null;
 
       if (!updated) return { session: null, entry: null };
@@ -166,7 +181,7 @@ export const createSessionsDBService = (db: DbClient) => {
 
   const insertEntryForActive = async (input: QueueExistingInput) => {
     return db.transaction(async (tx) => {
-      const [session] = await tx.select().from(sessions).where(eq(sessions.id, input.id)).for("update");
+      const [session] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, input.id)).for("update");
       if (!session || session.status === "cancelled") return null;
       const timestamp = nowTimestamp();
       const [entry] = await tx
@@ -189,7 +204,7 @@ export const createSessionsDBService = (db: DbClient) => {
   };
 
   const get = async (id: string) => {
-    const [row] = await db.select().from(sessions).where(eq(sessions.id, id));
+    const [row] = await db.select(sessionColumns).from(sessions).where(eq(sessions.id, id));
     return row ?? null;
   };
 
@@ -209,7 +224,7 @@ export const createSessionsDBService = (db: DbClient) => {
     }
 
     const rows = await db
-      .select()
+      .select(sessionColumns)
       .from(sessions)
       .where(and(...conditions))
       .orderBy(sessions.created_at);
@@ -222,7 +237,7 @@ export const createSessionsDBService = (db: DbClient) => {
       .update(sessions)
       .set({ ...input, updated_at: nowTimestamp() })
       .where(eq(sessions.id, id))
-      .returning();
+      .returning(sessionColumns);
     return updated ?? null;
   };
 
@@ -234,25 +249,28 @@ export const createSessionsDBService = (db: DbClient) => {
       .update(sessions)
       .set({ archived: true, updated_at: nowTimestamp() })
       .where(eq(sessions.id, id))
-      .returning();
+      .returning(sessionColumns);
     return updated ?? null;
   };
 
   const listByStatus = async (status: SessionStatus) => {
-    const rows = await db.select().from(sessions).where(eq(sessions.status, status));
+    const rows = await db.select(sessionColumns).from(sessions).where(eq(sessions.status, status));
     return rows;
   };
 
   // "Active" means the host believed a harness process was alive, whether it was working or
   // waiting for the person. Capacity accounting and the orphan sweep read the same set.
   const listActive = async () => {
-    const rows = await db.select().from(sessions).where(inArray(sessions.status, ACTIVE_SESSION_STATUSES));
+    const rows = await db
+      .select(sessionColumns)
+      .from(sessions)
+      .where(inArray(sessions.status, ACTIVE_SESSION_STATUSES));
     return rows;
   };
 
   const listByAgentSession = async (agent: string, agentSessionId: string) => {
     const rows = await db
-      .select()
+      .select(sessionColumns)
       .from(sessions)
       .where(
         and(eq(sessions.agent, agent), eq(sessions.agent_session_id, agentSessionId), eq(sessions.archived, false)),
@@ -279,33 +297,18 @@ export const createSessionsDBService = (db: DbClient) => {
       recoverQueuedDispatchClaim(db, id, queuePosition, expectedLastRequestStarted),
     requeueAfterTerminal: (id: string) => requeueAfterTerminal(db, id),
     cancelQueued: (id: string) => cancelQueued(db, id),
-    addAnchors: async (id: string, anchors: ResourceRef[]) => {
-      const [updated] = await db
-        .update(sessions)
-        .set({
-          anchors_json: mergeResourceAnchors(sessions.anchors_json, anchors),
-          updated_at: new Date().toISOString(),
-        })
-        .where(eq(sessions.id, id))
-        .returning();
-      return updated ?? null;
-    },
-    removeAnchors: async (id: string, refs: Pick<ResourceRef, "type" | "id">[]) => {
-      const [updated] = await db
-        .update(sessions)
-        .set({ anchors_json: removeResourceAnchors(sessions.anchors_json, refs), updated_at: new Date().toISOString() })
-        .where(and(eq(sessions.id, id), ne(sessions.anchors_json, removeResourceAnchors(sessions.anchors_json, refs))))
-        .returning();
-      return updated ?? null;
-    },
     get,
     list,
-    listActive,
-    listByStatus,
-    listByAgentSession,
     update,
     updateStatus,
     archive,
+    listByStatus,
+    listActive,
+    listByAgentSession,
     countActive,
+    ...createLegacyAnchorMutations(db, "session", async (tx, id) => {
+      const [row] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, id));
+      return row!;
+    }),
   };
 };

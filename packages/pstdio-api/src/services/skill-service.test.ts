@@ -189,6 +189,7 @@ const setupServiceWithExtension = async () => {
   const workspaceService = createWorkspaceService({
     eventBus: new EventBus(),
     workspacesDb: createWorkspacesDBService(db),
+    sessionsDb: { get: async () => null },
   });
   const extensionService = createExtensionService({
     extensionInstancesService: createExtensionInstancesDBService(db),

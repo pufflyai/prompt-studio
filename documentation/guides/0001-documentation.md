@@ -306,6 +306,8 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0060 — Board views are core project data](../adrs/0060-shared-project-board-views.md)
 - [0057 — Browser sessions in per-origin storage](../adrs/0057-browser-sessions-in-per-origin-storage.md)
 
+- [0061 — Project resource anchors](../adrs/0061-project-resource-anchors.md)
+
 ## Lessons learned
 
 - [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md)

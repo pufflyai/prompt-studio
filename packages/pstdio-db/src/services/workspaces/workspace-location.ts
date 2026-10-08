@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { projects, workspaces } from "../../db/schemas.pg";
+import { workspaceColumns } from "../legacy-resource-links";
 import { type JsonObject, nowTimestamp } from "./workspace-record";
 
 export const attachInitialProvider = async (
@@ -25,7 +26,7 @@ export const attachInitialProvider = async (
         isNull(workspaces.provider_operation_id),
       ),
     )
-    .returning();
+    .returning(workspaceColumns);
   return rows.at(0) ?? null;
 };
 
