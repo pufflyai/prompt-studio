@@ -16,3 +16,16 @@ export const openProjectHome = (page: Page, projectName: string) =>
     .locator('[data-workbench-region="nav"]')
     .getByRole("button", { name: new RegExp(`${projectName}$`) })
     .click();
+
+export const showSidenavEntry = async (page: Page, label: string) => {
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(option(sidenav, "Search")).toBeVisible();
+  if (!(await option(sidenav, label).isVisible())) {
+    await option(sidenav, "Search").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).hover();
+    await page.getByRole("menuitem", { name: label, exact: true }).click();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+  }
+  return getSidenavEntry(page, label);
+};
