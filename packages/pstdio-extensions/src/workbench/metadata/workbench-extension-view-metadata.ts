@@ -60,6 +60,7 @@ const toNativeViewBody = (
       headerHandlerId: handlers.headerHandlerId as string | undefined,
       bodyHandlerId: String(handlers.bodyHandlerId),
       childrenHandlerId: handlers.childrenHandlerId as string | undefined,
+      moveHandlerId: handlers.moveHandlerId as string | undefined,
       footerHandlerId: handlers.footerHandlerId as string | undefined,
       defaultExpandedSectionIds: body.defaultExpandedSectionIds,
       defaultExpandedNodeIds: body.defaultExpandedNodeIds,
