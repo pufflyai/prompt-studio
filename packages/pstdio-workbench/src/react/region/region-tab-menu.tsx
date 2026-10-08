@@ -1,5 +1,6 @@
 import { Box, Menu, Portal } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
+import { useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import { runUserAction } from "../../core/shared/run-user-action";
@@ -49,6 +50,7 @@ interface RegionTabMenuProps {
 }
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { anchor, label, open, setOpen, groups, placement, workbench } = props;
+  const pendingAction = useRef<(() => void) | null>(null);
   const currentRegion = findPlacementByWidgetId(workbench.layout.getLayout(), placement.widgetId)?.regionId;
   const destinations = workbench.getPanelDestinations(placement.widgetId).filter((region) => region !== currentRegion);
   const pin = () => {
@@ -64,6 +66,12 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     <Menu.Root
       open={open}
       onOpenChange={(details) => setOpen(details.open)}
+      onExitComplete={() => {
+        const action = pendingAction.current;
+        pendingAction.current = null;
+        // Finish the menu's focus restoration before an action opens a dialog or panel.
+        action?.();
+      }}
       positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
     >
       <Portal>
@@ -85,7 +93,13 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
                         iconColor={row.iconColor}
                         isSelected={row.selected}
                         disabled={row.disabled}
-                        onActivate={row.action ? () => activate(workbench, row.action!) : undefined}
+                        onActivate={
+                          row.action
+                            ? () => {
+                                pendingAction.current = () => activate(workbench, row.action!);
+                              }
+                            : undefined
+                        }
                       />
                     </Menu.Item>
                   ))}
