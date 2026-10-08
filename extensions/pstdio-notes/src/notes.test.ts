@@ -3,6 +3,42 @@ import { createNote, deleteNote, listNotes, noteExists, readNote, renameNote, wr
 import { createNotesMount } from "./test-mount";
 
 describe("notes", () => {
+  test("creates a new note without asking for a title", async () => {
+    const mount = createNotesMount();
+    const note = await createNote(mount);
+    expect(note.title).toBe("New note");
+    expect(await readNote(mount, note.id)).toBe("");
+    expect(await listNotes(mount)).toMatchObject([{ id: note.id, title: "New note" }]);
+  });
+
+  test("uses the beginning of the content until the user renames the note", async () => {
+    const mount = createNotesMount();
+    const note = await createNote(mount);
+    await writeNote(mount, note.id, "\n# Meeting notes\n\nAgenda");
+    expect(await listNotes(mount)).toMatchObject([{ id: note.id, title: "Meeting notes" }]);
+    await writeNote(mount, note.id, "Updated opening\n\nMore content");
+    expect(await listNotes(mount)).toMatchObject([{ title: "Updated opening" }]);
+    await renameNote(mount, note.id, "My title");
+    await writeNote(mount, note.id, "A different opening");
+    expect(await listNotes(mount)).toMatchObject([{ title: "My title" }]);
+  });
+
+  test("returns to New note when automatically titled content is cleared", async () => {
+    const mount = createNotesMount();
+    const note = await createNote(mount);
+    await writeNote(mount, note.id, "First line");
+    await writeNote(mount, note.id, " \n ");
+    expect(await listNotes(mount)).toMatchObject([{ title: "New note" }]);
+  });
+
+  test("respects an explicit New note title", async () => {
+    const mount = createNotesMount();
+    const note = await createNote(mount);
+    await renameNote(mount, note.id, "New note");
+    await writeNote(mount, note.id, "Content should not rename this note");
+    expect(await listNotes(mount)).toMatchObject([{ title: "New note" }]);
+  });
+
   test("rejects blank titles without creating a document", async () => {
     const mount = createNotesMount();
     await expect(createNote(mount, " \t\n ")).rejects.toThrow("title");
