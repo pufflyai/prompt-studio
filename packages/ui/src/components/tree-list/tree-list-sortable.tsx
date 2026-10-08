@@ -30,7 +30,7 @@ interface SortableSectionGroupProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   indicator: TreeListDropIndicator | null;
   dragging: boolean;
@@ -127,7 +127,7 @@ interface SortableOrPlainNodeRowProps {
   linkComponent?: TreeListLinkComponent;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleNode?: (nodeId: string) => void;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
   indicator: TreeListDropIndicator | null;
 }
 
@@ -245,7 +245,7 @@ interface TreeListSortableProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;

@@ -8,6 +8,7 @@ test("routes projected sidebar drops to the owning extension with original node 
   const calls: unknown[] = [];
   const originalSource = { id: "note-1", label: "First", canDrag: true };
   const originalTarget = { id: "folder:ideas", label: "Ideas", canDrop: true };
+  const resource = { type: "workspace", id: "notes-workspace" };
   workbench.registerModule({
     id: "notes-movement",
     activate: (context) =>
@@ -34,13 +35,22 @@ test("routes projected sidebar drops to the owning extension with original node 
     sourceExtensionId: "pstdio.lab",
     declarationIndex: 0,
     viewId: treeId,
+    resolveResource: () => resource,
   });
   const [section] = await workbench.navigationTrees.getSections(owner);
   const [source, target] = section!.nodes;
   expect(source!.id).toBe(`${treeId}:note-1`);
-  await workbench.navigationTrees.moveNode(source!, target!);
+  await workbench.navigationTrees.moveNode(source!, target!, {
+    position: "inside",
+    resource: { type: "workspace", id: "other-workspace" },
+  });
   expect(calls).toMatchObject([
-    { source: originalSource, target: originalTarget, renderer: { projectId: "project-1" } },
+    {
+      source: originalSource,
+      target: originalTarget,
+      position: "inside",
+      renderer: { projectId: "project-1", resource },
+    },
   ]);
   expect(getWorkbenchRenderers(workbench).getTreeRenderer(treeId)?.moveNode).toBeDefined();
   // Independent trees cannot receive each other's resource drops.
@@ -61,4 +71,10 @@ test("routes projected sidebar drops to the owning extension with original node 
   await workbench.navigationTrees.moveNode(nodes.find((node) => node.id.endsWith("note-1"))!, undefined);
   expect(calls).toHaveLength(2);
   expect(calls[1]).toMatchObject({ source: originalSource, target: undefined });
+  await workbench.navigationTrees.moveNode(
+    nodes.find((node) => node.id.endsWith("note-1"))!,
+    nodes.find((node) => node.id.endsWith("folder:ideas"))!,
+    { position: "after" },
+  );
+  expect(calls[2]).toMatchObject({ source: originalSource, target: originalTarget, position: "after" });
 });

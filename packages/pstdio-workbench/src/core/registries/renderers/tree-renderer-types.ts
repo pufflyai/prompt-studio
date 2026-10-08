@@ -23,6 +23,10 @@ export interface TreeContext extends TreeQueryContext {
   setSelectedNode(nodeId: string | undefined): void;
 }
 
+export interface TreeMoveContext extends TreeContext {
+  position?: "before" | "after" | "inside";
+}
+
 export interface TreeAction {
   id: string;
   label?: string;
@@ -137,7 +141,7 @@ export interface TreeRendererContribution {
   getFooter?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getChildren(node: TreeNode, ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
   canMove?: TreeMovePolicy;
-  moveNode?(source: TreeNode, target: TreeNode | undefined, ctx: TreeContext): Promise<void> | void;
+  moveNode?(source: TreeNode, target: TreeNode | undefined, ctx: TreeMoveContext): Promise<void> | void;
 }
 
 export interface RegisteredTreeRendererContribution extends TreeRendererContribution, RegisteredContributionMetadata {}

@@ -32,7 +32,10 @@ export interface TreeRendererActionParams extends TreeRendererQueryParams {
 
 export interface TreeRendererMoveParams extends TreeRendererQueryParams {
   source: TreeNode;
+  /** Omitted for a drop on the tree background. */
   target?: TreeNode;
+  /** Containers accept inside drops; leaf rows use their upper/lower half for before/after. */
+  position: "before" | "after" | "inside";
 }
 
 export type TreeNodeTarget = NavigationTarget;

@@ -128,10 +128,15 @@ Static host navigation and extension links have no selected resource dependency.
 ## Tree resource movement
 
 Tree nodes can opt into `canDrag` and `canDrop`. A native tree body can implement
-`onMove(ctx, { renderer, state, source, target })` to persist the change through the
+`onMove(ctx, { renderer, state, source, target, position })` to persist the change through the
 extension's public storage or artifact APIs. The callback receives the original
 extension node identities, including when the host composes several trees in its
-Sidenav. Drops across contributions are rejected. A successful callback refreshes
+Sidenav. `position` is `"inside"` on a container or the tree background, and
+`"before"` or `"after"` on the upper or lower half of a leaf row. `target` is omitted
+for background drops; extensions decide whether their tree supports that destination.
+The source tree's bound resource is preserved even if the selected resource changes.
+Drops across contributions are rejected. Node flags control the gesture; the callback
+must validate current permissions and source/destination data before writing. A successful callback refreshes
 the owning tree; extensions should also emit their declared data event for other
 views that depend on the changed resources.
 

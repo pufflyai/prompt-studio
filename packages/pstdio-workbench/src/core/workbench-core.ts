@@ -123,7 +123,7 @@ const moveNavigationNode = async (
   viewId: string,
   source: import("./registries/renderers/tree-renderer-types").TreeNode,
   target: import("./registries/renderers/tree-renderer-types").TreeNode | undefined,
-  context: import("./registries/navigation/navigation-tree-registry").NavigationTreeContext,
+  context: import("./registries/navigation/navigation-tree-registry").NavigationTreeMoveContext,
 ) => {
   await renderers.getTreeRenderer(viewId)?.moveNode?.(source, target, {
     ...context,
