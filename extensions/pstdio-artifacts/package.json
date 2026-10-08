@@ -11,9 +11,7 @@
   "pstdio": {
     "scope": "user"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "type": "module",
   "scripts": {
     "test": "bun test",
