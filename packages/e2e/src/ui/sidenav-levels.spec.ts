@@ -3,7 +3,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin } from "../ui-server";
 
-test("Notes, Sessions and ticket levels keep rows users pinned to the header", async ({ page, request }) => {
+test("Notes and Sidenav levels keep rows users pinned to the header", async ({ page, request }) => {
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Sidenav levels" }),
   });
@@ -41,14 +41,14 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await page.waitForTimeout(100);
 
   await row("Notes").click();
-  await expect(row("Sessions")).toHaveCount(0);
+  await expect(row("Sessions")).toBeVisible();
   await expect(firstRow).toHaveText("Tickets");
   await sidenav.getByText("Notes", { exact: true }).hover();
   await sidenav.getByRole("button", { name: "New note", exact: true }).click();
-  await page.getByRole("textbox", { name: "Title", exact: true }).fill("Level note");
-  await page.getByRole("button", { name: "Create", exact: true }).click();
+  const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+  await editor.fill("Level note");
   await expect(row("Level note")).toBeVisible();
-  // Level rows are data, so only the Notes section can be hidden from the customize menu.
+  // Individual notes are data; the Notes collection can be hidden from the customize menu.
   await row("Search").click({ button: "right" });
   await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await expect(page.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible();
