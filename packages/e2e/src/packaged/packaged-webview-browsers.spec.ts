@@ -16,6 +16,7 @@ import {
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { verifyTreeGroups } from "../helpers/tree-groups";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
@@ -176,6 +177,8 @@ test.describe("packaged extension webviews", () => {
               runtimeAuthorization(started.descriptor),
             );
             await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
+            const sidenav = page.locator('[data-workbench-region="sidenav"]');
+            await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));
           }
 
           expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);

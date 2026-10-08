@@ -36,6 +36,7 @@ import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-s
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
+// It also creates, renames, and removes persisted Sidenav groups without deleting their rows.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 const BUILD_TIMEOUT = 180_000;
