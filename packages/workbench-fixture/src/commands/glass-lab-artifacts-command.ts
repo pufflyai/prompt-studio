@@ -165,6 +165,7 @@ export const updateArtifactMenuCommand = defineCommand({
 
 export const deleteGlassLabArtifactCommand = defineCommand({
   id: "glass-lab-artifacts.delete",
+  resourceMutation: { kind: "remove", resourceType: resourceKind, idParam: "rowId" },
   title: l10n("commands.glassLabArtifacts.delete.title", "Delete Glass Lab artifact"),
   params: { rowId: params.text({ required: true }) },
   async run(ctx, commandParams) {

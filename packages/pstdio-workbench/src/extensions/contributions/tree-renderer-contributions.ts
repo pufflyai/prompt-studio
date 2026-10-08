@@ -107,6 +107,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       : undefined;
     return {
       id: action.id,
+      resourceMutation: input.metadata.commands.find((command) => command.id === commandId)?.resourceMutation,
       label: text(action.label),
       icon: action.icon,
       args: toRecordParams(action.params),

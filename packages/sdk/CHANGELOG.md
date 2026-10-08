@@ -1,5 +1,27 @@
 # @pstdio/sdk
 
+## 0.41.0
+
+_2026-10-08_
+
+### Minor Changes
+
+- bd5df55: Boards and data tables, including built-in Workspaces, share search, a value-first filter picker with shared Value panels, full-width Apply filter buttons, persistent multiselect selection and footer actions, readable editable bubbles, compact icons and checkboxes, advanced AND/OR bubbles, boolean predicates, one sort in Display, and project-scoped saved views with layers-plus creation and grouped context actions; collections use one toolbar Filter action and show feedback when filters hide every item and no columns or group rows remain visible and data tables use pagination without a filtered-row summary; popovers stay anchored, use subtle borders, and avoid separator overflow; filter pickers are taller and constrain their height to the viewport, date editors use one exact-date Value field, scalar filter panels use full-width parameter fields and borderless text bubbles, view menus omit default actions, and columns can disable filtering, including Workspaces Diff.
+- 3d8fcbd: Expose native harness commands, slash completion, and provider-owned composer tags with status indicators and actions.
+- 1fd5b6d: Add project-scoped resource links through the SDK, HTTP, and CLI with owner policies and legacy anchor migration.
+- 54f25c0: Replace `client.runtime.provisionBrowserSession()` with `client.runtime.createBrowserLogin()`, which returns a single-use browser login link.
+- e47a873: Add movable workbench tabs, subtle panel drop feedback, grouped context actions, destination-aware Add, layout reset, and session rename while preserving live views and page ownership.
+- 1ff0825: Open chat file references through canonical document routes with source positions and workspace file links.
+
+### Patch Changes
+
+- 657dab6: Sessions that extensions start now use the model options they pass in `harness.params`, on top of the project's harness defaults.
+- a2d2800: Deprecate workspace archive APIs in favor of deletion.
+- ba05dcb: Show backend connection loss in the status bar, retain loaded navigation, and reconnect stalled sync streams.
+- 8d68e16: Let string extension settings load their dropdown choices from a command with the new `options` field in extension API 0.1.2.
+- 7691e04: Share one terminal session contract and one contribution id rule: the SDK exports `contributionRefId`, `commandRefId` and the renderer terminal types, and `@pstdio/ui`, `@pstdio/workbench` and the host use them instead of copies.
+- 7aaf64e: Remove the manual skill "Update" action and the `outdated` and `outdated_agents` skill fields, because agent skill folders now follow the extension source automatically.
+
 ## 0.40.0
 
 _2026-10-02_

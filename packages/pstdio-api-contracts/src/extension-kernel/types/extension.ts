@@ -136,6 +136,10 @@ export interface CommandDefinition<
   cli?: true | CliContribution;
   /** Exposes this exact command and its params schema to scoped machine tokens. */
   automation?: true;
+  /** Preview a resource rename or removal in the dashboard while this command saves. Removal asks for confirmation. */
+  resourceMutation?:
+    | { kind: "rename"; resourceType: string; idParam: string; labelParam: string }
+    | { kind: "remove"; resourceType: string; idParam: string };
   /** Records CLI invocations of this command as mutations. */
   mutating?: true;
   run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings>;

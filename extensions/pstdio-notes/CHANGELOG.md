@@ -1,5 +1,13 @@
 # pstdio-notes
 
+## 0.41.0
+
+_2026-10-08_
+
+### Patch Changes
+
+- f130437: Rewrite the extension READMEs and Planner docs for the new Docs tab on prompt.studio.
+
 ## 0.40.0
 
 _2026-10-02_

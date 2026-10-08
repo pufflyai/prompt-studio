@@ -1,5 +1,41 @@
 # @pstdio/ui
 
+## 0.41.0
+
+_2026-10-08_
+
+### Minor Changes
+
+- bd5df55: Boards and data tables, including built-in Workspaces, share search, a value-first filter picker with shared Value panels, full-width Apply filter buttons, persistent multiselect selection and footer actions, readable editable bubbles, compact icons and checkboxes, advanced AND/OR bubbles, boolean predicates, one sort in Display, and project-scoped saved views with layers-plus creation and grouped context actions; collections use one toolbar Filter action and show feedback when filters hide every item and no columns or group rows remain visible and data tables use pagination without a filtered-row summary; popovers stay anchored, use subtle borders, and avoid separator overflow; filter pickers are taller and constrain their height to the viewport, date editors use one exact-date Value field, scalar filter panels use full-width parameter fields and borderless text bubbles, view menus omit default actions, and columns can disable filtering, including Workspaces Diff.
+- bd5df55: `@pstdio/ui` removes `FilterMenu`, `MANUAL_ORDERING`, `buildOrderingOptions`, `sanitizeFilters`, `sanitizeSettings`, `KanbanRendererFilterState`, `KanbanRendererOrdering`, `SortDirection`, and the data table `defaultHiddenColumns` and `defaultShowStats` props in favor of the view bar, view sorts, and `defaultSettings`; `@pstdio/workbench` drops the same kanban types and the data table column `defaultHidden` and `defaultShowStats` options.
+- 3d8fcbd: Expose native harness commands, slash completion, and provider-owned composer tags with status indicators and actions.
+- e47a873: Add movable workbench tabs, subtle panel drop feedback, grouped context actions, destination-aware Add, layout reset, and session rename while preserving live views and page ownership.
+- 1ff0825: Open chat file references through canonical document routes with source positions and workspace file links.
+- 576eb55: Hosts can save the chosen theme outside browser storage: `ThemePreferenceProvider` accepts `storage`, and `Workbench` and `WorkbenchThemeProvider` accept `themeStorage`. `useThemePreference()` reports `pendingThemePreference` while a chosen extension theme loads.
+
+### Patch Changes
+
+- 3d8fcbd: Preserve message drafts while sequential questions and one-click plan decisions take over the composer.
+- c42c4d0: `ChatInput` no longer reports its seed through `onChange`, and adopts `defaultState` only when its text differs from the editor, so hosts can pass their live draft.
+- 24916e8: Fix Codex async questions, clickable summaries with answers below long questions, and local image previews in chat.
+- 6f20714: Allow board panning and easier edge scrolling while dragging Kanban cards.
+- 70fd7a3: Update KaTeX to 0.19 so equation rendering no longer reads render options from a polluted object prototype.
+- 2bf353b: Add size tokens for the performance meter and the `mono/3XL/semibold` text style.
+- ba05dcb: Add a ghost connection indicator and saved widget dragging and keyboard ordering in the status bar.
+- 122103b: Theme previews no longer save the previewed theme, the palette preserves the highlighted entry while themes load and reports only real highlight changes, and read-only date controls show their value in the viewer's time zone.
+- d20bd9a: Keep a selection field's label visible when its selected values are long; the value now truncates in its button.
+- 092a063: Add `HostStorageProvider` for saved tree customizations and kanban board state; it replaces `KanbanRendererStorageProvider`.
+- 7691e04: Share one terminal session contract and one contribution id rule: the SDK exports `contributionRefId`, `commandRefId` and the renderer terminal types, and `@pstdio/ui`, `@pstdio/workbench` and the host use them instead of copies.
+- 558ea66: Restore session navigation resource menus and keyboard menu activation.
+- bb62889: Report command failures once at the UI action that started them.
+- 3d8fcbd: Hide attachments during question takeover and advance first radio answers while preserving keyboard focus.
+- 0a558d6: Allow editing every board view while keeping at least one view per board.
+- 4b23942: Show open panel toggles and other pressed controls as selected in color themes that set a background but no selection color.
+- 7e0a388: Restore composer focus after submission when the parent finishes reenabling the editor.
+- b64d71e: Clear the chat composer as soon as a message is sent.
+- 51b102b: Show Codex clarification questions in the shared composer and deliver correlated answers or Skip to the live run.
+- f130437: Add a `mono/S` text style for code in reading views.
+
 ## 0.40.0
 
 _2026-10-02_

@@ -153,6 +153,11 @@ export const KeyboardAndTouch: Story = {
     await userEvent.keyboard("{Shift>}{F10}{/Shift}");
     await waitFor(() => expect(screen.getByRole("menuitem", { name: "Open session" })).toBeVisible());
     await expect(screen.getByRole("menuitem", { name: "Unavailable action" })).toHaveAttribute("data-disabled");
+    await waitFor(() => {
+      const menu = screen.getByRole("menu").getBoundingClientRect();
+      const bounds = row.getBoundingClientRect();
+      expect(Math.abs(menu.top - bounds.bottom)).toBeLessThan(bounds.height);
+    });
     await waitFor(() => expect(screen.getByRole("menu")).toHaveFocus());
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());

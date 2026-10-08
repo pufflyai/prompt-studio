@@ -28,8 +28,8 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const { workbench, ownerKey, queryKey, refreshKey } = options;
   const connected = useWorkbenchConnection();
   const [state, setState] = useState<ReadState<T>>({ queryKey, loading: true });
-  const retryRef = useRef<(() => void) | undefined>(undefined);
-  const refreshRef = useRef<(() => void) | undefined>(undefined);
+  const retryRef = useRef<(() => Promise<void>) | undefined>(undefined);
+  const refreshRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const lastRefreshKey = useRef(refreshKey);
   const callbacks = useRef(options);
   useEffect(() => {
@@ -66,7 +66,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     };
     const refresh = (reason?: "retry") => {
       const current = callbacks.current;
-      binding.request(
+      return binding.request(
         {
           ...handlers,
           // A changed read scope cancels older work without clearing the mounted view's snapshot.
@@ -81,7 +81,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     lastRefreshKey.current = callbacks.current.refreshKey;
     retryRef.current = () => {
       setState((previous) => ({ ...previous, loading: previous.value === undefined, error: undefined }));
-      refresh("retry");
+      return refresh("retry");
     };
     refresh();
     const subscription = callbacks.current.subscribe(refresh);
@@ -104,6 +104,6 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     ...current,
     error: connectionLost ? undefined : current.error?.message,
     loading: current.loading || (connectionLost && current.value === undefined),
-    retry: () => retryRef.current?.(),
+    retry: () => retryRef.current?.() ?? Promise.resolve(),
   };
 };

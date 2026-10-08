@@ -10,6 +10,7 @@ import type {
   SessionMessage,
 } from "@pstdio/sdk/extensions";
 import { createRawEventStream, extractSessionId, sendUserMessage } from "./cli-stream";
+import { claudePrompt } from "./literal-prompt";
 import { createMessageAccumulator } from "./message-accumulator";
 import { normalizeClaudeCodeStream } from "./normalize-stream";
 import { closeOpenQuestions } from "./questions";
@@ -33,7 +34,10 @@ const BASE_ARGS = [
 
 type ClaudeCodeParams = Partial<Record<"thinking", string | boolean>> & Record<string, string | boolean | undefined>;
 
-const permissionModeArgs = () => ["--permission-mode", "bypassPermissions"];
+const permissionModeArgs = (params?: ClaudeCodeParams) => [
+  "--permission-mode",
+  params?.permission_mode === "plan" ? "plan" : "bypassPermissions",
+];
 
 const thinkingArgs = (params?: ClaudeCodeParams) => {
   const thinking = params?.thinking;
@@ -41,7 +45,7 @@ const thinkingArgs = (params?: ClaudeCodeParams) => {
 };
 
 export const buildStartSessionArgs = (input: { model?: string | null; params?: ClaudeCodeParams }) => {
-  const args = [...BASE_ARGS, ...permissionModeArgs(), ...thinkingArgs(input.params)];
+  const args = [...BASE_ARGS, ...permissionModeArgs(input.params), ...thinkingArgs(input.params)];
 
   if (input.model) {
     args.push("--model", input.model);
@@ -55,7 +59,13 @@ export const buildResumeArgs = (input: {
   model?: string | null;
   params?: ClaudeCodeParams;
 }) => {
-  const args = ["--resume", input.agentSessionId, ...BASE_ARGS, ...permissionModeArgs(), ...thinkingArgs(input.params)];
+  const args = [
+    "--resume",
+    input.agentSessionId,
+    ...BASE_ARGS,
+    ...permissionModeArgs(input.params),
+    ...thinkingArgs(input.params),
+  ];
 
   if (input.model) {
     args.push("--model", input.model);
@@ -85,15 +95,19 @@ const runPipelineFromEvents = async (
   events: AsyncIterable<RawLogEvent>,
   sink: HarnessEventSink,
   accumulatorOptions: Parameters<typeof createMessageAccumulator>[1],
+  compact = false,
 ) => {
   const accumulator = createMessageAccumulator(sink, accumulatorOptions);
+  let failed = false;
 
-  for await (const message of normalizeClaudeCodeStream(events)) {
+  for await (const message of normalizeClaudeCodeStream(events, { compact })) {
+    if (message.parts.some((part) => part.type === "error")) failed = true;
     accumulator.push(message);
   }
 
   // Claude's output ends when it exits, so a question it was still waiting on can never be answered.
   closeOpenQuestions(sink);
+  return failed;
 };
 
 type SpawnedChild = {
@@ -172,6 +186,8 @@ const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): 
 };
 
 export type StartSpawnInput = {
+  signal?: AbortSignal;
+  nativeCommand?: boolean;
   prompt: string;
   attachments?: HarnessAttachment[];
   model?: string | null;
@@ -180,25 +196,51 @@ export type StartSpawnInput = {
   env?: Record<string, string>;
   events: HarnessEventSink;
   questions?: HarnessQuestionChannel;
+  approvals?: HarnessApprovalChannel;
 };
 
 export const startClaudeCodeSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
+  input.signal?.throwIfAborted();
   const args = buildStartSessionArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
   // Keep diagnostics from filling the pipe and blocking the executable.
   child.stderr.resume();
+  const abort = () => child.kill();
+  input.signal?.addEventListener("abort", abort, { once: true });
+  void child.onExit.then(() => input.signal?.removeEventListener("abort", abort));
 
-  sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
+  sendUserMessage(
+    child.stdin,
+    promptWithAttachmentManifest(claudePrompt(input.prompt, input.nativeCommand), input.attachments),
+  );
 
-  const events = createRawEventStream(child.stdout, child.stdin, { questions: input.questions });
-  const { sessionId, remainingEvents } = await extractSessionId(events);
-
-  const pipelineDone = runPipelineFromEvents(remainingEvents, input.events, {
-    initialMessages: [userMessageFor(input.prompt, input.attachments)],
-    pushInitialMessages: true,
+  const events = createRawEventStream(child.stdout, child.stdin, {
+    questions: input.questions,
+    approvals: input.approvals,
   });
+  let extracted: Awaited<ReturnType<typeof extractSessionId>>;
+  try {
+    extracted = await extractSessionId(events);
+  } catch (error) {
+    child.kill();
+    await child.onExit;
+    throw error;
+  }
+  const { sessionId, remainingEvents } = extracted;
 
-  const done = Promise.all([child.onExit, pipelineDone]).then(([exit]) => toHarnessExit(exit));
+  const pipelineDone = runPipelineFromEvents(
+    remainingEvents,
+    input.events,
+    {
+      initialMessages: [userMessageFor(input.prompt, input.attachments)],
+      pushInitialMessages: true,
+    },
+    Boolean(input.nativeCommand && /^\/compact(?:\s|$)/.test(input.prompt)),
+  );
+
+  const done = Promise.all([child.onExit, pipelineDone]).then(([exit, failed]) =>
+    failed ? { status: "failed" as const } : toHarnessExit(exit),
+  );
 
   return {
     agentSessionId: sessionId,
@@ -212,30 +254,43 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
 export type ResumeSpawnInput = StartSpawnInput & {
   agentSessionId: string;
   messageOffset?: number;
-  approvals?: HarnessApprovalChannel;
 };
 
 export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps = defaultDeps) => {
   // A resume starts a new Claude process, which cannot answer what the previous process asked.
   closeOpenQuestions(input.events);
+  input.signal?.throwIfAborted();
   const args = buildResumeArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
   child.stderr.resume();
+  const abort = () => child.kill();
+  input.signal?.addEventListener("abort", abort, { once: true });
+  void child.onExit.then(() => input.signal?.removeEventListener("abort", abort));
 
-  sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
+  sendUserMessage(
+    child.stdin,
+    promptWithAttachmentManifest(claudePrompt(input.prompt, input.nativeCommand), input.attachments),
+  );
 
   const events = createRawEventStream(child.stdout, child.stdin, {
     questions: input.questions,
     approvals: input.approvals,
   });
 
-  const pipelineDone = runPipelineFromEvents(events, input.events, {
-    initialMessages: [userMessageFor(input.prompt, input.attachments)],
-    indexOffset: input.messageOffset ?? 0,
-    pushInitialMessages: true,
-  });
+  const pipelineDone = runPipelineFromEvents(
+    events,
+    input.events,
+    {
+      initialMessages: [userMessageFor(input.prompt, input.attachments)],
+      indexOffset: input.messageOffset ?? 0,
+      pushInitialMessages: true,
+    },
+    Boolean(input.nativeCommand && /^\/compact(?:\s|$)/.test(input.prompt)),
+  );
 
-  const done = Promise.all([child.onExit, pipelineDone]).then(([exit]) => toHarnessExit(exit));
+  const done = Promise.all([child.onExit, pipelineDone]).then(([exit, failed]) =>
+    failed ? { status: "failed" as const } : toHarnessExit(exit),
+  );
 
   return {
     agentSessionId: input.agentSessionId,
