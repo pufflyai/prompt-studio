@@ -35,13 +35,14 @@ export const SendMessage: StoryObj<typeof meta> = {
   tags: ["measurement-regression"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const editor = () => canvas.getAllByTestId("content-editable").at(-1)!;
     const errors = spyOn(console, "error");
     try {
-      await userEvent.click(canvas.getByTestId("content-editable"));
+      await userEvent.click(editor());
       await userEvent.keyboard("Measure this message.");
       await waitFor(() => expect(canvas.getByTestId("send-message-button")).toBeEnabled());
       await userEvent.click(canvas.getByTestId("send-message-button"));
-      await waitFor(() => expect(canvas.getByTestId("content-editable")).toBeEmptyDOMElement());
+      await waitFor(() => expect(editor()).toHaveTextContent(/^$/));
       await waitFor(() => expect(canvas.getByText("Measure this message.")).toBeVisible());
       expect(errors.mock.calls.filter((args) => args.some((arg) => String(arg).includes("flushSync")))).toEqual([]);
     } finally {
