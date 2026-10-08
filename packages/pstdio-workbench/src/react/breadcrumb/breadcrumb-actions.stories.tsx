@@ -1,6 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { runResourceMutation } from "../../extensions/host/workbench-resource-mutation";
@@ -10,9 +10,9 @@ import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
 
 const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
   const { optimistic = false } = props;
-  const [save, setSave] = useState<{ resolve(): void; reject(error: Error): void }>();
+  const save = useRef<{ resolve(): void; reject(error: Error): void } | undefined>(undefined);
   const waitForSave = () =>
-    optimistic ? new Promise<void>((resolve, reject) => setSave({ resolve, reject })) : Promise.resolve();
+    optimistic ? new Promise<void>((resolve, reject) => (save.current = { resolve, reject })) : Promise.resolve();
   const [result, setResult] = useState("No action run");
   const [workbench] = useState(() => {
     const page = { kind: "page" as const, extensionId: "storybook", id: "notes" };
@@ -159,20 +159,20 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
     <Stack>
       <WorkbenchBreadcrumbView workbench={workbench} />
       <Text>{result}</Text>
-      {save ? (
+      {optimistic ? (
         <Stack direction="row">
           <Button
             onClick={() => {
-              save.resolve();
-              setSave(undefined);
+              save.current?.resolve();
+              save.current = undefined;
             }}
           >
             Finish save
           </Button>
           <Button
             onClick={() => {
-              save.reject(new Error("Save failed"));
-              setSave(undefined);
+              save.current?.reject(new Error("Save failed"));
+              save.current = undefined;
             }}
           >
             Fail save

@@ -4,6 +4,7 @@ import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, S
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
+import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { WorkbenchIcon } from "../shared/icon";
 import { runPlacementAction } from "../shared/run-placement-action";
 import { usePlacementTab } from "../shared/use-placement-tab";
@@ -56,6 +57,7 @@ export const buildWorkbenchBreadcrumbItems = (
   });
 export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => {
   const { workbench } = props;
+  const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const items = useWorkbenchStore(workbench.breadcrumbs.store, (state) => state.items) ?? [];
   const page = useWorkbenchStore(workbench.pages.store, (state) =>
     state.activePageId ? state.pages[state.activePageId] : undefined,
@@ -69,7 +71,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   const crumbs = [...items];
   if (
     resource &&
-    workbench.resources.preview.resolve(resource) &&
+    resolveResourcePreview(resource, changes) &&
     !items.some((item) => item.resource && resourceKey(item.resource) === resourceKey(resource))
   ) {
     crumbs.push({

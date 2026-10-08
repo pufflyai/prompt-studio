@@ -23,7 +23,7 @@ export const useTreeData = (
   onMoveError?: (error: unknown) => void,
 ) => {
   const trees = getWorkbenchRenderers(workbench);
-  useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
+  const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
   const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
@@ -123,7 +123,7 @@ export const useTreeData = (
   });
   return {
     ...movement,
-    body: previewTreeResources(movement.body, movement.childrenByNodeId, workbench.resources),
+    body: previewTreeResources(movement.body, movement.childrenByNodeId, changes),
     childrenByNodeId: {},
     header: read.value?.header ?? [],
     footer: read.value?.footer ?? [],
