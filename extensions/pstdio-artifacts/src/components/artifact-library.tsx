@@ -1,6 +1,5 @@
-import { Input, SimpleGrid, Stack, Text } from "@chakra-ui/react";
-import { EmptyState, Header, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
-import { useState } from "react";
+import { SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import type { ArtifactSummary } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
 import { ArtifactThumbnail, type LoadArtifactPreview } from "./artifact-thumbnail";
@@ -29,31 +28,13 @@ export const ArtifactLibrary = (props: ArtifactLibraryProps) => {
   const { items, onOpen, loadPreview } = props;
   const translations = useArtifactTranslations();
   const { t } = translations;
-  const [search, setSearch] = useState("");
-  const filtered = items.filter((item) => item.title.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
   return (
     <Stack height="full" minHeight="0" gap="0">
-      <Header flexShrink="0" justifyContent="space-between">
-        <Text as="h2" textStyle="label/M/medium" flexShrink="0">
-          {t("library.heading", "Artifacts")}
-        </Text>
-        <Input
-          size="sm"
-          flex="1"
-          minWidth="0"
-          maxWidth="sm"
-          type="search"
-          aria-label={t("library.search", "Search artifacts")}
-          placeholder={t("library.searchPlaceholder", "Search artifacts…")}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-      </Header>
       <ScrollArea flex="1" minHeight="0">
         <Stack gap="lg" p="lg" width="full" maxWidth="4xl" mx="auto">
-          {filtered.length ? (
+          {items.length ? (
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="lg">
-              {filtered.map((item) => (
+              {items.map((item) => (
                 <SimpleCard
                   asChild
                   key={item.artifactId}
@@ -81,16 +62,8 @@ export const ArtifactLibrary = (props: ArtifactLibraryProps) => {
             </SimpleGrid>
           ) : (
             <EmptyState
-              title={
-                search
-                  ? t("library.noMatches", "No matching artifacts")
-                  : t("library.emptyTitle", "Your first artifact starts with an idea")
-              }
-              description={
-                search
-                  ? t("library.searchHint", "Try a different title.")
-                  : t("library.emptyHint", "Ask an agent to create and publish an interactive HTML page.")
-              }
+              title={t("library.emptyTitle", "Your first artifact starts with an idea")}
+              description={t("library.emptyHint", "Ask an agent to create and publish an interactive HTML page.")}
             />
           )}
         </Stack>
