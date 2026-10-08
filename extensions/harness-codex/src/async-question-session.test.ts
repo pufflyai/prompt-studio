@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { JsonPatch, SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
 import { resumeCodexSession, type SpawnDeps, startCodexSession } from "./spawn";
 
@@ -9,7 +10,7 @@ afterEach(() => {
 });
 const deps: SpawnDeps = {
   spawnProcess: (_args, options) => {
-    const child = spawn(process.execPath, [new URL("./app-server-fixture.ts", import.meta.url).pathname], {
+    const child = spawn(process.execPath, [fileURLToPath(new URL("./app-server-fixture.ts", import.meta.url))], {
       stdio: "pipe",
       env: { ...process.env, ...options?.env, PSTDIO_TEST_MODE: options?.env?.PSTDIO_TEST_MODE ?? "async" },
     });
