@@ -85,6 +85,7 @@ export type DataTableRendererSavedView = CollectionSavedView<DataTableRendererSe
 
 export interface DataTableRendererRowAction {
   id: string;
+  commandId?: string;
   label: string;
   icon?: unknown;
   destructive?: boolean;
@@ -93,6 +94,7 @@ export interface DataTableRendererRowAction {
 
 export interface DataTableRendererSelectionAction {
   id: string;
+  commandId?: string;
   label: string;
   icon?: unknown;
   destructive?: boolean;

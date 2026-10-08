@@ -205,6 +205,11 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           kind: "kanban",
           resourceKind: record.resourceKind,
           toolbarActions: mapViewToolbarActions(record),
+          listRowActions: () =>
+            (record.rowActions ?? []).map((action) => ({
+              commandId: action.commandId,
+              label: localize(action.label, action.id),
+            })),
           storageScope: context.projectId,
           attributes: attributes.source,
           defaultSettings: builtIns.settings,

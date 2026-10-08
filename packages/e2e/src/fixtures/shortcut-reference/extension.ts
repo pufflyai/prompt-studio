@@ -17,6 +17,16 @@ const command = defineCommand({
   },
 });
 const unassigned = defineCommand({ id: "unassigned", title: "Unassigned greeting", palette: [{}], run() {} });
+const archive = defineCommand({ id: "archive", title: "Archive shortcut record", run() {} });
+const board = defineView({
+  id: "board",
+  title: "Shortcut board",
+  body: {
+    kind: "kanban",
+    query: () => ({ rows: [] }),
+    rowActions: [{ id: "archive", label: "Archive shortcut record", command: archive.ref }],
+  },
+});
 const view = defineView({
   id: "reference",
   title: "Shortcut reference page",
@@ -36,8 +46,8 @@ const page = definePage({
   slots: [{ id: "inspector", region: "side", item: { kind: "view", view: inspector.ref, presence: "closed" } }],
 });
 export default defineExtension({
-  commands: [command, unassigned],
-  views: [view, inspector],
+  commands: [command, unassigned, archive],
+  views: [view, inspector, board],
   pages: [page],
   navigationItems: [
     defineNavigationItem({

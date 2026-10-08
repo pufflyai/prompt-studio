@@ -20,7 +20,20 @@ const stableValue = (value: unknown): unknown => {
   }
   return value;
 };
-const actionId = (action: NavigationTarget) => JSON.stringify(stableValue(action));
+const normalizeAction = (action: NavigationTarget) => {
+  if (
+    action.kind === "command" &&
+    action.args &&
+    !Array.isArray(action.args) &&
+    typeof action.args === "object" &&
+    Object.keys(action.args).length === 0
+  ) {
+    const { args: _args, ...target } = action;
+    return target;
+  }
+  return action;
+};
+const actionId = (action: NavigationTarget) => JSON.stringify(stableValue(normalizeAction(action)));
 const commandOwner = (commandId: string, fallback: string) =>
   commandId.split(".command.")[0] === commandId ? fallback : commandId.split(".command.")[0]!;
 
@@ -96,12 +109,22 @@ const userFacingActions = (sources: ShortcutSources) => {
   });
   const toolbar = Object.values(sources.views).flatMap((view) => {
     if (view.body.kind !== "dataTable" && view.body.kind !== "kanban") return [];
-    return (view.body.toolbarActions ?? []).flatMap((action) => {
+    const actions = [
+      ...(view.body.toolbarActions ?? []),
+      ...(view.body.kind === "kanban"
+        ? (view.body.listRowActions?.() ?? [])
+        : [...(view.body.rowActions ?? []), ...(view.body.selectionActions ?? [])]),
+    ];
+    return actions.flatMap((action) => {
       const record = action.commandId ? sources.commands[action.commandId] : undefined;
       return record
         ? [
             {
-              action: { kind: "command" as const, commandId: record.command.id, args: action.args },
+              action: {
+                kind: "command" as const,
+                commandId: record.command.id,
+                args: "args" in action ? action.args : undefined,
+              },
               label: action.label || record.command.label,
               ownerId: view.ownerId,
               category: record.command.category,

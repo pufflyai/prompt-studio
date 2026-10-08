@@ -99,17 +99,64 @@ test("lists all navigation bindings and retains an unassigned placement after di
 test("includes declared toolbar actions without exposing the view query command", () => {
   const workbench = createWorkbench();
   workbench.commands.registerCommand({ id: "export", label: "Export" }, { execute() {} });
+  workbench.commands.registerCommand({ id: "selected", label: "Export selected" }, { execute() {} });
   workbench.commands.registerCommand({ id: "query", label: "Fetch rows" }, { execute() {} });
-  workbench.views.registerView({
+  const view = workbench.views.registerView({
     id: "records",
     title: "Records",
     body: {
       kind: "dataTable",
       executeQuery: async () => ({ rows: [] }),
+      rowActions: [{ id: "row", label: "Export row", commandId: "export", run() {} }],
+      selectionActions: [{ id: "selection", label: "Export selected", commandId: "selected", run() {} }],
       toolbarActions: [{ id: "export", label: "Export records", commandId: "export", args: { format: "csv" } }],
     },
   });
   const entries = buildShortcutEntries(readShortcutSources(workbench));
   expect(entries.find((entry) => entry.label === "Export records")?.keybindings).toEqual([]);
   expect(entries.some((entry) => entry.label === "Fetch rows")).toBe(false);
+  expect(entries.find((entry) => entry.label === "Export row")?.keybindings).toEqual([]);
+  expect(entries.find((entry) => entry.label === "Export selected")?.keybindings).toEqual([]);
+  view.dispose();
+  expect(
+    buildShortcutEntries(readShortcutSources(workbench)).filter((entry) => entry.label.startsWith("Export")),
+  ).toEqual([]);
+});
+
+test("merges empty command parameters with omitted parameters", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand({ id: "open", label: "Open records" }, { execute() {} });
+  workbench.layout.registerMenuItem(["palette"], { commandId: "open", label: "Open records", args: {} });
+  workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: "open" }, keybinding: "Alt+O" });
+  expect(
+    buildShortcutEntries(readShortcutSources(workbench)).filter((entry) => entry.label === "Open records"),
+  ).toMatchObject([{ label: "Open records", keybindings: ["Alt+O"] }]);
+});
+
+test("discovers declared Kanban row-menu actions until their view is disposed", async () => {
+  const { registerWorkbenchExtensionKanbanRenderers } = await import("@pstdio/workbench/extensions");
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand(
+    { id: "tools.records.command.archive", label: "Archive record" },
+    { execute() {} },
+  );
+  const registration = registerWorkbenchExtensionKanbanRenderers(
+    { projectId: "project", workbench, executeCommand: async () => [] },
+    [
+      {
+        id: "records",
+        extensionId: "tools.records",
+        title: "Records",
+        queryHandlerId: "query",
+        rowActions: [{ id: "archive", label: "Archive record", commandId: "tools.records.command.archive" }],
+      },
+    ],
+  );
+  expect(
+    buildShortcutEntries(readShortcutSources(workbench)).filter((entry) => entry.category === "tools.records"),
+  ).toMatchObject([{ label: "Archive record", category: "tools.records", keybindings: [] }]);
+  registration.dispose();
+  expect(
+    buildShortcutEntries(readShortcutSources(workbench)).filter((entry) => entry.category === "tools.records"),
+  ).toEqual([]);
 });

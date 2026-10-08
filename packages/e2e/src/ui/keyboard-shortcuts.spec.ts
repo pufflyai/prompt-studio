@@ -38,6 +38,7 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
     "Say hello",
     "Shortcut greeting",
     "Unassigned greeting",
+    "Archive shortcut record",
     "Open shortcut destination",
     "Shortcut inspector",
     "Shortcut reference page + Shortcut inspector",
