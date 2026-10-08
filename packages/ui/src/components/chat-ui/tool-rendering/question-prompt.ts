@@ -107,7 +107,7 @@ export const parseQuestionPrompt = (input: unknown) => {
   });
   if (questions.length === 0) return null;
 
-  return { questions };
+  return { questions, ...(record.delivery === "async" ? { delivery: "async" as const } : {}) };
 };
 
 const isQuestionTool = (part: ToolPart) => part.tool.toLowerCase() === "question";
@@ -125,12 +125,47 @@ const orderedQuestionRequests = (messages: SessionMessage[]) => {
   return requests.values();
 };
 
+export const getQuestionRequestKey = (part: ToolPart) => part.callId ?? JSON.stringify(part.state?.input);
+
+export const isPendingQuestion = (part: ToolPart) =>
+  part.status !== "failed" &&
+  part.status !== "denied" &&
+  !hasQuestionResponse(part.state?.output) &&
+  !hasQuestionResponse(part.state?.metadata);
+
+const questionPromptFor = (part: ToolPart) => {
+  if (!isPendingQuestion(part)) return undefined;
+  const prompt = parseQuestionPrompt(part.state?.input);
+  return prompt ? { ...prompt, ...(part.callId ? { callId: part.callId } : {}) } : undefined;
+};
+
+export const resolveQuestionPrompt = (messages: SessionMessage[], key: string) => {
+  const part = [...orderedQuestionRequests(messages)].find((part) => getQuestionRequestKey(part) === key);
+  return part ? questionPromptFor(part) : undefined;
+};
+
 export const resolveActiveQuestionPrompt = (messages: SessionMessage[]) => {
   for (const part of orderedQuestionRequests(messages)) {
-    if (part.status === "failed" || part.status === "denied") continue;
-    if (hasQuestionResponse(part.state?.output) || hasQuestionResponse(part.state?.metadata)) continue;
-    const prompt = parseQuestionPrompt(part.state?.input);
-    if (prompt) return { ...prompt, ...(part.callId ? { callId: part.callId } : {}) };
+    const prompt = questionPromptFor(part);
+    if (prompt && prompt.delivery !== "async") return prompt;
   }
   return undefined;
+};
+
+export const getQuestionBubbleAnswer = (part: ToolPart, index: number): string | undefined => {
+  for (const value of [part.state?.metadata, part.state?.output]) {
+    const record = toInputRecord(value);
+    if (Array.isArray(record?.answers)) {
+      const answers = record.answers[index];
+      return Array.isArray(answers) && answers.length ? answers.join(", ") : "Skipped";
+    }
+  }
+  if (isPendingQuestion(part)) return undefined;
+  const prompt = parseQuestionPrompt(part.state?.input);
+  const text = getQuestionResponseText(part.state?.output);
+  if (!text || !prompt) return part.status === "failed" || part.status === "denied" ? "Unavailable" : "Answered";
+  const question = prompt.questions[index].question;
+  const answer = text.split(/\n\n/).find((section) => section.startsWith(`${question}\n`));
+  if (answer) return answer.slice(question.length + 1).trim() || "Skipped";
+  return prompt.questions.length === 1 ? text : "Answered";
 };

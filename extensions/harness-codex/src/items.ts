@@ -31,6 +31,7 @@ const toolMessage = (item: CodexThreadItem, id: string, tool: string, input: unk
     state: {
       input,
       output: item.aggregated_output,
+      metadata: item.metadata,
       errorText: status === "failed" ? "Tool execution failed" : undefined,
     },
   };
@@ -39,6 +40,10 @@ const toolMessage = (item: CodexThreadItem, id: string, tool: string, input: unk
 
 export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionMessage | null => {
   const id = `${idPrefix}-${item.id}`;
+
+  if (item.type === "user_message") {
+    return { id, role: "user", parts: [{ type: "text", text: item.text ?? "" }] };
+  }
 
   if (item.type === "agent_message") {
     return { id, role: "assistant", parts: [{ type: "text", text: item.text ?? "" }] };

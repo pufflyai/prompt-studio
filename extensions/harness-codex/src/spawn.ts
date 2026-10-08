@@ -7,6 +7,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { createAppServerItems } from "./app-server-items";
 import { createAppServerRpc } from "./app-server-rpc";
+import { createAsyncQuestionReplies } from "./async-question-replies";
 import { defaultSpawnProcess, type SpawnDeps } from "./codex-process";
 import { createCodexStreamPipeline } from "./normalize-stream";
 import { confirmQuestionReply } from "./question-confirmation";
@@ -31,20 +32,24 @@ export interface ResumeSpawnInput extends StartSpawnInput {
 }
 
 const runCodexSession = async (input: StartSpawnInput & Partial<ResumeSpawnInput>, deps: SpawnDeps) => {
-  if (input.questionResponse) throw questionReplyError("Codex question request is no longer pending.");
+  const asyncQuestions = createAsyncQuestionReplies(input.events);
+  const resumedAnswer = input.questionResponse ? asyncQuestions.prepare(input.questionResponse) : undefined;
+  const prompt = resumedAnswer?.text ?? input.prompt;
   const child = deps.spawnProcess(
     ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
     { cwd: input.cwd, env: input.env },
   );
+  const initialUserMessage = userMessageFor(prompt, input.attachments);
   const pipeline = createCodexStreamPipeline(input.events, {
-    initialMessages: [userMessageFor(input.prompt, input.attachments)],
+    initialMessages: [initialUserMessage],
     indexOffset: input.messageOffset ?? 0,
   });
   const publish = (item: import("./types").CodexThreadItem) => pipeline.handleEvent({ type: "item.updated", item });
-  const items = createAppServerItems(publish);
+  const items = createAppServerItems(publish, initialUserMessage.id);
   const completion = Promise.withResolvers<HarnessExit>();
   let ended = false;
   let transcriptPath: string | null = null;
+  let activeTurnId: string | undefined;
   const finish = (exit: HarnessExit, event?: CodexThreadEvent) => {
     if (ended) return;
     ended = true;
@@ -58,6 +63,7 @@ const runCodexSession = async (input: StartSpawnInput & Partial<ResumeSpawnInput
     if (ended) return;
     items.receive(message);
     questions.receive(message);
+    if (message.method === "turn/started") activeTurnId = (message.params?.turn as { id: string }).id;
     if (message.method === "turn/completed") {
       const turn = message.params?.turn as { status: string; error?: { message?: string } };
       const statuses: Record<string, HarnessExit["status"]> = {
@@ -98,15 +104,28 @@ const runCodexSession = async (input: StartSpawnInput & Partial<ResumeSpawnInput
       config: { model_reasoning_effort: input.params?.model_reasoning_effort ?? "medium" },
     })) as { thread: { id: string; path: string | null } };
     transcriptPath = result.thread.path;
-    await rpc.request("turn/start", {
+    const started = (await rpc.request("turn/start", {
       threadId: result.thread.id,
-      input: [{ type: "text", text: promptWithAttachmentManifest(input.prompt, input.attachments), text_elements: [] }],
-    });
+      clientUserMessageId: initialUserMessage.id,
+      input: [{ type: "text", text: promptWithAttachmentManifest(prompt, input.attachments), text_elements: [] }],
+    })) as { turn: { id: string } };
+    activeTurnId = started.turn.id;
+    resumedAnswer?.accept();
     return {
       agentSessionId: result.thread.id,
       done: Promise.all([completion.promise, child.onExit, rpc.finished.catch(() => {})]).then(([exit]) => exit),
       stop: () => finish({ status: "cancelled" }),
-      replyQuestion: questions.replyQuestion,
+      replyQuestion: (response) => {
+        if (ended) return Promise.reject(questionReplyError("Codex question request is no longer pending."));
+        if (!asyncQuestions.find(response)) return questions.replyQuestion(response);
+        return asyncQuestions.reply(response, (text) =>
+          rpc.request("turn/steer", {
+            threadId: result.thread.id,
+            expectedTurnId: activeTurnId,
+            input: [{ type: "text", text, text_elements: [] }],
+          }),
+        );
+      },
       timeoutStrategy: "provider",
       pid: child.pid,
     } satisfies HarnessSession;

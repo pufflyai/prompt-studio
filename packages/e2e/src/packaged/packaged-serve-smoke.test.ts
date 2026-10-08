@@ -26,6 +26,7 @@ import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smo
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
+// Async question parts and accepted answers survive the packaged live reply path.
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.

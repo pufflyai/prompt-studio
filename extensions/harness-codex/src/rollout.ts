@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
+import { type AsyncUserInputQuestion, asyncQuestionItem } from "./async-question-items";
 import { classifyCodexTool } from "./items";
 import { type CodexQuestion, questionAnswerText, questionInput } from "./questions";
 import { type RolloutItem, rolloutItemMessage } from "./rollout-items";
@@ -117,15 +118,23 @@ const appendReasoning = (payload: RolloutPayload, createdAt: number | undefined,
 const appendFunctionCall = (payload: RolloutPayload, createdAt: number | undefined, state: RolloutState) => {
   if (!payload.call_id) return;
 
-  const tool = payload.name === "request_user_input" ? "question" : (payload.name ?? "unknown");
+  const async = payload.name === "request_user_input_async";
+  const tool = async || payload.name === "request_user_input" ? "question" : (payload.name ?? "unknown");
   const input = parseArguments(payload.arguments);
+  const question = async
+    ? asyncQuestionItem(payload.call_id, (input as { questions: AsyncUserInputQuestion[] }).questions)
+    : undefined;
   const part: ToolPart = {
     type: "tool",
     tool,
     callId: payload.call_id,
     actionType: classifyCodexTool(tool),
     status: "pending",
-    state: { input: tool === "question" ? questionInput((input as { questions: CodexQuestion[] }).questions) : input },
+    state: {
+      input:
+        question?.input ??
+        (tool === "question" ? questionInput((input as { questions: CodexQuestion[] }).questions) : input),
+    },
   };
 
   state.toolIndex.set(payload.call_id, state.messages.length);
@@ -140,15 +149,24 @@ const completeFunctionCall = (payload: RolloutPayload, state: RolloutState) => {
 
   const existingMessage = state.messages[index];
   const existingPart = existingMessage.parts[0] as ToolPart;
+  if ((existingPart.state?.input as { delivery?: string })?.delivery === "async") return;
   let output: unknown = payload.output;
+  let metadata = existingPart.state?.metadata;
   if (existingPart.tool === "question") {
     const result = parseArguments(payload.output) as { answers?: Record<string, { answers: string[] }> };
     const input = existingPart.state?.input as { questions: CodexQuestion[] };
-    if (result?.answers) output = questionAnswerText(input.questions, result.answers);
+    if (result?.answers) {
+      output = questionAnswerText(input.questions, result.answers);
+      metadata = {
+        answers: Object.keys(result.answers).length
+          ? input.questions.map((question) => result.answers?.[question.id]?.answers ?? [])
+          : [],
+      };
+    }
   }
   state.messages[index] = {
     ...existingMessage,
-    parts: [{ ...existingPart, status: "completed", state: { ...existingPart.state, output } }],
+    parts: [{ ...existingPart, status: "completed", state: { ...existingPart.state, output, metadata } }],
   };
 };
 
@@ -202,9 +220,16 @@ export const normalizeRollout = (content: string): SessionMessage[] => {
 
   return turns.flatMap((turn) => {
     if (!turn.items) return turn.state.messages;
-    // Questions are server requests and have no completed ThreadItem record.
+    // Blocking questions have no completed ThreadItem; async deliveries do.
     const questions = turn.state.messages.filter((message) =>
-      message.parts.some((part) => part.type === "tool" && part.tool === "question"),
+      message.parts.some(
+        (part) =>
+          part.type === "tool" &&
+          part.tool === "question" &&
+          !turn.items?.some((item) =>
+            item.parts.some((candidate) => candidate.type === "tool" && candidate.callId === part.callId),
+          ),
+      ),
     );
     return [...questions, ...turn.items].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
   });

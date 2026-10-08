@@ -5,7 +5,9 @@ import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { RichMessage } from "@/components/rich-text";
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider, useChatLinkHandler } from "../links/chat-link-context";
+import { parseQuestionPrompt } from "../tool-rendering/question-prompt";
 import { Response } from "./ai-response";
+import { ChatQuestionBubble } from "./chat-question-bubble";
 import type { AlertPart, ChatMessagePart, ErrorPart, FilePart, SessionMessage, ToolPart } from "./message-types";
 import { ToolInvocationTimeline, type ToolInvocationTimelineProps } from "./tool-invocation-timeline";
 
@@ -85,7 +87,7 @@ const collectToolInvocations = (parts: ChatMessagePart[], startIndex: number) =>
 
   while (lookahead < parts.length) {
     const nextPart = parts[lookahead];
-    if (!isToolPart(nextPart)) break;
+    if (!isToolPart(nextPart) || (nextPart.tool === "question" && parseQuestionPrompt(nextPart.state?.input))) break;
     invocations.push(nextPart);
     lookahead += 1;
   }
@@ -139,6 +141,10 @@ function MessagePartsContent(props: MessagePartsProps) {
         );
         break;
       case "tool": {
+        if (part.tool === "question" && parseQuestionPrompt(part.state?.input)) {
+          nodes.push(<ChatQuestionBubble key={key} part={part} />);
+          break;
+        }
         const { invocations, nextIndex } = collectToolInvocations(parts, partIndex);
         partIndex = nextIndex;
         nodes.push(

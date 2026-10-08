@@ -1,4 +1,5 @@
 import type { SessionMessage } from "@pstdio/sdk/extensions";
+import { type AsyncUserInputQuestion, asyncQuestionItem } from "./async-question-items";
 import { itemToMessage } from "./items";
 import type { CodexThreadItem } from "./types";
 
@@ -17,6 +18,8 @@ export type RolloutItem = {
   server?: string;
   tool?: string;
   query?: string;
+  delivery?: string | null;
+  questions?: AsyncUserInputQuestion[] | null;
 };
 
 const joinText = (content: RolloutText[] | undefined) => (content ?? []).map((part) => part.text ?? "").join("");
@@ -27,6 +30,7 @@ const toThreadItem = (item: RolloutItem): CodexThreadItem | null => {
   const id = item.id ?? "";
   switch (item.type) {
     case "AgentMessage":
+      if (item.delivery === "async" && item.questions?.length) return asyncQuestionItem(id, item.questions);
       return { id, type: "agent_message", text: joinText(item.content) };
     case "Reasoning": {
       const text = (item.summary_text ?? []).join("\n");

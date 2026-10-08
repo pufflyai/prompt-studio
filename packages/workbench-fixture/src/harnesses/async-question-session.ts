@@ -17,7 +17,10 @@ export const createAsyncQuestionSession = (
         callId: "first-question",
         status: "pending",
         state: {
-          input: { questions: [{ question: "Which language?", options: ["TypeScript", "Python"], custom: true }] },
+          input: {
+            delivery: "async",
+            questions: [{ question: "Which language?", options: ["TypeScript", "Python"], custom: true }],
+          },
         },
       },
     ],
@@ -31,7 +34,9 @@ export const createAsyncQuestionSession = (
         tool: "question",
         callId: "second-question",
         status: "pending",
-        state: { input: { questions: [{ question: "Which validation?", options: ["Browser", "Native"] }] } },
+        state: {
+          input: { delivery: "async", questions: [{ question: "Which validation?", options: ["Browser", "Native"] }] },
+        },
       },
     ],
   };

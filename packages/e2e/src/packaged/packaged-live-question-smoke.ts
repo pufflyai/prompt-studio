@@ -42,7 +42,7 @@ export const registerLiveQuestionSmokeTests = () => {
           start(_ctx, input) {
             let finish;
             const done = new Promise(resolve => { finish = resolve; });
-            const part = { type: "tool", tool: "question", callId: "request-1", status: "pending", state: { input: { questions: [{ id: "greeting", question: "Which greeting?", options: [{ label: "Hi" }] }] } } };
+            const part = { type: "tool", tool: "question", callId: "request-1", status: "pending", state: { input: { delivery: "async", questions: [{ id: "greeting", question: "Which greeting?", options: [{ label: "Hi" }] }] } } };
             input.events.push({ op: "add", path: "/messages/0", value: { id: "question", role: "assistant", parts: [part] } });
             const hostPart = { ...part, callId: "request-2" };
             input.events.push({ op: "add", path: "/messages/1", value: { id: "host-question", role: "assistant", parts: [hostPart] } });
@@ -57,7 +57,7 @@ export const registerLiveQuestionSmokeTests = () => {
                 if (response.callId === "broken-provider") throw new Error("Provider failed");
                 if (response.callId !== "request-1") throw Object.assign(new Error("Stale request"), { questionRejected: true });
                 writeFileSync(${JSON.stringify(evidence)}, JSON.stringify(response));
-                input.events.push({ op: "replace", path: "/messages/0", value: { id: "question", role: "assistant", parts: [{ ...part, status: "completed", state: { ...part.state, output: response.answers.flat().join(", ") } }] } });
+                input.events.push({ op: "replace", path: "/messages/0", value: { id: "question", role: "assistant", parts: [{ ...part, status: "completed", state: { ...part.state, output: { answers: response.answers } } }] } });
               }
             };
           },
@@ -169,7 +169,7 @@ export const registerLiveQuestionSmokeTests = () => {
         expect((await request(`/sessions/${session.id}`)).agent_session_id).toBe("native-thread");
         expect((await request(`/sessions/${session.id}/conversation`)).messages[0].parts[0]).toMatchObject({
           status: "completed",
-          state: { output: scenario.native.flat().join(", ") },
+          state: { input: { delivery: "async" }, output: { answers: scenario.native } },
         });
       } finally {
         if (child) await stopProcess(child);
