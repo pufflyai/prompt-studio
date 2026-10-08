@@ -140,6 +140,12 @@ must validate current permissions and source/destination data before writing. A 
 the owning tree; extensions should also emit their declared data event for other
 views that depend on the changed resources.
 
+The workbench previews structural moves between known nodes immediately while their callbacks save. Consecutive
+drops save in gesture order. The next authoritative tree read replaces the preview; a
+failed callback restores the saved tree and reports the failure once. The preview does
+not write extension data or grant permissions. A navigation row moved after an expanded
+tree shows its placement line after the last visible descendant.
+
 ## Declared data dependencies
 
 Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. File and notification churn does not broadcast a view refresh. Each renderer also declares its own extension data events. The core extensions and host views declare these dependencies:

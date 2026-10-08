@@ -145,7 +145,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");
 
   const rowProps = createListRowRootProps({
-    rootProps,
+    rootProps: { ...rootProps, id },
     labelId,
     hasEndContent: Boolean(item.endContent),
     rowRole,

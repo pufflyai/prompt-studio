@@ -2,6 +2,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
+import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
 
 export type NavigationTreeSlot = "header" | "content" | "footer";
 
@@ -109,10 +110,7 @@ const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => 
 
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
-  const nodeSources = new WeakMap<
-    TreeNode,
-    { contribution: NavigationTreeContribution; node: TreeNode; resource?: ResourceRef }
-  >();
+  const registryToken = {};
   const listeners = new Set<() => void>();
   const emit = () => {
     for (const listener of listeners) listener();
@@ -139,7 +137,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       canReorder: node.canReorder ?? contribution.owner.kind === "mode",
       children: node.children?.map((child) => projectNode(child, contribution, moveScope, resource)),
     };
-    nodeSources.set(projected, { contribution, node, resource });
+    setNavigationTreeNodeSource(projected, { contribution, node, resource, registryToken });
     return projected;
   };
 
@@ -219,7 +217,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
     async getChildren(node, context = {}) {
       context.signal?.throwIfAborted();
-      const source = nodeSources.get(node);
+      const source = getNavigationTreeNodeSource(node, registryToken);
       if (!source) return node.children ?? [];
       const moveScope = node.moveScope ?? ownerId(source.contribution.owner);
       const query = { ...context, resource: source.resource };
@@ -231,8 +229,8 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     },
 
     async moveNode(sourceNode, targetNode, context = {}) {
-      const source = nodeSources.get(sourceNode);
-      const target = targetNode ? nodeSources.get(targetNode) : undefined;
+      const source = getNavigationTreeNodeSource(sourceNode, registryToken);
+      const target = targetNode ? getNavigationTreeNodeSource(targetNode, registryToken) : undefined;
       if (!source?.contribution.viewId || !source.node.canDrag) return;
       if (targetNode && (!target || source.contribution !== target.contribution || !target.node.canDrop)) return;
       await input.moveViewNode?.(source.contribution.viewId, source.node, target?.node, {
