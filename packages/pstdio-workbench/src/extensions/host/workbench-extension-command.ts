@@ -1,8 +1,10 @@
-import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { runResourceMutation } from "./workbench-resource-mutation";
 export interface WorkbenchExtensionCommandContext {
+  metadata?: Pick<WorkbenchExtensionMetadata, "commands">;
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   prepareCommandArgs?(
     commandId: string,
@@ -74,6 +76,10 @@ export const executeWorkbenchExtensionCommand = async (
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
-  const value = unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, input));
-  return value;
+  const persist = async () =>
+    unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, input));
+  const command = context.metadata?.commands.find((candidate) => candidate.id === commandId);
+  return command
+    ? runResourceMutation(context, command, input.params, { resource: input.resource }, persist)
+    : persist();
 };

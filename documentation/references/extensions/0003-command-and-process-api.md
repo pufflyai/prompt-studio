@@ -335,3 +335,14 @@ Ordinary command execution, hooks, schedules, automation, and nested `ctx.comman
 HTTP SDK callers use `client.extensions.stream(commandId, { projectId, ...body }, { signal })`. Its async iterable yields `{ type: "data", data }` and a final `{ type: "end", response }` containing the full command response. Break the loop or abort the signal to release the subscription.
 
 See [streamed webview commands](0005-webview-and-storage-api.md#streamed-commands) and [the transport decision](../../adrs/0065-stream-command-results-over-the-shared-client-stream.md).
+
+## Resource mutation previews
+
+A command can declare `resourceMutation` for a dashboard resource rename or removal. It names the resource type and the parameter containing its ID. A rename also names the parameter containing the new label.
+
+```ts
+resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", labelParam: "title" }
+// Removal uses: { kind: "remove", resourceType: "note", idParam: "noteId" }
+```
+
+The dashboard previews the change in navigation, tabs, and breadcrumbs while the command saves. Removal asks for confirmation first. Failure restores the affected resource. Writes for the same resource are ordered, and a failed earlier action cannot undo a newer preview. The preview stays until the mounted resource views refresh. The command still owns validation, persistence, and refresh events. API and CLI calls run the command directly, without a UI preview or confirmation. Commands without this declaration keep their existing behavior.

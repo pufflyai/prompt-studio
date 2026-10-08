@@ -2176,6 +2176,16 @@ interface CommandDefinition<TSchema extends ParamObjectSchema | undefined = Para
   palette?: readonly CommandPaletteContribution<SchemaParams<TSchema>>[];
   cli?: true | CliContribution;
   automation?: true;
+  resourceMutation?: {
+    kind: "rename";
+    resourceType: string;
+    idParam: string;
+    labelParam: string;
+  } | {
+    kind: "remove";
+    resourceType: string;
+    idParam: string;
+  };
   mutating?: true;
   stream?: CommandStreamDeclaration<TChunk>;
   run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings, TChunk>;

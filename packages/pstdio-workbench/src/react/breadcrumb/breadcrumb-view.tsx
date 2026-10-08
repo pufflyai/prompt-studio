@@ -63,11 +63,15 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   const placement = useWorkbenchStore(workbench.layout.store, (state) =>
     resolvePageActivePlacement(state.layout, page),
   );
-  const snapshot = usePlacementTab(placement);
+  const snapshot = usePlacementTab(placement, workbench);
   if (items.length === 0) return null;
   const resource = placement?.resource;
   const crumbs = [...items];
-  if (resource && !items.some((item) => item.resource && resourceKey(item.resource) === resourceKey(resource))) {
+  if (
+    resource &&
+    workbench.resources.preview.resolve(resource) &&
+    !items.some((item) => item.resource && resourceKey(item.resource) === resourceKey(resource))
+  ) {
     crumbs.push({
       title: snapshot.label ?? resource.label ?? resource.id,
       icon: snapshot.icon ?? workbench.resources.getKind(resource.type)?.icon,

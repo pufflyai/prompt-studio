@@ -132,3 +132,35 @@ test.each([
   binding.dispose();
   await registry.dispose();
 });
+
+test("awaiting a refresh waits for the latest replacement snapshot", async () => {
+  const registry = createRendererReadRegistry();
+  const binding = registry.bind("navigation");
+  const first = Promise.withResolvers<string>();
+  const last = Promise.withResolvers<string>();
+  const values: string[] = [];
+  const request = (load: () => Promise<string>) => ({
+    queryKey: "notes",
+    load,
+    onValue: (value: string) => values.push(value),
+    onError: () => {},
+  });
+  let completed = false;
+  const saved = binding.request(request(() => first.promise)).then(() => {
+    completed = true;
+  });
+  await Bun.sleep(0);
+  binding.request(
+    request(() => last.promise),
+    "retry",
+  );
+  first.resolve("stale");
+  await Bun.sleep(0);
+  expect(completed).toBe(false);
+  expect(values).toEqual([]);
+  last.resolve("saved");
+  await saved;
+  expect(values).toEqual(["saved"]);
+  binding.dispose();
+  await registry.dispose();
+});

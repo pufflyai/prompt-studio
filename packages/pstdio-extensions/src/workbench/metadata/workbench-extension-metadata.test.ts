@@ -32,6 +32,14 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   definition,
 });
 describe("createWorkbenchExtensionMetadata", () => {
+  test("preserves opt-in resource mutations through command metadata", () => {
+    const resourceMutation = { kind: "rename" as const, resourceType: "note", idParam: "noteId", labelParam: "title" };
+    const rename = defineCommand({ id: "rename", title: "Rename note", resourceMutation, async run() {} });
+    const runtime = normalizeExtensionSources([source(defineExtension({ commands: [rename] }))]);
+    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+    expect(metadata.commands[0]?.resourceMutation).toEqual(resourceMutation);
+  });
+
   test("publishes resource menu slot declarations", () => {
     const resourceKind = defineResourceKind({
       id: "note",
