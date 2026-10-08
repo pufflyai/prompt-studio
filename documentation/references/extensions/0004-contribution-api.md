@@ -81,6 +81,8 @@ When extension UI needs dashboard placement, attach it to a host-owned target an
 
 Keybindings bind app-level keyboard shortcuts to a navigation `action`. The action is any navigation target: a command, a page, a panel, an href, or a compound target. Pages and panels bind directly; no wrapper command is needed. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
 
+Help → Keyboard shortcuts lists registered bindings, including bindings whose context is currently inactive. It also lists actions exposed through menus, the command palette, and declared navigation items. Actions without a binding show “Not assigned”. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Internal commands used only for routing or fetching options are not listed unless they have a binding or a user-facing placement. An action does not need a default shortcut to be discoverable.
+
 Prefer `Mod+...` so the chord maps to `Cmd` on macOS and `Ctrl` on Windows/Linux without an override. Avoid chords already claimed by browsers, OSes, or developer tooling (`Mod+T`, `Mod+W`, `Mod+R`, `Mod+P`, `Mod+S`, `Mod+Shift+P`, `Mod+Shift+I`, `F5`, `F11`, `F12`, …); the extension runtime emits a `reserved_keybinding_chord` warning when a contribution hits a reserved chord on any platform. Reach for multi-step chords like `mod+k mod+t` if no single chord is safe.
 
 ```ts

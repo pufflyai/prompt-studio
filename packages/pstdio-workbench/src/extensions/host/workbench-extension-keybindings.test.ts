@@ -45,6 +45,7 @@ describe("extension keybindings", () => {
 
     expect(workbench.keybindings.listKeybindings()).toContainEqual(
       expect.objectContaining({
+        sourceExtensionId: "pstdio.lab",
         action: {
           kind: "command",
           commandId: "pstdio.lab.command.hello",

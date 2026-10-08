@@ -40,6 +40,7 @@ import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
+// It also checks extension navigation shortcuts and unassigned actions in the shortcut reference.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";

@@ -98,6 +98,14 @@ const registerItems = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
       defaultExpandedSectionIds: defaultExpandedGroupIds(items),
       ...(!resourceDependent ? { resolveResource: () => undefined } : {}),
       getSections: () => toSections(input.workbench, items, input.createWhenExpression),
+      listActions: () =>
+        items.map((item) => ({
+          label: text(item.label, item.id),
+          category: item.group || undefined,
+          action: toWorkbenchNavigationTarget(item.action as ExtensionNavigationTarget, {
+            extensionId: item.extensionId,
+          }),
+        })),
     });
   });
 

@@ -11,6 +11,8 @@ import type { CommandRegistry } from "../commands/command-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 
 export interface Keybinding {
+  /** Extension that authored this binding, when registered by an extension host. */
+  sourceExtensionId?: string;
   /** Action the chord executes through the shared navigation executor. */
   action: NavigationTarget;
   keybinding: KeybindingSequence;

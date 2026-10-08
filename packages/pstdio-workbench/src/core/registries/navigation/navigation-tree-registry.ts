@@ -2,6 +2,13 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
+import type { NavigationTarget } from "./navigation-registry";
+
+export interface DeclaredNavigationAction {
+  label: string;
+  action: NavigationTarget;
+  category?: string;
+}
 
 export type NavigationTreeSlot = "header" | "content" | "footer";
 
@@ -30,6 +37,8 @@ export interface NavigationTreeContribution {
   resolveResource?(resource: ResourceRef | undefined): ResourceRef | undefined;
   getSections?(context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getChildren?(node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
+  /** Authored actions for discovery, independent of tree data and visibility context. */
+  listActions?(): DeclaredNavigationAction[];
 }
 
 export interface CreateNavigationTreeRegistryInput {
@@ -40,6 +49,7 @@ export interface CreateNavigationTreeRegistryInput {
 }
 
 export interface NavigationTreeRegistry {
+  listActions(): (DeclaredNavigationAction & { ownerId: string })[];
   registerContribution(contribution: NavigationTreeContribution): Disposable;
   resolveOwner(
     kind: NavigationTreeOwner["kind"],
@@ -235,6 +245,14 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     onDidChange(listener) {
       listeners.add(listener);
       return createDisposable(() => listeners.delete(listener));
+    },
+    listActions() {
+      return [...contributions.values()].flatMap((contribution) =>
+        (contribution.listActions?.() ?? []).map((action) => ({
+          ...action,
+          ownerId: contribution.sourceExtensionId,
+        })),
+      );
     },
   };
 };
