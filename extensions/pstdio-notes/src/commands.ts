@@ -1,4 +1,5 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { moveNote, requireFolder } from "./folders";
 import { createNote, deleteNote, renameNote } from "./notes";
 import { notesChanged, notesMount, noteTarget } from "./pages";
 
@@ -9,10 +10,13 @@ export const createNoteCommand = defineCommand({
   palette: [{ group: "Notes", icon: "sticky-note" }],
   mutating: true,
   params: {
-    title: params.text({ label: l10n("params.title", "Title"), required: true }),
+    title: params.text({ label: l10n("params.title", "Title") }),
+    folderId: params.text({ label: l10n("params.folder", "Folder") }),
   },
   async run(ctx, commandParams) {
+    if (commandParams.folderId) await requireFolder(notesMount(ctx), commandParams.folderId);
     const note = await createNote(notesMount(ctx), commandParams.title);
+    if (commandParams.folderId) await moveNote(notesMount(ctx), note.id, commandParams.folderId);
     await ctx.events.emit(notesChanged, { noteId: note.id });
 
     ctx.navigation.open(noteTarget(note.id, note.title));
