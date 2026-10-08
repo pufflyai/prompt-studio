@@ -1847,6 +1847,7 @@ interface TreeRendererActionParams extends TreeRendererQueryParams {
 interface TreeRendererMoveParams extends TreeRendererQueryParams {
   source: TreeNode;
   target?: TreeNode;
+  position: "before" | "after" | "inside";
 }
 type TreeNodeTarget = NavigationTarget;
 interface TreeAction {
