@@ -55,16 +55,9 @@ export const useTreeViewGroups = (
       if (!group) return section;
       const menuItems: TreeListActionMenuItem[] = [
         {
-          id: "tree-group:new",
-          label: "New group",
-          icon: newGroupAction.icon,
-          onAction: () => startGroup(group.moveScope),
-        },
-        {
           id: "tree-group:rename",
           label: "Rename group",
           icon: <WorkbenchIcon name="pencil" size={14} />,
-          separatorBefore: true,
           onAction: () => setDraft({ storageKey, group, isNew: false }),
         },
         {

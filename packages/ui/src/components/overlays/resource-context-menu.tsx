@@ -1,4 +1,5 @@
 import { chakra, Menu, Portal, useMenu } from "@chakra-ui/react";
+import { ChevronRight } from "lucide-react";
 import { type ComponentProps, Fragment, type ReactElement, type ReactNode, useRef } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
@@ -9,7 +10,9 @@ export interface ResourceContextAction {
   key: string;
   label: string;
   commandId?: string;
-  onClick: () => Promise<void> | void;
+  onClick?: () => Promise<void> | void;
+  /** Nested actions, opened by hover or the arrow keys. */
+  items?: ResourceContextAction[];
   isDisabled?: boolean;
   icon?: ReactNode;
   endContent?: ReactNode;
@@ -56,17 +59,42 @@ const ResourceMenuContent = (props: {
             {actions.map((action) => (
               <Fragment key={action.key}>
                 {action.separatorBefore ? <Menu.Separator /> : null}
-                <Menu.Item value={action.key} disabled={action.isDisabled} closeOnSelect={action.closeOnSelect} asChild>
-                  <ListRow
-                    asChild
-                    variant="full-width"
-                    label={action.label}
-                    icon={action.icon}
-                    endContent={action.endContent}
+                {action.items ? (
+                  <Menu.Root positioning={{ placement: "right-start", gutter: 2 }} closeOnSelect={false}>
+                    <Menu.TriggerItem disabled={action.isDisabled} asChild>
+                      <ListRow
+                        asChild
+                        variant="full-width"
+                        label={action.label}
+                        icon={action.icon}
+                        endContent={<ChevronRight size={14} />}
+                      />
+                    </Menu.TriggerItem>
+                    <ResourceMenuContent
+                      actions={action.items}
+                      contentMinWidth={contentMinWidth}
+                      contentBackground={contentBackground}
+                      onSelect={onSelect}
+                    />
+                  </Menu.Root>
+                ) : (
+                  <Menu.Item
+                    value={action.key}
                     disabled={action.isDisabled}
-                    onActivate={() => onSelect(action)}
-                  />
-                </Menu.Item>
+                    closeOnSelect={action.closeOnSelect}
+                    asChild
+                  >
+                    <ListRow
+                      asChild
+                      variant="full-width"
+                      label={action.label}
+                      icon={action.icon}
+                      endContent={action.endContent}
+                      disabled={action.isDisabled}
+                      onActivate={() => onSelect(action)}
+                    />
+                  </Menu.Item>
+                )}
               </Fragment>
             ))}
           </ScrollArea>
@@ -81,13 +109,13 @@ const useResourceMenuActions = (closeOnSelect: boolean | undefined) => {
   return {
     onSelect: (action: ResourceContextAction) => {
       if (action.closeOnSelect ?? closeOnSelect ?? true) pendingAction.current = action;
-      else void action.onClick();
+      else void action.onClick?.();
     },
     onExitComplete: () => {
       const action = pendingAction.current;
       pendingAction.current = null;
       // Closing menus finish their scheduled focus changes before an action focuses an input or dialog.
-      void action?.onClick();
+      void action?.onClick?.();
     },
   };
 };

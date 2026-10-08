@@ -50,6 +50,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(row("Level note")).toBeVisible();
   // Individual notes are data; the Notes collection can be hidden from the customize menu.
   await row("Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await expect(page.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Level note", exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");

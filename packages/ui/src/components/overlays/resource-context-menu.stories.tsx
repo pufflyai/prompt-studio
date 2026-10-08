@@ -41,6 +41,35 @@ const InlineActionMenu = () => {
   );
 };
 
+const NestedVisibilityMenu = () => {
+  const [shown, setShown] = useState(true);
+  return (
+    <Stack>
+      <ResourceContextMenu
+        closeOnSelect={false}
+        actions={[
+          {
+            key: "visibility",
+            label: "Hide/show items",
+            items: [
+              {
+                key: "notes",
+                label: "Notes",
+                closeOnSelect: false,
+                endContent: <Eye size={14} />,
+                onClick: () => setShown(!shown),
+              },
+            ],
+          },
+        ]}
+      >
+        {menuTarget}
+      </ResourceContextMenu>
+      <Text>{shown ? "Notes shown" : "Notes hidden"}</Text>
+    </Stack>
+  );
+};
+
 const meta: Meta<typeof ResourceContextMenu> = {
   title: "Components/Overlays/Resource Context Menu",
   component: ResourceContextMenu,
@@ -61,6 +90,24 @@ type Story = StoryObj<typeof ResourceContextMenu>;
 
 export const Default: Story = {
   render: () => <ResourceContextMenu actions={createActions(4)}>{menuTarget}</ResourceContextMenu>,
+};
+
+export const VisibilitySubmenu: Story = {
+  render: () => <NestedVisibilityMenu />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    fireEvent.contextMenu(canvas.getByText("Right-click here"));
+    await userEvent.hover(await screen.findByRole("menuitem", { name: "Hide/show items" }));
+    const toggle = await screen.findByRole("menuitem", { name: "Notes", exact: true });
+    await userEvent.click(toggle);
+    await expect(canvas.getByText("Notes hidden")).toBeVisible();
+    await userEvent.click(toggle);
+    await expect(canvas.getByText("Notes shown")).toBeVisible();
+    await userEvent.keyboard("{Escape}{ArrowRight}");
+    await expect(toggle).toBeVisible();
+    await userEvent.keyboard("{Escape}{Escape}");
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+  },
 };
 
 export const InlineAction: Story = {

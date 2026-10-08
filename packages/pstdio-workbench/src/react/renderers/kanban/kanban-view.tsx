@@ -147,7 +147,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     const resourceActions = isKanbanRowResource(row.resource) ? resolveResourceActions(row.resource) : [];
     const contributionActions = (contribution.getRowContextMenuActions?.(row) ?? []).map((action) => ({
       ...action,
-      onClick: () => runUserAction(workbench, action.label, () => action.onClick()),
+      onClick: () => runUserAction(workbench, action.label, () => action.onClick?.()),
     }));
     return mergeKanbanViewRowActions(resourceActions, contributionActions);
   };

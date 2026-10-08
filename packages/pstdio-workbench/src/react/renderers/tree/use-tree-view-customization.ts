@@ -209,17 +209,21 @@ export const useTreeViewCustomization = (
   const visibleHeaderSections = visibleIn(headerSections);
   const visibleSections = visibleIn(contentSections);
   const visibleFooterSections = visibleIn(footerSections);
-  const backgroundContextActions = buildTreeVisibilityMenuActions(
+  const visibilityMenuItems = buildTreeVisibilityMenuActions(
     { headerSections: orderedHeaderSections, sections: orderedSections, footerSections: orderedFooterSections },
     sectionOverrides,
     nodeOverrides,
     visibilityActions,
     icons,
   );
-  if (newGroupAction) {
-    if (backgroundContextActions[0]) backgroundContextActions[0].separatorBefore = true;
-    backgroundContextActions.unshift(newGroupAction);
-  }
+  const backgroundContextActions: ResourceContextAction[] = newGroupAction ? [newGroupAction] : [];
+  if (visibilityMenuItems.length > 0)
+    backgroundContextActions.push({
+      key: "tree-visibility",
+      label: "Hide/show items",
+      icon: icons.visibleIcon,
+      items: visibilityMenuItems.map((item) => ({ ...item, closeOnSelect: false })),
+    });
 
   const customizationRevision = JSON.stringify({
     header: orderedHeaderSections.map((section) => [
