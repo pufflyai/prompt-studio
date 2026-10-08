@@ -10,11 +10,13 @@ import {
 } from "@pstdio/sdk/extensions";
 import { plannerTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
+import { mergedPullRequestsSchedule } from "./src/commands/check-merged-pull-requests";
 import { implementationTargetsCommand } from "./src/commands/implementation-targets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
+import { gitMergedHook } from "./src/hooks/git-merged";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { ticketStatuses } from "./src/ticket-status-provider";
@@ -32,6 +34,27 @@ const templateCommandRefs = {
 export default defineExtension({
   settings: {
     properties: {
+      "tickets.deleteLinkedWorkspaces": {
+        type: "boolean",
+        scope: "project",
+        default: true,
+        title: l10n("settings.tickets.deleteLinkedWorkspaces.title", "Delete linked workspaces"),
+        description: l10n(
+          "settings.tickets.deleteLinkedWorkspaces.description",
+          "When a ticket is archived or deleted, delete its workspaces once no active ticket uses them. This removes the worktree, its branch, and any uncommitted changes.",
+        ),
+      },
+      "tickets.markDoneOnMerge": {
+        type: "boolean",
+        scope: "project",
+        default: true,
+        title: l10n("settings.tickets.markDoneOnMerge.title", "Mark done on merge"),
+        description: l10n(
+          "settings.tickets.markDoneOnMerge.description",
+          "Move a ticket to Done when its workspace branch or linked pull request is merged.",
+        ),
+      },
+
       "refinement.generateArtifactPrototype": {
         type: "boolean",
         scope: "project",
@@ -104,7 +127,9 @@ export default defineExtension({
   settingsPanels: plannerUi.settingsPanels,
   statuses: [ticketStatuses],
 
+  schedules: [mergedPullRequestsSchedule],
   hooks: [
+    gitMergedHook,
     worktreeCreatedHook,
     defineHook({
       id: "session-awaiting-input",

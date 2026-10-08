@@ -253,6 +253,13 @@
       "when": 1791010286213,
       "tag": "0035_board_view_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791293290953,
+      "tag": "0036_striped_toad_men",
+      "breakpoints": true
     }
   ]
 }

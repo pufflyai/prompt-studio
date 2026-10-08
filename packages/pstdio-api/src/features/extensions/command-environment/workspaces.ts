@@ -5,13 +5,13 @@ import {
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
-import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import { listWorkspaceProviders } from "../../workspaces/workspace-provider-catalog";
 import {
   assertWorkspaceDeleteAllowed,
   cancelProviderBackedWorkspace,
   deleteProviderBackedWorkspace,
+  finalizeWorkspaceDelete,
 } from "../../workspaces/workspace-provider-lifecycle";
 import {
   createProviderBackedWorkspace,
@@ -96,6 +96,24 @@ export const createWorkspacesApi = (
   const projectOptionalWorkspace = async (workspace: WorkspaceRecord | null) =>
     workspace ? projectWorkspace(workspace, input.signal) : null;
 
+  const deleteWorkspace = async (id: string) => {
+    const workspace = await requireScopedWorkspace(id);
+    assertWorkspaceDeleteAllowed(workspace);
+    const remove = runtimeDeps.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
+    const removed = await remove(deps, workspace);
+    await finalizeWorkspaceDelete(deps, workspace);
+    if (removed && workspace.root_path) {
+      const { anchors_json: _anchors, ...eventWorkspace } = workspace;
+      const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
+      fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
+        projectId: workspace.project_id,
+        worktreePath: workspace.root_path,
+        workspace: eventWorkspace as ExtensionWorkspace,
+        workspaceId: workspace.id,
+      });
+    }
+  };
+
   return {
     listProviders: () => read(() => listWorkspaceProviders(deps, input.projectId)),
     getDefault: async () =>
@@ -163,10 +181,9 @@ export const createWorkspacesApi = (
       return projectWorkspace(await cancelProviderBackedWorkspace(deps, workspace));
     },
     archive: async (id) => {
-      const workspace = await getScopedWorkspace(id);
-      // Cascade archive: also archive the workspace's sessions and remove its worktree.
-      if (workspace) return projectWorkspace(await archiveWorkspaceCascade(deps, workspace));
-      throw new Error(`Workspace not found: ${id}`);
+      const workspace = await requireScopedWorkspace(id);
+      await deleteWorkspace(id);
+      return { ...workspace, deleted_at: new Date().toISOString() } as ExtensionWorkspace;
     },
     removeWorktree: async (id) => {
       const workspace = await requireScopedWorkspace(id);
@@ -176,22 +193,6 @@ export const createWorkspacesApi = (
       });
       return { removed };
     },
-    delete: async (id) => {
-      const workspace = await requireScopedWorkspace(id);
-      assertWorkspaceDeleteAllowed(workspace);
-      const remove = runtimeDeps.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
-      const removed = await remove(deps, workspace);
-      await deps.workspaceService.softDelete(id);
-      if (removed && workspace.root_path) {
-        const { anchors_json: _anchors, ...eventWorkspace } = workspace;
-        const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
-        fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
-          projectId: workspace.project_id,
-          worktreePath: workspace.root_path,
-          workspace: eventWorkspace as ExtensionWorkspace,
-          workspaceId: workspace.id,
-        });
-      }
-    },
+    delete: deleteWorkspace,
   };
 };

@@ -85,7 +85,7 @@ describe("command environment project scope", () => {
     } as never);
 
     await expect(workspaces.resolve(workspace.id)).rejects.toThrow("Local workspace execution target");
-    await expect(workspaces.archive(workspace.id)).rejects.toThrow("does not allow archiving");
+    await expect(workspaces.archive(workspace.id)).rejects.toThrow("does not allow deletion");
     await expect(workspaces.delete(workspace.id)).rejects.toThrow("does not allow deletion");
     expect(deleteProviderBackedWorkspace).not.toHaveBeenCalled();
 

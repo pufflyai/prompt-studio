@@ -35,5 +35,9 @@
   "commands.unlinkTicket": "Délier le ticket",
   "commands.refinementPolicy.title": "Lire les options d’affinement des tickets",
   "settings.uxPrototype.title": "Créer un prototype d’artefact pour les fonctionnalités UX",
-  "settings.uxPrototype.description": "Exiger un prototype interactif lors de l’affinement d’une nouvelle fonctionnalité UX si Artifacts est disponible."
+  "settings.uxPrototype.description": "Exiger un prototype interactif lors de l’affinement d’une nouvelle fonctionnalité UX si Artifacts est disponible.",
+  "settings.tickets.deleteLinkedWorkspaces.title": "Supprimer les espaces de travail liés",
+  "settings.tickets.deleteLinkedWorkspaces.description": "Lorsqu’un ticket est archivé ou supprimé, supprime ses espaces de travail dès qu’aucun ticket actif ne les utilise. Cela supprime l’arbre de travail, sa branche et les modifications non validées.",
+  "settings.tickets.markDoneOnMerge.title": "Marquer comme terminé après fusion",
+  "settings.tickets.markDoneOnMerge.description": "Déplace un ticket vers Terminé lorsque la branche de son espace de travail ou une demande de fusion liée est fusionnée."
 }
