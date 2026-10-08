@@ -8,7 +8,7 @@ interface NativeItem {
   text?: string;
   summary?: string[];
   command?: string;
-  aggregatedOutput?: string;
+  aggregatedOutput?: string | null;
   exitCode?: number | null;
   status?: string;
   changes?: Array<{ path: string; kind: { type: string } }>;
@@ -16,14 +16,20 @@ interface NativeItem {
   tool?: string;
   query?: string;
   result?: unknown;
+  arguments?: unknown;
+  namespace?: string | null;
+  contentItems?: unknown;
+  success?: boolean | null;
+  name?: string;
+  output?: unknown;
   delivery?: string | null;
   questions?: AsyncUserInputQuestion[] | null;
   clientId?: string | null;
-  content?: Array<{ type: string; text?: string }>;
+  content?: Array<string | { type: string; text?: string }>;
   path?: string;
 }
 
-const toThreadItem = (native: NativeItem) => {
+export const toThreadItem = (native: NativeItem) => {
   if (native.type === "agentMessage" && native.delivery === "async" && native.questions?.length) {
     return asyncQuestionItem(native.id, native.questions);
   }
@@ -35,26 +41,36 @@ const toThreadItem = (native: NativeItem) => {
     fileChange: "file_change",
     mcpToolCall: "mcp_tool_call",
     webSearch: "web_search",
+    plan: "agent_message",
+    dynamicToolCall: "mcp_tool_call",
+    functionCallOutput: "mcp_tool_call",
     imageView: "image_view",
   };
   if (!types[native.type]) return undefined;
+  let output = native.aggregatedOutput ?? undefined;
+  if (native.type === "mcpToolCall" && native.result !== undefined) output = JSON.stringify(native.result);
+  if (native.type === "dynamicToolCall") output = JSON.stringify(native.contentItems);
+  if (native.type === "functionCallOutput")
+    output = typeof native.output === "string" ? native.output : JSON.stringify(native.output);
   return {
     id: native.id,
     type: types[native.type],
     text:
       native.type === "reasoning"
         ? native.summary?.join("\n")
-        : (native.text ?? native.content?.map((part) => part.text ?? "").join("")),
+        : (native.text ??
+          native.content?.map((part) => (typeof part === "string" ? part : (part.text ?? ""))).join("")),
     command: native.command,
-    aggregated_output:
-      native.type === "mcpToolCall" && native.result !== undefined
-        ? JSON.stringify(native.result)
-        : native.aggregatedOutput,
+    aggregated_output: output,
     exit_code: native.exitCode,
-    status: native.status,
+    status:
+      native.success === false
+        ? "failed"
+        : (native.status ?? (native.type === "functionCallOutput" ? "completed" : undefined)),
     changes: native.changes?.map((change) => ({ path: change.path, kind: change.kind.type })),
-    server: native.server,
-    tool: native.tool,
+    server: native.server ?? native.namespace ?? undefined,
+    tool: native.tool ?? native.name,
+    input: native.arguments,
     query: native.query,
     path: native.path,
   };
