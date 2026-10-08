@@ -10,7 +10,7 @@ const LEGACY_FILES = new Set([
   "drizzle/0029_contribution_id_grammar.sql",
   "src/db/contribution-id-renames.ts",
   "src/db/legacy-template-owners.ts",
-  "drizzle/0036_superb_diamondback.sql",
+  "drizzle/0037_nebulous_galactus.sql",
   "src/services/legacy-resource-links.ts",
 ]);
 
