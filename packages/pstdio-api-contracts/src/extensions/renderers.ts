@@ -18,6 +18,7 @@ export const extensionTreeRendererRecordSchema = extensionRendererRecordBaseSche
   headerHandlerId: z.string().optional(),
   bodyHandlerId: z.string(),
   childrenHandlerId: z.string().optional(),
+  moveHandlerId: z.string().optional(),
   footerHandlerId: z.string().optional(),
   defaultExpandedSectionIds: z.array(z.string()).optional(),
   defaultExpandedNodeIds: z.array(z.string()).optional(),

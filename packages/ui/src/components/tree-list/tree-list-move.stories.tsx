@@ -2,6 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FileText, Folder } from "lucide-react";
 import { useState } from "react";
+import { expect, fireEvent, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
@@ -77,4 +78,49 @@ const MovableFilesStory = () => {
 
 export const MovableFiles: Story = {
   render: () => <MovableFilesStory />,
+};
+
+const MovableNotes = () => {
+  const [inFolder, setInFolder] = useState(false);
+  const note = { id: "note", label: "Research note", canDrag: true };
+  return (
+    <TreeList
+      draggable
+      expandedNodeIds={["notes", "folder"]}
+      sections={[
+        {
+          id: "navigation",
+          nodes: [
+            {
+              id: "notes",
+              label: "Notes",
+              canDrop: true,
+              children: [
+                { id: "folder", label: "Ideas", canDrop: true, isContainer: true, children: inFolder ? [note] : [] },
+                ...(inFolder ? [] : [note]),
+              ],
+            },
+          ],
+        },
+      ]}
+      onMoveNode={(_source, target) => setInFolder(target === "folder")}
+    />
+  );
+};
+
+export const NotesInSortableNavigation: Story = {
+  render: () => <MovableNotes />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const transfer = new DataTransfer();
+    const note = canvas.getByRole("option", { name: "Research note" });
+    fireEvent.dragStart(note.parentElement!, { dataTransfer: transfer });
+    fireEvent.drop(canvas.getByRole("option", { name: "Ideas" }).parentElement!, { dataTransfer: transfer });
+    await expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "3");
+    fireEvent.dragStart(canvas.getByRole("option", { name: "Research note" }).parentElement!, {
+      dataTransfer: transfer,
+    });
+    fireEvent.drop(canvas.getByRole("option", { name: "Notes" }).parentElement!, { dataTransfer: transfer });
+    await expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "2");
+  },
 };

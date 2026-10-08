@@ -30,6 +30,11 @@ export interface TreeRendererActionParams extends TreeRendererQueryParams {
   node?: TreeNode;
 }
 
+export interface TreeRendererMoveParams extends TreeRendererQueryParams {
+  source: TreeNode;
+  target?: TreeNode;
+}
+
 export type TreeNodeTarget = NavigationTarget;
 
 export interface TreeAction {
@@ -76,6 +81,9 @@ export interface TreeNode {
   hiddenByDefault?: boolean;
   /** Opt in to the tree's hide/show customization menu (header/footer rows). Off by default. */
   canHide?: boolean;
+  /** Opt in to native dragging and owner-handled drops. */
+  canDrag?: boolean;
+  canDrop?: boolean;
   metadata?: JsonObject;
 }
 
@@ -98,6 +106,8 @@ export interface TreeRendererContribution extends RendererContributionBase {
   body: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
   children?: RendererCallback<TreeRendererChildrenParams, TreeNode[]>;
   footer?: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
+  /** Persist a drop between nodes owned by this tree. */
+  onMove?: RendererCallback<TreeRendererMoveParams, void>;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
 }
