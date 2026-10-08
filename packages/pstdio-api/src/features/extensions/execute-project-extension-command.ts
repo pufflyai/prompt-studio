@@ -1,4 +1,4 @@
-import type { CommandExecuteBody, JsonObject } from "pstdio-api-contracts";
+import type { CommandExecuteBody, JsonObject, JsonValue } from "pstdio-api-contracts";
 import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
@@ -18,7 +18,13 @@ export const resolveCommandWorkspaceDir = (workspace: { root_path: string | null
 
 export const executeProjectExtensionCommand = async (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; commandId: string; body: CommandExecuteBody; signal?: AbortSignal },
+  input: {
+    projectId: string;
+    commandId: string;
+    body: CommandExecuteBody;
+    signal?: AbortSignal;
+    onChunk?: (chunk: JsonValue) => Promise<void>;
+  },
 ) => {
   const { body, commandId, projectId } = input;
   const snapshot = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(projectId));
@@ -67,6 +73,7 @@ export const executeProjectExtensionCommand = async (
     source: body.source ?? "api",
     metadata: body.metadata as JsonObject | undefined,
     signal: input.signal,
+    onChunk: input.onChunk,
   });
   if (body.source !== "dashboard") {
     for (const eventId of eventIds)

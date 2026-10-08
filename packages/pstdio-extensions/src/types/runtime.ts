@@ -74,6 +74,7 @@ export interface RuntimeCliContribution {
 }
 
 export interface RuntimeCommandRecord {
+  stream?: { readonly kind: "stream" };
   id: string;
   localId: string;
   extensionId: string;

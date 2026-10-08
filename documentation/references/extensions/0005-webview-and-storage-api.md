@@ -201,7 +201,7 @@ Closing a terminal panel kills its session. A session opened through `ctx.termin
 
 `kill()` signals the session's process group, so the shell and everything it started stop together. The default signal is `SIGHUP`, which shells honor even when they ignore `SIGTERM`. The host then sends `SIGKILL` to the group, because a shell that exits may leave children running. The call always settles. A job that moves to its own process group and ignores the hangup keeps running, as `nohup` jobs do in any terminal.
 
-In the dashboard, `POST /v1/terminal/sessions` opens a PTY in the runtime. A server-sent events (SSE) stream delivers base64 output chunks and the exit event. Input, resize, and kill requests address the session ID. Webviews that declare `terminal.session` use this same path.
+In the dashboard, a WebSocket at `/v1/terminal` opens a PTY in the runtime and carries output, exit, input, resize, and kill messages. Webviews that declare `terminal.session` use this same transport.
 
 Logs record only lifecycle data: session ID, process ID, exit code, and signal. Terminal content is never logged.
 
@@ -306,3 +306,24 @@ goes through commands.
 ## Client events and workspace scope
 
 `createWebviewClient` exposes `commands`, `settings`, `artifacts`, and `events`. Subscribe through the events client and dispose subscriptions when the view unmounts. Pass `{ workspaceId }` when commands need a specific workspace; omitted commands use the project's default workspace. The client defaults to the host's calling extension ID; a type-only import does not change routing. See the [client contract](../../../packages/sdk/src/extensions/webview-client.ts) for signatures and options.
+
+## Streamed commands
+
+Declare the `commands.stream` webview capability to read a command that declares `stream: streamOf<TChunk>()`:
+
+```ts
+const controller = new AbortController();
+const stream = client.streams["logs.tail"]({ source: "build" }, { signal: controller.signal });
+for await (const line of stream) {
+  appendLine(line);
+}
+const summary = await stream.result;
+```
+
+`client.streams` contains only commands with a stream declaration. It accepts the same parameters as `client.commands`, followed by an optional `{ signal }`. Each stream has one consumer. `result` resolves with the final value or rejects with the outcome reason and code.
+
+Call `stream.cancel()`, abort the signal, or break the loop to stop the command. Cancellation ends iteration and rejects `result` with `command_stream_cancelled`. Frame disconnect also cancels streams and plain command calls. Hidden mounted panels keep running. A lost connection ends the stream with `command_stream_disconnected`; start a new stream to reconnect.
+
+The host allows 16 live streams per frame and 8 MiB of unread JSON per stream. Overflow ends the stream with `command_stream_overflow`. All command streams and session readers share one connection. Events remain invalidation signals; chunks go only to their caller.
+
+The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` operations. `createWebviewClient` handles IDs, consumed-byte acknowledgements, and scoped `data`/`end` events for you.

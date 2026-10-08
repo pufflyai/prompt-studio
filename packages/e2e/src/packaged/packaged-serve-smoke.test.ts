@@ -14,6 +14,7 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, and continuous ticket/workspace navigation.
@@ -441,3 +442,5 @@ registerBoardViewsSmokeTests();
 registerBoardPanningSmokeTests();
 
 registerResourceLinksSmokeTests();
+
+registerCommandStreamSmokeTests();

@@ -201,6 +201,7 @@ export const registerCommands = (
       cli,
       automation: command.automation === true,
       mutating: command.mutating === true,
+      stream: command.stream,
       run: command.run as RuntimeCommandRecord["run"],
     };
 

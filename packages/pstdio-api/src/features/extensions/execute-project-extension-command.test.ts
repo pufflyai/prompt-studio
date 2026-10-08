@@ -68,3 +68,36 @@ test("cancelling a workspace lookup prevents command execution", async () => {
   await executing.catch(() => undefined);
   await expect(executing).rejects.toMatchObject({ name: "AbortError" });
 });
+
+test("streamed commands deliver chunks and still return the final outcome", async () => {
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  const command = snapshot.runtime.commands[0]!;
+  command.stream = { kind: "stream" };
+  command.run = async (ctx) => {
+    await ctx.stream.write({ line: 1 });
+    await ctx.stream.write({ line: 2 });
+    return 2;
+  };
+  const chunks: unknown[] = [];
+  const response = await executeProjectExtensionCommand(fixture.deps, {
+    projectId: "project-1",
+    commandId: command.id,
+    body: {},
+    onChunk: async (chunk) => {
+      chunks.push(chunk);
+    },
+  });
+  expect(chunks).toEqual([{ line: 1 }, { line: 2 }]);
+  expect(response.outcome).toMatchObject({ ok: true, value: 2 });
+});
+
+test("ordinary execution drops chunks from a streaming command", async () => {
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  const command = snapshot.runtime.commands[0]!;
+  command.stream = { kind: "stream" };
+  command.run = async (ctx) => {
+    await ctx.stream.write({ line: 1 });
+    return "done";
+  };
+  expect((await execute()).outcome).toMatchObject({ ok: true, value: "done" });
+});

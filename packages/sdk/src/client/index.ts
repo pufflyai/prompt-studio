@@ -2,6 +2,7 @@ export type { AgentClient } from "./agents";
 export type { AutomationClient } from "./automation";
 export type { BoardViewsClient } from "./board-views";
 export { createClient, type PstdioClient } from "./client";
+export type { CommandStreamClientEvent } from "./extension-stream";
 export type { ExtensionClient } from "./extensions";
 export type { DirectoryEntry, FilesystemClient } from "./filesystem";
 export type { NotificationsClient } from "./notifications";

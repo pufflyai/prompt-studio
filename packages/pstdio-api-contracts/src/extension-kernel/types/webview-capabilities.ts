@@ -2,7 +2,7 @@ import type { TerminalSessionOperation, TerminalSessionResult } from "../../exte
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
-import type { JsonObject } from "./json";
+import type { JsonObject, JsonValue } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { ResourceRef } from "./resources";
 
@@ -14,6 +14,7 @@ export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "clipboard.write",
   "commands.execute",
+  "commands.stream",
   "navigation.open",
   "placement.close",
   "notification.show",
@@ -61,6 +62,15 @@ export interface WebviewCommandsExecuteParams {
   resource?: ResourceRef;
   metadata?: JsonObject;
 }
+
+export type WebviewCommandsStreamParams =
+  | ({ operation: "start"; streamId: string } & WebviewCommandsExecuteParams)
+  | { operation: "cancel"; streamId: string }
+  | { operation: "ack"; streamId: string; bytes: number };
+
+export type WebviewCommandStreamEvent =
+  | { streamId: string; type: "data"; data: JsonValue }
+  | { streamId: string; type: "end"; outcome: CommandOutcome };
 
 export interface WebviewNavigationOpenParams {
   target: NavigationTarget;
@@ -142,6 +152,7 @@ export interface WebviewKeyboardEventParams {
 
 export interface WebviewHostCapabilityParams {
   "commands.execute": WebviewCommandsExecuteParams;
+  "commands.stream": WebviewCommandsStreamParams;
   "navigation.open": WebviewNavigationOpenParams;
   "placement.close": Record<string, never>;
   "notification.show": WebviewNotificationShowParams;
@@ -164,6 +175,7 @@ export interface WebviewHostCapabilityParams {
 
 export interface WebviewHostCapabilityResults {
   "commands.execute": { outcome: CommandOutcome };
+  "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
   "navigation.open": void;
   "placement.close": void;
   "notification.show": void;
