@@ -150,7 +150,9 @@ const isDisplayRenderablePart = (part: ChatMessagePart) => {
   }
 };
 
-const isActivityPart = (part: ChatMessagePart) => part.type === "reasoning" || part.type === "tool";
+// Questions are interaction content and must remain visible even without a later assistant response.
+const isActivityPart = (part: ChatMessagePart) =>
+  part.type === "reasoning" || (part.type === "tool" && part.tool.toLowerCase() !== "question");
 
 const isActivityOnlyMessage = (message: SessionMessage) => {
   if (message.role === "user") return false;

@@ -15,6 +15,7 @@ import {
   createInstalledExtensionSourcesDBService,
   createNotificationsDBService,
   createProjectsDBService,
+  createResourceLinksDBService,
   createSessionQueueEntriesDBService,
   createSessionsDBService,
   createSettingsDBService,
@@ -64,6 +65,7 @@ export const createAppDatabaseServices = (db: DbClient) => ({
   extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
   extensionAutomationPreferencesService: createExtensionAutomationPreferencesDBService(db),
   extensionStorageService: createExtensionStorageDBService(db),
+  resourceLinksService: createResourceLinksDBService(db),
   extensionResourceSequencesService: createExtensionResourceSequencesDBService(db),
   extensionSettingsDBService: createExtensionSettingsDBService(db),
 });

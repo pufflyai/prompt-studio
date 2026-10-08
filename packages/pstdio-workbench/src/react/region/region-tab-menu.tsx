@@ -11,11 +11,9 @@ const activate = (workbench: WorkbenchCore, action: NonNullable<WorkbenchTabMenu
   const target = action.kind === "navigation" ? action.target : action;
   if (target.kind === "command") {
     const command = workbench.commands.getCommand(target.commandId)?.command;
-    const args = target.args && typeof target.args === "object" ? target.args : {};
-    const params = Object.fromEntries(Object.entries(command?.params ?? {}).filter(([key]) => !(key in args)));
-    if (command && hasCommandParameters(params)) {
+    if (command && hasCommandParameters(command.params)) {
       workbench.commandPalette.requestParams({
-        record: { command: { ...command, params } },
+        record: { command },
         label: command.label,
         args: target.args,
       });

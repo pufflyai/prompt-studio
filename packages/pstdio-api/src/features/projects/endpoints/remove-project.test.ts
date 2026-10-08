@@ -188,16 +188,16 @@ describe("DELETE /v1/projects/:id", () => {
   });
 });
 
-test("deletes a project after its Git workspace was archived through a symlinked home", async () => {
-  const home = join(tempRoot, "archived-home");
-  const alias = join(tempRoot, "archived-home-alias");
+test("deletes a project after its Git workspace was deleted through a symlinked home", async () => {
+  const home = join(tempRoot, "deleted-home");
+  const alias = join(tempRoot, "deleted-home-alias");
   mkdirSync(home);
   symlinkSync(home, alias, "junction");
   const previousHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = alias;
   try {
-    const repoRoot = createGitRepo("archived-worktree-repo");
-    const project = await createProject("archived-worktree", repoRoot);
+    const repoRoot = createGitRepo("deleted-worktree-repo");
+    const project = await createProject("deleted-worktree", repoRoot);
     const created = await app.request("/v1/workspaces", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -205,7 +205,7 @@ test("deletes a project after its Git workspace was archived through a symlinked
     });
     expect(created.status).toBe(201);
     const workspace = await created.json();
-    expect((await app.request(`/v1/workspaces/${workspace.id}/archive`, { method: "POST" })).status).toBe(200);
+    expect((await app.request(`/v1/workspaces/${workspace.id}`, { method: "DELETE" })).status).toBe(200);
     expect(existsSync(workspace.root_path)).toBe(false);
     expect((await app.request(`/v1/projects/${project.id}`, { method: "DELETE" })).status).toBe(204);
     expect(existsSync(join(repoRoot, "README.md"))).toBe(true);

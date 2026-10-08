@@ -294,30 +294,4 @@ test.describe("Workspace table", () => {
     const workspaces = (await listRes.json()) as Array<Workspace & { name: string }>;
     expect(workspaces.find((item) => item.id === workspace.id)?.name).toBe(nextName);
   });
-
-  test("shows archived workspaces with their state", async ({ page, request }) => {
-    const repoRoot = createGitRepo();
-    repoDirs.push(repoRoot);
-    projectId = (await createProjectViaApi(request, "Workspace test", repoRoot)).id;
-
-    const workspace = await createWorkspaceViaApi(request, projectId);
-    const archiveResponse = await request.post(`${apiBase}/v1/workspaces/${workspace.id}/archive`);
-    expect(archiveResponse.ok()).toBe(true);
-
-    await page.addInitScript((selectedProjectId) => {
-      window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
-    }, projectId);
-
-    await page.goto(`/projects/${projectId}/workspaces`);
-
-    const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
-    await expect(workspaceRow).toBeVisible();
-    // State is a diagnostic column: hidden by default and available from the display menu.
-    await page.getByRole("button", { name: "Display settings" }).click();
-    const display = page.getByTestId("data-table-display-menu");
-    const stateColumn = page.getByRole("checkbox", { name: "State", exact: true });
-    await display.locator("label").filter({ has: stateColumn }).click();
-    await page.keyboard.press("Escape");
-    await expect(workspaceRow.getByText("Archived", { exact: true })).toBeVisible();
-  });
 });

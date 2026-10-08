@@ -1,5 +1,5 @@
 import { HStack, Stack } from "@chakra-ui/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type ChatInputQuestion,
   type ChatInputQuestionCustomAnswers,
@@ -9,6 +9,7 @@ import {
   isQuestionOtherSelected,
 } from "./chat-input-question-answers";
 import { QuestionStepTab } from "./chat-input-question-step-tab";
+import { useQuestionNavigation } from "./chat-question-navigation";
 import { getOwnQuestionValue } from "./question-choices";
 import { QuestionFormBlockView } from "./timeline-tool-blocks";
 
@@ -45,7 +46,17 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
   const { questions, isEditable } = props;
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const questionPanelRef = useRef<HTMLDivElement>(null);
-  const renderQuestionIndex = Math.min(activeQuestionIndex, questions.length - 1);
+  const navigation = useQuestionNavigation();
+  const selection = navigation?.selection;
+  const focusRevision = selection?.revision;
+  useEffect(() => {
+    if (focusRevision !== undefined) questionPanelRef.current?.focus();
+  }, [focusRevision]);
+  const selectStep = (index: number) => {
+    if (selection) navigation?.selectStep(index);
+    else setActiveQuestionIndex(index);
+  };
+  const renderQuestionIndex = Math.min(selection?.index ?? activeQuestionIndex, questions.length - 1);
   const activeQuestion = questions[renderQuestionIndex];
   const hasMultipleQuestions = questions.length > 1;
 
@@ -61,7 +72,7 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
               isActive={questionIndex === renderQuestionIndex}
               selectedOptionsByQuestion={selectedOptionsByQuestion}
               customAnswersByQuestion={customAnswersByQuestion}
-              onSelectStep={setActiveQuestionIndex}
+              onSelectStep={selectStep}
             />
           ))}
         </HStack>
@@ -92,7 +103,7 @@ const QuestionPromptStepper = (props: QuestionPromptStepperProps) => {
             if (!question.multiple && !hadSelection && renderQuestionIndex < questions.length - 1) {
               // Keep keyboard focus in the panel while the previous question's controls are removed.
               questionPanelRef.current?.focus();
-              setActiveQuestionIndex(renderQuestionIndex + 1);
+              selectStep(renderQuestionIndex + 1);
             }
           }}
           onToggleOther={() => {

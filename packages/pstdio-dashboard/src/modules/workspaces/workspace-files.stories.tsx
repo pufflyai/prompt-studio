@@ -10,10 +10,10 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
+import { workspaceFileQueryKey } from "@/shared/workspaces/workspace-file-query";
 import {
   workspaceDiffFileQueryKey,
   workspaceDiffFilesQueryKey,
-  workspaceFileQueryKey,
   workspaceFilesQueryKey,
 } from "./data/workspace-queries";
 import { createWorkspacesModule } from "./module";

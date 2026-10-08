@@ -18,6 +18,10 @@ import { mapViewToolbarActions } from "./view-toolbar-actions";
 const localize = (value: unknown, fallback = "") => text(value as Parameters<typeof text>[0], fallback);
 
 export interface WorkbenchExtensionDataTableRendererAdapter {
+  resolveRowResource?: (
+    record: WorkbenchExtensionDataTableRendererRecord,
+    row: { id: string; values: Record<string, unknown>; resource?: ResourceRef },
+  ) => ResourceRef | undefined;
   /** Shared saved views for the table, such as the dashboard's project views. */
   createViewsProvider?: (
     record: WorkbenchExtensionDataTableRendererRecord,
@@ -124,6 +128,7 @@ const registerRenderer = (
         if (!isQueryResult(value)) return { rows: [] };
         const rows = value.rows.map((row) => {
           const mapped = toRow(row);
+          if (adapter.resolveRowResource) mapped.resource = adapter.resolveRowResource(record, row);
           originalRows.set(mapped, row);
           return mapped;
         });

@@ -57,9 +57,9 @@ describe("PocketCoder workspaces", () => {
     ["canceled", "cancelled"],
     ["failed", "failed"],
     ["expired", "failed"],
-    ["succeeded", "archived"],
-    ["preserving", "archiving"],
-    ["preserved", "archived"],
+    ["succeeded", "cancelled"],
+    ["preserving", "provisioning"],
+    ["preserved", "cancelled"],
   ] as const)("maps %s to %s", async (state, expected) => {
     const server = serve(() => Response.json(workspaceResource(state)));
     const result = await provider.resolve(server.ctx as never, input);

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { getWriter } from "@/lib/sync/collections";
+import { getCollection, getWriter } from "@/lib/sync/collections";
 import {
   buildDashboardWorkspacesFromRows,
   readProjectSetupError,
@@ -316,29 +316,19 @@ describe("dashboard workspace list rows", () => {
     expect(workspaces.map((workspace) => workspace.resource.icon)).toEqual(["GitBranch", "Folder", "Cloud"]);
   });
 
-  test("includes archived workspaces only when the collection asks for them", () => {
-    const archivedWorkspace = { ...rows.workspaces[0], id: "workspace-archived", archived: true };
-    const rowsWithArchive = { ...rows, workspaces: [...rows.workspaces, archivedWorkspace] };
-
-    expect(buildDashboardWorkspacesFromRows(rowsWithArchive, { projectId: "project-1" })).toHaveLength(1);
-
-    const workspaces = buildDashboardWorkspacesFromRows(rowsWithArchive, {
-      projectId: "project-1",
-      includeArchived: true,
-    });
-
-    expect(workspaces.map((workspace) => workspace.id)).toEqual(["workspace-1", "workspace-archived"]);
-    expect(toWorkspaceDataTableRow(workspaces[1]!).values.state).toBe("Archived");
-  });
-
   test("reads the setup error of the selected project's default workspace only", () => {
-    getWriter("workspaces")?.truncateAndWrite([
-      { ...rows.workspaces[1], is_default: true, setup_error: "spawn git ENOENT" },
-      { ...rows.workspaces[0], is_default: true, setup_error: null },
-    ]);
+    const previous = [...getCollection("workspaces").state.values()];
+    try {
+      getWriter("workspaces")?.truncateAndWrite([
+        { ...rows.workspaces[1], is_default: true, setup_error: "spawn git ENOENT" },
+        { ...rows.workspaces[0], is_default: true, setup_error: null },
+      ]);
 
-    expect(readProjectSetupError("project-2", 0)).toBe("spawn git ENOENT");
-    expect(readProjectSetupError("project-1", 0)).toBeNull();
-    expect(readProjectSetupError(undefined, 0)).toBeNull();
+      expect(readProjectSetupError("project-2", 0)).toBe("spawn git ENOENT");
+      expect(readProjectSetupError("project-1", 0)).toBeNull();
+      expect(readProjectSetupError(undefined, 0)).toBeNull();
+    } finally {
+      getWriter("workspaces")?.truncateAndWrite(previous);
+    }
   });
 });

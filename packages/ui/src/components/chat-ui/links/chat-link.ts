@@ -5,6 +5,7 @@ export interface ChatLinkCandidate {
 
 export interface ChatLinkHandler {
   resolveHref(candidate: ChatLinkCandidate): string | null;
+  resolveImageSource?(source: string): Promise<string | null>;
   describe?(candidate: ChatLinkCandidate): string;
   open(candidate: ChatLinkCandidate): void | Promise<void>;
 }

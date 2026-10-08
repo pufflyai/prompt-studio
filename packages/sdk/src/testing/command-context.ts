@@ -1,4 +1,5 @@
 import type { CommandContext, ExtensionStorageApi } from "pstdio-api-contracts/extension-kernel";
+import { createMemoryResourceLinks } from "./memory-resource-links";
 import { createMemoryResources } from "./memory-resources";
 
 export type CommandContextOverrides = { [K in keyof CommandContext]?: Partial<CommandContext[K]> };
@@ -11,6 +12,7 @@ export interface CommandContextInput<TParams extends Record<string, unknown>> {
 }
 // Only the counters are shared per storage. Each context resolves prefixes from its own
 // input, so a context that overrides the project shorthand allocates with that prefix.
+const linksByStorage = new WeakMap<ExtensionStorageApi, Parameters<typeof createMemoryResourceLinks>[0]["edges"]>();
 const sequencesByStorage = new WeakMap<ExtensionStorageApi, Map<string, number>>();
 const paramsByContext = new WeakMap<object, Record<string, unknown>>();
 
@@ -21,7 +23,16 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     sequences = new Map<string, number>();
     sequencesByStorage.set(storage, sequences);
   }
-  const resources = createMemoryResources(input.resourcePrefixes ?? {}, sequences);
+  let edges = linksByStorage.get(storage);
+  if (!edges) {
+    edges = new Map();
+    linksByStorage.set(storage, edges);
+  }
+  const resources = createMemoryResources(
+    input.resourcePrefixes ?? {},
+    sequences,
+    createMemoryResourceLinks({ projectId, extensionId: overrides?.extensionId ?? "test.extension", edges }),
+  );
   const context = {
     extensionId: "test.extension",
     name: "test-extension",

@@ -1,46 +1,35 @@
-import type { DataTableRendererSettings, Localizable } from "@pstdio/sdk/extensions";
-import type { CollectionViewsSource, KanbanRendererSettings } from "@pstdio/workbench";
+import type { DataTableRendererSettings } from "@pstdio/sdk/extensions";
+import type { KanbanRendererSettings } from "@pstdio/workbench";
 import type {
   WorkbenchExtensionDataTableRendererAdapter,
   WorkbenchExtensionKanbanRendererAdapter,
 } from "@pstdio/workbench/extensions";
-import { dataTableBuiltInViews, kanbanBuiltInViews } from "pstdio-api-contracts";
 import { createSharedCollectionViews } from "@/shared/collections/collection-views";
-import {
-  type ResolvedWorkbenchExtensionMetadata,
-  resolveLocalizableString,
-} from "@/shared/extensions/extension-localization";
+import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 
 type BoardRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["createViewsProvider"]>>[0];
 type TableRecord = Parameters<NonNullable<WorkbenchExtensionDataTableRendererAdapter["createViewsProvider"]>>[0];
 
-interface SharedViewsInput<TSettings> {
+interface SharedViewsInput {
   projectId: string;
   record: {
     id: string;
     extensionId: string;
-    defaultActiveViewId?: string;
-    defaultViews?: { id: string; isDefault?: boolean }[];
     refreshEventIds?: string[];
   };
   metadata: ResolvedWorkbenchExtensionMetadata;
-  builtIns: (Omit<CollectionViewsSource<TSettings>["views"][number], "title"> & { title: Localizable<string> })[];
 }
-const createSharedViews = <TSettings>(input: SharedViewsInput<TSettings>) => {
+const createSharedViews = <TSettings>(input: SharedViewsInput) => {
   const { projectId, record, metadata } = input;
   const extensionInstanceId = metadata.extensions.find(
     (extension) => extension.id === record.extensionId,
   )?.extensionInstanceId;
   const localId = metadata.views.find((view) => view.id === record.id)!.localId;
-  return createSharedCollectionViews({
+  return createSharedCollectionViews<TSettings>({
     projectId,
     extensionInstanceId,
     localId,
     record,
-    builtIns: input.builtIns.map((view) => ({
-      ...view,
-      title: resolveLocalizableString(view.title, record.extensionId),
-    })),
   });
 };
 
@@ -53,7 +42,6 @@ export const createSharedBoardViews = (
     projectId,
     record,
     metadata,
-    builtIns: kanbanBuiltInViews(record).views,
   });
 
 export const createSharedTableViews = (
@@ -65,5 +53,4 @@ export const createSharedTableViews = (
     projectId,
     record,
     metadata,
-    builtIns: dataTableBuiltInViews(record).views,
   });
