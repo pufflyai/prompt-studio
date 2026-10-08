@@ -8,15 +8,22 @@ import { WorkbenchIcon } from "../shared/icon";
 import { getPanelLabel } from "./panel-widget-open";
 
 const activate = (workbench: WorkbenchCore, action: NonNullable<WorkbenchTabMenuGroup["rows"][number]["action"]>) => {
-  if (action.kind === "command") {
-    const command = workbench.commands.getCommand(action.commandId)?.command;
-    if (command && hasCommandParameters(command.params)) {
-      workbench.commandPalette.requestParams({ record: { command }, label: command.label, args: action.args });
+  const target = action.kind === "navigation" ? action.target : action;
+  if (target.kind === "command") {
+    const command = workbench.commands.getCommand(target.commandId)?.command;
+    const args = target.args && typeof target.args === "object" ? target.args : {};
+    const params = Object.fromEntries(Object.entries(command?.params ?? {}).filter(([key]) => !(key in args)));
+    if (command && hasCommandParameters(params)) {
+      workbench.commandPalette.requestParams({
+        record: { command: { ...command, params } },
+        label: command.label,
+        args: target.args,
+      });
     } else
       void runUserAction(workbench, command?.label ?? "Command", () =>
-        workbench.commands.executeCommand(action.commandId, action.args),
+        workbench.commands.executeCommand(target.commandId, target.args),
       );
-  } else void runUserAction(workbench, "Open", () => workbench.navigation.openTarget(action.target));
+  } else void runUserAction(workbench, "Open", () => workbench.navigation.openTarget(target));
 };
 const SharedAction = (props: { value: string; label: string; icon: string; onActivate(): void }) => {
   const { value, label, icon, onActivate } = props;
