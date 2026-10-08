@@ -22,7 +22,9 @@ export const showSidenavEntry = async (page: Page, label: string) => {
   await expect(option(sidenav, "Search")).toBeVisible();
   if (!(await option(sidenav, label).isVisible())) {
     await option(sidenav, "Search").click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).hover();
+    await expect(page.getByRole("menu").last()).toBeVisible();
+    const visibilitySubmenu = page.getByRole("menuitem", { name: "Hide/show items", exact: true });
+    if (await visibilitySubmenu.isVisible()) await visibilitySubmenu.hover();
     await page.getByRole("menuitem", { name: label, exact: true }).click();
     await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
