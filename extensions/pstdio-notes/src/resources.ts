@@ -19,7 +19,7 @@ export const noteResources = defineCommandPaletteResource({
       if (query && !note.title.toLowerCase().includes(query)) {
         if (!(await readNote(mount, note.id)).toLowerCase().includes(query)) continue;
       }
-      items.push({ id: note.id, label: note.title, icon: "file-text", target: noteTarget(note.id, note.title) });
+      items.push({ id: note.id, label: note.title, icon: "file-text", target: noteTarget(note.id, note.title, ctx) });
     }
     return { items };
   },
