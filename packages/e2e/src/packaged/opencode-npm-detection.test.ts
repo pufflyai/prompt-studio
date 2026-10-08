@@ -23,9 +23,11 @@ test("detects an npm-installed OpenCode command and lists its models", async () 
 console.log(process.argv[2] === "--version" ? "1.18.34" : "opencode/test-model");`,
   );
   if (process.platform === "win32") {
+    const node = Bun.which("node");
+    if (!node) throw new Error("Node.js is required to test npm command shims.");
     writeFileSync(
       join(prefix, "opencode.cmd"),
-      `@ECHO off\r\n"${process.execPath}" "%~dp0\\node_modules\\opencode-ai\\bin\\opencode.cjs" %*\r\n`,
+      `@ECHO off\r\n"${node}" "%~dp0\\node_modules\\opencode-ai\\bin\\opencode.cjs" %*\r\n`,
     );
     writeFileSync(join(prefix, "opencode.ps1"), 'throw "Use the sibling command shim"');
     writeFileSync(join(prefix, "opencode"), "#!/bin/sh\nexit 1\n");

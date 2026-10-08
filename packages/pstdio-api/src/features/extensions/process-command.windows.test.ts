@@ -2,21 +2,21 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createProcessApi } from "./extension-process-api";
 import { resolveProcessCommand } from "./process-command";
 
 const run = async (command: readonly string[], prefix: string) => {
   const resolved = resolveProcessCommand(command, (name) => Bun.which(name, { PATH: prefix }));
-  const child = Bun.spawn(resolved.argv, {
-    stdout: "pipe",
-    stderr: "pipe",
-    windowsHide: true,
-    windowsVerbatimArguments: resolved.windowsVerbatimArguments,
+  // Bun.which reads the startup PATH. Route this call to the isolated fixture
+  // while retaining the process API's environment, spawning and output handling.
+  const api = createProcessApi({
+    spawner: ((_command, options) =>
+      Bun.spawn(resolved.argv, {
+        ...options,
+        windowsVerbatimArguments: resolved.windowsVerbatimArguments,
+      })) as typeof Bun.spawn,
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
+  const { stdout, stderr, exitCode } = await api.run({ command: [...command] });
   return { exitCode, stdout: stdout.trim(), stderr: stderr.trim() };
 };
 
