@@ -7,6 +7,8 @@ test("lists notes from a local project workspace without repository context", as
   const mount = createNotesMount();
   const note = await createNote(mount, "Folder notes");
   const groups = await notesTree.body.body({
+    extensionId: "pstdio.pstdio-notes",
+    projectId: "notes-project",
     artifacts: { mount: () => mount },
     workspaces: {
       getDefault: async () => ({
@@ -17,7 +19,13 @@ test("lists notes from a local project workspace without repository context", as
       }),
     },
   } as never);
-  expect(groups[0].nodes[0].children).toMatchObject([{ id: note.id, label: "Folder notes" }]);
+  expect(groups[0].nodes[0].children).toMatchObject([
+    {
+      id: note.id,
+      label: "Folder notes",
+      resource: { type: "note", id: note.id, extensionId: "pstdio.pstdio-notes", projectId: "notes-project" },
+    },
+  ]);
   expect(groups[0].nodes[0].actions[0].disabled).toBe(false);
 });
 
