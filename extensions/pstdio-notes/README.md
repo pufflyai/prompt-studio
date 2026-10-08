@@ -22,12 +22,12 @@ The sidebar keeps your notes within reach while the open tab shows the note's bo
 
 - Choose **New note** next to **Notes**, or next to a folder, to start writing immediately. The note starts empty and is called **New note**.
 - Selecting a note opens it in a tab and keeps the project navigation in the sidebar.
-- The title follows the first line of content, up to 80 characters, until you rename the note. Clearing automatically titled content returns the title to **New note**. A title you choose stays unchanged when you edit the body.
+- The first nonempty save gives an untitled note a title from the beginning of its content, up to 80 characters. That title is saved in Markdown front matter and stays unchanged through later edits or clearing the body. A title you choose prevents the automatic rename.
 - Right-click a note and choose **Rename note** to change its title. The sidebar and open tabs update. The body stays the same.
-- Choose **New folder** next to **Notes** to group notes. Right-click a note and choose **Move note** to select a folder or return it to the root.
+- Choose **New folder** next to **Notes** to group notes. Drag notes into folders or back onto **Notes** to return them to the root.
 - Right-click a folder to rename it or remove it. Removing a folder keeps its notes at the root.
-- Right-click a note and choose **Delete** to delete it.
-- Drag a note onto another note to place it before that note, or onto a folder or Notes to change its folder. The order is saved with the notes.
+- Right-click a note or its tab to rename or delete it.
+- Drag a note to the upper or lower half of another note to place it before or after that note. The placement line shows the destination. Notes can move only within the Notes subtree, and the order is saved.
 - Find notes by title or content from Search. Selecting a result opens its note tab.
 - Every note has its own ID, so two people can create notes with the same title at the same time.
 
@@ -46,15 +46,14 @@ pst pstdio-notes notes delete --note-id <note-id>
 
 ## Where notes are stored
 
-Each note is a folder in the project's default workspace. The title and the Markdown body are separate files:
+Each note is a folder in the project's default workspace. The title lives in the Markdown front matter of `content.md`; the editor shows the body:
 
 ```txt
 <project-folder>/.pstdio/extension-storage/pstdio-notes/documents/<note-id>/
-  title.txt
   content.md
   folder.txt    # present when the note belongs to a folder
 ```
 
-An empty `title.txt` means the note uses its content as the title. Named folders are stored under `documents/.folders/<folder-id>/title.txt`. Notes keep their IDs when moved. Manual note order is stored in `documents/.order.json`.
+An empty front matter `title` permits the first automatic rename. Existing sidecar titles are preserved and moved into front matter when that note is next saved or renamed. Named folders are stored under `documents/.folders/<folder-id>/title.txt`. Notes keep their IDs when moved. Manual note order is stored in `documents/.order.json`.
 
 Git is optional. In a Git project, commit that folder to share notes with your team, or leave it out of Git to keep them on your computer.
