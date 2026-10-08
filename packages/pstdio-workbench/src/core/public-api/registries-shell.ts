@@ -18,6 +18,8 @@ export { createSettingsRegistry } from "../registries/settings/settings-registry
 export type {
   CreateWorkbenchStatusBarRegistryInput,
   WorkbenchStatusBarItem,
+  WorkbenchStatusBarPersistenceAdapter,
+  WorkbenchStatusBarPosition,
   WorkbenchStatusBarRegistry,
   WorkbenchStatusBarRegistryState,
   WorkbenchStatusBarSlot,

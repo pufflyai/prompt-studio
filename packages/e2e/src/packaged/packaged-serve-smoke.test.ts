@@ -14,6 +14,7 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -138,6 +139,7 @@ test(
       });
       expect(renameRes.status).toBe(400);
       await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
+      await expectPackagedConnectionStatus(started.baseUrl, runtimeAuthorization(started.descriptor));
     } finally {
       if (child) {
         await stopProcess(child);

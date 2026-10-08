@@ -1,5 +1,6 @@
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
+import { EXTENSION_WEBVIEW_PATH_PREFIX } from "pstdio-api-contracts/extension-webview-path";
 import type { Plugin, ProxyOptions } from "vite";
 import { type RawData, WebSocketServer } from "ws";
 
@@ -28,7 +29,12 @@ export const createApiProxy = (target: string, token: string): Record<string, Pr
       server.on("proxyReq", (proxyRequest) => proxyRequest.removeHeader("origin"));
     },
   };
-  return Object.fromEntries(API_PATHS.map((path) => [path, proxy]));
+  // Signed webview URLs authorize their own read-only assets. Preserve the sandbox
+  // origin so the backend can apply its asset CORS policy without an API credential.
+  return {
+    [EXTENSION_WEBVIEW_PATH_PREFIX]: { target },
+    ...Object.fromEntries(API_PATHS.map((path) => [path, proxy])),
+  };
 };
 
 const terminalUpstreamUrl = (target: string, requestUrl: string) => {
@@ -84,7 +90,7 @@ export const createApiCredentialPlugin = (input: { target: string; token: string
   apply: "serve",
   configureServer(server) {
     server.middlewares.use((request, response, next) => {
-      if (!isApiPath(request.url) || isSameOrigin(request)) {
+      if (!isApiPath(request.url) || request.url?.startsWith(EXTENSION_WEBVIEW_PATH_PREFIX) || isSameOrigin(request)) {
         next();
         return;
       }
