@@ -4,8 +4,19 @@ import { createWorkbenchStore } from "../../shared/store/workbench-store";
 
 type ResourceChange = { label: string } | { removed: true };
 
+export type ResourcePreviewChanges = ReadonlyMap<symbol, { resource: ResourceRef; change: ResourceChange }>;
+
+export const resolveResourcePreview = (resource: ResourceRef, changes: ResourcePreviewChanges) => {
+  let result: ResourceRef | undefined = resource;
+  for (const intent of changes.values()) {
+    if (resourceKey(intent.resource) !== resourceKey(resource)) continue;
+    result = "removed" in intent.change ? undefined : { ...resource, label: intent.change.label };
+  }
+  return result;
+};
+
 export const createResourcePreview = () => {
-  const store = createWorkbenchStore<{ changes: Map<symbol, { resource: ResourceRef; change: ResourceChange }> }>({
+  const store = createWorkbenchStore<{ changes: ResourcePreviewChanges }>({
     name: "workbench.resource-preview",
     initialState: { changes: new Map() },
   });
@@ -18,13 +29,8 @@ export const createResourcePreview = () => {
   };
   return {
     store,
-    resolve(resource: ResourceRef): ResourceRef | undefined {
-      let result: ResourceRef | undefined = resource;
-      for (const intent of store.getState().changes.values()) {
-        if (resourceKey(intent.resource) !== resourceKey(resource)) continue;
-        result = "removed" in intent.change ? undefined : { ...resource, label: intent.change.label };
-      }
-      return result;
+    resolve(resource: ResourceRef) {
+      return resolveResourcePreview(resource, store.getState().changes);
     },
     persist<T>(resource: ResourceRef, save: () => Promise<T>): Promise<T> {
       const key = resourceKey(resource);

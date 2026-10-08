@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createResourcePreview } from "./resource-preview";
+import { createResourcePreview, resolveResourcePreview } from "./resource-preview";
 
 const resource = { type: "note", id: "one", extensionId: "notes", projectId: "project", label: "Original" };
 test("shows a rename immediately and keeps it until the authoritative refresh completes", async () => {
@@ -32,4 +32,16 @@ test("rolls back only the failed intent and isolates resources by owner and proj
   expect(previews.resolve(resource)).toBeUndefined();
   deletion.rollback();
   expect(previews.resolve(resource)?.label).toBe("Original");
+});
+
+test("projects immutable preview snapshots without changing the resource identity", () => {
+  const previews = createResourcePreview();
+  const before = previews.store.getState().changes;
+  const rename = previews.begin(resource, { label: "New" });
+  const after = previews.store.getState().changes;
+  expect(resolveResourcePreview(resource, before)).toEqual(resource);
+  expect(resolveResourcePreview(resource, after)).toEqual({ ...resource, label: "New" });
+  rename.rollback();
+  expect(resolveResourcePreview(resource, after)?.label).toBe("New");
+  expect(resolveResourcePreview(resource, previews.store.getState().changes)).toEqual(resource);
 });

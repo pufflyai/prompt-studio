@@ -12,6 +12,7 @@ import {
   workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
+import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
@@ -59,7 +60,7 @@ export const useWorkbenchRegionTabsState = (
   visibilityStorageKey?: string,
   hasPanelMenuOpeners = false,
 ) => {
-  useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
+  const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -76,7 +77,9 @@ export const useWorkbenchRegionTabsState = (
   const regionState = layoutState.layout.regions[region];
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
-      placement.role === "sub-panel" && isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
+      placement.role === "sub-panel" &&
+      (!placement.resource || Boolean(resolveResourcePreview(placement.resource, changes))) &&
+      isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
   );
   const visibleSubPanels = filterVisibleTabs(subPanelPlacements, tabStore.tabOverrides, (placement) =>
     toTabKey(region, placement),
@@ -85,7 +88,7 @@ export const useWorkbenchRegionTabsState = (
   const visiblePlacements = regionState.widgets.filter(
     (placement) =>
       (visibleSubPanelIds.has(placement.widgetId) || placement.role === "location") &&
-      (!placement.resource || Boolean(workbench.resources.preview.resolve(placement.resource))),
+      (!placement.resource || Boolean(resolveResourcePreview(placement.resource, changes))),
   );
   const leadingItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },
