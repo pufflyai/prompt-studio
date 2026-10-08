@@ -133,6 +133,20 @@ The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to 
 an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is
 trusted configuration because every entry names code the host may run.
 
+The host records the commit it cloned, but it does not yet check that commit against an expected
+value, and it does not check a signature on remote catalogs. PS-528 adds both.
+
+## Trust
+
+An installed extension runs inside the API process with the access of the user's account. It can read
+files, the host environment, and stored connection secrets. The process isolation model is in
+[ADR 0058](../../adrs/0058-isolate-extension-backends.md).
+
+Repo extensions are discovered and enabled when a project opens, and their entry code runs at that
+point. User extensions stay disabled until someone enables them. The planned trust step, which reads
+only `package.json` until a person approves the folder's content hash, is in
+[ADR 0059](../../adrs/0059-trust-step-for-repo-extensions.md).
+
 ## Developing A Repo-Scoped Extension
 
 A repo-scoped extension installs into `<repo>/.pstdio/extensions/<install-name>`, which is often the
