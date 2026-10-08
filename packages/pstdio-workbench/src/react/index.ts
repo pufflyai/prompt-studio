@@ -56,6 +56,10 @@ export type { TreeActionParamsRequest } from "./renderers/tree/tree-actions";
 export { createTreeContextMenuItems } from "./renderers/tree/tree-actions";
 export { WorkbenchTreeView } from "./renderers/tree/tree-view";
 export { WorkbenchConnectionProvider } from "./renderers/workbench-connection-provider";
+export { RelatedResources } from "./resource-links/related-resources";
+export type { WorkbenchResourceLinksOptions } from "./resource-links/resource-links-module";
+export { createWorkbenchResourceLinksModule, resourceLinksCommandId } from "./resource-links/resource-links-module";
+export type { ResourceLinkCandidate, ResourceLinksService } from "./resource-links/resource-links-types";
 export type { WorkbenchSettingsModuleOptions } from "./settings/settings-module";
 export {
   createWorkbenchSettingsModule,
