@@ -49,7 +49,7 @@ Test and Build runs on every pull request update: opening, reopening, and each n
 Pull requests run only what their changes need. The `scope` job runs `scripts/ci/pull-request-ci-scope.ts`, which compares the merge commit with the target branch:
 
 - The Linux job always builds everything. It lints and tests only changed packages and the packages that depend on them.
-- The Windows job runs when a package that does filesystem or process work is affected, such as `pstdio-db`, `pstdio-api`, or `pstdio-wt`. A change to one of their dependencies counts. The script lists these packages.
+- The Windows jobs run when a package that does filesystem or process work is affected, such as `pstdio-db`, `pstdio-api`, or `pstdio-wt`. A change to one of their dependencies counts. The script lists these packages. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time. The platform job builds and lints every affected package, tests the remaining packages, and runs the Git worktree suite. Both jobs retain the 25-minute limit and are required by `ci_passed`.
 - The e2e jobs run when the `e2e` package is affected. The extensions that e2e loads at runtime and the dashboard it serves are e2e devDependencies, so changes to them count. A test in `packages/e2e` keeps the extension list and the devDependencies in step.
 - The license check runs when a `package.json` or `bun.lock` changes.
 - A change under `scripts/` runs every job. It holds repository tooling, such as the test preload and build scripts.

@@ -6,6 +6,7 @@ import type {
   WorkbenchPageLocationPersistence,
   WorkbenchPanelMenuStatePersistenceAdapter,
   WorkbenchPersistenceAdapter,
+  WorkbenchStatusBarPersistenceAdapter,
 } from "../core";
 import { createLocalStorageLayoutPersistence } from "./local-storage-layout-persistence";
 import {
@@ -106,9 +107,15 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
     flush: layoutPersistence.flush,
     dispose: layoutPersistence.dispose,
   };
+  const statusBarKey = workbenchStoragePersistenceKey(input.namespace, "status-bar", undefined);
+  const statusBarPersistence: WorkbenchStatusBarPersistenceAdapter = {
+    getOrder: () => readJson<string[]>(storage, statusBarKey),
+    setOrder: (ids) => storage.setItem(statusBarKey, JSON.stringify(ids)),
+  };
 
   return {
     snapshotPersistence,
+    statusBarPersistence,
     layoutPersistence,
     panelMenuStatePersistence: createLocalStoragePanelMenuStatePersistence({
       namespace: input.namespace,

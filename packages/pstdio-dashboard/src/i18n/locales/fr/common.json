@@ -2,5 +2,10 @@
   "browserSignIn": {
     "title": "Ouvrez Prompt Studio depuis un terminal",
     "description": "Ce navigateur n'est pas connecté. Exécutez cette commande dans un terminal pour ouvrir un tableau de bord connecté."
+  },
+  "connection": {
+    "lost": "Connexion au serveur perdue. Reconnexion automatique en cours.",
+    "connected": "Connecté au serveur.",
+    "unavailable": "Serveur indisponible"
   }
 }

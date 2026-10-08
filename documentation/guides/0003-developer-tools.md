@@ -2,6 +2,18 @@
 
 Developer tools helps you find out which part of Prompt Studio is using your computer's CPU. Use it when the app feels slow, a fan spins up, or an extension seems to do too much work.
 
+## Show connection status
+
+Open **Settings → Developer tools → Connection** and turn on **Show connection status**. A badge with a green dot appears at the trailing end of the status bar while connected. When the app loses contact with the backend, the badge shows a red dot and **Backend unavailable**. Hover or focus the indicator for an explanation, including automatic reconnection. Loaded navigation stays visible, and the indicator returns to a green dot when the connection recovers.
+
+The switch is off by default and is saved on this device. Turning it off hides the indicator. Live sync, retained navigation, and automatic recovery stay active.
+
+## Reorder status bar items
+
+When a side has several items, drag a widget directly, like a tab, to place it before or after another widget. You can also focus a widget or its control and press **Alt+Left** or **Alt+Right**. A normal click still opens the widget's controls. Items stay on their leading or trailing side.
+
+The order is saved on this device. It survives reloads, connection recovery, and turning an indicator off and on.
+
 ## Turn on performance monitoring
 
 1. Open **Settings** and select **Developer tools → Performance**.

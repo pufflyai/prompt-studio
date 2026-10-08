@@ -42,13 +42,9 @@ import { createWorkbenchShellPlacementRegistry } from "./registries/placements/s
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
 import { createResourceRegistry } from "./registries/resources/resource-registry";
 import { createSettingsRegistry } from "./registries/settings/settings-registry";
-import { createStatusBarRegistry } from "./registries/status-bar/status-bar-registry";
 import { createStatusRegistry } from "./registries/statuses/status-registry";
 import { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
 import { createThemeRegistry } from "./registries/themes/theme-registry";
-import { createWorkbenchViewMenuRegistry } from "./registries/view-menus/view-menu-registry";
-import { createWorkbenchViewBodyRegistration } from "./registries/views/view-body-registration";
-import { createViewRegistry } from "./registries/views/view-registry";
 import { createContextKeyService } from "./shared/context/context-key-service";
 import { createDisposable } from "./shared/disposable";
 import {
@@ -60,6 +56,7 @@ import {
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createCoreRenderers } from "./workbench-core-renderers";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
+import { createCoreViews } from "./workbench-core-views";
 import { createWorkbenchModuleRegistry } from "./workbench-module-registry";
 import { setWorkbenchRenderers } from "./workbench-renderers";
 
@@ -168,8 +165,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     isRegionFocusable: (region) => layout.getLayout().regions[region].visible,
   });
 
-  const views = createViewRegistry({ registerBody: createWorkbenchViewBodyRegistration(renderers) });
-  const viewMenus = createWorkbenchViewMenuRegistry({ views });
+  const { views, viewMenus, statusBar } = createCoreViews(input, renderers);
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
 
   const modePlacements = createWorkbenchModePlacementRegistry({
@@ -202,8 +198,6 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     enteredWithPersistedLayout: layout.enteredWithPersistedLayout,
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
-
-  const statusBar = createStatusBarRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) });
 
   const navigationTrees = createWorkbenchNavigationTrees(renderers);
 
