@@ -151,7 +151,7 @@ describe("createDb", () => {
       const pglite = new PGlite();
       await pglite.waitReady;
       const oldDb = drizzle(pglite, { schema });
-      const migrationsFolder = await resolveMigrationsFolder();
+      const { path: migrationsFolder } = await resolveMigrationsFolder();
       const oldMigrationsFolder = path.join(tempRoot, "old-migrations");
       fs.mkdirSync(path.join(oldMigrationsFolder, "meta"), { recursive: true });
       const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf8")) as {

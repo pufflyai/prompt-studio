@@ -71,19 +71,28 @@ export const resolveMigrationsFolder = async (
 
   if (embedded.length > 0) {
     const root = fs.mkdtempSync(path.join(options.tmpDir ?? os.tmpdir(), `${DRIZZLE_EXTRACT_DIR}-`));
-    await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
-    return root;
+    const dispose = () => fs.rmSync(root, { recursive: true, force: true });
+    try {
+      await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
+      return { path: root, dispose };
+    } catch (error) {
+      dispose();
+      throw error;
+    }
   }
 
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle");
+  return {
+    path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle"),
+    dispose: () => {},
+  };
 };
 
 const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-migrations-"));
+  const migrations = await resolveMigrationsFolder();
   try {
-    await run(await resolveMigrationsFolder({ tmpDir: root }));
+    await run(migrations.path);
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    migrations.dispose();
   }
 };
 
