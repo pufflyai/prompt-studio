@@ -51,7 +51,10 @@ import type {
 } from "./registries/renderers/tree-renderer-registry";
 import type { ResourceRef, ResourceRegistry } from "./registries/resources/resource-registry";
 import type { SettingsRegistry } from "./registries/settings/settings-registry";
-import type { WorkbenchStatusBarRegistry } from "./registries/status-bar/status-bar-registry";
+import type {
+  WorkbenchStatusBarPersistenceAdapter,
+  WorkbenchStatusBarRegistry,
+} from "./registries/status-bar/status-bar-registry";
 import type { WorkbenchStatusRegistry } from "./registries/statuses/status-registry";
 import type { FileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
 import type { ThemeRegistry } from "./registries/themes/theme-registry";
@@ -184,6 +187,7 @@ export interface createWorkbenchInput {
   preferencePersistence?: PreferencePersistenceAdapter;
   treePersistence?: TreeRendererPersistenceAdapter;
   panelMenuStatePersistence?: WorkbenchPanelMenuStatePersistenceAdapter;
+  statusBarPersistence?: WorkbenchStatusBarPersistenceAdapter;
   defaultPanelOpenByRegionId?: Partial<Record<WorkbenchRegion, boolean>>;
   /** Host-level region layout policy. The active mode's regionSettings win over it. */
   regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;

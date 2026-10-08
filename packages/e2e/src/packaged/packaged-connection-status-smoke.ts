@@ -1,4 +1,5 @@
 import { chromium, expect } from "@playwright/test";
+import { expectPackagedStatusBarOrder } from "./packaged-status-bar-order";
 
 export const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<string, string>) => {
   const browser = await chromium.launch();
@@ -6,7 +7,7 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     const page = await browser.newPage({ extraHTTPHeaders: headers });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(baseUrl);
-    await page.getByText("Settings", { exact: true }).click();
+    await page.getByRole("option", { name: "Settings", exact: true }).click();
     await page.getByText("Connection", { exact: true }).click();
     const toggle = page.getByRole("checkbox", { name: "Show connection status" });
     await expect(toggle).not.toBeChecked();
@@ -16,9 +17,12 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     const connected = page.getByRole("status", { name: /connected to backend/i, includeHidden: true });
     await expect(connected).toBeVisible();
     await expect(connected).toHaveText("");
+    await expect(connected).toHaveCSS("border-top-width", "1px");
+    await expect(connected.locator("svg")).toHaveCSS("width", "6px");
     await page.reload();
     await expect(toggle).toBeChecked();
     await expect(connected).toBeVisible();
+    await expectPackagedStatusBarOrder(page);
     await page.context().setOffline(true);
     await page.evaluate(() => window.stop());
     const warning = page.getByRole("status", { name: /backend connection lost/i, includeHidden: true });
@@ -37,7 +41,7 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     await expect(connected).toBeVisible();
     await connected.hover();
     await expect(page.getByRole("tooltip")).toHaveText((await connected.getAttribute("aria-label")) ?? "");
-    await page.getByText("Settings", { exact: true }).click();
+    await page.getByRole("option", { name: "Settings", exact: true }).click();
     await page.getByText("Connection", { exact: true }).click();
     await toggle.focus();
     await toggle.press("Space");

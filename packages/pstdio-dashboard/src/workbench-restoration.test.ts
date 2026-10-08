@@ -86,6 +86,27 @@ afterEach(() => {
   getWriter("workspace_sessions")?.truncateAndWrite([]);
 });
 describe("createDashboardWorkbench restoration", () => {
+  test("restores the chosen status bar order when the dashboard starts again", async () => {
+    const storage = createStorage();
+    const registerIndicators = (workbench: ReturnType<typeof createDashboardWorkbench>) => {
+      for (const id of ["connection", "performance"]) {
+        workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
+        workbench.statusBar.registerItem({ id, viewId: id, slot: "trailing" });
+      }
+    };
+    const first = createDashboardWorkbench({ storage });
+    registerIndicators(first);
+    first.statusBar.reorderItem("performance", { beforeItemId: "connection" });
+    await first.dispose();
+    const restored = createDashboardWorkbench({ storage });
+    registerIndicators(restored);
+    expect(restored.statusBar.listVisibleItems("trailing").map((item) => item.id)).toEqual([
+      "performance",
+      "connection",
+    ]);
+    await restored.dispose();
+  });
+
   test("opens the project named in the URL instead of the last selected project", async () => {
     const storage = createStorage();
     createDashboardProjectSelectionPersistence({

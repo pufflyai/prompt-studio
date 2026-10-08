@@ -1,6 +1,25 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  statusBarItem: {
+    value: {
+      position: "relative",
+      minWidth: "0",
+      height: "full",
+      "& [data-status-drag-handle]": {
+        opacity: 0,
+        color: "fg.muted",
+        cursor: "grab",
+        transition: "opacity 0s 150ms",
+      },
+      "&:hover [data-status-drag-handle], &:focus-within [data-status-drag-handle]": {
+        opacity: 1,
+        transition: "opacity 0s",
+      },
+      "&[data-dragging]": { opacity: 0.5 },
+      "@media (hover: none)": { "& [data-status-drag-handle]": { opacity: 1 } },
+    },
+  },
   dropIndicator: {
     value: {
       position: "absolute",

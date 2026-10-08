@@ -194,6 +194,8 @@ export type {
   WorkbenchSidePanelPresentation,
   WorkbenchSnapshot,
   WorkbenchStatusBarItem,
+  WorkbenchStatusBarPersistenceAdapter,
+  WorkbenchStatusBarPosition,
   WorkbenchStatusBarRegistry,
   WorkbenchStatusBarRegistryState,
   WorkbenchStatusBarSlot,

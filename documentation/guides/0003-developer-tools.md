@@ -4,9 +4,15 @@ Developer tools helps you find out which part of Prompt Studio is using your com
 
 ## Show connection status
 
-Open **Settings → Developer tools → Connection** and turn on **Show connection status**. A green dot appears at the trailing end of the status bar while connected. When the app loses contact with the backend, it shows a red dot and **Backend unavailable**. Hover or focus the indicator for an explanation, including automatic reconnection. Loaded navigation stays visible, and the indicator returns to a green dot when the connection recovers.
+Open **Settings → Developer tools → Connection** and turn on **Show connection status**. A badge with a green dot appears at the trailing end of the status bar while connected. When the app loses contact with the backend, the badge shows a red dot and **Backend unavailable**. Hover or focus the indicator for an explanation, including automatic reconnection. Loaded navigation stays visible, and the indicator returns to a green dot when the connection recovers.
 
 The switch is off by default and is saved on this device. Turning it off hides the indicator. Live sync, retained navigation, and automatic recovery stay active.
+
+## Reorder status bar items
+
+When a side has several items, hover an item to reveal its grip, then drag the grip to place the item before or after another item. On a touch screen, the grips stay visible. You can also focus a grip and press **Alt+Left** or **Alt+Right**. Items stay on their leading or trailing side.
+
+The order is saved on this device. It survives reloads, connection recovery, and turning an indicator off and on.
 
 ## Turn on performance monitoring
 

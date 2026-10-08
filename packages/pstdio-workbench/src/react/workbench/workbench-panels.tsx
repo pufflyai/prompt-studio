@@ -4,11 +4,8 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
-import { useRetainedViewPlacements } from "../region/use-retained-view-placements";
-import { WorkbenchWidgetHost } from "../region/widget-host";
-import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchStatusBarItems } from "./workbench-status-bar-items";
 
 interface WorkbenchSidenavProps {
   workbench: WorkbenchCore;
@@ -51,47 +48,6 @@ interface WorkbenchRegionPanelProps {
 }
 
 export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
-
-interface WorkbenchStatusBarItemsProps {
-  workbench: WorkbenchCore;
-  slot: "leading" | "trailing";
-}
-
-const WorkbenchStatusBarItems = (props: WorkbenchStatusBarItemsProps) => {
-  const { slot, workbench } = props;
-  // Read the items here, not in the parent: the compiler keeps this element when
-  // only the parent re-renders, so items registered later would never show.
-  useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
-  const activeModeId = useWorkbenchActiveModeId(workbench);
-  const items = activeModeId === workbench.modes.getActiveModeId() ? workbench.statusBar.listVisibleItems(slot) : [];
-
-  const placements = useRetainedViewPlacements(
-    workbench,
-    items.map((item) => ({
-      widgetId: item.id,
-      contributionId: item.viewId,
-      viewId: item.viewId,
-      title: workbench.views.getView(item.viewId)?.title,
-      closable: false,
-    })),
-  );
-  return placements.map((placement) => {
-    const order = items.findIndex((item) => item.id === placement.widgetId);
-    return (
-      <Box
-        key={placement.widgetId}
-        display={order < 0 ? "none" : "flex"}
-        inert={order < 0}
-        order={order}
-        alignItems="center"
-        minW="0"
-        h="full"
-      >
-        <WorkbenchWidgetHost workbench={workbench} region="status" placement={placement} />
-      </Box>
-    );
-  });
-};
 
 export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;

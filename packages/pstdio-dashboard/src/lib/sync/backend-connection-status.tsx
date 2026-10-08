@@ -15,7 +15,7 @@ export const BackendConnectionStatus = (props: BackendConnectionStatusProps) => 
   return (
     <Tooltip content={description} openDelay={300} closeDelay={150} positioning={{ placement: "top-end" }}>
       <Badge
-        variant="plain"
+        variant="chip"
         size="sm"
         color={connected ? "fg.success" : "fg.error"}
         tabIndex={0}
