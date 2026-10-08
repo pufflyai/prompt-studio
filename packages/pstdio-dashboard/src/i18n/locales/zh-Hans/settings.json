@@ -85,5 +85,11 @@
     "description": "选择 Prompt Studio 的外观。也可以按 Alt+Shift+T 更改主题。",
     "theme": "主题",
     "themeHelper": "适用于所有项目。"
+  },
+  "connectionStatus": {
+    "title": "连接状态",
+    "description": "在状态栏中显示后端连接状态。",
+    "enable": "显示连接状态",
+    "saveError": "无法更改连接状态显示。"
   }
 }

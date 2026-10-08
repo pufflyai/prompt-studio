@@ -85,5 +85,11 @@
     "description": "Prompt Studio의 모양을 선택합니다. Alt+Shift+T로도 테마를 바꿀 수 있습니다.",
     "theme": "테마",
     "themeHelper": "모든 프로젝트에 적용됩니다."
+  },
+  "connectionStatus": {
+    "title": "연결 상태",
+    "description": "상태 표시줄에 백엔드 연결 상태를 표시합니다.",
+    "enable": "연결 상태 표시",
+    "saveError": "연결 상태 표시를 변경하지 못했습니다."
   }
 }

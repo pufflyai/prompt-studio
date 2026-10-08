@@ -7,6 +7,7 @@ import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
 import { AppearanceSettingsPanel } from "./components/appearance-settings-panel";
 import { BetaFeaturesPanel } from "./components/beta-features-panel";
+import { ConnectionStatusPanel } from "./components/connection-status-panel";
 import { ExtensionsPanel } from "./components/extensions-panel";
 import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
@@ -50,6 +51,22 @@ const settingsItem = <TItem,>(input: WorkbenchPanelRenderInput, panelId: string)
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
   ctx.settings.registerSection({ id: "experimental", title: "Experimental", order: 30, scope: "global" });
+  ctx.settings.registerSection({ id: "developer-tools", title: "Developer tools", order: 25, scope: "global" });
+  ctx.views.registerView({
+    id: "dashboard.settings.connection",
+    title: "Connection",
+    body: { kind: "react", render: () => <ConnectionStatusPanel /> },
+  });
+  ctx.settings.registerPanel({
+    id: "connection",
+    title: "Connection",
+    section: "developer-tools",
+    kind: "view",
+    scope: "global",
+    order: 20,
+    icon: "Wifi",
+    viewId: "dashboard.settings.connection",
+  });
   ctx.views.registerView({
     id: "dashboard.settings.beta-features",
     title: "Beta features",
