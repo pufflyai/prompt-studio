@@ -5,8 +5,7 @@ import { plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
-// Workspaces that archive-ticket archived stay archived: the SDK workspace API has no
-// unarchive call, so a restored ticket starts new work in a new workspace.
+// Deleted workspaces are not restored. A restored ticket can start work in a new workspace.
 export const unarchiveTicketCommand = defineCommand({
   id: "unarchive-ticket",
   mutating: true,

@@ -57,7 +57,7 @@ test("tree menus act on an inactive sub-ticket and preserve the open ticket", as
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
-test("tree file menus rename and delete files while workspace menus archive the clicked workspace", async ({
+test("tree file menus rename and delete files while workspace menus delete the clicked workspace", async ({
   page,
   request,
 }, testInfo) => {
@@ -101,17 +101,16 @@ test("tree file menus rename and delete files while workspace menus archive the 
 
     const workspaceRow = sidenav.getByRole("option", { name: attempt.workspace.workspace_shorthand });
     await workspaceRow.click({ button: "right" });
-    await expectResourceMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
+    await expectResourceMenuItems(page, ["Open terminal", "Rename workspace", "Delete workspace"]);
     await expect(page.getByRole("menu")).toHaveCount(1);
     await expect(page).toHaveURL(openedUrl);
     await page.screenshot({ path: testInfo.outputPath("workspace-tree-menu.png"), animations: "disabled" });
-    const archived = page.waitForResponse(
+    const deleted = page.waitForResponse(
       (response) =>
-        response.request().method() === "POST" &&
-        response.url().endsWith(`/workspaces/${attempt.workspace.id}/archive`),
+        response.request().method() === "DELETE" && response.url().endsWith(`/workspaces/${attempt.workspace.id}`),
     );
-    await page.getByRole("menuitem", { name: "Archive workspace", exact: true }).click();
-    expect((await archived).ok()).toBe(true);
+    await page.getByRole("menuitem", { name: "Delete workspace", exact: true }).click();
+    expect((await deleted).ok()).toBe(true);
     await expect(workspaceRow).toHaveCount(0);
     await expect(renamedRow).toBeVisible();
     await expect(page).toHaveURL(openedUrl);

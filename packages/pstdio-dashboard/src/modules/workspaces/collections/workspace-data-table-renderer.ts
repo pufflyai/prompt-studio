@@ -34,10 +34,10 @@ const presentation: Record<string, Pick<DataTableRendererColumn, "stat" | "rende
 const workspaceColumns = workspaceCollectionColumns.map((column) => ({ ...column, ...presentation[column.id] }));
 
 const executeWorkspaceQuery = async (ctx: WorkbenchModuleContext, signal: AbortSignal) => {
-  const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true });
+  const workspaces = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx));
 
   await requestDashboardWorkspaceDiffSummaries(
-    workspaces.filter((workspace) => !workspace.archived && workspace.supportsDiff).map((workspace) => workspace.id),
+    workspaces.filter((workspace) => workspace.supportsDiff).map((workspace) => workspace.id),
     signal,
   );
 

@@ -54,7 +54,7 @@ describe("GET /v1/workspaces/:id/activity", () => {
       projectId,
       resourceType: "workspace",
       resourceId: workspace.id,
-      eventType: "workspace_archived",
+      eventType: "workspace_created",
       actorType: "system",
       source: "api",
       summary: "Archived workspace",
@@ -77,13 +77,13 @@ describe("GET /v1/workspaces/:id/activity", () => {
     const secondPage = (await secondPageRes.json()) as { events: Array<{ event_type: string }> };
     expect(secondPage.events).toHaveLength(1);
 
-    const filteredRes = await app.request(`/v1/workspaces/${workspace.id}/activity?event_type=workspace_archived`);
+    const filteredRes = await app.request(`/v1/workspaces/${workspace.id}/activity?event_type=workspace_created`);
     expect(filteredRes.status).toBe(200);
     const filtered = (await filteredRes.json()) as {
       events: Array<{ event_type: string; created_at: string }>;
     };
     expect(filtered.events).toHaveLength(1);
-    expect(filtered.events[0].event_type).toBe("workspace_archived");
+    expect(filtered.events[0].event_type).toBe("workspace_created");
 
     const toRes = await app.request(
       `/v1/workspaces/${workspace.id}/activity?to=${encodeURIComponent(filtered.events[0].created_at)}`,

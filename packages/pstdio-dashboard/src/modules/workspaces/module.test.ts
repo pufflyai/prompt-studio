@@ -93,13 +93,11 @@ describe("createWorkspacesModule", () => {
       workspaceIsDefault: false,
       workspaceExecutionKind: "local",
       workspaceProviderState: "ready",
-      workspaceSupportsArchive: true,
       workspaceSupportsDelete: true,
     });
     expect(createWorkbenchResourceActions(workbench, workspace).map((action) => action.label)).toEqual([
       "Open terminal",
       "Rename workspace",
-      "Archive workspace",
       "Delete workspace",
     ]);
   });

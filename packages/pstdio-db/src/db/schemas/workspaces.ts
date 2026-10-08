@@ -27,6 +27,7 @@ export type WorkspaceCapabilities = {
   diff: boolean;
   merge: boolean;
   rebase: boolean;
+  /** @deprecated Use delete. */
   archive: boolean;
   delete: boolean;
 };
@@ -99,7 +100,7 @@ export const workspaces = pgTable(
     uniqueIndex("workspaces_project_default_idx").on(table.project_id).where(sql`${table.is_default} = true`),
     uniqueIndex("workspaces_project_active_name_idx")
       .on(table.project_id, table.name)
-      .where(sql`${table.archived} = false and ${table.deleted_at} is null`),
+      .where(sql`${table.deleted_at} is null`),
     // A folder holds one .pstdio/config.json, so it can belong to only one workspace.
     uniqueIndex("workspaces_active_root_path_idx").on(table.root_path).where(sql`${table.deleted_at} is null`),
   ],

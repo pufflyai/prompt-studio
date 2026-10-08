@@ -1,47 +1,16 @@
-import {
-  defineCommand,
-  type ExtensionContextBase,
-  type ExtensionStorageApi,
-  type ExtensionWorkspace,
-  l10n,
-  params,
-} from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
-import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
+import { deleteUnusedLinkedWorkspaces, type TicketCleanupContext } from "./ticket-workspace-cleanup";
+
 const ARCHIVE_ALL_COLUMN_ACTION = "archive_all";
 
-interface CleanupFailureNotification {
-  title: string;
-  body: string;
-  kind: "failed";
-  priority: "normal";
-}
-
-interface ArchiveTicketsContext {
-  storage: ExtensionStorageApi;
-  workspaces: {
-    list: () => Promise<ExtensionWorkspace[]>;
-    archive: (id: string) => Promise<unknown> | unknown;
-  };
-  notify?: {
-    action?: (input: CleanupFailureNotification) => Promise<unknown> | unknown;
-  };
-}
-
-const isLinkedToAnyTicket = (workspace: ExtensionWorkspace, tickets: StoredTicket[]) => {
-  for (const ticket of tickets) {
-    if (isWorkspaceLinkedToTicket(workspace, ticket.shorthand)) return true;
-  }
-  return false;
-};
-
-const persistArchivedTickets = async (ctx: ArchiveTicketsContext, tickets: StoredTicket[]) => {
+const persistArchivedTickets = async (ctx: TicketCleanupContext, tickets: StoredTicket[]) => {
   const updatedAt = new Date().toISOString();
   const archivedTickets = tickets.map((ticket) => ({ ...ticket, archived: true, updatedAt }));
   const collection = ticketsCollection(ctx.storage);
@@ -49,48 +18,6 @@ const persistArchivedTickets = async (ctx: ArchiveTicketsContext, tickets: Store
   await Promise.all(archivedTickets.map((ticket) => collection.put(ticket.id, ticket)));
 
   return archivedTickets;
-};
-
-const archiveLinkedWorkspaces = async (ctx: ArchiveTicketsContext, tickets: StoredTicket[]) => {
-  // Providers own workspace cleanup. Retain the project folder and providers
-  // that explicitly disallow archiving, even after their last ticket is archived.
-  const linked = (await ctx.workspaces.list()).filter(
-    (workspace) =>
-      !workspace.is_default &&
-      workspace.provider_capabilities_json?.archive !== false &&
-      isLinkedToAnyTicket(workspace, tickets),
-  );
-  const allTickets = new Map((await ticketsCollection(ctx.storage).list()).map((ticket) => [ticket.id, ticket]));
-  const unused = linked.filter((workspace) =>
-    (workspace.anchors_json ?? [])
-      .filter((anchor) => anchor.type === "ticket")
-      .every((anchor) => allTickets.get(anchor.id)?.archived === true),
-  );
-  await Promise.all(unused.map((workspace) => ctx.workspaces.archive(workspace.id)));
-};
-
-// Reports cleanup failure via a persistent notification so the user learns about it even
-// after the command outcome has been returned (toast notices are collected synchronously
-// into the outcome and would be lost for the column action's fire-and-forget cascade).
-const reportCleanupFailure = async (ctx: ArchiveTicketsContext, error: unknown) => {
-  try {
-    await ctx.notify?.action?.({
-      title: "Workspace cleanup failed",
-      body: `Linked workspace cleanup failed after archiving the ticket: ${error instanceof Error ? error.message : String(error)}`,
-      kind: "failed",
-      priority: "normal",
-    });
-  } catch {
-    // Best-effort: ticket archival has already been persisted.
-  }
-};
-
-const archiveLinkedWorkspacesSafely = async (ctx: ArchiveTicketsContext, tickets: StoredTicket[]) => {
-  try {
-    await archiveLinkedWorkspaces(ctx, tickets);
-  } catch (error) {
-    await reportCleanupFailure(ctx, error);
-  }
 };
 
 export const archiveTicketCommand = defineCommand({
@@ -117,7 +44,7 @@ export const archiveTicketCommand = defineCommand({
     // Await cascade so single-ticket UX reflects completion, but never reject:
     // the ticket is durably archived, so a cleanup failure should not be reported
     // as a failed archive. The failure surfaces via a persistent notification instead.
-    await archiveLinkedWorkspacesSafely(ctx, [next]);
+    await deleteUnusedLinkedWorkspaces(ctx, [next]);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: next.id });
 
     return next;
@@ -125,7 +52,7 @@ export const archiveTicketCommand = defineCommand({
 });
 
 export const archiveTicketColumnAction = async (
-  ctx: Pick<ExtensionContextBase, "events" | "notify" | "storage" | "workspaces">,
+  ctx: Pick<ExtensionContextBase, "events" | "notify" | "storage" | "workspaces" | "settings">,
   input: { columnId: string; actionId: string },
 ) => {
   if (input.actionId !== ARCHIVE_ALL_COLUMN_ACTION) return { archived: [] };
@@ -138,7 +65,7 @@ export const archiveTicketColumnAction = async (
   // Fire-and-forget: return as soon as tickets are persisted so the board refresh
   // fires immediately. Linked workspaces are sync'd to the dashboard, so their UI
   // updates as the cascade completes; failures surface via a persistent notification.
-  void archiveLinkedWorkspacesSafely(ctx, archived);
+  void deleteUnusedLinkedWorkspaces(ctx, archived);
   await ctx.events.emit(plannerTicketsChanged, {});
 
   return { archived };

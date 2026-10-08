@@ -31,7 +31,6 @@ export interface DashboardWorkspace {
   branch: string | null;
   worktreePath: string | null;
   isDefault: boolean;
-  archived: boolean;
   setupError: string | null;
   displayPath: string | null;
   supportsDiff: boolean;
@@ -44,7 +43,6 @@ export interface DashboardWorkspaceRow extends DataTableRendererRow {
 }
 interface DashboardWorkspaceOptions {
   projectId?: string;
-  includeArchived?: boolean;
   diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
 const anchorMetadataFromWorkspace = (workspace: SyncedRow) => {
@@ -75,7 +73,6 @@ const createWorkspaceResourceMetadata = (input: {
     | undefined;
   const providerCapabilities = input.workspace.provider_capabilities_json as
     | {
-        archive?: boolean;
         delete?: boolean;
         diff?: boolean;
         files?: "none" | "read" | "write";
@@ -89,7 +86,6 @@ const createWorkspaceResourceMetadata = (input: {
     ...createDashboardWorkspaceCapabilityMetadata({
       executionKind,
       providerState,
-      supportsArchive: providerCapabilities?.archive === true,
       supportsDelete: providerCapabilities?.delete === true,
       supportsFiles: providerCapabilities ? providerCapabilities.files !== "none" : executionKind === "local",
       supportsDiff: providerCapabilities?.diff === true,
@@ -98,7 +94,7 @@ const createWorkspaceResourceMetadata = (input: {
     ...(input.workspace.display_path ? { workspaceDisplayPath: input.workspace.display_path } : {}),
     workspaceError: input.workspace.setup_error ?? providerError?.message ?? null,
     // Resource-scoped action menus (header overflow, tree context menu) gate the
-    // rename/archive/delete actions on this flag so the default workspace stays permanent.
+    // rename/delete actions on this flag so the default workspace stays permanent.
     workspaceIsDefault: Boolean(input.workspace.is_default),
     ...anchorMetadataFromWorkspace(input.workspace),
     // Sessions created from a workspace inherit this so the composer stays locked to the workspace branch.
@@ -117,11 +113,7 @@ export const buildDashboardWorkspacesFromRows = (
   options: DashboardWorkspaceOptions = {},
 ) => {
   return rows.workspaces
-    .filter(
-      (workspace) =>
-        (options.includeArchived ? !workspace.deleted_at : isVisibleDashboardRow(workspace)) &&
-        isDashboardProjectRow(workspace, options.projectId),
-    )
+    .filter((workspace) => isVisibleDashboardRow(workspace) && isDashboardProjectRow(workspace, options.projectId))
     .map((workspace) => {
       const title = (workspace.name as string | null) ?? (workspace.workspace_shorthand as string);
       const type: DashboardWorkspace["type"] = workspaceKind(workspace);
@@ -150,7 +142,6 @@ export const buildDashboardWorkspacesFromRows = (
         branch: (workspace.branch as string | null) ?? null,
         worktreePath: (workspace.root_path as string | null) ?? null,
         isDefault: Boolean(workspace.is_default),
-        archived: Boolean(workspace.archived),
         setupError: (workspace.setup_error as string | null) ?? providerError?.message ?? null,
         displayPath: (workspace.display_path as string | null) ?? workspacePath,
         supportsDiff: metadata.workspaceSupportsDiff === true,
@@ -182,23 +173,17 @@ export const resolveDashboardWorkspaceIcon = (workspaceId: string) => {
   return workspace ? workspaceIcon(workspaceKind(workspace)) : dashboardViews.workspaces.icon;
 };
 
-export const createDashboardWorkspaces = (
-  projectId?: string,
-  options: {
-    includeArchived?: boolean;
-  } = {},
-) => {
+export const createDashboardWorkspaces = (projectId?: string) => {
   const rows = readWorkspaceRows();
   return buildDashboardWorkspacesFromRows(rows, {
     projectId,
-    includeArchived: options.includeArchived,
     diffSummariesByWorkspaceId: getDashboardWorkspaceDiffSummaries(
       rows.workspaces.filter((workspace) => !workspace.archived).map((workspace) => workspace.id),
     ),
   });
 };
 const formatWorkspaceState = (workspace: DashboardWorkspace) => {
-  const state = workspace.archived ? "archived" : workspace.providerState;
+  const state = workspace.providerState;
   const label = state.replaceAll("_", " ");
   return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
 };

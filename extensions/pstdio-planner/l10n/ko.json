@@ -32,5 +32,9 @@
   "commands.refinementPolicy.title": "티켓 구체화 옵션 읽기",
   "settings.uxPrototype.title": "UX 기능의 아티팩트 프로토타입 생성",
   "settings.uxPrototype.description": "Artifacts를 사용할 수 있는 경우 새 UX 기능을 구체화할 때 대화형 프로토타입을 필수로 만듭니다.",
-  "ticketWorkspaces.project": "프로젝트 폴더"
+  "ticketWorkspaces.project": "프로젝트 폴더",
+  "settings.tickets.deleteLinkedWorkspaces.title": "연결된 작업 공간 삭제",
+  "settings.tickets.deleteLinkedWorkspaces.description": "티켓을 보관하거나 삭제하면 활성 티켓이 사용하지 않는 작업 공간을 삭제합니다. 작업 트리, 브랜치 및 커밋하지 않은 변경 사항이 삭제됩니다.",
+  "settings.tickets.markDoneOnMerge.title": "병합 시 완료로 표시",
+  "settings.tickets.markDoneOnMerge.description": "작업 공간 브랜치 또는 연결된 풀 리퀘스트가 병합되면 티켓을 완료로 이동합니다."
 }

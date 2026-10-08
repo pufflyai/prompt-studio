@@ -24,13 +24,13 @@ test("cancelling an already settled local or remote workspace retains its locati
   expect(await api.cancel(fixture.workspace.id)).toMatchObject({ root_path: null });
 });
 
-test("archive returns the same projected workspace contract as get", async () => {
+test("deprecated archive deletes through the provider path and returns the workspace projection", async () => {
   const { workspace, deps, root } = fixture;
   Object.assign(workspace, { is_default: false, provider_id: "pstdio.worktree", root_path: root });
-  Object.assign(workspace.provider_capabilities_json, { archive: true });
+  Object.assign(workspace.provider_capabilities_json, { delete: true });
   deps.workspaceService.updateProviderProjection = async (_id, patch) => Object.assign(workspace, patch) as never;
-  deps.workspaceService.archive = async () => Object.assign(workspace, { archived: true }) as never;
+  deps.workspaceService.softDelete = async () => Object.assign(workspace, { deleted_at: "now" }) as never;
   deps.workspaceSessionService = { listByWorkspace: async () => [] } as never;
   const result = await environment().workspaces.archive(workspace.id);
-  expect(result).toMatchObject({ id: workspace.id, archived: true, root_path: root });
+  expect(result).toMatchObject({ id: workspace.id, deleted_at: expect.any(String), root_path: root });
 });

@@ -225,7 +225,7 @@ Use kernel event refs from `@pstdio/sdk/extensions` when possible:
 
 - `projectEvents.opened`
 - `sessionEvents.started`, `resumed`, `awaitingInput`, `succeeded`, `failed`, `completed`
-- `workspaceEvents.created`, `provision` (awaited), `ready`, `archived`, `deleted`
+- `workspaceEvents.created`, `provision` (awaited), `ready`, `deleted`; `archived` is deprecated (use `deleted`)
 - `worktreeEvents.removed`
 - `gitEvents.committed`, `rebased`, `merged`, `conflicted`
 

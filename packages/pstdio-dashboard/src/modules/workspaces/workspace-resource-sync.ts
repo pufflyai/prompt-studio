@@ -8,7 +8,7 @@ export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
     const location = ctx.pages.store.getState().location;
     const primary = ctx.getPrimaryResource();
     if (location?.resource?.type !== "workspace" || primary?.type !== "workspace") return;
-    const current = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx), { includeArchived: true }).find(
+    const current = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).find(
       (workspace) => workspace.id === location.resource?.id,
     );
     if (!current) return;
