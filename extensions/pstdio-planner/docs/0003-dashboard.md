@@ -34,7 +34,7 @@ You can also create tickets from a terminal with [`pst tickets create`](0004-cli
 
 The display menu switches between **Board** and **List**. It also sets the grouping, the sub-grouping, the ordering, and the properties shown on each card.
 
-The board shows active tickets only. Use the filter menu to show archived tickets, or to filter by status, parent, or tag.
+The board starts with a **Ticket is Active** filter. Remove it to show both active and archived tickets, or choose **Archived** to show only archived tickets. Use the filter menu to filter by status, parent, or tag.
 
 To find a ticket quickly, search for it in the command palette. Tickets have their own group there.
 

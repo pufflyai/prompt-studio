@@ -52,7 +52,7 @@ test("shares saved ticket views while keeping active views local", async ({
       "aria-selected",
       "true",
     );
-    await second.getByRole("button", { name: "Remove Archived filter", exact: true }).click();
+    await second.getByRole("button", { name: "Remove Ticket filter", exact: true }).click();
     await expect(second.getByRole("button", { name: "Save view", exact: true })).toBeVisible();
     const edited = await request.patch(`/v1/projects/${project.id}/board-views/${saved.id}`, {
       data: { title: "Agent edit" },
@@ -75,7 +75,7 @@ test("shares saved ticket views while keeping active views local", async ({
     await page.getByRole("tab", { name: "All copy", exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Delete view", exact: true }).click();
     await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Remove Archived filter", exact: true }).click();
+    await page.getByRole("button", { name: "Remove Ticket filter", exact: true }).click();
     await page.getByRole("button", { name: "Save as new view", exact: true }).click();
     await expect(page.getByRole("tab", { name: "All copy", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("button", { name: "Save as new view", exact: true })).toHaveCount(0);
