@@ -48,6 +48,6 @@ export const expectNotesResources = async (input: {
   await execute(tree.body.moveHandlerId!, { renderer, source: { id: note.id }, target: { id: `folder:${folder.id}` } });
   const sections = (await execute(tree.body.bodyHandlerId, { renderer })) as TreeViewSection[];
   expect(sections[0]!.nodes[0]!.children!.find((child) => child.id === `folder:${folder.id}`)?.children).toMatchObject([
-    { id: note.id },
+    { id: note.id, resource: { type: "note", id: note.id, extensionId: "pstdio.pstdio-notes", projectId } },
   ]);
 };
