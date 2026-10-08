@@ -1,5 +1,14 @@
 # remote-workspaces
 
+## 0.41.0
+
+_2026-10-08_
+
+### Patch Changes
+
+- f130437: Rewrite the extension READMEs and Planner docs for the new Docs tab on prompt.studio.
+- 42d62b5: Delete unused ticket workspaces, mark tickets done on merge, and replace workspace archiving with deletion.
+
 ## 0.40.0
 
 _2026-10-02_
