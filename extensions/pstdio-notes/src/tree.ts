@@ -1,8 +1,9 @@
 import { defineNavigationTree, defineView, l10n, viewDataEvents, workbenchModes } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
 import { listFolders } from "./folders";
+import { moveTreeNote } from "./note-movement";
 import { listNotes } from "./notes";
-import { notesChanged, notesMount, noteTarget } from "./pages";
+import { noteResource, notesChanged, notesMount, noteTarget } from "./pages";
 import { folderActions, newFolderAction, newNoteAction, noteActions } from "./tree-actions";
 
 export const notesTree = defineView({
@@ -11,6 +12,12 @@ export const notesTree = defineView({
   body: {
     kind: "tree",
     refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
+    onMove: async (ctx, { source, target }) => {
+      if (!(await notesFileAccess(ctx)).writable) throw new Error("Notes are read-only.");
+      if (!target) return;
+      await moveTreeNote(notesMount(ctx), source.id, target.id);
+      await ctx.events.emit(notesChanged, { noteId: source.id });
+    },
     body: async (ctx) => {
       const { readable, writable } = await notesFileAccess(ctx);
       const [notes, folders] = readable
@@ -20,6 +27,9 @@ export const notesTree = defineView({
         id: note.id,
         label: note.title,
         icon: "file-text",
+        canDrag: writable,
+        canDrop: writable,
+        resource: noteResource(note.id, note.title),
         target: noteTarget(note.id, note.title),
         contextMenuActions: noteActions(note, writable, folders),
       });
@@ -33,6 +43,7 @@ export const notesTree = defineView({
               id: "notes",
               label: l10n("navigation.notes", "Notes"),
               icon: "notebook-pen",
+              canDrop: writable,
               collapsible: true,
               canHide: true,
               actions: [newNoteAction(writable), newFolderAction(writable)],
@@ -41,6 +52,7 @@ export const notesTree = defineView({
                   id: `folder:${folder.id}`,
                   label: folder.title,
                   icon: "folder",
+                  canDrop: writable,
                   collapsible: true,
                   actions: [newNoteAction(writable, folder.id)],
                   contextMenuActions: folderActions(folder, writable),

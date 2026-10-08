@@ -5,6 +5,7 @@ export type NotesMount = Pick<ArtifactMount, "exists" | "list" | "readText" | "w
 const CONTENT_PATH = "/content.md";
 const notePath = (id: string) => `${id}${CONTENT_PATH}`;
 const titlePath = (id: string) => `${id}/title.txt`;
+export const noteOrderPath = ".order.json";
 export const noteFolderPath = (id: string) => `${id}/folder.txt`;
 
 const readNoteFolder = async (mount: NotesMount, id: string) =>
@@ -57,9 +58,13 @@ export const listNotes = async (mount: NotesMount) => {
       }
     }),
   );
-  return notes
+  const sorted = notes
     .filter((note) => note !== undefined)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title));
+  if (!(await mount.exists(noteOrderPath))) return sorted;
+  const order: string[] = JSON.parse(await mount.readText(noteOrderPath));
+  const positions = new Map(order.map((id, index) => [id, index]));
+  return sorted.sort((a, b) => (positions.get(a.id) ?? order.length) - (positions.get(b.id) ?? order.length));
 };
 
 export const createNote = async (mount: NotesMount, rawTitle?: string) => {
