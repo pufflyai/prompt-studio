@@ -30,6 +30,7 @@ interface SortableSectionGroupProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   indicator: TreeListDropIndicator | null;
   dragging: boolean;
@@ -47,6 +48,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     onNavigate,
     onToggleSection,
     onToggleNode,
+    onMoveNode,
     onSectionContextMenu,
     indicator,
     dragging,
@@ -103,6 +105,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
                     linkComponent={linkComponent}
                     onNavigate={onNavigate}
                     onToggleNode={onToggleNode}
+                    onMoveNode={onMoveNode}
                     indicator={indicator}
                   />
                 ) : null,
@@ -124,6 +127,7 @@ interface SortableOrPlainNodeRowProps {
   linkComponent?: TreeListLinkComponent;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleNode?: (nodeId: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   indicator: TreeListDropIndicator | null;
 }
 
@@ -139,6 +143,7 @@ const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
     linkComponent,
     onNavigate,
     onToggleNode,
+    onMoveNode,
     indicator,
   } = props;
   const nodeRow = (
@@ -153,6 +158,7 @@ const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
       linkComponent={linkComponent}
       onNavigate={onNavigate}
       onToggleNode={onToggleNode}
+      onMoveNode={onMoveNode}
     />
   );
   if (row.level > 0) return nodeRow;
@@ -195,7 +201,7 @@ const SortableSections = (props: SortableSectionsProps) => {
       items={sections.map((section) => toSectionDragId(section.id))}
       strategy={verticalListSortingStrategy}
     >
-      <Stack gap="0" w="full" minW="0" maxW="full">
+      <Stack gap="0" w="full" minW="0" maxW="full" position="relative">
         {sections.map((section, index) => (
           <Fragment key={section.id}>
             <SortableSectionGroup
@@ -209,6 +215,7 @@ const SortableSections = (props: SortableSectionsProps) => {
               onNavigate={rest.onNavigate}
               onToggleSection={rest.onToggleSection}
               onToggleNode={rest.onToggleNode}
+              onMoveNode={rest.onMoveNode}
               onSectionContextMenu={rest.onSectionContextMenu}
               indicator={indicator}
               dragging={Boolean(active)}
@@ -238,6 +245,7 @@ interface TreeListSortableProps {
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
@@ -257,6 +265,7 @@ export const TreeListSortable = (props: TreeListSortableProps) => {
     onNavigate,
     onToggleSection,
     onToggleNode,
+    onMoveNode,
     onSectionContextMenu,
     onReorderSections,
     onReorderNodes,
@@ -286,6 +295,7 @@ export const TreeListSortable = (props: TreeListSortableProps) => {
       onNavigate={onNavigate}
       onToggleSection={onToggleSection}
       onToggleNode={onToggleNode}
+      onMoveNode={onMoveNode}
       onSectionContextMenu={onSectionContextMenu}
     />
   );
