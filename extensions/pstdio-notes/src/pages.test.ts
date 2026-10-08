@@ -77,7 +77,28 @@ describe("note editor", () => {
       await query(ctx as never, {
         renderer: { rendererId: "notes", resource: { type: "note", id: note.id, label: "Original" } },
       }),
-    ).toEqual({ label: "Renamed" });
+    ).toMatchObject({
+      label: "Renamed",
+      menu: [
+        {
+          rows: [
+            { id: "rename", action: { target: { params: { noteId: note.id } } } },
+            { id: "delete", action: { target: { params: { noteId: note.id } } } },
+          ],
+        },
+      ],
+    });
+  });
+
+  test("handles a note removed between the existence check and editor read", async () => {
+    const { ctx, mount } = createContext();
+    const note = await createNote(mount, "Removing");
+    const readText = mount.readText;
+    mount.readText = async (path) => {
+      await deleteNote(mount, note.id);
+      return readText(path);
+    };
+    expect(await load(ctx, note.id)).toMatchObject({ emptyState: { title: "Note not found" } });
   });
 
   test("does not bring back a note that was deleted while its tab stayed open", async () => {

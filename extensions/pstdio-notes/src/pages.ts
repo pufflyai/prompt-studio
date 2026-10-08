@@ -11,6 +11,7 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
+import { noteTabActions } from "./note-tab-actions";
 import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 
 export const notesChanged = eventRef<{ noteId?: string }>({
@@ -57,10 +58,17 @@ export const editor = defineView({
         };
       }
 
+      let content: string;
+      try {
+        content = await readNote(mount, id);
+      } catch (error) {
+        if (await noteExists(mount, id)) throw error;
+        return { emptyState: { title: "Note not found", description: "This note was deleted." } };
+      }
       return {
         fileName: `${id}.md`,
         mimeType: "text/markdown",
-        content: await readNote(mount, id),
+        content,
         editable: writable,
         placeholder: "Write your notes here...",
       };
@@ -94,10 +102,16 @@ export const notesPage = definePage({
         refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
         query: async (ctx, { renderer }) => {
           const id = renderer.resource?.id;
-          if (!(await notesFileAccess(ctx)).readable) return {};
+          const { readable, writable } = await notesFileAccess(ctx);
+          if (!readable) return {};
           const mount = notesMount(ctx);
           if (!id || !(await noteExists(mount, id))) return {};
-          return { label: await readNoteTitle(mount, id) };
+          try {
+            return { label: await readNoteTitle(mount, id), menu: noteTabActions(id, writable) };
+          } catch (error) {
+            if (await noteExists(mount, id)) throw error;
+            return {};
+          }
         },
       },
       item: {
