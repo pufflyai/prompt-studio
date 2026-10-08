@@ -12,7 +12,7 @@ import {
   expectResourceMenuItems,
   prepareResourceActionsDashboard,
 } from "./helpers/resource-actions";
-import { getSidenavEntry } from "./helpers/sidenav-navigation";
+import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 test("tree menus act on an inactive sub-ticket and preserve the open ticket", async ({ page, request }, testInfo) => {
@@ -53,7 +53,7 @@ test("tree menus act on an inactive sub-ticket and preserve the open ticket", as
   expect((await getPlannerTicket(request, apiBase, project.id, parent.id))?.archived).toBe(false);
 
   await page.getByRole("button", { name: /Resource Actions$/ }).click();
-  await getSidenavEntry(page, "Workspaces");
+  await showSidenavEntry(page, "Workspaces");
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
 
@@ -183,7 +183,7 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await expect(page).toHaveURL(sessionUrl);
 
   await page.goto(`/projects/${project.id}/`);
-  await getSidenavEntry(page, "Workspaces");
+  await showSidenavEntry(page, "Workspaces");
   await row("Workspaces").click();
   await page.getByText("Project folder", { exact: true }).first().click();
   await row("Session A").click();
