@@ -261,7 +261,7 @@ export const buildTicketAttributes = (
   },
   {
     id: TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
-    label: l10n("displayMenu.propertyOptions.archived", "Archived"),
+    label: l10n("displayMenu.propertyOptions.archived", "Ticket"),
     type: {
       kind: "enum",
       options: [

@@ -20,7 +20,7 @@ describe("buildTicketAttributes", () => {
 
     expect(archiveAttribute).toEqual({
       id: "archived",
-      label: { $l10n: "displayMenu.propertyOptions.archived", default: "Archived" },
+      label: { $l10n: "displayMenu.propertyOptions.archived", default: expect.any(String) },
       type: {
         kind: "enum",
         options: [

@@ -13,7 +13,7 @@
   "kanbanRenderers.tickets.rowActions.unarchive": "取消封存",
   "kanbanRenderers.tickets.title": "工單",
   "displayMenu.orderingOptions.shorthand": "ID",
-  "displayMenu.propertyOptions.archived": "已封存",
+  "displayMenu.propertyOptions.archived": "工單",
   "displayMenu.propertyOptions.createdAt": "建立時間",
   "displayMenu.propertyOptions.status": "狀態",
   "displayMenu.propertyOptions.updatedAt": "更新時間",
