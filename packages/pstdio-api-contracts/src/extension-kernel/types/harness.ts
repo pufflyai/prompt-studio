@@ -58,6 +58,8 @@ export type {
   HarnessResumeInput,
   HarnessSession,
   HarnessStartInput,
+  HarnessSteeringInput,
+  HarnessSteeringResult,
   JsonPatch,
   QuestionResponse,
   TimeoutStrategy,

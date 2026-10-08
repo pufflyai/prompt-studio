@@ -1,6 +1,9 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries } from "../../db/schemas.pg";
+import { combinePending } from "./combine-pending";
+import { movePending } from "./move-pending";
+import { createSteeringDeliveryOperations } from "./steering-deliveries";
 
 type QueueEntryRecord = typeof session_queue_entries.$inferSelect;
 
@@ -8,13 +11,13 @@ type CreateInput = Pick<QueueEntryRecord, "session_id" | "prompt" | "request_kin
   Partial<
     Pick<
       QueueEntryRecord,
-      "attachments_json" | "question_response_json" | "params_json" | "created_at" | "dispatch_started_at"
+      "model" | "attachments_json" | "question_response_json" | "params_json" | "created_at" | "dispatch_started_at"
     >
   >;
 type UpdateInput = Partial<
   Pick<
     QueueEntryRecord,
-    "prompt" | "request_kind" | "attachments_json" | "question_response_json" | "params_json" | "created_at"
+    "prompt" | "request_kind" | "model" | "attachments_json" | "question_response_json" | "params_json" | "created_at"
   >
 >;
 
@@ -36,6 +39,8 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .insert(session_queue_entries)
       .values({
         session_id: input.session_id,
+        model: input.model ?? null,
+        revision: crypto.randomUUID(),
         prompt: input.prompt,
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
@@ -58,7 +63,9 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     return db
       .select()
       .from(session_queue_entries)
-      .where(isNull(session_queue_entries.dispatch_started_at))
+      .where(
+        and(isNull(session_queue_entries.dispatch_started_at), isNull(session_queue_entries.steering_delivery_json)),
+      )
       .orderBy(session_queue_entries.created_at, session_queue_entries.queue_position);
   };
 
@@ -66,9 +73,22 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     return db
       .select()
       .from(session_queue_entries)
-      .where(and(eq(session_queue_entries.session_id, sessionId), isNull(session_queue_entries.dispatch_started_at)))
+      .where(
+        and(
+          eq(session_queue_entries.session_id, sessionId),
+          isNull(session_queue_entries.dispatch_started_at),
+          isNull(session_queue_entries.steering_delivery_json),
+        ),
+      )
       .orderBy(session_queue_entries.queue_position);
   };
+
+  const listUndispatchedBySession = async (sessionId: string) =>
+    db
+      .select()
+      .from(session_queue_entries)
+      .where(and(eq(session_queue_entries.session_id, sessionId), isNull(session_queue_entries.dispatch_started_at)))
+      .orderBy(session_queue_entries.queue_position);
 
   const listDispatchStarted = async () => {
     return db.select().from(session_queue_entries).where(isNotNull(session_queue_entries.dispatch_started_at));
@@ -80,18 +100,27 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
       .update(session_queue_entries)
       .set({ dispatch_started_at: timestamp, updated_at: timestamp })
       .where(
-        and(eq(session_queue_entries.queue_position, queuePosition), isNull(session_queue_entries.dispatch_started_at)),
+        and(
+          eq(session_queue_entries.queue_position, queuePosition),
+          isNull(session_queue_entries.dispatch_started_at),
+          isNull(session_queue_entries.steering_delivery_json),
+        ),
       )
       .returning();
     return updated ?? null;
   };
 
-  const updatePending = async (queuePosition: number, input: UpdateInput) => {
+  const updatePending = async (queuePosition: number, input: UpdateInput, expectedRevision?: string) => {
     const [updated] = await db
       .update(session_queue_entries)
-      .set({ ...input, updated_at: nowTimestamp() })
+      .set({ ...input, revision: crypto.randomUUID(), updated_at: nowTimestamp() })
       .where(
-        and(eq(session_queue_entries.queue_position, queuePosition), isNull(session_queue_entries.dispatch_started_at)),
+        and(
+          eq(session_queue_entries.queue_position, queuePosition),
+          isNull(session_queue_entries.dispatch_started_at),
+          isNull(session_queue_entries.steering_delivery_json),
+          expectedRevision ? eq(session_queue_entries.revision, expectedRevision) : undefined,
+        ),
       )
       .returning();
     return updated ?? null;
@@ -108,11 +137,12 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
         const timestamp = nowTimestamp();
         const [firstUpdated] = await tx
           .update(session_queue_entries)
-          .set({ ...firstInput, updated_at: timestamp })
+          .set({ ...firstInput, revision: crypto.randomUUID(), updated_at: timestamp })
           .where(
             and(
               eq(session_queue_entries.queue_position, firstQueuePosition),
               isNull(session_queue_entries.dispatch_started_at),
+              isNull(session_queue_entries.steering_delivery_json),
             ),
           )
           .returning();
@@ -120,11 +150,12 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
 
         const [secondUpdated] = await tx
           .update(session_queue_entries)
-          .set({ ...secondInput, updated_at: timestamp })
+          .set({ ...secondInput, revision: crypto.randomUUID(), updated_at: timestamp })
           .where(
             and(
               eq(session_queue_entries.queue_position, secondQueuePosition),
               isNull(session_queue_entries.dispatch_started_at),
+              isNull(session_queue_entries.steering_delivery_json),
             ),
           )
           .returning();
@@ -142,11 +173,16 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     await db.delete(session_queue_entries).where(eq(session_queue_entries.queue_position, queuePosition));
   };
 
-  const removePending = async (queuePosition: number) => {
+  const removePending = async (queuePosition: number, expectedRevision?: string) => {
     const removed = await db
       .delete(session_queue_entries)
       .where(
-        and(eq(session_queue_entries.queue_position, queuePosition), isNull(session_queue_entries.dispatch_started_at)),
+        and(
+          eq(session_queue_entries.queue_position, queuePosition),
+          isNull(session_queue_entries.dispatch_started_at),
+          isNull(session_queue_entries.steering_delivery_json),
+          expectedRevision ? eq(session_queue_entries.revision, expectedRevision) : undefined,
+        ),
       )
       .returning({ queuePosition: session_queue_entries.queue_position });
     return removed.length > 0;
@@ -158,10 +194,14 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
 
   return {
     get,
+    movePending: (input: Parameters<typeof movePending>[1]) => movePending(db, input),
+    ...createSteeringDeliveryOperations(db),
+    combinePending: (input: Parameters<typeof combinePending>[1]) => combinePending(db, input),
     create,
     createDispatchStarted,
     listPending,
     listPendingBySession,
+    listUndispatchedBySession,
     listDispatchStarted,
     markDispatchStarted,
     updatePending,

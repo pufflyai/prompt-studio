@@ -13,6 +13,7 @@ interface ChatInputToolbarProps {
   onSkip: () => void;
   buttonAction: ChatInputAction;
   submitTitle?: string;
+  submitLabel?: string;
   messageTitle: string;
   runAction: (action: ChatInputAction) => void;
 }
@@ -25,6 +26,7 @@ export const ChatInputToolbar = (props: ChatInputToolbarProps) => {
     onSkip,
     buttonAction,
     submitTitle,
+    submitLabel,
     messageTitle,
     runAction,
   } = props;
@@ -40,13 +42,19 @@ export const ChatInputToolbar = (props: ChatInputToolbarProps) => {
           Skip
         </Button>
       ) : null}
-      <SendButton
-        canInterrupt={buttonAction === "interrupt"}
-        title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}
-        shortcut={buttonAction === "submit" ? "Enter" : undefined}
-        onClick={() => runAction(buttonAction)}
-        disabled={buttonAction === "none"}
-      />
+      {submitLabel ? (
+        <Button size="xs" variant="primary" disabled={buttonAction === "none"} onClick={() => runAction(buttonAction)}>
+          {submitLabel}
+        </Button>
+      ) : (
+        <SendButton
+          canInterrupt={buttonAction === "interrupt"}
+          title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}
+          shortcut={buttonAction === "submit" ? "Enter" : undefined}
+          onClick={() => runAction(buttonAction)}
+          disabled={buttonAction === "none"}
+        />
+      )}
     </HStack>
   );
 };

@@ -15,7 +15,7 @@ const uploadSessionAttachment = async (projectId: string, file: File) =>
     },
   });
 
-const deleteSessionAttachment = (projectId: string, fileId: string) =>
+export const deleteSessionAttachment = (projectId: string, fileId: string) =>
   apiRequest<void>(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments/${encodeURIComponent(fileId)}`, {
     method: "DELETE",
   });
@@ -29,6 +29,7 @@ export const useSessionDraftAttachments = (
   projectId: string | undefined,
   draftKey: string,
   drafts: DashboardSessionDraftPersistence | undefined,
+  savedFileIds: string[] = [],
 ) => {
   const draft = projectId ? drafts?.getAttachmentDraft(projectId, draftKey) : undefined;
   const { attachments, uploading } = useSyncExternalStore(
@@ -58,6 +59,10 @@ export const useSessionDraftAttachments = (
 
   const removeAttachment = (fileId: string) => {
     if (!projectId) return;
+    if (savedFileIds.includes(fileId)) {
+      draft?.changeAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId));
+      return;
+    }
     void deleteSessionAttachment(projectId, fileId)
       .then(() => draft?.changeAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId)))
       .catch(() => undefined);

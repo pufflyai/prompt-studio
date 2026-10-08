@@ -1,3 +1,4 @@
+import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import type { SessionStreamConnection, SessionStreamHandlers } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { RendererReadBinding, RendererReadRegistry } from "@pstdio/workbench";
@@ -11,6 +12,7 @@ import { type SessionNotice, toSessionNotice } from "./session-notice";
 
 export interface SessionHistoryState {
   messages: SessionMessage[];
+  queue?: PendingQueuedFollowUpsResponse;
   loading: boolean;
   streaming: boolean;
   error?: SessionNotice;
@@ -18,7 +20,10 @@ export interface SessionHistoryState {
 }
 interface HistoryTransport {
   getConversation(id: string, signal?: AbortSignal): Promise<{ messages: SessionMessage[] }>;
-  getQueuedMessages(id: string, options?: { signal?: AbortSignal }): Promise<{ messages: SessionMessage[] }>;
+  getQueuedMessages(
+    id: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ messages: SessionMessage[]; queue?: PendingQueuedFollowUpsResponse }>;
   connectStream(id: string, handlers: SessionStreamHandlers): SessionStreamConnection;
 }
 interface HistoryControllerInput {
@@ -62,7 +67,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         onValue: (value) => {
           if (current !== generation || startedRevision !== queueRevision) return;
           queued = value.messages;
-          publish({ queueError: undefined });
+          publish({ queueError: undefined, queue: value.queue });
         },
         onError: (error) => publish({ queueError: toSessionNotice(error) }),
       },
@@ -127,7 +132,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         if ("error" in value) publish({ queueError: { message: value.error, temporary: true } });
         else {
           queued = value.messages;
-          publish({ queueError: undefined });
+          publish({ queueError: undefined, queue: value.queue });
         }
       },
       onEnd: () => {

@@ -144,3 +144,13 @@ This confirmation path applies to Codex structured proposals. Claude's live `Exi
 - Adapter tests prove native dispatch, acknowledged state changes, capability gating, explicit composition rules and event ownership.
 - No inferred goal loop, provider-name switches in the workbench, duplicate persisted native state, hidden second prompt, argument modal or Reset to default action.
 - Extend public SDK contracts in the SDK PR first, following extension API versioning. The current command text and opaque mode summary do not yet express all requirements here.
+
+## Inline queued request editing
+
+A queued row is selectable by click, Enter, or Space. Selection moves the shared chatbox into that row, between its neighbors. Only this target has an editor. Show visible Update and Cancel, its own model and thinking controls, and attachments. Keep the normal draft below as a compact selectable row. Switching targets preserves each target's text, editor selection, settings, and files. Cancel discards only the selected edit. Update collapses only after acknowledgement; errors and stale revisions retain recoverable input. Questions and decisions temporarily occupy the composer without consuming queued edits or the draft.
+
+Queue rows have no numbers, title, or pencil action. Remove appears on hover, focus, and touch; pointer exit waits 150 ms. Grip-only dragging uses a 4 px activation threshold, half-opacity source, stationary siblings, and a shared accent drop line. Bound the viewport to 188 px with shared scrolling and keep the draft reachable. There is no item-count limit.
+
+Row edges reorder; compatible centers combine; the flush strip above the viewport sends into active work. Keep its up-arrow and lowercase label “drop here to send now” in all states. The strip is 20 px high with a larger drag hit region, overlays existing space, and squares the queue's top corners during dragging. It is transparent with dashed top/side borders at idle; the targeted state uses canonical accent fill, contrasting text, and a solid outline at 30% text opacity. Show only one destination. Keyboard and touch can reach each destination, and edge dragging scrolls overflow.
+
+Different saved settings, unsupported or inactive work, blocking input, and unsaved edits make live input unavailable with a reason. Combining requires matching complete settings and resolved edits. A failure keeps saved work intact. Uncertain native delivery remains visible and cannot replay automatically.

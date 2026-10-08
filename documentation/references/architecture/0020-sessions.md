@@ -283,3 +283,9 @@ The dashboard uses TanStack DB collections with the SDK SSE sync client:
 ## Native harness operations
 
 Optional [harness commands and modes](../extensions/0015-harness-commands.md) use the same session, workspace, execution slot, conversation, cancellation, and checkpoint owners as normal turns. Native state remains in the provider. Existing session parameters store planning selections. A native acknowledgement does not finish an operation; its terminal event does.
+
+## Live input from the queue
+
+Queued input owns its execution settings. Selecting another model for the normal draft does not change saved work. Editing a request saves its full prompt, model, parameters, and attachments without starting a run.
+
+Steering captures the running handle and uses its optional native live-input method. It keeps the current run and status, and waits for provider acceptance before promoting the request into persisted history. Completion waits for existing controls; cancellation aborts them. Unknown delivery remains recoverable and excluded from automatic queue dispatch. See [session queue ownership](0018-session-queue.md#saved-requests-and-explicit-live-input).

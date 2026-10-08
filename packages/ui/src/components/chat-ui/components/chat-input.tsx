@@ -2,6 +2,7 @@ import { Box, Flex, Text } from "@chakra-ui/react";
 import { type MouseEvent, type ReactNode, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { type PromptCommand, PromptEditor } from "../../rich-text";
+import type { PromptSelectionSnapshot } from "../../rich-text/prompt-input/plugins/preserve-selection-plugin";
 import { createSerializedPromptState } from "../utils/editor-state";
 import {
   type ChatInputAction,
@@ -56,6 +57,11 @@ export interface ChatInputProps {
   autoFocus?: boolean;
   focusSignal?: number;
   submitTitle?: string;
+  submitLabel?: string;
+  initialSelection?: PromptSelectionSnapshot;
+  onSelectionChange?: (selection: PromptSelectionSnapshot) => void;
+  onEditorStateChange?: (text: string, state: string) => void;
+  retainTextUntilAcknowledged?: boolean;
   commands?: PromptCommand[];
 }
 
@@ -98,6 +104,11 @@ export const ChatInput = (props: ChatInputProps) => {
     autoFocus = false,
     focusSignal = 0,
     submitTitle,
+    submitLabel,
+    initialSelection,
+    onSelectionChange,
+    onEditorStateChange,
+    retainTextUntilAcknowledged = false,
     commands = [],
   } = props;
 
@@ -161,12 +172,12 @@ export const ChatInput = (props: ChatInputProps) => {
     history.reset();
     setSubmitting(true);
     // The conversation owns the message from the moment it is sent.
-    replaceDraftText("");
+    if (!retainTextUntilAcknowledged) replaceDraftText("");
     try {
       await submitComposerResponse({ text: text.trim(), attachments: attachedResources, onSubmit, onClearAttachments });
     } catch {
       // A rejected handoff leaves the draft available for a retry.
-      replaceDraftText(sentText);
+      if (!retainTextUntilAcknowledged) replaceDraftText(sentText);
     } finally {
       setSubmitting(false);
       focusAfterSubmission();
@@ -243,10 +254,13 @@ export const ChatInput = (props: ChatInputProps) => {
                 onRecallPrevious={history.recallPrevious}
                 onRecallNext={history.recallNext}
                 defaultState={editorState}
+                initialSelection={initialSelection}
+                onSelectionChange={onSelectionChange}
                 isEditable={!isDisabled && !submitting && !occupied}
                 placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
                 onChange={(nextText, state) => {
                   setEditorState(JSON.stringify(state));
+                  onEditorStateChange?.(nextText, JSON.stringify(state));
                   history.change(nextText);
                 }}
                 onSubmit={() => runAction(resolveChatInputKeyboardAction(actionState))}
@@ -269,6 +283,7 @@ export const ChatInput = (props: ChatInputProps) => {
             onSkip={() => {}}
             buttonAction={buttonAction}
             submitTitle={submitTitle}
+            submitLabel={submitLabel}
             messageTitle={messageTitle}
             runAction={runAction}
           />

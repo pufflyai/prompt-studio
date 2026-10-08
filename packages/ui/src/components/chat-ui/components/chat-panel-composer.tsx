@@ -1,27 +1,19 @@
-import { Stack } from "@chakra-ui/react";
-import { type ReactNode, useEffect, useState } from "react";
+import { Box, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { ReactNode } from "react";
+import { queuedFollowUpRecipe } from "@/theme/recipes/queued-follow-up";
+import type { useQueuedFollowUpComposer } from "./use-queued-follow-up-composer";
+
+export { useQueuedFollowUpComposer } from "./use-queued-follow-up-composer";
+
 import type { PromptCommand } from "@/components/rich-text";
-import { createSerializedPromptState } from "../utils/editor-state";
-import { ChatInput } from "./chat-input";
-import type { ChatInputQuestionPrompt, ChatInputQuestionResponse } from "./chat-input-question-prompt";
+import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import type { ComposerDecision } from "./composer-decision";
 import type { QueuedFollowUp } from "./message-types";
+import { QueuedComposerInput } from "./queued-composer-input";
 import { QueuedFollowUpList } from "./queued-follow-up-list";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
 
-interface QueuedFollowUpComposerInput {
-  queuedFollowUps: QueuedFollowUp[];
-  defaultValue: string;
-  onChange?: (text: string) => void;
-  onSubmit?: (
-    text: string,
-    attachments: string[],
-    questionResponse?: ChatInputQuestionResponse,
-  ) => void | Promise<void>;
-  onUpdate?: (itemId: string, prompt: string) => void;
-}
-
-interface ChatPanelComposerProps {
+export interface ChatPanelComposerProps {
   conversationKey?: string;
   recentUserMessages: string[];
   actions?: ReactNode;
@@ -42,87 +34,50 @@ interface ChatPanelComposerProps {
   onAttachText?: (text: string) => void;
   onClearAttachments?: () => void;
   onInterrupt?: () => void;
-  onQueuedFollowUpMove?: (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => void;
+  onQueuedFollowUpMove?: (
+    itemId: string,
+    direction: QueuedFollowUpMoveDirection,
+    steps?: number,
+    selection?: { source: QueuedFollowUp; items: QueuedFollowUp[] },
+  ) => void;
   onQueuedFollowUpRemove?: (itemId: string) => void;
-  onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void;
+  onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void | Promise<void>;
+  onQueuedFollowUpSteer?: (item: QueuedFollowUp) => void | Promise<void>;
+  onQueuedFollowUpCombine?: (source: QueuedFollowUp, target: QueuedFollowUp) => void | Promise<void>;
+  queueSteeringUnavailableReason?: string | null;
+  unsavedQueueItemIds?: string[];
   queuedComposer: ReturnType<typeof useQueuedFollowUpComposer>;
   queuedFollowUps: QueuedFollowUp[];
   streaming: boolean;
   workspaceHub?: ReactNode;
 }
 
-export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) => {
-  const { queuedFollowUps, defaultValue, onChange, onSubmit, onUpdate } = input;
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editSeed, setEditSeed] = useState("");
-  const [focusSignal, setFocusSignal] = useState(0);
-  const inputValue = editingItemId ? editSeed : defaultValue;
-
-  useEffect(() => {
-    if (!editingItemId) return;
-    if (queuedFollowUps.some((item) => item.id === editingItemId)) return;
-    setEditingItemId(null);
-    setEditSeed("");
-  }, [editingItemId, queuedFollowUps]);
-
-  const edit = (item: QueuedFollowUp) => {
-    setEditingItemId(item.id);
-    setEditSeed(item.prompt);
-    setFocusSignal((signal) => signal + 1);
-  };
-
-  const change = (text: string) => {
-    if (editingItemId) return;
-    onChange?.(text);
-  };
-
-  const submit = (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => {
-    // Question replies belong to the waiting agent, even while a queued message is being edited.
-    if (questionResponse) return onSubmit?.(text, attachments, questionResponse);
-    if (editingItemId) {
-      onUpdate?.(editingItemId, text);
-      setEditingItemId(null);
-      setEditSeed("");
-      return;
-    }
-
-    return onSubmit?.(text, attachments, questionResponse);
-  };
-
-  return { change, edit, editingItemId, focusSignal, inputValue, isEditing: Boolean(editingItemId), submit };
-};
-
 export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const {
-    conversationKey,
-    recentUserMessages,
-    actions,
-    attachmentActions,
     composerHeader,
-    attachedResources,
-    attachmentList,
-    chatInputAutoFocus,
-    chatInputPlaceholder,
     chatInputQuestionPrompt,
     composerDecision,
-    chatInputCommands,
     hasWorkspaceHub,
-    inputDisabled,
-    submitDisabled,
-    onAttachFiles,
-    onAttachText,
-    onClearAttachments,
-    onInterrupt,
     onQueuedFollowUpMove,
     onQueuedFollowUpRemove,
     onQueuedFollowUpUpdate,
+    onQueuedFollowUpSteer,
+    onQueuedFollowUpCombine,
+    queueSteeringUnavailableReason,
+    unsavedQueueItemIds = [],
     queuedComposer,
     queuedFollowUps,
-    streaming,
     workspaceHub,
   } = props;
+  const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
+  const displayedQueue =
+    queuedComposer.editingItem && !queuedFollowUps.some((item) => item.id === queuedComposer.editingItemId)
+      ? [...queuedFollowUps, queuedComposer.editingItem]
+      : queuedFollowUps;
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
+  const editing = queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision;
+  const editor = <QueuedComposerInput {...props} editing={editing} hasQueuedFollowUps={hasQueuedFollowUps} />;
   return (
     <Stack p="xs" gap="0">
       {/* Concentric hierarchy: the hub shell owns the visible border so the session reads
@@ -138,43 +93,32 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         {workspaceHub}
         {composerHeader}
         <QueuedFollowUpList
-          items={queuedFollowUps}
+          items={displayedQueue}
+          editor={editing ? editor : undefined}
+          dirtyItemIds={[...queuedComposer.dirtyItemIds, ...unsavedQueueItemIds]}
+          steeringUnavailableReason={queueSteeringUnavailableReason}
+          onSteer={onQueuedFollowUpSteer}
+          onCombine={onQueuedFollowUpCombine}
           editingItemId={queuedComposer.editingItemId}
           onEdit={onQueuedFollowUpUpdate ? queuedComposer.edit : undefined}
           onRemove={onQueuedFollowUpRemove}
           onMove={onQueuedFollowUpMove}
         />
-        <ChatInput
-          key={`${conversationKey ?? ""}:${queuedComposer.editingItemId ?? "draft"}`}
-          recentUserMessages={recentUserMessages}
-          placeholder={chatInputPlaceholder}
-          defaultState={createSerializedPromptState(queuedComposer.inputValue)}
-          streaming={streaming}
-          onSubmit={queuedComposer.submit}
-          onInterrupt={onInterrupt}
-          onAttachFiles={onAttachFiles}
-          onAttachText={onAttachText}
-          onChange={queuedComposer.change}
-          actions={actions}
-          attachmentActions={attachmentActions}
-          attachedResources={attachedResources}
-          onClearAttachments={onClearAttachments}
-          attachmentList={attachmentList}
-          isDisabled={inputDisabled}
-          submitDisabled={submitDisabled}
-          attachedToTop={hasQueuedFollowUps}
-          recessed={hasWorkspaceHub}
-          questionPrompt={chatInputQuestionPrompt}
-          decision={composerDecision}
-          autoFocus={chatInputAutoFocus}
-          focusSignal={queuedComposer.focusSignal}
-          submitTitle={
-            queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision
-              ? "Save queued follow-up"
-              : undefined
-          }
-          commands={chatInputCommands}
-        />
+        {editing ? (
+          <Box css={styles.draft} asChild>
+            <button type="button" onClick={queuedComposer.selectDraft} aria-label="Edit saved draft">
+              {queuedComposer.draftValue || "Saved draft · select to edit"}
+            </button>
+          </Box>
+        ) : (
+          editor
+        )}
+        {queuedComposer.error || (editing && queuedComposer.stale) ? (
+          <Text color="fg.error" textStyle="label/S/regular" role="alert">
+            {queuedComposer.error ??
+              "This request changed. Your edit is kept; select the saved request again before updating."}
+          </Text>
+        ) : null}
       </Stack>
     </Stack>
   );

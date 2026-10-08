@@ -20,6 +20,12 @@ import {
 import { listSessionActivityHandler, listSessionActivityRoute } from "./endpoints/list-session-activity";
 import { listSessionsHandler, listSessionsRoute } from "./endpoints/list-sessions";
 import {
+  combineQueuedFollowUpsHandler,
+  combineQueuedFollowUpsRoute,
+  pendingQueuedFollowUpsHandler,
+  pendingQueuedFollowUpsRoute,
+} from "./endpoints/pending-queued-follow-ups";
+import {
   deleteQueuedFollowUpHandler,
   deleteQueuedFollowUpRoute,
   moveQueuedFollowUpHandler,
@@ -44,6 +50,7 @@ import {
   unsubscribeSessionStreamHandler,
   unsubscribeSessionStreamRoute,
 } from "./endpoints/session-stream";
+import { steerQueuedFollowUpHandler, steerQueuedFollowUpRoute } from "./endpoints/steer-queued-follow-up";
 import { updateSessionStatusHandler, updateSessionStatusRoute } from "./endpoints/update-session-status";
 import { createSessionStreamConnections } from "./session-stream-connections";
 
@@ -69,6 +76,9 @@ export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDep
   routes.openapi(renameSessionRoute, renameSessionHandler(deps));
   routes.openapi(archiveSessionRoute, archiveSessionHandler(deps));
   routes.openapi(followUpSessionRoute, followUpSessionHandler(deps));
+  routes.openapi(steerQueuedFollowUpRoute, steerQueuedFollowUpHandler(deps));
+  routes.openapi(pendingQueuedFollowUpsRoute, pendingQueuedFollowUpsHandler(deps));
+  routes.openapi(combineQueuedFollowUpsRoute, combineQueuedFollowUpsHandler(deps));
   routes.openapi(updateQueuedFollowUpRoute, updateQueuedFollowUpHandler(deps));
   routes.openapi(deleteQueuedFollowUpRoute, deleteQueuedFollowUpHandler(deps));
   routes.openapi(moveQueuedFollowUpRoute, moveQueuedFollowUpHandler(deps));

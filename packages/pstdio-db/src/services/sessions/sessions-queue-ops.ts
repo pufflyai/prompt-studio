@@ -35,6 +35,7 @@ export const claimQueuedForDispatch = async (db: DbClient, id: string, queuePosi
             eq(session_queue_entries.queue_position, queuePosition),
             eq(session_queue_entries.session_id, id),
             isNull(session_queue_entries.dispatch_started_at),
+            isNull(session_queue_entries.steering_delivery_json),
           ),
         )
         .returning();
@@ -108,7 +109,9 @@ export const cancelQueued = async (db: DbClient, id: string) => {
 
     if (!updated) return null;
 
-    await tx.delete(session_queue_entries).where(eq(session_queue_entries.session_id, id));
+    await tx
+      .delete(session_queue_entries)
+      .where(and(eq(session_queue_entries.session_id, id), isNull(session_queue_entries.steering_delivery_json)));
     return updated;
   });
 };

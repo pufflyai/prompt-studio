@@ -12,10 +12,14 @@ export const dispatchQueuedEntry = async (
   session: ExistingSession,
   entry: PendingQueueEntry,
 ) => {
+  // Drain discovery may precede an edit or combine; read the saved request under the scheduling lock.
+  const fresh = await deps.sessionQueueEntriesService.get(entry.queue_position);
+  if (!fresh || fresh.session_id !== session.id || fresh.dispatch_started_at || fresh.steering_delivery_json) return;
+  entry = fresh;
   const agentId = session.agent!;
-  const model = session.last_selected_model ?? undefined;
+  const model = entry.model ?? undefined;
   const cwd = session.cwd ?? undefined;
-  const params = entry.params_json ?? session.params_json ?? undefined;
+  const params = entry.params_json ?? undefined;
   const dispatchSession = await deps.sessionService.claimQueuedForDispatch(session.id, entry.queue_position);
 
   if (!dispatchSession) return;

@@ -37,6 +37,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
@@ -453,3 +454,4 @@ registerBoardPanningSmokeTests();
 registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
+registerQueuedRequestSmokeTests();

@@ -17,6 +17,7 @@ import { migrateThrough } from "./migrate-through";
 import { openPglite } from "./open-pglite";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
+import { snapshotLegacyQueuedRequests } from "./queued-request-migration";
 import * as schema from "./schemas.pg";
 import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
 import { prepareWorkspaceLocations } from "./workspace-location-migration";
@@ -137,6 +138,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       await removeArchivedWorkspaces(openedPglite);
       await migrate(db, { migrationsFolder });
       await finishBoardViewRules(openedPglite);
+      await snapshotLegacyQueuedRequests(db);
     }
 
     let closed = false;
