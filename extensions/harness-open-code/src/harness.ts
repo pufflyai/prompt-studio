@@ -8,6 +8,7 @@ import type {
   QuestionResponse,
 } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { opencodeCommandState, prepareOpencodeOperation } from "./commands";
 import { recoverOpencodeMessages } from "./history-reconciliation";
 import { parseOpencodeModels } from "./models";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
@@ -190,6 +191,8 @@ export const createOpencodeHarness = (
     detect: (ctx) => deps.detect(ctx),
 
     listModels,
+    getCommandState: (ctx, input) => opencodeCommandState(input, serviceFor(ctx)),
+    prepareOperation: (ctx, input, operation) => prepareOpencodeOperation(input, operation, serviceFor(ctx)),
 
     start: async (ctx, input) => {
       const opencode = serviceFor(ctx);

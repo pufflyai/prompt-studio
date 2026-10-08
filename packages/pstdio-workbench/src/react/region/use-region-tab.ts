@@ -16,7 +16,7 @@ export interface WorkbenchRegionTabProps {
 }
 export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   const { workbench, placement, disabled = false, sortable = false, region, nextWidgetId, previousWidgetId } = props;
-  const snapshot = usePlacementTab(placement);
+  const snapshot = usePlacementTab(placement, workbench);
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

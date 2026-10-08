@@ -63,21 +63,18 @@ export const createWorkbenchExtensionTabPresentation = (
   metadata: WorkbenchExtensionTabMetadata,
 ): WorkbenchPanelTab => {
   const snapshots = new Map<string, WorkbenchTabSnapshot>();
-  const loading = new Set<string>();
+  const instances = new Map<string, Parameters<WorkbenchPanelTab["getSnapshot"]>[0]>();
+  const loading = new Map<string, Promise<void>>();
   const listeners = new Set<() => void>();
   const refreshEvents = new Set(metadata.refreshEventIds ?? []);
-  const load = (instance: Parameters<WorkbenchPanelTab["getSnapshot"]>[0]) => {
-    if (loading.has(instance.instanceId)) return;
-    loading.add(instance.instanceId);
-    const resource = instance.resource
-      ? {
-          type: instance.resource.type,
-          id: instance.resource.id ?? resourceKey(instance.resource),
-          label: instance.resource.label,
-          metadata: instance.resource.metadata,
-        }
-      : undefined;
-    void Promise.resolve(
+  let revision = 0;
+  const load = (instance: Parameters<WorkbenchPanelTab["getSnapshot"]>[0]): Promise<void> => {
+    instances.set(instance.instanceId, instance);
+    const pending = loading.get(instance.instanceId);
+    if (pending) return pending;
+    const resource = instance.resource;
+    const currentRevision = revision;
+    const pendingLoad = Promise.resolve(
       executeWorkbenchExtensionCommand(input, metadata.queryHandlerId, {
         resource,
         params: {
@@ -90,22 +87,41 @@ export const createWorkbenchExtensionTabPresentation = (
         },
       }),
     )
-      .then((value) => {
+      .then(async (value) => {
+        if (currentRevision !== revision) {
+          loading.delete(instance.instanceId);
+          await load(instance);
+          return;
+        }
         snapshots.set(instance.instanceId, toSnapshot(value, metadata.extensionId, input.projectId));
         for (const listener of listeners) listener();
       })
-      .finally(() => loading.delete(instance.instanceId));
+      .finally(() => {
+        if (loading.get(instance.instanceId) === pendingLoad) loading.delete(instance.instanceId);
+      });
+    loading.set(instance.instanceId, pendingLoad);
+    return pendingLoad;
   };
   return {
     refreshEvents: metadata.refreshEventIds,
     getSnapshot(instance) {
-      load(instance);
+      if (!snapshots.has(instance.instanceId)) void load(instance).catch(() => undefined);
       return snapshots.get(instance.instanceId) ?? {};
     },
     subscribe(listener) {
       listeners.add(listener);
+      const resourceSubscription = input.workbench.resources.preview.subscribeRefresh(async (resource) => {
+        const affected = [...instances.values()].filter(
+          (instance) => instance.resource && resourceKey(instance.resource) === resourceKey(resource),
+        );
+        if (!affected.length) return;
+        revision++;
+        for (const instance of affected) snapshots.delete(instance.instanceId);
+        await Promise.all(affected.map(load));
+      });
       const refreshSubscription = input.subscribeRefreshEvents?.((event: WorkbenchExtensionRefreshEvent) => {
         if (!refreshEvents.has(event.id)) return;
+        revision++;
         snapshots.clear();
         listener();
       });
@@ -113,6 +129,7 @@ export const createWorkbenchExtensionTabPresentation = (
         dispose() {
           listeners.delete(listener);
           refreshSubscription?.dispose();
+          resourceSubscription.dispose();
         },
       };
       return disposable;

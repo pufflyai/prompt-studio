@@ -28,6 +28,7 @@ export interface TreeMoveContext extends TreeContext {
 }
 
 export interface TreeAction {
+  resourceMutation?: import("@pstdio/sdk/extensions").CommandDefinition["resourceMutation"];
   id: string;
   label?: string;
   icon?: string;

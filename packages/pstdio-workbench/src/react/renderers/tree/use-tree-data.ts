@@ -3,6 +3,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useRendererRead } from "../use-renderer-read";
+import { previewTreeResources } from "./tree-resource-preview";
 import {
   expandDefaultTreeSections,
   type LoadedTreeData,
@@ -22,6 +23,7 @@ export const useTreeData = (
   onMoveError?: (error: unknown) => void,
 ) => {
   const trees = getWorkbenchRenderers(workbench);
+  useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
   const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
@@ -82,6 +84,18 @@ export const useTreeData = (
       }));
     });
   };
+  useEffect(() => {
+    const subscription = workbench.resources.preview.subscribeRefresh(async (resource) => {
+      const contains = (nodes: TreeNode[]): boolean =>
+        nodes.some(
+          (node) =>
+            (node.resource && resourceKey(node.resource) === resourceKey(resource)) ||
+            contains(read.value?.children[node.id] ?? node.children ?? []),
+        );
+      if (read.value?.body.some((section) => contains(section.nodes))) await read.retry();
+    });
+    return () => subscription.dispose();
+  }, [workbench, read.retry, read.value]);
   const savedBody = read.value?.body ?? [];
   const savedChildren = {
     ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
@@ -109,6 +123,8 @@ export const useTreeData = (
   });
   return {
     ...movement,
+    body: previewTreeResources(movement.body, movement.childrenByNodeId, workbench.resources),
+    childrenByNodeId: {},
     header: read.value?.header ?? [],
     footer: read.value?.footer ?? [],
     loadChildren,

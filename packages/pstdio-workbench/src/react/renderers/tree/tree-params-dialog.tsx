@@ -1,4 +1,5 @@
 import type { WorkbenchCore } from "../../../core";
+import { reportUserActionError } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { CommandParamsDialog } from "../../command-palette/command-params-dialog";
 import type { TreeActionParamsRequest } from "./tree-actions";
@@ -24,6 +25,7 @@ export const TreeParamsDialog = (props: TreeParamsDialogProps) => {
           ? workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)
           : Promise.resolve(input.args)
       }
+      onRunError={(label, error) => reportUserActionError(workbench, label, error)}
       onClose={onClose}
       onRun={async ({ args }) => {
         await request?.run(args);

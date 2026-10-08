@@ -65,7 +65,7 @@ export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionM
   }
 
   if (item.type === "mcp_tool_call") {
-    return toolMessage(item, id, [item.server, item.tool].filter(Boolean).join(".") || "mcp_tool_call", undefined);
+    return toolMessage(item, id, [item.server, item.tool].filter(Boolean).join(".") || "mcp_tool_call", item.input);
   }
 
   if (item.type === "web_search") {

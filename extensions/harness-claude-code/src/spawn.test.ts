@@ -310,3 +310,15 @@ describe("resumeClaudeCodeSession", () => {
     });
   });
 });
+
+test("a native error result fails the run even when the CLI exits cleanly", async () => {
+  const deps = createMockSpawnDeps([
+    JSON.stringify({ type: "system", session_id: "native-command" }),
+    JSON.stringify({ type: "result", is_error: true, result: "Command failed" }),
+  ]);
+  const run = await startClaudeCodeSession(
+    { prompt: "/compact", nativeCommand: true, events: recordingSink().sink },
+    deps,
+  );
+  expect(await run.done).toEqual({ status: "failed" });
+});

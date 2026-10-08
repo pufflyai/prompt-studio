@@ -5,12 +5,23 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { JsonPatch, SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
-import { resumeCodexSession, type SpawnDeps, startCodexSession } from "./spawn";
+import type { SpawnDeps } from "./codex-process";
+import { createCodexRuntime } from "./codex-runtime";
+import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
+
+let runtime: ReturnType<typeof createCodexRuntime>;
+const startCodexSession = (input: StartSpawnInput, deps: SpawnDeps) => {
+  runtime ??= createCodexRuntime(deps);
+  return runtime.run(input);
+};
+const resumeCodexSession = (input: ResumeSpawnInput, deps: SpawnDeps) => startCodexSession(input, deps);
 
 const transcriptRoots: string[] = [];
 let transcriptPath: string;
 let fixtureChild: ReturnType<typeof spawn>;
-afterEach(() => {
+afterEach(async () => {
+  await runtime?.dispose();
+  runtime = undefined!;
   for (const root of transcriptRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 const fixtureDeps: SpawnDeps = {
@@ -106,7 +117,7 @@ test("keeps structured questions pending until an explicit correlated reply reac
       "no longer pending",
     );
   } finally {
-    session.stop();
+    await session.stop();
   }
 });
 
@@ -221,12 +232,8 @@ test("resumes the native thread with model, effort, attachments, environment, an
     .flatMap((p) => (p.value as SessionMessage).parts)
     .filter((p) => p.type === "text")
     .map((p) => p.text);
-  const config = JSON.parse(texts[1]);
-  expect(config).toMatchObject({
-    method: "thread/resume",
-    params: { threadId: "thread-fixture", model: "gpt-5.5", cwd, config: { model_reasoning_effort: "high" } },
-  });
-  expect(JSON.parse(texts[2]).input[0].text).toContain(`path=${JSON.stringify(localPath)}`);
+  expect(JSON.parse(texts[1])).toMatchObject({ threadId: "thread-fixture", model: "gpt-5.5", effort: "high" });
+  expect(JSON.parse(texts[1]).input[0].text).toContain(`path=${JSON.stringify(localPath)}`);
 });
 
 test("cancels a pending native question and rejects later replies", async () => {
@@ -266,23 +273,35 @@ test("fails and releases a provider that exits successfully without completing i
     fixtureDeps,
   );
   try {
-    expect(await Promise.race([session.done, Bun.sleep(500).then(() => null)])).toEqual({ status: "failed" });
+    expect(await Promise.race([session.done, Bun.sleep(500).then(() => null)])).toEqual({ status: "disconnected" });
   } finally {
     session.stop();
     await session.done;
   }
 });
 
-test("settles a protocol read failure as a failed run", async () => {
+test("reports disconnection for unreadable native events received before turn acknowledgement", async () => {
   const session = await startCodexSession(
     {
       prompt: "Fail protocol",
-      env: { PSTDIO_TEST_MODE: "protocol-error" },
+      env: { PSTDIO_SESSION_ID: "protocol-recovery", PSTDIO_TEST_MODE: "protocol-error" },
       events: { getMessages: () => [], push: () => {} },
     },
     fixtureDeps,
   );
-  expect(await session.done).toEqual({ status: "failed" });
+  expect(await session.done).toEqual({ status: "disconnected" });
+  expect(session.agentSessionId).toBe("thread-fixture");
+  const followUp = await resumeCodexSession(
+    {
+      agentSessionId: session.agentSessionId,
+      prompt: "Continue",
+      env: { PSTDIO_SESSION_ID: "protocol-recovery", PSTDIO_TEST_MODE: "complete" },
+      events: { getMessages: () => [], push: () => {} },
+    },
+    fixtureDeps,
+  );
+  expect(await followUp.done).toEqual({ status: "completed" });
+  expect(followUp.agentSessionId).toBe(session.agentSessionId);
 });
 
 test("releases the live run when its protocol stream reports an error", async () => {
@@ -292,7 +311,7 @@ test("releases the live run when its protocol stream reports an error", async ()
   );
   try {
     fixtureChild.stdout!.destroy(new Error("Protocol read failed"));
-    expect(await Promise.race([session.done, Bun.sleep(500).then(() => null)])).toEqual({ status: "failed" });
+    expect(await Promise.race([session.done, Bun.sleep(500).then(() => null)])).toEqual({ status: "disconnected" });
   } finally {
     session.stop();
     await session.done;

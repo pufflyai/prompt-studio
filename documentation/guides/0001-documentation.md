@@ -308,6 +308,10 @@ Keep an original post's publication date when adding images or correcting it. Re
 
 - [0061 — Project resource anchors](../adrs/0061-project-resource-anchors.md)
 
+- [0062 — Temporary Codex history identity migration](../adrs/0062-temporary-codex-history-identity-migration.md)
+- [0063 — Temporary Claude literal slash input](../adrs/0063-temporary-claude-literal-slash-input.md)
+- [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
+
 ## Lessons learned
 
 - [0001 — Check runtime support before using browser APIs](../lessons-learned/0001-no-bun-eventsource.md)

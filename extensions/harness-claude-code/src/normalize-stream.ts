@@ -4,7 +4,7 @@ import type { ClaudeCodeContentBlock, ClaudeCodeToolResultBlock, ClaudeCodeToolU
 import { parseStdoutLine } from "./types";
 import { parseTimestamp } from "./utils";
 
-type StreamContext = { index: number; toolMap: Map<string, string> };
+type StreamContext = { index: number; toolMap: Map<string, string>; localReply?: boolean };
 
 const trackToolUse = (block: ClaudeCodeToolUseBlock, ctx: StreamContext) => {
   const part = toolUsePart(block);
@@ -176,6 +176,12 @@ const handleResult = (parsed: Record<string, unknown>, ctx: StreamContext): Sess
     id: `stream-result-${ctx.index}`,
     role: "system",
     parts: [
+      ...(parsed.local_command && typeof parsed.result === "string" && !ctx.localReply
+        ? [{ type: "text" as const, text: parsed.result || "Native compaction completed." }]
+        : []),
+      ...(parsed.is_error
+        ? [normalizeErrorPart({ message: typeof parsed.result === "string" ? parsed.result : undefined })]
+        : []),
       {
         type: "token_usage",
         inputTokens: usage.input_tokens ?? 0,
@@ -219,7 +225,10 @@ const dispatchStdoutEvent = (parsed: Record<string, unknown>, ctx: StreamContext
 const timestampMessages = (messages: SessionMessage[], createdAt: number) =>
   messages.map((message) => ({ ...message, createdAt }));
 
-export async function* normalizeClaudeCodeStream(raw: AsyncIterable<RawLogEvent>): AsyncGenerator<SessionMessage> {
+export async function* normalizeClaudeCodeStream(
+  raw: AsyncIterable<RawLogEvent>,
+  options: { compact?: boolean } = {},
+): AsyncGenerator<SessionMessage> {
   const ctx: StreamContext = { index: 0, toolMap: new Map() };
 
   for await (const event of raw) {
@@ -239,6 +248,8 @@ export async function* normalizeClaudeCodeStream(raw: AsyncIterable<RawLogEvent>
 
     const parsed = parseStdoutLine(event.data);
     if (!parsed) continue;
+    if (options.compact && parsed.type === "assistant") continue;
+    if (parsed.local_command_source) ctx.localReply = true;
 
     const createdAt = parseTimestamp(parsed.timestamp) ?? Date.now();
     for (const msg of timestampMessages(dispatchStdoutEvent(parsed, ctx), createdAt)) {
