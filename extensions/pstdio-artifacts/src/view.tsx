@@ -13,7 +13,8 @@ import type { ArtifactContent, ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
 import { ArtifactReader } from "./components/artifact-reader";
-import { artifactUrl, changedEvent, libraryTarget } from "./contracts";
+import { artifactUrl, changedEvent } from "./contracts";
+import type { ArtifactExample } from "./create-artifact";
 import { ArtifactTranslations } from "./translations";
 
 interface HostProps {
@@ -35,6 +36,7 @@ const ArtifactsApp = (props: AppProps) => {
   const [selected, setSelected] = useState<string>();
   const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState<string>();
+  const [creating, setCreating] = useState<ArtifactExample>();
   const id = hostProps.resource?.id;
   const url = id ? artifactUrl(hostProps.projectId, id) : undefined;
   useEffect(() => client.events.subscribe(changedEvent, () => setRefresh((value) => value + 1)), [client]);
@@ -81,38 +83,33 @@ const ArtifactsApp = (props: AppProps) => {
     await host.call("navigation.open", { target: item.target });
   };
 
+  const create = async (example: ArtifactExample) => {
+    setCreating(example);
+    setError(undefined);
+    try {
+      await client.commands["start-creation"]({ example });
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setCreating(undefined);
+    }
+  };
+
   let body = (
     <Center flex="1">
       <Spinner />
     </Center>
   );
   if (id && content && items) {
-    body = (
-      <ArtifactReader
-        content={content}
-        revisions={items}
-        onSelect={setSelected}
-        onRename={async (name) => {
-          if (!url) return;
-          const renamed = await client.commands.rename({ url, name });
-          setRefresh((value) => value + 1);
-          await open(renamed);
-        }}
-        onDelete={async () => {
-          if (!url) return;
-          await client.commands.delete({ url });
-          await host.call("placement.close", {});
-          await host.call("navigation.open", { target: libraryTarget });
-        }}
-        onBack={() => {
-          void host.call("navigation.open", { target: libraryTarget });
-        }}
-      />
-    );
+    body = <ArtifactReader content={content} revisions={items} onSelect={setSelected} />;
   } else if (!id && items) {
     body = (
       <ArtifactLibrary
         items={items}
+        creating={creating}
+        onCreate={(example) => {
+          void create(example);
+        }}
         onOpen={(item) => {
           void open(item);
         }}

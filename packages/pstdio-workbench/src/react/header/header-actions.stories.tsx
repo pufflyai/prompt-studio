@@ -1,7 +1,7 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
-import { createWorkbench, workbenchTopHeaderTrailingMenuPath } from "../../core";
+import { createWorkbench, resourceContextMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 
@@ -37,6 +37,7 @@ const createHeaderWorkbench = () => {
       {
         id: "artifact",
         region: "main",
+        tab: { getSnapshot: () => ({ label: "Preview" }) },
         item: {
           kind: "binding",
           binding: {
@@ -56,6 +57,8 @@ const createHeaderWorkbench = () => {
     },
   );
   workbench.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, { commandId: "related", group: "primary" });
+  workbench.commands.registerCommand({ id: "rename-artifact", label: "Rename artifact" }, { execute: () => undefined });
+  workbench.layout.registerMenuItem(resourceContextMenuPath("artifact"), { commandId: "rename-artifact" });
   workbench.pageLocations.setProject("storybook");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
@@ -87,5 +90,19 @@ export const FocusedResourceInLibrary: Story = {
     const library = canvas.getAllByRole("tab", { name: "Library" })[0];
     await userEvent.click(library!);
     await expect(canvas.queryByRole("button", { name: "Related resources" })).toBeNull();
+  },
+};
+
+export const BreadcrumbActionsForFocusedResource: Story = {
+  ...FocusedResourceInLibrary,
+  args: { workbench: createHeaderWorkbench() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Open artifact tab" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "Actions for prototype" }));
+    await expect(await within(document.body).findByRole("menuitem", { name: "Rename artifact" })).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getAllByRole("tab", { name: "Library" })[0]!);
+    await expect(canvas.queryByRole("button", { name: "Actions for prototype" })).toBeNull();
   },
 };

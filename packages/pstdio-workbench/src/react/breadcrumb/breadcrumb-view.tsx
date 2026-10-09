@@ -6,7 +6,7 @@ import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { WorkbenchIcon } from "../shared/icon";
-import { runPlacementAction } from "../shared/run-placement-action";
+import { placementMenuActions } from "../shared/placement-menu-actions";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -80,18 +80,8 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
       resource,
     });
   }
-  const actions = (snapshot.menu ?? []).flatMap((group, groupIndex) =>
-    group.rows.map((row, index) => ({
-      key: `${group.id}:${row.id}`,
-      label: row.label,
-      icon: row.icon ? <WorkbenchIcon name={row.icon} size={14} /> : undefined,
-      isDisabled: row.disabled,
-      separatorBefore: groupIndex > 0 && index === 0,
-      onClick: () => {
-        if (row.action) runPlacementAction(workbench, row.action);
-      },
-    })),
-  );
+  const actions = placementMenuActions(workbench, snapshot);
+
   return (
     <Breadcrumb
       items={buildWorkbenchBreadcrumbItems(crumbs, (item) =>

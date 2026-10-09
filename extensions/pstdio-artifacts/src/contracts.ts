@@ -1,21 +1,17 @@
-import { parsePageUrl, qualifyRef, type ResourceRef, serializePageUrl } from "@pstdio/sdk/extensions";
-import { detail, library } from "./pages";
+import { parsePageUrl, type ResourceRef, serializePageUrl } from "@pstdio/sdk/extensions";
+import { artifactPage, artifactPanelRef, libraryPageRef, libraryPanelRef } from "./artifact-refs";
+import { extensionId } from "./events";
 
-export const extensionId = "pstdio.pstdio-artifacts";
-export const artifactPage = {
-  id: detail.id,
-  ref: qualifyRef(extensionId, detail.ref),
-  path: detail.path,
-};
-const libraryPageRef = qualifyRef(extensionId, library.ref);
+export { artifactPage } from "./artifact-refs";
+
+export { changedEvent, extensionId } from "./events";
 export const libraryTarget = {
   kind: "compound" as const,
   targets: [
     { kind: "page" as const, page: libraryPageRef },
-    { kind: "panel" as const, panel: qualifyRef(extensionId, library.panels.library) },
+    { kind: "panel" as const, panel: libraryPanelRef },
   ],
 };
-export const changedEvent = `${extensionId}.artifacts.changed`;
 
 export const artifactResource = (projectId: string, id: string, label?: string) =>
   ({
@@ -32,7 +28,7 @@ export const artifactTarget = (projectId: string, id: string, label?: string) =>
     { kind: "page" as const, page: libraryPageRef },
     {
       kind: "panel" as const,
-      panel: qualifyRef(extensionId, library.panels.artifact),
+      panel: artifactPanelRef,
       resource: artifactResource(projectId, id, label),
       open: "pin" as const,
     },
