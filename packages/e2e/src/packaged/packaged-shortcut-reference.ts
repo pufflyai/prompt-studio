@@ -21,7 +21,7 @@ export const verifyPackagedShortcutReference = async (
   await expect(dialog.getByRole("group", { name: "Shortcut reference", exact: true })).toBeVisible();
   await expect(dialog.getByRole("menuitem", { name: /Open shortcut destination/ })).toContainText(/J/i);
   await expect(dialog.getByText("https://example.com/shortcuts", { exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
+  await dialog.getByRole("button", { name: "Close Keyboard shortcuts", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.goto(`${origin}/projects/${projectId}/extensions/e2e.shortcut-reference/reference`);
   const navigation = page.getByRole("option", { name: /Open shortcut destination/ }).first();
