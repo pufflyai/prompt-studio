@@ -6,10 +6,21 @@ export type ClientOptions = {
 
 export class PstdioApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    readonly code?: string,
+  ) {
     super(message);
     this.name = "PstdioApiError";
     this.status = status;
+  }
+}
+
+export class PstdioConnectionError extends Error {
+  constructor(cause: unknown) {
+    super("Could not connect to the backend.", { cause });
+    this.name = "PstdioConnectionError";
   }
 }
 
@@ -119,22 +130,32 @@ export const createRequest = (options: ClientOptions): RequestFn => {
       hasJsonBody: reqOpts.body !== undefined && !isRawBody(reqOpts.body),
     });
     if (!isSameOriginTarget(baseUrl, path, url)) headers.delete("authorization");
-    const response = await fetchFn(url, {
+    const requestInit: RequestInit = {
       method: reqOpts.method ?? "GET",
       headers: Object.fromEntries(headers.entries()),
       body: reqOpts.body !== undefined ? serializeRequestBody(reqOpts.body) : undefined,
       signal: reqOpts.signal,
       cache: reqOpts.cache,
       credentials: "same-origin",
-    });
+    };
+    try {
+      const response = await fetchFn(url, requestInit);
+      if (!response.ok) {
+        const errorBody: unknown = await response.json().catch(() => null);
+        const message = readErrorMessage(errorBody, response.status);
+        const code =
+          errorBody && typeof errorBody === "object" && "code" in errorBody && typeof errorBody.code === "string"
+            ? errorBody.code
+            : undefined;
+        throw new PstdioApiError(message, response.status, code);
+      }
 
-    if (!response.ok) {
-      const errorBody: unknown = await response.json().catch(() => null);
-      const message = readErrorMessage(errorBody, response.status);
-      throw new PstdioApiError(message, response.status);
+      if (response.status === 204) return undefined as T;
+      return (await response.json()) as T;
+    } catch (error) {
+      reqOpts.signal?.throwIfAborted();
+      if (error instanceof PstdioApiError || error instanceof SyntaxError) throw error;
+      throw new PstdioConnectionError(error);
     }
-
-    if (response.status === 204) return undefined as T;
-    return response.json() as Promise<T>;
   };
 };

@@ -66,6 +66,9 @@ export const collectCompositionContributions = (
       ...(isRecord(contribution.resolve)
         ? { resolveCommandId: contributionRefId(contribution.resolve as ResourceKindResolver, ext.id) }
         : {}),
+      ...(isRecord(contribution.resolveMany)
+        ? { resolveManyCommandId: contributionRefId(contribution.resolveMany as ResourceKindResolver, ext.id) }
+        : {}),
       contribution: {
         ...contribution,
         menuSlots,

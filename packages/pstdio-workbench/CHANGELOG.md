@@ -1,5 +1,34 @@
 # @pstdio/workbench
 
+## 0.41.0
+
+_2026-10-08_
+
+### Minor Changes
+
+- bd5df55: Boards and data tables, including built-in Workspaces, share search, a value-first filter picker with shared Value panels, full-width Apply filter buttons, persistent multiselect selection and footer actions, readable editable bubbles, compact icons and checkboxes, advanced AND/OR bubbles, boolean predicates, one sort in Display, and project-scoped saved views with layers-plus creation and grouped context actions; collections use one toolbar Filter action and show feedback when filters hide every item and no columns or group rows remain visible and data tables use pagination without a filtered-row summary; popovers stay anchored, use subtle borders, and avoid separator overflow; filter pickers are taller and constrain their height to the viewport, date editors use one exact-date Value field, scalar filter panels use full-width parameter fields and borderless text bubbles, view menus omit default actions, and columns can disable filtering, including Workspaces Diff.
+- bd5df55: `@pstdio/ui` removes `FilterMenu`, `MANUAL_ORDERING`, `buildOrderingOptions`, `sanitizeFilters`, `sanitizeSettings`, `KanbanRendererFilterState`, `KanbanRendererOrdering`, `SortDirection`, and the data table `defaultHiddenColumns` and `defaultShowStats` props in favor of the view bar, view sorts, and `defaultSettings`; `@pstdio/workbench` drops the same kanban types and the data table column `defaultHidden` and `defaultShowStats` options.
+- 1fd5b6d: Add project-scoped resource links through the SDK, HTTP, and CLI with owner policies and legacy anchor migration.
+- ba05dcb: Add a ghost connection indicator and saved widget dragging and keyboard ordering in the status bar.
+- e47a873: Add movable workbench tabs, subtle panel drop feedback, grouped context actions, destination-aware Add, layout reset, and session rename while preserving live views and page ownership.
+- 1ff0825: Open chat file references through canonical document routes with source positions and workspace file links.
+- 576eb55: Hosts can save the chosen theme outside browser storage: `ThemePreferenceProvider` accepts `storage`, and `Workbench` and `WorkbenchThemeProvider` accept `themeStorage`. `useThemePreference()` reports `pendingThemePreference` while a chosen extension theme loads.
+
+### Patch Changes
+
+- 13cd617: Fix webview tab drops and show single panel tabs beside menu openers.
+- ba05dcb: Show backend connection loss in the status bar, retain loaded navigation, and reconnect stalled sync streams.
+- 122103b: The theme picker starts on the chosen theme, Escape always restores it, and bridged webviews show one failure message in theme colors.
+- 8faa1c7: Preserve navigation rows and live views during resource changes while selecting the open workspace correctly.
+- 662cf1b: Remove unused runtime dependencies.
+- 61bfc4f: Decide whether a ticket can start from its dependencies alone, and show why Run attempt cannot start a ticket in the dialog.
+- 7691e04: Share one terminal session contract and one contribution id rule: the SDK exports `contributionRefId`, `commandRefId` and the renderer terminal types, and `@pstdio/ui`, `@pstdio/workbench` and the host use them instead of copies.
+- 4b23942: Show Sidenav rows as selected after users move them into the header or footer.
+- bb62889: Report command failures once at the UI action that started them.
+- 2bf353b: Center status bar items in the space below the panels by removing the panel padding above the status bar.
+- 2bf353b: Show status bar items that register after the status bar first renders.
+- 8d68e16: Export `useCommandOptions` and `CommandOptionStatus` so hosts can load command-backed options outside command dialogs.
+
 ## 0.40.0
 
 _2026-10-02_

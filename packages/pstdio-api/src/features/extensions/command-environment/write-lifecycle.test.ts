@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInvocationScope } from "pstdio-extensions";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import { createCommandEnvironment } from "./index";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
@@ -64,26 +65,36 @@ test("cancelling scoped reads leaves artifact, project and extension saves indep
 });
 
 test("anchor edits keep their project checks after a reader is cancelled", async () => {
+  const app = await createTestApp();
   const controller = new AbortController();
   controller.abort();
-  const writes: string[] = [];
-  const service = (kind: string) => ({
-    get: async (id: string) => ({ id, project_id: id === "foreign" ? "other" : "p" }),
-    addAnchors: async () => {
-      writes.push(`${kind}:add`);
-    },
-    removeAnchors: async () => {
-      writes.push(`${kind}:remove`);
-    },
-  });
-  const deps = { sessionService: service("session"), workspaceService: service("workspace") } as never;
-  const sessions = createSessionsApi(deps, { projectId: "p", project: {} as never, signal: controller.signal });
-  const workspaces = createWorkspacesApi(deps, { projectId: "p", signal: controller.signal }, {} as never);
-  for (const api of [sessions, workspaces]) {
-    await api.addAnchors("own", []);
-    await api.removeAnchors("own", []);
-    await expect(api.addAnchors("foreign", [])).rejects.toThrow("not found");
-    await expect(api.get("own")).rejects.toThrow();
+  try {
+    const project = await app.deps.projectService.create({ name: "Own project" });
+    const other = await app.deps.projectService.create({ name: "Other project" });
+    const session = await app.deps.sessionService.create({ project_id: project.id, title: "Own", agent: "test" });
+    const foreignSession = await app.deps.sessionService.create({
+      project_id: other.id,
+      title: "Foreign",
+      agent: "test",
+    });
+    const workspace = await app.deps.workspaceService.createStandalone({ project_id: project.id });
+    const foreignWorkspace = await app.deps.workspaceService.createStandalone({ project_id: other.id });
+    const sessions = createSessionsApi(app.deps, { projectId: project.id, project, signal: controller.signal });
+    const workspaces = createWorkspacesApi(app.deps, { projectId: project.id, signal: controller.signal }, {} as never);
+    const anchor = { type: "project", id: project.id, extensionId: "pstdio" };
+    for (const [api, service, ownId, foreignId] of [
+      [sessions, app.deps.sessionService, session.id, foreignSession.id],
+      [workspaces, app.deps.workspaceService, workspace.id, foreignWorkspace.id],
+    ] as const) {
+      await api.addAnchors(ownId, [anchor]);
+      expect((await service.get(ownId))?.anchors_json).toEqual([anchor]);
+      await api.removeAnchors(ownId, [anchor]);
+      expect((await service.get(ownId))?.anchors_json).toEqual([]);
+      await expect(api.addAnchors(foreignId, [anchor])).rejects.toThrow("not found");
+      await expect(api.removeAnchors(foreignId, [anchor])).rejects.toThrow("not found");
+      await expect(api.get(ownId)).rejects.toThrow();
+    }
+  } finally {
+    await app.close();
   }
-  expect(writes).toEqual(["session:add", "session:remove", "workspace:add", "workspace:remove"]);
 });

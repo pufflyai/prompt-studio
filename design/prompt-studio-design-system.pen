@@ -1,5 +1,5 @@
 {
-  "version": "2.20",
+  "version": "2.21",
   "children": [
     {
       "type": "frame",
@@ -32095,7 +32095,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -47227,6 +47227,167 @@
                       "fill": "$btn-fill"
                     }
                   }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "LLeUN",
+              "name": "Async question bubbles · PS-546",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PsqbB",
+                  "name": "Section title",
+                  "fill": "$ds-fg",
+                  "content": "Async question · conversation summary",
+                  "fontFamily": "$font-label",
+                  "fontSize": 18,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "PzOXU",
+                  "name": "cmp/ChatQuestionBubble",
+                  "context": "One button per question. Shows question → first offered answer before submission. It never submits automatically. Clicking a pending bubble opens that exact question in the composer, preserving the chat draft. Answered bubbles show the accepted answer and are read-only. Keep short questions inline. When the question is long or multiline, place the arrow and answer together on a row below the full question.",
+                  "reusable": true,
+                  "fill": "$ds-bg-subtle",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "LCEHH",
+                      "name": "Question",
+                      "fill": "$ds-fg",
+                      "content": "Which color?",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jMcbw",
+                      "name": "Arrow and answer",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "O0luR",
+                          "name": "Answer direction",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "arrow-right",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZZwpl",
+                          "name": "Answer",
+                          "fill": "$ds-fg-muted",
+                          "content": "Blue",
+                          "lineHeight": 1.5,
+                          "fontFamily": "$font-label",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wvRuZ",
+                  "name": "Question bubble states",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "B1KYN",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Hover",
+                      "fill": "$ds-surface-hover"
+                    },
+                    {
+                      "id": "u4Wbbw",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Open / keyboard focus",
+                      "fill": "$ds-bg-active",
+                      "stroke": "$ds-border-accent"
+                    },
+                    {
+                      "id": "h6lM8Y",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Answered",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Green",
+                          "fill": "$ds-fg"
+                        }
+                      }
+                    },
+                    {
+                      "id": "ienPl",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Free text",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Your answer",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Jjbeg",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Skipped",
+                      "descendants": {
+                        "ZZwpl": {
+                          "content": "Skipped",
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    },
+                    {
+                      "id": "tdfam",
+                      "type": "ref",
+                      "ref": "PzOXU",
+                      "name": "Long multiline question · answer underneath",
+                      "layout": "vertical",
+                      "alignItems": "start",
+                      "width": 560,
+                      "descendants": {
+                        "LCEHH": {
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Should I validate the full release workflow in the browser, including onboarding, selecting a project, opening a session, submitting an async answer, and restoring the draft and attachments afterward?\nOr should I only run the targeted tests for the changed question controls before preparing the pull request?"
+                        },
+                        "ZZwpl": {
+                          "content": "Browser checks"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -74674,7 +74835,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95303,7 +95464,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124289,7 +124450,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -128235,6 +128396,28 @@
                               }
                             },
                             {
+                              "id": "tZXPj",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
                               "type": "frame",
                               "id": "EEFpj",
                               "name": "G",
@@ -128607,6 +128790,28 @@
                                 },
                                 "ROY2j": {
                                   "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "iRnZJ",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
                                   "fill": "$tree-fg"
                                 }
                               }
@@ -150741,7 +150946,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -150763,7 +150968,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151491,7 +151696,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151513,7 +151718,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152129,7 +152334,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152151,7 +152356,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153502,7 +153707,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153524,7 +153729,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153555,8 +153760,8 @@
       "id": "yDXFi",
       "x": 17200,
       "y": 8001,
-      "name": "Conversation · Next async question · PS-459",
-      "context": "The first request has been answered. The next independent asynchronous question now occupies the composer. New arrivals queue without changing current selections. Each request uses its own native identity and response channel. The same saved draft stays intact until all blocking requests finish.",
+      "name": "Conversation · Async question opened · PS-546",
+      "context": "A pending async question stays as a conversation bubble while the agent works. Clicking that bubble opens its question in the composer. Pending async arrivals never replace the open question. The draft and attachments return after send, skip, or close.",
       "theme": {
         "mode": "dark"
       },
@@ -153685,32 +153890,34 @@
                   }
                 },
                 {
-                  "id": "C0B2xh",
+                  "id": "sqiIG",
                   "type": "ref",
-                  "ref": "CQVFo",
-                  "name": "Answer to first async question",
-                  "width": "fill_container",
+                  "ref": "PzOXU",
+                  "name": "Validation answered bubble",
                   "descendants": {
-                    "ZdoE8": {
-                      "content": "Browser checks"
+                    "LCEHH": {
+                      "content": "Which validation should I run?"
                     },
-                    "b60X5h": {
-                      "content": "19:43"
+                    "ZZwpl": {
+                      "content": "Browser checks",
+                      "fill": "$ds-fg"
                     }
                   }
                 },
                 {
-                  "id": "K4hItM",
+                  "id": "meVRH",
                   "type": "ref",
-                  "ref": "X7Yj6",
-                  "name": "Next async question in conversation",
-                  "width": "fill_container",
+                  "ref": "PzOXU",
+                  "name": "Files question bubble · open",
+                  "fill": "$ds-bg-active",
+                  "stroke": "$ds-border-accent",
                   "descendants": {
-                    "EiVAs": {
+                    "LCEHH": {
                       "content": "Which files should I include?"
                     },
-                    "p3bQE": {
-                      "content": "19:44"
+                    "ZZwpl": {
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
                     }
                   }
                 },
@@ -153959,6 +154166,25 @@
                           "gap": 6,
                           "alignItems": "center",
                           "children": [
+                            {
+                              "id": "XVe5P",
+                              "type": "ref",
+                              "ref": "c24zV7",
+                              "name": "Close question · restore draft",
+                              "height": 28,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "xs"
+                              },
+                              "descendants": {
+                                "DsEVd": {
+                                  "enabled": false
+                                },
+                                "Hf4GT": {
+                                  "content": "Back to message"
+                                }
+                              }
+                            },
                             {
                               "id": "TQY2z",
                               "type": "ref",
@@ -164299,6 +164525,1931 @@
               "fontFamily": "$font-label",
               "fontSize": 14,
               "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "M5BcB",
+      "x": 19360,
+      "y": 8001,
+      "name": "Conversation · Async question pending · PS-546",
+      "context": "Async questions do not take over the composer. The bubble shows question → first offered option. The agent keeps working and the unsent message and attachments stay editable. Clicking any pending bubble opens that exact question in the existing composer.",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1000,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "Xk89F",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Session navigation",
+          "width": "fill_container",
+          "descendants": {
+            "rKPgR": {
+              "name": "Sessions"
+            },
+            "rKPgR/QAdbs": {
+              "icon": "messages-square"
+            },
+            "rKPgR/g7l5u": {
+              "content": "Sessions"
+            },
+            "U8yd35": {
+              "name": "Release workflow"
+            },
+            "U8yd35/QAdbs": {
+              "icon": "message-square"
+            },
+            "U8yd35/g7l5u": {
+              "content": "Release workflow"
+            },
+            "R8Q6C": {
+              "enabled": false
+            },
+            "AZ9VV": {
+              "enabled": false
+            },
+            "saN8L": {
+              "enabled": false
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "w1kCnv",
+          "name": "Session conversation",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            24,
+            56
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "lR6or",
+              "name": "Conversation history",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "id": "ak1A9",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Update our release workflow. Start with a plan."
+                    },
+                    "b60X5h": {
+                      "content": "19:39"
+                    }
+                  }
+                },
+                {
+                  "id": "a1pu0O",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Assistant message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "I checked the current workflow. There is a duplicate mode picker, and native status needs validation."
+                    },
+                    "p3bQE": {
+                      "content": "19:40"
+                    }
+                  }
+                },
+                {
+                  "id": "YGZWf",
+                  "type": "ref",
+                  "ref": "CQVFo",
+                  "name": "User message",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ZdoE8": {
+                      "content": "Keep Goal and Plan tags compact. Validate the changes in isolation."
+                    },
+                    "b60X5h": {
+                      "content": "19:41"
+                    }
+                  }
+                },
+                {
+                  "id": "LcV8b",
+                  "type": "ref",
+                  "ref": "PzOXU",
+                  "name": "Validation question bubble · pending",
+                  "descendants": {
+                    "LCEHH": {
+                      "content": "Which validation should I run?"
+                    },
+                    "ZZwpl": {
+                      "content": "Browser checks",
+                      "fill": "$ds-fg-muted"
+                    }
+                  }
+                },
+                {
+                  "id": "CiUrn",
+                  "type": "ref",
+                  "ref": "PzOXU",
+                  "name": "Files question bubble · pending",
+                  "descendants": {
+                    "LCEHH": {
+                      "content": "Which files should I include?"
+                    },
+                    "ZZwpl": {
+                      "content": "Release notes only",
+                      "fill": "$ds-fg-muted"
+                    }
+                  }
+                },
+                {
+                  "id": "M4MHM",
+                  "type": "ref",
+                  "ref": "X7Yj6",
+                  "name": "Agent continues independent work",
+                  "width": "fill_container",
+                  "descendants": {
+                    "EiVAs": {
+                      "content": "The browser checks are ready. I am checking the release script while you choose the files."
+                    },
+                    "p3bQE": {
+                      "content": "19:45"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "EWJ5R",
+                  "name": "Conversation remaining space",
+                  "width": "fill_container",
+                  "height": "fill_container"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "eMim8",
+              "name": "Workspace composer shell",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 4,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 4,
+              "padding": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "G8hPw",
+                  "name": "Release workflow workspace",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    8,
+                    4,
+                    8
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "FOYGR",
+                      "name": "Identity",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "LShZp",
+                          "name": "Workspace",
+                          "gap": 7,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "RVsQ3",
+                              "name": "Icon",
+                              "width": 13,
+                              "height": 13,
+                              "icon": "git-branch",
+                              "library": "lucide",
+                              "fill": "$ds-fg-muted"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HrIbW",
+                              "name": "Name",
+                              "fill": "$ds-fg",
+                              "content": "Release workflow",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "oYq03",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Open",
+                      "width": 24,
+                      "height": 24,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "2xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "arrow-up-right",
+                          "width": 12,
+                          "height": 12,
+                          "fill": "$ds-fg-muted"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "A7Jm5F",
+                  "name": "Restored original draft and attachments",
+                  "context": "Async questions remain in the chat until opened. Keep this original unsent draft and its files editable. Question replies never include the draft or its files.",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "cornerRadius": 4,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "oagy8",
+                      "name": "Draft attachments · preserved",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "oSR4w",
+                          "type": "ref",
+                          "ref": "kNQoL",
+                          "name": "release-notes.md · draft attachment",
+                          "descendants": {
+                            "XgLPG": {
+                              "content": "release-notes.md"
+                            },
+                            "n6amuf": {
+                              "content": "4 KB"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nE3WW",
+                      "name": "Draft editor · stays editable",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        4,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "cMhWj",
+                          "name": "Unsent message",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Also update the release notes and include the migration steps.",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kkae7",
+                          "name": "Editing cursor",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "I am still writing this message… |",
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QKMWI",
+                      "name": "Message toolbar",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "rArtx",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Attach",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "paperclip",
+                              "height": 14,
+                              "width": 14
+                            }
+                          }
+                        },
+                        {
+                          "id": "kI1Rm",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Model",
+                          "height": 28,
+                          "stroke": "$ds-border",
+                          "strokeWidth": 0,
+                          "strokeAlignment": "inner",
+                          "theme": {
+                            "trig": "default",
+                            "btn": "ghost",
+                            "size": "xs"
+                          },
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": false
+                            },
+                            "l7dix": {
+                              "padding": 0
+                            },
+                            "sefGB": {
+                              "content": "gpt-5.5",
+                              "fontSize": 12,
+                              "fill": "$btn-fg"
+                            },
+                            "Tpujq": {
+                              "fill": "$btn-fg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "m5NrFI",
+                          "type": "ref",
+                          "ref": "HXArk",
+                          "name": "Plan tag",
+                          "height": 28,
+                          "descendants": {
+                            "rfQui": {
+                              "content": "Plan"
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "cbMZk",
+                          "name": "Spacer",
+                          "width": "fill_container",
+                          "height": 28
+                        },
+                        {
+                          "id": "kBjuR",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Send draft · enabled",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "xs",
+                            "btn-interaction": "default"
+                          },
+                          "width": 28,
+                          "height": 28,
+                          "strokeWidth": 0,
+                          "fill": "$btn-fill",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up",
+                              "height": 16,
+                              "width": 16
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "uQ78Q",
+      "x": 27245,
+      "y": 0,
+      "name": "Developer Tools · Connection Status · Production",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 2000,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        48,
+        40
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "YX35U",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Connection status · device preference",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "C4Od4m",
+          "name": "Connection settings",
+          "width": "fill_container",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "TaIjw",
+              "name": "Connection · Off",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JxYIw",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "cbnuk",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "connection · off · default",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "zeVO3",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Enables the status bar indicator for this device.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "M808Kc",
+                  "name": "Settings Surface",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 360,
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pEN1W",
+                      "name": "Head",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Ir7Tp",
+                          "name": "I",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$ds-accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "XnBUK",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lSeCO",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "QNrRM",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xxnwP",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AC7pE",
+                          "name": "Sections",
+                          "width": 220,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "X20LaD",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "WORKBENCH",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "NoEqz",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Runtime",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "cpu"
+                                },
+                                "ROY2j": {
+                                  "content": "Runtime",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Fohw5",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "gguqX",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "DEVELOPER TOOLS",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "Va2vY",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "name": "Performance",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "gauge"
+                                },
+                                "ROY2j": {
+                                  "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "daLwx",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HRVXb",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "vqiOq",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXPERIMENTAL",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "x0RNUO",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Beta features",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "flask-conical"
+                                },
+                                "ROY2j": {
+                                  "content": "Beta features",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ksrtK",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "c4uln",
+                              "name": "Intro",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NqGPb",
+                                  "name": "Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Connection status",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "XWyIR",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Show the backend connection status in the status bar.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "r1JNK8",
+                              "name": "Switch Card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 12,
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "WS7Lx",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "YThYK",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "wrQ0u",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Show connection status",
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "L8m1Z",
+                                      "type": "ref",
+                                      "ref": "ZVbcE",
+                                      "name": "Switch",
+                                      "theme": {
+                                        "switch": "off"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "G7CiA",
+              "name": "Connection · On",
+              "width": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "cornerRadius": 8,
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WlY17",
+                  "name": "H",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 5,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Q5UYq",
+                      "name": "T",
+                      "fill": "$ds-fg",
+                      "content": "connection · on",
+                      "fontFamily": "$font-mono",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ocYBe",
+                      "name": "D",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Enables the status bar indicator for this device.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gcom6",
+                  "name": "Settings Surface",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 360,
+                  "fill": "$ds-bg",
+                  "cornerRadius": "$overlay-radius",
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "fmBA5",
+                      "name": "Head",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$ds-bg-subtle",
+                      "stroke": "$ds-border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Ti656",
+                          "name": "I",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$ds-accent"
+                        },
+                        {
+                          "type": "text",
+                          "id": "QrWBW",
+                          "name": "T",
+                          "fill": "$ds-fg",
+                          "content": "Settings",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Y09yR",
+                          "name": "Sp",
+                          "width": "fill_container",
+                          "height": 2
+                        },
+                        {
+                          "id": "i7psEk",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Close",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "x"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YHYSo",
+                      "name": "Body",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "CTeX3",
+                          "name": "Sections",
+                          "width": 220,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "stroke": "$ds-border",
+                          "strokeWidth": {
+                            "right": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 3,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "dmJRB",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "WORKBENCH",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "X1DLA",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Runtime",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "cpu"
+                                },
+                                "ROY2j": {
+                                  "content": "Runtime",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "IUoaD",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "n0Vgr",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "DEVELOPER TOOLS",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "K5wAh",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "name": "Performance",
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "gauge"
+                                },
+                                "ROY2j": {
+                                  "content": "Performance",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "id": "cTU3I",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Connection",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "active"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "wifi"
+                                },
+                                "ROY2j": {
+                                  "content": "Connection",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "KbsVM",
+                              "name": "G",
+                              "width": "fill_container",
+                              "height": 10
+                            },
+                            {
+                              "type": "text",
+                              "id": "acT9h",
+                              "name": "L",
+                              "fill": "$ds-fg-subtle",
+                              "content": "EXPERIMENTAL",
+                              "fontFamily": "$font-heading",
+                              "fontSize": 9,
+                              "fontWeight": "600",
+                              "letterSpacing": 1
+                            },
+                            {
+                              "id": "smDWU",
+                              "type": "ref",
+                              "ref": "t5G2s8",
+                              "name": "Beta features",
+                              "theme": {
+                                "depth": "0",
+                                "tree": "default"
+                              },
+                              "descendants": {
+                                "w2TSr": {
+                                  "enabled": false
+                                },
+                                "Mbu4C": {
+                                  "icon": "flask-conical"
+                                },
+                                "ROY2j": {
+                                  "content": "Beta features",
+                                  "fill": "$tree-fg"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "W3hSGk",
+                          "name": "Content",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 24,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "l21hD",
+                              "name": "Intro",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "memyL",
+                                  "name": "Title",
+                                  "fill": "$ds-fg",
+                                  "content": "Connection status",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "wdFCw",
+                                  "name": "Description",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Show the backend connection status in the status bar.",
+                                  "lineHeight": 1.45,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "R17md",
+                              "name": "Switch Card",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$ds-border-subtle",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "gap": 12,
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ENQGs",
+                                  "name": "Row",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "L4JSC",
+                                      "name": "Label",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "fEXEo",
+                                          "name": "Name",
+                                          "fill": "$ds-fg",
+                                          "content": "Show connection status",
+                                          "fontFamily": "$font-label",
+                                          "fontSize": 13,
+                                          "fontWeight": "500"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "bWSGA",
+                                      "type": "ref",
+                                      "ref": "ZVbcE",
+                                      "name": "Switch",
+                                      "theme": {
+                                        "switch": "on"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R0Jge7",
+          "name": "Connected · trailing status",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 12,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "xsOCO",
+              "name": "text",
+              "fill": "$ds-fg-muted",
+              "content": "Loaded navigation stays visible",
+              "fontFamily": "$font-body",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "urRzk",
+              "name": "frame",
+              "width": "fill_container",
+              "height": 2
+            },
+            {
+              "type": "frame",
+              "id": "j8CGB",
+              "name": "Backend connection status",
+              "context": "Green connection dot. Hover or keyboard focus: Connected to backend.",
+              "width": 24,
+              "height": 24,
+              "fill": "#00000000",
+              "cornerRadius": "$btn-radius",
+              "stroke": "$ds-border",
+              "gap": "$btn-gap",
+              "padding": [
+                0,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "cvXVO",
+                  "name": "Connected dot",
+                  "fill": "$ds-success",
+                  "width": 6,
+                  "height": 6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CPMmL",
+          "name": "Outage warning · trailing status",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 12,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "dQVrq",
+              "name": "text",
+              "fill": "$ds-fg-muted",
+              "content": "Loaded navigation stays visible",
+              "fontFamily": "$font-body",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "jSpHq",
+              "name": "frame",
+              "width": "fill_container",
+              "height": 2
+            },
+            {
+              "type": "frame",
+              "id": "K8XAhY",
+              "name": "Backend connection warning",
+              "context": "Red connection dot and Backend unavailable. Hover or keyboard focus: Backend connection lost. Reconnecting automatically.",
+              "height": 24,
+              "fill": "#00000000",
+              "cornerRadius": "$btn-radius",
+              "stroke": "$ds-border",
+              "gap": "$btn-gap",
+              "padding": [
+                0,
+                6
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "A0XXZ",
+                  "name": "Disconnected dot",
+                  "fill": "$ds-error",
+                  "width": 6,
+                  "height": 6
+                },
+                {
+                  "type": "text",
+                  "id": "SsXhN",
+                  "name": "Label",
+                  "fill": "$ds-error",
+                  "content": "Backend unavailable",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "EANSh",
+          "name": "Interaction",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "When enabled, show a green dot while connected. After connection loss, show a red dot and Backend unavailable. Tooltips explain connection health on hover and keyboard focus. Loaded navigation stays visible. Recovery restores the green dot.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "IpczA",
+          "name": "Reorder status bar items",
+          "context": "Drag a status widget directly, like a tab, to reorder it within its side. No grip controls. A 2 px placement line marks the drop edge and the source stays at 50% opacity. Focus the item or its control and use Alt+Left/Right to reorder. Normal clicks still open widget controls. Save the order on this device, including temporarily disabled items. The bar is 32 px tall with 12 px padding on both sides. Ghost connection controls use a 24 px height and a centered 6 px dot.",
+          "width": "fill_container",
+          "height": 32,
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "f1wkRl",
+              "name": "Flexible status space",
+              "width": "fill_container",
+              "height": 2
+            },
+            {
+              "type": "frame",
+              "id": "mRBTb",
+              "name": "Performance status item",
+              "height": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "OpCkS",
+                  "type": "ref",
+                  "ref": "BtQDh",
+                  "name": "Performance monitor"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "qeEGW",
+              "name": "Vertical status drop indicator",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 32
+            },
+            {
+              "type": "frame",
+              "id": "W6omg",
+              "name": "Connection status item being dragged",
+              "opacity": 0.5,
+              "height": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "b2Rpf",
+                  "name": "Connection badge while dragging",
+                  "context": "Green connection dot. Hover or keyboard focus: Connected to backend.",
+                  "width": 24,
+                  "height": 24,
+                  "fill": "#00000000",
+                  "cornerRadius": "$btn-radius",
+                  "stroke": "$ds-border",
+                  "gap": "$btn-gap",
+                  "padding": [
+                    0,
+                    6
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "N5tvrL",
+                      "name": "Connected dot",
+                      "fill": "$ds-success",
+                      "width": 6,
+                      "height": 6
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "xgxAe",
+      "x": 29345,
+      "y": 0,
+      "name": "Resource links · Shared workbench controls · PS-490",
+      "width": 1120,
+      "height": 680,
+      "fill": "$ds-bg-subtle",
+      "gap": 32,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "SZuKv",
+          "name": "Related resources",
+          "width": 520,
+          "fill": "$ds-bg",
+          "cornerRadius": "$overlay-radius",
+          "stroke": "$ds-border-subtle",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "p8lUMa",
+              "name": "Header",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Q9TFT",
+                  "name": "Title",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Related resources",
+                  "fontFamily": "$font-label",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "XrMa6",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Close",
+                  "width": 28,
+                  "height": 28,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "x"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mu1AL",
+              "name": "Body",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eSIK1",
+                  "name": "Resource name",
+                  "fill": "$ds-fg-muted",
+                  "content": "PS-490 · General resource linking",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "ZF56W",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "OlPPW",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "Interaction prototype"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Outgoing · Result"
+                        }
+                      }
+                    },
+                    {
+                      "id": "NZs5f",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Remove link",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "unlink"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MBRMY",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "MVzxW",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "WS-180 · Implementation"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Incoming · Primary"
+                        }
+                      }
+                    },
+                    {
+                      "id": "bhxJ1",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Remove link",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "unlink"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FVnGn",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "WqBgK",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "note: deleted-resource"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Unavailable"
+                        }
+                      }
+                    },
+                    {
+                      "id": "XUWD9",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Remove link",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "unlink"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "ePzHl",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Link resource action",
+                  "height": 32,
+                  "descendants": {
+                    "DsEVd": {
+                      "icon": "link"
+                    },
+                    "Hf4GT": {
+                      "content": "Link resource"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "SkbcQ",
+          "name": "Link resource",
+          "width": 520,
+          "fill": "$ds-bg",
+          "cornerRadius": "$overlay-radius",
+          "stroke": "$ds-border-subtle",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "b61Qn",
+              "name": "Header",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "LgIPQ",
+                  "name": "Title",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Link resource",
+                  "fontFamily": "$font-label",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "Ge7W4",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Close",
+                  "width": 28,
+                  "height": 28,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "x"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uDOFu",
+              "name": "Body",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "IVKkj",
+                  "name": "Resource name",
+                  "fill": "$ds-fg-muted",
+                  "content": "PS-490 · General resource linking",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "GcO1V",
+                  "type": "ref",
+                  "ref": "nbn0J",
+                  "name": "Search enabled resources",
+                  "width": "fill_container",
+                  "height": 32,
+                  "descendants": {
+                    "hcIyD": {
+                      "content": "Search resources…"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "XUUnS",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "aUEl8",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "Interaction prototype"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Artifacts"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "R7bJV",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "OmsEm",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "Project notes"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Artifacts"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "oIeJY",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Purpose selector",
+                  "height": 32,
+                  "descendants": {
+                    "DsEVd": {
+                      "icon": "chevron-down"
+                    },
+                    "Hf4GT": {
+                      "content": "Purpose: Result"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HCY74",
+              "name": "Footer",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": 16,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "id": "jSazo",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Cancel",
+                  "height": 32,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Cancel"
+                    }
+                  }
+                },
+                {
+                  "id": "hjmdc",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Link",
+                  "height": 32,
+                  "theme": {
+                    "btn": "primary",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Link",
+                      "fill": "$btn-fg"
+                    }
+                  }
+                }
+              ]
             }
           ]
         }

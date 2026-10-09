@@ -1,15 +1,19 @@
 import type {
   FileRendererSectionTarget,
+  FileSourcePosition,
+  PageDocumentDeclaration,
   PageLocation,
   PageRef,
   ResourceRef,
 } from "pstdio-api-contracts/extension-kernel";
+import { isFileSourcePosition } from "pstdio-api-contracts/extension-kernel";
 import { defaultPageResourceCodec } from "./page-resource-codec";
 
 export interface PageUrlDefinition {
   id: string;
   ref: PageRef;
   path: string;
+  document?: PageDocumentDeclaration;
 }
 export interface PageResourceCodec {
   normalize(resource: ResourceRef): ResourceRef;
@@ -94,6 +98,25 @@ export const serializeWorkbenchPageUrl = (input: {
   if (input.location.resource) {
     query.set("resource", input.resources.toUri(input.resources.normalize(input.location.resource)));
   }
+  const document = page.document && input.location.resource?.metadata?.[page.document.metadataKey];
+  if (document !== undefined) {
+    if (typeof document !== "string" || !document) throw new Error("Page location has an invalid document");
+    query.set("document", document);
+  }
+  if (input.location.position) {
+    if (
+      !page.document ||
+      typeof document !== "string" ||
+      !document ||
+      input.location.section ||
+      !isFileSourcePosition(input.location.position)
+    )
+      throw new Error("Page location has an invalid source position");
+    for (const key of ["line", "column", "endLine", "endColumn"] as const) {
+      const value = input.location.position[key];
+      if (value !== undefined) query.set(key, String(value));
+    }
+  }
   if (input.location.section) query.set("section", serializeSection(input.location.section));
   const encoded = query.toString();
   const path = routePath(input.projectId, page);
@@ -133,11 +156,46 @@ const parseResource = (uri: string, resources: PageResourceCodec): ResourceRef |
   }
 };
 
+const parseSourcePosition = (
+  url: URL,
+  page: PageUrlDefinition,
+  document: string | null,
+  section?: FileRendererSectionTarget,
+) => {
+  const coordinates = Object.fromEntries(
+    ["line", "column", "endLine", "endColumn"]
+      .filter((key) => url.searchParams.has(key))
+      .map((key) => {
+        const raw = url.searchParams.get(key)!;
+        return [key, /^[1-9]\d*$/.test(raw) ? Number(raw) : NaN];
+      }),
+  );
+  let position: FileSourcePosition | undefined;
+  if (Object.keys(coordinates).length) {
+    if (!page.document || document === null || section || !isFileSourcePosition(coordinates)) return false;
+    position = coordinates;
+  }
+  return position;
+};
+
 export interface ParsedWorkbenchPageUrl {
   pageId: string;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
 }
+
+const pageForUrl = (url: URL, projectId: string, pages: readonly PageUrlDefinition[]) => {
+  const segments = decodedSegments(url.pathname);
+  if (!segments || segments[0] !== "projects" || segments[1] !== projectId) return undefined;
+  const route = segments.slice(2);
+  const extensionRoute = route[0] === "extensions";
+  const extensionId = extensionRoute ? route[1] : hostExtensionId;
+  const path = (extensionRoute ? route.slice(2) : route).join("/");
+  if (!extensionId || (extensionRoute && !path)) return undefined;
+  const page = pageForRoute(pages, extensionId, path);
+  return page;
+};
 
 export const parseWorkbenchPageUrl = (input: {
   url: string;
@@ -151,34 +209,43 @@ export const parseWorkbenchPageUrl = (input: {
   } catch {
     return undefined;
   }
-  const segments = decodedSegments(url.pathname);
-  if (!segments || segments[0] !== "projects" || segments[1] !== input.projectId) return undefined;
-  const route = segments.slice(2);
-  const extensionRoute = route[0] === "extensions";
-  const extensionId = extensionRoute ? route[1] : hostExtensionId;
-  const path = (extensionRoute ? route.slice(2) : route).join("/");
-  if (!extensionId || (extensionRoute && !path)) return undefined;
-  const page = pageForRoute(input.pages, extensionId, path);
+  const page = pageForUrl(url, input.projectId, input.pages);
   if (!page) return undefined;
 
+  for (const key of ["resource", "document", "section", "line", "column", "endLine", "endColumn"]) {
+    if (url.searchParams.getAll(key).length > 1) return undefined;
+  }
   const resourceValue = url.searchParams.get("resource");
-  const resource = resourceValue ? parseResource(resourceValue, input.resources) : undefined;
-  if (resourceValue && !resource) return undefined;
+  let resource = resourceValue ? parseResource(resourceValue, input.resources) : undefined;
+  if (resourceValue !== null && !resource) return undefined;
+  const document = url.searchParams.get("document");
+  if (document !== null) {
+    if (!document || !page.document || !resource) return undefined;
+    resource = { ...resource, metadata: { [page.document.metadataKey]: document } };
+  }
   const sectionValue = url.searchParams.get("section");
   const section = sectionValue ? parseSection(sectionValue) : undefined;
-  if (sectionValue && !section) return undefined;
+  if (sectionValue !== null && !section) return undefined;
+  const position = parseSourcePosition(url, page, document, section);
+  if (position === false) return undefined;
   return {
     pageId: page.id,
     ...(resource ? { resource } : {}),
     ...(section ? { section } : {}),
+    ...(position ? { position } : {}),
   };
 };
 
 /** Serialize a project page using the same resource encoding as the dashboard. */
-export const serializePageUrl = (input: { projectId: string; page: PageUrlDefinition; resource?: ResourceRef }) =>
+export const serializePageUrl = (input: {
+  projectId: string;
+  page: PageUrlDefinition;
+  resource?: ResourceRef;
+  position?: FileSourcePosition;
+}) =>
   serializeWorkbenchPageUrl({
     projectId: input.projectId,
-    location: { page: input.page.ref, resource: input.resource },
+    location: { page: input.page.ref, resource: input.resource, position: input.position },
     pages: [input.page],
     resources: defaultPageResourceCodec,
   });

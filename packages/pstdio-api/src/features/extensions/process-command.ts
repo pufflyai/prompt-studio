@@ -82,7 +82,10 @@ export const resolveProcessCommand = (
 
   if (endsWithAny(target, [".cmd", ".bat"])) {
     const doubleEscape = isNpmStyleShim(target);
-    const line = [target, ...args].map((part) => escapeForCmd(part, doubleEscape)).join(" ");
+    // The executable is parsed once; only arguments pass through the shim too.
+    // Double escaping the path leaves literal carets and quotes in its name.
+    const escapedCommand = escapeForCmd(target, false);
+    const line = [escapedCommand, ...args.map((arg) => escapeForCmd(arg, doubleEscape))].join(" ");
     return {
       argv: [comspec ?? "cmd.exe", "/d", "/s", "/c", `"${line}"`],
       windowsVerbatimArguments: true,

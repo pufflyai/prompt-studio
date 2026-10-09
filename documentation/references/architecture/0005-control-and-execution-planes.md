@@ -10,7 +10,7 @@ For the user view, see [Local and remote work](../../guides/concepts/0004-local-
 | --- | --- |
 | Project, workspace, session, and queue state | API domain services and database |
 | Ticket and review policy | Planner extension commands and storage |
-| Extension adoption and lifecycle dispatch | API extension runtime |
+| Extension install, adoption, and lifecycle dispatch | API extension runtime |
 | Local worktree creation and removal | API workspace provider using `pstdio-wt` |
 | Local workspace merge | CLI merge workflow using `pstdio-wt`, with API-managed workspace state |
 | Agent execution | Selected harness acting on the workspace execution target |
@@ -23,6 +23,8 @@ The CLI is not the sole owner of local Git. Workspace creation/deletion commands
 A local filesystem operation runs on the machine that can access the workspace path. A remote workspace supplies an opaque provider reference and execution target. The host must not invent a local directory for remote work or allow an unsupported file/Git operation merely because a workspace record exists.
 
 State-backed command middleware and hooks execute in the host extension runtime. Provider operations run through their declared execution boundary. Session lifecycle events are emitted by the session service; the removed `on-agent-ready` hook name is not a supported extension contract.
+
+The API host installs extension files and provisions workspace skills. Clients upload source files or name a catalog entry. A development watcher runs where the author edits files and submits each refresh to the same install route. Installed diagnostics run on the host; local authoring checks are read-only. Global agent skills remain an explicit `pst agents install-skills` action on the agent machine.
 
 ## Rules
 

@@ -51,7 +51,7 @@ export const isConnectionError = (error: unknown) => {
 export const requestJson = async <T>(
   fetcher: OpencodeFetcher,
   url: string,
-  options: { method: string; headers: Record<string, string>; body?: unknown },
+  options: { method: string; headers: Record<string, string>; body?: unknown; signal?: AbortSignal },
 ) => {
   const timeoutMs = options.method === "GET" ? GET_TIMEOUT_MS : POST_TIMEOUT_MS;
 
@@ -59,7 +59,9 @@ export const requestJson = async <T>(
     method: options.method,
     headers: options.headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(timeoutMs)])
+      : AbortSignal.timeout(timeoutMs),
   });
 
   const text = await response.text();

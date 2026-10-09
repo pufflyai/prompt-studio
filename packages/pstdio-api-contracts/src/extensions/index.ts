@@ -13,6 +13,7 @@ export * from "./data-table-renderer";
 export * from "./execute";
 export * from "./host-capabilities";
 export * from "./install";
+export * from "./installation";
 export * from "./kanban-renderer";
 export * from "./keybindings";
 export { navigationTargetSchema } from "./navigation-target-metadata";

@@ -10,9 +10,11 @@ export {
   type ClientOptions,
   createRequest,
   PstdioApiError,
+  PstdioConnectionError,
   type RequestFn,
   type RequestOptions,
 } from "./request";
+export type { ResourceAnchorsClient } from "./resource-anchors";
 export { createRuntimeClient, type RuntimeClient } from "./runtime";
 export type { ListSessionsInput, SessionClient, SessionStreamConnection, SessionStreamHandlers } from "./sessions";
 export type { SettingsClient } from "./settings";

@@ -37,9 +37,9 @@ const validateResourceKindOwnership = (runtime: Accumulator) => {
       );
       return false;
     }
-    const owner = owners.get(kind.id);
+    const owner = owners.get(`${kind.extensionId}:${kind.id}`);
     if (!owner) {
-      owners.set(kind.id, kind);
+      owners.set(`${kind.extensionId}:${kind.id}`, kind);
       return true;
     }
     addDiagnostic(
@@ -54,17 +54,39 @@ const validateResourceKindOwnership = (runtime: Accumulator) => {
 };
 
 const validateResourceMenuOwnership = (runtime: Accumulator) => {
-  const slots = new Map<string, { kind: (typeof runtime.resourceKinds)[number]; slot: { external?: boolean } }>();
+  const slots = new Map<
+    string,
+    Array<{ kind: (typeof runtime.resourceKinds)[number]; slot: { external?: boolean } }>
+  >();
   for (const kind of runtime.resourceKinds) {
     for (const [slotId, slot] of Object.entries(kind.contribution.menuSlots ?? {})) {
-      slots.set(`${kind.id}.${slotId}`, { kind, slot });
+      const key = `${kind.id}.${slotId}`;
+      slots.set(key, [...(slots.get(key) ?? []), { kind, slot }]);
+      slots.set(`${kind.extensionId}.resource-kind.${key}`, [{ kind, slot }]);
     }
   }
 
   for (const command of runtime.commands) {
-    command.menus = command.menus.filter((menu, index) => {
-      const target = slots.get(menu.slot.id);
-      if (!target || command.extensionId === target.kind.extensionId || target.slot.external) return true;
+    command.menus = command.menus.flatMap((menu, index) => {
+      const candidates = slots.get(menu.slot.id) ?? [];
+      const owned = candidates.find((candidate) => candidate.kind.extensionId === command.extensionId);
+      const target = owned ?? (candidates.length === 1 ? candidates[0] : undefined);
+      if (!target && candidates.length > 1) {
+        addDiagnostic(
+          runtime,
+          command,
+          "extension_resource_menu_slot_ambiguous",
+          menu.slot.id,
+          "Resource menu slot needs an owner.",
+        );
+        return [];
+      }
+      if (!target) return [menu];
+      if (command.extensionId === target.kind.extensionId || target.slot.external) {
+        const prefix = `${target.kind.extensionId}.resource-kind.`;
+        const id = menu.slot.id.startsWith(prefix) ? menu.slot.id : `${prefix}${menu.slot.id}`;
+        return [{ ...menu, slot: { ...menu.slot, id } }];
+      }
 
       addDiagnostic(
         runtime,
@@ -73,7 +95,7 @@ const validateResourceMenuOwnership = (runtime: Accumulator) => {
         menu.slot.id,
         `Menu slot "${menu.slot.id}" is closed to external commands`,
       );
-      return false;
+      return [];
     });
   }
 };
@@ -82,17 +104,20 @@ const validateResourceMenuOwnership = (runtime: Accumulator) => {
 const validateResourceKindResolvers = (runtime: Accumulator) => {
   const commands = new Map(runtime.commands.map((command) => [command.id, command]));
   runtime.resourceKinds = runtime.resourceKinds.map((kind) => {
-    if (!kind.resolveCommandId) return kind;
-    if (commands.get(kind.resolveCommandId)?.extensionId === kind.extensionId) return kind;
-    addDiagnostic(
-      runtime,
-      kind,
-      "extension_resource_kind_resolver_invalid",
-      kind.resolveCommandId,
-      `Resource kind "${kind.id}" must resolve with a command of its own extension`,
-    );
-    const { resolveCommandId: _dropped, ...rest } = kind;
-    return rest;
+    const result = { ...kind };
+    for (const key of ["resolveCommandId", "resolveManyCommandId"] as const) {
+      const commandId = kind[key];
+      if (!commandId || commands.get(commandId)?.extensionId === kind.extensionId) continue;
+      addDiagnostic(
+        runtime,
+        kind,
+        "extension_resource_kind_resolver_invalid",
+        commandId,
+        `Resource kind "${kind.id}" must resolve with a command of its own extension`,
+      );
+      delete result[key];
+    }
+    return result;
   });
 };
 

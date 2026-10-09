@@ -5,6 +5,8 @@ import { plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
+import { deleteUnusedLinkedWorkspaces } from "./ticket-workspace-cleanup";
+
 export const deleteTicketCommand = defineCommand({
   id: "delete-ticket",
   mutating: true,
@@ -20,8 +22,10 @@ export const deleteTicketCommand = defineCommand({
   ],
   async run(ctx, commandParams) {
     const ref = ticketRefFromCommandContext(ctx, commandParams);
-    const id = (await findTicket(ctx.storage, ref))?.id ?? ref;
+    const ticket = await findTicket(ctx.storage, ref);
+    const id = ticket?.id ?? ref;
     await ticketsCollection(ctx.storage).delete(id);
+    if (ticket) await deleteUnusedLinkedWorkspaces(ctx, [ticket]);
     await ctx.resources.removed({ type: "ticket", id });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: id });
     return { id };

@@ -41,7 +41,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
 
   return {
     id: `workspace-${workspace.id}`,
-    label: workspace.is_default ? l10n("ticketWorkspaces.project", "Project workspace") : label,
+    label: workspace.is_default ? l10n("ticketWorkspaces.project", "Project folder") : label,
     icon,
     resource,
     target: {

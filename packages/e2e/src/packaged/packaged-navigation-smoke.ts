@@ -19,7 +19,16 @@ export const writeNavigationExtension = (root: string) => {
   );
   writeFileSync(
     join(source, "extension.ts"),
-    `export default { commands: [{
+    `export default {
+      resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
+      views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
+      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, slots: [], panels: {} }],
+      commands: [{
+      id: "open-document", ref: { kind: "command", id: "open-document" }, title: "Open document",
+      run(ctx: { navigation: { open(target: unknown): void } }) {
+        ctx.navigation.open({ kind: "page", page: { kind: "page", id: "record" }, resource: { type: "record", id: "record-1", metadata: { documentId: "file-1" } }, position: { line: 2, column: 3 } });
+      },
+    }, {
       id: "open", ref: { kind: "command", id: "open" }, title: "Open", cli: true,
       params: { href: { type: "text" } },
       run(ctx: { navigation: { open(target: unknown): void } }, params: { href?: string }) {
@@ -36,6 +45,35 @@ export const expectPackagedNavigation = async (input: {
   projectId: string;
   headers: Record<string, string>;
 }) => {
+  const metadataResponse = await fetch(`${input.baseUrl}/v1/projects/${input.projectId}/extensions/ui`, {
+    headers: input.headers,
+  });
+  const metadata = await metadataResponse.json();
+  expect(metadata.pages).toContainEqual(
+    expect.objectContaining({ localId: "record", document: { metadataKey: "documentId" } }),
+  );
+  const documentResponse = await fetch(
+    `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/test.navigation-probe.command.open-document/execute`,
+    {
+      method: "POST",
+      headers: { ...input.headers, "content-type": "application/json" },
+      body: JSON.stringify({ source: "dashboard", params: {} }),
+    },
+  );
+  expect(documentResponse.status).toBe(200);
+  expect(await documentResponse.json()).toMatchObject({
+    outcome: {
+      status: "success",
+      navigationRequests: [
+        {
+          kind: "page",
+          page: { extensionId: "test.navigation-probe", id: "record" },
+          resource: { metadata: { documentId: "file-1" } },
+          position: { line: 2, column: 3 },
+        },
+      ],
+    },
+  });
   for (const source of ["dashboard", "cli"]) {
     const response = await fetch(
       `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/test.navigation-probe.command.open/execute`,

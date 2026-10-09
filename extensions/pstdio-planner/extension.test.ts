@@ -241,9 +241,9 @@ describe("pstdio planner workspace contributions", () => {
       rmSync(worktreePath, { recursive: true, force: true });
     }
   });
-  // The planner keeps only worktreeCreated and the blocked-notification hook.
-  test("contributes no session-start or git hooks", () => {
+  test("contributes ticket workspace and merge hooks", () => {
     expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
+      "git-merged-mark-done",
       "session-awaiting-input",
       "worktree-created",
     ]);

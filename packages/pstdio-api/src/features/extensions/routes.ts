@@ -2,7 +2,6 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
 import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps, ExtensionWebviewRouteDeps } from "./deps";
-import { addLocalExtensionFolderHandler, addLocalExtensionFolderRoute } from "./endpoints/add-local-extension-folder";
 import {
   createExtensionNotificationHandler,
   createExtensionNotificationRoute,
@@ -28,6 +27,7 @@ import {
   listExtensionConnectionsHandler,
   listExtensionConnectionsRoute,
 } from "./endpoints/extension-connections";
+import { extensionDiagnosticsHandler, extensionDiagnosticsRoute } from "./endpoints/extension-diagnostics";
 import {
   deleteExtensionFileHandler,
   deleteExtensionFileRoute,
@@ -67,10 +67,8 @@ import {
   getMarketplaceExtensionContributionsRoute,
 } from "./endpoints/get-marketplace-extension-contributions";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
-import {
-  installMarketplaceExtensionHandler,
-  installMarketplaceExtensionRoute,
-} from "./endpoints/install-marketplace-extension";
+import { installExtensionHandler, installExtensionRoute } from "./endpoints/install-extension";
+
 import { listExtensionAppearanceHandler, listExtensionAppearanceRoute } from "./endpoints/list-extension-appearance";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
 import { listProjectExtensionsHandler, listProjectExtensionsRoute } from "./endpoints/list-project-extensions";
@@ -133,8 +131,8 @@ const registerProjectExtensionRoutes = (
   deps: ProjectExtensionLifecycleRouteDeps & ExtensionWebviewMetadataDeps,
 ) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
-  routes.openapi(installMarketplaceExtensionRoute, installMarketplaceExtensionHandler(deps));
-  routes.openapi(addLocalExtensionFolderRoute, addLocalExtensionFolderHandler(deps));
+  routes.openapi(installExtensionRoute, installExtensionHandler(deps));
+  routes.openapi(extensionDiagnosticsRoute, extensionDiagnosticsHandler(deps));
   routes.openapi(getMarketplaceExtensionContributionsRoute, getMarketplaceExtensionContributionsHandler(deps));
   routes.openapi(getExtensionContributionsRoute, getExtensionContributionsHandler(deps));
   routes.openapi(setProjectExtensionEnabledRoute, setProjectExtensionEnabledHandler(deps));

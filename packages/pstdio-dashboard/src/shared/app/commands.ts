@@ -4,7 +4,6 @@ export const dashboardCommandIds = {
   createProject: "dashboard.createProject",
   createSession: "dashboard.createSession",
   renameSession: "dashboard.renameSession",
-  archiveWorkspace: "dashboard.archiveWorkspace",
   createWorkspace: "workbench.workspace.create",
   deleteWorkspace: "dashboard.deleteWorkspace",
   renameWorkspace: "dashboard.renameWorkspace",

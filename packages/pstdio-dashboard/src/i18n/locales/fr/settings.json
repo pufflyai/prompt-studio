@@ -85,5 +85,11 @@
     "description": "Choisissez l'apparence de Prompt Studio. Vous pouvez aussi changer de thème avec Alt+Shift+T.",
     "theme": "Thème",
     "themeHelper": "S'applique à tous les projets."
+  },
+  "connectionStatus": {
+    "title": "État de la connexion",
+    "description": "Afficher l’état de connexion au serveur dans la barre d’état.",
+    "enable": "Afficher l’état de la connexion",
+    "saveError": "Impossible de modifier l’affichage de l’état de la connexion."
   }
 }

@@ -66,9 +66,9 @@ export const useInstallMarketplaceExtension = (projectId: string | undefined) =>
   const queryClient = useQueryClient();
   const cache = createProjectExtensionCache(queryClient, projectId);
   return useMutation({
-    mutationFn: ({ installName }: { installName: string }) => {
+    mutationFn: ({ installName, force }: { installName: string; force?: boolean }) => {
       if (!projectId) throw new Error("Project id is required to install extensions.");
-      return installMarketplaceExtension(projectId, installName);
+      return installMarketplaceExtension(projectId, installName, force);
     },
     onSuccess: (result) => cache.storeExtension(result.extension),
   });

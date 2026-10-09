@@ -148,3 +148,24 @@ export const normalizeErrorPart = (input: { errorType?: string; message?: string
 
   return { type: "error", errorType: "other", message: message && message.length > 0 ? message : undefined };
 };
+
+const textOf = (content: unknown) => {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((block) => (block && typeof block === "object" && "text" in block ? String(block.text) : ""))
+    .join("\n");
+};
+
+/**
+ * Claude Code reports API failures, such as a missing login, as a synthetic assistant reply
+ * tagged with an `error` code. Show it as an error the person can act on.
+ */
+export const apiErrorPart = (error: string, content: unknown) =>
+  error === "authentication_failed"
+    ? normalizeErrorPart({
+        errorType: "permission",
+        message:
+          "Claude Code is not signed in. Open a terminal on the computer that runs Prompt Studio, run `claude`, and sign in. Then send your message again.",
+      })
+    : normalizeErrorPart({ message: textOf(content) || error });

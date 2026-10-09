@@ -49,7 +49,7 @@ Test and Build runs on every pull request update: opening, reopening, and each n
 Pull requests run only what their changes need. The `scope` job runs `scripts/ci/pull-request-ci-scope.ts`, which compares the merge commit with the target branch:
 
 - The Linux job always builds everything. It lints and tests only changed packages and the packages that depend on them.
-- The Windows job runs when a package that does filesystem or process work is affected, such as `pstdio-db`, `pstdio-api`, or `pstdio-wt`. A change to one of their dependencies counts. The script lists these packages.
+- The Windows jobs run when a package that does filesystem or process work is affected, such as `pstdio-db`, `pstdio-api`, or `pstdio-wt`. A change to one of their dependencies counts. The script lists these packages. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time. The platform job builds and lints every affected package, tests the remaining packages, and runs the Git worktree suite. Both jobs retain the 25-minute limit and are required by `ci_passed`.
 - The e2e jobs run when the `e2e` package is affected. The extensions that e2e loads at runtime and the dashboard it serves are e2e devDependencies, so changes to them count. A test in `packages/e2e` keeps the extension list and the devDependencies in step.
 - The license check runs when a `package.json` or `bun.lock` changes.
 - A change under `scripts/` runs every job. It holds repository tooling, such as the test preload and build scripts.
@@ -118,7 +118,7 @@ Read the first failure and its trace. Check setup, teardown, and server logs bef
 
 Keep the existing job and test time limits. A timeout needs a performance investigation. A passing rerun alone does not explain the failure.
 
-The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. It runs package test suites one at a time to avoid competing database startups; the API suite still uses two file workers.
+The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. After building the SDK dependencies, npm command shim tests cover OpenCode version and model commands through the process API, user folders with spaces and shell operators, and forwarded arguments. The job also compiles the Windows runtime and checks OpenCode detection and model discovery through its harness using an npm-style installation with Node. Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. It runs package test suites one at a time to avoid competing database startups; the API suite still uses two file workers.
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 

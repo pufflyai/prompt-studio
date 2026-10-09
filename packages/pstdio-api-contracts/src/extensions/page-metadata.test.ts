@@ -34,3 +34,11 @@ test.each([
   expect(result.success).toBe(false);
   if (!result.success) expect(result.error.issues[0]?.path).toEqual(["main", field]);
 });
+
+test("preserves the selected document declaration in page metadata", () => {
+  const record = { ...page({ kind: "panels", empty: view }), document: { metadataKey: "documentId" } };
+  expect(workbenchExtensionPageRecordSchema.parse(record).document).toEqual(record.document);
+  expect(workbenchExtensionPageRecordSchema.safeParse({ ...record, document: { metadataKey: " " } }).success).toBe(
+    false,
+  );
+});

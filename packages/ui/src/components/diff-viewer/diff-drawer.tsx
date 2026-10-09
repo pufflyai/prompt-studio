@@ -1,7 +1,8 @@
 import { Box, Stack } from "@chakra-ui/react";
-import { defaultRangeExtractor, useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
+import { defaultRangeExtractor, type Virtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { useVirtualizer } from "@/utils/use-virtualizer";
 import { type Diff, DiffCard } from "./diff-card";
 import { DiffDrawerEmptyState } from "./diff-drawer-empty-state";
 import { estimateDiffCardHeight } from "./diff-drawer-height";

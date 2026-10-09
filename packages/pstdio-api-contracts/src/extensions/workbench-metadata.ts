@@ -189,6 +189,7 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
   resolveCommand: z.string().optional(),
+  resolveManyCommand: z.string().optional(),
   menuSlots: z
     .array(
       z.object({

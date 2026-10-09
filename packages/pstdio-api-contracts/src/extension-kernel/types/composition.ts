@@ -37,6 +37,10 @@ export interface ResourceKindDefinition extends ContributionDefinition<"resource
    * such as a selected document, from `ctx.resource`.
    */
   readonly resolve?: CommandRef;
+  /** Resolve params.resources as a bounded ResourceRef[] batch. Return ResourceResolution[] with owner navigation; omit missing resources. */
+  readonly resolveMany?: CommandRef;
+  /** Validate an explicit anchor change. Return ResourceAnchorValidationResult. Must not mutate links. */
+  readonly validateAnchors?: CommandRef;
 }
 
 export interface ResourceHierarchyProvider extends ContributionDefinition<"resource-hierarchy-provider"> {

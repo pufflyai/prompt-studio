@@ -268,3 +268,21 @@ describe("createResourceRegistry", () => {
     expect(resources.listResources("")).toHaveLength(0);
   });
 });
+
+test("resource context replaces the open page owner for scoped menus", async () => {
+  const {
+    createWorkbenchResourceContextValues,
+    scopeWorkbenchResourceContextValues,
+    workbenchResourceOwnerContextKey,
+  } = await import("./resource-registry");
+  const page = createWorkbenchResourceContextValues({ type: "item", id: "one", extensionId: "example.notes" });
+  expect(page[workbenchResourceOwnerContextKey]).toBe("example.notes");
+  expect(
+    scopeWorkbenchResourceContextValues(page, { type: "item", id: "two", extensionId: "example.art" })[
+      workbenchResourceOwnerContextKey
+    ],
+  ).toBe("example.art");
+  expect(
+    scopeWorkbenchResourceContextValues(page, { type: "workspace", id: "three" })[workbenchResourceOwnerContextKey],
+  ).toBeUndefined();
+});

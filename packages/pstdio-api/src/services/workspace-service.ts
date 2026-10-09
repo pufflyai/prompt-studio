@@ -1,10 +1,18 @@
+import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import type { createWorkspacesDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
 import { apiLogger } from "../lib/logger";
+import {
+  publishCreatedResourceAnchors,
+  publishResourceAnchorChanges,
+  refreshLegacyAnchorSources,
+} from "./resource-anchor-events";
 
 export type WorkspaceServiceDeps = {
+  sessionsDb: { get: (id: string) => Promise<{ id: string } | null> };
   workspacesDb: ReturnType<typeof createWorkspacesDBService>;
   eventBus: EventBus;
+  validateCreatedAnchors?: (source: ResourceRef & { projectId: string }, anchors: ResourceAnchor[]) => Promise<void>;
 };
 
 export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
@@ -34,14 +42,30 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
 
   // --- mutations (orchestrated) ---
   const create = async (input: Parameters<typeof raw.create>[0]) => {
-    const workspace = await raw.create(input);
+    const workspace = await raw.create(
+      input,
+      (row) =>
+        deps.validateCreatedAnchors?.(
+          { type: "workspace", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
+          input.anchors ?? [],
+        ) ?? Promise.resolve(),
+    );
     deps.eventBus.emit("workspaces", "set", workspace);
+    publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
     return workspace;
   };
 
   const createStandalone = async (input: Parameters<typeof raw.createStandalone>[0]) => {
-    const workspace = await raw.createStandalone(input);
+    const workspace = await raw.createStandalone(
+      input,
+      (row) =>
+        deps.validateCreatedAnchors?.(
+          { type: "workspace", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
+          input.anchors ?? [],
+        ) ?? Promise.resolve(),
+    );
     deps.eventBus.emit("workspaces", "set", workspace);
+    publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
     return workspace;
   };
 
@@ -53,6 +77,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
 
     const workspace = await raw.createDefault(input);
     deps.eventBus.emit("workspaces", "set", workspace);
+    publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
     return workspace;
   };
 
@@ -65,7 +90,9 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   };
 
   const softDelete = async (id: string) => {
-    await raw.softDelete(id);
+    const changes = await raw.softDelete(id);
+    publishResourceAnchorChanges(deps.eventBus, changes, "remove");
+    await refreshLegacyAnchorSources(deps.eventBus, changes, { workspace: raw.get, session: deps.sessionsDb.get });
     deps.eventBus.emit("workspaces", "delete", { id });
   };
 
@@ -120,10 +147,16 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     updateProviderProjection,
     updateProviderOperationProjection,
     beginProviderOperation,
-    addAnchors: async (id: string, anchors: Parameters<typeof raw.addAnchors>[1]) =>
-      emitOrLog("set", id, await raw.addAnchors(id, anchors)),
-    removeAnchors: async (id: string, refs: Parameters<typeof raw.removeAnchors>[1]) =>
-      emitOrLog("set", id, await raw.removeAnchors(id, refs)),
+    addAnchors: async (id: string, anchors: Parameters<typeof raw.addAnchors>[1]) => {
+      const result = await raw.addAnchors(id, anchors);
+      if (result) publishResourceAnchorChanges(deps.eventBus, result.changes, "add");
+      return emitOrLog("set", id, result?.record);
+    },
+    removeAnchors: async (id: string, refs: Parameters<typeof raw.removeAnchors>[1]) => {
+      const result = await raw.removeAnchors(id, refs);
+      if (result) publishResourceAnchorChanges(deps.eventBus, result.changes, "remove");
+      return emitOrLog("set", id, result?.record);
+    },
     rename,
   };
 };

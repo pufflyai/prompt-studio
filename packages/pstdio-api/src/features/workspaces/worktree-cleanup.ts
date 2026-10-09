@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { realpath, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { removeWorktreeAndBranch } from "pstdio-wt";
+import { git, listWorktrees, removeWorktreeAndBranch } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
 import { worktreeProviderId } from "./workspace-provider-identity";
 import { resolveWorkspacesRoot } from "./worktree-setup";
@@ -54,6 +54,14 @@ export const cleanupWorkspaceWorktree = async (
   if (!existsSync(paths.worktreeRoot)) return true;
   if (!existsSync(paths.sourceRoot)) {
     await rm(paths.worktreeRoot, { recursive: true, force: true });
+    return true;
+  }
+  const registered = await listWorktrees(paths.sourceRoot);
+  const targetPath = await canonicalPath(paths.worktreeRoot);
+  const registeredPaths = await Promise.all(registered.map((entry) => canonicalPath(entry.worktree)));
+  if (!registeredPaths.includes(targetPath)) {
+    await rm(paths.worktreeRoot, { recursive: true, force: true });
+    if (workspace.branch) await git(paths.sourceRoot, ["branch", "-D", workspace.branch]).catch(() => {});
     return true;
   }
   if (!workspace.branch) return false;

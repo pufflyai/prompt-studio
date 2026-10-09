@@ -15,13 +15,14 @@ import type { DesktopProjectTabsController } from "./desktop-project-tabs-contro
 import {
   clearSelectedProject,
   type DashboardProjectSelectionContext,
-  registerPersistedProjectSelection,
+  registerInitialProjectSelection,
   registerSelectedProjectDeletionSync,
   registerSingleProjectSelectionSync,
   selectProject,
 } from "./project-selection-sync";
 
 interface CreateProjectsModuleInput {
+  initialProjectId?: string;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   projectTabs?: DesktopProjectTabsController;
 }
@@ -184,19 +185,22 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
     id: "dashboard.projects",
     activate(ctx) {
       const selectedProjectContext = { context: ctx.context.createScope("dashboard.selectedProject") };
-      const startedWithPersistedProject = Boolean(input.projectSelectionPersistence?.getSelectedProjectId());
+      const startedWithProject = Boolean(
+        input.initialProjectId ?? input.projectSelectionPersistence?.getSelectedProjectId(),
+      );
 
       registerProjectWidgets(ctx);
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
-      const persistedProjectSelection = registerPersistedProjectSelection(
+      const initialProjectSelection = registerInitialProjectSelection(
         ctx,
         selectedProjectContext,
         input.projectSelectionPersistence,
+        input.initialProjectId,
       );
       const singleProjectSelection =
-        startedWithPersistedProject || input.projectTabs
+        startedWithProject || input.projectTabs
           ? undefined
           : registerSingleProjectSelectionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
       const selectedProjectDeletionSync =
@@ -204,7 +208,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         registerSelectedProjectDeletionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
 
       return [
-        ...(persistedProjectSelection ? [persistedProjectSelection] : []),
+        ...(initialProjectSelection ? [initialProjectSelection] : []),
         ...(singleProjectSelection ? [singleProjectSelection] : []),
         selectedProjectDeletionSync,
       ];

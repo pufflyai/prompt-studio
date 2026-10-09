@@ -3,6 +3,7 @@ import {
   type WorkbenchModuleContext,
   workbenchResourceIdContextKey,
   workbenchResourceMetadataContextKey,
+  workbenchResourceOwnerContextKey,
   workbenchResourceTypeContextKey,
 } from "@pstdio/workbench";
 import {
@@ -27,11 +28,13 @@ export const syncActiveResourceContext = (ctx: WorkbenchModuleContext) => {
       ctx.context.delete(dashboardActiveResourceIdContextKey);
       ctx.context.delete(workbenchResourceTypeContextKey);
       ctx.context.delete(workbenchResourceIdContextKey);
+      ctx.context.delete(workbenchResourceOwnerContextKey);
       return;
     }
     ctx.context.set(dashboardActiveResourceKindContextKey, resource.type);
     ctx.context.set(dashboardActiveResourceIdContextKey, resource.id ?? resourceKey(resource));
     ctx.context.set(workbenchResourceTypeContextKey, resource.type);
+    ctx.context.set(workbenchResourceOwnerContextKey, resource.extensionId);
     ctx.context.set(workbenchResourceIdContextKey, resource.id ?? resourceKey(resource));
     for (const [key, value] of Object.entries(resource.metadata ?? {})) {
       if (!isContextPrimitive(value)) continue;

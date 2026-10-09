@@ -5,6 +5,7 @@ const packageDirs = [
   "clients/landing-page",
   "packages/ui",
   "packages/pstdio",
+  "packages/pstdio-api",
   "packages/pstdio-dashboard",
   "packages/pstdio-db",
   "packages/pstdio-logging",
@@ -50,6 +51,13 @@ describe("pull request CI scope", () => {
 
   test("a change to a dependency of a filesystem or process package runs Windows", () => {
     expect(pullRequest(["packages/pstdio-logging/src/index.ts"], ["pstdio-logging", "pstdio-api"]).windows).toBe(true);
+  });
+
+  test("an agent command runner change requires Windows checks", () => {
+    const scope = pullRequest(["packages/pstdio-api/src/features/extensions/process-command.ts"], ["pstdio-api"]);
+
+    expect(scope.lernaFilter).toBe("--since HEAD~1");
+    expect(scope.windows).toBe(true);
   });
 
   test("a change that affects the e2e package runs the e2e jobs", () => {

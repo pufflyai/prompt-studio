@@ -8,6 +8,7 @@ export type CodexUsage = {
 export type CodexThreadItem = {
   id: string;
   type: string;
+  turnId?: string;
   text?: string;
   command?: string | string[];
   aggregated_output?: string;
@@ -20,26 +21,7 @@ export type CodexThreadItem = {
   items?: unknown;
   message?: string;
   input?: unknown;
-};
-
-type CodexThreadEventBase = { timestamp?: string };
-
-export type CodexThreadEvent = CodexThreadEventBase &
-  (
-    | { type: "thread.started"; thread_id: string }
-    | { type: "turn.started" }
-    | { type: "turn.completed"; usage?: CodexUsage }
-    | { type: "turn.failed"; error?: { message?: string } }
-    | { type: "item.started" | "item.updated" | "item.completed"; item: CodexThreadItem }
-    | { type: "error"; message?: string }
-  );
-
-export const parseThreadEvent = (line: string): CodexThreadEvent | null => {
-  try {
-    const parsed = JSON.parse(line) as Record<string, unknown>;
-    if (!parsed || typeof parsed.type !== "string") return null;
-    return parsed as CodexThreadEvent;
-  } catch {
-    return null;
-  }
+  path?: string;
+  output?: unknown;
+  metadata?: Record<string, unknown>;
 };

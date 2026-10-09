@@ -26,6 +26,7 @@ import { createNotificationsModule } from "./modules/notifications/module";
 import { createPerformanceModule } from "./modules/performance/module";
 import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "./modules/projects/module";
+import { createResourceLinksModule } from "./modules/resource-links/module";
 import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
 import { createSessionsModule } from "./modules/sessions/module";
 import { createSettingsModule } from "./modules/settings/module";
@@ -46,6 +47,7 @@ interface CreateDashboardWorkbenchInput {
 }
 
 type CreateDashboardModulesInput = {
+  initialProjectId?: string;
   projectTabs?: DesktopProjectTabsController;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
@@ -56,7 +58,9 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createSidenavModule(),
   createWorkspacesModule(),
   createExtensionsModule(),
+  createResourceLinksModule(),
   createProjectsModule({
+    initialProjectId: input.initialProjectId,
     projectSelectionPersistence: input.projectSelectionPersistence,
     projectTabs: input.projectTabs,
   }),
@@ -120,6 +124,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   });
 
   const modules = createDashboardModules({
+    initialProjectId: urlProjectId,
     projectTabs: input.projectTabs,
     projectSelectionPersistence,
     sessionDraftPersistence,

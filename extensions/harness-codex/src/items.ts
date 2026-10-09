@@ -30,7 +30,8 @@ const toolMessage = (item: CodexThreadItem, id: string, tool: string, input: unk
     status,
     state: {
       input,
-      output: item.aggregated_output,
+      output: item.output ?? item.aggregated_output,
+      metadata: item.metadata,
       errorText: status === "failed" ? "Tool execution failed" : undefined,
     },
   };
@@ -39,6 +40,10 @@ const toolMessage = (item: CodexThreadItem, id: string, tool: string, input: unk
 
 export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionMessage | null => {
   const id = `${idPrefix}-${item.id}`;
+
+  if (item.type === "user_message") {
+    return { id, role: "user", parts: [{ type: "text", text: item.text ?? "" }] };
+  }
 
   if (item.type === "agent_message") {
     return { id, role: "assistant", parts: [{ type: "text", text: item.text ?? "" }] };
@@ -53,13 +58,14 @@ export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionM
   }
 
   if (item.type === "question") return toolMessage(item, id, "question", item.input);
+  if (item.type === "image_view") return toolMessage(item, id, "view_image", { path: item.path });
 
   if (item.type === "file_change") {
     return toolMessage(item, id, "apply_patch", { changes: item.changes });
   }
 
   if (item.type === "mcp_tool_call") {
-    return toolMessage(item, id, [item.server, item.tool].filter(Boolean).join(".") || "mcp_tool_call", undefined);
+    return toolMessage(item, id, [item.server, item.tool].filter(Boolean).join(".") || "mcp_tool_call", item.input);
   }
 
   if (item.type === "web_search") {
@@ -71,7 +77,11 @@ export const itemToMessage = (item: CodexThreadItem, idPrefix: string): SessionM
   }
 
   if (item.type === "error") {
-    return { id, role: "system", parts: [{ type: "error", errorType: "other", message: item.message }] };
+    return {
+      id,
+      role: "system",
+      parts: [{ type: "error", errorType: "other", message: readableErrorMessage(item.message) }],
+    };
   }
 
   return null;
@@ -91,9 +101,21 @@ export const usageMessage = (usage: CodexUsage | undefined, id: string, createdA
   ],
 });
 
+// Codex passes some API failures through as the raw JSON response body. Show its message instead.
+const readableErrorMessage = (message: string | undefined) => {
+  if (!message?.trimStart().startsWith("{")) return message;
+  try {
+    const body = JSON.parse(message) as { message?: unknown; error?: { message?: unknown } };
+    const readable = body.error?.message ?? body.message;
+    return typeof readable === "string" && readable.trim() ? readable : message;
+  } catch {
+    return message;
+  }
+};
+
 export const errorMessage = (message: string | undefined, id: string, createdAt: number): SessionMessage => ({
   id,
   role: "system",
   createdAt,
-  parts: [{ type: "error", errorType: "other", message }],
+  parts: [{ type: "error", errorType: "other", message: readableErrorMessage(message) }],
 });

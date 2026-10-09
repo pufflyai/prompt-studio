@@ -1,6 +1,7 @@
 import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { getCollection, type SyncedRow, subscribeCollections } from "@/lib/sync/collections";
 import { type ExtensionRefreshEvent, publishExtensionEvent } from "./extension-webview-broadcast";
+import { subscribeToResourceAnchorChanges } from "./resource-anchor-feed";
 
 const projectOf = (row: SyncedRow | undefined) => (typeof row?.project_id === "string" ? row.project_id : undefined);
 
@@ -23,6 +24,9 @@ export const subscribeCoreViewDataEvents = (
       for (const event of events) publish(event);
     });
   };
+  const unsubscribeAnchors = subscribeToResourceAnchorChanges((event) =>
+    enqueue(viewDataEvents.resourceAnchorsChanged.id, event.projectId),
+  );
   const unsubscribe = subscribeCollections((change) => {
     if (!change) return;
     for (const { value, previousValue } of change.changes) {
@@ -53,5 +57,6 @@ export const subscribeCoreViewDataEvents = (
     disposed = true;
     pending.clear();
     unsubscribe();
+    unsubscribeAnchors();
   };
 };

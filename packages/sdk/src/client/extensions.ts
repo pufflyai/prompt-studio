@@ -6,6 +6,9 @@ import type {
   EnableInstalledExtensionRequest,
   EnableInstalledExtensionResponse,
   ExtensionConnectionRecord,
+  ExtensionDiagnosticsResponse,
+  InstallExtensionRequest,
+  InstallExtensionResponse,
   ListExtensionAppearanceResponse,
   ListExtensionCommandsResponse,
   ListExtensionConnectionsResponse,
@@ -15,6 +18,12 @@ import type {
 import type { RequestFn } from "./request";
 
 export type ExtensionClient = {
+  install(
+    projectId: string,
+    input: InstallExtensionRequest | { upload: FormData },
+    options?: { signal?: AbortSignal },
+  ): Promise<InstallExtensionResponse>;
+  diagnostics(projectId: string, options?: { scope?: "user" | "repo" }): Promise<ExtensionDiagnosticsResponse>;
   enableInstalled(
     projectId: string,
     installName: string,
@@ -38,6 +47,14 @@ export type ExtensionClient = {
 };
 
 export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
+  install: (projectId, input, options) =>
+    request(`/v1/projects/${projectId}/extensions/install`, {
+      method: "POST",
+      body: "upload" in input ? input.upload : input,
+      signal: options?.signal,
+    }),
+  diagnostics: (projectId, options) =>
+    request(`/v1/projects/${projectId}/extensions/diagnostics${options?.scope ? `?scope=${options.scope}` : ""}`),
   enableInstalled: (projectId, installName, body) =>
     request(`/v1/projects/${projectId}/extensions/installed/${encodeURIComponent(installName)}/enable`, {
       method: "POST",

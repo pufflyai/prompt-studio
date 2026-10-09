@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
+import { sessionColumns } from "../legacy-resource-links";
 import { nextSessionRunStart } from "./session-run-start";
 
 class QueueClaimFailed extends Error {}
@@ -22,7 +23,7 @@ export const claimQueuedForDispatch = async (db: DbClient, id: string, queuePosi
           updated_at: timestamp,
         })
         .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
-        .returning();
+        .returning(sessionColumns);
 
       if (!updated) return null;
 
@@ -57,7 +58,7 @@ export const recoverQueuedDispatchClaim = async (
   const timestamp = nowTimestamp();
 
   return db.transaction(async (tx) => {
-    const [session] = await tx.select().from(sessions).where(eq(sessions.id, id)).for("update");
+    const [session] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, id)).for("update");
     if (session?.status !== "in_progress" || session.last_request_started !== expectedLastRequestStarted) return null;
     const [entry] = await tx
       .update(session_queue_entries)
@@ -77,7 +78,7 @@ export const recoverQueuedDispatchClaim = async (
       .update(sessions)
       .set({ status: "queued", updated_at: timestamp })
       .where(and(eq(sessions.id, id), eq(sessions.status, "in_progress")))
-      .returning();
+      .returning(sessionColumns);
 
     return updated ?? null;
   });
@@ -90,7 +91,7 @@ export const requeueAfterTerminal = async (db: DbClient, id: string) => {
     .update(sessions)
     .set({ status: "queued", last_request_ended: null, updated_at: timestamp })
     .where(and(eq(sessions.id, id), inArray(sessions.status, REQUEUEABLE_TERMINAL_STATUSES)))
-    .returning();
+    .returning(sessionColumns);
 
   return updated ?? null;
 };
@@ -103,7 +104,7 @@ export const cancelQueued = async (db: DbClient, id: string) => {
       .update(sessions)
       .set({ status: "cancelled", last_request_ended: timestamp, updated_at: timestamp })
       .where(and(eq(sessions.id, id), eq(sessions.status, "queued")))
-      .returning();
+      .returning(sessionColumns);
 
     if (!updated) return null;
 

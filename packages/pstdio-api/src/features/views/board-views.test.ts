@@ -51,10 +51,13 @@ let values=[{value:"todo",label:"To do"},{value:"gone",label:"Gone"}], fail=fals
 const legacySettings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",ordering:{attributeId:"manual",direction:"asc"},displayProperties:["state"]};
 const settings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",displayProperties:["state"]};
 const filter={conjunction:"and",rules:[]};
-export default {
+const extension = {
 commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}},{id:"empty",ref:{kind:"command",id:"empty"},title:"Empty",params:{},run:()=>{inbox=[];return null;}}],
 views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings:legacySettings,filters:{}},{id:"flagged",title:"Flagged",settings:legacySettings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true,filterable:false},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
-};`,
+};
+extension.views.push({id:"badges",ref:{kind:"view",id:"badges"},title:"Badges",body:{kind:"kanban",defaultSettings:{...settings,displayProperties:["badge"]},query:()=>({rows:[],attributes:[{id:"badge",label:"Badge",type:{kind:"enum",options:[{value:"mention",label:"Mention"}]}},{id:"private",label:"Private",type:{kind:"string"},displayable:false}]})}});
+export default extension;
+`,
   );
   handle = await createTestApp();
   const created = await handle.app.request("/v1/projects", {
@@ -87,15 +90,16 @@ afterEach(async () => {
 
 test("uses deprecated default flags only below explicit and project defaults", async () => {
   const path = "/boards/test.boards.view.legacy/views";
-  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: "flagged" });
-  expect(await (await request("/boards/test.boards.view.explicit/views")).json()).toMatchObject({
-    defaultViewId: "first",
-  });
-  expect((await request(`${path}/default`, "PUT", { viewId: "first" })).status).toBe(200);
-  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: "first" });
+  const legacy = await (await request(path)).json();
+  const first = legacy.views.find((view: { title: string }) => view.title === "First");
+  expect(legacy.views.find((view: { id: string }) => view.id === legacy.defaultViewId).title).toBe("Flagged");
+  const explicit = await (await request("/boards/test.boards.view.explicit/views")).json();
+  expect(explicit.views.find((view: { id: string }) => view.id === explicit.defaultViewId).title).toBe("First");
+  expect((await request(`${path}/default`, "PUT", { viewId: first.id })).status).toBe(200);
+  expect(await (await request(path)).json()).toMatchObject({ defaultViewId: first.id });
 });
 
-test("exposes runtime fields, protects built-ins, and shares create/default/order/delete", async () => {
+test("exposes runtime fields and shares create/default/order/delete", async () => {
   const boards = await request(`/boards/${boardId}`);
   expect(boards.status).toBe(200);
   expect(await boards.json()).toMatchObject({
@@ -107,14 +111,13 @@ test("exposes runtime fields, protects built-ins, and shares create/default/orde
     ],
   });
   expect((await request("/boards")).status).toBe(503);
-  const builtIn = await request("/board-views/all", "PATCH", { title: "No" });
-  expect(builtIn.status).toBe(409);
+  const initial = (await (await request(`/boards/${boardId}/views`)).json()).views[0];
   const invalid = await request(`/boards/${boardId}/views`, "POST", { title: "Invalid", filter: stateIs("bad") });
   expect(invalid.status).toBe(400);
   expect(await invalid.text()).toContain("todo");
   const response = await request(`/boards/${boardId}/views`, "POST", {
     title: "Todo",
-    copyFrom: "all",
+    copyFrom: initial.id,
     filter: stateIs("todo"),
     sorts: [{ attributeId: "title", direction: "asc" }],
   });
@@ -130,7 +133,53 @@ test("exposes runtime fields, protects built-ins, and shares create/default/orde
   ).toBe(view.id);
   expect((await request(`/boards/${boardId}/views/order`, "PUT", { viewIds: [] })).status).toBe(400);
   expect((await request(`/board-views/${view.id}`, "DELETE")).status).toBe(200);
-  expect((await (await request(`/boards/${boardId}/views`)).json()).defaultViewId).toBe("all");
+  expect((await (await request(`/boards/${boardId}/views`)).json()).defaultViewId).toBe(initial.id);
+});
+
+test("initial views can be renamed edited and deleted while one view remains", async () => {
+  const path = `/boards/${boardId}/views`;
+  const initial = (await (await request(path)).json()).views[0];
+  expect(initial.builtIn).toBe(false);
+  const updated = await request(`/board-views/${initial.id}`, "PATCH", { title: "My tasks", filter: stateIs("todo") });
+  expect(updated.status).toBe(200);
+  expect(await updated.json()).toMatchObject({ title: "My tasks", filter: stateIs("todo") });
+  expect((await request(`/board-views/${initial.id}`, "DELETE")).status).toBe(409);
+  const second = await (await request(path, "POST", { title: "Second" })).json();
+  expect((await request(`/board-views/${initial.id}`, "DELETE")).status).toBe(200);
+  const current = await (await request(path)).json();
+  expect(current.views.map((view: { id: string }) => view.id)).toEqual([second.id]);
+  expect(current.defaultViewId).toBe(second.id);
+  expect((await request(`/board-views/${second.id}`, "DELETE")).status).toBe(409);
+  expect((await (await request(path)).json()).views).toHaveLength(1);
+});
+
+test("starting views retain displayed attributes unless display is explicitly disabled", async () => {
+  const path = "/boards/test.boards.view.badges/views";
+  const initial = (await (await request(path)).json()).views[0];
+  expect(initial.settings.displayProperties).toEqual(["badge"]);
+  const saved = await request(`/board-views/${initial.id}`, "PATCH", {
+    settings: { displayProperties: ["badge"] },
+  });
+  expect(saved.status).toBe(200);
+  expect((await (await request(path)).json()).views[0].settings.displayProperties).toEqual(["badge"]);
+  expect(
+    (
+      await request(`/board-views/${initial.id}`, "PATCH", {
+        settings: { displayProperties: ["private"] },
+      })
+    ).status,
+  ).toBe(400);
+});
+
+test("orphaned views can be fully removed after their board disappears", async () => {
+  const initial = (await (await request(`/boards/${boardId}/views`)).json()).views[0];
+  const row = (await handle.deps.boardViewsService.get(projectId, initial.id))!;
+  const orphan = await handle.deps.boardViewsService.create({ ...row, board_id: "removed-board", title: "Old view" });
+  expect(await (await request("/board-views?orphaned=true")).json()).toContainEqual(
+    expect.objectContaining({ id: orphan.id }),
+  );
+  expect((await request(`/board-views/${orphan.id}`, "DELETE")).status).toBe(200);
+  expect(await (await request("/board-views?orphaned=true")).json()).toEqual([]);
 });
 
 test("retains saved rules when the board query fails", async () => {
@@ -190,7 +239,7 @@ test("data table views resolve fields from columns and save shared views", async
   ).toBe(400);
   const builtIns = await (await request(`/boards/${tableId}/views`)).json();
   expect(builtIns.views).toMatchObject([
-    { id: "default", builtIn: true, settings: { grouping: "none" }, sorts: [{ attributeId: "score" }] },
+    { id: expect.any(String), builtIn: false, settings: { grouping: "none" }, sorts: [{ attributeId: "score" }] },
   ]);
   const score = (condition: string, value: unknown) => ({
     conjunction: "and",
@@ -212,7 +261,7 @@ test("data table views resolve fields from columns and save shared views", async
     sorts: [{ attributeId: "score", direction: "desc" }],
   });
   const listed = await (await request(`/boards/${tableId}/views`)).json();
-  expect(listed.views.map((saved: { id: string }) => saved.id)).toEqual(["default", view.id]);
+  expect(listed.views.map((saved: { id: string }) => saved.id)).toEqual([builtIns.views[0].id, view.id]);
   const wrongKind = await request(`/board-views/${view.id}`, "PATCH", { settings: { viewMode: "list" } });
   expect(wrongKind.status).toBe(400);
   expect(await wrongKind.text()).toContain("do not fit a data table view");
