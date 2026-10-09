@@ -20,12 +20,13 @@ export const WorkbenchBreadcrumbResourceActions = (props: { workbench: Workbench
   );
   const snapshot = usePlacementTab(placement, workbench);
   const resolveActions = useWorkbenchResourceActionResolver(workbench);
-  const resource = placement?.resource ? resolveResourcePreview(placement.resource, changes) : items.at(-1)?.resource;
   const contributed = placementMenuActions(workbench, snapshot);
+  const subject = contributed.length ? placement?.resource : (items.at(-1)?.resource ?? placement?.resource);
+  const resource = subject ? resolveResourcePreview(subject, changes) : undefined;
   const resolved = resource ? resolveActions(resource) : [];
   const actions = contributed.length ? contributed : resolved;
   if (!resource || actions.length === 0) return null;
-  const label = snapshot.label ?? resource.label ?? resource.id ?? resource.type;
+  const label = (contributed.length ? snapshot.label : undefined) ?? resource.label ?? resource.id ?? resource.type;
   return (
     <ResourceActionMenu actions={actions} positioning={{ placement: "bottom-start" }}>
       <IconButton
