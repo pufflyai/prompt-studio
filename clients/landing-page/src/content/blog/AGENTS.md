@@ -5,6 +5,9 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 ## Content
 
 - Write short, direct descriptions of what people can do and why it helps.
+- Start with the actual changes. Omit slogans, mood-setting introductions, and vague claims such as "a more flexible workbench" or "keep the conversation moving".
+- Name the feature, explain the user benefit, and give a concrete example when useful. For example: "Prompt Studio 0.41 brings shared collection controls, movable tabs, and optional performance monitoring. Save a Ready to build ticket view to reuse its filters, keep a terminal beside your conversation, and pause an extension to check whether it slows the app."
+- Use concrete feature or workflow categories for headings, such as "Collection controls", "Workbench tabs", "Performance monitoring", and "Planner". Avoid fluffy descriptions such as "Make the workbench feel familiar".
 - Order release features by user impact. Lead with the most useful visible changes, then agent workflows, extension features, and smaller improvements.
 - Cover every relevant new feature. Group related changes; omit internal refactors and minor fixes unless they change something useful to users.
 - Keep paragraphs to one or two short sentences. Use brief lists for parallel improvements and `##` headings for sections.
@@ -13,6 +16,7 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 
 ## Release sources and metadata
 
+- Release titles contain only the product name and version: `Prompt Studio 0.41`. Do not add a subtitle, colon, tagline, or feature summary. Use the description and body for those details.
 - Check published GitHub releases, excluding drafts. Read the target release's core, SDK, UI, workbench, and relevant extension changelogs.
 - Use the release's actual publication timestamp, not the date its changelog was prepared. Preserve an existing publication date when correcting or illustrating a post.
 - If the release is pending, label the post as a preview. Use the preview's publication date and links to pending changesets at a fixed commit. Never invent a release date or claim pending work has shipped.
@@ -21,6 +25,13 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 - Do not store reading time. Do not duplicate the shared alpha notice.
 - `AGENTS.md` is contributor guidance, not a post. Keep it excluded from the blog collection loader.
 
+## Unpublished drafts
+
+- Save unpublished posts in `drafts/<slug>.md` under this folder. The blog loader reads only top-level post files, so drafts have no website page, document JSON, index entry, sidebar entry, search result, or sitemap entry. Never put drafts in `public/` or add them to the page catalog.
+- For a pending release, label the body as a draft and describe planned changes without claiming they have shipped. Link to pending changesets and relevant source at a fixed commit.
+- Drafts may omit `published` and banner paths until publication. Do not invent a release date or reuse another post's banner.
+- To publish, verify the release and final scope, add the actual publication timestamp and distinct paired banners, replace draft wording and pending sources, and move the file to this folder's top level.
+
 ## Banners and recordings
 
 - Follow the repository Shape Art skill. Give each post a distinct 1600 × 400 banner with light and dark backgrounds, the same seed and composition, and all six shape kinds allowed.
@@ -28,6 +39,7 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 - Record real UI interactions using Playwright against `bun run dev:playwright` and its printed Docker dashboard URL. Use a disposable project and sample content. Stop it with `bun run dev:playwright:down` afterward.
 - Record one workflow per clip. Match sample data, actions, framing, and playback speed in light and dark variants. Trim setup, idle time, typing, and loading pauses while leaving time to read results.
 - Keep shareable source recordings beside the GIFs in `documentation/images/`, with descriptive names prefixed by the post slug. Keep temporary browser state, tokens, logs, and capture scripts outside published assets.
+- Do not add "Light video" or "Dark video" links, or other links to the source recordings, to blog posts. Keep recordings as source assets; readers use the embedded GIF for their active theme.
 - Export matching `-light.gif` and `-dark.gif` files. Show only the active theme's version using the site's themed-media support. Give each workflow useful alt text and a short caption.
 - Label the capture build when it differs from the release. State when sample extensions or data change what users see. Do not imply an existing control is new without a release source.
 - Never include credentials, personal paths, or private conversations. Screenshots explain static controls; GIFs explain movement.
@@ -36,6 +48,7 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 
 - Check every claim against release sources, and check metadata, relative paths, captions, and links.
 - Build the landing page; do not add tests for editorial content, media, or collection configuration.
+- For a draft, check that the production build has no article, document JSON, navigation metadata, search entry, or sitemap entry for its slug.
 - Use Playwright to check the built article and blog index on desktop and mobile in both themes. Check for overflow, missing images, readable captions, and correct theme selection.
 - Verify every served GIF has multiple frames and visibly changes during playback, after direct loading and navigation from the blog index. Image optimization must preserve animation.
 - No changeset is needed for posts, media, or these instructions alone. Follow the repository rules if the task also changes released package behavior.
