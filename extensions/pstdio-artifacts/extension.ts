@@ -10,6 +10,7 @@ import {
 import { commands } from "./src/commands";
 import { libraryTarget } from "./src/contracts";
 import { artifact, detail, library, openView, view } from "./src/pages";
+import { artifactResources } from "./src/resources";
 
 export default defineExtension({
   defaultLocale: "en",
@@ -17,6 +18,7 @@ export default defineExtension({
   commands: Object.values(commands),
   artifactMounts: [defineArtifactMount({ id: "sites", path: "sites", label: l10n("mounts.sites", "Published HTML") })],
   resourceKinds: [artifact],
+  commandPaletteResources: [artifactResources],
   views: [view, openView],
   pages: [library, detail],
   navigationItems: [
