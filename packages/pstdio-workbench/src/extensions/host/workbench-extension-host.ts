@@ -61,6 +61,7 @@ const registerCommands = (
         label: text(command.title, command.id),
         description: text(command.description),
         params: localizeParamSchema(command.params, text, command.extensionId),
+        resourceMutation: command.resourceMutation,
       },
       {
         prepareArgs: (args, executionContext, onArgsChange) =>

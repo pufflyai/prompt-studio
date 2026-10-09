@@ -154,6 +154,7 @@ export { createNavigationRegistry } from "../registries/navigation/navigation-re
 export type {
   NavigationTreeContext,
   NavigationTreeContribution,
+  NavigationTreeMoveContext,
   NavigationTreeOwner,
   NavigationTreeRegistry,
   NavigationTreeSlot,

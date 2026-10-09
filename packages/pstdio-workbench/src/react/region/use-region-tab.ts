@@ -1,7 +1,7 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { type KeyboardEvent, type MouseEvent, type PointerEvent, useEffect, useRef, useState } from "react";
-import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabSnapshot, WorkbenchWidgetPlacement } from "../../core";
-import { toPanelInstance } from "../../core/registries/layout/panel-api";
+import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
+import { usePlacementTab } from "../shared/use-placement-tab";
 import { useTabDrag } from "./tab-drag-context";
 
 export interface WorkbenchRegionTabProps {
@@ -16,9 +16,7 @@ export interface WorkbenchRegionTabProps {
 }
 export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   const { workbench, placement, disabled = false, sortable = false, region, nextWidgetId, previousWidgetId } = props;
-  const [snapshot, setSnapshot] = useState<WorkbenchTabSnapshot>(
-    () => placement.tab?.getSnapshot(toPanelInstance(placement)) ?? {},
-  );
+  const snapshot = usePlacementTab(placement, workbench);
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -32,17 +30,7 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   });
   const context = useTabDrag();
   const clearHold = () => clearTimeout(hold.current);
-  useEffect(() => {
-    const tab = placement.tab;
-    const refresh = () => setSnapshot(tab?.getSnapshot(toPanelInstance(placement)) ?? {});
-    const subscription = tab?.subscribe?.(refresh);
-    refresh();
-    return () => {
-      clearTimeout(hold.current);
-      if (typeof subscription === "function") subscription();
-      else subscription?.dispose();
-    };
-  }, [placement]);
+  useEffect(() => () => clearTimeout(hold.current), []);
   const show = (element: HTMLElement) => {
     if (disabled) return;
     const rect = element.getBoundingClientRect();

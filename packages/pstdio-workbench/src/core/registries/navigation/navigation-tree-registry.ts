@@ -2,6 +2,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
+import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
 
 export type NavigationTreeSlot = "header" | "content" | "footer";
 
@@ -14,6 +15,10 @@ export interface NavigationTreeOwner {
 export interface NavigationTreeContext {
   resource?: ResourceRef;
   signal?: AbortSignal;
+}
+
+export interface NavigationTreeMoveContext extends NavigationTreeContext {
+  position?: "before" | "after" | "inside";
 }
 
 export interface NavigationTreeContribution {
@@ -37,6 +42,12 @@ export interface CreateNavigationTreeRegistryInput {
   getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
   getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
+  moveViewNode?(
+    viewId: string,
+    source: TreeNode,
+    target: TreeNode | undefined,
+    context: NavigationTreeMoveContext,
+  ): Promise<void> | void;
 }
 
 export interface NavigationTreeRegistry {
@@ -53,6 +64,7 @@ export interface NavigationTreeRegistry {
     context?: NavigationTreeContext,
   ): Promise<TreeViewSection[]>;
   getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
+  moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeMoveContext): Promise<void>;
   getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
   onDidChange(listener: () => void): Disposable;
 }
@@ -98,10 +110,7 @@ const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => 
 
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
-  const nodeSources = new WeakMap<
-    TreeNode,
-    { contribution: NavigationTreeContribution; node: TreeNode; resource?: ResourceRef }
-  >();
+  const registryToken = {};
   const listeners = new Set<() => void>();
   const emit = () => {
     for (const listener of listeners) listener();
@@ -128,7 +137,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       canReorder: node.canReorder ?? contribution.owner.kind === "mode",
       children: node.children?.map((child) => projectNode(child, contribution, moveScope, resource)),
     };
-    nodeSources.set(projected, { contribution, node, resource });
+    setNavigationTreeNodeSource(projected, { contribution, node, resource, registryToken });
     return projected;
   };
 
@@ -208,7 +217,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
     async getChildren(node, context = {}) {
       context.signal?.throwIfAborted();
-      const source = nodeSources.get(node);
+      const source = getNavigationTreeNodeSource(node, registryToken);
       if (!source) return node.children ?? [];
       const moveScope = node.moveScope ?? ownerId(source.contribution.owner);
       const query = { ...context, resource: source.resource };
@@ -217,6 +226,17 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
         : await source.contribution.getChildren?.(source.node, query);
       if (!children) return node.children ?? [];
       return children.map((child) => projectNode(child, source.contribution, moveScope, source.resource));
+    },
+
+    async moveNode(sourceNode, targetNode, context = {}) {
+      const source = getNavigationTreeNodeSource(sourceNode, registryToken);
+      const target = targetNode ? getNavigationTreeNodeSource(targetNode, registryToken) : undefined;
+      if (!source?.contribution.viewId || !source.node.canDrag) return;
+      if (targetNode && (!target || source.contribution !== target.contribution || !target.node.canDrop)) return;
+      await input.moveViewNode?.(source.contribution.viewId, source.node, target?.node, {
+        ...context,
+        resource: source.resource,
+      });
     },
 
     getDefaultExpandedSectionIds(owner, selectedSlot) {

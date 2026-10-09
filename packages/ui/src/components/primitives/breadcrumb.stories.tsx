@@ -1,7 +1,8 @@
 import { Avatar, Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
-import type { Meta } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react";
 import { ChevronRight, FileText, Folder, Home, MessageCircle } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 
 import { Breadcrumb, type BreadcrumbProps } from "@/components/primitives/breadcrumb";
 
@@ -56,6 +57,43 @@ const meta: Meta<typeof Breadcrumb> = {
 export default meta;
 
 export const Default = {};
+
+const ResourceActionsExample = () => {
+  const [title, setTitle] = useState("Meeting notes");
+  return (
+    <Breadcrumb
+      items={[
+        { title: "Notes" },
+        {
+          title,
+          contextMenuActions: [
+            {
+              key: "rename",
+              label: "Rename note",
+              icon: <FileText size={14} />,
+              onClick: () => setTitle("Renamed note"),
+            },
+          ],
+        },
+      ]}
+      separator="/"
+    />
+  );
+};
+
+export const ResourceActions: StoryObj<typeof Breadcrumb> = {
+  render: () => <ResourceActionsExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement),
+      body = within(canvasElement.ownerDocument.body);
+    await userEvent.tab();
+    await expect(canvas.getByText("Meeting notes", { exact: true })).toHaveFocus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    await body.findByRole("menuitem", { name: "Rename note" });
+    await userEvent.keyboard("{Home}{Enter}");
+    await expect(await canvas.findByText("Renamed note", { exact: true })).toBeVisible();
+  },
+};
 
 export const IconSeparator = {
   args: {

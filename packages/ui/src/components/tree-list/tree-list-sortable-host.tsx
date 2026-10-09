@@ -13,7 +13,7 @@ const edgePosition = {
 } as const;
 
 // The accent line marks the drop slot on the target's edge without shifting the rows.
-const DropLine = (props: { edge: TreeListDropIndicator["edge"] }) => {
+export const DropLine = (props: { edge: TreeListDropIndicator["edge"] }) => {
   const { edge } = props;
   return <DropIndicator data-tree-list-drop-indicator={edge} {...edgePosition[edge]} />;
 };

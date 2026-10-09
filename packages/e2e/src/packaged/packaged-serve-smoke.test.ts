@@ -355,6 +355,15 @@ test(
 
       const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
       expectExamplePages(metadata);
+      expect(
+        metadata.commands.find(
+          (command) => command.id === "pstdio.workbench-fixture.command.glass-lab-artifacts.delete",
+        )?.resourceMutation,
+      ).toEqual({
+        kind: "remove",
+        resourceType: "glass-lab-artifact",
+        idParam: "rowId",
+      });
       await expectPackagedWebviewRuntime(started.baseUrl, metadata);
       await expectPackagedArtifacts({
         baseUrl: started.baseUrl,

@@ -30,6 +30,7 @@ const body = z.discriminatedUnion("kind", [
       header: callbackSchema.optional(),
       footer: callbackSchema.optional(),
       children: callbackSchema.optional(),
+      onMove: callbackSchema.optional(),
       searchable: z.boolean().optional(),
       searchPlaceholder: localizableStringSchema.optional(),
       defaultExpandedSectionIds: z.array(z.string()).optional(),

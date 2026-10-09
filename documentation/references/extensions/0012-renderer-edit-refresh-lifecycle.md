@@ -125,6 +125,27 @@ Host tree renderers can publish partial sections through the workbench's `TreeQu
 
 Static host navigation and extension links have no selected resource dependency. Links with resource-based visibility conditions retain it. Extension navigation trees can declare `resourceScope: "project"` when their data belongs to the project independently of the selected resource. The default `"selection"` scope preserves selected-resource reads and cancellation for other trees. Changing modes still replaces their navigation.
 
+## Tree resource movement
+
+Tree nodes can opt into `canDrag` and `canDrop`. A native tree body can implement
+`onMove(ctx, { renderer, state, source, target, position })` to persist the change through the
+extension's public storage or artifact APIs. The callback receives the original
+extension node identities, including when the host composes several trees in its
+Sidenav. `position` is `"inside"` on a container or the tree background, and
+`"before"` or `"after"` on the upper or lower half of a leaf row. `target` is omitted
+for background drops; extensions decide whether their tree supports that destination.
+The source tree's bound resource is preserved even if the selected resource changes.
+Drops across contributions are rejected. Node flags control the gesture; the callback
+must validate current permissions and source/destination data before writing. A successful callback refreshes
+the owning tree; extensions should also emit their declared data event for other
+views that depend on the changed resources.
+
+The workbench previews structural moves between known nodes immediately while their callbacks save. Consecutive
+drops save in gesture order. The next authoritative tree read replaces the preview; a
+failed callback restores the saved tree and reports the failure once. The preview does
+not write extension data or grant permissions. A navigation row moved after an expanded
+tree shows its placement line after the last visible descendant.
+
 ## Declared data dependencies
 
 Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. File and notification churn does not broadcast a view refresh. Each renderer also declares its own extension data events. The core extensions and host views declare these dependencies:

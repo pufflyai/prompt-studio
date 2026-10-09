@@ -33,7 +33,7 @@ import type { WorkbenchWidgetPlacement } from "./registries/layout/layout-types"
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
-import { createNavigationTreeRegistry } from "./registries/navigation/navigation-tree-registry";
+import type { createNavigationTreeRegistry } from "./registries/navigation/navigation-tree-registry";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
 import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
 import type { WorkbenchPageRegistryStoreState } from "./registries/pages/page-registry";
@@ -54,6 +54,7 @@ import {
   primaryWorkbenchResource,
 } from "./workbench-core-connections";
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
+import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
 import { createCoreRenderers } from "./workbench-core-renderers";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
 import { createCoreViews } from "./workbench-core-views";
@@ -171,15 +172,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
 
-  const navigationTrees = createNavigationTreeRegistry({
-    subscribeViewRefresh: (viewId, listener) =>
-      renderers.onDidRefresh(({ treeId }) => {
-        if (treeId === viewId) listener();
-      }),
-    getViewDefaultExpandedSectionIds: (viewId) => renderers.getTreeRenderer(viewId)?.defaultExpandedSectionIds,
-    getViewSections: (viewId, context) => renderers.getBody(viewId, { ...context, viewId }),
-    getViewChildren: (viewId, node, context) => renderers.getChildren(viewId, node, { ...context, viewId }),
-  });
+  const navigationTrees = createWorkbenchNavigationTrees(renderers);
 
   const overlays = createWorkbenchOverlayRegistry({ layout, views, viewMenus });
   const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });

@@ -64,6 +64,7 @@ export interface Command {
   icon?: string;
   when?: string;
   params?: CommandParamSchema;
+  resourceMutation?: import("@pstdio/sdk/extensions").CommandDefinition["resourceMutation"];
 }
 
 export interface CommandHandler<TArgs = unknown, TResult = unknown> {
