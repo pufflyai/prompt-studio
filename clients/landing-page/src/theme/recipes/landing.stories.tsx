@@ -23,6 +23,18 @@ export const CompactDesktop: Story = {
     },
   },
 };
+export const SingleColumn: Story = {
+  decorators: [
+    (Story) => (
+      <Box width="1199px" maxWidth="full">
+        <Story />
+      </Box>
+    ),
+  ],
+  parameters: {
+    docs: { description: { story: "The download panel and editor stack when their main area is below 1200 pixels." } },
+  },
+};
 export const Mobile: Story = {
   decorators: [
     (Story) => (

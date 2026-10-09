@@ -100,6 +100,19 @@ export const DocsSidebar: Story = {
   ),
 };
 
+export const DocsSidebarShortWindow: Story = {
+  render: () => (
+    <Box width="220px" height="320px">
+      <ResourceSidebar page={STORY_SESSIONS} pages={STORY_PAGES} onNavigate={noop} />
+    </Box>
+  ),
+  parameters: {
+    docs: {
+      description: { story: "Long navigation remains scrollable in a short window without a visible scrollbar." },
+    },
+  },
+};
+
 export const BlogSidebar: Story = {
   render: () => (
     <Box width="220px" height="full">

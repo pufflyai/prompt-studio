@@ -1,5 +1,5 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
-import { BOARD_SCALE } from "../../services/shapes/assembly-layout";
+import { ASSEMBLY_WIDE_WIDTH, BOARD_SCALE } from "../../services/shapes/assembly-layout";
 
 export const landingSlotRecipe = defineSlotRecipe({
   slots: [
@@ -165,7 +165,10 @@ export const landingSlotRecipe = defineSlotRecipe({
       minHeight: "full",
       width: "full",
       mx: "auto",
-      "@container hero (min-width: 54rem)": { gridTemplateColumns: "30rem minmax(0, 1fr)", pb: "4" },
+      [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: {
+        gridTemplateColumns: "30rem minmax(0, 1fr)",
+        pb: "4",
+      },
     },
     cardSpace: {
       position: "relative",
@@ -177,7 +180,7 @@ export const landingSlotRecipe = defineSlotRecipe({
       "--assembly-horizontal-space": "32px",
       "--assembly-bottom-space": "96px",
       "--assembly-board-scale": BOARD_SCALE.narrow,
-      "@container hero (min-width: 54rem)": {
+      [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: {
         "--assembly-min-height": "36rem",
         "--assembly-horizontal-space": "48px",
         "--assembly-bottom-space": "16px",
@@ -197,7 +200,7 @@ export const landingSlotRecipe = defineSlotRecipe({
       gap: "xl",
       px: { base: "lg", xl: "3xl" },
       py: { base: "xl", xl: "4xl" },
-      "@container hero (min-width: 54rem)": { gap: "md", py: "lg" },
+      [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: { gap: "md", py: "lg" },
     },
     download: { display: "flex", flexDirection: "column", gap: "sm", alignItems: "start", width: "full" },
     downloadDescription: { minHeight: "12" },

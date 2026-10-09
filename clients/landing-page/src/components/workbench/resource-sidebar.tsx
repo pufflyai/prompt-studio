@@ -45,7 +45,7 @@ export const ResourceSidebar = (props: ResourceSidebarProps) => {
 
   return (
     <Box as="nav" aria-label="Sections" css={styles.sidebar}>
-      <ScrollArea css={styles.sidebarScroll}>
+      <ScrollArea css={styles.sidebarScroll} showVerticalScrollbar={false}>
         <Box css={styles.sidebarRows}>
           {section === "studio" && <StudioSidebar page={page} />}
           <Suspense fallback={null}>

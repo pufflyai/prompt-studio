@@ -27,8 +27,10 @@ The demos and tool stencils render in code. They use no screenshot or image asse
 
 Only the home page shows the introduction and download picker. They share one
 continuous surface with the tool assembly scene, without a divider or resize handle.
-The layout places one tool editor beside the copy when there is room and below it on
-smaller screens. Other pages use the full content area beside the navigation.
+The layout places one tool editor beside the copy when the main area is at least
+1200 pixels wide and below it in narrower containers, including windowed mode.
+The copy, initial outline, shape pile, and live editor share this breakpoint.
+Other pages use the full content area beside the navigation.
 
 The download column retains its original 480-pixel width and horizontal padding on desktop.
 Compact vertical spacing and an editor sized from its container leave room for the pile without
@@ -118,7 +120,8 @@ Each tab has its own sidebar. Selecting another tab reopens the last page read i
 that section during this visit; selecting the open tab returns to the section's first
 page (`/`, `/docs/`, or `/blog/`). A reload starts fresh. The green control collapses
 or expands the window. Red and yellow enter window mode and are disabled there. Drag
-the title bar to move the window. Desktop navigation uses the sidebar. The mobile
+the title bar to move the window. Desktop navigation uses the sidebar. Its long
+menus remain scrollable without visible scrollbars. The mobile
 header has no separate page menu or site tabs. There are no breadcrumbs.
 
 Every same-site link, including links inside docs HTML, opens without a reload, so

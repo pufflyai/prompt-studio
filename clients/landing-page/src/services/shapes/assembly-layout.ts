@@ -15,6 +15,7 @@ export interface AssemblySlot {
 }
 export const DEFAULT_FIELD_SIZE = { width: 1200, height: 900 };
 export const DEFAULT_COPY_SIZE = { width: 480, height: 672 };
+export const ASSEMBLY_WIDE_WIDTH = 1200;
 export const cursorStart = (width: number, index: number) => ({ x: width + 80 + index * 40, y: 80 + index * 70 });
 export const BOARD_WIDTH = 640;
 export const BOARD_HEIGHT = 462;
@@ -70,7 +71,7 @@ export const assemblyLayout = (
   example = ASSEMBLY_EXAMPLES[0],
   unitScale = 1,
 ) => {
-  const wide = size.width >= 864 * unitScale;
+  const wide = size.width >= ASSEMBLY_WIDE_WIDTH * unitScale;
   const available = wide ? size.width - copy.width - 48 : size.width - 32;
   const y = wide ? 24 : copy.height + 24;
   // Grow the whole editor with its container, leaving physical space for the slot tray and pile.

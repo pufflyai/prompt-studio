@@ -1,4 +1,5 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
+import { ASSEMBLY_WIDE_WIDTH } from "../../services/shapes/assembly-layout";
 
 export const landingAssemblySlotRecipe = defineSlotRecipe({
   slots: [
@@ -72,7 +73,7 @@ export const landingAssemblySlotRecipe = defineSlotRecipe({
       "@media (prefers-reduced-motion: reduce)": { "& [data-assembly-cursor]": { display: "none" } },
     },
     pile: {
-      "@container assembly (min-width: 54rem)": { transform: "translateX(15rem)" },
+      [`@container assembly (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: { transform: "translateX(15rem)" },
     },
     piece: {
       cursor: "grab",
