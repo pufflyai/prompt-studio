@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PromptSelectionSnapshot } from "../../rich-text/prompt-input/plugins/preserve-selection-plugin";
 import { createSerializedPromptState } from "../utils/editor-state";
 import type { ChatInputQuestionResponse } from "./chat-input-question-prompt";
@@ -14,12 +14,28 @@ interface QueuedFollowUpComposerInput {
     questionResponse?: ChatInputQuestionResponse,
   ) => void | Promise<void>;
   onUpdate?: (itemId: string, prompt: string) => void | Promise<void>;
+  onCreate?: (itemId: string, prompt: string) => void | Promise<void>;
+  onRestoreDraft?: (itemId: string) => void;
+  canRestoreDraft?: boolean;
+  disabled?: boolean;
   onSelect?: (item: QueuedFollowUp | null) => void;
   onDiscard?: (itemId: string) => void;
 }
 
 export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) => {
-  const { queuedFollowUps, defaultValue, onChange, onSubmit, onUpdate, onSelect, onDiscard } = input;
+  const {
+    queuedFollowUps,
+    defaultValue,
+    onChange,
+    onSubmit,
+    onUpdate,
+    onCreate,
+    onRestoreDraft,
+    canRestoreDraft = false,
+    disabled = false,
+    onSelect,
+    onDiscard,
+  } = input;
   const [editingItem, setEditingItem] = useState<QueuedFollowUp | null>(null);
   const [edits, setEdits] = useState<Record<string, { text: string; state: string }>>({});
   const [draftState, setDraftState] = useState<{ text: string; state: string } | null>(null);
@@ -27,9 +43,12 @@ export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) =>
   const [selections, setSelections] = useState<Record<string, PromptSelectionSnapshot>>({});
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [recoveredItemId, setRecoveredItemId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const savedItem = queuedFollowUps.find((item) => item.id === editingItem?.id);
+  const createNew = Boolean(editingItem && !savedItem);
   const stale = Boolean(
-    editingItem && (!savedItem || (editingItem.revision && editingItem.revision !== savedItem.revision)),
+    editingItem && savedItem && editingItem.revision && editingItem.revision !== savedItem.revision,
   );
   const inputValue = editingItem ? (edits[editingItem.id]?.text ?? editingItem.prompt) : defaultValue;
   const savedDraftState = draftState?.text === defaultValue ? draftState.state : undefined;
@@ -37,9 +56,44 @@ export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) =>
   const select = (item: QueuedFollowUp | null) => {
     setEditingItem(item);
     setError(null);
+    setNotice(null);
     onSelect?.(item);
     setFocusSignal((signal) => signal + 1);
   };
+  useEffect(() => {
+    if (!editingItem || savedItem || updating || disabled || recoveredItemId === editingItem.id) return;
+    setRecoveredItemId(editingItem.id);
+    if (!canRestoreDraft || !onChange || defaultValue.trim() || queuedFollowUps.length) return;
+    // The host moves settings and files before the editor gives the draft its text.
+    onRestoreDraft?.(editingItem.id);
+    setDraftState({ text: inputValue, state: editorState ?? createSerializedPromptState(inputValue) });
+    setSelections((current) => ({ ...current, draft: current[editingItem.id] }));
+    onChange(inputValue);
+    setEdits((current) => {
+      const next = { ...current };
+      delete next[editingItem.id];
+      return next;
+    });
+    setEditingItem(null);
+    setError(null);
+    onSelect?.(null);
+    setFocusSignal((signal) => signal + 1);
+    setNotice("This request was sent. Your edit moved to the draft.");
+  }, [
+    editingItem,
+    savedItem,
+    updating,
+    disabled,
+    recoveredItemId,
+    canRestoreDraft,
+    defaultValue,
+    queuedFollowUps.length,
+    onRestoreDraft,
+    inputValue,
+    editorState,
+    onChange,
+    onSelect,
+  ]);
   const change = (text: string) => {
     if (!editingItem) {
       onChange?.(text);
@@ -71,7 +125,10 @@ export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) =>
     if (stale || updating) throw new Error("Select the saved request again before updating.");
     setUpdating(true);
     try {
-      await onUpdate?.(editingItem.id, text);
+      if (createNew) {
+        if (!onCreate) throw new Error("This conversation cannot create a new queue item.");
+        await onCreate(editingItem.id, text);
+      } else await onUpdate?.(editingItem.id, text);
       setEdits((current) => {
         const next = { ...current };
         delete next[editingItem.id];
@@ -108,6 +165,8 @@ export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) =>
     isEditing: Boolean(editingItem),
     submit,
     error,
+    notice: notice ?? (createNew ? "This request was sent. Create a new queue item to keep your edits." : null),
+    createNew,
     updating,
     stale,
     dirtyItemIds: Object.keys(edits).filter(

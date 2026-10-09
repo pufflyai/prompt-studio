@@ -47,6 +47,8 @@ export interface ChatInputProps {
   onChange?: (text: string) => void;
   attachmentList?: ReactNode;
   actions?: ReactNode;
+  /** Secondary actions immediately before the submit button. */
+  submitActions?: ReactNode;
   /** Attachment controls shown only while editing a message draft. */
   attachmentActions?: ReactNode;
   attachedToTop?: boolean;
@@ -96,6 +98,7 @@ export const ChatInput = (props: ChatInputProps) => {
     placeholder,
     attachmentList,
     actions,
+    submitActions,
     attachmentActions,
     attachedToTop = false,
     recessed = false,
@@ -284,6 +287,7 @@ export const ChatInput = (props: ChatInputProps) => {
             buttonAction={buttonAction}
             submitTitle={submitTitle}
             submitLabel={submitLabel}
+            submitActions={submitActions}
             messageTitle={messageTitle}
             runAction={runAction}
           />

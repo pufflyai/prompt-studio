@@ -457,4 +457,5 @@ registerBoardPanningSmokeTests();
 registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
+// Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();

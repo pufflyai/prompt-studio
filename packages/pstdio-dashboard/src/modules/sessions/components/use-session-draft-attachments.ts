@@ -59,13 +59,9 @@ export const useSessionDraftAttachments = (
 
   const removeAttachment = (fileId: string) => {
     if (!projectId) return;
-    if (savedFileIds.includes(fileId)) {
-      draft?.changeAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId));
-      return;
-    }
-    void deleteSessionAttachment(projectId, fileId)
-      .then(() => draft?.changeAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId)))
-      .catch(() => undefined);
+    // Removing a draft reference must also work for files retained by sent history.
+    draft?.changeAttachments((current) => current.filter((attachment) => attachment.file_id !== fileId));
+    if (!savedFileIds.includes(fileId)) void deleteSessionAttachment(projectId, fileId).catch(() => undefined);
   };
 
   const restoreAttachments = (restored: SessionAttachment[]) => {

@@ -2,6 +2,7 @@ import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import type { ComponentProps } from "react";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
+import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
@@ -25,6 +26,7 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
   const { projectId, sessionId, draftKey, drafts, queue, refreshQueue, draftAttachments, modelControls, ...panel } =
     props;
   const selection = useQueuedRequestSelection(projectId, draftKey, drafts);
+  const followUp = useFollowUpSession();
   const files = selection.selection ? selection.attachments : draftAttachments;
   const actions = useQueuedSessionMessages({
     sessionId,
@@ -62,6 +64,30 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
         </>
       }
       onQueuedFollowUpUpdate={sessionId ? actions.handleQueuedFollowUpUpdate : undefined}
+      onQueuedFollowUpCreate={async (id, prompt) => {
+        const edit = selection.edits[id];
+        if (!sessionId || !edit) throw new Error("The queued edit is no longer available.");
+        await followUp.mutateAsync({
+          sessionId,
+          prompt,
+          model: edit.model,
+          params: edit.params,
+          attachments: selection.attachments.attachments,
+        });
+        selection.commit(id);
+        refreshQueue();
+      }}
+      canRestoreQueuedEditToDraft={
+        Boolean(queue) && !draftAttachments.attachments.length && !draftAttachments.uploading
+      }
+      onQueuedFollowUpRestoreDraft={(id) => {
+        const edit = selection.edits[id];
+        if (!edit) return;
+        draftAttachments.restoreAttachments(selection.attachments.attachments);
+        modelControls.setSelectedModel(edit.model);
+        modelControls.setHarnessParamOverrides(edit.params);
+        selection.commit(id);
+      }}
       onQueuedFollowUpSelect={selection.select}
       onQueuedFollowUpDiscard={selection.discard}
       onQueuedFollowUpCombine={actions.handleQueuedFollowUpCombine}

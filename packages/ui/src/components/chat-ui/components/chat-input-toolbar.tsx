@@ -7,6 +7,7 @@ import { SendButton } from "./send-button";
 
 interface ChatInputToolbarProps {
   actions?: ReactNode;
+  submitActions?: ReactNode;
   questionPrompt: boolean;
   skipDisabled: boolean;
   skipTitle: string;
@@ -20,6 +21,7 @@ interface ChatInputToolbarProps {
 export const ChatInputToolbar = (props: ChatInputToolbarProps) => {
   const {
     actions,
+    submitActions,
     questionPrompt,
     skipDisabled,
     skipTitle,
@@ -37,6 +39,7 @@ export const ChatInputToolbar = (props: ChatInputToolbarProps) => {
           {actions}
         </HStack>
       </ScrollArea>
+      {submitActions}
       {questionPrompt ? (
         <Button size="xs" variant="ghost" disabled={skipDisabled} title={skipTitle} onClick={onSkip}>
           Skip

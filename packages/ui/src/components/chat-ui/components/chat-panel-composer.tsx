@@ -1,4 +1,4 @@
-import { Box, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Stack, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { queuedFollowUpRecipe } from "@/theme/recipes/queued-follow-up";
 import type { useQueuedFollowUpComposer } from "./use-queued-follow-up-composer";
@@ -70,10 +70,6 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     workspaceHub,
   } = props;
   const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
-  const displayedQueue =
-    queuedComposer.editingItem && !queuedFollowUps.some((item) => item.id === queuedComposer.editingItemId)
-      ? [...queuedFollowUps, queuedComposer.editingItem]
-      : queuedFollowUps;
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
   const editing = queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision;
@@ -93,8 +89,10 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         {workspaceHub}
         {composerHeader}
         <QueuedFollowUpList
-          items={displayedQueue}
+          items={queuedFollowUps}
           editor={editing ? editor : undefined}
+          retainedEditor={editing && queuedComposer.createNew ? editor : undefined}
+          retainedEditorPosition={queuedComposer.editingItem?.position}
           dirtyItemIds={[...queuedComposer.dirtyItemIds, ...unsavedQueueItemIds]}
           steeringUnavailableReason={queueSteeringUnavailableReason}
           onSteer={onQueuedFollowUpSteer}
@@ -113,12 +111,6 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         ) : (
           editor
         )}
-        {queuedComposer.error || (editing && queuedComposer.stale) ? (
-          <Text color="fg.error" textStyle="label/S/regular" role="alert">
-            {queuedComposer.error ??
-              "This request changed. Your edit is kept; select the saved request again before updating."}
-          </Text>
-        ) : null}
       </Stack>
     </Stack>
   );

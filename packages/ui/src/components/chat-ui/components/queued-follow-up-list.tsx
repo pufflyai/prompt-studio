@@ -8,7 +8,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { type ReactNode, useState } from "react";
+import { Fragment, type ReactNode, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { queuedFollowUpRecipe } from "@/theme/recipes/queued-follow-up";
 import type { QueuedFollowUp } from "./message-types";
@@ -20,6 +20,8 @@ interface QueuedFollowUpListProps {
   items: QueuedFollowUp[];
   editingItemId?: string | null;
   editor?: ReactNode;
+  retainedEditor?: ReactNode;
+  retainedEditorPosition?: number;
   dirtyItemIds?: string[];
   steeringUnavailableReason?: string | null;
   onEdit?: (item: QueuedFollowUp) => void;
@@ -40,6 +42,8 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
     items,
     editingItemId,
     editor,
+    retainedEditor,
+    retainedEditorPosition,
     dirtyItemIds = [],
     steeringUnavailableReason,
     onEdit,
@@ -61,7 +65,8 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
   const [destination, setDestination] = useState<{ kind: string; item?: QueuedFollowUp } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  if (!items.length) return null;
+  if (!items.length && !retainedEditor) return null;
+  const retainedIndex = getRetainedEditorIndex(items, retainedEditorPosition);
   const steerReason =
     source?.steeringUnavailableReason ??
     steeringUnavailableReason ??
@@ -144,19 +149,22 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
         <QueueSendNow visible={showSendNow} targeted={destination?.kind === "steer"} reason={steerReason} />
         <ScrollArea maxH="queue-viewport" minH="0" viewportProps={{ maxH: "queue-viewport" }}>
           {items.map((item, index) => (
-            <QueuedFollowUpRow
-              key={item.id}
-              item={item}
-              index={index}
-              source={source?.id === item.id}
-              destination={destination?.item?.id === item.id ? destination.kind : undefined}
-              unavailableReason={destination?.kind === "combine" ? combineReason(item) : null}
-              editing={editingItemId === item.id}
-              editor={editingItemId === item.id ? editor : undefined}
-              onEdit={onEdit}
-              onRemove={onRemove}
-            />
+            <Fragment key={item.id}>
+              {retainedEditor && index === retainedIndex ? <RetainedEditor>{retainedEditor}</RetainedEditor> : null}
+              <QueuedFollowUpRow
+                item={item}
+                index={index}
+                source={source?.id === item.id}
+                destination={destination?.item?.id === item.id ? destination.kind : undefined}
+                unavailableReason={destination?.kind === "combine" ? combineReason(item) : null}
+                editing={editingItemId === item.id}
+                editor={editingItemId === item.id ? editor : undefined}
+                onEdit={onEdit}
+                onRemove={onRemove}
+              />
+            </Fragment>
           ))}
+          {retainedEditor && retainedIndex === items.length ? <RetainedEditor>{retainedEditor}</RetainedEditor> : null}
         </ScrollArea>
         {error ? (
           <Text css={styles.notice} role="alert">
@@ -165,5 +173,22 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
         ) : null}
       </Box>
     </DndContext>
+  );
+};
+
+const getRetainedEditorIndex = (items: QueuedFollowUp[], position = Number.POSITIVE_INFINITY) => {
+  const index = items.findIndex((item) => (item.position ?? Number.POSITIVE_INFINITY) > position);
+  return index < 0 ? items.length : index;
+};
+
+const RetainedEditor = (props: { children: ReactNode }) => {
+  const { children } = props;
+  const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
+  return (
+    <Box css={styles.row}>
+      <Box flex="1" minW="0">
+        {children}
+      </Box>
+    </Box>
   );
 };

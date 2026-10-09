@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expectPackagedQueuedEditRecovery } from "./packaged-queued-edit-recovery-smoke";
 import { expectPackagedQueuedEditorCancellation } from "./packaged-queued-editor-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -35,7 +36,9 @@ export const registerQueuedRequestSmokeTests = () => {
             const add=message=>input.events.push({op:"add",path:"/messages/"+index++,value:message});
             add({id:"initial",role:"user",parts:[{type:"text",text:input.prompt}]});
             return {agentSessionId:"native",done,stop(){finish({status:"completed"});},async steer(delivery){
-              add({id:delivery.deliveryId,role:"user",parts:[{type:"text",text:delivery.prompt}]});return {status:"accepted"};
+              add({id:delivery.deliveryId,role:"user",parts:[{type:"text",text:delivery.prompt},
+                ...delivery.attachments.map(file=>({type:"file",fileId:file.fileId,url:file.url,
+                  filename:file.fileName,mediaType:file.mimeType??undefined,size:file.sizeBytes}))]});return {status:"accepted"};
             }};
           },resume(){throw new Error("Steering must keep the current run");}
         };
@@ -163,6 +166,7 @@ export const registerQueuedRequestSmokeTests = () => {
         queuedSession.id,
         false,
       );
+      await expectPackagedQueuedEditRecovery(started.baseUrl, runtimeAuthorization(started.descriptor), project.id);
     } finally {
       if (child) await stopProcess(child);
       rmSync(root, { recursive: true, force: true });
