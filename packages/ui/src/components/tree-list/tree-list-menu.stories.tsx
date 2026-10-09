@@ -75,9 +75,11 @@ export const FooterMenu: StoryObj<typeof meta> = {
       expect(Math.abs(bounds.bottom - anchor.top)).toBeLessThan(20);
     });
     await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(menu).not.toBeVisible());
     help.focus();
     await userEvent.keyboard("{Enter}");
-    await expect(await screen.findByRole("menuitem", { name: "Documentation" })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Documentation" })).toBeVisible());
     await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(menu).not.toBeVisible());
   },
 };
