@@ -26,11 +26,7 @@ export const detectOpencode = async (ctx: HarnessContext) => {
       );
     const number = version.match(/\d+\.\d+\.\d+/)?.[0] ?? version;
     if (!Bun.semver.satisfies(number, `>=${MINIMUM_VERSION}`))
-      return unavailable(
-        ctx,
-        `OpenCode ${number} is too old. Update OpenCode to ${MINIMUM_VERSION} or newer.`,
-        version,
-      );
+      return unavailable(ctx, `Requires OpenCode ${MINIMUM_VERSION} or newer. Found ${number}.`, version);
     return { available: true, version };
   } catch {
     // Avoid logging raw process output or environment values.

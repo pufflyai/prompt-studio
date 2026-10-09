@@ -31,11 +31,7 @@ export const detectClaude = async (ctx: HarnessContext) => {
       );
     const number = version.match(/\d+\.\d+\.\d+/)?.[0] ?? version;
     if (!Bun.semver.satisfies(number, `>=${MINIMUM_VERSION}`))
-      return unavailable(
-        ctx,
-        `Claude Code ${number} is too old. Update Claude Code to ${MINIMUM_VERSION} or newer.`,
-        version,
-      );
+      return unavailable(ctx, `Requires Claude Code ${MINIMUM_VERSION} or newer. Found ${number}.`, version);
     return { available: true, version };
   } catch {
     // Avoid logging raw process output or environment values.
