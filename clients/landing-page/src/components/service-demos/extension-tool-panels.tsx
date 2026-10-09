@@ -1,6 +1,5 @@
 import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { SessionIndicator } from "@pstdio/ui";
-import { Pause, Play } from "lucide-react";
 import { EXAMPLE_ICONS, type ExampleIcon } from "../../content/icon-set-content";
 import type { DEMO_EXTENSIONS } from "../../content/service-demo-content";
 import { MATRIX_SHADER } from "../../content/shader-demo-content";
@@ -34,10 +33,6 @@ const ExtensionShaderPanel = (props: { icon: ExampleIcon }) => {
         <Text textStyle="mono/XS" color="fg.muted">
           {icon.name}
         </Text>
-        <Button variant="ghost" size="xs" onClick={preview.toggle}>
-          {preview.playing ? <Pause /> : <Play />}
-          {preview.playing ? "Pause" : "Play"}
-        </Button>
       </HStack>
       {preview.error && (
         <Text role="alert" textStyle="mono/XS" color="fg.error">

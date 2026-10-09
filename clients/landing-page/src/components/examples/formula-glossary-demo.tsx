@@ -3,6 +3,8 @@ import { Slider } from "@pstdio/ui";
 import { useState } from "react";
 import { EXAMPLE_FORMULAS } from "../../content/formula-glossary-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
+import { useDemoCli } from "../../hooks/use-demo-cli";
+import { useDemoComposition } from "../../hooks/use-demo-composition";
 import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { calculateFormula, formatMoney } from "../../services/financial-formulas";
 import { DemoPanel } from "./demo-workbench";
@@ -12,13 +14,17 @@ import { FormulaPlot } from "./formula-plot";
 export const FormulaGlossaryDemo = (props: { highlighted?: ToolShapeKind }) => {
   const { highlighted } = props;
   const [selection, setSelection] = useState({ id: EXAMPLE_FORMULAS[0].id, inputs: EXAMPLE_FORMULAS[0].defaults });
+  const hostRef = useDemoCli("formulas", (command) => setSelection({ id: command.id, inputs: command.inputs }));
   const { inputs } = selection;
   const formula = EXAMPLE_FORMULAS.find((item) => item.id === selection.id)!;
   const result = calculateFormula(formula.id, inputs);
   const story = useStoryStyles();
   const styles = useToolDemoStyles();
+  const composition = useDemoComposition();
+  const command = <FormulaCommandDemo key={formula.id} formula={formula} inputs={inputs} highlighted={highlighted} />;
   return (
-    <Stack gap="panel-gap">
+    <Stack ref={hostRef} gap="panel-gap">
+      {composition && command}
       <Box css={story.panels}>
         <DemoPanel title="Financial formulas" kind="page" highlighted={highlighted}>
           <Box css={styles.sessions} role="group" aria-label="Choose a formula">
@@ -91,7 +97,7 @@ export const FormulaGlossaryDemo = (props: { highlighted?: ToolShapeKind }) => {
           </Stack>
         </DemoPanel>
       </Box>
-      <FormulaCommandDemo key={formula.id} formula={formula} inputs={inputs} highlighted={highlighted} />
+      {!composition && command}
     </Stack>
   );
 };

@@ -15,7 +15,7 @@ interface ReadingContentProps {
 export const ReadingContent = (props: ReadingContentProps) => {
   const { page, pages, document = { html: "", headings: [] } } = props;
   if (page.view === "docs") return <DocsHomeView page={page} pages={pages} />;
-  if (page.view === "doc") return <DocsPageView page={page} pages={pages} document={document} />;
+  if (page.view === "doc") return <DocsPageView page={page} document={document} />;
   if (page.view === "blog") return <BlogIndexView page={page} pages={pages} />;
   if (page.view === "post") return <PostView page={page} document={document} />;
   return (

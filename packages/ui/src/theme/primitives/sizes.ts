@@ -46,6 +46,8 @@ export const spacing = {
 };
 
 export const sizes = {
+  "palette-width": { value: "44rem" },
+  "palette-results-height": { value: "24rem" },
   "status-dot": { value: "0.375rem" },
   "performance-bar": { value: sp[25] },
   "performance-meter": { value: "0.625rem" },

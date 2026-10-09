@@ -1,4 +1,4 @@
-import { Dialog } from "@chakra-ui/react";
+import { Dialog, useSlotRecipe } from "@chakra-ui/react";
 import type { KeyboardEvent, ReactNode, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -46,6 +46,10 @@ export type PaletteStateValue<T extends PaletteEntry, TValue> = TValue | ((state
 
 export interface PaletteProps<T extends PaletteEntry = PaletteEntry> {
   open: boolean;
+  /** Fill the viewport, with a scrollable results area. */
+  fullScreen?: boolean;
+  /** Focus the dialog instead of opening a touch keyboard when false. */
+  searchAutoFocus?: boolean;
   entries: T[];
   initialQuery?: string;
   initialActiveIndex?: number;
@@ -79,6 +83,8 @@ const resolveStateValue = <T extends PaletteEntry, TValue>(
 export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   const {
     open,
+    fullScreen = false,
+    searchAutoFocus = true,
     entries,
     initialQuery = "",
     initialActiveIndex = 0,
@@ -96,6 +102,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
     onClose,
     onEscape,
   } = props;
+  const styles = useSlotRecipe({ key: "palette" })({ fullScreen });
   const getFilteredEntries = (value: string) => {
     const entryMode = mode ?? resolvePaletteMode(value, modes);
     return filterEntries
@@ -113,6 +120,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   const { query, activeId } = searchState;
   const [setup, setSetup] = useState({ open: false, resetKey });
   const inputRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Reset while rendering, not in an effect, so the first open render already highlights
   // the initial entry and listeners never see the previous session's entry.
@@ -167,7 +175,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   };
 
   useEffect(() => {
-    if (!setup.open) return;
+    if (!setup.open || !searchAutoFocus) return;
 
     const timeout = setTimeout(() => {
       const input = inputRef.current;
@@ -177,7 +185,7 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
       input.setSelectionRange(length, length);
     }, 0);
     return () => clearTimeout(timeout);
-  }, [setup]);
+  }, [setup, searchAutoFocus]);
 
   const activeEntryId = activeEntry?.id;
   // Callers rebuild entries and callbacks on every render. Report only a real change of the
@@ -235,10 +243,14 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={(details) => !details.open && closePalette()}>
+    <Dialog.Root
+      open={open}
+      initialFocusEl={() => (searchAutoFocus ? inputRef.current : contentRef.current)}
+      onOpenChange={(details) => !details.open && closePalette()}
+    >
       <Dialog.Backdrop />
-      <Dialog.Positioner alignItems="center" justifyContent="center" p="md">
-        <Dialog.Content maxW="44rem" w="full" p="0" overflow="hidden" borderWidth="1px" borderColor="border.subtle">
+      <Dialog.Positioner css={styles.positioner}>
+        <Dialog.Content ref={contentRef} tabIndex={-1} css={styles.content} aria-label="Command palette">
           <SearchModalContent
             searchValue={query}
             searchPlaceholder={resolvedPlaceholder}
@@ -248,7 +260,8 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
             footerStart={footerStart}
             footerEnd={footerEnd}
             scrollAreaProps={{
-              maxH: "24rem",
+              maxH: "var(--palette-results-height)",
+              css: styles.results,
               showHorizontalScrollbar: false,
               viewportRef: scrollRef,
               viewportProps: { style: { overflowAnchor: "none" } },
