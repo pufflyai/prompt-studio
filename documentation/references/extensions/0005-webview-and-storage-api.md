@@ -342,8 +342,8 @@ export const reindexBoards = defineHook({
 - The resolved event id is `artifact.changed:<extension-id>.artifact.<mount-id>`.
 - The payload is `{ projectId, mount, paths }`, plus the default workspace fields every host event
   carries. `paths` are relative to the mount root, use `/`, are sorted, and have no duplicates. They
-  name changed files and folders. A path that no longer exists was removed; it can also be a
-  short-lived file such as an editor's temp file.
+  name changed files, and folders that were created, removed, or renamed. A path that no longer
+  exists was removed; it can also be a short-lived file such as an editor's temp file.
 - `paths: []` means "reload the whole mount". The host sends it when more than 200 paths changed at
   once, when the mount folder itself was removed, replaced, or came back, or when the mount has
   more than 2,000 folders, counting the mount folder, on Linux, where each folder needs its own OS

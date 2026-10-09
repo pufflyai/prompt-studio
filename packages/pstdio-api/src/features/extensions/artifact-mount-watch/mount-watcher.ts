@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { lstatSync, mkdirSync } from "node:fs";
 import { isAbsolute, relative, sep } from "node:path";
 import { createDirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
 import type { ArtifactMountWriteLedger } from "./write-ledger";
@@ -24,6 +24,14 @@ export type ArtifactMountWatcherInput = {
   onFolderLimit: () => void;
   maxFolders?: number;
   watch?: WatchDirectory;
+};
+
+const isFolder = (path: string) => {
+  try {
+    return lstatSync(path, { throwIfNoEntry: false })?.isDirectory() === true;
+  } catch {
+    return false;
+  }
 };
 
 const isInsideRoot = (mountPath: string) =>
@@ -70,7 +78,10 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
     timer = setTimeout(flush, dueAt - now);
   };
 
-  const handleEvent = (path: string) => {
+  const handleEvent = (eventType: string, path: string) => {
+    // Windows also reports a folder as changed when an entry inside it changes. The entry has its
+    // own event, so only a folder that was created, removed, or renamed counts.
+    if (eventType === "change" && isFolder(path)) return;
     const mountPath = relative(input.root, path);
     if (mountPath === "") rootChanged = true;
     else if (isInsideRoot(mountPath)) pending.add(path);
@@ -81,7 +92,7 @@ export const watchArtifactMount = (input: ArtifactMountWatcherInput) => {
   mkdirSync(input.root, { recursive: true });
   const tree = createDirectoryTreeWatcher({
     root: input.root,
-    onEvent: (_eventType, path) => handleEvent(path),
+    onEvent: handleEvent,
     onError: input.onError,
     maxDirectories: input.maxFolders ?? MAX_FOLDERS,
     onDirectoryLimit: () => {

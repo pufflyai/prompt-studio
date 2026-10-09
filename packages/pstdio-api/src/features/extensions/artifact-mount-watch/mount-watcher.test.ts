@@ -83,6 +83,25 @@ describe("watchArtifactMount", () => {
     expect(changes).toEqual([["sales/q3.json"]]);
   });
 
+  test("ignores a folder reported as changed because an entry inside it changed", async () => {
+    // Windows reports the parent folder too. The fake handle replays that pattern on every platform.
+    let emit: (eventType: string, filename: string) => void = () => {};
+    const { changes, root } = await startWatch({
+      watch: (path, listener) => {
+        if (!path.includes("sales")) emit = listener;
+        return { close: () => {} };
+      },
+    });
+    mkdirSync(join(root, "sales"));
+    writeFileSync(join(root, "sales", "q3.json"), "{}");
+
+    emit("change", "sales");
+    emit("change", join("sales", "q3.json"));
+    await waitFor(() => changes.length > 0);
+
+    expect(changes).toEqual([["sales/q3.json"]]);
+  });
+
   test("reports at most one change per second while edits continue", async () => {
     const { changes, root } = await startWatch();
 
