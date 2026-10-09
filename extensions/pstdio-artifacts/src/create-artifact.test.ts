@@ -3,7 +3,7 @@ import type { CommandContext, NavigationTarget } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
 
-test.each(["brief", "dashboard"])("starts and opens a project creation session for %s", async (example) => {
+test.each(["brief", "diagram"])("starts and opens a project creation session for %s", async (example) => {
   const started: Parameters<CommandContext["sessions"]["create"]>[0][] = [];
   const opened: NavigationTarget[] = [];
   const session = {

@@ -4,7 +4,7 @@ import type { ArtifactExample } from "../create-artifact";
 import { useArtifactTranslations } from "../translations";
 
 const BriefIcon = createGlyphIcon("document-text-1");
-const DashboardIcon = createGlyphIcon("chart-1");
+const DiagramIcon = createGlyphIcon("schema");
 
 interface ArtifactCreationExamplesProps {
   onCreate: (example: ArtifactExample) => void;
@@ -22,10 +22,10 @@ export const ArtifactCreationExamples = (props: ArtifactCreationExamplesProps) =
       description: t("library.briefDescription", "Goals, decisions, and next steps"),
     },
     {
-      id: "dashboard" as const,
-      Icon: DashboardIcon,
-      title: t("library.dashboardTitle", "Project dashboard"),
-      description: t("library.dashboardDescription", "Progress, open work, and milestones"),
+      id: "diagram" as const,
+      Icon: DiagramIcon,
+      title: t("library.diagramTitle", "System diagram"),
+      description: t("library.diagramDescription", "Components, connections, and data flow"),
     },
   ];
   return (

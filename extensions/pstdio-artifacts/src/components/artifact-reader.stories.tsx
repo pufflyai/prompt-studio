@@ -28,9 +28,6 @@ const meta = {
     content,
     revisions: [exampleArtifact],
     onSelect: () => {},
-    onBack: () => {},
-    onRename: async () => {},
-    onDelete: async () => {},
   },
 } satisfies Meta<typeof ArtifactReader>;
 export default meta;

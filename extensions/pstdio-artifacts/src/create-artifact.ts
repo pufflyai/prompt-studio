@@ -1,6 +1,6 @@
 import { defineCommand, l10n, params, workbenchPanels } from "@pstdio/sdk/extensions";
 
-export type ArtifactExample = "brief" | "dashboard";
+export type ArtifactExample = "brief" | "diagram";
 
 const examples = {
   brief: {
@@ -8,10 +8,10 @@ const examples = {
     prompt:
       "Create an interactive project brief using this project's notes and files. Include goals, decisions, current status, and next steps.",
   },
-  dashboard: {
-    title: "Create a project dashboard",
+  diagram: {
+    title: "Create a system diagram",
     prompt:
-      "Create an interactive project dashboard showing progress, open work, and upcoming milestones. Use the available project data and clearly label any sample data.",
+      "Create an interactive system diagram using this project's notes and files. Show the main components, their responsibilities, and how data flows between them. Let readers explore the connections, and clearly label assumptions where project context is missing.",
   },
 };
 
@@ -26,13 +26,13 @@ export const startCreation = defineCommand({
       required: true,
       options: [
         { value: "brief", label: "Project brief" },
-        { value: "dashboard", label: "Project dashboard" },
+        { value: "diagram", label: "System diagram" },
       ],
     }),
   },
   async run(ctx, input) {
     const example = examples[input.example as ArtifactExample];
-    if (!example) throw new Error("Choose a project brief or project dashboard.");
+    if (!example) throw new Error("Choose a project brief or system diagram.");
     const session = await ctx.sessions.create({
       title: example.title,
       workspaceId: ctx.workspaceId,

@@ -13,7 +13,7 @@ import type { ArtifactContent, ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
 import { ArtifactReader } from "./components/artifact-reader";
-import { artifactUrl, changedEvent, libraryTarget } from "./contracts";
+import { artifactUrl, changedEvent } from "./contracts";
 import type { ArtifactExample } from "./create-artifact";
 import { ArtifactTranslations } from "./translations";
 
@@ -101,28 +101,7 @@ const ArtifactsApp = (props: AppProps) => {
     </Center>
   );
   if (id && content && items) {
-    body = (
-      <ArtifactReader
-        content={content}
-        revisions={items}
-        onSelect={setSelected}
-        onRename={async (name) => {
-          if (!url) return;
-          const renamed = await client.commands.rename({ url, name });
-          setRefresh((value) => value + 1);
-          await open(renamed);
-        }}
-        onDelete={async () => {
-          if (!url) return;
-          await client.commands.delete({ url });
-          await host.call("placement.close", {});
-          await host.call("navigation.open", { target: libraryTarget });
-        }}
-        onBack={() => {
-          void host.call("navigation.open", { target: libraryTarget });
-        }}
-      />
-    );
+    body = <ArtifactReader content={content} revisions={items} onSelect={setSelected} />;
   } else if (!id && items) {
     body = (
       <ArtifactLibrary
