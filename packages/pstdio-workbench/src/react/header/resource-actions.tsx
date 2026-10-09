@@ -20,8 +20,9 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
   );
   const snapshot = usePlacementTab(placement, workbench);
   const resolveActions = useWorkbenchResourceActionResolver(workbench);
-  const resource = placement?.resource ? resolveResourcePreview(placement.resource, changes) : items.at(-1)?.resource;
   const contributed = placementMenuActions(workbench, snapshot);
+  const subject = contributed.length ? placement?.resource : (items.at(-1)?.resource ?? placement?.resource);
+  const resource = subject ? resolveResourcePreview(subject, changes) : undefined;
   const resolved = resource ? resolveActions(resource) : [];
   const resourceActions = contributed.length ? contributed : resolved;
   const [firstLocationAction, ...locationActions] = createWorkbenchLocationActions(workbench, resource);
@@ -29,7 +30,7 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
     ? [...resourceActions, { ...firstLocationAction, separatorBefore: resourceActions.length > 0 }, ...locationActions]
     : resourceActions;
   if (items.length === 0 || actions.length === 0) return null;
-  const resourceLabel = snapshot.label ?? resource?.label ?? resource?.id ?? resource?.type;
+  const resourceLabel = (contributed.length ? snapshot.label : undefined) ?? resource?.label ?? resource?.id ?? resource?.type;
   const label = resource ? `Actions for ${resourceLabel}` : "Page actions";
   return (
     <ResourceActionMenu actions={actions} positioning={{ placement: "bottom-start" }}>

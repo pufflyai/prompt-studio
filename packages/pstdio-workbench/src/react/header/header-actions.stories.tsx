@@ -37,6 +37,7 @@ const createHeaderWorkbench = () => {
       {
         id: "artifact",
         region: "main",
+        tab: { getSnapshot: () => ({ label: "Preview" }) },
         item: {
           kind: "binding",
           binding: {
