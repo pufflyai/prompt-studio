@@ -16,7 +16,7 @@ export const verifyPackagedShortcutReference = async (
   await page.reload();
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
-  const dialog = page.getByRole("dialog").last();
+  const dialog = page.getByRole("dialog").filter({ has: page.getByText("Keyboard shortcuts", { exact: true }) });
   await expect(dialog.getByRole("menuitem", { name: /Shortcut greeting/ })).toHaveCount(1);
   await expect(dialog.getByRole("group", { name: "Shortcut reference", exact: true })).toBeVisible();
   await expect(dialog.getByRole("menuitem", { name: /Open shortcut destination/ })).toContainText(/J/i);
