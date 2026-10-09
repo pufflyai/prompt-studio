@@ -25,7 +25,7 @@ export const nativeWorkspaceBoard = (projectId: string) => {
     scope: { project_id: projectId, extension_instance_id: null, board_id: WORKSPACES_COLLECTION_ID },
     body,
     settings,
-    builtIns: views.map((view) => ({ ...view, boardId: WORKSPACES_COLLECTION_ID, title: String(view.title) })),
+    startingViews: views.map((view) => ({ ...view, boardId: WORKSPACES_COLLECTION_ID, title: String(view.title) })),
   };
 };
 

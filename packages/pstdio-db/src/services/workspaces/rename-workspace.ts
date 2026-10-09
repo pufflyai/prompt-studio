@@ -1,6 +1,7 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { workspaces } from "../../db/schemas.pg";
+import { workspaceColumns } from "../legacy-resource-links";
 
 export const workspaceNameMaxLength = 120;
 
@@ -42,7 +43,7 @@ const isWorkspaceNameConflict = (error: unknown) =>
 export const renameWorkspace = async (db: DbClient, id: string, name: string) => {
   const normalizedName = normalizeWorkspaceName(name);
   const [current] = await db
-    .select()
+    .select(workspaceColumns)
     .from(workspaces)
     .where(and(eq(workspaces.id, id), eq(workspaces.archived, false), sql`${workspaces.deleted_at} is null`));
 
@@ -68,7 +69,7 @@ export const renameWorkspace = async (db: DbClient, id: string, name: string) =>
     .update(workspaces)
     .set({ name: normalizedName, updated_at: new Date().toISOString() })
     .where(eq(workspaces.id, id))
-    .returning()
+    .returning(workspaceColumns)
     .catch((error: unknown) => {
       if (isWorkspaceNameConflict(error)) throw new WorkspaceNameConflictError("Workspace name already exists");
       throw error;

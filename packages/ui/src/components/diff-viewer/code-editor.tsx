@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useId, useRef } from "react";
 import type { MonacoThemeData } from "../../theme";
 import psTheme from "../../theme/theme";
 import { useThemePreference } from "../../utils/theme-preference";
+import { type CodeSourcePosition, sourcePositionSelection } from "./source-position";
 
 export const createCodeEditorPreloader = (initialize: () => Promise<unknown>) => {
   let initialization: Promise<unknown> | undefined;
@@ -92,6 +93,14 @@ export const configureCodeEditor = (
   });
 };
 
+const reveal = (editor: Monaco.editor.IStandaloneCodeEditor, target?: CodeSourcePosition) => {
+  const model = editor.getModel();
+  if (!model || !target) return;
+  const selection = sourcePositionSelection(target, model);
+  editor.setSelection(selection);
+  editor.revealRangeInCenter(selection);
+};
+
 interface CodeEditorProps {
   language: string;
   /** File name, including its extension, used to parse the editor model. */
@@ -102,6 +111,7 @@ interface CodeEditorProps {
   showLineNumbers?: boolean;
   onChange?: (code: string) => void;
   disableScroll?: boolean;
+  position?: CodeSourcePosition;
 }
 
 export const CodeEditor = (props: CodeEditorProps) => {
@@ -114,7 +124,14 @@ export const CodeEditor = (props: CodeEditorProps) => {
     fileName,
     onChange,
     disableScroll,
+    position,
   } = props;
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const positionRef = useRef(position);
+  positionRef.current = position;
+  useEffect(() => {
+    if (editorRef.current) reveal(editorRef.current, position);
+  }, [position]);
   const editorId = useId();
   // Preserve the extension for JSX parsing while keeping each editor's model independent.
   const modelPath = fileName
@@ -167,6 +184,8 @@ export const CodeEditor = (props: CodeEditorProps) => {
         onMount={(editor, monaco) => {
           applyEditorTheme(monaco);
           configureCodeEditor(editor, monaco);
+          editorRef.current = editor;
+          reveal(editor, positionRef.current);
         }}
       />
     </Suspense>

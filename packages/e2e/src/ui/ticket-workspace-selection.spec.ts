@@ -67,7 +67,7 @@ test("workspace navigation owns selection while keeping ticket document context"
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const body = sidenav.getByRole("option", { name: `${ticket.shorthand} Workspace selection`, exact: true });
     const file = sidenav.getByRole("option", { name: "plan.md", exact: true });
-    const rootRow = sidenav.getByRole("option", { name: /^Project (workspace|folder)$/ });
+    const rootRow = sidenav.getByRole("option", { name: "Project folder", exact: true });
     const linkedRow = sidenav.getByRole("option", { name: linkedWorkspace.workspace_shorthand, exact: true });
     await page.goto(board);
     const card = page.getByTestId("renderer-card").filter({ hasText: "Workspace selection" });

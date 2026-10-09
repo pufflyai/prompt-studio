@@ -12,7 +12,7 @@ export const createPageHistoryEntry =
       kind: "pstdio.page-location",
       index,
       projectId,
-      routeKey: workbenchPageLocationRouteKey(location, input.resources),
+      routeKey: workbenchPageLocationRouteKey(location, input.resources, input.pages()),
       location,
     } satisfies WorkbenchPageHistoryState,
   });

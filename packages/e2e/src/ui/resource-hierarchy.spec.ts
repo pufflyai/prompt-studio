@@ -105,6 +105,9 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(breadcrumb).not.toContainText("Workspaces");
 
     await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(page).not.toHaveURL(/document=/);
+    await expect(breadcrumb).toContainText(attempt.workspace.workspace_shorthand);
+    await page.getByRole("button", { name: "Navigate back" }).click();
     await expect(breadcrumb).toContainText(child.shorthand);
     await expect(breadcrumb).not.toContainText(attempt.workspace.workspace_shorthand);
     await expect(sidenav.getByRole("button", { name: "New file" })).toHaveCount(1);

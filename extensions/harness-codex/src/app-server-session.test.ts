@@ -39,6 +39,30 @@ const fixtureDeps: SpawnDeps = {
   },
 };
 
+test("fails the run when its final message cannot be published", async () => {
+  const session = await startCodexSession(
+    {
+      prompt: "Complete",
+      env: { PSTDIO_TEST_MODE: "complete" },
+      events: {
+        getMessages: () => [],
+        push: (patch) => {
+          const message = patch.value as SessionMessage;
+          if (message.parts.some((part) => part.type === "text" && part.text === "Hi, colleague")) {
+            throw new Error("Message storage failed");
+          }
+        },
+      },
+    },
+    fixtureDeps,
+  );
+  try {
+    expect(await session.done).toEqual({ status: "failed" });
+  } finally {
+    session.stop();
+  }
+});
+
 test("keeps structured questions pending until an explicit correlated reply reaches the same process", async () => {
   const messages: SessionMessage[] = [];
   const events = {

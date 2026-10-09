@@ -14,7 +14,9 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
-// Core extension checks include Notes ownership, Planner commands, and continuous ticket/workspace navigation.
+import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
+// Core extension checks cover Notes ownership, Planner archive filters and commands,
+// ticket cleanup/merge settings, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
@@ -26,6 +28,7 @@ import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smo
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
+// Async question parts and accepted answers survive the packaged live reply path.
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
@@ -33,10 +36,13 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
+import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
+
+import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
@@ -132,6 +138,7 @@ test(
       });
       expect(renameRes.status).toBe(400);
       await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
+      await expectPackagedConnectionStatus(started.baseUrl, runtimeAuthorization(started.descriptor));
     } finally {
       if (child) {
         await stopProcess(child);
@@ -162,6 +169,13 @@ test(
       expect(createRes.status).toBe(201);
 
       const project = (await createRes.json()) as { id: string };
+      await expectPackagedWorkspaceFileLink({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        projectRoot: repoPath,
+        home: tempRoot,
+        headers: runtimeAuthorization(started.descriptor),
+      });
       const providersRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/workspace-providers`, {
         headers: runtimeAuthorization(started.descriptor),
       });
@@ -454,3 +468,5 @@ registerLiveQuestionSmokeTests();
 // Shared views persist flat filters and one ordering, and reject a second sort.
 registerBoardViewsSmokeTests();
 registerBoardPanningSmokeTests();
+
+registerResourceLinksSmokeTests();

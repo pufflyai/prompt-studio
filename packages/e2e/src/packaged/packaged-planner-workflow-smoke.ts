@@ -88,6 +88,8 @@ export const expectPlannerWorkflow = async (
   const settingsResponse = await fetch(settingsUrl, { headers });
   expect(await settingsResponse.json()).toMatchObject({
     settings: expect.arrayContaining([
+      expect.objectContaining({ key: "tickets.deleteLinkedWorkspaces", value: true, scope: "project" }),
+      expect.objectContaining({ key: "tickets.markDoneOnMerge", value: true, scope: "project" }),
       expect.objectContaining({
         key: "implementation.defaultTargetBranch",
         scope: "project",

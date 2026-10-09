@@ -34,7 +34,7 @@ interface BarProps {
 export const Bar = (props: BarProps) => {
   const { storageKey, filter = EMPTY_VIEW_FILTER, sorts = [], editedSorts } = props;
   const [savedViews, setSavedViews] = useState<(CollectionSavedView<StorySettings> & { builtIn: boolean })[]>([
-    { id: "all", title: "All tickets", settings, filter, sorts, builtIn: true },
+    { id: "all", title: "All tickets", settings, filter, sorts, builtIn: false },
     { id: "mine", title: "My work", settings, filter: EMPTY_VIEW_FILTER, sorts: [], builtIn: false },
   ]);
   const [search, setSearch] = useState("");
@@ -48,7 +48,19 @@ export const Bar = (props: BarProps) => {
       return view;
     },
     onUpdateView: async (id: string, input: Partial<CollectionSavedView<StorySettings>>) =>
-      setSavedViews((current) => current.map((view) => (view.id === id ? { ...view, ...input } : view))),
+      setSavedViews((current) =>
+        current.map((view) =>
+          view.id === id
+            ? {
+                ...view,
+                ...input,
+                sorts:
+                  input.sorts?.map((sort) => ({ direction: sort.direction, attributeId: sort.attributeId })) ??
+                  view.sorts,
+              }
+            : view,
+        ),
+      ),
     onDeleteView: async (id: string) => setSavedViews((current) => current.filter((view) => view.id !== id)),
     onSetDefaultView: async () => undefined,
   };

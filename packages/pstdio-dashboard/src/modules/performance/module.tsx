@@ -69,7 +69,6 @@ export const createPerformanceModule = () =>
         controller.setPopoverOpen(true);
       };
 
-      ctx.settings.registerSection({ id: "developer-tools", title: "Developer tools", order: 25, scope: "global" });
       const disposables = [
         ctx.views.registerView({
           id: SETTINGS_VIEW_ID,

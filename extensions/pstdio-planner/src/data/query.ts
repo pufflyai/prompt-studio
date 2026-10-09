@@ -20,31 +20,13 @@ import {
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
-/** The part of a view's filter rules the query reads: which fields the rules name, at any depth. */
-export interface TicketsViewFilter {
-  attributeId?: string;
-  rules?: TicketsViewFilter[];
-}
-
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
   projectId: string;
   filters?: KanbanRendererFilterState;
-  filter?: TicketsViewFilter;
   workspaces?: ExtensionWorkspace[];
   workspaceSessions?: TicketWorkspaceSessionLookup;
 }
-
-const namesField = (filter: TicketsViewFilter | undefined, attributeId: string): boolean =>
-  filter?.attributeId === attributeId || (filter?.rules ?? []).some((rule) => namesField(rule, attributeId));
-
-// A view rule on the archive state can ask for archived tickets in ways `filters` cannot carry,
-// such as "is none of active" or a rule inside an "or" group. Both sets load, and the renderer
-// applies the rule.
-const defaultArchiveStates = (filter: TicketsViewFilter | undefined) =>
-  namesField(filter, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID)
-    ? [TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ARCHIVED]
-    : [TICKET_ARCHIVE_STATE_ACTIVE];
 
 // The renderer re-applies filter, sort, and grouping locally. The query returns the
 // requested archive set and tag schema. Workflow status data comes from the referenced
@@ -53,7 +35,6 @@ export const runTicketsQuery = async ({
   storage,
   projectId,
   filters,
-  filter,
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
@@ -71,7 +52,9 @@ export const runTicketsQuery = async ({
   );
   const selectedArchiveStates = filters?.[TICKET_ARCHIVE_STATE_ATTRIBUTE_ID];
   const requestedArchiveStates = new Set(
-    selectedArchiveStates?.length ? selectedArchiveStates : defaultArchiveStates(filter),
+    selectedArchiveStates?.length
+      ? selectedArchiveStates
+      : [TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ARCHIVED],
   );
   const rows = sortedBySortOrder(
     tickets.filter((ticket) =>

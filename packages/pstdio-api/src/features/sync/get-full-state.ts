@@ -9,9 +9,11 @@ import {
   installed_extension_sources,
   notifications,
   projects,
+  sessionColumns,
   sessions,
   settings,
   workspace_sessions,
+  workspaceColumns,
   workspaces,
 } from "pstdio-db";
 
@@ -38,6 +40,9 @@ export const getFullState = async (db: DbClient) => {
   const entries = await Promise.all(
     SYNCED_TABLES.map(async (name) => {
       const table = tableMap[name];
+      if (name === "workspaces")
+        return [name, await db.select(workspaceColumns).from(workspaces).where(isNull(workspaces.deleted_at))] as const;
+      if (name === "sessions") return [name, await db.select(sessionColumns).from(sessions)] as const;
       const query = db.select().from(table);
       const rows = hasDeletedAt(table)
         ? await query.where(isNull(table.deleted_at as Parameters<typeof isNull>[0]))

@@ -90,12 +90,20 @@ describe("normalizeRollout in code mode", () => {
       "assistant",
     ]);
     const tools = messages.flatMap((message) => message.parts.filter((part): part is ToolPart => part.type === "tool"));
-    expect(tools.map((part) => [part.tool, part.status, part.state?.input])).toEqual([
+    expect(
+      tools.filter((part) => part.tool !== "question").map((part) => [part.tool, part.status, part.state?.input]),
+    ).toEqual([
       ["shell", "completed", { command: ["/bin/zsh", "-lc", "pst tickets --help"] }],
       ["shell", "failed", { command: ["/bin/zsh", "-lc", "printenv | rg 'PSTDIO|PST_'"] }],
       ["shell", "completed", { command: ["/bin/zsh", "-lc", `bun -e 'console.log("ok")'`] }],
       ["apply_patch", "completed", { changes: [{ path: "/repo/notes.md", kind: "update" }] }],
     ]);
+    expect(tools.filter((part) => part.tool === "question")).toHaveLength(1);
+    expect(tools.find((part) => part.tool === "question")).toMatchObject({
+      callId: "msg-2",
+      status: "pending",
+      state: { input: { delivery: "async" } },
+    });
     expect(messages[0].parts).toEqual([{ type: "text", text: "update the board" }]);
   });
 

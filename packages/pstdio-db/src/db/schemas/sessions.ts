@@ -2,7 +2,6 @@ import { boolean, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import { sessionStatusEnum } from "./enums";
 import { files } from "./files";
 import { projects } from "./projects";
-import type { ResourceRef } from "./types";
 
 type HarnessParamsJson = Record<string, string | boolean>;
 
@@ -21,7 +20,6 @@ export const sessions = pgTable("sessions", {
   original_session_id: text("original_session_id"),
   cwd: text("cwd"),
   params_json: jsonb("params_json").$type<HarnessParamsJson>(),
-  anchors_json: jsonb("anchors_json").$type<ResourceRef[]>().notNull().default([]),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 });

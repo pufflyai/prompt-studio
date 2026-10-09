@@ -56,7 +56,7 @@ export const createWorkbenchPageLocationController = <Value>(
   input: CreateWorkbenchPageLocationControllerInput<Value>,
 ): WorkbenchPageLocationController => {
   const internals = getWorkbenchPageRegistryInternals(input.registry);
-  const pages = () => input.registry.listPages();
+  const pages = input.registry.listPages;
   let historyIndex = 0;
   let maxHistoryIndex = 0;
   const historyStore = createWorkbenchStore<WorkbenchPageLocationHistoryState>({
@@ -70,8 +70,7 @@ export const createWorkbenchPageLocationController = <Value>(
       "pageLocationHistory",
     );
   const resetHistory = () => {
-    historyIndex = 0;
-    maxHistoryIndex = 0;
+    [historyIndex, maxHistoryIndex] = [0, 0];
     publishHistory();
   };
 
@@ -143,8 +142,8 @@ export const createWorkbenchPageLocationController = <Value>(
     });
     if (!isHistoryState(entry.state) || entry.state.projectId !== projectId) return direct;
     const contextual = normalizeStored(entry.state.location);
-    const directKey = workbenchPageLocationRouteKey(direct.location, internals.resources);
-    const contextualKey = workbenchPageLocationRouteKey(contextual.location, internals.resources);
+    const directKey = workbenchPageLocationRouteKey(direct.location, internals.resources, pages());
+    const contextualKey = workbenchPageLocationRouteKey(contextual.location, internals.resources, pages());
     if (entry.state.routeKey !== directKey || contextualKey !== directKey) return direct;
     return contextual;
   };
@@ -244,7 +243,7 @@ export const createWorkbenchPageLocationController = <Value>(
         active: input.registry.store.getState().location,
       }),
     normalizeStored,
-    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources),
+    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources, pages()),
     commit,
     fail,
     closePlacement: closeActivePlacement,
@@ -275,6 +274,7 @@ export const createWorkbenchPageLocationController = <Value>(
         input.registry.store.getState().location,
         state.location,
         internals.resources,
+        pages(),
       )
         ? "none"
         : "push";

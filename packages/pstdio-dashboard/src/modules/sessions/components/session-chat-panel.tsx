@@ -32,6 +32,7 @@ import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
 import type { HarnessParamValues } from "./harness-param-values";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
+import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
 import { SessionComposerActions } from "./session-composer-actions";
@@ -93,6 +94,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     const value = state.values[dashboardSelectedProjectIdContextKey];
     return typeof value === "string" ? value : undefined;
   });
+  const links = useSessionLinks(input.workbench, projectId, view.workspaceId);
 
   const { messages, loading, streaming, reconnect, refreshQueue, error, queueError } = history;
   const createSession = useCreateProjectSession();
@@ -208,9 +210,11 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             // state, so switching sessions in the bubble is a real switch.
             conversationKey={`dashboard-workbench-session:${view.id}`}
             messages={chatMessages}
+            linkHandler={links.handler}
             conversationNotices={
               <>
                 {commandComposer.notices}
+                {links.notice}
                 <SessionChatNotices
                   error={error}
                   queueError={queueError}

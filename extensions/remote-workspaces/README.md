@@ -128,7 +128,7 @@ If a submit response is lost, the extension reads the existing conversation inst
 
 PocketCoder does not give each turn a stable ID. So the extension saves a marker of the conversation's position for each pending turn. The marker holds no secrets. It keeps restart recovery from mistaking an earlier reply for a new one. See the [temporary turn-cursor decision](../../documentation/adrs/0022-temporary-pocketcoder-turn-cursor.md).
 
-**Stop cancels the entire PocketCoder workspace.** Deleting a Prompt Studio workspace also cancels the remote work and waits until PocketCoder reports that it ended. PocketCoder keeps its own record of the workspace. A canceled or expired workspace cannot take follow-ups, so launch a new one. This extension does not offer checkpoint restore, archiving, file browsing, diffs, merging, or attachments.
+**Stop cancels the entire PocketCoder workspace.** Deleting a Prompt Studio workspace also cancels the remote work and waits until PocketCoder reports that it ended. PocketCoder keeps its own record of the workspace. Preserving remote workspaces appear as provisioning; preserved and succeeded workspaces appear as cancelled because they no longer accept work. A canceled or expired workspace cannot take follow-ups, so launch a new one. This extension does not offer checkpoint restore, archiving, file browsing, diffs, merging, or attachments.
 
 ### Work on your own repository
 

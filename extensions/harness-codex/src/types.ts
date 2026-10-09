@@ -20,6 +20,9 @@ export type CodexThreadItem = {
   items?: unknown;
   message?: string;
   input?: unknown;
+  path?: string;
+  output?: unknown;
+  metadata?: Record<string, unknown>;
 };
 
 type CodexThreadEventBase = { timestamp?: string };

@@ -1,6 +1,7 @@
 import type { Argv } from "yargs";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
+import * as fileLinkCommand from "./file-link";
 import * as listCommand from "./list";
 import * as mergeCommand from "./merge";
 
@@ -11,7 +12,12 @@ let _yargs: Argv;
 
 export const builder = (yargs: Argv) => {
   _yargs = yargs;
-  return yargs.command(createCommand).command(listCommand).command(deleteCommand).command(mergeCommand);
+  return yargs
+    .command(createCommand)
+    .command(listCommand)
+    .command(deleteCommand)
+    .command(mergeCommand)
+    .command(fileLinkCommand);
 };
 
 export const handler = () => {

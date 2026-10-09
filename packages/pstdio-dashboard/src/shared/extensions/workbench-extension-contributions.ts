@@ -5,6 +5,7 @@ import {
   resourceContextMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchResourceMetadataContextKey,
+  workbenchResourceOwnerContextKey,
   workbenchResourceTypeContextKey,
   workbenchTopHeaderTrailingMenuPath,
   workbenchViewIdContextKey,
@@ -52,7 +53,10 @@ export const clearCachedDashboardExtensionMetadata = (projectId: string | undefi
 export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>
   projectId ? metadataByProjectId.get(projectId) : undefined;
 
-type ResourceKindMenuMetadata = Pick<DashboardExtensionMetadata["resourceKinds"][number], "id" | "label" | "menuSlots">;
+type ResourceKindMenuMetadata = Pick<
+  DashboardExtensionMetadata["resourceKinds"][number],
+  "id" | "label" | "menuSlots"
+> & { extensionId?: string };
 
 const hostResourceKinds = Object.values(workbenchResourceKindDefinitions) as ResourceKindMenuMetadata[];
 
@@ -82,17 +86,22 @@ export const buildDashboardMenuSlotRegistry = (metadata: DashboardExtensionMetad
     [projectCommandPanelSlotId, { menuPath: workbenchCommandPaletteMenuPath }],
   ]);
   const resourceKindsBySlotId = new Map<string, string>();
+  const resourceOwnersBySlotId = new Map<string, string>();
   const resourceKinds = [...hostResourceKinds, ...metadata.resourceKinds];
 
   for (const resourceKind of resourceKinds) {
     for (const slot of resourceKind.menuSlots ?? []) {
-      const slotId = `${resourceKind.id}.${slot.id}`;
+      const localSlotId = `${resourceKind.id}.${slot.id}`;
+      const slotId = resourceKind.extensionId
+        ? `${resourceKind.extensionId}.resource-kind.${localSlotId}`
+        : localSlotId;
       menuSlotsById.set(slotId, menuSlotConfig(resourceKind, slot));
       resourceKindsBySlotId.set(slotId, resourceKind.id);
+      if (resourceKind.extensionId) resourceOwnersBySlotId.set(slotId, resourceKind.extensionId);
     }
   }
 
-  return { menuSlotsById, resourceKindsBySlotId };
+  return { menuSlotsById, resourceKindsBySlotId, resourceOwnersBySlotId };
 };
 
 export const dashboardMenuTargetsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
@@ -174,7 +183,7 @@ const resourceMenuRegistrations = (
   }));
 
 export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExtensionMetadata) => {
-  const { menuSlotsById, resourceKindsBySlotId } = buildDashboardMenuSlotRegistry(metadata);
+  const { menuSlotsById, resourceKindsBySlotId, resourceOwnersBySlotId } = buildDashboardMenuSlotRegistry(metadata);
   const result = buildWorkbenchExtensionMenuRegistrations({
     metadata,
     menuSlotsById,
@@ -187,8 +196,15 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
         resourceKind && resourceKind !== "project"
           ? `${workbenchResourceTypeContextKey} == ${contextValue(resourceKind)}`
           : undefined;
+      const owner = contribution.target ? undefined : resourceOwnersBySlotId.get(contribution.slotId);
+      const ownerWhen = owner ? `${workbenchResourceOwnerContextKey} == ${contextValue(owner)}` : undefined;
       const contributionWhen = buildDashboardWorkbenchWhenExpression(contribution.when);
-      return [defaultWhen, contributionWhen].filter(Boolean).join(" && ") || undefined;
+      return (
+        (contributionWhen?.split(" || ") ?? [undefined])
+          .map((branch) => [defaultWhen, ownerWhen, branch].filter(Boolean).join(" && "))
+          .filter(Boolean)
+          .join(" || ") || undefined
+      );
     },
   });
   const registrations = result.registrations.map((registration): DashboardExtensionMenuRegistration => {

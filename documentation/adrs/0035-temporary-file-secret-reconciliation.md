@@ -29,3 +29,5 @@ Only the connection service and the file-backed secret store know about reconcil
 ## Removal
 
 Remove this reconciliation when ADR 0034 is removed and every supported secret provider can commit credential ownership with the application database or provide its own durable deletion queue. Delete this ADR, the secret listing method, and the startup reconciliation call together.
+
+The planned keychain store (PS-527, using `Bun.secrets`) cannot list its entries. It cannot find orphans the way this reconciliation lists secret files, so PS-527 must use the database as the record of which references exist and remove this listing step.

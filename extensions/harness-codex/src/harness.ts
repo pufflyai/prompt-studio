@@ -1,6 +1,7 @@
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { recoverCodexMessages } from "./history-reconciliation";
+import { snapshotCodexMessageImages } from "./image-items";
 import { discoverCodexModels } from "./models";
 import { normalizeRollout, readRollout } from "./rollout";
 import { resumeCodexSession, startCodexSession } from "./spawn";
@@ -102,7 +103,8 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
         questionResponse: input.questionResponse,
       }),
 
-    getMessages: async (_ctx, input) => normalizeRollout(await deps.readTranscript(input.agentSessionId)),
+    getMessages: async (_ctx, input) =>
+      snapshotCodexMessageImages(normalizeRollout(await deps.readTranscript(input.agentSessionId)), input.cwd),
     recoverMessages: (_ctx, input) => recoverCodexMessages(input),
   };
 };

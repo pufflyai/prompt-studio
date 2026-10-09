@@ -9,6 +9,7 @@ import * as logsCommand from "./logs";
 import * as notificationsCommand from "./notifications";
 import * as performanceCommand from "./performance";
 import * as projectsCommand from "./projects";
+import * as resourcesCommand from "./resources";
 import * as serveCommand from "./serve";
 import * as sessionsCommand from "./sessions";
 import * as viewsCommand from "./views";
@@ -27,6 +28,7 @@ export const topLevelCommandModules = [
   performanceCommand,
   viewsCommand,
   projectsCommand,
+  resourcesCommand,
   serveCommand,
   sessionsCommand,
   workspaceCommand,
