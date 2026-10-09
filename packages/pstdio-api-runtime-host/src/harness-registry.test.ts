@@ -58,6 +58,43 @@ const startInput: HarnessStartInput = {
   events: { push: () => {}, getMessages: () => [] },
 };
 
+describe("harness detection isolation", () => {
+  it("isolates a throwing detection provider from healthy harnesses", async () => {
+    const registry = createHarnessRegistry(
+      [
+        record(
+          {
+            detect: () => {
+              throw new Error("broken provider");
+            },
+          },
+          "broken",
+        ),
+        record({ detect: () => ({ available: true }) }, "healthy"),
+      ],
+      buildContext,
+    );
+    expect(await Promise.all(registry.list().map((handle) => handle.detect()))).toEqual([
+      { available: false },
+      { available: true },
+    ]);
+  });
+
+  it("bounds a provider that never completes its detection", async () => {
+    const registry = createHarnessRegistry(
+      [
+        record({ detect: () => new Promise(() => {}) }, "hanging"),
+        record({ detect: () => ({ available: true }) }, "healthy"),
+      ],
+      buildContext,
+    );
+    expect(await Promise.all(registry.list().map((handle) => handle.detect()))).toEqual([
+      { available: false },
+      { available: true },
+    ]);
+  });
+});
+
 describe("createHarnessRegistry", () => {
   it("requires provider recovery before exposing native history", () => {
     expect(() => createHarnessRegistry([record({ getMessages: () => [] })], buildContext)).toThrow("recoverMessages");

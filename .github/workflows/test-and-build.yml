@@ -98,7 +98,8 @@ jobs:
         run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
 
       - name: Test monorepo (non-e2e)
-        run: bunx lerna run test --ignore e2e ${{ needs.scope.outputs.lerna_filter }}
+        # Stream failures as they happen; buffered task output can be lost when the runner exits.
+        run: bunx lerna run test --ignore e2e ${{ needs.scope.outputs.lerna_filter }} --stream
 
   published_extensions:
     needs: scope
@@ -157,7 +158,7 @@ jobs:
         run: bun run build
 
       - name: Test Windows npm command shims
-        run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts
+        run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts packages/pstdio-api/src/features/extensions/process-discovery.test.ts packages/pstdio-extensions/src/runtime/process-environment.test.ts packages/pstdio-api-runtime-host/src/harness-registry.test.ts
 
       - name: Compile Windows runtime for harness detection
         env:
@@ -167,7 +168,7 @@ jobs:
       - name: Test packaged Windows npm harness detection
         env:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
-        run: bun test packages/e2e/src/packaged/opencode-npm-detection.test.ts --timeout 30000
+        run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts --timeout 30000
 
       - name: Lint monorepo
         run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}

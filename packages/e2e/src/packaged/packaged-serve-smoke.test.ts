@@ -27,7 +27,7 @@ import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// npm harness detection and model discovery are covered by opencode-npm-detection.test.ts.
+// npm harness detection and model discovery are covered by harness-npm-detection.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.

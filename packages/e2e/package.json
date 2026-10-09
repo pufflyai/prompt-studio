@@ -18,6 +18,8 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@pstdio/sdk": "workspace:*",
+    "@types/cmd-shim": "5.0.2",
+    "cmd-shim": "7.0.0",
     "extension-lab": "workspace:*",
     "harness-claude-code": "workspace:*",
     "harness-codex": "workspace:*",

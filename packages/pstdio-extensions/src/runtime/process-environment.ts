@@ -10,6 +10,9 @@ const SAFE_HOST_VARIABLES = [
   "NO_COLOR",
   "PATH",
   "PATHEXT",
+  // Windows PowerShell can stall while rebuilding its default module search
+  // path when this is absent. Like PATH, it contains runtime search directories.
+  "PSModulePath",
   "SHELL",
   "SystemRoot",
   "TEMP",
@@ -58,14 +61,21 @@ const createEnvironment = (
   hostEnv: NodeJS.ProcessEnv,
   explicitEnv: NodeJS.ProcessEnv,
   isAllowed: (name: string) => boolean,
+  platform: NodeJS.Platform,
 ) => {
   const env: NodeJS.ProcessEnv = {};
+  const canonicalNames = [...SAFE_HOST_VARIABLES, ...INSTALL_HOST_VARIABLES];
+  const normalize = (name: string) =>
+    platform === "win32"
+      ? (canonicalNames.find((candidate) => candidate.toLowerCase() === name.toLowerCase()) ?? name.toUpperCase())
+      : name;
 
   for (const [name, value] of Object.entries(hostEnv)) {
-    if (value !== undefined && isAllowed(name)) env[name] = value;
+    const key = normalize(name);
+    if (value !== undefined && isAllowed(key)) env[key] = value;
   }
   for (const [name, value] of Object.entries(explicitEnv)) {
-    if (value !== undefined) env[name] = value;
+    if (value !== undefined) env[normalize(name)] = value;
   }
 
   return env;
@@ -74,7 +84,10 @@ const createEnvironment = (
 export const createExtensionProcessEnvironment = (
   hostEnv: NodeJS.ProcessEnv = process.env,
   explicitEnv: NodeJS.ProcessEnv = {},
-) => createEnvironment(hostEnv, explicitEnv, isSafeHostVariable);
+  platform: NodeJS.Platform = process.platform,
+) => createEnvironment(hostEnv, explicitEnv, isSafeHostVariable, platform);
 
-export const createExtensionInstallEnvironment = (hostEnv: NodeJS.ProcessEnv = process.env) =>
-  createEnvironment(hostEnv, {}, isInstallHostVariable);
+export const createExtensionInstallEnvironment = (
+  hostEnv: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+) => createEnvironment(hostEnv, {}, isInstallHostVariable, platform);

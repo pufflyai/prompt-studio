@@ -5,7 +5,7 @@ import {
   createExtensionProcessEnvironment,
   type InvocationScope,
 } from "pstdio-extensions";
-import { resolveProcessCommand } from "./process-command";
+import { resolveProcessEnvironmentCommand } from "./process-command";
 import { signalProcessTree } from "./process-group";
 
 type ProcessSpawner = typeof Bun.spawn;
@@ -119,13 +119,14 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     input = await resolveInput(input);
     ensureActive();
 
-    const resolved = resolveProcessCommand(input.command);
+    const env = createExtensionProcessEnvironment(process.env, input.env);
+    const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
     // Unix needs a separate process group to stop descendants. Windows detachment
     // disconnects the console instead and loses output from commands inside npm shims.
     const child = spawner(resolved.argv, {
       cwd: input.cwd,
       detached: process.platform !== "win32",
-      env: createExtensionProcessEnvironment(process.env, input.env),
+      env,
       stderr: "pipe",
       stdout: "pipe",
       windowsHide: true,
@@ -180,11 +181,12 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     async spawnDetached(input) {
       input = await resolveInput(input);
       ensureActive();
-      const resolved = resolveProcessCommand(input.command);
+      const env = createExtensionProcessEnvironment(process.env, input.env);
+      const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
       const proc = spawner(resolved.argv, {
         detached: true,
         cwd: input.cwd,
-        env: createExtensionProcessEnvironment(process.env, input.env),
+        env,
         stderr: "ignore",
         stdin: "ignore",
         stdout: "ignore",

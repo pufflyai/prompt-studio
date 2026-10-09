@@ -2,24 +2,12 @@ import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/ex
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { createCodexRuntime } from "./codex-runtime";
 import { codexCommandState, prepareCodexOperation } from "./commands";
+import { detectCodex } from "./detection";
 import { snapshotCodexMessageImages } from "./image-items";
 import { discoverCodexModels } from "./models";
 import { recoverNativeHistory } from "./native-history";
 import { approvedPlanKey, readCodexProposedPlan } from "./plan-approval";
 import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
-
-const detectCodex = async (ctx: HarnessContext) => {
-  try {
-    const result = await ctx.process.run({ command: ["codex", "--version"] });
-    if (result.exitCode !== 0) return { available: false };
-    const version = result.stdout.trim();
-    const number = version.match(/\d+\.\d+\.\d+/)?.[0];
-    return { available: Boolean(number && Bun.semver.satisfies(number, "^0.160.1")), version };
-  } catch {
-    // A missing binary makes process.run throw rather than exit non-zero.
-    return { available: false };
-  }
-};
 
 const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
   PSTDIO_SESSION_ID: sessionId,
