@@ -44,22 +44,24 @@ export const MenuAndBranch: StoryObj<typeof meta> = {};
 export const FooterMenu: StoryObj<typeof meta> = {
   render: () => (
     <Box h="20rem" display="flex" alignItems="flex-end" p="md">
-      <TreeList
-        sections={[
-          {
-            id: "footer",
-            nodes: [
-              {
-                id: "help-footer",
-                label: "Help",
-                icon: <HelpCircle />,
-                menuPlacement: "top-start",
-                menuItems: [{ id: "docs", label: "Documentation" }],
-              },
-            ],
-          },
-        ]}
-      />
+      <Box w="xs">
+        <TreeList
+          sections={[
+            {
+              id: "footer",
+              nodes: [
+                {
+                  id: "help-footer",
+                  label: "Help",
+                  icon: <HelpCircle />,
+                  menuPlacement: "top-start",
+                  menuItems: [{ id: "docs", label: "Documentation" }],
+                },
+              ],
+            },
+          ]}
+        />
+      </Box>
     </Box>
   ),
   play: async ({ canvasElement }) => {
