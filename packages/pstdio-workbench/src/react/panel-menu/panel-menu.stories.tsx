@@ -10,6 +10,7 @@ interface MenuWorkbenchOptions {
   both?: boolean;
   menuMinPx?: number;
   tall?: boolean;
+  embedded?: boolean;
 }
 
 const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
@@ -27,13 +28,18 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
       title: `${side} inspector`,
       body: {
         kind: "react",
-        render: () => (
-          <Box p="sm">
-            {(options.tall ? Array.from({ length: 80 }, (_, line) => line) : [0]).map((line) => (
-              <Text key={line}>Inspector details</Text>
-            ))}
-          </Box>
-        ),
+        render: () =>
+          options.embedded ? (
+            <Box h="full" display="flex" minH="0">
+              <iframe title="Embedded controls" srcDoc="<button>Copy Link</button>" width="100%" height="100%" />
+            </Box>
+          ) : (
+            <Box p="sm">
+              {(options.tall ? Array.from({ length: 80 }, (_, line) => line) : [0]).map((line) => (
+                <Text key={line}>Inspector details</Text>
+              ))}
+            </Box>
+          ),
       },
     });
     workbench.viewMenus.registerViewMenu({
@@ -117,6 +123,18 @@ export const FloatingWhenNarrow: Story = {
     });
     // Short content keeps the floating menu short instead of stretching it to the viewport.
     await waitFor(() => expect(floating.getBoundingClientRect().height).toBeLessThan(200));
+  },
+};
+
+export const FloatingEmbeddedContent: Story = {
+  args: { width: 500, menus: { closed: ["right"], embedded: true } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Open Main right menu" }));
+    const menu = await within(canvasElement.ownerDocument.body).findByRole("menu", {
+      name: "Main right menu controls",
+    });
+    await waitFor(() => expect(menu.querySelector("iframe")!.getBoundingClientRect().height).toBeGreaterThan(100));
   },
 };
 

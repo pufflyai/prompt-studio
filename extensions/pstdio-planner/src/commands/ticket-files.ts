@@ -9,7 +9,7 @@ import {
 } from "@pstdio/sdk/extensions";
 
 import { statusesCollection, ticketsCollection } from "../data/collections";
-import { selectedDocumentFromResource } from "../data/document-selection";
+import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
 import { ticketPageTarget } from "../data/ticket-page-target";
@@ -196,7 +196,10 @@ export const listTicketFilesTree = async (
   const selectTarget = (documentId: string) =>
     ticketPageTarget({
       ...ticketResource,
-      metadata: { ...ticketResource.metadata, documentId },
+      metadata: {
+        ...ticketResource.metadata,
+        ...(documentId !== TICKET_BODY_DOCUMENT ? { documentId } : {}),
+      },
     });
 
   const ticketSection: TreeViewSection = {

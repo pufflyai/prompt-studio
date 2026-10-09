@@ -17,7 +17,7 @@ import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
-// ticket cleanup/merge settings, and continuous ticket/workspace navigation.
+// ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
