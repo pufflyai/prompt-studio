@@ -1,4 +1,4 @@
-import { SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Separator, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import type { ArtifactSummary } from "../artifacts";
 import type { ArtifactExample } from "../create-artifact";
@@ -37,6 +37,7 @@ export const ArtifactLibrary = (props: ArtifactLibraryProps) => {
       <ScrollArea flex="1" minHeight="0">
         <Stack gap="lg" p="lg" width="full" maxWidth="4xl" mx="auto">
           <ArtifactCreationExamples onCreate={onCreate} creating={creating} />
+          <Separator />
           {items.length ? (
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="lg">
               {items.map((item) => (
