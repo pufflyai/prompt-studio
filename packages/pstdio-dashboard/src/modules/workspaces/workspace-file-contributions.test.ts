@@ -24,6 +24,7 @@ const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef 
     workspaceId: "workspace-1",
     workspaceType: "worktree",
     workspaceSupportsDiff: true,
+    workspaceSupportsFiles: true,
     ...metadata,
   },
 });
