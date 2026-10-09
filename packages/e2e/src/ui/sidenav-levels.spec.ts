@@ -50,8 +50,10 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await expect(row("Level note")).toBeVisible();
   // Level rows are data, so only the Notes section can be hidden from the customize menu.
   await row("Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await expect(page.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Level note", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await row("Level note").click();
   await expect(row("Level note")).toHaveAttribute("aria-selected", "true");

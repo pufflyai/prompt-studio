@@ -1,8 +1,11 @@
-import { Box, HStack, IconButton, Menu, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
 import type { FocusEventHandler, MouseEvent as ReactMouseEvent } from "react";
+import { createResourceContextActions } from "../list-row/list-row-chrome";
 import { SearchableActionMenu } from "../list-row/searchable-action-menu";
+import { ResourceActionMenu, ResourceContextMenu } from "../overlays/resource-context-menu";
 import type { TreeListAction, TreeListSection } from "./tree-list.types";
+import { TreeListInlineInputRow } from "./tree-list-inline-input";
 
 interface TreeListSectionActionsProps {
   sectionId: string;
@@ -29,22 +32,11 @@ const TreeListSectionActions = (props: TreeListSectionActionsProps) => {
         }
         if (action.menuItems && action.menuItems.length > 0) {
           return (
-            <Menu.Root key={action.id}>
-              <Menu.Trigger asChild>
-                <IconButton variant="ghost" size="2xs" aria-label={action.label}>
-                  {action.icon}
-                </IconButton>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content minW="160px" bg="bg">
-                  {action.menuItems.map((item) => (
-                    <Menu.Item key={item.id} value={item.id} disabled={item.disabled} onClick={() => item.onAction?.()}>
-                      {item.label}
-                    </Menu.Item>
-                  ))}
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
+            <ResourceActionMenu key={action.id} actions={createResourceContextActions(action.menuItems)}>
+              <IconButton variant="ghost" size="2xs" aria-label={action.label}>
+                {action.icon}
+              </IconButton>
+            </ResourceActionMenu>
           );
         }
         return (
@@ -80,47 +72,55 @@ interface TreeListSectionHeaderProps {
 export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
   const { section, collapsible, expanded, focusId, tabIndex, onFocus, onToggle, onContextMenu } = props;
 
+  if (section.inlineInput) {
+    return <TreeListInlineInputRow input={section.inlineInput} level={0} />;
+  }
+
+  const contextActions = createResourceContextActions(section.contextMenuItems ?? []);
+
   return (
-    <HStack
-      className="group"
-      justify="space-between"
-      align="center"
-      w="full"
-      minW="0"
-      maxW="full"
-      px="sm"
-      py="2xs"
-      height="7"
-      cursor={collapsible ? "pointer" : "default"}
-      tabIndex={collapsible ? tabIndex : undefined}
-      data-tree-list-focus-id={collapsible ? focusId : undefined}
-      aria-expanded={collapsible ? expanded : undefined}
-      _hover={collapsible ? { bg: "bg.hover" } : undefined}
-      _focusVisible={collapsible ? { bg: "bg.hover" } : undefined}
-      onFocus={collapsible ? onFocus : undefined}
-      onClick={collapsible ? onToggle : undefined}
-      onContextMenu={
-        onContextMenu
-          ? (event) => {
-              event.preventDefault();
-              onContextMenu(event, section.id);
-            }
-          : undefined
-      }
-    >
-      <HStack gap="1" flex="1" minW="0">
-        <Text textStyle="label/XS" textTransform="uppercase" color="fg.muted" letterSpacing="0.08em" truncate>
-          {section.label}
-        </Text>
-        {collapsible ? (
-          <Box color="fg.muted" flexShrink={0}>
-            <Box asChild transform={expanded ? "rotate(90deg)" : "rotate(0deg)"} transition="120ms">
-              <ChevronRight size={14} />
+    <ResourceContextMenu actions={contextActions}>
+      <HStack
+        className="group"
+        justify="space-between"
+        align="center"
+        w="full"
+        minW="0"
+        maxW="full"
+        px="sm"
+        py="2xs"
+        height="7"
+        cursor={collapsible ? "pointer" : "default"}
+        tabIndex={collapsible ? tabIndex : undefined}
+        data-tree-list-focus-id={collapsible ? focusId : undefined}
+        aria-expanded={collapsible ? expanded : undefined}
+        _hover={collapsible ? { bg: "bg.hover" } : undefined}
+        _focusVisible={collapsible ? { bg: "bg.hover" } : undefined}
+        onFocus={collapsible ? onFocus : undefined}
+        onClick={collapsible ? onToggle : undefined}
+        onContextMenu={
+          onContextMenu
+            ? (event) => {
+                event.preventDefault();
+                onContextMenu(event, section.id);
+              }
+            : undefined
+        }
+      >
+        <HStack gap="1" flex="1" minW="0">
+          <Text textStyle="label/XS" textTransform="uppercase" color="fg.muted" letterSpacing="0.08em" truncate>
+            {section.label}
+          </Text>
+          {collapsible ? (
+            <Box color="fg.muted" flexShrink={0}>
+              <Box asChild transform={expanded ? "rotate(90deg)" : "rotate(0deg)"} transition="120ms">
+                <ChevronRight size={14} />
+              </Box>
             </Box>
-          </Box>
-        ) : null}
+          ) : null}
+        </HStack>
+        <TreeListSectionActions sectionId={section.id} actions={section.actions ?? []} />
       </HStack>
-      <TreeListSectionActions sectionId={section.id} actions={section.actions ?? []} />
-    </HStack>
+    </ResourceContextMenu>
   );
 };

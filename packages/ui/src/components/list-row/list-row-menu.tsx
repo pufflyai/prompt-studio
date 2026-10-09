@@ -3,6 +3,7 @@ import { Fragment, type ReactElement } from "react";
 import type { ListRowActionMenuItem, ListRowMenuPlacement } from "./list-row.types";
 
 interface ListRowMenuProps {
+  triggerId?: string;
   items: ListRowActionMenuItem[];
   open: boolean;
   placement?: ListRowMenuPlacement;
@@ -23,10 +24,11 @@ const ListRowMenuItemIcon = (props: { item: ListRowActionMenuItem }) => {
 };
 
 export const ListRowMenu = (props: ListRowMenuProps) => {
-  const { children, items, onOpenChange, onSelect, open, placement = "right-start" } = props;
+  const { children, items, onOpenChange, onSelect, open, placement = "right-start", triggerId } = props;
 
   return (
     <Menu.Root
+      ids={{ trigger: triggerId }}
       open={open}
       positioning={{ placement, offset: { mainAxis: 4 } }}
       onOpenChange={(details) => onOpenChange(details.open)}

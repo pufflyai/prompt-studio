@@ -155,6 +155,7 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await expectSidenavSections(sidenav);
 
   await row(sidenav, "Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   const searchToggle = page.getByRole("menuitem", { name: /Search/ });
   const workspacesToggle = page.getByRole("menuitem", { name: /Workspaces/ });
   await expect(searchToggle).toBeVisible();
@@ -170,10 +171,12 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await searchToggle.click();
   await expect(row(sidenav, "Search")).toBeVisible();
   await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
   await expect(searchToggle).toBeHidden();
 
   await row(sidenav, "Tickets").click({ button: "right" });
   const ticketsToggle = page.getByRole("menuitem", { name: "Tickets", exact: true });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await expect(ticketsToggle).toBeVisible();
   await ticketsToggle.click();
   await expect(row(sidenav, "Tickets")).toHaveCount(0);
@@ -187,6 +190,7 @@ test("customizes the Sidenav from any point and persists section visibility", as
   await expect(row(sidenav, "Workspaces")).toHaveCount(0);
 
   await row(sidenav, "Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await searchToggle.click();
   await expect(row(sidenav, "Search")).toHaveCount(0);
   await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();

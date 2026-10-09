@@ -1,5 +1,5 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { type WorkbenchModuleContribution, workbenchTopHeaderTrailingMenuPath } from "../../core";
+import type { WorkbenchModuleContribution } from "../../core";
 import { RelatedResources } from "./related-resources";
 import { closeResourceLinksOnProjectChange } from "./resource-links-project-scope";
 import type { ResourceLinksService } from "./resource-links-types";
@@ -55,12 +55,6 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
           },
         },
       );
-      // This is shared workbench chrome. Owner-only resource menu slots stay private.
-      ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
-        commandId: resourceLinksCommandId,
-        group: "primary",
-        order: 90,
-      });
       return closeResourceLinksOnProjectChange(ctx, viewId);
     },
   }) satisfies WorkbenchModuleContribution;

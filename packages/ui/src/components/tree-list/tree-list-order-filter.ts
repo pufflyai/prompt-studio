@@ -1,4 +1,5 @@
 import type { TreeListSection } from "./tree-list.types";
+import type { TreeListGroup } from "./tree-list-order.store";
 
 const keepFixedPositions = <T extends { id: string; canReorder?: boolean }>(original: T[], ordered: T[]) => {
   const movable = ordered.filter((item) => item.canReorder !== false);
@@ -47,16 +48,20 @@ export const applyTreeListOrder = (
   sections: TreeListSection[],
   sectionOrder: string[],
   nodeOrderBySection: Record<string, string[]>,
+  groups: TreeListGroup[] = [],
 ): TreeListSection[] => {
   const nodesById = new Map(sections.flatMap((section) => section.nodes.map((node) => [node.id, node] as const)));
+  const groupedSections: TreeListSection[] = groups.length
+    ? [...sections, ...groups.map((group) => ({ ...group, canHide: true, nodes: [] }))]
+    : sections;
   // Order entries for ids no contributor declares are bare runs users made by dropping rows behind a group.
   // They exist while at least one of their rows does.
   const looseSections = Object.entries(nodeOrderBySection).flatMap(([id, nodeIds]) => {
-    if (sections.some((section) => section.id === id)) return [];
+    if (groupedSections.some((section) => section.id === id)) return [];
     const first = nodeIds.map((nodeId) => nodesById.get(nodeId)).find((node) => node && node.canReorder !== false);
     return first ? [{ id, moveScope: first.moveScope, nodes: [] }] : [];
   });
-  const allSections = looseSections.length > 0 ? [...sections, ...looseSections] : sections;
+  const allSections = looseSections.length > 0 ? [...groupedSections, ...looseSections] : groupedSections;
 
   let changed = allSections !== sections;
   const reorderedSections = keepFixedPositions(allSections, reorderBy(allSections, sectionOrder));
