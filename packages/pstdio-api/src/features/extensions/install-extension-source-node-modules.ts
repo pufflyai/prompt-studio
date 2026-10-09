@@ -67,16 +67,15 @@ export const linkUsableNodeModules = (sourcePath: string, targetPath: string) =>
 const rebaseCopiedLink = (copied: string, source: string, target: string, sourcePath: string, targetPath: string) => {
   const original = join(source, relative(target, copied));
 
-  let linkText: string;
+  let destination: string;
   try {
-    linkText = readlinkSync(original);
+    destination = realpathSync(original);
   } catch {
     // The workspace link vanished between the copy and this pass. Keep the
     // verbatim link cpSync already wrote rather than aborting the install.
     return;
   }
 
-  const destination = resolve(dirname(original), linkText);
   const sourceRelative = relative(source, destination);
   const inside = !sourceRelative.startsWith("..") && !isAbsolute(sourceRelative);
   const extensionRelative = relative(sourcePath, destination);
