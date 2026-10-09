@@ -24,6 +24,7 @@ export const listFolders = async (mount: NotesMount) => {
 
 export const createFolder = async (mount: NotesMount, name: string) => {
   const title = folderTitle(name);
+  await requireUniqueFolderTitle(mount, title);
   const id = crypto.randomUUID();
   await mount.writeText(folderPath(id), title);
   return { id, title };
@@ -31,8 +32,15 @@ export const createFolder = async (mount: NotesMount, name: string) => {
 
 export const renameFolder = async (mount: NotesMount, id: string, name: string) => {
   const title = folderTitle(name);
+  await requireUniqueFolderTitle(mount, title, id);
   await mount.updateText(folderPath(id), title);
   return { id, title };
+};
+
+const requireUniqueFolderTitle = async (mount: NotesMount, title: string, exceptId?: string) => {
+  const folders = await listFolders(mount);
+  if (folders.some((folder) => folder.id !== exceptId && folder.title.trim().toLowerCase() === title.toLowerCase()))
+    throw new Error(`A folder named "${title}" already exists.`);
 };
 
 export const moveNote = async (mount: NotesMount, id: string, folderId?: string) => {
