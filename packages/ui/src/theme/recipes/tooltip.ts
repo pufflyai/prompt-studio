@@ -8,6 +8,11 @@ export const tooltipRecipe = defineSlotRecipe({
       bg: "bg.inverted",
       borderRadius: "xs",
       color: "fg.inverted",
+      "& .chakra-kbd": {
+        color: "fg.inverted",
+        bg: "transparent",
+        borderColor: "border.inverted",
+      },
     },
   },
 });

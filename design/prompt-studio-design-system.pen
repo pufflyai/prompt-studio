@@ -14057,7 +14057,7 @@
                               "stroke": "$ds-border",
                               "strokeWidth": 1,
                               "strokeAlignment": "inner",
-                              "gap": 5,
+                              "gap": 1,
                               "padding": [
                                 3,
                                 8
@@ -17031,7 +17031,7 @@
                       "type": "frame",
                       "id": "XpOTN",
                       "name": "cmp/Kbd",
-                      "context": "Height per size (recipes/kbd.ts): sm 16 · md 20 · lg 24.",
+                      "context": "Keys and shortcut key groups use a maximum 1px gap. Tooltip keys use inverted foreground, transparent fill, and inverted border.",
                       "theme": {
                         "kbd": "raised",
                         "size": "md"
@@ -17048,7 +17048,7 @@
                         "left": 1
                       },
                       "strokeAlignment": "inner",
-                      "gap": 2,
+                      "gap": 1,
                       "padding": [
                         0,
                         "$kbd-px"
@@ -31134,7 +31134,7 @@
                       "type": "frame",
                       "id": "l0W35",
                       "name": "cmp/Tooltip",
-                      "context": "recipes/tooltip.ts + Chakra: bg.inverted, fg.inverted, radius xs, px 10, py 4, 10px text, max width 320.",
+                      "context": "recipes/tooltip.ts: inverted surface and foreground; nested keys use transparent fill, inverted foreground and border.",
                       "reusable": true,
                       "fill": "$ds-bg-inverted",
                       "cornerRadius": 4,
@@ -41053,7 +41053,7 @@
                                   "stroke": "$ds-border",
                                   "strokeWidth": 1,
                                   "strokeAlignment": "inner",
-                                  "gap": 5,
+                                  "gap": 1,
                                   "padding": [
                                     3,
                                     8
@@ -41253,7 +41253,7 @@
                                       "stroke": "$ds-border",
                                       "strokeWidth": 1,
                                       "strokeAlignment": "inner",
-                                      "gap": 5,
+                                      "gap": 1,
                                       "padding": [
                                         3,
                                         8
@@ -90968,12 +90968,16 @@
                                 "kbd": "raised",
                                 "size": "md"
                               },
+                              "fill": "#00000000",
+                              "stroke": "$ds-border-inverted",
                               "descendants": {
                                 "xvAGG": {
-                                  "content": "⌘"
+                                  "content": "⌘",
+                                  "fill": "$ds-fg-inverted"
                                 },
                                 "uD3AU": {
-                                  "content": "N"
+                                  "content": "N",
+                                  "fill": "$ds-fg-inverted"
                                 },
                                 "MuHox": {
                                   "enabled": false
@@ -186264,6 +186268,47 @@
       "type": "color",
       "value": "#22252C"
     },
+    "ds-error-subtle": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFE0E3",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#580707",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#F9267226",
+          "theme": {
+            "mode": "monokai"
+          }
+        },
+        {
+          "value": "#FF555526",
+          "theme": {
+            "mode": "dracula"
+          }
+        },
+        {
+          "value": "#DC322F33",
+          "theme": {
+            "mode": "solarized-dark"
+          }
+        },
+        {
+          "value": "#DC322F26",
+          "theme": {
+            "mode": "solarized-light"
+          }
+        }
+      ]
+    },
     "btn-fg": {
       "type": "color",
       "value": [
@@ -188495,47 +188540,6 @@
         },
         {
           "value": "#85990026",
-          "theme": {
-            "mode": "solarized-light"
-          }
-        }
-      ]
-    },
-    "ds-error-subtle": {
-      "type": "color",
-      "value": [
-        {
-          "value": "#FFE0E3",
-          "theme": {
-            "mode": "light"
-          }
-        },
-        {
-          "value": "#580707",
-          "theme": {
-            "mode": "dark"
-          }
-        },
-        {
-          "value": "#F9267226",
-          "theme": {
-            "mode": "monokai"
-          }
-        },
-        {
-          "value": "#FF555526",
-          "theme": {
-            "mode": "dracula"
-          }
-        },
-        {
-          "value": "#DC322F33",
-          "theme": {
-            "mode": "solarized-dark"
-          }
-        },
-        {
-          "value": "#DC322F26",
           "theme": {
             "mode": "solarized-light"
           }

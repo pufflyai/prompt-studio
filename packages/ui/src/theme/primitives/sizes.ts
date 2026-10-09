@@ -22,6 +22,7 @@ export const sp = {
 };
 
 export const spacing = {
+  "shortcut-key-gap": { value: "1px" },
   "window-tab-gap": { value: "0.4375rem" },
   "window-controls-mac": { value: "5.625rem" },
   none: { value: "0" },
