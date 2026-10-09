@@ -26,6 +26,13 @@ Codex reports a status dot with native state: active is green, paused/blocked/us
 
 No harness has a maximum. Both CLIs ship every one to three days, and the harnesses ignore events and items they do not know. A maximum would report the newest CLI as not installed.
 
+Tests keep these versions supported:
+
+- `src/supported-versions.test.ts` in each harness replays real CLI output from the minimum and the latest version through the harness. Codex runs a shell command and reads it back from history. Claude Code keeps a run open until its background task finishes and answers a question. Each test requires a recording at the current `MINIMUM_VERSION`.
+- `src/installed-cli.test.ts` runs the harness against the installed CLI without a login: detection, model listing, and the Codex app-server thread and goal calls or the Claude Code session arguments. It runs when `INSTALLED_CLI_TESTS=1`. Test and Build installs the minimum versions when a Codex or Claude Code harness changes. Release readiness also installs the latest versions.
+
+To change a minimum, update `MINIMUM_VERSION` in the harness's `src/detection.ts`. Then record new output with `bun scripts/record-cli-output.ts <executable>` at the new minimum and the latest version, and delete recordings older than the minimum. Recording needs a signed-in CLI. The scripts remove machine paths and account details.
+
 The current Codex protocol types come from 0.160.1. The original native integration checks used Codex 0.159.3, Claude Code 2.1.287, and OpenCode 1.18.25. Regenerate the checked-in Codex types with `bun extensions/harness-codex/scripts/generate-protocol.ts` using the supported Codex executable.
 
 Legacy history identity migration and Claude literal slash input need isolated temporary workarounds. Their limits and removal criteria are in [ADR 0062](../../adrs/0062-temporary-codex-history-identity-migration.md) and [ADR 0063](../../adrs/0063-temporary-claude-literal-slash-input.md). Question reply confirmation retains [ADR 0052](../../adrs/0052-temporary-codex-question-delivery-confirmation.md).

@@ -54,7 +54,7 @@ Prompt Studio looks for the agent's command, such as `claude`, `codex`, or `open
 - On Windows, run `where.exe opencode` in PowerShell to check an npm installation. It should include `opencode.cmd` in your npm global folder, usually `%APPDATA%\npm`. Keep that folder on your Windows user `PATH` so the desktop app can find it.
 - For Codex or Claude Code, use `where.exe codex` or `where.exe claude`. Custom npm prefixes are supported. If several installations appear, the first matching command on the runtime's `PATH` wins. Repair or remove a broken earlier installation; Prompt Studio does not silently skip it.
 - A PowerShell alias or function is not an executable on `PATH`. An installation inside WSL is separate from a Windows installation. Install the CLI in the environment that runs Prompt Studio.
-- A version probe must finish within three seconds and return a recognized version on stdout or stderr. An empty response, an unsupported Codex version, a failed command, or a timeout makes the harness unavailable. Other harnesses remain listed. Run `pst logs` for probe diagnostics.
+- A version probe must finish within three seconds and return a recognized version on stdout or stderr. An empty response, a version older than the supported one (Codex 0.157.0 and newer, Claude Code 2.1.203 and newer), a failed command, or a timeout makes the harness unavailable. Other harnesses remain listed. Run `pst logs` for probe diagnostics.
 - npm's Windows batch wrapper can fail when its installation prefix contains `&`. If the wrapper also fails when run directly, reinstall the CLI under a prefix without `&`.
 - If the agent is absent from the list entirely, check that its extension is enabled and loaded for the project. See **An extension does not load** below.
 

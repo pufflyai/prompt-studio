@@ -13,6 +13,8 @@ curl -fsSL https://claude.ai/install.sh | bash
 claude --version
 ```
 
+Prompt Studio supports Claude Code 2.1.203 and newer. An older version shows as not installed. Update it with `claude update`.
+
 Start `claude` once in a terminal and sign in. Prompt Studio uses that sign-in and never asks for your Anthropic credentials.
 
 Check that Prompt Studio finds Claude Code:

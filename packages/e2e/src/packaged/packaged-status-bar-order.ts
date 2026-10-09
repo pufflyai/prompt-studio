@@ -56,7 +56,8 @@ export const expectPackagedStatusBarOrder = async (page: Page) => {
   await expect.poll(isConnectionFirst).toBe(true);
   await expect(meter).toBeFocused();
   await meter.click({ delay: 100 });
-  await expect(page.getByRole("dialog")).toBeVisible();
+  // The popover handles Escape once it takes focus. An earlier Escape can be lost, as a person never sends it.
+  await expect(page.getByRole("dialog")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("option", { name: "Settings", exact: true }).click();

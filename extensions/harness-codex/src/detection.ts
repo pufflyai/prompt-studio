@@ -3,7 +3,7 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 // 0.157.0 is the oldest release whose app-server protocol matches every request, notification, and
 // item this harness uses. There is no upper bound: Codex ships every few days with additive protocol
 // changes, and the harness ignores items it does not know. See ADR 0064.
-const MINIMUM_VERSION = "0.157.0";
+export const MINIMUM_VERSION = "0.157.0";
 
 export const detectCodex = async (ctx: HarnessContext) => {
   try {

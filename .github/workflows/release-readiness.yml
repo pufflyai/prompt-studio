@@ -41,6 +41,13 @@ jobs:
     with:
       ref: ${{ inputs.ref }}
 
+  harness_cli_support:
+    needs: npm
+    uses: ./.github/workflows/harness-cli-support.yml
+    with:
+      ref: ${{ inputs.ref }}
+      versions: '["minimum", "latest"]'
+
   release_build:
     needs: npm
     runs-on: ubuntu-latest

@@ -21,7 +21,14 @@ const packageDirs = [
 const pullRequest = (changedFiles: string[], affectedPackages: string[] = []) =>
   resolveCiScope({ event: "pull_request", changedFiles, packageDirs, affectedPackages });
 
-const everything = { lernaFilter: "", windows: true, e2e: true, license: true, publishedExtensions: true };
+const everything = {
+  lernaFilter: "",
+  windows: true,
+  e2e: true,
+  license: true,
+  publishedExtensions: true,
+  harnessCli: true,
+};
 
 describe("pull request CI scope", () => {
   for (const harness of ["harness-codex", "harness-open-code", "harness-claude-code"]) {
@@ -51,6 +58,7 @@ describe("pull request CI scope", () => {
       e2e: false,
       license: false,
       publishedExtensions: false,
+      harnessCli: false,
     });
   });
 
@@ -92,6 +100,7 @@ describe("pull request CI scope", () => {
       e2e: false,
       license: false,
       publishedExtensions: false,
+      harnessCli: false,
     });
   });
 
@@ -116,4 +125,10 @@ test("published extensions are checked for extension and public contract changes
     expect(pullRequest([file]).publishedExtensions).toBe(true);
   }
   expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"]).publishedExtensions).toBe(false);
+});
+
+test("installed CLI checks run for Codex and Claude Code harness changes", () => {
+  expect(pullRequest(["extensions/harness-codex/src/detection.ts"]).harnessCli).toBe(true);
+  expect(pullRequest(["extensions/harness-claude-code/src/spawn.ts"]).harnessCli).toBe(true);
+  expect(pullRequest(["extensions/harness-open-code/src/detection.ts"]).harnessCli).toBe(false);
 });

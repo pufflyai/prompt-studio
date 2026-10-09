@@ -3,7 +3,7 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 // 2.1.203 is the first release that reports `background_tasks_changed` in stream JSON. Older releases
 // end the run at the first result and kill the agent's background tasks. There is no upper bound
 // because Claude Code ships almost daily and the harness ignores events it does not know.
-const MINIMUM_VERSION = "2.1.203";
+export const MINIMUM_VERSION = "2.1.203";
 
 export const detectClaude = async (ctx: HarnessContext) => {
   try {

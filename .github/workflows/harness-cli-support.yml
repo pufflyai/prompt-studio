@@ -1,0 +1,67 @@
+name: Harness CLI support
+
+# Runs each harness against the real agent CLI. `minimum` reads the version the harness detection
+# accepts as its oldest; `latest` is the newest release on npm. No agent login is needed.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git revision to test
+        required: true
+        type: string
+      versions:
+        description: JSON list of versions to install, from "minimum" and "latest"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  installed_cli:
+    name: ${{ matrix.harness.extension }} (${{ matrix.version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(inputs.versions) }}
+        harness:
+          - extension: harness-codex
+            package: "@openai/codex"
+          - extension: harness-claude-code
+            package: "@anthropic-ai/claude-code"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install the agent CLI
+        env:
+          EXTENSION: ${{ matrix.harness.extension }}
+          PACKAGE: ${{ matrix.harness.package }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          if [ "$VERSION" = minimum ]; then
+            VERSION=$(bun -e "console.log((await import('./extensions/$EXTENSION/src/detection.ts')).MINIMUM_VERSION)")
+          fi
+          npm install --global "$PACKAGE@$VERSION"
+
+      - name: Test the harness against the installed CLI
+        working-directory: extensions/${{ matrix.harness.extension }}
+        env:
+          INSTALLED_CLI_TESTS: "1"
+        run: bun test src/installed-cli.test.ts

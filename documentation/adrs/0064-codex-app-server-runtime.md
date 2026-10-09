@@ -31,7 +31,7 @@ On 2026-10-09 we generated the app-server types from 0.150.0 through 0.162.0 and
 
 A live probe started each release with the harness's app-server arguments. It created a thread, set, paused, read, and cleared a goal without the new optional `origin` field, and listed models. Every release from 0.150.0 to 0.162.0 passed. A real turn with a shell command and a mid-turn `turn/steer` completed on 0.157.0, 0.159.0, 0.160.1, and 0.162.0.
 
-The minimum is therefore 0.157.0. There is no maximum. A maximum turns every Codex release into an outage, and the observed protocol changes were additive. When a release breaks a rule the harness relies on, raise the minimum or update the harness. Do not cap newer releases.
+The minimum is therefore 0.157.0. Recorded 0.157.0 and latest traffic replays through the harness in its tests, and CI runs the harness against the installed minimum. See [native harnesses](../references/extensions/0016-native-harnesses.md#supported-cli-versions). There is no maximum. A maximum turns every Codex release into an outage, and the observed protocol changes were additive. When a release breaks a rule the harness relies on, raise the minimum or update the harness. Do not cap newer releases.
 
 ## Evidence and resource policy
 
