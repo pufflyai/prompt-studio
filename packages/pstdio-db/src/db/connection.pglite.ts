@@ -17,6 +17,7 @@ import { migrateThrough } from "./migrate-through";
 import { openPglite } from "./open-pglite";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
+import { snapshotLegacyQueuedRequests } from "./queued-request-migration";
 import * as schema from "./schemas.pg";
 import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
 import { prepareWorkspaceLocations } from "./workspace-location-migration";
@@ -73,13 +74,30 @@ export const resolveMigrationsFolder = async (
   });
 
   if (embedded.length > 0) {
-    const root = path.join(options.tmpDir ?? os.tmpdir(), DRIZZLE_EXTRACT_DIR);
-    fs.rmSync(root, { recursive: true, force: true });
-    await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
-    return root;
+    const root = fs.mkdtempSync(path.join(options.tmpDir ?? os.tmpdir(), `${DRIZZLE_EXTRACT_DIR}-`));
+    const dispose = () => fs.rmSync(root, { recursive: true, force: true });
+    try {
+      await extractEmbeddedMigrations(embedded, root, options.logger ?? console.log);
+      return { path: root, dispose };
+    } catch (error) {
+      dispose();
+      throw error;
+    }
   }
 
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle");
+  return {
+    path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle"),
+    dispose: () => {},
+  };
+};
+
+const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
+  const migrations = await resolveMigrationsFolder();
+  try {
+    await run(migrations.path);
+  } finally {
+    migrations.dispose();
+  }
 };
 
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
@@ -119,8 +137,8 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
     console.log("[createDb] PGlite ready");
 
     const db = drizzle(openedPglite, { schema });
-    const migrationsFolder = await resolveMigrationsFolder();
-    if (fs.existsSync(migrationsFolder)) {
+    await withMigrationsFolder(async (migrationsFolder) => {
+      if (!fs.existsSync(migrationsFolder)) return;
       if (await hasLegacyTemplatesTable(openedPglite)) {
         const storage = await openedPglite.query<{ extension_files: string | null }>(
           "SELECT to_regclass('public.extension_files')::text AS extension_files",
@@ -141,7 +159,8 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       await removeArchivedWorkspaces(openedPglite);
       await migrate(db, { migrationsFolder });
       await finishBoardViewRules(openedPglite);
-    }
+      await snapshotLegacyQueuedRequests(db);
+    });
 
     let closed = false;
     const close = async () => {

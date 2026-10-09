@@ -36,6 +36,9 @@ export const stubEnvironment = (
   storage: CommandRunnerEnvironment["storage"],
   overrides: Partial<CommandRunnerEnvironment> = {},
 ): CommandRunnerEnvironment => {
+  const queuedRequestsRequireHost = async () => {
+    throw new Error("Queued requests require the host runtime.");
+  };
   const environment: CommandRunnerEnvironment = {
     project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
     resources: createMemoryResources({}),
@@ -60,6 +63,10 @@ export const stubEnvironment = (
       listByWorkspace: async () => [],
       create: async () => createSessionResource(),
       followup: async () => {},
+      getQueuedFollowUps: queuedRequestsRequireHost,
+      updateQueuedFollowUp: queuedRequestsRequireHost,
+      combineQueuedFollowUps: queuedRequestsRequireHost,
+      steerQueuedFollowUp: queuedRequestsRequireHost,
       addAnchors: async () => {},
       removeAnchors: async () => {},
     },

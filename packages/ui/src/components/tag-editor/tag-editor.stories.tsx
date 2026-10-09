@@ -89,8 +89,8 @@ export const ExternalReset = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.dblClick(canvas.getByText("Low"));
-    const input = canvas.getByDisplayValue("Low");
+    await userEvent.click(canvas.getByText("Low"));
+    const input = canvas.getByRole("textbox");
     await userEvent.clear(input);
     await userEvent.type(input, "Low reviewed{enter}");
     await expect(canvas.getByText("Low reviewed")).toBeVisible();
@@ -138,7 +138,7 @@ export const WithHeaderActions = {
                   { value: "multi_select", label: "Multiple" },
                 ]}
               />
-              <Button size="xs" variant="ghost" color="fg.subtle" aria-label="Delete tag">
+              <Button size="xs" variant="destructive-ghost" aria-label="Delete tag">
                 <Trash2 size={14} />
               </Button>
             </HStack>

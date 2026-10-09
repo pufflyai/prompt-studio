@@ -11,6 +11,7 @@ export * from "./harness-commands";
 export * from "./history-reconciliation";
 export * from "./notifications/types";
 export * from "./projects";
+export * from "./queued-follow-ups";
 export * from "./resource-anchors";
 export * from "./runtime-auth";
 export * from "./session-attachment-types";

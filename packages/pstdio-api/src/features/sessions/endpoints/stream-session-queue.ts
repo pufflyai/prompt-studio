@@ -1,6 +1,7 @@
-import type { JsonPatch, SessionMessage } from "pstdio-api-contracts";
+import type { JsonPatch, SessionMessage, SessionQueuedMessagesResponse } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "../deps";
-import { getQueuedSessionMessages } from "../queued-session-messages";
+import { pendingQueuedRequests } from "../pending-queued-requests";
+import { queuedMessagesFromRequests } from "../queued-session-messages";
 import type { SessionEventSink } from "../session-stream-connections";
 
 // Queue positions are authoritative. Matching prompt text would retire the wrong
@@ -8,10 +9,16 @@ import type { SessionEventSink } from "../session-stream-connections";
 export const createStreamQueuePublisher = (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
   let userIds = new Set<string>();
   const publish = async () => {
-    let data: { messages: SessionMessage[] } | { error: string };
+    let data: SessionQueuedMessagesResponse | { error: string };
     try {
       const session = await deps.sessionService.get(id);
-      data = { messages: session?.project_id ? await getQueuedSessionMessages(deps, session.project_id, id) : [] };
+      const queue = await pendingQueuedRequests(deps, id);
+      data = {
+        messages: session?.project_id
+          ? await queuedMessagesFromRequests(deps, session.project_id, id, queue.requests)
+          : [],
+        queue,
+      };
     } catch {
       data = { error: "Could not refresh queued messages" };
     }

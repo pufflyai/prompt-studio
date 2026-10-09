@@ -3,7 +3,8 @@ import { sessionQueuedMessagesResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
-import { getQueuedSessionMessages } from "../queued-session-messages";
+import { pendingQueuedRequests } from "../pending-queued-requests";
+import { queuedMessagesFromRequests } from "../queued-session-messages";
 
 export const getQueuedMessagesRoute = createRoute({
   method: "get",
@@ -25,6 +26,9 @@ export const getQueuedMessagesHandler =
     const { id } = c.req.valid("param");
     const session = await deps.sessionService.get(id);
     if (!session) return c.json({ error: `Session not found: ${id}` }, 404);
-    const messages = session.project_id ? await getQueuedSessionMessages(deps, session.project_id, id) : [];
-    return c.json({ messages }, 200);
+    const queue = await pendingQueuedRequests(deps, id);
+    const messages = session.project_id
+      ? await queuedMessagesFromRequests(deps, session.project_id, id, queue.requests)
+      : [];
+    return c.json({ messages, queue }, 200);
   };

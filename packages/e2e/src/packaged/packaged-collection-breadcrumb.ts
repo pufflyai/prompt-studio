@@ -10,15 +10,15 @@ export const verifyPackagedCollectionBreadcrumb = async (
   headers: Record<string, string>,
 ) => {
   const title = "Packaged collection breadcrumb";
-  const filename = "breadcrumb.html";
-  const path = join(projectFolder, filename);
+  const fileName = "breadcrumb.html";
+  const path = join(projectFolder, fileName);
   writeFileSync(path, `<html><head><title>${title}</title></head><body>Artifact preview</body></html>`);
   const response = await fetch(
     `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-artifacts.command.publish/execute`,
     {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ source: "api", params: { file_path: filename } }),
+      body: JSON.stringify({ source: "api", params: { file_path: fileName } }),
     },
   );
   expect(response.status).toBe(200);

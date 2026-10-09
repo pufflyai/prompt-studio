@@ -1,3 +1,4 @@
+import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import type { QueuedFollowUp, SessionMessage } from "@pstdio/ui/chat-ui";
 
 const queuedPromptPrefix = "queued-prompt-";
@@ -29,9 +30,26 @@ const getAttachments = (message: SessionMessage): QueuedFollowUp["attachments"] 
       name: part.filename ?? part.url.split("/").pop() ?? "Attachment",
       mediaType: part.mediaType,
       url: part.url,
+      size: part.size,
     }));
 
-export const splitQueuedFollowUps = (messages: SessionMessage[], sessionId: string | null) => {
+const hasDeliveredRequest = (
+  request: PendingQueuedFollowUpsResponse["requests"][number] | undefined,
+  messages: SessionMessage[],
+) => {
+  if (!request?.steeringDelivery) return false;
+  const matching = messages.filter((message) => message.role === "user" && message.id === request.steeringDelivery!.id);
+  if (matching.length !== 1) return false;
+  return request.attachments.every((file) =>
+    matching[0].parts.some((part) => part.type === "file" && part.fileId === file.file_id),
+  );
+};
+
+export const splitQueuedFollowUps = (
+  messages: SessionMessage[],
+  sessionId: string | null,
+  queue?: PendingQueuedFollowUpsResponse,
+) => {
   const transcriptMessages: SessionMessage[] = [];
   const queuedFollowUps: QueuedFollowUp[] = [];
 
@@ -42,7 +60,15 @@ export const splitQueuedFollowUps = (messages: SessionMessage[], sessionId: stri
       continue;
     }
 
+    const request = queue?.requests.find((item) => item.queuePosition === position);
+    // A queued SSE snapshot can precede durable removal but arrive after the accepted user patch.
+    if (hasDeliveredRequest(request, messages)) continue;
     queuedFollowUps.push({
+      revision: request?.revision,
+      model: request?.model,
+      params: request?.params,
+      steeringDelivery: request?.steeringDelivery,
+      steeringUnavailableReason: request?.steeringUnavailableReason,
       id: message.id,
       prompt: getPromptText(message),
       attachments: getAttachments(message),

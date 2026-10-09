@@ -16,12 +16,14 @@ import { CommentNode } from "./plugins/CommentPlugin/nodes/CommentNode/CommentNo
 import { CommandMenuPlugin, type PromptCommand } from "./plugins/command-menu-plugin";
 import { ImperativeAPIPlugin, type PromptEditorRef } from "./plugins/ImperativeAPIPlugin";
 import { KeyboardShortcutPlugin } from "./plugins/KeyboardShortcutPlugin";
-import { PreserveSelectionPlugin } from "./plugins/preserve-selection-plugin";
+import { PreserveSelectionPlugin, type PromptSelectionSnapshot } from "./plugins/preserve-selection-plugin";
 import theme from "./theme/prompt-input-theme";
 import { $getTextContent, getTextFromSerializedEditorState } from "./utils";
 
 export interface PromptEditorProps {
   defaultState: string;
+  initialSelection?: PromptSelectionSnapshot;
+  onSelectionChange?: (selection: PromptSelectionSnapshot) => void;
   debug?: boolean;
   isEditable?: boolean;
   placeholder?: ReactElement | ((isEditable: boolean) => ReactElement | null);
@@ -37,7 +39,7 @@ export interface PromptEditorProps {
 const nodes = [CommentNode, MarkNode];
 
 export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptEditorProps> = (props, ref) => {
-  const { defaultState, debug = false, isEditable = true, placeholder } = props;
+  const { initialSelection, onSelectionChange, defaultState, debug = false, isEditable = true, placeholder } = props;
   const { onChange, onError = () => {}, onSubmit, onRecallPrevious, onRecallNext, commands = [] } = props;
 
   const initialConfig = {
@@ -83,7 +85,11 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
         />
         <ImperativeAPIPlugin editorRef={ref} previousTextRef={previousTextRef} />
         <ToggleEditablePlugin isEditable={isEditable} />
-        <PreserveSelectionPlugin isEditable={isEditable} />
+        <PreserveSelectionPlugin
+          isEditable={isEditable}
+          initialSelection={initialSelection}
+          onSelectionChange={onSelectionChange}
+        />
         <CommentPlugin />
         <KeyboardShortcutPlugin onSubmit={onSubmit} onRecallPrevious={onRecallPrevious} onRecallNext={onRecallNext} />
         <CommandMenuPlugin key={commands.map((command) => command.name).join("\n")} commands={commands} />

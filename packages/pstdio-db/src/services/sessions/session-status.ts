@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { sessionColumns } from "../legacy-resource-links";
@@ -44,7 +44,9 @@ export const updateSessionStatus = async (
 
     // Cleanup shares the guarded transition's row lock, so it cannot delete a replacement run's work.
     if (status === "cancelled" || (current.status === "queued" && (terminal || status === "disconnected"))) {
-      await tx.delete(session_queue_entries).where(eq(session_queue_entries.session_id, id));
+      await tx
+        .delete(session_queue_entries)
+        .where(and(eq(session_queue_entries.session_id, id), isNull(session_queue_entries.steering_delivery_json)));
     }
     return updated;
   });

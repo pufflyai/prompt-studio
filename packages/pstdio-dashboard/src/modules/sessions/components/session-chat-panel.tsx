@@ -1,6 +1,6 @@
 import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
-import { type ChatInputQuestionResponse, ChatPanel, ChatSkeleton } from "@pstdio/ui/chat-ui";
+import { type ChatInputQuestionResponse, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
@@ -26,16 +26,13 @@ import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { useCreateProjectSession } from "../hooks/use-create-project-session";
 import type { useDashboardSessionMessages } from "../hooks/use-dashboard-session-messages";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
-import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
 import { useStopSession } from "../hooks/use-stop-session";
 import { canSubmitSessionMessage } from "../runtime/session-runtime-selection";
 import type { HarnessParamValues } from "./harness-param-values";
-import { SessionAttachmentControls } from "./session-attachment-controls";
-import { SessionAttachmentList } from "./session-attachment-list";
 import { useSessionLinks } from "./session-chat-links";
 import { SessionChatNotices } from "./session-chat-notices";
 import { SessionChatWorkspaceHub } from "./session-chat-workspace-hub";
-import { SessionComposerActions } from "./session-composer-actions";
+import { SessionQueuedChatPanel } from "./session-queued-chat-panel";
 import { useCommandComposer } from "./use-command-composer";
 import { usePendingSessionFollowUp } from "./use-pending-session-follow-up";
 import { useSessionChatDraft } from "./use-session-chat-draft";
@@ -96,7 +93,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   });
   const links = useSessionLinks(input.workbench, projectId, view.workspaceId);
 
-  const { messages, loading, streaming, reconnect, refreshQueue, error, queueError } = history;
+  const { messages, loading, streaming, reconnect, refreshQueue, error, queueError, queue } = history;
   const createSession = useCreateProjectSession();
   const followUp = useFollowUpSession();
   const stopSession = useStopSession();
@@ -151,7 +148,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   );
   const openWorkspaceOnSelection = input.panel.region !== "side";
 
-  const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
+  const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId, queue);
   const chatMessages = useApiFileParts(splitDisplay.messages);
   const effectiveStreaming = streaming || view.status === "in_progress" || pendingWork;
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
@@ -186,10 +183,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   };
   const unsent = pendingFollowUp?.failure ? pendingFollowUp : null;
 
-  const { handleQueuedFollowUpUpdate, handleQueuedFollowUpRemove, handleQueuedFollowUpMove } = useQueuedSessionMessages(
-    { sessionId, queuedFollowUps: splitDisplay.queuedFollowUps, refreshQueue },
-  );
-
   const decision = commandComposer.decision && {
     ...commandComposer.decision,
     controls: commandComposer.controls,
@@ -205,7 +198,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     <Box position="relative" h="full" w="full">
       <Box position="absolute" inset="0" overflow="hidden" display="flex" flexDirection="column">
         <Box flex="1" minH="0" overflow="hidden">
-          <ChatPanel
+          <SessionQueuedChatPanel
             // Keying on the session id gives each session its own draft and scroll
             // state, so switching sessions in the bubble is a real switch.
             conversationKey={`dashboard-workbench-session:${view.id}`}
@@ -239,9 +232,6 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               </>
             }
             queuedFollowUps={splitDisplay.queuedFollowUps}
-            onQueuedFollowUpUpdate={sessionId ? handleQueuedFollowUpUpdate : undefined}
-            onQueuedFollowUpRemove={sessionId ? handleQueuedFollowUpRemove : undefined}
-            onQueuedFollowUpMove={sessionId ? handleQueuedFollowUpMove : undefined}
             loading={loading}
             streaming={effectiveStreaming}
             streamingStartedAt={streamingStartedAt}
@@ -254,38 +244,24 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             chatInputCommands={commandComposer.suggestions}
             composerDecision={decision}
             attachedResources={attachedResources}
-            attachmentActions={
-              <SessionAttachmentControls
-                projectId={projectId}
-                uploading={draftAttachments.uploading}
-                onAttachFiles={(files) => void draftAttachments.uploadFiles(files)}
-              />
-            }
-            actions={
-              <SessionComposerActions
-                projectId={projectId}
-                view={view}
-                selectedAgent={selectedAgent}
-                setSelectedAgent={setSelectedAgent}
-                selectedModel={selectedModel}
-                setSelectedModel={setSelectedModel}
-                harnessParamOverrides={harnessParamOverrides}
-                setHarnessParamOverrides={setHarnessParamOverrides}
-              >
-                {commandComposer.controls}
-              </SessionComposerActions>
-            }
-            attachmentList={
-              draftAttachments.attachments.length > 0 ? (
-                <SessionAttachmentList
-                  attachments={draftAttachments.attachments}
-                  onRemove={draftAttachments.removeAttachment}
-                />
-              ) : undefined
-            }
-            onAttachFiles={projectId ? (files) => void draftAttachments.uploadFiles(files) : undefined}
-            onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}
-            inputDisabled={draftAttachments.uploading}
+            projectId={projectId}
+            sessionId={sessionId}
+            draftKey={view.draftKey}
+            drafts={drafts}
+            queue={queue}
+            refreshQueue={refreshQueue}
+            draftAttachments={draftAttachments}
+            modelControls={{
+              projectId,
+              view,
+              selectedAgent,
+              setSelectedAgent,
+              selectedModel,
+              setSelectedModel,
+              harnessParamOverrides,
+              setHarnessParamOverrides,
+              children: commandComposer.controls,
+            }}
             submitDisabled={!canSubmit}
             workspaceHub={
               <SessionChatWorkspaceHub

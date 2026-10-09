@@ -28,10 +28,11 @@ test("prepares runtime migrations without reading schema-generation snapshots", 
       ],
       logger: () => {},
     });
-    expect(readFileSync(join(folder, "0000_initial.sql"), "utf8")).toBe(migration);
-    expect(JSON.parse(readFileSync(join(folder, "meta/_journal.json"), "utf8")).entries).toEqual([
+    expect(readFileSync(join(folder.path, "0000_initial.sql"), "utf8")).toBe(migration);
+    expect(JSON.parse(readFileSync(join(folder.path, "meta/_journal.json"), "utf8")).entries).toEqual([
       { tag: "0000_initial" },
     ]);
+    folder.dispose();
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

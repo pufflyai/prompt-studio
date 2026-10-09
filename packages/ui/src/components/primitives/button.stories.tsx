@@ -186,7 +186,7 @@ export const Sizes = {
             <IconButton size={size.size} variant="ghost" aria-label="Settings">
               <Icon as={Settings} />
             </IconButton>
-            <IconButton size={size.size} variant="destructive" aria-label="Delete">
+            <IconButton size={size.size} variant="destructive-ghost" aria-label="Delete">
               <Icon as={Trash2} />
             </IconButton>
           </HStack>
@@ -208,7 +208,7 @@ export const IconOnly = {
       <IconButton variant="outline" aria-label="Download">
         <Icon as={Download} boxSize="16px" />
       </IconButton>
-      <IconButton variant="ghost" aria-label="Delete">
+      <IconButton variant="destructive-ghost" aria-label="Delete">
         <Icon as={Trash2} boxSize="16px" />
       </IconButton>
       <IconButton variant="ghost" aria-label="Open panel" aria-pressed="true">

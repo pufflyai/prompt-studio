@@ -77,7 +77,9 @@ export const PlanApproval: Story = {
     const c = within(canvasElement);
     await expect(c.getByLabelText("Plan decision")).toBeVisible();
     await userEvent.click(c.getByRole("button", { name: "Continue planning", exact: true }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("Keep this unsent draft");
+    await expect(
+      canvasElement.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]')!,
+    ).toHaveTextContent("Keep this unsent draft");
     await userEvent.click(c.getByRole("button", { name: "Plan details" }));
     await userEvent.click(
       await within(canvasElement.ownerDocument.body).findByRole("button", {
@@ -101,9 +103,11 @@ export const QueuedEdit: Story = {
   args: { queuedFollowUps: [{ id: "queued", prompt: "Keep this queued edit" }], onQueuedFollowUpUpdate: fn() },
   play: async ({ canvasElement, args }) => {
     const c = within(canvasElement);
-    await userEvent.click(c.getByRole("button", { name: "Edit queued follow-up" }));
+    await userEvent.click(c.getByRole("button", { name: /^Edit queued message:/ }));
     await userEvent.click(c.getByRole("button", { name: "Continue planning", exact: true }));
-    await expect(c.getByRole("textbox")).toHaveTextContent("Keep this queued edit");
+    await expect(
+      canvasElement.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]')!,
+    ).toHaveTextContent("Keep this queued edit");
     await expect(args.onQueuedFollowUpUpdate).not.toHaveBeenCalled();
   },
 };

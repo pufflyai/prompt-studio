@@ -465,3 +465,16 @@ A level page without a declared parent, such as Notes, has nothing outside the l
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
 
 Session commands contributed through `sessionSlots.headerPrimary` or `sessionSlots.headerOverflow` also appear in shared session resource menus. Session tree rows must set `resource` explicitly, even when `target.resource` already names the session. Visibility and execution use the clicked session; opening a different resource first is not required. Host session rows expose the existing Open session panel action without tab placement arguments.
+
+## Queued conversation requests
+
+The host provides these project-scoped `ctx.sessions` methods:
+
+- `getQueuedFollowUps(sessionId)` returns full saved requests, their revisions, and the active run precondition.
+- `updateQueuedFollowUp(sessionId, queuePosition, input)` saves the full request and returns its new revision. Send `expectedRevision`; omitted fields retain saved values. `model: null` selects the provider default, `params: null` resets supported defaults, and `attachments: []` clears references.
+- `combineQueuedFollowUps(sessionId, targetPosition, { sourcePosition, sourceRevision, targetRevision })` atomically combines compatible requests.
+- `steerQueuedFollowUp(sessionId, queuePosition, { expectedRevision, expectedRunStartedAt })` returns an accepted, rejected, or uncertain outcome.
+
+An active `HarnessSession` may provide `steer({ deliveryId, prompt, attachments, signal })`. It must use native input without cancelling or starting a turn. Before returning accepted, emit exactly one normalized user message whose ID is `deliveryId`. Native history must preserve that correlation for recovery. A successful pipe write alone is insufficient. A transport failure after input may have been sent is uncertain. Only return rejected when native input was definitely refused. Older harnesses remain supported without this optional method.
+
+Publish the additive SDK before harness extensions adopt it. Codex native acceptance and persisted `clientUserMessageId` were verified on 0.160.0. Claude Code 2.1.294 validation is blocked by a weekly usage limit; OpenCode is unverified. This host change enables neither adapter by itself.

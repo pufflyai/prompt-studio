@@ -6,7 +6,10 @@ import * as createCommand from "./create";
 import * as denyCommand from "./deny";
 import * as followUpCommand from "./follow-up";
 import * as listCommand from "./list";
+import * as queuedCommand from "./queued-follow-ups";
+import { combineQueuedCommand, updateQueuedCommand } from "./queued-follow-ups";
 import * as resolveSessionIdCommand from "./resolve-session-id";
+import * as steerCommand from "./steer";
 import * as stopCommand from "./stop";
 import * as streamCommand from "./stream";
 import * as viewCommand from "./view";
@@ -25,6 +28,10 @@ export const builder = (yargs: Argv) => {
     .command(denyCommand)
     .command(followUpCommand)
     .command(listCommand)
+    .command(queuedCommand)
+    .command(updateQueuedCommand)
+    .command(combineQueuedCommand)
+    .command(steerCommand)
     .command(resolveSessionIdCommand)
     .command(streamCommand)
     .command(stopCommand)

@@ -23,6 +23,7 @@ import { numberInputSlotRecipe } from "./recipes/number-input";
 import { paletteSlotRecipe } from "./recipes/palette";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
+import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
 import { skeletonRecipe } from "./recipes/skeleton";
 import { switchSlotRecipe } from "./recipes/switch";
@@ -79,6 +80,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      queuedFollowUp: queuedFollowUpRecipe,
       tag: tagSlotRecipe,
       checkbox: checkboxSlotRecipe,
       windowTitleBar: windowTitleBarRecipe,

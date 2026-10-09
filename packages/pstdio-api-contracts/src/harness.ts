@@ -135,6 +135,8 @@ export type HarnessSession = {
   stop(): void | Promise<void>;
   /** Replies in place. Reject invalid answers with HarnessQuestionReplyError. */
   replyQuestion?(response: QuestionResponse): Promise<void>;
+  /** Accept live input without starting a new run. Emit one user message with deliveryId before returning accepted. Native history must preserve that identity for recovery. A thrown transport error is uncertain, never a definite rejection. */
+  steer?(input: HarnessSteeringInput): Promise<HarnessSteeringResult>;
   timeoutStrategy?: TimeoutStrategy;
   /** Observability only. */
   pid?: number;
@@ -190,3 +192,16 @@ export type HarnessRecoveryInput = {
 export type HarnessRecoveryResult =
   | { kind: "recovered"; messages: SessionMessage[] }
   | { kind: "conflict"; category: string };
+
+/** Input to the captured running owner. Its saved model and params must already match that run. */
+export interface HarnessSteeringInput {
+  deliveryId: string;
+  prompt: string;
+  attachments: HarnessAttachment[];
+  signal?: AbortSignal;
+}
+
+export type HarnessSteeringResult =
+  | { status: "accepted" }
+  | { status: "rejected"; reason: string }
+  | { status: "uncertain"; reason: string };

@@ -658,12 +658,14 @@ describe("createCommandEnvironment project boundaries", () => {
 
     await env.sessions.followup({ sessionId: "session-1", prompt: "continue" });
 
-    expect(inserted).toEqual([
+    expect(inserted).toMatchObject([
       {
         id: "session-1",
         prompt: "continue",
         request_kind: "follow_up",
         question_response_json: null,
+        model: null,
+        params_json: {},
       },
     ]);
   });

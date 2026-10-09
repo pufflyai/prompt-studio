@@ -206,6 +206,10 @@ jobs:
       - name: Build database and API dependencies
         run: bun run build -- --scope pstdio-api --include-dependencies
 
+      # This job has its own fresh runner, so it must prepare PowerShell before API tests too.
+      - name: Warm up Windows PowerShell
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
+
       # PGlite setup dominates these suites on Windows. Run them on their own runner
       # so the platform checks do not wait for hundreds of database initializations.
       - name: Test database and API packages
