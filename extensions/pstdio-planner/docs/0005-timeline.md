@@ -1,6 +1,6 @@
 # Ticket timeline
 
-Open **Ticket timeline** in the project sidebar. The timeline is part of Planner and uses the same tickets, statuses, tags, and ticket form as the Tickets board.
+Open **Tickets** or **Ticket timeline** under **Project Planning** in the project sidebar. The timeline entry uses the timeline icon. Both views are part of Planner and use the same tickets, statuses, tags, and ticket form.
 
 Both boards use the shared Kanban card. Timeline cards keep their full titles. Tickets waiting for unfinished prerequisites appear slightly dimmed. The timeline shows **Blocked** only when prerequisites are complete and the ticket has a blocked status or another recorded blocker.
 

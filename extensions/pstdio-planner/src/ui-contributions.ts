@@ -170,7 +170,7 @@ export const createPlannerUi = (baseUrl: string) => {
         slot: "content",
         label: l10n("kanbanRenderers.tickets.title", "Tickets"),
         icon: "square-kanban",
-        group: "",
+        group: "Project Planning",
         action: { kind: "page", page: ticketsPage.ref },
       }),
     ],

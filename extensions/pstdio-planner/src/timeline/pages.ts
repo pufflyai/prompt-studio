@@ -1,4 +1,3 @@
-// Place the execution plan webview on its own project page with a Tools navigation row.
 import {
   defineNavigationItem,
   definePage,
@@ -11,6 +10,7 @@ import {
 export const timelineView = defineView({
   id: "timeline",
   title: l10n("timeline.view.title", "Timeline"),
+  icon: "chart-no-axes-gantt",
   body: {
     kind: "webview",
     entry: packageAsset("./view/entry.tsx", import.meta.url),
@@ -22,7 +22,7 @@ export const timelinePage = definePage({
   id: "timeline",
   title: l10n("timeline.page.title", "Ticket timeline"),
   path: "ticket-timeline",
-  icon: "list-ordered",
+  icon: "chart-no-axes-gantt",
   mode: workbenchModes.project,
   main: { kind: "view", view: timelineView.ref, cardinality: "one" },
   slots: [],
@@ -32,8 +32,8 @@ export const timelineNavigation = defineNavigationItem({
   id: "timeline",
   owner: workbenchModes.project,
   slot: "content",
-  group: "Tools",
+  group: "Project Planning",
   label: l10n("timeline.page.title", "Ticket timeline"),
-  icon: "list-ordered",
+  icon: "chart-no-axes-gantt",
   action: { kind: "page", page: timelinePage.ref },
 });

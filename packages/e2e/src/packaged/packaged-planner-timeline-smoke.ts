@@ -19,6 +19,14 @@ export async function expectPackagedPlannerTimeline(input: {
     (view) => view.extensionId === "pstdio.pstdio-planner" && view.localId === "timeline",
   );
   expect(view?.body.kind).toBe("webview");
+  const planningNavigation = metadata.navigationItems.filter((item) => {
+    if (item.extensionId !== "pstdio.pstdio-planner" || item.action.kind !== "page") return false;
+    return ["tickets", "timeline"].includes(item.action.page.id);
+  });
+  expect(planningNavigation).toHaveLength(2);
+  expect(planningNavigation[0]?.group).toBeTruthy();
+  expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
+  expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = async (command: string, params: unknown) => {
     const response = await fetch(
       `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
