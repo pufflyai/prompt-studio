@@ -1,6 +1,5 @@
 import type {
   HarnessContext,
-  HarnessDetectionResult,
   HarnessExit,
   HarnessProvider,
   HarnessResumeInput,
@@ -9,6 +8,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { opencodeCommandState, prepareOpencodeOperation } from "./commands";
+import { detectOpencode } from "./detection";
 import { recoverOpencodeMessages } from "./history-reconciliation";
 import { parseOpencodeModels } from "./models";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
@@ -18,17 +18,6 @@ import { createOpencodeService } from "./opencode-service";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 
 // --- Detection ---
-
-const detectOpencode = async (ctx: HarnessContext): Promise<HarnessDetectionResult> => {
-  try {
-    const result = await ctx.process.run({ command: ["opencode", "--version"] });
-    if (result.exitCode !== 0) return { available: false };
-    return { available: true, version: result.stdout.trim() };
-  } catch {
-    // A missing binary makes process.run throw rather than exit non-zero.
-    return { available: false };
-  }
-};
 
 const readOpencodeModels = async (ctx: HarnessContext) => {
   try {

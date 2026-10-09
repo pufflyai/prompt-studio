@@ -64,10 +64,23 @@ describe("resolveProcessCommand", () => {
     });
   });
 
-  test("leaves path commands unchanged", () => {
-    const resolved = resolveProcessCommand([".\\tools\\codex.cmd", "--version"], () => "ignored");
+  test("leaves Unix path commands unchanged", () => {
+    const resolved = resolveProcessCommand(["./tools/codex", "--version"], () => "ignored", "linux");
 
-    expect(resolved).toEqual({ argv: [".\\tools\\codex.cmd", "--version"] });
+    expect(resolved).toEqual({ argv: ["./tools/codex", "--version"] });
+  });
+
+  test("wraps an explicit Windows command path relative to the child directory", () => {
+    const resolved = resolveProcessCommand(
+      [".\\tools\\codex.cmd", "--version"],
+      () => null,
+      "win32",
+      "cmd.exe",
+      () => false,
+      "C:\\project",
+    );
+    expect(resolved.windowsVerbatimArguments).toBe(true);
+    expect(resolved.argv[4]).toContain(escapeForCmd("C:\\project\\tools\\codex.cmd", false));
   });
 
   test("keeps the original command when resolution fails", () => {

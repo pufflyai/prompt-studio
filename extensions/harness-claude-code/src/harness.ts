@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { claudeCommandState, prepareClaudeOperation } from "./commands";
+import { detectClaude } from "./detection";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
@@ -60,18 +61,6 @@ export const parseTranscript = (content: string): ClaudeCodeTranscriptEntry[] =>
   }
 
   return entries;
-};
-
-const detectClaude = async (ctx: HarnessContext) => {
-  try {
-    // CLAUDECODE is cleared so a nested session is not mistaken for the CLI itself.
-    const result = await ctx.process.run({ command: ["claude", "--version"], env: { CLAUDECODE: "" } });
-    if (result.exitCode !== 0) return { available: false };
-    return { available: true, version: result.stdout.trim() };
-  } catch {
-    // A missing binary makes process.run throw rather than exit non-zero.
-    return { available: false };
-  }
 };
 
 const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({

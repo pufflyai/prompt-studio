@@ -11,7 +11,7 @@ describe("resolvePackagedRuntimeTestArgs", () => {
     expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-x64" })).toEqual([
       "test",
       "src/packaged/runtime-lifecycle.test.ts",
-      "src/packaged/opencode-npm-detection.test.ts",
+      "src/packaged/harness-npm-detection.test.ts",
       "src/packaged/extension-browser-install.test.ts",
       "--timeout",
       "30000",
@@ -20,7 +20,7 @@ describe("resolvePackagedRuntimeTestArgs", () => {
     expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-arm64" })).toEqual([
       "test",
       "src/packaged/runtime-lifecycle.test.ts",
-      "src/packaged/opencode-npm-detection.test.ts",
+      "src/packaged/harness-npm-detection.test.ts",
       "--timeout",
       "30000",
       "--silent",
