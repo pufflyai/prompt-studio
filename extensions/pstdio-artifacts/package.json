@@ -1,6 +1,6 @@
 {
   "name": "pstdio-artifacts",
-  "version": "0.40.0",
+  "version": "0.41.0",
   "displayName": "Artifacts",
   "description": "Publish interactive HTML pages and browse their saved revisions.",
   "publisher": "pstdio",
@@ -11,9 +11,7 @@
   "pstdio": {
     "scope": "user"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "type": "module",
   "scripts": {
     "test": "bun test",

@@ -26,8 +26,8 @@ describe("resolveProcessCommand", () => {
     // The whole command line is wrapped for `cmd /c`.
     expect(line.startsWith('"')).toBe(true);
     expect(line.endsWith('"')).toBe(true);
-    // npm shim -> double meta-escaped; no bare metacharacter reaches cmd.
-    expect(line).toContain(escapeForCmd(shim, true));
+    // The executable is parsed once; arguments pass through the npm shim too.
+    expect(line).toContain(escapeForCmd(shim, false));
     expect(line).toContain(escapeForCmd("a & b", true));
     expect(line).toContain(escapeForCmd('q"x', true));
     expect(line).not.toMatch(/[^^]&(?!amp)/); // no unescaped `&`
@@ -46,7 +46,7 @@ describe("resolveProcessCommand", () => {
 
     expect(resolved.argv.slice(0, 4)).toEqual(["cmd.exe", "/d", "/s", "/c"]);
     expect(resolved.windowsVerbatimArguments).toBe(true);
-    expect(resolved.argv[4]).toContain(escapeForCmd(cmd, true));
+    expect(resolved.argv[4]).toContain(escapeForCmd(cmd, false));
   });
 
   test("runs a lone Windows .ps1 shim through powershell", () => {
@@ -60,14 +60,36 @@ describe("resolveProcessCommand", () => {
     );
 
     expect(resolved).toEqual({
-      argv: ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "--version"],
+      argv: [
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ps1,
+        "--version",
+      ],
     });
   });
 
-  test("leaves path commands unchanged", () => {
-    const resolved = resolveProcessCommand([".\\tools\\codex.cmd", "--version"], () => "ignored");
+  test("leaves Unix path commands unchanged", () => {
+    const resolved = resolveProcessCommand(["./tools/codex", "--version"], () => "ignored", "linux");
 
-    expect(resolved).toEqual({ argv: [".\\tools\\codex.cmd", "--version"] });
+    expect(resolved).toEqual({ argv: ["./tools/codex", "--version"] });
+  });
+
+  test("wraps an explicit Windows command path relative to the child directory", () => {
+    const resolved = resolveProcessCommand(
+      [".\\tools\\codex.cmd", "--version"],
+      () => null,
+      "win32",
+      "cmd.exe",
+      () => false,
+      "C:\\project",
+    );
+    expect(resolved.windowsVerbatimArguments).toBe(true);
+    expect(resolved.argv[4]).toContain(escapeForCmd("C:\\project\\tools\\codex.cmd", false));
   });
 
   test("keeps the original command when resolution fails", () => {

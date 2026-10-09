@@ -1,5 +1,14 @@
 # pstdio-artifacts
 
+## 0.41.0
+
+_2026-10-08_
+
+### Patch Changes
+
+- f130437: Rewrite the extension READMEs and Planner docs for the new Docs tab on prompt.studio.
+- 242bc5c: Add configurable UX refinement prototypes and publish optional Artifacts with header search.
+
 ## 0.40.0
 
 _2026-10-02_

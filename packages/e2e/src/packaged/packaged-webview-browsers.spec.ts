@@ -17,6 +17,7 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
+import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -52,6 +53,10 @@ test.beforeAll(() => {
 test.describe("packaged extension webviews", () => {
   for (const browserCase of webviewBrowsers) {
     const browserAvailable = existsSync(browserCase.type.executablePath());
+    const defaultExtensions = e2eExtensions(
+      "workbench-fixture",
+      ...(browserCase.name === "Chromium" ? ["pstdio-artifacts"] : []),
+    );
     const browserTest = browserAvailable || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;
 
     browserTest(
@@ -64,7 +69,7 @@ test.describe("packaged extension webviews", () => {
         try {
           expect(browserAvailable).toBe(true);
           const started = await startPackagedServe(tempRoot, {
-            PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+            PSTDIO_DEFAULT_EXTENSIONS: defaultExtensions,
             PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
           });
           child = started.child;
@@ -183,6 +188,13 @@ test.describe("packaged extension webviews", () => {
               runtimeAuthorization(started.descriptor),
             );
             await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
+            await verifyPackagedCollectionBreadcrumb(
+              page,
+              started.baseUrl,
+              project.id,
+              projectFolder,
+              runtimeAuthorization(started.descriptor),
+            );
           }
 
           expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);

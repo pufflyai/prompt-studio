@@ -1,7 +1,7 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
+import { useVirtualizer } from "@/utils/use-virtualizer";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListSection } from "./tree-list.types";
 import { TreeListBackground } from "./tree-list-background";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
@@ -48,8 +48,8 @@ interface TreeListProps {
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
   /** Decide whether a proposed customization move is valid. */
   canMove?: TreeListMovePolicy;
-  /** Move a node onto another node, or onto the tree root when the target is omitted. */
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  /** Move a node before/after a leaf, into a container, or into the background when the target is omitted. */
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
   // When set, right-clicking the empty back area of the tree (everything not
   // covered by an item row) opens this menu. Item rows keep their own
   // right-click behaviour — the menu lives on a layer behind them.
@@ -72,7 +72,7 @@ interface TreeListRowProps {
   onToggleSection?: (sectionId: string) => void;
   onToggleNode?: (nodeId: string) => void;
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
 }
 
 const TreeListRow = (props: TreeListRowProps) => {
@@ -312,6 +312,7 @@ export const TreeList = (props: TreeListProps) => {
       onSectionContextMenu={props.onSectionContextMenu}
       onReorderSections={props.onReorderSections}
       onReorderNodes={props.onReorderNodes}
+      onMoveNode={props.onMoveNode}
       canMove={props.canMove}
     />
   ) : (

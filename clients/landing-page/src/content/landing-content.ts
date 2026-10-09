@@ -33,7 +33,7 @@ export interface ViewMeta {
 }
 
 export const VIEW_META: Record<SidebarView, ViewMeta> = {
-  start: { label: "Start Here", icon: Sparkles },
+  start: { label: "Home", icon: Sparkles },
   "what-is-prompt-studio": { label: "What is Prompt Studio", icon: BadgeCheck },
   examples: { label: "Examples", icon: PanelsTopLeft },
   features: { label: "Features", icon: LayoutGrid },

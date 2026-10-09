@@ -87,12 +87,12 @@ Release article views show an alpha notice before the body: Prompt Studio is sti
 
 Give each post one category: `release` for shipped versions and their changes, `thoughts` for ideas and personal essays, or `tool showcase` for a specific tool and how people and agents use it. The schema rejects missing or unknown categories. The list and article header show the category, and article metadata carries it as `articleSection`.
 
-Every post has its own paired light and dark banners. Generate a distinct 4:1 piece with the repo-local Shape Art extension: `pst shape-art piece generate --id blog-<post-slug> --background ink --width 1600 --height 400`. Follow the [Shape Art skill](../../.pstdio/extensions/shape-art/skills/shape-art/SKILL.md). Allow all six shape kinds, including yellow commands and orange automation shapes. Save a second recipe with the same seed and composition on a paper background, using an `-light` suffix. Keep each PNG and its editable JSON recipe together in `design/art/`.
+Every post has its own paired light and dark banners. Generate a distinct 4:1 piece with the repo-local Shape Art extension: `pst shape-art piece generate --id blog-<post-slug> --background ink --width 1600 --height 400`. Follow the [Shape Art skill](../../.pstdio/extensions/shape-art/skills/shape-art/SKILL.md). Allow all six shape kinds, including yellow commands and orange automation shapes. Save a second recipe with the same seed and composition on a paper background, using an `-light` suffix. Pieces in `design/art/` are ignored drafts. Copy each PNG and its editable JSON recipe together into the blog's `images/` folder before using them in a new post. Existing tracked banners can keep their current paths.
 
 ```yaml
 image:
-  light: ../../../../../design/art/blog-welcome-to-prompt-studio-light.png
-  dark: ../../../../../design/art/blog-welcome-to-prompt-studio.png
+  light: ./images/blog-my-post-light.png
+  dark: ./images/blog-my-post.png
 ```
 
 Astro checks both source paths and optimizes the banners. The site shows the variant for its active theme; link previews use the light variant. Keep the original proportions and opaque backgrounds. Art is decorative; screenshots and GIFs in the body explain the actual product.
@@ -102,6 +102,8 @@ The blog list highlights the newest post with a wide banner and larger title. Ol
 Write `published` as an unquoted date or UTC timestamp. Use a release's actual publication timestamp for release posts, so posts about releases published on the same day sort correctly. Check published GitHub releases; exclude drafts. Link each release post to its release notes and relevant changelogs at that release tag. Describe selected changes in terms of what people can do, and distinguish platform features from extension workflows.
 
 Keep an original post's publication date when adding images or correcting it. Reuse relevant documentation screenshots. Label a recent capture when it illustrates an older release, and do not imply that a pictured control was introduced in that release unless the changelog confirms it.
+
+Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENTS.md) for concise feature ordering and recording checks. Markdown GIFs named `-light.gif` and `-dark.gif` use the page's active theme. Include both with matching alt text and one caption; the website hides the inactive variant.
 
 ## Guides
 
@@ -307,6 +309,11 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0057 — Browser sessions in per-origin storage](../adrs/0057-browser-sessions-in-per-origin-storage.md)
 
 - [0061 — Project resource anchors](../adrs/0061-project-resource-anchors.md)
+
+- [0062 — Temporary Codex history identity migration](../adrs/0062-temporary-codex-history-identity-migration.md)
+- [0063 — Temporary Claude literal slash input](../adrs/0063-temporary-claude-literal-slash-input.md)
+- [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
+- [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
 
 ## Lessons learned
 

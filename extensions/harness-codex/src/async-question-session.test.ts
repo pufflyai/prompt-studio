@@ -2,10 +2,21 @@ import { afterEach, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import type { JsonPatch, SessionMessage, ToolPart } from "@pstdio/sdk/extensions";
-import { resumeCodexSession, type SpawnDeps, startCodexSession } from "./spawn";
+import type { SpawnDeps } from "./codex-process";
+import { createCodexRuntime } from "./codex-runtime";
+import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
+
+const runtimes: ReturnType<typeof createCodexRuntime>[] = [];
+const startCodexSession = (input: StartSpawnInput, deps: SpawnDeps) => {
+  const runtime = createCodexRuntime(deps);
+  runtimes.push(runtime);
+  return runtime.run(input);
+};
+const resumeCodexSession = (input: ResumeSpawnInput, deps: SpawnDeps) => startCodexSession(input, deps);
 
 const children: ReturnType<typeof spawn>[] = [];
-afterEach(() => {
+afterEach(async () => {
+  await Promise.all(runtimes.splice(0).map((runtime) => runtime.dispose()));
   for (const child of children.splice(0)) child.kill();
 });
 const deps: SpawnDeps = {

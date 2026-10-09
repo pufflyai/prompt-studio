@@ -109,8 +109,11 @@ const dispatchSessionStreamEvent = (event: string, data: unknown, handlers: Sess
   }
 };
 
-export const createSessionClient = (request: RequestFn, clientOptions: ClientOptions): SessionClient => {
-  const streams = createSessionStreamTransport(request, clientOptions);
+export const createSessionClient = (
+  request: RequestFn,
+  clientOptions: ClientOptions,
+  streams = createSessionStreamTransport(request, clientOptions),
+): SessionClient => {
   return {
     getDraftHarnessCommands: (input, signal) =>
       request("/v1/sessions/harness-command-state", { method: "POST", body: input, signal }),

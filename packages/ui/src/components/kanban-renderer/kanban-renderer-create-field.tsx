@@ -3,7 +3,7 @@ import { Paperclip } from "lucide-react";
 import { useRef } from "react";
 import { AttachmentChip } from "@/components/overlays/attachment-chip";
 import { SelectionInput } from "@/components/param-editor/inputs/selection-input";
-import { LazyMarkdownEditor } from "@/components/rich-text";
+import { LazyMarkdownEditor } from "@/components/rich-text/lazy-markdown-editor";
 import type { KanbanRendererCreateField } from "./types";
 
 // The editor and its syntax highlighting are heavy and only needed once a

@@ -46,6 +46,7 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   automation: command.automation,
+  resourceMutation: command.resourceMutation,
   params: command.params as WorkbenchExtensionMetadata["commands"][number]["params"],
 });
 
@@ -170,6 +171,7 @@ export const createWorkbenchExtensionMetadata = (
     label: record.contribution.label,
     icon: record.contribution.icon,
     resolveCommand: record.resolveCommandId,
+    resolveManyCommand: record.resolveManyCommandId,
     menuSlots: Object.entries(record.contribution.menuSlots ?? {}).map(([id, slot]) => ({
       id,
       placement: slot.placement,

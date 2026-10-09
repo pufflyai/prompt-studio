@@ -1,6 +1,13 @@
 import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
+import { ticketDocumentDeclaration } from "./document-selection";
 
 const plannerPage = (id: string) => ({ kind: "page" as const, id, extensionId: "pstdio.pstdio-planner" });
+export const ticketDocumentPage = {
+  id: "ticket",
+  ref: plannerPage("ticket"),
+  path: "ticket",
+  document: ticketDocumentDeclaration,
+};
 export const ticketsPageTarget = { kind: "page", page: plannerPage("tickets") } satisfies NavigationTargetPage;
 
 // Planner owns this resource hierarchy and chooses its pages. The host must not

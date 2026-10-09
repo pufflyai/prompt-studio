@@ -1,6 +1,6 @@
 ---
 title: "Prompt Studio 0.38"
-description: Choose where a tool runs, upgrade or reload your extensions, and keep agent conversations going. Highlights from the September 29 releases, 0.37 and 0.38.
+description: "Choose an agent's workspace, reload an edited tool, and retry failed messages. Changes from 0.37 and 0.38."
 published: 2026-09-29T21:15:47Z
 author: aurelien-franky
 category: release
@@ -9,82 +9,57 @@ image:
   dark: ../../../../../design/art/blog-prompt-studio-0-38.png
 ---
 
-Building a useful tool is a loop: ask for it, try it, change it, and run it again. The two releases on September 29 make that loop easier to manage. This post brings the changes in **0.37 and 0.38** together under the latest version, **0.38**.
+Prompt Studio 0.38 adds workspace choices to extension commands and opens new terminals in the project folder when no workspace is selected. This post also covers **0.37**: extension upgrade controls, conversation recovery, and signed Windows installers.
 
-0.38 adds a shared workspace input to extension commands, so you can choose the environment before work starts. Earlier that day, 0.37 added extension update and repair controls, conversation fixes, and signed Windows installers.
+## Extension updates
 
-## Choose the environment before starting
-
-Before this release, an extension needed its own way to collect workspace choices. Now its command can declare a `workspace` parameter. Prompt Studio builds the input from the available providers, using the same choices and fields as **Create workspace**.
-
-A workspace is the environment where work runs. A separate Git worktree, for example, lets an agent make changes on its own branch while you keep working in the project folder. The available types come from your installed workspace providers.
-
-![Animation opening a Planner Run attempt form and selecting feature/reading-list as its Git worktree base branch](../../../../../documentation/images/workspace-command-choices.gif)
-
-*Recorded in 0.39 with a sample Planner ticket. The shared workspace parameter ships in 0.38; Planner's Run attempt choices are restored in 0.39. This recording shows the resulting form and stops before running an agent.*
-
-For a tool author, this means less form code and one place for provider-specific inputs. For the person using the tool, it means choosing the environment before the command starts, rather than discovering afterward that it used the wrong one.
-
-The parameter can also be supplied as structured JSON through the CLI. [CLI-ready actions](/docs/guides/extensions/cli-ready-actions/#use-typed-inputs-and-readable-results) explains how an agent passes the same workspace choice.
-
-## Load the next version of your tool
-
-The 0.37 update to extension settings distinguishes two kinds of update. An installed tool with a newer release offers **Upgrade**; **Upgrade all** updates all installed extensions that have newer versions. A local tool whose source has changed offers **Reload**, which validates and loads that project's files.
-
-You can also drop an extension folder into settings. Prompt Studio copies it into the project's `.pstdio/extensions` folder and loads it there. The project gets its own copy of the tool.
+From 0.37, **Upgrade** installs a newer release and **Upgrade all** updates every eligible extension. **Reload** validates and loads edited local source for the current project.
 
 ![Animation reloading changed local extension source in settings and opening Contributions to see its updated command title](../../../../../documentation/images/reload-local-extension.gif)
 
-*Recorded in 0.39 using a disposable local extension. Its source was edited before recording. Reload adopts the change; the Contributions tab shows the updated command. These update and repair controls ship in 0.37.*
+*Recorded in 0.39 with a sample local extension edited before capture. Reload and these repair controls shipped in 0.37.*
 
-When a local tool fails to load, **Reload** reports the actual validation error for that project's source. Failed extensions also offer **Copy error**, and **Upgrade** when available. This gives you something concrete to pass to the agent fixing the tool.
+Drop an extension folder into settings to copy it into the project's `.pstdio/extensions` folder. If a local tool fails to load, use **Copy error** to give the agent the validation error, fix the source, and reload.
 
-The repair loop is concrete: read the error, ask the agent to fix that source, and reload the result. See [extension installation and loading](/docs/references/extensions/manifest-and-installation/) for the rules.
+See [extension installation and loading](/docs/references/extensions/manifest-and-installation/).
 
-## Keep a conversation going after a problem
+## Workspace choices
 
-The conversation improvements in 0.37 put chat problems in the conversation, where the affected work is visible. A message that could not be sent remains as **Not sent**, and temporary failures offer **Retry**. You can dismiss a problem you no longer need to see. The first message of a new session no longer blanks for a few frames.
+In 0.38, extension commands can declare a `workspace` parameter. The form uses installed providers to offer the same types and fields as **Create workspace**.
 
-More importantly, a saved conversation and an agent's history can disagree without making the session read-only. Reconciliation keeps the saved conversation, so you can continue instead of hitting **Conversation cannot continue**.
+For example, choose a Git worktree and its base branch before an agent starts, so its changes stay on a separate branch.
 
-There are fixes for individual harnesses too:
+![Animation opening a Planner Run attempt form and selecting feature/reading-list as its Git worktree base branch](../../../../../documentation/images/workspace-command-choices.gif)
 
-- Codex conversations can continue after code-mode commands.
-- An OpenCode question can be answered even when an earlier turn failed.
-- Thinking-level selection works again for Claude Code, Codex, and OpenCode. Its icons match the Planner priority colors, with a flame for **Max**.
+*Recorded in 0.39 with a sample Planner ticket; no agent is run. The shared input shipped in 0.38, and Planner's Run attempt choices were restored in 0.39.*
 
-## Install on Windows, use the CLI anywhere
+Agents can pass the same workspace choice as structured JSON through [CLI-ready actions](/docs/guides/extensions/cli-ready-actions/#use-typed-inputs-and-readable-results), without each tool building a separate workspace form.
 
-Since 0.37, Windows users get signed x64 desktop installers and automatic updates. Desktop installations on macOS, Windows, and Linux make the bundled `pst` command available too.
+## Agent conversations
 
-The command line is useful beyond setup. Agents can invoke an extension's declared operations through the same handler its interface uses. If you are building a tool, ask for [CLI-ready actions](/docs/guides/extensions/cli-ready-actions/) alongside its page.
+The 0.37 changes keep unsent messages visible as **Not sent** and offer **Retry** for temporary failures. Saved and agent history can be reconciled without making the conversation read-only.
 
-## Smaller fixes and extension changes
+- Codex conversations continue after code-mode commands.
+- OpenCode questions can be answered after an earlier turn fails.
+- Thinking-level selection works again for Claude Code, Codex, and OpenCode.
 
-- Project navigation stays mounted while selection changes, and settings entries appear as their data arrives.
-- Extensions can declare clipboard writes, and tool authors get a shared copy button. The bridge permission makes the intended capability explicit.
-- Edited numeric controls save on blur, and **Apply** stays clear of the side-panel button.
-- Notes shows its title without an extra navigation label.
-- Extension API `alpha.14` requires explicit navigation and resource removal. Use compatible extension builds when upgrading this host release.
+## Windows and terminals
 
-The upgrade also repairs duplicate folder registrations. Each folder belongs to one workspace; extra workspaces and older project entries sharing a newer project's home folder are removed. Review this migration in the release notes if your setup contains duplicate registrations.
+0.37 adds signed Windows x64 desktop installers and automatic updates. Desktop installations on macOS, Windows, and Linux also provide the bundled `pst` command, including [CLI-ready extension actions](/docs/guides/extensions/cli-ready-actions/).
 
-## Open a terminal in the project you selected
+In 0.38, a new terminal starts in the project root when no workspace is selected, saving a manual directory change. With a workspace selected, it starts there.
 
-With no workspace selected, a new terminal now starts in the project root. It previously started in the app's working folder.
+## Other changes
 
-That removes a common first step: opening a terminal, checking the directory, and changing into the project before doing any work. When a workspace is selected, the terminal still uses that workspace.
+- Extensions with the same name in different folders load their own views, so a test copy does not conflict with another project's tool.
+- Planner badges show workspace names, including the project folder name instead of **default**.
+- Clipboard writes and a shared copy button are available to extensions; edited numeric controls save on blur.
+- Extension API **alpha.14** requires explicit navigation and resource removal. Use compatible extension builds.
+- Upgrading removes duplicate workspace folder registrations and older projects sharing a newer project's home folder, allowing sessions to start again. Check the release notes if your setup has duplicate registrations.
+- Planner owns automation; its separate Automation extension is removed from the Marketplace.
 
-## Keep same-name tools separate
+## Release notes
 
-Two folders can contain extensions with the same name. Their views could fail to load because their built assets collided. The assets are now scoped to the installed source, so one folder's build does not stand in for another's.
-
-This is useful when you keep a tool in more than one project or try a separate copy while changing it.
-
-## Other 0.38 changes
-
-- Planner workspace badges show the workspace's name. The project-folder workspace reads as the folder name, rather than **default**.
-- Remove the separate Planner Automation extension from the Marketplace. Planner owns that workflow.
-- Show the Windows download on the website.
-
-These highlights come from both releases’ consumed changesets. See the [0.38 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.38.0), tagged [0.38 core changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.38.0/packages/pstdio/CHANGELOG.md#0380), and [Planner changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.38.0/extensions/pstdio-planner/CHANGELOG.md#0380). The earlier [0.37 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.37.0), [core changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/packages/pstdio/CHANGELOG.md#0370), [UI changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/packages/ui/CHANGELOG.md#0370), and [Codex](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/extensions/harness-codex/CHANGELOG.md#0370) and [OpenCode](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/extensions/harness-open-code/CHANGELOG.md#0370) changelogs cover the update and conversation work. Browse [all changes from 0.36.1 to 0.38](https://github.com/pufflyai/prompt-studio/compare/pstdio@0.36.1...pstdio@0.38.0).
+- **0.38:** [0.38 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.38.0), [0.38 core changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.38.0/packages/pstdio/CHANGELOG.md#0380), [Planner changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.38.0/extensions/pstdio-planner/CHANGELOG.md#0380).
+- **0.37:** [0.37 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.37.0), [core changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/packages/pstdio/CHANGELOG.md#0370), [UI changelog](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/packages/ui/CHANGELOG.md#0370), [Codex](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/extensions/harness-codex/CHANGELOG.md#0370), [OpenCode](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.37.0/extensions/harness-open-code/CHANGELOG.md#0370).
+- [all changes from 0.36.1 to 0.38](https://github.com/pufflyai/prompt-studio/compare/pstdio@0.36.1...pstdio@0.38.0).

@@ -1,12 +1,12 @@
 import { Box, Link, Text } from "@chakra-ui/react";
 import { ListRow, ScrollArea } from "@pstdio/ui";
 import { ArrowUpRight, CircleDot, MessagesSquare } from "lucide-react";
+import { Suspense } from "react";
 import { SIDEBAR_VIEWS, SITE_LINKS, VIEW_META } from "../../content/landing-content";
 import type { LandingPage } from "../../content/landing-pages";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { BlogNavigation, DocsNavigation } from "../../services/landing-modules";
 import { landingPathForView, sectionForPage } from "../../services/landing-route";
-import { BlogSidebar } from "../blog/blog-sidebar";
-import { DocsSidebar } from "../docs/docs-sidebar";
 
 const EXTERNAL_LINKS = [
   { label: "Issues", icon: CircleDot, href: SITE_LINKS.issues },
@@ -45,11 +45,13 @@ export const ResourceSidebar = (props: ResourceSidebarProps) => {
 
   return (
     <Box as="nav" aria-label="Sections" css={styles.sidebar}>
-      <ScrollArea css={styles.sidebarScroll}>
+      <ScrollArea css={styles.sidebarScroll} showVerticalScrollbar={false}>
         <Box css={styles.sidebarRows}>
           {section === "studio" && <StudioSidebar page={page} />}
-          {section === "docs" && <DocsSidebar page={page} pages={pages} onNavigate={onNavigate} />}
-          {section === "blog" && <BlogSidebar page={page} pages={pages} />}
+          <Suspense fallback={null}>
+            {section === "docs" && <DocsNavigation.Component page={page} pages={pages} onNavigate={onNavigate} />}
+            {section === "blog" && <BlogNavigation.Component page={page} pages={pages} />}
+          </Suspense>
         </Box>
       </ScrollArea>
       <Box css={styles.sidebarFooter}>

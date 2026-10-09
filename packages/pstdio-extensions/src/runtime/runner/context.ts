@@ -198,6 +198,7 @@ export const createContextFactory = (
     );
     return {
       ...base,
+      stream: { write: async () => {} },
       commandId,
       invocationId,
       signal: scope.signal,

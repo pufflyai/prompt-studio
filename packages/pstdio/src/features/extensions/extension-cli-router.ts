@@ -5,10 +5,14 @@ import type {
   ListExtensionCommandsResponse,
   LocalizableString,
 } from "@pstdio/sdk/api";
+import type { ExtensionClient } from "@pstdio/sdk/client";
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
+import { describeParamValue, formatParamName, parseExtensionCommandArgs } from "./extension-cli-args";
+import { printExtensionCommandStream } from "./extension-cli-stream";
 
-type ParamDescriptor = NonNullable<ExtensionCommandRecord["params"]>[string];
+export { parseExtensionCommandArgs } from "./extension-cli-args";
+
 type TranslationRecord = NonNullable<ListExtensionCommandsResponse["translations"]>[number];
 
 export type ExtensionCommandCollision = {
@@ -23,6 +27,7 @@ export type ExtensionCommandTable = {
 };
 
 type DispatchDeps = {
+  stream: ExtensionClient["stream"];
   cwd: () => string;
   execute: (commandId: string, request: CommandExecuteRequest) => Promise<CommandExecuteResponse>;
   listCommands: (projectId: string) => Promise<ListExtensionCommandsResponse>;
@@ -84,44 +89,6 @@ const commandCliPaths = (command: ExtensionCommandRecord) => {
   return Array.from(new Set(paths));
 };
 
-const formatParamName = (name: string) => `--${name.replace(/[A-Z]/g, (value) => `-${value.toLowerCase()}`)}`;
-
-const normalizeParamName = (name: string) =>
-  name.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
-
-const JSON_PARAM_TYPES = new Set(["json", "harness", "resource", "workspace"]);
-
-const describeParamValue = (param: ParamDescriptor) => {
-  if ((param.type === "select" || param.type === "multi-select") && param.options && !Array.isArray(param.options))
-    return " <value> (command-backed)";
-  if (param.type === "boolean") return "";
-  if (param.type === "number") return " <number>";
-  if (param.type === "list") return " <value...>";
-  if (JSON_PARAM_TYPES.has(param.type)) return " <json>";
-  return " <value>";
-};
-
-const parseJsonParam = (name: string, value: string) => {
-  try {
-    return JSON.parse(value);
-  } catch {
-    throw new Error(`${formatParamName(name)} expects a JSON value (got ${value})`);
-  }
-};
-
-const coerceParam = (name: string, descriptor: ParamDescriptor | undefined, value: string | boolean) => {
-  if (descriptor?.type === "number") {
-    const number = typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
-    if (Number.isNaN(number)) throw new Error(`${formatParamName(name)} expects a number (got ${value})`);
-    return number;
-  }
-  if (descriptor?.type === "boolean") return value === true || value === "true";
-  if (descriptor && JSON_PARAM_TYPES.has(descriptor.type) && typeof value === "string") {
-    return parseJsonParam(name, value);
-  }
-  return value;
-};
-
 const firstOptionIndex = (args: string[]) => {
   const index = args.findIndex((arg) => arg.startsWith("-"));
   return index === -1 ? args.length : index;
@@ -172,6 +139,7 @@ const outputForResponse = (response: CommandExecuteResponse, json: boolean) => {
 const defaultDeps = (): DispatchDeps => ({
   cwd: () => process.cwd(),
   execute: (commandId, request) => apiClient().extensions.execute(commandId, request),
+  stream: (...args) => apiClient().extensions.stream(...args),
   listCommands: (projectId) => apiClient().extensions.listCommands(projectId),
   log: (message) => console.log(message),
   error: (message) => console.error(message),
@@ -254,6 +222,7 @@ export const renderCommandHelp = (command: ExtensionCommandRecord) => {
     lines.push("", "Aliases:", ...command.cliAliases.map((alias) => `  ${alias}`));
   }
 
+  lines.push("", "  --stream  Stream command chunks as NDJSON");
   const params = Object.entries(command.params ?? {});
   if (params.length > 0) {
     lines.push("", "Options:");
@@ -283,74 +252,6 @@ const paramsWithSessionContext = (command: ExtensionCommandRecord, params: Recor
   if (!command.params?.sessionId || params.sessionId !== undefined) return params;
   const sessionId = process.env.PSTDIO_SESSION_ID?.trim();
   return sessionId ? { ...params, sessionId } : params;
-};
-
-type ExtensionCommandParamDescriptor = NonNullable<ExtensionCommandRecord["params"]>[string];
-
-const readBuiltinCliFlag = (arg: string | undefined) => {
-  if (arg === "--help" || arg === "-h") return "help";
-  if (arg === "--json") return "json";
-  return null;
-};
-
-const readParamFlag = (command: ExtensionCommandRecord, args: string[], index: number) => {
-  const arg = args[index];
-  if (!arg?.startsWith("--")) return null;
-
-  const [rawName, inlineValue] = arg.slice(2).split("=", 2);
-  const name = normalizeParamName(rawName ?? "");
-  const descriptor = command.params?.[name];
-  if (inlineValue !== undefined) return { descriptor, name, nextIndex: index, value: inlineValue };
-  const next = args[index + 1];
-  // A boolean flag takes the next word only when it is an explicit `true` or `false`.
-  const explicitBoolean = descriptor?.type === "boolean" && (next === "true" || next === "false");
-  if (explicitBoolean) return { descriptor, name, nextIndex: index + 1, value: next };
-  if (descriptor?.type === "boolean") return { descriptor, name, nextIndex: index, value: true };
-  if (descriptor && next === undefined) throw new Error(`${formatParamName(name)} expects a value`);
-  return { descriptor, name, nextIndex: index + 1, value: next };
-};
-
-const assignParamValue = (
-  params: Record<string, unknown>,
-  name: string,
-  descriptor: ExtensionCommandParamDescriptor | undefined,
-  value: unknown,
-) => {
-  if (descriptor?.type !== "list") {
-    const scalarValue = typeof value === "string" || typeof value === "boolean" ? value : true;
-    params[name] = coerceParam(name, descriptor, scalarValue);
-    return;
-  }
-
-  const existing = Array.isArray(params[name]) ? (params[name] as unknown[]) : [];
-  existing.push(typeof value === "string" ? value : String(value ?? ""));
-  params[name] = existing;
-};
-
-export const parseExtensionCommandArgs = (command: ExtensionCommandRecord, args: string[]) => {
-  const params: Record<string, unknown> = {};
-  let help = false;
-  let json = false;
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    const builtinFlag = readBuiltinCliFlag(arg);
-    if (builtinFlag === "help") {
-      help = true;
-      continue;
-    }
-    if (builtinFlag === "json") {
-      json = true;
-      continue;
-    }
-
-    const paramFlag = readParamFlag(command, args, index);
-    if (!paramFlag) continue;
-    assignParamValue(params, paramFlag.name, paramFlag.descriptor, paramFlag.value);
-    index = paramFlag.nextIndex;
-  }
-
-  return { help, json, params };
 };
 
 const hasExtensionCommandRoute = (parts: string[], table: ExtensionCommandTable) => {
@@ -408,6 +309,14 @@ export const dispatchExtensionCliCommand = async (input: {
     );
     return 1;
   }
+
+  if (parsed.stream)
+    return printExtensionCommandStream({
+      commandId: command.id,
+      request: { projectId, workspaceId, params, source: "cli" },
+      stream: deps.stream,
+      log: deps.log,
+    });
 
   const response = await deps.execute(command.id, {
     projectId,

@@ -20,6 +20,7 @@ import { kbdRecipe } from "./recipes/kbd";
 import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
 import { numberInputSlotRecipe } from "./recipes/number-input";
+import { paletteSlotRecipe } from "./recipes/palette";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
@@ -90,6 +91,7 @@ const config = defineConfig({
       popover: popoverRecipe,
       menu: menuSlotRecipe,
       numberInput: numberInputSlotRecipe,
+      palette: paletteSlotRecipe,
       editable: editableSlotRecipe,
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,

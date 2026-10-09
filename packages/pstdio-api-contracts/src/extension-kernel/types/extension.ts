@@ -23,7 +23,7 @@ import type {
 } from "./contributions";
 import type { EventRef } from "./events";
 import type { HarnessProvider } from "./harness";
-import type { JsonObject, MaybePromise, Struct } from "./json";
+import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
@@ -122,10 +122,16 @@ export interface WorkspaceProviderResult {
  * A command exposed by an extension. The `params` schema (typed via `params.*`) drives
  * the inferred shape of the second argument passed to `run`.
  */
+export interface CommandStreamDeclaration<TChunk extends JsonValue = JsonValue> {
+  readonly kind: "stream";
+  readonly chunk?: TChunk;
+}
+
 export interface CommandDefinition<
   TSchema extends ParamObjectSchema | undefined = ParamObjectSchema | undefined,
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
+  TChunk extends JsonValue = JsonValue,
 > extends ContributionDefinition<"command"> {
   readonly ref: CommandRef<SchemaParams<TSchema>, TResult>;
   title: Localizable<string>;
@@ -136,9 +142,14 @@ export interface CommandDefinition<
   cli?: true | CliContribution;
   /** Exposes this exact command and its params schema to scoped machine tokens. */
   automation?: true;
+  /** Preview a resource rename or removal in the dashboard while this command saves. Removal asks for confirmation. */
+  resourceMutation?:
+    | { kind: "rename"; resourceType: string; idParam: string; labelParam: string }
+    | { kind: "remove"; resourceType: string; idParam: string };
   /** Records CLI invocations of this command as mutations. */
   mutating?: true;
-  run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings>;
+  stream?: CommandStreamDeclaration<TChunk>;
+  run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings, TChunk>;
 }
 
 /**
@@ -251,7 +262,7 @@ export interface UiContributions {
 /** Behavioural surface: commands, middleware, hooks, schedules. */
 export interface BehaviourContributions {
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous command shapes
-  commands?: readonly CommandDefinition<any, any, any>[];
+  commands?: readonly CommandDefinition<any, any, any, any>[];
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous middleware shapes
   middlewares?: readonly MiddlewareDefinition<any, any>[];
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous hook shapes

@@ -1,5 +1,21 @@
 # pstdio-planner
 
+## 0.41.0
+
+_2026-10-08_
+
+### Patch Changes
+
+- f130437: Rewrite the extension READMEs and Planner docs for the new Docs tab on prompt.studio.
+- 242bc5c: Add configurable UX refinement prototypes and publish optional Artifacts with header search.
+- 42d62b5: Delete unused ticket workspaces, mark tickets done on merge, and replace workspace archiving with deletion.
+- 913c1c2: The tickets board loads archived tickets when a view's filter rule names the archive state, such as `archived is-none-of active`.
+- 7b1d280: Move the Planner's implementation settings onto its extension page with a dropdown for the default target branch, list Ticket tags above Danger zone, and return `[{ branch }]` rows from `pst pstdio-planner implementation-targets`.
+- c9d4d97: Show agent failures as errors, format ticket dates in the browser, use Project folder consistently, and remove the faulty Lab page.
+- 61bfc4f: Decide whether a ticket can start from its dependencies alone, and show why Run attempt cannot start a ticket in the dialog.
+- 558ea66: Restore session navigation resource menus and keyboard menu activation.
+- 0a558d6: Correct ticket archive filter labels and show both active and archived tickets when the filter is removed.
+
 ## 0.40.0
 
 _2026-10-02_

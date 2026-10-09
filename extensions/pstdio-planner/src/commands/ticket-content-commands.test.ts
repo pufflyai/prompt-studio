@@ -15,6 +15,26 @@ const seedContent = async (storage: ReturnType<typeof createMemoryStorage>, tick
 };
 
 describe("ticket body file-renderer commands", () => {
+  test("a missing or foreign document never falls back to the ticket body", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const other = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Other" } }));
+    const file = await createTicketFileCommand.run(
+      ...makeCommandArgs({ storage, params: { ticketId: other.id, name: "private.md" } }),
+    );
+    for (const documentId of ["deleted-file", file.id]) {
+      await expect(
+        getTicketContentCommand.run(
+          ...makeCommandArgs({
+            storage,
+            params: {},
+            overrides: { resource: { type: "ticket", id: ticket.id, metadata: { documentId } } },
+          }),
+        ),
+      ).rejects.toThrow("Document unavailable");
+    }
+  });
+
   test("get-ticket-content resolves the body from params.id", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));

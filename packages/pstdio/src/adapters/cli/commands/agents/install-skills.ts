@@ -1,7 +1,7 @@
 import type { Arguments, Argv } from "yargs";
 import { findProjectRoot, readConfig } from "@/features/config/config";
 import { getProjectFolder } from "@/features/projects/project-folder";
-import { installSkillsForAgent } from "@/features/skills/install-default-skills";
+import { installSkillsForAgent } from "@/features/skills/install-skills";
 
 export const command = "install-skills <agent-id>";
 export const describe = "Install skills for an agent";

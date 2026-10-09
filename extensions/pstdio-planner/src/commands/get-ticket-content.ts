@@ -27,6 +27,7 @@ export const getTicketContent = async (
       const { mimeType, dataUrl } = await attachmentDataUrl(ctx.storage, attachment);
       return { fileName: attachment.name, mimeType, dataUrl };
     }
+    throw new Error(`Document unavailable: ${documentId}`);
   }
 
   return { content: ticket.content ?? "", placeholder: BODY_PLACEHOLDER, revision: ticket.updatedAt };

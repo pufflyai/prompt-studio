@@ -85,7 +85,7 @@ export const createSmokeContext = async (input: { source: string; projectPath?: 
   try {
     const home = join(root, "home");
     const project = join(root, "project");
-    const staged = join(root, "inputs");
+    const staged = join(project, ".pstdio", "extension-test-inputs");
     const copy = (destination: string) =>
       cpSync(context, destination, {
         recursive: true,
@@ -99,9 +99,9 @@ export const createSmokeContext = async (input: { source: string; projectPath?: 
         },
       });
     mkdirSync(home);
-    copy(staged);
     if (input.projectPath) copy(project);
     else mkdirSync(project);
+    copy(staged);
     const env: NodeJS.ProcessEnv = Object.fromEntries(
       Object.entries(input.env ?? process.env).filter(([key]) => inheritedEnvironment.has(key.toUpperCase())),
     );

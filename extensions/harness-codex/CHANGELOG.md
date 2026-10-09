@@ -1,5 +1,17 @@
 # harness-codex
 
+## 0.41.0
+
+_2026-10-08_
+
+### Patch Changes
+
+- 71f5121: Find and read Codex rollout files without blocking Prompt Studio, and scan the Codex sessions folder only once per thread.
+- 24916e8: Fix Codex async questions, clickable summaries with answers below long questions, and local image previews in chat.
+- f130437: Rewrite the extension READMEs and Planner docs for the new Docs tab on prompt.studio.
+- c9d4d97: Show agent failures as errors, format ticket dates in the browser, use Project folder consistently, and remove the faulty Lab page.
+- 51b102b: Show Codex clarification questions in the shared composer and deliver correlated answers or Skip to the live run.
+
 ## 0.40.0
 
 _2026-10-02_

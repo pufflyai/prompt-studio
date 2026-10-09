@@ -40,6 +40,7 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     visual: { layerStyle: "panel", bg: "bg.subtle", p: "xs", width: "full", minWidth: 0 },
     panels: {
       display: "grid",
+      alignItems: "start",
       gridTemplateColumns: "minmax(0, 1fr)",
       gap: "panel-gap",
       "@container (min-width: 36rem)": { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.3fr)" },
@@ -48,7 +49,8 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       layerStyle: "panel",
       bg: "bg",
       minWidth: 0,
-      height: "full",
+      height: "auto",
+      maxHeight: "32rem",
       display: "flex",
       flexDirection: "column",
       "&[data-highlighted=true]": { borderColor: "fg.muted" },
@@ -62,7 +64,16 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       borderColor: "border.subtle",
       textStyle: "label/M/medium",
     },
-    panelBody: { display: "flex", flexDirection: "column", gap: "md", p: "md", flex: 1, minWidth: 0 },
+    panelBody: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "md",
+      p: "md",
+      flex: 1,
+      minWidth: 0,
+      minHeight: 0,
+      overflowY: "auto",
+    },
     blockGrid: {
       display: "grid",
       gap: "sm",
@@ -95,10 +106,15 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     },
   },
   variants: {
-    spacing: {
-      normal: {},
-      spacious: { page: { gap: "5xl" } },
+    compact: {
+      true: {
+        panelHeader: { p: "xs", textStyle: "label/S/medium" },
+        panelBody: { p: "xs", gap: "xs", overflowY: "hidden" },
+        panel: {
+          animation: "slide-from-bottom 420ms ease-out",
+          "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+        },
+      },
     },
   },
-  defaultVariants: { spacing: "normal" },
 });

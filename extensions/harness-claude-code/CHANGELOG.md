@@ -1,5 +1,15 @@
 # harness-claude-code
 
+## 0.41.0
+
+_2026-10-08_
+
+### Patch Changes
+
+- 8542b56: Let Claude Code ask the person a question in the chat form and continue the same run with the answer or Skip.
+- f130437: Rewrite the extension READMEs and Planner docs for the new Docs tab on prompt.studio.
+- c9d4d97: Show agent failures as errors, format ticket dates in the browser, use Project folder consistently, and remove the faulty Lab page.
+
 ## 0.40.0
 
 _2026-10-02_

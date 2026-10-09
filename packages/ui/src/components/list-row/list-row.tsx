@@ -134,27 +134,25 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
   const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");
 
-  const rowProps = {
-    ...createListRowRootProps({
-      rootProps,
-      labelId,
-      hasEndContent: Boolean(item.endContent),
-      rowRole,
-      className,
-      isSelected,
-      isExpanded,
-      showChevron,
-      rowHeight,
-      minHeight,
-      verticalPadding,
-      paddingLeft,
-      selectedBg,
-      hoverBg,
-      tone,
-      isDisabled,
-      variant,
-    }),
-  };
+  const rowProps = createListRowRootProps({
+    rootProps: { ...rootProps, id },
+    labelId,
+    hasEndContent: Boolean(item.endContent),
+    rowRole,
+    className,
+    isSelected,
+    isExpanded,
+    showChevron,
+    rowHeight,
+    minHeight,
+    verticalPadding,
+    paddingLeft,
+    selectedBg,
+    hoverBg,
+    tone,
+    isDisabled,
+    variant,
+  });
 
   const content = (
     <ListRowContent

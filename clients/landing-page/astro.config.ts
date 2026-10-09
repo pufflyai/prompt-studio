@@ -5,14 +5,25 @@ import { defineConfig } from "astro/config";
 import { pageSummary } from "./src/services/markdown/page-summary";
 import { publishedLinks } from "./src/services/markdown/published-links";
 import { readingTime } from "./src/services/markdown/reading-time";
+import { themedImages } from "./src/services/markdown/themed-images";
 
 const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 export default defineConfig({
   site: "https://prompt.studio",
-  integrations: [react()],
+  integrations: [react({ experimentalDisableStreaming: true })],
+  vite: {
+    build: {
+      rolldownOptions: {
+        output: {
+          // Keep startup's shared modules together instead of fetching many tiny files.
+          codeSplitting: { groups: [{ name: "landing", tags: ["$initial"] }] },
+        },
+      },
+    },
+  },
   markdown: {
-    processor: satteri({ mdastPlugins: [publishedLinks(repoRoot), pageSummary, readingTime] }),
+    processor: satteri({ mdastPlugins: [publishedLinks(repoRoot), pageSummary, readingTime, themedImages] }),
     // Code colors are CSS variables. The `landingDoc` recipe maps them to design
     // tokens, so code follows the color mode the page sets before it paints.
     shikiConfig: { theme: "css-variables" },

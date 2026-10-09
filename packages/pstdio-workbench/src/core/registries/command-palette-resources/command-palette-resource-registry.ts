@@ -1,9 +1,11 @@
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
 export interface CommandPaletteResourceQueryContext {
   query: string;
   limit: number;
+  signal?: AbortSignal;
 }
 
 // A single dynamic palette result. `activate` is supplied by whoever registers the
@@ -11,6 +13,7 @@ export interface CommandPaletteResourceQueryContext {
 // this registry free of command/resource execution concerns.
 export interface CommandPaletteResourceResult {
   id: string;
+  resource?: ResourceRef;
   label: string;
   description?: string;
   icon?: string;

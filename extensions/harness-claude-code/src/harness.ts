@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
+import { claudeCommandState, prepareClaudeOperation } from "./commands";
+import { detectClaude } from "./detection";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
@@ -61,18 +63,6 @@ export const parseTranscript = (content: string): ClaudeCodeTranscriptEntry[] =>
   return entries;
 };
 
-const detectClaude = async (ctx: HarnessContext) => {
-  try {
-    // CLAUDECODE is cleared so a nested session is not mistaken for the CLI itself.
-    const result = await ctx.process.run({ command: ["claude", "--version"], env: { CLAUDECODE: "" } });
-    if (result.exitCode !== 0) return { available: false };
-    return { available: true, version: result.stdout.trim() };
-  } catch {
-    // A missing binary makes process.run throw rather than exit non-zero.
-    return { available: false };
-  }
-};
-
 const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
   PSTDIO_SESSION_ID: sessionId,
   ...(ctx.projectId ? { PSTDIO_PROJECT_ID: ctx.projectId } : {}),
@@ -116,6 +106,17 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     label: l10n("harness.claudeCode", "Claude Code"),
     skills: { dir: ".claude/skills" },
     params: {
+      permission_mode: {
+        control: "command",
+        ...params.select({
+          label: "Permission mode",
+          defaultValue: "bypassPermissions",
+          options: [
+            { label: "Default", value: "bypassPermissions" },
+            { label: "Planning", value: "plan" },
+          ],
+        }),
+      },
       thinking: params.select({
         label: "Thinking",
         defaultValue: "high",
@@ -132,6 +133,8 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
     capabilities: () => ["SessionFork", "ContextUsage", "Approvals"],
     detect: (ctx) => deps.detect(ctx),
     listModels,
+    getCommandState: (_ctx, input) => claudeCommandState(input),
+    prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
 
     start: (ctx, input) =>
       startClaudeCodeSession({

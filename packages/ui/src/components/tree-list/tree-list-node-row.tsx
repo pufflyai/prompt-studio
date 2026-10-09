@@ -1,7 +1,8 @@
 import type { StackProps } from "@chakra-ui/react";
 import { Stack } from "@chakra-ui/react";
-import type { FocusEventHandler, DragEvent as ReactDragEvent } from "react";
+import { type FocusEventHandler, type DragEvent as ReactDragEvent, useState } from "react";
 import { ListRow } from "../list-row/list-row";
+import { DropIndicator } from "../primitives/drop-indicator";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode } from "./tree-list.types";
 import { readDraggedTreeNodeId, writeDraggedTreeNodeId } from "./tree-list-drag";
 import { TreeListInlineInputRow } from "./tree-list-inline-input";
@@ -22,7 +23,7 @@ interface TreeListNodeRowProps {
   onFocus?: FocusEventHandler<HTMLElement>;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleNode?: (nodeId: string) => void;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
 }
 
 export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
@@ -41,6 +42,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     onToggleNode,
     onMoveNode,
   } = props;
+  const [dropPosition, setDropPosition] = useState<"before" | "after" | "inside" | null>(null);
 
   if (node.inlineInput) {
     return <TreeListInlineInputRow input={node.inlineInput} icon={node.icon} level={level} />;
@@ -71,12 +73,19 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     event.dataTransfer.effectAllowed = "move";
   };
 
+  const positionAt = (event: ReactDragEvent<HTMLElement>) => {
+    if (hasChildren) return "inside";
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+  };
+
   const handleDragOver = (event: ReactDragEvent<HTMLElement>) => {
     if (!onMoveNode) return;
     event.stopPropagation();
     if (!node.canDrop) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+    setDropPosition(positionAt(event));
   };
 
   const handleDrop = (event: ReactDragEvent<HTMLElement>) => {
@@ -84,8 +93,9 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     event.stopPropagation();
     if (!node.canDrop) return;
     event.preventDefault();
+    setDropPosition(null);
     const sourceNodeId = readDraggedTreeNodeId(event.dataTransfer);
-    if (sourceNodeId && sourceNodeId !== node.id) onMoveNode(sourceNodeId, node.id);
+    if (sourceNodeId && sourceNodeId !== node.id) onMoveNode(sourceNodeId, node.id, positionAt(event));
   };
 
   const rowItem: TreeListNode = {
@@ -131,12 +141,26 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
       w="full"
       minW="0"
       maxW="full"
+      position="relative"
+      bg={dropPosition === "inside" ? "bg.accent-subtle" : undefined}
       draggable={Boolean(onMoveNode && node.canDrag)}
       onDragStart={node.canDrag ? handleDragStart : undefined}
       onDragOver={onMoveNode ? handleDragOver : undefined}
       onDrop={onMoveNode ? handleDrop : undefined}
+      onDragLeave={(event) => {
+        if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget))
+          setDropPosition(null);
+      }}
     >
       {row}
+      {dropPosition === "before" || dropPosition === "after" ? (
+        <DropIndicator
+          data-tree-list-drop-indicator={dropPosition}
+          {...(dropPosition === "before"
+            ? { top: "0", transform: "translateY(-50%)" }
+            : { bottom: "0", transform: "translateY(50%)" })}
+        />
+      ) : null}
     </Stack>
   );
 };

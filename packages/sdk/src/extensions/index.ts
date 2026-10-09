@@ -83,7 +83,7 @@ export {
 export { SDK_VERSION } from "../version";
 export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
-export { defineCommand, defineHook, defineMiddleware } from "./define-command";
+export { defineCommand, defineHook, defineMiddleware, streamOf } from "./define-command";
 export {
   defineActivityItem,
   defineArtifactMount,
@@ -156,3 +156,5 @@ export {
 export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtensionEvent } from "./webview-events";
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
+
+export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

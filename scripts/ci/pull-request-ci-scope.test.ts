@@ -5,11 +5,15 @@ const packageDirs = [
   "clients/landing-page",
   "packages/ui",
   "packages/pstdio",
+  "packages/pstdio-api",
   "packages/pstdio-dashboard",
   "packages/pstdio-db",
   "packages/pstdio-logging",
   "packages/e2e",
   "extensions/pstdio-planner",
+  "extensions/harness-codex",
+  "extensions/harness-open-code",
+  "extensions/harness-claude-code",
   "design/motion",
   "scripts",
 ];
@@ -20,6 +24,13 @@ const pullRequest = (changedFiles: string[], affectedPackages: string[] = []) =>
 const everything = { lernaFilter: "", windows: true, e2e: true, license: true, publishedExtensions: true };
 
 describe("pull request CI scope", () => {
+  for (const harness of ["harness-codex", "harness-open-code", "harness-claude-code"]) {
+    test(`${harness} discovery changes require native Windows checks`, () => {
+      const scope = pullRequest([`extensions/${harness}/src/detection.ts`], [harness]);
+      expect(scope.lernaFilter).toBe("--since HEAD~1");
+      expect(scope.windows).toBe(true);
+    });
+  }
   test("a push to main runs every job on every package", () => {
     const scope = resolveCiScope({
       event: "push",
@@ -50,6 +61,13 @@ describe("pull request CI scope", () => {
 
   test("a change to a dependency of a filesystem or process package runs Windows", () => {
     expect(pullRequest(["packages/pstdio-logging/src/index.ts"], ["pstdio-logging", "pstdio-api"]).windows).toBe(true);
+  });
+
+  test("an agent command runner change requires Windows checks", () => {
+    const scope = pullRequest(["packages/pstdio-api/src/features/extensions/process-command.ts"], ["pstdio-api"]);
+
+    expect(scope.lernaFilter).toBe("--since HEAD~1");
+    expect(scope.windows).toBe(true);
   });
 
   test("a change that affects the e2e package runs the e2e jobs", () => {

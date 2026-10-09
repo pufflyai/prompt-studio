@@ -15,6 +15,7 @@ import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
 import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
+import { documentLinkCommand } from "./document-link";
 import { getTicketCommand } from "./get-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
 import { requestHumanCommand, resolveHumanRequestCommand } from "./human-requests";
@@ -94,6 +95,7 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  documentLinkCommand,
   checkMergedPullRequestsCommand,
   openTicketsCommand,
   linkTicketCommand,

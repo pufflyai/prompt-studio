@@ -21,10 +21,11 @@ interface ReadOwner {
   pending?: ReadJob;
   active?: { controller: AbortController; settled: Promise<void> };
   queued: boolean;
+  waiters: Set<() => void>;
 }
 
 export interface RendererReadBinding {
-  request<T>(request: RendererReadRequest<T>, reason?: "refresh" | "retry"): void;
+  request<T>(request: RendererReadRequest<T>, reason?: "refresh" | "retry"): Promise<void>;
   dispose(): void;
 }
 
@@ -37,6 +38,10 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
   const owners = new Map<string, ReadOwner>();
   let disposed = false;
   const release = (key: string, owner: ReadOwner) => {
+    if (!owner.active && !owner.pending && !owner.queued) {
+      for (const finish of owner.waiters) finish();
+      owner.waiters.clear();
+    }
     if (!owner.binding && !owner.active && !owner.pending && owners.get(key) === owner) owners.delete(key);
   };
   const isCurrent = (owner: ReadOwner, job: ReadJob) =>
@@ -74,7 +79,7 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
   return {
     bind(key) {
       if (disposed) throw new Error("Read registry is disposed");
-      const owner = owners.get(key) ?? { generation: 0, queued: false };
+      const owner = owners.get(key) ?? { generation: 0, queued: false, waiters: new Set<() => void>() };
       owners.set(key, owner);
       owner.active?.controller.abort();
       owner.pending = undefined;
@@ -83,13 +88,18 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
       owner.generation++;
       return {
         request<T>(request: RendererReadRequest<T>, reason: "refresh" | "retry" = "refresh") {
-          if (owner.binding !== token || disposed) return;
+          if (owner.binding !== token || disposed) return Promise.resolve();
           if (owner.queryKey !== request.queryKey || reason === "retry") {
             owner.generation++;
             owner.active?.controller.abort();
           }
           owner.queryKey = request.queryKey;
           const generation = owner.generation;
+          let finish!: () => void;
+          const completed = new Promise<void>((resolve) => {
+            finish = resolve;
+          });
+          owner.waiters.add(finish);
           const job: ReadJob = {
             token,
             generation,
@@ -112,6 +122,7 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
           };
           owner.pending = job;
           schedule(key, owner);
+          return completed;
         },
         dispose() {
           if (owner.binding !== token) return;

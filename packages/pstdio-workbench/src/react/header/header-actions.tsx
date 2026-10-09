@@ -61,7 +61,9 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const resource = useWorkbenchStore(workbench.layout.store, (state) => getAnchorResource(state.layout, "primary"));
+  // Command handlers can read the focused panel while the page's primary resource stays unchanged.
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const resource = getAnchorResource(layout, "primary");
   const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath, { resource });
   const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items);
 

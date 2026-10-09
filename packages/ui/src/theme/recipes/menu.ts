@@ -96,6 +96,11 @@ export const menuSlotRecipe = defineSlotRecipe({
           width: "64",
           minWidth: "64",
           maxWidth: "64",
+          // An iframe needs a definite viewport; it cannot size a menu from its guest content.
+          "&:has(iframe)": {
+            h: "64",
+            maxH: "var(--available-height)",
+          },
         },
       },
     },

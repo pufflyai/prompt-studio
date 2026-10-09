@@ -27,6 +27,7 @@ RUN cd clients/landing-page && bun run build
 
 FROM nginx:1.27-alpine AS runner
 
+COPY clients/landing-page/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/clients/landing-page/dist /usr/share/nginx/html
 
 EXPOSE 80

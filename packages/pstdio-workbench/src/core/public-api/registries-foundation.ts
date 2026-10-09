@@ -155,6 +155,7 @@ export { getNavigationTargetKey } from "../registries/navigation/navigation-targ
 export type {
   NavigationTreeContext,
   NavigationTreeContribution,
+  NavigationTreeMoveContext,
   NavigationTreeOwner,
   NavigationTreeRegistry,
   NavigationTreeSlot,

@@ -1,4 +1,5 @@
 import type { SessionMessage, SessionMessageRole } from "@pstdio/sdk/extensions";
+import { visibleClaudePrompt } from "./literal-prompt";
 import { apiErrorPart, mergeToolResultMessage, toolResultPart, toolUsePart } from "./message-parts";
 import type { ClaudeCodeContentBlock, ClaudeCodeTranscriptEntry } from "./types";
 import { parseTimestamp } from "./utils";
@@ -24,7 +25,12 @@ const transcriptBlockToMessage = (
 ): SessionMessage | null => {
   if (block.type === "text") {
     if (!block.text.trim()) return null;
-    return { id, role, parts: [{ type: "text", text: block.text }], createdAt };
+    return {
+      id,
+      role,
+      parts: [{ type: "text", text: role === "user" ? visibleClaudePrompt(block.text) : block.text }],
+      createdAt,
+    };
   }
 
   if (block.type === "thinking") {
@@ -70,7 +76,12 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
   if (typeof content === "string") {
     if (!content.trim()) return [];
     return [
-      { id: entry.uuid, role, parts: [{ type: "text" as const, text: content }], createdAt } satisfies SessionMessage,
+      {
+        id: entry.uuid,
+        role,
+        parts: [{ type: "text" as const, text: role === "user" ? visibleClaudePrompt(content) : content }],
+        createdAt,
+      } satisfies SessionMessage,
     ];
   }
 

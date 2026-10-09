@@ -23,6 +23,14 @@ const codeColors = {
   "--astro-code-token-punctuation": "{colors.fg.muted}",
 };
 
+const themedMedia = {
+  "& img[data-art-tone=dark], & p:has(> img[data-art-tone=dark])": { display: "none" },
+  _dark: {
+    "& img[data-art-tone=light], & p:has(> img[data-art-tone=light])": { display: "none" },
+    "& img[data-art-tone=dark], & p:has(> img[data-art-tone=dark])": { display: "block" },
+  },
+};
+
 // Documents come from markdown, so the typography targets plain tags instead of
 // components.
 export const landingDocSlotRecipe = defineSlotRecipe({
@@ -71,7 +79,17 @@ export const landingDocSlotRecipe = defineSlotRecipe({
       "& li": { textStyle: "paragraph/M/regular", color: "fg.muted" },
       "& li > :is(ul, ol)": { mt: "sm" },
       "& strong": { color: "fg", fontWeight: "medium" },
-      "& :where(p, li, td, blockquote) a": { textDecoration: "underline", _hover: { color: "fg" } },
+      "& :where(p, li, td, blockquote) a": {
+        textDecoration: "underline",
+        display: { base: "inline-block", lg: "inline" },
+        minHeight: { base: "11", lg: "auto" },
+        px: { base: "2xs", lg: 0 },
+        py: { base: "xs", lg: 0 },
+        mx: { base: "-2xs", lg: 0 },
+        maxWidth: "full",
+        touchAction: "manipulation",
+        _hover: { color: "fg" },
+      },
       "& blockquote": { borderInlineStartWidth: "2px", borderColor: "border", ps: "md" },
       "& hr": { borderColor: "border" },
       "& :not(pre) > code": { textStyle: "mono/S", bg: "bg.muted", color: "fg", px: "2xs", borderRadius: "2xs" },
@@ -88,7 +106,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
       "& td": { textStyle: "paragraph/M/regular", color: "fg.muted", verticalAlign: "top" },
     },
     // Markdown HTML joins the article's flow, so headings and paragraphs keep its spacing.
-    html: { display: "contents" },
+    html: { display: "contents", ...themedMedia },
     outline: {
       display: { base: "none", xl: "flex" },
       flexDirection: "column",
@@ -126,11 +144,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
     postBanner: { display: "block", width: "full", height: "auto", borderRadius: "xs" },
     postArtwork: {
       display: "contents",
-      "& img[data-art-tone=dark]": { display: "none" },
-      _dark: {
-        "& img[data-art-tone=light]": { display: "none" },
-        "& img[data-art-tone=dark]": { display: "block" },
-      },
+      ...themedMedia,
     },
     postListItem: {
       display: "flex",
@@ -158,7 +172,17 @@ export const landingDocSlotRecipe = defineSlotRecipe({
       rowGap: "lg",
       "& > div": { display: "flex", flexDirection: "column", gap: "sm" },
       "& ul": { listStyleType: "none", ps: 0, gap: "xs" },
-      "& li a": { textStyle: "label/M/regular", color: "fg.muted", textDecoration: "none", _hover: { color: "fg" } },
+      "& li a": {
+        display: { base: "flex", lg: "inline" },
+        alignItems: "center",
+        width: { base: "full", lg: "auto" },
+        px: { base: "xs", lg: 0 },
+        mx: { base: "-xs", lg: 0 },
+        textStyle: "label/M/regular",
+        color: "fg.muted",
+        textDecoration: "none",
+        _hover: { color: "fg" },
+      },
     },
   },
 });

@@ -144,6 +144,7 @@ export interface RuntimeResourceKindRecord {
   sourcePath: string;
   /** Qualified id of the owner's command that resolves an open resource. */
   resolveCommandId?: string;
+  resolveManyCommandId?: string;
   contribution: Omit<ResourceKindDefinition, "menuSlots"> & {
     menuSlots: Record<
       string,

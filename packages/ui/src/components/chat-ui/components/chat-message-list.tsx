@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useLayoutEffect, useRef, type WheelEvent } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
+import { useVirtualizer } from "@/utils/use-virtualizer";
 import { ChatMessage } from "./ai-message";
 import { messageFadeInProps, useMessageAnimationKeys } from "./chat-message-animation";
 import { ChatMessageListResponse, StickyMessageToggle } from "./chat-message-list-items";

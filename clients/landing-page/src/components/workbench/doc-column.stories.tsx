@@ -1,5 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import darkMedia from "../../content/blog/images/blog-prompt-studio-0-41.png";
+import lightMedia from "../../content/blog/images/blog-prompt-studio-0-41-light.png";
 import { DocColumn, DocHtml } from "./doc-column";
 
 // Sample markup only. Real legal text lives in the markdown files.
@@ -45,4 +47,27 @@ export const PrivacyPolicy: Story = {
 
 export const TermsOfService: Story = {
   args: { pageKey: "/terms/", children: <DocHtml html={TERMS_HTML} /> },
+};
+
+const THEMED_MEDIA_HTML = `
+<h1>Theme-specific media</h1>
+<p>The article shows one image and hides the inactive image's paragraph.</p>
+<p><img data-art-tone="light" src="${lightMedia}" alt="Light theme media" /></p>
+<p><img data-art-tone="dark" src="${darkMedia}" alt="Dark theme media" /></p>
+<p><em>One caption stays visible in both themes.</em></p>
+`;
+
+export const ThemedMedia: Story = {
+  args: { pageKey: "/themed-media/", children: <DocHtml html={THEMED_MEDIA_HTML} /> },
+};
+
+export const ThemedMediaDark: Story = {
+  ...ThemedMedia,
+  decorators: [
+    (Story) => (
+      <Box className="dark">
+        <Story />
+      </Box>
+    ),
+  ],
 };

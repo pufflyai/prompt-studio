@@ -13,6 +13,8 @@ const REPOSITORY_TOOLING_DIR = "scripts";
 const WINDOWS_SENSITIVE_PACKAGES = [
   "@pstdio/desktop",
   "harness-codex",
+  "harness-open-code",
+  "harness-claude-code",
   "pstdio",
   "pstdio-api",
   "pstdio-api-runtime-host",

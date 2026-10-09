@@ -1,81 +1,58 @@
-import { Box, Icon, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
-import { createGlyphIcon } from "@pstdio/ui";
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { landingStorySlotRecipe } from "./landing-story";
+import { useState } from "react";
+import { ExamplesView } from "../../components/sections/examples-view";
+import { WhatIsPromptStudioView } from "../../components/sections/what-is-prompt-studio-view";
+import type { ToolExampleId } from "../../content/tool-examples-content";
 
-const ExampleIcon = createGlyphIcon("cloud-add");
-
-const LandingStory = () => {
-  const styles = useSlotRecipe({ recipe: landingStorySlotRecipe })({ spacing: "spacious" });
-  return (
-    <Box css={styles.page}>
-      <Box css={styles.section}>
-        <Stack css={styles.intro}>
-          <Text as="h1" textStyle="heading/L">
-            Combine building blocks to build extensions.
-          </Text>
-          <Text textStyle="paragraph/L/regular" color="fg.muted">
-            Give your agents the pieces they need to build useful tools.
-          </Text>
-        </Stack>
-        <Box css={styles.blockGrid}>
-          {[
-            { name: "Pages", detail: "Give your tool an interface." },
-            { name: "Editors", detail: "Work with files your way." },
-            { name: "Commands", detail: "Add an action you or your agent can run." },
-            { name: "Skills", detail: "Teach your agent how you work." },
-            { name: "Hooks", detail: "Run an action when something happens." },
-            { name: "Schedules", detail: "Give repeated work a time to run." },
-          ].map((block) => (
-            <Box key={block.name} css={styles.block}>
-              <Text as="h2" textStyle="heading/S">
-                {block.name}
-              </Text>
-              <Text textStyle="paragraph/M/regular">{block.detail}</Text>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-      <Box css={styles.section}>
-        <Stack css={styles.intro}>
-          <Text as="h2" textStyle="heading/L">
-            A clean editor out of the box
-          </Text>
-          <Text textStyle="paragraph/L/regular" color="fg.muted">
-            Give your tools a consistent UI, with panels, navigation, and themes included.
-          </Text>
-        </Stack>
-        <Box css={styles.visual}>
-          <Box css={styles.panels}>
-            {["Your icon set", "Icon inspector"].map((title) => (
-              <Box css={styles.panel} key={title}>
-                <Box css={styles.panelHeader}>
-                  <Text>{title}</Text>
-                </Box>
-                <Box css={styles.panelBody}>
-                  <Icon as={ExampleIcon} boxSize="16" />
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      </Box>
-    </Box>
-  );
+const ExampleChapters = () => {
+  const [example, setExample] = useState<ToolExampleId>("agents");
+  return <ExamplesView exampleId={example} onNavigate={setExample} />;
 };
 
 const meta = {
-  title: "Theme/Landing Story",
-  component: LandingStory,
+  title: "Theme/Landing Chapters",
+  component: WhatIsPromptStudioView,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof LandingStory>;
-export default meta;
-type Story = StoryObj<typeof meta>;
-export const Desktop: Story = {};
-export const NarrowPanel: Story = {
   decorators: [
     (Story) => (
-      <Box width="80">
+      <Box height="100dvh">
+        <Story />
+      </Box>
+    ),
+  ],
+} satisfies Meta<typeof WhatIsPromptStudioView>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const WhatIsPromptStudio: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Chapters advance every eight seconds without transition animations. A compact tab row sits above the bounded chapter scroll area. Hover or focus holds the current chapter. Tabs have no numbered stepper or playback controls.",
+      },
+    },
+  },
+};
+export const Examples: Story = { render: () => <ExampleChapters /> };
+export const NarrowChapters: Story = {
+  decorators: [
+    (Story) => (
+      <Box width="80" height="full">
+        <Story />
+      </Box>
+    ),
+  ],
+};
+export const NarrowExamples: Story = {
+  ...NarrowChapters,
+  render: () => <ExampleChapters />,
+};
+export const ShortViewport: Story = {
+  decorators: [
+    (Story) => (
+      <Box height="28rem">
         <Story />
       </Box>
     ),

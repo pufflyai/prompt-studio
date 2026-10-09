@@ -1,196 +1,70 @@
-import { afterEach, describe, expect, type Mock, mock, test } from "bun:test";
-import { ExtensionAlreadyInstalledError } from "pstdio-api/extensions/install-extension-source";
-import type { Arguments } from "yargs";
-import { CLI_VERSION } from "@/features/cli-version";
+import { afterEach, describe, expect, mock, test } from "bun:test";
+import { PstdioApiError } from "@pstdio/sdk/client";
 import { createHandler } from "./add";
-import type { ExtensionsAddArgs } from "./shared";
 
-const argv = (args: Partial<ExtensionsAddArgs>) =>
-  ({ _: [], $0: "pstdio", source: "planner", ...args }) as Arguments<ExtensionsAddArgs>;
-
-const installed = {
-  installName: "planner",
-  targetPath: "/home/user/.pstdio/extensions/planner",
-  source: { kind: "named" as const, name: "planner", ref: "repo#main:extensions/planner" },
-  metadata: {
-    id: "pstdio.planner",
-    name: "planner",
-    displayName: "Planner",
-    version: "1.0.0",
-    enginesPstdio: "^0.1.0",
-  },
-  manifest: { id: "pstdio.planner" },
-  sourceHash: "hash",
+const source = {
+  metadata: { id: "test.tool", name: "tool", displayName: "Tool", version: "1.0.0" },
+  targetPath: "/host/extensions/tool",
   check: {
-    extensionsRoot: "/home/user/.pstdio/extensions",
-    extensionsRootExists: true,
-    errorCount: 0,
-    warningCount: 0,
+    extensionsRoot: "/host/extensions",
     extensions: [],
     commands: [],
-    middlewares: [],
-    hooks: [],
-    schedules: [],
-    artifactMounts: [],
-    commandPaletteContributions: [],
-    commandPaletteResources: [],
-    themes: [],
-    fileIconThemes: [],
-    menuContributions: [],
-    modes: [],
-    pages: [],
-    views: [],
-    viewMenus: [],
-    placements: [],
-    resourceKinds: [],
-    resourceHierarchyProviders: [],
-    navigationItems: [],
-    navigationTrees: [],
-    statusBarItems: [],
-    statuses: [],
-    activityItems: [],
-    keybindings: [],
-    settingsSections: [],
-    settingsPanels: [],
-    templates: [],
-    skills: [],
+    errorCount: 0,
+    warningCount: 0,
     diagnostics: [],
-    hostCompatibility: {
-      status: "verified" as const,
-      host: { host: "dashboard" as const, hostVersion: "0.25.2", capabilities: {} },
-      diagnostics: [],
-    },
+    hostCompatibility: { status: "verified" },
   },
 };
-
-const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) => {
-  const log = (overrides.log ?? mock()) as Mock<(message: string) => void>;
-
-  return {
-    cwd: () => "/repo",
-    enableInstalledExtension: mock(async () => ({ enabled: true, projectId: "project-1" })),
-    ensureApi: mock(async () => {}),
-    findProjectRoot: () => "/repo",
-    getProjectFolder: async () => "/repo",
-    installDefaultSkills: mock(async () => {}),
-    installExtensionSource: mock(async () => installed),
-    log,
-    readConfig: () => ({ project_id: "project-1" }),
-    ...overrides,
-  };
-};
-
+const makeDeps = () => ({
+  cwd: () => "/client/project",
+  findProjectRoot: () => "/client/project",
+  readConfig: () => ({ project_id: "project" }),
+  ensureApi: mock(async () => undefined),
+  install: mock(async () => ({ source, extension: {} }) as never),
+  upload: mock(async () => ({ upload: new FormData() })),
+  log: mock((_message: string) => {}),
+});
+afterEach(() => {
+  process.exitCode = 0;
+});
 describe("extensions add", () => {
-  test("installs source and enables it when run inside a linked project", async () => {
+  test("sends catalog options to the host and prints its installed path", async () => {
     const deps = makeDeps();
-    const handler = createHandler(deps);
-
-    await handler(argv({ source: "planner", name: "planner-dev", force: true, "skip-install": true }));
-
-    expect(deps.installExtensionSource).toHaveBeenCalledWith({
-      source: "planner",
-      installName: "planner-dev",
+    await createHandler(deps)({
+      source: "tool",
+      name: "custom",
       force: true,
-      ref: undefined,
-      hostReleaseRef: `pstdio@${CLI_VERSION}`,
-      repoPath: "/repo",
+      branch: "main",
+      "skip-install": true,
+    } as never);
+    expect(deps.install).toHaveBeenCalledWith("project", {
+      source: { kind: "catalog", name: "tool", ref: "main" },
+      installName: "custom",
+      force: true,
       skipInstall: true,
     });
-    expect(deps.ensureApi).toHaveBeenCalled();
-    expect(deps.enableInstalledExtension).toHaveBeenCalledWith("project-1", installed);
-    expect(deps.installDefaultSkills).toHaveBeenCalledWith("/repo", "project-1");
-
-    const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;
-    expect(output).toContain("Id: pstdio.planner");
-    expect(output).toContain("Name: planner");
-    expect(output).toContain("Project: enabled for project-1");
+    expect(deps.log.mock.calls[0]?.[0]).toContain("/host/extensions/tool");
   });
-
-  test("installs from a branch only when asked", async () => {
+  test("uploads local files instead of asking for the host project folder", async () => {
     const deps = makeDeps();
-    const handler = createHandler(deps);
-
-    await handler(argv({ source: "planner", branch: "feature/new-renderer" }));
-
-    expect(deps.installExtensionSource).toHaveBeenCalledWith(
-      expect.objectContaining({ hostReleaseRef: `pstdio@${CLI_VERSION}`, ref: "feature/new-renderer" }),
+    await createHandler(deps)({ source: "./tool" } as never);
+    expect(deps.upload).toHaveBeenCalledWith(
+      "./tool",
+      { installName: undefined, force: undefined, skipInstall: undefined },
+      "project",
     );
+    expect(deps.install).toHaveBeenCalledWith("project", { upload: expect.any(FormData) });
   });
-
-  test("skips enablement when outside a linked project", async () => {
-    const deps = makeDeps({ findProjectRoot: () => null, readConfig: () => null });
-    const handler = createHandler(deps);
-
-    await handler(argv({ source: "./planner" }));
-
-    expect(deps.installExtensionSource).toHaveBeenCalledWith({
-      source: "./planner",
-      installName: undefined,
-      force: undefined,
-      ref: undefined,
-      skipInstall: undefined,
-    });
-    expect(deps.ensureApi).not.toHaveBeenCalled();
-    expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
-    expect(deps.installDefaultSkills).not.toHaveBeenCalled();
-
-    const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;
-    expect(output).toContain("Project: not enabled");
-    expect(output).toContain("Run inside a linked project");
+  test("asks for a linked project before installing", async () => {
+    const deps = { ...makeDeps(), findProjectRoot: () => null };
+    await expect(createHandler(deps)({ source: "tool" } as never)).rejects.toThrow("linked project");
+    expect(deps.install).not.toHaveBeenCalled();
   });
-
-  test("prints a friendly message and sets exit code when the install target already exists", async () => {
-    const deps = makeDeps({
-      installExtensionSource: mock(async () => {
-        throw new ExtensionAlreadyInstalledError("/home/user/.pstdio/extensions/planner");
-      }),
-    });
-    const handler = createHandler(deps);
-
-    await handler(argv({ source: "planner" }));
-
-    expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
-    expect(deps.installDefaultSkills).not.toHaveBeenCalled();
+  test("prints the host conflict and exits with code one", async () => {
+    const deps = makeDeps();
+    deps.install.mockRejectedValueOnce(new PstdioApiError("An extension is already installed at /host/tool.", 409));
+    await createHandler(deps)({ source: "tool" } as never);
     expect(process.exitCode).toBe(1);
-
-    const output = (deps.log as Mock<(message: string) => void>).mock.calls[0]?.[0] as string;
-    expect(output).toContain("already installed at /home/user/.pstdio/extensions/planner");
-    expect(output).toContain("--force");
+    expect(deps.log).toHaveBeenCalledWith("An extension is already installed at /host/tool.");
   });
-
-  test("prints a clear error when a repo-scoped extension is added outside a project folder", async () => {
-    const deps = makeDeps({
-      findProjectRoot: () => null,
-      readConfig: () => null,
-      installExtensionSource: mock(async () => {
-        throw new Error(
-          'Extension "planner" declares pstdio.scope "repo". Install it from a project opened from a local folder.',
-        );
-      }),
-    });
-    const handler = createHandler(deps);
-
-    await expect(handler(argv({ source: "planner" }))).rejects.toThrow(
-      "Install it from a project opened from a local folder",
-    );
-
-    expect(deps.ensureApi).not.toHaveBeenCalled();
-    expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
-    expect(deps.installDefaultSkills).not.toHaveBeenCalled();
-  });
-
-  // Bun does not treat `process.exitCode = undefined` as a reset (it stays at the
-  // last set value), so explicitly clear it to 0 between tests to avoid leaking
-  // a non-zero exit code to the bun test runner.
-  afterEach(() => {
-    process.exitCode = 0;
-  });
-});
-
-test("uses the default workspace folder when an obsolete config link is found elsewhere", async () => {
-  const deps = makeDeps({ findProjectRoot: () => "/discarded-folder" });
-  const handler = createHandler({ ...deps, getProjectFolder: async () => "/project-home" });
-  await handler(argv({ source: "planner" }));
-  expect(deps.installExtensionSource).toHaveBeenCalledWith(expect.objectContaining({ repoPath: "/project-home" }));
-  expect(deps.installDefaultSkills).toHaveBeenCalledWith("/project-home", "project-1");
 });

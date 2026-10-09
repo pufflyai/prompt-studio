@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { HarnessAttachment, HarnessParams } from "@pstdio/sdk/extensions";
+import { createCommandApi } from "./opencode-commands";
 import {
   buildHeaders,
   buildRequestUrl,
@@ -252,5 +253,13 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
 
   const { listPendingQuestions, replyQuestion } = createQuestionApi({ fetcher: deps.fetcher, withServerUrl });
 
-  return { startSession, sendSessionMessage, getSessionMessages, abortSession, listPendingQuestions, replyQuestion };
+  return {
+    startSession,
+    sendSessionMessage,
+    getSessionMessages,
+    abortSession,
+    listPendingQuestions,
+    replyQuestion,
+    ...createCommandApi({ fetcher: deps.fetcher, withServerUrl }),
+  };
 };

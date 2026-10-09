@@ -134,6 +134,8 @@ const largeEntries: PaletteEntry[] = [
 const commandResourceModes: PaletteMode[] = [{ id: "search" }, { id: "command", inputPrefix: ">" }];
 
 interface PaletteStoryProps {
+  fullScreen?: boolean;
+  searchAutoFocus?: boolean;
   entries?: PaletteEntry[];
   initialQuery?: string;
   initialActiveIndex?: number;
@@ -144,6 +146,8 @@ interface PaletteStoryProps {
 
 const PaletteStory = (props: PaletteStoryProps) => {
   const {
+    fullScreen,
+    searchAutoFocus,
     entries = baseEntries,
     initialQuery = "",
     initialActiveIndex = 0,
@@ -157,6 +161,8 @@ const PaletteStory = (props: PaletteStoryProps) => {
     <Box bg="bg" minH="32rem" p="lg">
       <Palette
         open={open}
+        fullScreen={fullScreen}
+        searchAutoFocus={searchAutoFocus}
         entries={entries}
         initialQuery={initialQuery}
         initialActiveIndex={initialActiveIndex}
@@ -204,6 +210,17 @@ export const KeyboardSelection: Story = {
 
 export const ThemeMenu: Story = {
   render: () => <PaletteStory entries={themeEntries} placeholder="Choose a theme" footerEnd="Preview theme" />,
+};
+
+export const FullScreenNavigation: Story = {
+  render: () => <PaletteStory fullScreen searchAutoFocus={false} entries={largeEntries} />,
+  parameters: {
+    docs: {
+      description: {
+        story: "Fill the viewport and focus the dialog on open. Search receives focus only when selected.",
+      },
+    },
+  },
 };
 
 export const Modes: Story = {

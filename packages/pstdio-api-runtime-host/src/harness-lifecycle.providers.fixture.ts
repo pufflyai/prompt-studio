@@ -34,5 +34,6 @@ try {
   clearTimeout(deadline);
   await session.stop();
   await session.done;
+  await record.provider.dispose?.(context);
   events.close();
 }
