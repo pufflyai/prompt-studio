@@ -28,7 +28,4 @@ export const verifyPackagedShortcutReference = async (
   await page.getByRole("button", { name: "Help", exact: true }).focus();
   const workspaceLabel = page.getByRole("option", { name: "Workspaces", exact: true }).getByText("Workspaces");
   await expect.poll(() => workspaceLabel.evaluate((label) => label.clientWidth >= label.scrollWidth)).toBe(true);
-  const navigation = page.getByRole("option", { name: /Open shortcut destination/ }).first();
-  await navigation.hover();
-  await expect(navigation.locator("kbd").last()).toBeVisible();
 };

@@ -60,9 +60,6 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
     else await expect(greeting).toHaveCount(0);
   }
   await page.keyboard.press("Escape");
-  const navigation = page.getByRole("option", { name: /Open shortcut destination/ }).first();
-  await navigation.hover();
-  await expect(navigation.locator("kbd").last()).toBeVisible();
   await page.keyboard.press("Alt+Shift+J");
   await expect(page).toHaveURL(/\/extensions\/e2e.shortcut-reference\/reference/);
   await page.keyboard.press("Alt+Shift+I");
@@ -121,7 +118,7 @@ test("the theme picker opens on the current theme and Escape keeps it", async ({
   expect(consoleErrors.filter((error) => error.includes("Maximum update depth"))).toEqual([]);
 });
 
-test("main shortcuts navigate, show sidenav hints, and open creation forms", async ({ page, request }) => {
+test("main shortcuts navigate and open creation forms", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Shortcut defaults" }),
   });
@@ -137,14 +134,7 @@ test("main shortcuts navigate, show sidenav hints, and open creation forms", asy
   ] as const) {
     await page.goto(`/projects/${project.id}/tickets`);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
-    await row.hover();
-    const hint = row.locator("kbd").last();
-    await expect(hint).toHaveText(key);
-    await expect(hint).toBeVisible();
-    await expect(hint.locator("..")).toHaveCSS("opacity", "1");
-    await page.mouse.move(0, 0);
     await row.focus();
-    await expect(hint.locator("..")).toHaveCSS("opacity", "1");
     await page.keyboard.press(`Alt+Shift+${key}`);
     await expect(page).toHaveURL(destination);
   }

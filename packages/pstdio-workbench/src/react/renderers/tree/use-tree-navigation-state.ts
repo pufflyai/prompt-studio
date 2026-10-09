@@ -3,8 +3,6 @@ import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { resolveTreeActiveResource } from "./tree-active-resource";
 
 export const useTreeNavigationState = (workbench: WorkbenchCore) => {
-  useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
-  useWorkbenchStore(workbench.context.store, (state) => state);
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const activeLocation = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const activePage = useWorkbenchStore(workbench.pages.store, (state) =>

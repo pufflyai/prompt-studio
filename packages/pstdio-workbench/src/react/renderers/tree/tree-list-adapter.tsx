@@ -1,11 +1,10 @@
 import { Box } from "@chakra-ui/react";
 import type { PageLocation, PageRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
-  getNavigationTargetKey,
   getWorkbenchSelectionResourceKeys,
   type NavigationTarget,
   type ResourceRef,
@@ -186,18 +185,8 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   if (node.resource) return node.resource;
   return undefined;
 };
-const renderShortcutEndContent = (binding: string | string[] | undefined) => {
-  if (!binding) return undefined;
-  return <PaletteShortcut binding={binding} variant="sidenav" />;
-};
-const resolveTreeNodeEndContent = (
-  node: TreeNode,
-  resource: ResourceRef | undefined,
-  binding: string | string[] | undefined,
-) => {
+const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined) => {
   if (node.endContent !== undefined) return node.endContent as ReactNode;
-  const shortcut = renderShortcutEndContent(binding);
-  if (shortcut) return shortcut;
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
   if (resource?.type !== "workspace" || typeof additions !== "number" || typeof deletions !== "number") {
@@ -233,12 +222,6 @@ const toTreeListNode = (
     onRequestParams: context.onRequestParams,
   });
   const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
-  const action = node.target ?? (node.commandId ? { kind: "command" as const, commandId: node.commandId } : undefined);
-  const binding = action
-    ? context.workbench.keybindings
-        .listActiveKeybindings()
-        .find((candidate) => getNavigationTargetKey(candidate.action) === getNavigationTargetKey(action))?.keybinding
-    : undefined;
   const treeNode: TreeListNode = {
     id: node.id,
     moveScope: node.moveScope,
@@ -262,8 +245,7 @@ const toTreeListNode = (
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,
     }),
-    endContent: resolveTreeNodeEndContent(node, resource, binding),
-    endContentVisibility: node.endContent === undefined && binding ? "hover" : "always",
+    endContent: resolveTreeNodeEndContent(node, resource),
     menuItems,
     contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),

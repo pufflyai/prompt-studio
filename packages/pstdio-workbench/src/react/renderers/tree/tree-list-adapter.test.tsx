@@ -239,28 +239,6 @@ describe("toTreeListSection", () => {
   });
 });
 describe("toTreeListSection end content", () => {
-  test("renders active command keybindings as trailing content", () => {
-    const workbench = createWorkbench();
-    workbench.commands.registerCommand({ id: "project.search", label: "Search project" }, { execute: () => undefined });
-    workbench.keybindings.registerKeybinding({
-      action: { kind: "command", commandId: "project.search" },
-      keybinding: "mod+shift+f",
-    });
-    const section = toTreeListSection(
-      {
-        id: "primary",
-        nodes: [{ id: "search", label: "Search", commandId: "project.search" }],
-      },
-      {},
-      { workbench },
-    );
-    expect(section.nodes[0]?.endContent).toMatchObject({
-      props: {
-        binding: "mod+shift+f",
-        variant: "sidenav",
-      },
-    });
-  });
   test("does not render a chevron for menu-backed tree rows", () => {
     const workbench = createWorkbench();
     workbench.commands.registerCommand({ id: "help.open", label: "Open help" }, { execute: () => undefined });
@@ -314,14 +292,10 @@ describe("toTreeListSection end content", () => {
       props: { additions: 7, deletions: 2, variant: "ghost", size: "small" },
     });
   });
-  test("prefers explicit end content over command keybindings", () => {
+  test("preserves explicit end content", () => {
     const workbench = createWorkbench();
     const explicitEndContent = <Box data-testid="custom-end-content" />;
     workbench.commands.registerCommand({ id: "project.search", label: "Search project" }, { execute: () => undefined });
-    workbench.keybindings.registerKeybinding({
-      action: { kind: "command", commandId: "project.search" },
-      keybinding: "mod+shift+f",
-    });
     const section = toTreeListSection(
       {
         id: "primary",

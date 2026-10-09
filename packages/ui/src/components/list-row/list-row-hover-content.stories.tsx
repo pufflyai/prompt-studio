@@ -3,7 +3,6 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { Computer, Plus } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { PaletteShortcut } from "../command-palette/palette-shortcut";
 import { ListRow } from "./list-row";
 
 const meta = {
@@ -24,8 +23,6 @@ const NarrowNavigationExample = () => {
         label="Workspaces"
         tooltip="Workspaces"
         icon={<Computer />}
-        endContent={<PaletteShortcut binding="Alt+Shift+W" variant="sidenav" />}
-        endContentVisibility="hover"
         onActivate={() => setRowCount((count) => count + 1)}
         actions={[
           {
@@ -49,7 +46,7 @@ const NarrowNavigationExample = () => {
         endContent={<Text textStyle="label/XS">12</Text>}
       />
       <Box color="fg.muted" textStyle="label/XS">
-        Hover or focus a row. Hidden shortcuts and actions release label space; the count stays visible.
+        Hover or focus a row. Hidden actions release label space; the count stays visible.
       </Box>
       <Text role="status" aria-label="Action activations" textStyle="label/XS">
         {actionCount}

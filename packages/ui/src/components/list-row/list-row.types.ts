@@ -78,8 +78,6 @@ export interface ListRowItem {
   };
   /** Custom content rendered on the right, before any hover actions. Use for Kbd shortcuts, counts, or badges. */
   endContent?: ReactNode;
-  /** Hover content uses row space only while the row is hovered or contains focus. Defaults to always. */
-  endContentVisibility?: "always" | "hover";
   /** Tooltip shown on hover. Can be a string or ReactNode (e.g. Kbd shortcut hint). */
   tooltip?: ReactNode;
   disabled?: boolean;

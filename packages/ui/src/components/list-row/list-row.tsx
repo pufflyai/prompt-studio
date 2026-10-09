@@ -11,7 +11,6 @@ import type { ListRowItem, ListRowProps } from "./list-row.types";
 import { ListRowChrome } from "./list-row-chrome";
 import { ListRowContent } from "./list-row-content";
 import { computePaddingLeft, createListRowRootProps, resolveListRowSizing } from "./list-row-root-props";
-import { useRowHover } from "./use-row-hover";
 
 export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const {
@@ -22,7 +21,6 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     iconColor,
     indicator,
     endContent,
-    endContentVisibility,
     tooltip,
     disabled,
     isContainer,
@@ -60,7 +58,6 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   } = props;
   const [menuOpen, setMenuOpen] = useState(false);
   const labelId = useId();
-  const hoverProps = useRowHover(props);
 
   const item: ListRowItem = {
     id,
@@ -70,7 +67,6 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     iconColor,
     indicator,
     endContent,
-    endContentVisibility,
     tooltip,
     disabled,
     isContainer,
@@ -158,7 +154,6 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       isDisabled,
       variant,
     }),
-    ...hoverProps,
   };
 
   const content = (

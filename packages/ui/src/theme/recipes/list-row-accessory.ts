@@ -11,9 +11,11 @@ export const listRowAccessoryRecipe = defineRecipe({
       always: {},
       hover: {
         position: "absolute",
+        insetInlineEnd: "sm",
         opacity: 0,
         pointerEvents: "none",
-        ".group[data-hover] &": { position: "static", opacity: 1, pointerEvents: "auto" },
+        transition: "opacity 120ms ease",
+        _groupHover: { position: "static", opacity: 1, pointerEvents: "auto" },
         _groupFocusWithin: { position: "static", opacity: 1, pointerEvents: "auto" },
       },
     },

@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { ListRow } from "../list-row/list-row";
 import { PaletteShortcut } from "./palette-shortcut";
 
 const meta = {
@@ -11,10 +10,3 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Inline: Story = {};
-
-export const SidenavHoverAndFocus: Story = {
-  args: { variant: "sidenav" },
-  render: (args) => (
-    <ListRow label="Notes" tooltip="Notes" endContent={<PaletteShortcut {...args} />} endContentVisibility="hover" />
-  ),
-};

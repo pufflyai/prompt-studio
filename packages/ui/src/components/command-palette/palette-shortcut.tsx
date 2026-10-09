@@ -1,4 +1,4 @@
-import { Box, Kbd, useRecipe } from "@chakra-ui/react";
+import { Kbd } from "@chakra-ui/react";
 import { ArrowLeft, ArrowRight, Command, type LucideIcon, Option } from "lucide-react";
 import { Fragment } from "react";
 
@@ -61,13 +61,12 @@ const getShortcutDisplayParts = (binding: PaletteShortcutBinding) => {
   return steps.map((step) => step.map((label) => resolveShortcutDisplayPart(label)));
 };
 
-export const PaletteShortcut = (props: { binding: PaletteShortcutBinding; variant?: "inline" | "sidenav" }) => {
-  const { binding, variant } = props;
-  const recipe = useRecipe({ key: "paletteShortcut" });
+export const PaletteShortcut = (props: { binding: PaletteShortcutBinding }) => {
+  const { binding } = props;
   const steps = getShortcutDisplayParts(binding);
 
   return (
-    <Box as="span" css={recipe({ variant })} aria-hidden={variant === "sidenav" ? true : undefined}>
+    <>
       {steps.map((step, stepIndex) => (
         <Fragment key={`${step.map((part) => part.label).join("+")}-${stepIndex}`}>
           {step.map((part, partIndex) => (
@@ -88,6 +87,6 @@ export const PaletteShortcut = (props: { binding: PaletteShortcutBinding; varian
           {stepIndex < steps.length - 1 ? " then " : null}
         </Fragment>
       ))}
-    </Box>
+    </>
   );
 };
