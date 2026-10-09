@@ -1,8 +1,7 @@
 name: Harness CLI support
 
 # Runs each harness against the real agent CLI. `minimum` reads the version the harness detection
-# accepts as its oldest; `latest` is the newest release on npm. No agent login is needed: OpenCode
-# runs a real turn on one of its free models.
+# accepts as its oldest; `latest` is the newest release on npm. No agent login is needed.
 on:
   workflow_call:
     inputs:

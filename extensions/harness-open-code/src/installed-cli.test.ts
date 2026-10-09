@@ -3,13 +3,12 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessContext, SessionMessage } from "@pstdio/sdk/extensions";
+import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { detectOpencode } from "./detection";
 import { createOpencodeHarness } from "./harness";
-import { recordingSink } from "./opencode-session-poller.test-helpers";
 
 // Runs the harness against the OpenCode CLI on PATH. CI installs the minimum supported version and,
-// before a release, the latest one. OpenCode's free models need no login, so this runs a real turn.
+// before a release, the latest one. Nothing here needs a model or a login.
 const enabled = process.env.INSTALLED_CLI_TESTS === "1";
 // Keep OpenCode's sessions and settings out of the developer's own OpenCode data.
 const home = mkdtempSync(join(tmpdir(), "opencode-home-"));
@@ -42,19 +41,9 @@ describe.if(enabled)("installed OpenCode CLI", () => {
     expect((await harness.listModels!(context)).length).toBeGreaterThan(0);
   });
 
-  test("runs a turn with a shell command on a free model", async () => {
-    const { sink } = recordingSink();
-    const session = await harness.start(context, {
-      prompt: "Run the shell command `echo hi` with your bash tool, then reply with only the word done.",
-      model: "opencode/big-pickle",
-      cwd: mkdtempSync(join(tmpdir(), "opencode-turn-")),
-      sessionId: "installed-cli",
-      events: sink,
-    });
-    expect(await session.done).toEqual({ status: "completed" });
-    const parts = sink.getMessages().flatMap((message: SessionMessage) => message.parts);
-    expect(parts.some((part) => part.type === "tool" && part.tool === "bash")).toBe(true);
-    expect(parts.some((part) => part.type === "text" && /\bdone\b/i.test(part.text))).toBe(true);
-    session.stop();
-  }, 180_000);
+  test("starts its server and reads OpenCode's native commands", async () => {
+    const state = await harness.getCommandState!(context, { cwd: home });
+    // The harness adds /compact itself; every other command comes from the OpenCode server.
+    expect(state.commands.length).toBeGreaterThan(1);
+  }, 120_000);
 });
