@@ -2,7 +2,8 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 
 export const detectOpencode = async (ctx: HarnessContext) => {
   try {
-    const result = await ctx.process.run({ command: ["opencode", "--version"] });
+    // Model listing also calls this probe without the host availability wrapper.
+    const result = await ctx.process.run({ command: ["opencode", "--version"], timeoutMs: 3_000 });
     if (result.exitCode !== 0) {
       ctx.logger.warn("OpenCode version probe failed. Check the CLI selected by the runtime PATH.");
       return { available: false };

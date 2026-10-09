@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
+import cmdShim from "cmd-shim";
 import { createProcessApi } from "./extension-process-api";
 
 const roots: string[] = [];
@@ -44,13 +45,43 @@ test("preserves PATH order and does not silently bypass a broken installation", 
   expect((await run([second.prefix, first.prefix])).stdout).toBe("fixture\n");
 });
 
-for (const directory of ["npm", "Custom Tools Å & Partners"]) {
-  test(`runs explicit wrapper paths and keeps arguments intact in ${directory}`, async () => {
-    const { command } = fixture(directory, "discovery-cli", "console.log(JSON.stringify(process.argv.slice(2)))");
-    const args = ["a & b", "x|y", "(value)", "a^b", 'say "hello"', "C:\\folder with spaces\\", "Ångström"];
-    const result = await createProcessApi().run({ command: [command, ...args] });
-    expect(result.exitCode).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual(args);
+for (const adjacentNode of [false, true]) {
+  test(`runs npm shims with ${adjacentNode ? "adjacent Node" : "Node from PATH"} and preserves literal arguments`, async () => {
+    const node = Bun.which("node");
+    if (!node) throw new Error("Node.js is required to test npm command shims.");
+    const { command, prefix, script } = fixture(adjacentNode ? "npm" : "Custom Tools Å & Partners", "discovery-cli");
+    writeFileSync(
+      script,
+      "#!/usr/bin/env node\nconsole.log(JSON.stringify({ args: process.argv.slice(2), executable: process.execPath }))",
+    );
+    if (adjacentNode) copyFileSync(node, join(prefix, process.platform === "win32" ? "node.exe" : "node"));
+    await cmdShim(script, command.replace(/\.cmd$/, ""));
+    const args = [
+      "a & b",
+      "x|y",
+      "(value)",
+      "a^b",
+      'say "hello"',
+      "C:\\folder with spaces\\",
+      "Ångström",
+      "%PATH%",
+      "%DISCOVERY_LITERAL%",
+      "%",
+      "100%",
+      "!",
+      "!DISCOVERY_LITERAL!",
+      "%DISCOVERY_LITERAL% & !DISCOVERY_LITERAL!",
+    ];
+    const result = await createProcessApi().run({
+      command: [command, ...args],
+      env: { PATH: `${dirname(node)}${delimiter}${process.env.PATH}`, DISCOVERY_LITERAL: "must not expand" },
+    });
+    expect(result.exitCode, result.stderr).toBe(0);
+    const output = JSON.parse(result.stdout);
+    expect(output.args).toEqual(args);
+    expect(output.executable.toLowerCase()).toBe(
+      (adjacentNode ? join(prefix, process.platform === "win32" ? "node.exe" : "node") : node).toLowerCase(),
+    );
   });
 }
 

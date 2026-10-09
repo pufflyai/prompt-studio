@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
+import cmdShim from "cmd-shim";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary } from "./packaged-helpers";
@@ -16,27 +17,23 @@ const harnesses = [
 ];
 const harnessId = (harness: (typeof harnesses)[number]) => `pstdio.${harness.extension}.harness.${harness.id}`;
 
-const installFixtures = (prefix: string, broken: boolean) => {
+const installFixtures = async (prefix: string, state: "healthy" | "broken" | "hanging") => {
   for (const harness of harnesses) {
     const bin = join(prefix, "node_modules", harness.command, "bin");
     mkdirSync(bin, { recursive: true });
     const script = join(bin, "cli.cjs");
     let source = `console.error(${JSON.stringify(`\u001b[32m${harness.version}\u001b[0m`)});`;
     if (harness.command === "opencode")
-      source = broken
-        ? `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, "hanging.pid"))}, String(process.pid)); setInterval(() => {}, 1000);`
-        : `console.log(process.argv[2] === '--version' ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
-    if (broken && harness.command === "codex") source = "console.error('broken install'); process.exit(7);";
-    writeFileSync(script, source);
+      source =
+        state === "broken"
+          ? `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, "opencode.pid"))}, String(process.pid)); setInterval(() => {}, 1000);`
+          : `console.log(process.argv[2] === '--version' ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
+    if (state === "broken" && harness.command === "codex") source = "console.error('broken install'); process.exit(7);";
+    if (state === "hanging")
+      source = `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, `${harness.command}.pid`))}, String(process.pid)); setInterval(() => {}, 1000);`;
+    writeFileSync(script, `#!/usr/bin/env node\n${source}`);
     if (process.platform === "win32") {
-      const node = Bun.which("node");
-      if (!node) throw new Error("Node.js is required to test npm command shims.");
-      writeFileSync(
-        join(prefix, `${harness.command}.cmd`),
-        `@ECHO off\r\n"${node}" "%~dp0\\node_modules\\${harness.command}\\bin\\cli.cjs" %*\r\n`,
-      );
-      writeFileSync(join(prefix, `${harness.command}.ps1`), 'throw "Use the sibling command shim"');
-      writeFileSync(join(prefix, harness.command), "#!/bin/sh\nexit 1\n");
+      await cmdShim(script, join(prefix, harness.command));
     } else {
       writeFileSync(join(prefix, harness.command), `#!/bin/sh\nexec "${process.execPath}" "${script}" "$@"\n`, {
         mode: 0o755,
@@ -48,11 +45,10 @@ const installFixtures = (prefix: string, broken: boolean) => {
 const root = mkdtempSync(join(tmpdir(), "packaged-harness-discovery-"));
 const prefix = join(root, "User Å Name & Tools", "custom-prefix");
 let runtime: Awaited<ReturnType<typeof startPackagedServe>>;
+let project: { id: string };
 
-// Both projects use one runtime: changing the CLI fixtures also proves discovery
-// observes the current installation instead of caching a previous success.
 beforeAll(async () => {
-  installFixtures(prefix, false);
+  await installFixtures(prefix, "healthy");
   runtime = await startPackagedServe(root, {
     PATH: `${prefix}${delimiter}${process.env.PATH}`,
     PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(...harnesses.map((harness) => harness.extension)),
@@ -66,9 +62,9 @@ afterAll(async () => {
 
 for (const broken of [false, true]) {
   test(broken
-    ? "lists healthy harnesses beside failed and hanging npm probes"
+    ? "refreshes the same project and lists healthy harnesses beside failed and hanging npm probes"
     : "detects all npm harnesses from a custom prefix", async () => {
-    installFixtures(prefix, broken);
+    await installFixtures(prefix, broken ? "broken" : "healthy");
     const started = runtime;
     const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
     const createProject = async (name: string, agents?: string[]) => {
@@ -82,7 +78,9 @@ for (const broken of [false, true]) {
       expect(created.status).toBe(201);
       return (await created.json()) as { id: string };
     };
-    const project = await createProject(broken ? "broken-harnesses" : "healthy-harnesses");
+    if (!broken) project = await createProject("harnesses");
+    // Reuse the same cache key and let the five-second availability TTL expire.
+    if (broken) await Bun.sleep(5_001);
     const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
     expect(agents.status).toBe(200);
     const result = (await agents.json()) as Array<{ id: string; availability: { type: string } }>;
@@ -98,7 +96,7 @@ for (const broken of [false, true]) {
     if (broken) {
       // The registry deadline can answer before the process timeout finishes
       // stopping the wrapper. Keep its owner alive until cleanup has completed.
-      const pid = Number(await Bun.file(join(prefix, "hanging.pid")).text());
+      const pid = Number(await Bun.file(join(prefix, "opencode.pid")).text());
       expect(pid).toBeGreaterThan(0);
       let alive = true;
       for (let attempt = 0; attempt < 50; attempt++) {
@@ -125,3 +123,37 @@ for (const broken of [false, true]) {
     }
   }, 30_000);
 }
+
+test("returns no models and stops every hanging version probe", async () => {
+  for (const harness of harnesses) rmSync(join(prefix, `${harness.command}.pid`), { force: true });
+  await installFixtures(prefix, "hanging");
+  const headers = runtimeAuthorization(runtime.descriptor);
+  try {
+    const results = await Promise.allSettled(
+      harnesses.map(async (harness) => {
+        const response = await fetch(
+          `${runtime.baseUrl}/v1/agents/${harnessId(harness)}/models?project=${project.id}`,
+          { headers, signal: AbortSignal.timeout(4_000) },
+        );
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual([]);
+      }),
+    );
+    for (const result of results)
+      expect(result.status, result.status === "rejected" ? String(result.reason) : undefined).toBe("fulfilled");
+    for (const harness of harnesses) {
+      const pid = Number(await Bun.file(join(prefix, `${harness.command}.pid`)).text());
+      expect(pid).toBeGreaterThan(0);
+      expect(() => process.kill(pid, 0)).toThrow();
+    }
+  } finally {
+    // A failing regression must not leave fixtures alive after the test runtime exits.
+    for (const harness of harnesses) {
+      const file = Bun.file(join(prefix, `${harness.command}.pid`));
+      if (!(await file.exists())) continue;
+      try {
+        process.kill(Number(await file.text()), "SIGKILL");
+      } catch {}
+    }
+  }
+}, 30_000);

@@ -3,7 +3,12 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 export const detectClaude = async (ctx: HarnessContext) => {
   try {
     // CLAUDECODE is cleared so a nested session is not mistaken for the CLI itself.
-    const result = await ctx.process.run({ command: ["claude", "--version"], env: { CLAUDECODE: "" } });
+    // Model listing also calls this probe without the host availability wrapper.
+    const result = await ctx.process.run({
+      command: ["claude", "--version"],
+      env: { CLAUDECODE: "" },
+      timeoutMs: 3_000,
+    });
     if (result.exitCode !== 0) {
       ctx.logger.warn("Claude Code version probe failed. Check the CLI selected by the runtime PATH.");
       return { available: false };
