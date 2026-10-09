@@ -9,6 +9,7 @@ import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
 import { createResourceAnchorsClient, type ResourceAnchorsClient } from "./resource-anchors";
 import { createRuntimeClient, type RuntimeClient } from "./runtime";
+import { createSessionStreamTransport } from "./session-stream";
 import { createSessionClient, type SessionClient } from "./sessions";
 import { createSettingsClient, type SettingsClient } from "./settings";
 import { createSkillClient, type SkillClient } from "./skills";
@@ -34,18 +35,19 @@ export type PstdioClient = {
 
 export const createClient = (options: ClientOptions = {}): PstdioClient => {
   const request = createRequest(options);
+  const streams = createSessionStreamTransport(request, options);
   return {
     resources: createResourceAnchorsClient(request),
     views: createBoardViewsClient(request),
     projects: createProjectClient(request),
     filesystem: createFilesystemClient(request),
     workspaces: createWorkspaceClient(request),
-    sessions: createSessionClient(request, options),
+    sessions: createSessionClient(request, options, streams),
     skills: createSkillClient(request),
     agents: createAgentClient(request),
     automation: createAutomationClient(request),
     notifications: createNotificationsClient(request),
-    extensions: createExtensionClient(request),
+    extensions: createExtensionClient(request, streams),
     settings: createSettingsClient(request),
     sync: createSyncClient(options),
     runtime: createRuntimeClient(request),

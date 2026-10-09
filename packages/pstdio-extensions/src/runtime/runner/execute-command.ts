@@ -6,6 +6,7 @@ import type {
   JsonObject,
 } from "@pstdio/sdk/extensions";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
+import { createCommandStreamWriter } from "./command-stream";
 import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
@@ -14,6 +15,9 @@ import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
 import { validateCommandParams } from "./validate-params";
+
+const streamCancelled = (input: InternalExecuteInput, scope: InvocationScope) =>
+  Boolean(input.onChunk && scope.signal.aborted);
 
 const buildRequestPayload = (
   record: RuntimeCommandRecord,
@@ -74,6 +78,10 @@ const runExtensionCommand = async (
     };
   }
 
+  if (input.onChunk && !record.stream)
+    return { ok: false, status: "error", code: "command_not_streamable", reason: "Command does not declare a stream." };
+  const writer = createCommandStreamWriter(input.onChunk, scope.signal);
+  scope.register(writer.close);
   const notices: CommandNotice[] = [];
   const envFor = createEnvironmentCache(state.deps, input.projectId, notices, {
     workspaceDir: input.workspaceDir,
@@ -178,7 +186,8 @@ const runExtensionCommand = async (
   const start = Date.now();
   try {
     if (input.signal?.aborted) throw input.signal.reason;
-    const value = await record.run(buildCommandCtx(finalInvocation), finalInvocation.params);
+    const value = await record.run({ ...buildCommandCtx(finalInvocation), stream: writer }, finalInvocation.params);
+    if (streamCancelled(input, scope)) throw scope.signal.reason;
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(lifecycleEventId("completed", record.id), {
       ...startedPayload,
@@ -196,7 +205,13 @@ const runExtensionCommand = async (
       elapsedMs,
     });
     return withNotices(
-      { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
+      {
+        ok: false,
+        status: "error",
+        code: streamCancelled(input, scope) ? "command_stream_cancelled" : "handler_threw",
+        reason: message,
+        error: serializeError(err),
+      },
       notices,
     );
   }

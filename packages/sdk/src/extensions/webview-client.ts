@@ -10,12 +10,13 @@ import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
+import { type CommandStreamOptions, createWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
 
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
 // per-command result types (see ADR 0012-temporary-webview-client-type-source).
 type CommandFn<TDefinition> =
-  TDefinition extends CommandDefinition<infer TSchema, infer TResult, infer _TSettings>
+  TDefinition extends CommandDefinition<infer TSchema, infer TResult, infer _TSettings, infer _TChunk>
     ? TSchema extends ParamObjectSchema
       ? Partial<ParamsOf<TSchema>> extends ParamsOf<TSchema>
         ? (params?: ParamsOf<TSchema>) => Promise<TResult>
@@ -51,6 +52,7 @@ export type WebviewArtifactsClient = {
 export type WebviewClient<TCommands, TSettings = undefined> = {
   artifacts: WebviewArtifactsClient;
   commands: WebviewCommandsClient<TCommands>;
+  streams: WebviewStreamsClient<TCommands>;
   events: WebviewEventsClient;
   settings: WebviewSettingsClient<ClientSettingsMap<TSettings>>;
 };
@@ -107,6 +109,21 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     },
   );
 
+  const streams = new Proxy(
+    {},
+    {
+      get: (_target, key) =>
+        typeof key !== "string"
+          ? undefined
+          : (params?: JsonObject, streamOptions?: CommandStreamOptions) =>
+              createWebviewCommandStream(
+                host,
+                { commandId: `${extensionId}.command.${key}`, params, workspaceId: options?.workspaceId },
+                streamOptions,
+              ),
+    },
+  );
+
   const settings = {
     all: async () => (await host.call("extension.settings.all", {})) ?? {},
     get: (key: string) => host.call("extension.settings.get", { key }),
@@ -127,5 +144,5 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
   };
 
   const events = createWebviewEventsClient(host, extensionId);
-  return { artifacts, commands, events, settings } as WebviewClient<TCommands, TSettings>;
+  return { artifacts, commands, streams, events, settings } as WebviewClient<TCommands, TSettings>;
 };

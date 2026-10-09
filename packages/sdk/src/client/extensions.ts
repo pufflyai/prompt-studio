@@ -15,7 +15,9 @@ import type {
   ListProjectExtensionsResponse,
   UpgradeProjectExtensionResponse,
 } from "pstdio-api-contracts";
+import { type CommandStreamClientEvent, streamExtensionCommand } from "./extension-stream";
 import type { RequestFn } from "./request";
+import type { createSessionStreamTransport } from "./session-stream";
 
 export type ExtensionClient = {
   install(
@@ -24,6 +26,11 @@ export type ExtensionClient = {
     options?: { signal?: AbortSignal },
   ): Promise<InstallExtensionResponse>;
   diagnostics(projectId: string, options?: { scope?: "user" | "repo" }): Promise<ExtensionDiagnosticsResponse>;
+  stream(
+    commandId: string,
+    input: CommandExecuteRequest,
+    options?: { signal?: AbortSignal },
+  ): AsyncIterable<CommandStreamClientEvent>;
   enableInstalled(
     projectId: string,
     installName: string,
@@ -46,7 +53,10 @@ export type ExtensionClient = {
   dispatchEvent(projectId: string, input: DispatchExtensionEventInput): Promise<void>;
 };
 
-export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
+export const createExtensionClient = (
+  request: RequestFn,
+  streams: ReturnType<typeof createSessionStreamTransport>,
+): ExtensionClient => ({
   install: (projectId, input, options) =>
     request(`/v1/projects/${projectId}/extensions/install`, {
       method: "POST",
@@ -55,6 +65,7 @@ export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
     }),
   diagnostics: (projectId, options) =>
     request(`/v1/projects/${projectId}/extensions/diagnostics${options?.scope ? `?scope=${options.scope}` : ""}`),
+  stream: (commandId, input, options) => streamExtensionCommand(streams, commandId, input, options),
   enableInstalled: (projectId, installName, body) =>
     request(`/v1/projects/${projectId}/extensions/installed/${encodeURIComponent(installName)}/enable`, {
       method: "POST",

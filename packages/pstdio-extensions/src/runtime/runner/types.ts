@@ -24,6 +24,7 @@ import type {
   ExtensionTerminalApi,
   ExtensionWorkspacesApi,
   JsonObject,
+  JsonValue,
   ResourceRef,
   SlotInvocationContext,
   WorkbenchAttachmentInvocationContext,
@@ -111,6 +112,7 @@ export interface CommandRunnerHostDeps {
 }
 
 export interface CommandExecuteInput {
+  onChunk?: (chunk: JsonValue) => Promise<void>;
   commandId: string;
   projectId: string;
   params?: JsonObject;

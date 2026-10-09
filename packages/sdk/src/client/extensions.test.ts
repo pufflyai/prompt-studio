@@ -1,17 +1,16 @@
 import { expect, test } from "bun:test";
-import { createExtensionClient } from "./extensions";
-import { createRequest, PstdioApiError } from "./request";
+import { createClient } from "./client";
+import { PstdioApiError } from "./request";
 
 test("sends catalog and multipart installs through the same endpoint", async () => {
   const calls: Request[] = [];
-  const request = createRequest({
+  const client = createClient({
     baseUrl: "http://host",
     fetch: (async (url, init) => {
       calls.push(new Request(url, init));
       return Response.json({ source: {}, extension: {} }, { status: 201 });
     }) as typeof fetch,
-  });
-  const client = createExtensionClient(request);
+  }).extensions;
   await client.install("project", { source: { kind: "catalog", name: "tool", ref: "main" }, force: true });
   expect(calls[0]!.url).toBe("http://host/v1/projects/project/extensions/install");
   expect(await calls[0]!.json()).toEqual({ source: { kind: "catalog", name: "tool", ref: "main" }, force: true });
@@ -25,16 +24,16 @@ test("sends catalog and multipart installs through the same endpoint", async () 
 });
 
 test("preserves the host conflict code for replacement controls", async () => {
-  const request = createRequest({
+  const client = createClient({
     baseUrl: "http://host",
     fetch: (async () =>
       Response.json(
         { error: "Already installed", code: "extension_already_installed" },
         { status: 409 },
       )) as unknown as typeof fetch,
-  });
+  }).extensions;
   try {
-    await createExtensionClient(request).install("project", { source: { kind: "catalog", name: "tool" } });
+    await client.install("project", { source: { kind: "catalog", name: "tool" } });
     throw new Error("Expected a conflict");
   } catch (error) {
     expect(error).toBeInstanceOf(PstdioApiError);

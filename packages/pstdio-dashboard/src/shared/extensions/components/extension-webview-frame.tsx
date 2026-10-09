@@ -1,5 +1,5 @@
 import { Center, Text } from "@chakra-ui/react";
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { ResourceRef, WebviewCommandsStreamParams } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import { createTerminalSessionCapability, createWorkbenchWebviewHostCapabilities } from "@pstdio/workbench/extensions";
@@ -7,7 +7,7 @@ import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webvie
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
-import { apiRequest, buildAbsoluteApiUrl } from "@/lib/api";
+import { apiRequest, buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
   deleteGlobalExtensionSetting,
@@ -19,7 +19,12 @@ import {
   updateGlobalExtensionSetting,
   updateProjectExtensionSetting,
 } from "../api";
-import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
+import { createCommandStreamCapability, withFrameSignal } from "../command-stream-capability";
+import {
+  type ExtensionCommandEvent,
+  publishExtensionCommandEvent,
+  subscribeToExtensionCommandFeed,
+} from "../extension-webview-broadcast";
 import { createDashboardExtensionWebviewCapabilities } from "../extension-webview-capabilities";
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
 import { openExtensionViews } from "../open-extension-views";
@@ -52,6 +57,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [hostEvents] = useState(createHostEventPublisher);
+  const [streamCommand] = useState(() => createCommandStreamCapability(hostEvents));
   const [pageLocation, setPageLocation] = useState(() => props.workbench?.pages.store.getState().location);
   useEffect(() => {
     const store = props.workbench?.pages.store;
@@ -148,24 +154,33 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     ...(props.workbench
       ? createWorkbenchWebviewHostCapabilities({ workbench: props.workbench, placement: props.placement, hostEvents })
       : {}),
+    "commands.stream": (params: unknown) =>
+      streamCommand(params as WebviewCommandsStreamParams, {
+        projectId: requireProjectId(),
+        stream: (...args) => getApiClient().extensions.stream(...args),
+        publish: (response) => publishExtensionCommandEvent(response, { projectId }),
+      }),
     "commands.execute": async (params: unknown) => {
       const commandInput = params as Parameters<typeof executeWebviewCommand>[0];
-      return executeWebviewCommand({
-        ...commandInput,
-        workbench: props.workbench,
-        projectId,
-        executeExtensionCommand: (input) =>
-          executeCommand.mutateAsync({
-            commandId: input.commandId,
-            body: {
-              metadata: input.metadata,
-              params: input.params,
-              workspaceId: input.workspaceId,
-              resource: input.resource,
-              source: "dashboard",
-            },
-          }),
-      });
+      return withFrameSignal(hostEvents, (signal) =>
+        executeWebviewCommand({
+          ...commandInput,
+          workbench: props.workbench,
+          projectId,
+          executeExtensionCommand: (input) =>
+            executeCommand.mutateAsync({
+              signal,
+              commandId: input.commandId,
+              body: {
+                metadata: input.metadata,
+                params: input.params,
+                workspaceId: input.workspaceId,
+                resource: input.resource,
+                source: "dashboard",
+              },
+            }),
+        }),
+      );
     },
     "notification.show": (params: unknown) => {
       const notification = params as {

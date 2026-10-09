@@ -1,16 +1,21 @@
 import type {
   CommandDefinition,
+  CommandStreamDeclaration,
   ContributionDefinition,
   HookDefinition,
+  JsonValue,
   MiddlewareDefinition,
   ParamObjectSchema,
   Struct,
 } from "pstdio-api-contracts/extension-kernel";
 
-type CommandContribution<TSchema extends ParamObjectSchema | undefined, TResult> = CommandDefinition<TSchema, TResult> &
-  ContributionDefinition<"command">;
-type CommandInput<TSchema extends ParamObjectSchema | undefined, TResult> = Omit<
-  CommandDefinition<TSchema, TResult>,
+type CommandContribution<
+  TSchema extends ParamObjectSchema | undefined,
+  TResult,
+  TChunk extends JsonValue,
+> = CommandDefinition<TSchema, TResult, Record<string, unknown>, TChunk> & ContributionDefinition<"command">;
+type CommandInput<TSchema extends ParamObjectSchema | undefined, TResult, TChunk extends JsonValue> = Omit<
+  CommandDefinition<TSchema, TResult, Record<string, unknown>, TChunk>,
   "ref"
 >;
 
@@ -29,12 +34,16 @@ type CommandInput<TSchema extends ParamObjectSchema | undefined, TResult> = Omit
  *     },
  *   });
  */
-export function defineCommand<const TSchema extends ParamObjectSchema | undefined = undefined, TResult = unknown>(
-  definition: CommandInput<TSchema, TResult>,
-): CommandContribution<TSchema, TResult>;
-export function defineCommand<const TSchema extends ParamObjectSchema | undefined = undefined, TResult = unknown>(
-  definition: CommandInput<TSchema, TResult>,
-) {
+export function defineCommand<
+  const TSchema extends ParamObjectSchema | undefined = undefined,
+  TResult = unknown,
+  TChunk extends JsonValue = never,
+>(definition: CommandInput<TSchema, TResult, TChunk>): CommandContribution<TSchema, TResult, TChunk>;
+export function defineCommand<
+  const TSchema extends ParamObjectSchema | undefined = undefined,
+  TResult = unknown,
+  TChunk extends JsonValue = never,
+>(definition: CommandInput<TSchema, TResult, TChunk>) {
   return { ...definition, ref: { kind: "command" as const, id: definition.id } };
 }
 
@@ -57,3 +66,5 @@ export const defineHook = <TPayload extends Struct = Struct>(
   ...definition,
   ref: { kind: "hook", id: definition.id },
 });
+
+export const streamOf = <TChunk extends JsonValue>(): CommandStreamDeclaration<TChunk> => ({ kind: "stream" });

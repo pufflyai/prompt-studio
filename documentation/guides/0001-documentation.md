@@ -311,6 +311,7 @@ Keep an original post's publication date when adding images or correcting it. Re
 - [0062 — Temporary Codex history identity migration](../adrs/0062-temporary-codex-history-identity-migration.md)
 - [0063 — Temporary Claude literal slash input](../adrs/0063-temporary-claude-literal-slash-input.md)
 - [0064 — Codex App Server runtime](../adrs/0064-codex-app-server-runtime.md)
+- [0065 — Stream command results over the shared client stream](../adrs/0065-stream-command-results-over-the-shared-client-stream.md)
 
 ## Lessons learned
 
