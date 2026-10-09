@@ -37,6 +37,7 @@ export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
   const compact = !editor;
   return (
     <Box
+      className="group"
       ref={(node: HTMLDivElement | null) => {
         drag.setNodeRef(node);
         row.current = node;
@@ -101,7 +102,7 @@ export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
           <IconButton
             aria-label="Remove queued follow-up"
             size="2xs"
-            variant="ghost"
+            variant="destructive-ghost"
             onClick={(event) => {
               event.stopPropagation();
               onRemove(item.id);

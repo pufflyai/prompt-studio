@@ -77,6 +77,22 @@ export const buttonRecipe = defineRecipe({
         _hover: { "&:not(:active, [data-active])": { bg: "red.700" } },
         _active: { bg: "red.800" },
       },
+      "destructive-ghost": {
+        color: "fg.subtle",
+        bg: "transparent",
+        border: "none",
+        "&:not(:disabled, [data-disabled])": {
+          _hover: { color: "fg.error", bg: "bg.error" },
+          _focusVisible: { color: "fg.error", bg: "bg.error" },
+          _active: { color: "fg.error", bg: "bg.error" },
+          _groupHover: { color: "fg.error", bg: "bg.error" },
+        },
+        _disabled: {
+          color: "fg.subtle",
+          bg: "transparent",
+          _hover: { bg: "transparent" },
+        },
+      },
       outline: {
         color: "fg",
         bg: "bg",

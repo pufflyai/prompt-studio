@@ -29,6 +29,14 @@ Use these general UX and UI patterns across the app and its extensions.
 - Use extra-small inputs for inline file creation and renaming in the side navigation.
 - Inputs and buttons in the same row must have matching heights. Use shared component sizes.
 
+## Delete icon buttons
+
+- Use the same style as the Statuses editor for every delete icon button in the app and its extensions.
+- Use `fg.subtle` on a transparent background at rest. Use `fg.error` and `bg.error` on hover, keyboard focus, and press. A row that reveals its delete action on hover uses the same colors.
+- Keep disabled delete buttons subdued, with no error-colored hover state.
+- Use the shared button recipe's `destructive-ghost` variant. Keep the size appropriate for the surrounding controls.
+- This rule applies to icon-only delete and trash actions. Text delete buttons and close or dismiss buttons keep their own styles.
+
 ## Long paths and resource names
 
 - Truncate in the middle. Keep the beginning and the final 3–5 characters visible, including the file extension when possible.

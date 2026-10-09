@@ -17,6 +17,19 @@ export const expectPackagedQueuedEditorCancellation = async (
     await page.goto(`${baseUrl}/projects/${projectId}/session?resource=${resource}`);
     const editor = page.getByTestId("content-editable").last();
     await expect(editor).toBeEditable();
+    const remove = page.getByRole("button", { name: "Remove queued follow-up", exact: true }).first();
+    await page.getByRole("button", { name: "Edit queued message: First", exact: true }).hover({ timeout: 5000 });
+    await expect(remove).toHaveCSS(
+      "color",
+      await remove.evaluate((element) => {
+        const reference = document.createElement("span");
+        reference.style.color = "var(--chakra-colors-fg-error)";
+        element.append(reference);
+        const color = getComputedStyle(reference).color;
+        reference.remove();
+        return color;
+      }),
+    );
     await editor.fill("Independent draft");
     await page.getByRole("button", { name: "Edit queued message: First", exact: true }).click();
     await expect(editor).toHaveText("First");
