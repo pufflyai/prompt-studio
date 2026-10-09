@@ -195,7 +195,6 @@
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/views/document-link.tsx",
         "src/views/tags-settings-panel.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

@@ -58,7 +58,7 @@ The sidebar lists, from top to bottom:
 
 The editor shows the document you selected in the sidebar: the description, a ticket file, or an image. Edit the description and ticket files there.
 
-Open **Copy Link** beside the editor, then press the copy button to copy a link to the selected saved document. Reload, Back, and Forward restore that document. File links keep working after a rename. A deleted document shows an unavailable error.
+Selecting a saved document puts it in the page URL. Reload, Back, and Forward restore that document. File links keep working after a rename. A deleted document shows an unavailable error.
 
 Chat links to `.pstdio/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
 

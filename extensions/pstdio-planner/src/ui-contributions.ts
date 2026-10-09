@@ -78,16 +78,6 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
-  const documentLink = defineView({
-    id: "document-link",
-    title: l10n("ticketDocument.copyLink", "Copy Link"),
-    icon: "link",
-    body: {
-      kind: "webview",
-      entry: packageAsset("./src/views/document-link.tsx", baseUrl),
-      capabilities: ["commands.execute", "clipboard.write"],
-    },
-  });
   const tickets = defineView({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -183,15 +173,9 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings, documentLink],
+    views: [tickets, editor, files, properties, tagSettings],
     pages: [ticketsPage, ticketDetailPage],
     viewMenus: [
-      defineViewMenu({
-        id: "ticket.document-link",
-        owner: editor.ref,
-        view: documentLink.ref,
-        side: "left",
-      }),
       defineViewMenu({
         id: "ticket.properties",
         owner: editor.ref,
