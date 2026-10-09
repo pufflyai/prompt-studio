@@ -56,7 +56,7 @@ describe("pstdio planner extension contributions", () => {
       slot: "content",
       view: { kind: "view", id: "ticket-files" },
     });
-    expect(extension.viewMenus?.[0]).toMatchObject({
+    expect(extension.viewMenus?.find((menu) => menu.id === "ticket.properties")).toMatchObject({
       id: "ticket.properties",
       owner: { id: "ticket-editor" },
       view: { id: "ticket-properties" },

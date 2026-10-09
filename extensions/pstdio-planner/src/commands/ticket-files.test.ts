@@ -38,13 +38,27 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
     shorthand: ticket.shorthand,
     metadata: {
       archived: false,
-      documentId,
+      ...(documentId !== "__ticket__" ? { documentId } : {}),
       resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     },
   },
 });
 
 describe("ticket files tree commands", () => {
+  test("the body uses the default document route to avoid duplicate history", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const sections = await listTicketFilesTreeCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: ticketRendererParams(ticket),
+      }),
+    );
+    expect(sections[0].nodes[0].target).toMatchObject({
+      resource: { id: ticket.id, metadata: { archived: false } },
+    });
+    expect(sections[0].nodes[0].target).not.toHaveProperty("resource.metadata.documentId");
+  });
   test("returns a native tree section for the ticket body and editable files", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Write a haiku" } }));

@@ -58,6 +58,10 @@ The sidebar lists, from top to bottom:
 
 The editor shows the document you selected in the sidebar: the description, a ticket file, or an image. Edit the description and ticket files there.
 
+Open **Copy Link** beside the editor, then press the copy button to copy a link to the selected saved document. Reload, Back, and Forward restore that document. File links keep working after a rename. A deleted document shows an unavailable error.
+
+Chat links to `.pstdio/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
+
 ### Properties
 
 The Properties panel opens beside the editor. It shows the ticket's ID, its created and updated times, review links, status, dependencies, parent, and tags. It also shows the blocked reason when the ticket is blocked. Change the status and the tags here. You can also copy the ID from the panel.

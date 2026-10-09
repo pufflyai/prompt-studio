@@ -24,7 +24,7 @@ import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
-import { ticketPageTarget } from "./data/ticket-page-target";
+import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketStatuses } from "./ticket-status-provider";
@@ -57,10 +57,11 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
     slots: [],
   });
   const ticketDetailPage = definePage({
-    id: "ticket",
+    id: ticketDocumentPage.id,
     title: l10n("panels.ticketEditor.title", "Ticket"),
     icon: "component",
-    path: "ticket",
+    path: ticketDocumentPage.path,
+    document: ticketDocumentPage.document,
     mode: workbenchModes.project,
     parent: ticketsPage.ref,
     resource: {
@@ -77,6 +78,16 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
+  const documentLink = defineView({
+    id: "document-link",
+    title: l10n("ticketDocument.copyLink", "Copy Link"),
+    icon: "link",
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/document-link.tsx", baseUrl),
+      capabilities: ["commands.execute", "clipboard.write"],
+    },
+  });
   const tickets = defineView({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -172,9 +183,15 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings],
+    views: [tickets, editor, files, properties, tagSettings, documentLink],
     pages: [ticketsPage, ticketDetailPage],
     viewMenus: [
+      defineViewMenu({
+        id: "ticket.document-link",
+        owner: editor.ref,
+        view: documentLink.ref,
+        side: "left",
+      }),
       defineViewMenu({
         id: "ticket.properties",
         owner: editor.ref,
