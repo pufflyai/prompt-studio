@@ -24,6 +24,10 @@ export const verifyPackagedShortcutReference = async (
   await dialog.getByRole("button", { name: "Close Keyboard shortcuts", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.goto(`${origin}/projects/${projectId}/extensions/e2e.shortcut-reference/reference`);
+  await page.mouse.move(0, 0);
+  await page.getByRole("button", { name: "Help", exact: true }).focus();
+  const workspaceLabel = page.getByRole("option", { name: "Workspaces", exact: true }).getByText("Workspaces");
+  await expect.poll(() => workspaceLabel.evaluate((label) => label.clientWidth >= label.scrollWidth)).toBe(true);
   const navigation = page.getByRole("option", { name: /Open shortcut destination/ }).first();
   await navigation.hover();
   await expect(navigation.locator("kbd").last()).toBeVisible();

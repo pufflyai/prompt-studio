@@ -263,6 +263,7 @@ const toTreeListNode = (
       onRequestParams: context.onRequestParams,
     }),
     endContent: resolveTreeNodeEndContent(node, resource, binding),
+    endContentVisibility: node.endContent === undefined && binding ? "hover" : "always",
     menuItems,
     contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),

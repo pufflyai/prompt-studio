@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Stack, Text, useRecipe } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
@@ -187,6 +187,7 @@ export const ListRowContent = (props: {
     showContextMenuTrigger,
   } = props;
   const actions = createResourceRowActions(item, showContextMenuTrigger);
+  const accessoryRecipe = useRecipe({ key: "listRowAccessory" });
 
   return (
     <>
@@ -200,7 +201,7 @@ export const ListRowContent = (props: {
         variant={variant}
       />
       {item.endContent ? (
-        <Box id={`${labelId}-end`} flexShrink={0} color="fg.muted" display="flex" alignItems="center">
+        <Box id={`${labelId}-end`} color="fg.muted" css={accessoryRecipe({ visibility: item.endContentVisibility })}>
           {item.endContent}
         </Box>
       ) : null}

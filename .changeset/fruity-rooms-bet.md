@@ -6,4 +6,4 @@
 "pstdio-planner": patch
 "pstdio-artifacts": patch
 ---
-Show assigned shortcuts under extension names, add main navigation and creation defaults, and reveal sidenav shortcut hints on hover and focus.
+Show assigned shortcuts under extension names, add main navigation and creation defaults, and reveal sidenav shortcut hints without truncating idle labels.

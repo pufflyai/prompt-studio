@@ -11,6 +11,7 @@ import type { ListRowItem, ListRowProps } from "./list-row.types";
 import { ListRowChrome } from "./list-row-chrome";
 import { ListRowContent } from "./list-row-content";
 import { computePaddingLeft, createListRowRootProps, resolveListRowSizing } from "./list-row-root-props";
+import { useRowHover } from "./use-row-hover";
 
 export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const {
@@ -21,6 +22,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     iconColor,
     indicator,
     endContent,
+    endContentVisibility,
     tooltip,
     disabled,
     isContainer,
@@ -58,6 +60,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   } = props;
   const [menuOpen, setMenuOpen] = useState(false);
   const labelId = useId();
+  const hoverProps = useRowHover(props);
 
   const item: ListRowItem = {
     id,
@@ -67,6 +70,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     iconColor,
     indicator,
     endContent,
+    endContentVisibility,
     tooltip,
     disabled,
     isContainer,
@@ -107,24 +111,14 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       event.preventDefault();
       return;
     }
-    handleActivate();
-  };
-
-  const handleMenuClick = (event: ReactMouseEvent<HTMLElement>) => {
-    onClick?.(event);
-    if (event.defaultPrevented) return;
-
-    if (isDisabled) {
-      event.preventDefault();
-      return;
-    }
-
-    setMenuOpen((current) => !current);
+    if (hasMenuItems) setMenuOpen((current) => !current);
+    else handleActivate();
   };
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(event);
     if (event.defaultPrevented) return;
+    if (event.target !== event.currentTarget) return;
     if (event.key !== "Enter" && event.key !== " ") return;
 
     event.preventDefault();
@@ -140,29 +134,32 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const hasDescription = item.description !== undefined;
   const paddingLeft = computePaddingLeft(depth);
   const verticalPadding = variant === "default" || hasDescription ? "xs" : "2xs";
-  const activationProps = hasMenuItems ? { onClick: handleMenuClick } : { onClick: handleClick };
+  const activationProps = { onClick: handleClick };
   const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
   const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");
 
-  const rowProps = createListRowRootProps({
-    rootProps,
-    labelId,
-    hasEndContent: Boolean(item.endContent),
-    rowRole,
-    className,
-    isSelected,
-    isExpanded,
-    showChevron,
-    rowHeight,
-    minHeight,
-    verticalPadding,
-    paddingLeft,
-    selectedBg,
-    hoverBg,
-    tone,
-    isDisabled,
-    variant,
-  });
+  const rowProps = {
+    ...createListRowRootProps({
+      rootProps,
+      labelId,
+      hasEndContent: Boolean(item.endContent),
+      rowRole,
+      className,
+      isSelected,
+      isExpanded,
+      showChevron,
+      rowHeight,
+      minHeight,
+      verticalPadding,
+      paddingLeft,
+      selectedBg,
+      hoverBg,
+      tone,
+      isDisabled,
+      variant,
+    }),
+    ...hoverProps,
+  };
 
   const content = (
     <ListRowContent

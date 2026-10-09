@@ -14,5 +14,7 @@ export const Inline: Story = {};
 
 export const SidenavHoverAndFocus: Story = {
   args: { variant: "sidenav" },
-  render: (args) => <ListRow label="Notes" tooltip="Notes" endContent={<PaletteShortcut {...args} />} />,
+  render: (args) => (
+    <ListRow label="Notes" tooltip="Notes" endContent={<PaletteShortcut {...args} />} endContentVisibility="hover" />
+  ),
 };
