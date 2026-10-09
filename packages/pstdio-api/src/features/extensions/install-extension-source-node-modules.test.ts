@@ -22,7 +22,7 @@ test("copied dependencies keep links to uploaded package files after source clea
     expect(installedDependencies.exitCode).toBe(0);
     copyUsableNodeModules(source, installed);
     const dependency = join(installed, "node_modules/demo/index.ts");
-    expect(relative(realpathSync(installed), realpathSync(dependency))).not.toStartWith("..");
+    expect(relative(realpathSync.native(installed), realpathSync.native(dependency))).not.toStartWith("..");
     rmSync(source, { recursive: true });
     expect(readFileSync(dependency, "utf8")).toBe("export const value = 42;");
   } finally {
