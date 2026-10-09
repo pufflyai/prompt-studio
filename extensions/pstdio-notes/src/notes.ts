@@ -1,6 +1,6 @@
 import type { ArtifactMount } from "@pstdio/sdk/extensions";
 import { buildNoteDocument, firstNoteTitle, parseNoteDocument } from "./note-frontmatter";
-import { writeNoteInOrder } from "./note-writes";
+import { writeResourceInOrder } from "./resource-writes";
 
 export type NotesMount = Pick<ArtifactMount, "exists" | "list" | "readText" | "writeText" | "updateText" | "delete">;
 
@@ -38,15 +38,15 @@ const saveNoteDocument = async (mount: NotesMount, id: string, body: string, tit
 };
 
 export const writeNote = (mount: NotesMount, id: string, content: string) =>
-  writeNoteInOrder(id, async () => {
+  writeResourceInOrder(id, async () => {
     const document = await readNoteDocument(mount, id);
     const title = document.title || firstNoteTitle(content);
     await saveNoteDocument(mount, id, content, title, document.fields);
   });
-export const deleteNote = (mount: NotesMount, id: string) => writeNoteInOrder(id, () => mount.delete(id));
+export const deleteNote = (mount: NotesMount, id: string) => writeResourceInOrder(id, () => mount.delete(id));
 
 export const renameNote = async (mount: NotesMount, id: string, rawTitle: string) =>
-  writeNoteInOrder(id, async () => {
+  writeResourceInOrder(id, async () => {
     const title = noteTitle(rawTitle);
     const document = await readNoteDocument(mount, id);
     await saveNoteDocument(mount, id, document.body, title, document.fields);
