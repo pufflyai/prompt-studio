@@ -127,6 +127,9 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       cwd: input.cwd,
       detached: process.platform !== "win32",
       env,
+      // The one-shot process API has no input channel. Closing stdin prevents
+      // console programs such as Windows PowerShell from waiting for input.
+      stdin: "ignore",
       stderr: "pipe",
       stdout: "pipe",
       windowsHide: true,

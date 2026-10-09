@@ -60,7 +60,16 @@ describe("resolveProcessCommand", () => {
     );
 
     expect(resolved).toEqual({
-      argv: ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "--version"],
+      argv: [
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ps1,
+        "--version",
+      ],
     });
   });
 

@@ -60,6 +60,15 @@ test("reports missing wrapper targets as failures", async () => {
   expect((await createProcessApi().run({ command: [command] })).exitCode).not.toBe(0);
 });
 
+test("closes stdin for one-shot probes", async () => {
+  const { command } = fixture(
+    "custom",
+    "input-cli",
+    "process.stdin.resume(); process.stdin.on('end', () => console.log('finished'));",
+  );
+  expect((await createProcessApi().run({ command: [command], timeoutMs: 1500 })).stdout.trim()).toBe("finished");
+});
+
 test.skipIf(process.platform !== "win32")(
   "honors per-call PATHEXT and prefers a runnable PowerShell sibling",
   async () => {

@@ -136,7 +136,9 @@ export const resolveProcessCommand = (
     };
   }
   if (target.toLowerCase().endsWith(".ps1")) {
-    return { argv: ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", target, ...args] };
+    return {
+      argv: ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", target, ...args],
+    };
   }
   return { argv: [target, ...args] };
 };
