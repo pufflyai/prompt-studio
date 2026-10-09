@@ -24,7 +24,7 @@ test("loads a thumbnail while command completion refreshes host props", async ({
   }
 });
 
-for (const title of ["Project brief", "Project dashboard"]) {
+for (const title of ["Project brief", "System diagram"]) {
   test(`starts and opens a creation session from ${title}`, async ({ page, request }) => {
     const repoRoot = resolve(import.meta.dirname, "../../../..");
     const tempRoot = resolve(repoRoot, "__test-tmp__");
@@ -116,7 +116,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     const libraryUrl = `/projects/${project.id}/extensions/${extensionId}/artifacts`;
     await page.goto(libraryUrl);
     const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
-    const artifactMenu = frame.getByRole("button", { name: "Artifact actions", exact: true });
+    const artifactMenu = page.locator("[data-workbench-breadcrumb-resource-actions]");
     const versionMenu = frame.getByRole("button", { name: "Versions", exact: true });
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     const libraryTab = page.getByRole("tab", { name: "Artifacts", exact: true });
@@ -201,12 +201,11 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(referenceTab).toBeVisible();
     expect(await execute("revisions", { url: first.url })).toHaveLength(2);
     await artifactMenu.click();
-    await frame.getByRole("menuitem", { name: "Rename artifact…", exact: true }).click();
-    await frame.getByRole("textbox", { name: "Artifact name" }).fill("Launch notes");
-    await frame.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Rename artifact…", exact: true }).click();
+    await page.getByRole("textbox", { name: "Artifact name" }).fill("Launch notes");
+    await page.getByRole("button", { name: "Run", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Launch notes", exact: true })).toBeVisible();
-    await artifactMenu.click();
-    await frame.getByRole("menuitem", { name: "All artifacts", exact: true }).click();
+    await breadcrumbs.getByRole("button", { name: "Artifacts", exact: true }).click();
     const card = frame.getByRole("button", { name: "Launch notes", exact: true });
     await expect(card).toBeVisible();
     // Thumbnails load only after their card enters the viewport.
@@ -217,14 +216,14 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await card.press("Enter");
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await artifactMenu.click();
-    await frame.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
-    await frame.getByRole("button", { name: "Delete artifact", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(frame.getByRole("button", { name: "Reference", exact: true })).toBeVisible();
     expect((await execute("list", {})).map((item: { url: string }) => item.url)).toEqual([reference.url]);
     await referenceTab.click();
     await artifactMenu.click();
-    await frame.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
-    await frame.getByRole("button", { name: "Delete artifact", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     expect(await execute("list", {})).toEqual([]);
   } finally {
@@ -233,7 +232,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
   }
 });
 
-test("uses translated version and action menus and dialogs", async ({ page }) => {
+test("uses translated version controls", async ({ page }) => {
   const storyId = "extensions-artifacts-library--french";
   const { baseUrl, storybook } = await startStorybook(storyId, "pstdio-dashboard");
   try {
@@ -241,18 +240,9 @@ test("uses translated version and action menus and dialogs", async ({ page }) =>
     await expect(page.getByRole("button", { name: "Release overview", exact: true })).toBeVisible();
     await page.goto(storyUrl(baseUrl, "extensions-artifacts-reader--french"));
     const versions = page.getByRole("button", { name: "Versions", exact: true });
-    const actions = page.getByRole("button", { name: "Actions de l’artefact", exact: true });
     await versions.click();
     await expect(page.getByRole("menuitemradio", { name: "Version 1 · Dernière version" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await actions.click();
-    await page.getByRole("menuitem", { name: "Renommer l’artefact…" }).click();
-    await expect(page.getByRole("textbox", { name: "Nom de l’artefact" })).toHaveValue("Release overview");
-    await page.getByRole("button", { name: "Annuler", exact: true }).click();
-    await actions.click();
-    await page.getByRole("menuitem", { name: "Supprimer l’artefact…" }).click();
-    await expect(page.getByRole("button", { name: "Supprimer l’artefact", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Fermer", exact: true })).toHaveCount(2);
   } finally {
     await stopStorybook(storybook);
   }

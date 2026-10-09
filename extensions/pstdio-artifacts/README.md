@@ -14,7 +14,7 @@ pst extensions add pstdio-artifacts
 
 ## Create a page
 
-Open **Artifacts** and click the **Project brief** or **Project dashboard** button under **Make something new**. Each example starts and opens an agent session using your project’s configured agent. The agent uses the project’s available context and the `publish-artifact` skill to publish the result here. You can also ask any session to create and publish another kind of interactive page.
+Open **Artifacts** and click the **Project brief** or **System diagram** button under **Make something new**. Each example starts and opens an agent session using your project’s configured agent. The agent uses the project’s available context and the `publish-artifact` skill to publish the result here. You can also ask any session to create and publish another kind of interactive page.
 
 ## Publish a page
 
@@ -45,11 +45,10 @@ Artifacts are also searchable resources. Search by their current name to open th
 
 The library stays open as an **Artifacts** tab next to each artifact you open. Switching tabs keeps the state of each interactive preview. Click **Artifacts** in the breadcrumb to return to the library tab. A link to a published URL opens the matching artifact tab.
 
-Each artifact has two icon menus in its header. Use **Versions** to pick a saved version. New versions appear in this menu without resetting the preview you are looking at. Use **Artifact actions** to:
+Use **Versions** in the reader header to pick a saved version. New versions appear in this menu without resetting the preview you are looking at. Use the action menu beside the breadcrumb to:
 
 - Rename the artifact. The new name applies to all versions and later updates. The saved HTML does not change.
 - Delete the artifact. After you confirm, Artifacts removes all its versions and their saved copies. Your original source files stay.
-- Go back to the library tab.
 
 ## Pages that follow the theme
 
