@@ -24,44 +24,44 @@ test("loads a thumbnail while command completion refreshes host props", async ({
   }
 });
 
-test("starts and opens creation sessions from both artifact examples", async ({ page, request }) => {
-  const repoRoot = resolve(import.meta.dirname, "../../../..");
-  const tempRoot = resolve(repoRoot, "__test-tmp__");
-  mkdirSync(tempRoot, { recursive: true });
-  const repo = mkdtempSync(join(tempRoot, "artifact-creation-"));
-  execFileSync("git", ["init", "--quiet", repo]);
-  const created = await request.post(`${uiOrigin}/v1/projects`, {
-    data: folderProjectInput({ name: "Artifact creation examples" }, repo),
-  });
-  expect(created.ok()).toBe(true);
-  const project = (await created.json()) as { id: string };
-  try {
-    const enabled = await request.post(
-      `${uiOrigin}/v1/projects/${project.id}/extensions/installed/workbench-fixture/enable`,
-      {
-        data: {
-          displayName: "Workbench fixture",
-          extensionId: "pstdio.workbench-fixture",
-          manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
-          name: "workbench-fixture",
-          sourceHash: "artifact-creation",
-          sourceKind: "local_path",
-          sourcePath: resolve(repoRoot, "packages/workbench-fixture"),
-          sourceRef: null,
-          version: null,
+for (const title of ["Project brief", "Project dashboard"]) {
+  test(`starts and opens a creation session from ${title}`, async ({ page, request }) => {
+    const repoRoot = resolve(import.meta.dirname, "../../../..");
+    const tempRoot = resolve(repoRoot, "__test-tmp__");
+    mkdirSync(tempRoot, { recursive: true });
+    const repo = mkdtempSync(join(tempRoot, "artifact-creation-"));
+    execFileSync("git", ["init", "--quiet", repo]);
+    const created = await request.post(`${uiOrigin}/v1/projects`, {
+      data: folderProjectInput({ name: "Artifact creation examples" }, repo),
+    });
+    expect(created.ok()).toBe(true);
+    const project = (await created.json()) as { id: string };
+    try {
+      const enabled = await request.post(
+        `${uiOrigin}/v1/projects/${project.id}/extensions/installed/workbench-fixture/enable`,
+        {
+          data: {
+            displayName: "Workbench fixture",
+            extensionId: "pstdio.workbench-fixture",
+            manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
+            name: "workbench-fixture",
+            sourceHash: "artifact-creation",
+            sourceKind: "local_path",
+            sourcePath: resolve(repoRoot, "packages/workbench-fixture"),
+            sourceRef: null,
+            version: null,
+          },
         },
-      },
-    );
-    expect(enabled.ok()).toBe(true);
-    const configured = await request.patch(`${uiOrigin}/v1/projects/${project.id}`, {
-      data: { default_agent_id: "pstdio.workbench-fixture.harness.fake", default_agent_model: null },
-    });
-    expect(configured.ok()).toBe(true);
-    await page.addInitScript(() => {
-      localStorage.setItem("onboarding-complete", "true");
-    });
-    const libraryUrl = `/projects/${project.id}/extensions/${extensionId}/artifacts`;
-    for (const title of ["Project brief", "Project dashboard"]) {
+      );
+      expect(enabled.ok()).toBe(true);
+      const configured = await request.patch(`${uiOrigin}/v1/projects/${project.id}`, {
+        data: { default_agent_id: "pstdio.workbench-fixture.harness.fake", default_agent_model: null },
+      });
+      expect(configured.ok()).toBe(true);
+      await page.addInitScript(() => {
+        localStorage.setItem("onboarding-complete", "true");
+      });
+      const libraryUrl = `/projects/${project.id}/extensions/${extensionId}/artifacts`;
       await page.goto(libraryUrl);
       const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
       const response = page.waitForResponse(
@@ -78,12 +78,12 @@ test("starts and opens creation sessions from both artifact examples", async ({ 
       const session = await request.get(`${uiOrigin}/v1/sessions/${result.outcome.value.sessionId}`);
       expect(session.ok()).toBe(true);
       expect((await session.json()).project_id).toBe(project.id);
+    } finally {
+      await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
+      rmSync(repo, { recursive: true, force: true });
     }
-  } finally {
-    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
-    rmSync(repo, { recursive: true, force: true });
-  }
-});
+  });
+}
 
 test("publishes HTML, isolates its preview, and preserves revisions across live updates", async ({ page, request }) => {
   // A shared path also lets this test target the isolated Docker instance.
