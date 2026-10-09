@@ -112,7 +112,10 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - Webview bundles are reused across restarts while their inputs are unchanged. Startup checks them
   in the background and does not wait. Editing an installed folder still rebuilds that extension's
   webview assets, so an open webview updates while you work. Only its contributions wait for the
-  update, because those are what the project agreed to run.
+  update, because those are what the project agreed to run. If an extension fails to load, for
+  example before its dependencies are installed, a webview request loads it again once its
+  `package.json`, the files its entry imports, or its installed dependencies change. Reload always
+  loads it again. A restart is not needed.
 - Skill files are read from the installed folder. Editing a folder that ships skills or a
   `workspace.provision` hook re-provisions the workspaces of every project that runs it, so agent
   skill folders such as `.agents/skills` match the edit. A write that leaves the folder's content

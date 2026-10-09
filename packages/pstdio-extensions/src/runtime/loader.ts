@@ -141,6 +141,23 @@ const dependencyCacheKey = (nodeModulesPath: string | null) => {
   return `node-modules-${dependencyPackageState(nodeModulesPath)}`;
 };
 
+const runtimePackageKey = (packagePath: string, runtimeModulePaths: Set<string>, nodeModulesPath: string | null) =>
+  `${digest(resolve(packagePath))}-${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${dependencyCacheKey(nodeModulesPath)}`;
+
+// Names everything a load reads: the manifest, the modules the entry imports, and the installed
+// dependencies. Loads with the same key import the same runtime copy with the same dependencies,
+// and Bun keeps a module that failed to evaluate, so a failed load can only end differently once
+// the key changes.
+export const extensionLoadKey = (packagePath: string) => {
+  const { entryPath, diagnostics } = readPackageManifest(packagePath);
+  if (!entryPath) return `manifest-${digest(JSON.stringify(diagnostics))}`;
+  return runtimePackageKey(
+    packagePath,
+    collectRuntimeModulePaths(packagePath, entryPath),
+    resolveNodeModulesPath(packagePath),
+  );
+};
+
 const createRuntimePackage = (packagePath: string, entryPath: string, packageName: string) => {
   const cacheRoot = runtimeCacheRoot();
   ensureRuntimeCachePruned(cacheRoot);
@@ -150,7 +167,7 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
   const rootPath = join(
     cacheRoot,
     safeCacheSegment(packageName),
-    `${digest(resolve(packagePath))}-${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${dependencyCacheKey(nodeModulesPath)}`,
+    runtimePackageKey(packagePath, runtimeModulePaths, nodeModulesPath),
   );
   const runtimePackagePath = join(rootPath, "package");
   const entryRelativePath = relative(packagePath, entryPath);
