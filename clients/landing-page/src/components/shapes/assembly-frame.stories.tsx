@@ -7,12 +7,12 @@ import { AssemblyFrame } from "./assembly-frame";
 const meta = {
   title: "Landing/Initial Editor Frame",
   component: AssemblyFrame,
-  parameters: { layout: "centered" },
+  parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => {
       const styles = useLandingStyles();
       return (
-        <Box width="6xl" maxWidth="full" height="48rem">
+        <Box width="full" maxWidth="6xl" height="48rem">
           <Box css={styles.hero}>
             <Box css={styles.heroLayout} data-assembly-area="">
               <DownloadPanel headingLevel="h1" />
@@ -30,4 +30,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const BeforeJavaScript: Story = {};
-export const Narrow: Story = { globals: { viewport: { value: "mobile1", isRotated: false } } };
+export const Narrow: Story = {
+  decorators: [
+    (Story) => (
+      <Box width="80">
+        <Story />
+      </Box>
+    ),
+  ],
+};
