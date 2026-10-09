@@ -8,12 +8,14 @@ import { registerApi } from "./app-routing";
 import {
   createAppTerminalSupervisor,
   createRuntimeRouteDeps,
+  startAppArtifactMountWatch,
   startAppExtensionScheduler,
   startAppLifecycle,
   startNotificationWakeTimer,
 } from "./app-runtime";
 import { createAutomationService } from "./features/automation/automation-service";
 import type { RouteDeps } from "./features/deps";
+import { createArtifactMountWriteLedger } from "./features/extensions/artifact-mount-watch/write-ledger";
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
@@ -140,6 +142,7 @@ const buildApp = async (
   } = dbs;
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
+  const artifactMountWrites = createArtifactMountWriteLedger();
   const sessionQueueEntriesService = createSessionQueueService(rawSessionQueueEntriesService, async (id) => {
     const session = await sessionsDBService.update(id, {});
     if (session) eventBus.emit("sessions", "set", session);
@@ -205,6 +208,7 @@ const buildApp = async (
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
   const sessionHookDeps = (): SessionHookDeps => ({
+    artifactMountWrites,
     automationService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesService,
     resourceLinksService: dbs.resourceLinksService,
@@ -251,6 +255,7 @@ const buildApp = async (
   const terminalSupervisor = createAppTerminalSupervisor();
 
   deps = {
+    artifactMountWrites,
     resourceLinksService: dbs.resourceLinksService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesService,
     extensionWebviewAccess: createExtensionWebviewAccess(),
@@ -291,6 +296,7 @@ const buildApp = async (
   await automationService.recoverInterruptedRuns();
 
   const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);
+  const artifactMountWatch = startAppArtifactMountWatch(deps, projectService);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
 
   const runtimeDeps = createRuntimeRouteDeps({
@@ -314,6 +320,7 @@ const buildApp = async (
     unsubscribeExtensionEvents,
     extensionRuntime,
     extensionScheduler,
+    artifactMountWatch,
     automationService,
     terminalSupervisor,
     closeDb,

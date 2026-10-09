@@ -1,14 +1,18 @@
-import { watch as fsWatch, lstatSync, readdirSync } from "node:fs";
-import { basename, isAbsolute, join, relative, sep } from "node:path";
+import { lstatSync, readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+import {
+  createDirectoryTreeWatcher,
+  type DirectoryTreeWatcher,
+  type DirectoryWatchHandle,
+  resolveWatchEventPath,
+  type WatchDirectory,
+  watchDirectory,
+} from "../fs-watch/directory-tree-watcher";
 import { createExtensionIgnoreMatcher, type ExtensionIgnoreMatcher } from "./extension-ignore";
 
 type InstalledSourceRegistration = {
   install_name: string;
   source_path: string;
-};
-
-type SourceWatcher = {
-  close: () => void;
 };
 
 const defaultDebounceMs = 100;
@@ -19,18 +23,15 @@ const defaultDebounceMs = 100;
 // crawls hundreds of thousands of entries — enough to hang a CI job.
 const skippedDirectoryNames = new Set(["node_modules", ".git"]);
 
-type WatchListener = (eventType: string, filename: string | Buffer | null) => void;
-type WatchErrorHandler = (error: unknown) => void;
-type WatchSource = (path: string, listener: WatchListener, onError: WatchErrorHandler) => SourceWatcher;
-
 type WatchedRegistration = {
+  dependencyHandles: Map<string, DirectoryWatchHandle>;
   identity: string;
   matcher: ExtensionIgnoreMatcher;
   queued: boolean;
   running: boolean;
   sourcePath: string;
   timer: ReturnType<typeof setTimeout> | null;
-  watchers: Map<string, SourceWatcher>;
+  tree: DirectoryTreeWatcher;
 };
 
 export type ExtensionSourceWatcher = {
@@ -45,49 +46,13 @@ export type CreateExtensionSourceWatcherInput = {
   onError?: (error: unknown) => void;
   /** Called when a watched source folder changes. It must not adopt the new source. */
   onSourceChanged: (sourcePath: string) => Promise<unknown>;
-  watch?: WatchSource;
+  watch?: WatchDirectory;
   watchDependencies?: boolean;
-};
-
-// macOS and Windows provide recursive notifications from one root handle. This
-// avoids the macOS gap while a new child watcher starts, and keeps child handles
-// from preventing source-directory replacement on Windows.
-const supportsNativeRecursiveWatch = process.platform === "win32" || process.platform === "darwin";
-const defaultWatch: WatchSource = (path, listener, onError) => {
-  const watcher = fsWatch(path, { recursive: supportsNativeRecursiveWatch }, listener);
-  watcher.on("error", onError);
-  return watcher;
 };
 
 const sourceIdentity = (sourcePath: string) => {
   const stats = lstatSync(sourcePath, { bigint: true });
   return [stats.dev.toString(), stats.ino.toString(), stats.birthtimeNs.toString()].join(":");
-};
-
-const listWatchableDirectories = (sourcePath: string, matcher: ExtensionIgnoreMatcher, startPath: string) => {
-  const directories: string[] = [];
-
-  const visit = (dir: string) => {
-    directories.push(dir);
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      // Dirent.isDirectory() does not follow symlinks, so linked directories
-      // (which can point anywhere, including outside the extension) are skipped.
-      if (!entry.isDirectory()) continue;
-      if (skippedDirectoryNames.has(entry.name)) continue;
-      const path = join(dir, entry.name);
-      if (matcher.ignores(relative(sourcePath, path))) continue;
-      visit(path);
-    }
-  };
-
-  visit(startPath);
-  return directories;
-};
-
-const toEventPath = (directoryPath: string, filename: string | Buffer | null) => {
-  if (!filename) return directoryPath;
-  const value = filename.toString();
-  return isAbsolute(value) ? value : join(directoryPath, value);
 };
 
 const dependencyWatchDirectories = (dependencyRoot: string) => {
@@ -111,16 +76,17 @@ export const createExtensionSourceWatcher = async (
 ): Promise<ExtensionSourceWatcher> => {
   const debounceMs = input.debounceMs ?? defaultDebounceMs;
   const registrations = new Map<string, WatchedRegistration>();
-  const watch = input.watch ?? defaultWatch;
-  const nativeRecursive = supportsNativeRecursiveWatch && !input.watch;
+  const watch = input.watch ?? watchDirectory;
+  const reportError = (error: unknown) => input.onError?.(error);
   const watchDependencies = input.watchDependencies ?? true;
   let disposed = false;
 
   const disposeRegistration = (registration: WatchedRegistration) => {
     registration.queued = false;
     if (registration.timer) clearTimeout(registration.timer);
-    for (const watcher of registration.watchers.values()) watcher.close();
-    registration.watchers.clear();
+    registration.tree.close();
+    for (const handle of registration.dependencyHandles.values()) handle.close();
+    registration.dependencyHandles.clear();
   };
 
   const runReload = (registration: WatchedRegistration) => {
@@ -153,67 +119,31 @@ export const createExtensionSourceWatcher = async (
     }, debounceMs);
   };
 
-  const watchDirectory = (registration: WatchedRegistration, directoryPath: string) => {
-    if (registration.watchers.has(directoryPath)) return;
-
-    try {
-      const watcher = watch(
-        directoryPath,
-        (eventType, filename) => handleDirectoryEvent(registration, directoryPath, eventType, filename),
-        (error) => input.onError?.(error),
-      );
-      registration.watchers.set(directoryPath, watcher);
-    } catch (error) {
-      input.onError?.(error);
-    }
-  };
-
-  const watchDirectoryTree = (registration: WatchedRegistration, startPath: string) => {
-    if (nativeRecursive) {
-      watchDirectory(registration, registration.sourcePath);
-      return;
-    }
-    let directories: string[];
-    try {
-      directories = listWatchableDirectories(registration.sourcePath, registration.matcher, startPath);
-    } catch (error) {
-      input.onError?.(error);
-      return;
-    }
-
-    for (const directoryPath of directories) watchDirectory(registration, directoryPath);
-  };
-
   const watchDependencyRoot = (registration: WatchedRegistration) => {
-    if (nativeRecursive) return;
+    if (registration.tree.recursive) return;
     const dependencyRoot = join(registration.sourcePath, "node_modules");
     const directories = dependencyWatchDirectories(dependencyRoot);
-    for (const [path, watcher] of registration.watchers) {
-      if (path !== dependencyRoot && !path.startsWith(dependencyRoot + sep)) continue;
+    for (const [path, handle] of registration.dependencyHandles) {
       if (directories.has(path)) continue;
-      watcher.close();
-      registration.watchers.delete(path);
+      handle.close();
+      registration.dependencyHandles.delete(path);
     }
-    for (const path of directories) watchDirectory(registration, path);
+    for (const path of directories) {
+      if (registration.dependencyHandles.has(path)) continue;
+      try {
+        const handle = watch(
+          path,
+          (eventType, filename) => handleSourceEvent(registration, eventType, resolveWatchEventPath(path, filename)),
+          reportError,
+        );
+        registration.dependencyHandles.set(path, handle);
+      } catch (error) {
+        reportError(error);
+      }
+    }
   };
 
-  const watchCreatedDirectory = (registration: WatchedRegistration, eventPath: string) => {
-    if (registration.watchers.has(eventPath)) return;
-    if (skippedDirectoryNames.has(basename(eventPath))) return;
-
-    const stats = lstatSync(eventPath, { throwIfNoEntry: false });
-    if (!stats?.isDirectory()) return;
-
-    watchDirectoryTree(registration, eventPath);
-  };
-
-  const handleDirectoryEvent = (
-    registration: WatchedRegistration,
-    directoryPath: string,
-    eventType: string,
-    filename: string | Buffer | null,
-  ) => {
-    const eventPath = toEventPath(directoryPath, filename);
+  const handleSourceEvent = (registration: WatchedRegistration, eventType: string, eventPath: string) => {
     const relativePath = relative(registration.sourcePath, eventPath);
     const segments = relativePath.split(sep);
     if (segments[0] === "node_modules") {
@@ -227,23 +157,35 @@ export const createExtensionSourceWatcher = async (
     const includedIgnoredPath = relativePath && input.includeIgnoredPath?.(relativePath);
     if (relativePath && registration.matcher.ignores(relativePath) && !includedIgnoredPath) return;
 
-    if (!nativeRecursive) watchCreatedDirectory(registration, eventPath);
     scheduleReload(registration);
   };
 
   const addRegistration = (row: InstalledSourceRegistration) => {
+    const matcher = createExtensionIgnoreMatcher(row.source_path);
     const registration: WatchedRegistration = {
+      dependencyHandles: new Map(),
       identity: sourceIdentity(row.source_path),
-      matcher: createExtensionIgnoreMatcher(row.source_path),
+      matcher,
       queued: false,
       running: false,
       sourcePath: row.source_path,
       timer: null,
-      watchers: new Map(),
+      tree: createDirectoryTreeWatcher({
+        root: row.source_path,
+        onEvent: (eventType, path) => handleSourceEvent(registration, eventType, path),
+        onError: reportError,
+        skipDirectory: (path) => {
+          const relativePath = relative(row.source_path, path);
+          return (
+            relativePath.split(sep).some((segment) => skippedDirectoryNames.has(segment)) ||
+            matcher.ignores(relativePath)
+          );
+        },
+        watch: input.watch,
+      }),
     };
 
     registrations.set(row.source_path, registration);
-    watchDirectoryTree(registration, row.source_path);
     if (watchDependencies) watchDependencyRoot(registration);
   };
 

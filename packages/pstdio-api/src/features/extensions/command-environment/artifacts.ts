@@ -8,6 +8,7 @@ export const createArtifactsApi = (
     artifactMounts?: RuntimeArtifactMount[];
     extensionId: string;
     name: string;
+    onWrite: (path: string) => void;
     projectId: string;
     signal?: AbortSignal;
   },
@@ -30,6 +31,8 @@ export const createArtifactsApi = (
       name: mount.name,
       mountPath: mount.relativePath,
       signal: input.signal,
+      // Only a watched mount needs to tell its own writes from direct edits.
+      onWrite: mount.watch ? input.onWrite : undefined,
     });
   };
 

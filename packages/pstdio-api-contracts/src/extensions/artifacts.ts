@@ -7,6 +7,7 @@ export const extensionArtifactMountSchema = z.object({
   relativePath: z.string(),
   fullPath: z.string(),
   label: localizableStringSchema,
+  watch: z.boolean(),
 });
 
 export type ExtensionArtifactMount = z.infer<typeof extensionArtifactMountSchema>;

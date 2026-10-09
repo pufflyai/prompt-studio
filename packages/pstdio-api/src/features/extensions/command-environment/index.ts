@@ -106,7 +106,11 @@ export const createCommandEnvironment = (
 
     return {
       storage,
-      artifacts: createArtifactsApi(resolveProjectPath, { ...input, signal }),
+      artifacts: createArtifactsApi(resolveProjectPath, {
+        ...input,
+        onWrite: (path) => deps.artifactMountWrites.record(path),
+        signal,
+      }),
       projectFiles: createProjectFilesApi(deps, input.projectId, provisioningWorkspaceId, signal),
       workspaceFiles:
         input.workspaceId && workingFiles

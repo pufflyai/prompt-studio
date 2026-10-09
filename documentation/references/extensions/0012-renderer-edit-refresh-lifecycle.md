@@ -148,7 +148,7 @@ tree shows its placement line after the last visible descendant.
 
 ## Declared data dependencies
 
-Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. File and notification churn does not broadcast a view refresh. Each renderer also declares its own extension data events. The core extensions and host views declare these dependencies:
+Extensions use public `viewDataEvents` for host-owned session, workspace, and session-workspace link data. Events carry `projectId`. Reassignment invalidates both former and new owners; removals use the previous row. Notification churn does not broadcast a view refresh. A file change broadcasts one only for a watched artifact mount: a renderer that lists `artifactChanged(mount)` reloads when that mount's files change outside the mount API (see [Watched mounts](0005-webview-and-storage-api.md#watched-mounts)). Each renderer also declares its own extension data events. The core extensions and host views declare these dependencies:
 
 | Native view | Dependencies |
 | --- | --- |

@@ -303,6 +303,62 @@ are minted only for png, jpeg, webp, and gif. Image bytes are served through the
 asset channel with short-lived signed URLs that each cover one file ([ADR 0008](../../adrs/0008-capability-secured-extension-webview-assets.md)). Webviews never write to mounts; mutation
 goes through commands.
 
+### Watched mounts
+
+Set `watch: true` on a mount to get an event when its files change outside the mount API. This happens
+when an agent edits a file with its own tools, a script writes it, or a person saves it in an editor.
+`artifactChanged(mount)` names the event. Native views, webviews, and hooks use the same ref:
+
+```ts
+import { artifactChanged, defineArtifactMount, defineHook } from "@pstdio/sdk/extensions";
+
+export const boards = defineArtifactMount({ id: "boards", path: "boards", label: "Boards", watch: true });
+
+// Native view body: reload after your own command event and after direct edits.
+// refreshEvents: [boardsChanged, artifactChanged(boards)],
+
+// Webview: refetch after a direct edit. The listener gets no payload.
+// client.events.subscribe(artifactChanged(boards), refetch);
+
+export const reindexBoards = defineHook({
+  id: "reindex-boards",
+  event: artifactChanged(boards),
+  run: async (ctx, { paths }) => {
+    const mount = ctx.artifacts.mount(boards.id);
+    const targets = paths.length > 0 ? paths : (await mount.list("**/*.json")).map((file) => file.path);
+    // Paths can name folders and removed files, so check before reading.
+    for (const path of targets) {
+      if (path.endsWith(".json") && (await mount.exists(path))) await indexBoard(ctx, path);
+    }
+  },
+});
+```
+
+- The host watches the mount in the project's default workspace, the same copy that `ctx.artifacts`
+  and webview reads use. It creates the mount folder when the watch starts, but never creates a
+  removed workspace or mount folder again. A remote or not-ready default workspace has no watch,
+  and worktree copies are never watched. Tell agents the absolute path, for example in your
+  extension's skill.
+- The resolved event id is `artifact.changed:<extension-id>.artifact.<mount-id>`.
+- The payload is `{ projectId, mount, paths }`, plus the default workspace fields every host event
+  carries. `paths` are relative to the mount root, use `/`, are sorted, and have no duplicates. They
+  name changed files and folders. A path that no longer exists was removed; it can also be a
+  short-lived file such as an editor's temp file.
+- `paths: []` means "reload the whole mount". The host sends it when more than 200 paths changed at
+  once, when the mount folder itself was removed, replaced, or came back, or when the mount has
+  more than 2,000 folders, counting the mount folder, on Linux, where each folder needs its own OS
+  watch.
+- A burst of changes produces one event, 200 ms after the last change. While changes continue, a
+  mount reports at most once per second.
+- Writes, updates, and deletes through `ctx.artifacts.mount(...)` do not produce the event. Emit your
+  own event from the command, as before. A hook can write into the mount it watches without
+  triggering itself.
+- A hook can watch another extension's mount with `artifactChanged({ id, extensionId })`. The payload
+  has paths only; reading the files still needs the owner's commands.
+- Events are hints. A client that reconnects reloads anyway, so a missed event is safe.
+
+The decision is recorded in [ADR 0066](../../adrs/0066-host-owned-artifact-mount-watching.md).
+
 ## Client events and workspace scope
 
 `createWebviewClient` exposes `commands`, `settings`, `artifacts`, and `events`. Subscribe through the events client and dispose subscriptions when the view unmounts. Pass `{ workspaceId }` when commands need a specific workspace; omitted commands use the project's default workspace. The client defaults to the host's calling extension ID; a type-only import does not change routing. See the [client contract](../../../packages/sdk/src/extensions/webview-client.ts) for signatures and options.

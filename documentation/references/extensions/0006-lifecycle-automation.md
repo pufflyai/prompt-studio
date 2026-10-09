@@ -14,7 +14,7 @@ To call another extension's command, use the command ref that extension exports.
 
 ## Events and payloads
 
-Declare hooks with `defineHook({ id, event, run })` and register them in `hooks`. Use typed refs from `@pstdio/sdk/extensions`, including `projectEvents`, `workspaceEvents`, `worktreeEvents`, `sessionEvents`, and `gitEvents`. `commandEvent(ref, phase)` observes a command's lifecycle.
+Declare hooks with `defineHook({ id, event, run })` and register them in `hooks`. Use typed refs from `@pstdio/sdk/extensions`, including `projectEvents`, `workspaceEvents`, `worktreeEvents`, `sessionEvents`, and `gitEvents`. `commandEvent(ref, phase)` observes a command's lifecycle. `artifactChanged(mount)` observes direct edits to a watched artifact mount; see [Watched mounts](0005-webview-and-storage-api.md#watched-mounts).
 
 Callbacks receive the context and a typed payload. Payload fields use camelCase and include the resource identifiers needed to load further data. Use their exported types instead of assuming every event shares one payload.
 
