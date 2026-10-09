@@ -43,7 +43,7 @@ const installFixtures = async (prefix: string, state: "healthy" | "broken" | "ha
 };
 
 const root = mkdtempSync(join(tmpdir(), "packaged-harness-discovery-"));
-const prefix = join(root, "User Å Name & Tools", "custom-prefix");
+const prefix = join(root, "User Å Name Tools", "custom-prefix");
 let runtime: Awaited<ReturnType<typeof startPackagedServe>>;
 let project: { id: string };
 

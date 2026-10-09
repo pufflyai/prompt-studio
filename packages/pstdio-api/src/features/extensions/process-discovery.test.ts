@@ -49,7 +49,7 @@ for (const adjacentNode of [false, true]) {
   test(`runs npm shims with ${adjacentNode ? "adjacent Node" : "Node from PATH"} and preserves literal arguments`, async () => {
     const node = Bun.which("node");
     if (!node) throw new Error("Node.js is required to test npm command shims.");
-    const { command, prefix, script } = fixture(adjacentNode ? "npm" : "Custom Tools Å & Partners", "discovery-cli");
+    const { command, prefix, script } = fixture(adjacentNode ? "npm" : "Custom Tools Å Partners", "discovery-cli");
     writeFileSync(
       script,
       "#!/usr/bin/env node\nconsole.log(JSON.stringify({ args: process.argv.slice(2), executable: process.execPath }))",
@@ -84,6 +84,33 @@ for (const adjacentNode of [false, true]) {
     );
   });
 }
+
+test("runs wrappers from directories containing shell operators", async () => {
+  const { command } = fixture("Custom Tools Å & Partners", "discovery-cli", "console.log('fixture')");
+  expect((await createProcessApi().run({ command: [command] })).stdout).toBe("fixture\n");
+});
+
+test.skipIf(process.platform !== "win32")(
+  "reports npm wrappers broken by an ampersand in their install path",
+  async () => {
+    const { command, script } = fixture("npm & tools", "discovery-cli");
+    writeFileSync(script, "#!/usr/bin/env node\nconsole.log('fixture')");
+    await cmdShim(script, command.replace(/\.cmd$/, ""));
+    // cmd-shim 7 assigns %~dp0 without quotes. Run it directly to establish that
+    // this installation is broken even outside the extension process launcher.
+    const child = Bun.spawn([process.env.ComSpec ?? "cmd.exe", "/d", "/s", "/c", `""${command}" --version"`], {
+      stdout: "pipe",
+      stderr: "pipe",
+      windowsVerbatimArguments: true,
+    });
+    const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+    expect(exitCode).not.toBe(0);
+    expect(stderr).toContain("MODULE_NOT_FOUND");
+    const result = await createProcessApi().run({ command: [command, "--version"] });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("MODULE_NOT_FOUND");
+  },
+);
 
 test("reports missing wrapper targets as failures", async () => {
   const { command, script } = fixture("custom");
