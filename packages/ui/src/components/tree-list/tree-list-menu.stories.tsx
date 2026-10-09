@@ -45,8 +45,7 @@ export const FooterMenu: StoryObj<typeof meta> = {
   render: () => (
     <Box h="20rem" display="flex" alignItems="flex-end" p="md">
       <TreeList
-        sections={[]}
-        footerSections={[
+        sections={[
           {
             id: "footer",
             nodes: [
