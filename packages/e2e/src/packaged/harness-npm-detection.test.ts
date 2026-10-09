@@ -24,7 +24,7 @@ const installFixtures = (prefix: string, broken: boolean) => {
     let source = `console.error(${JSON.stringify(harness.version)});`;
     if (harness.command === "opencode")
       source = broken
-        ? "setInterval(() => {}, 1000);"
+        ? `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, "hanging.pid"))}, String(process.pid)); setInterval(() => {}, 1000);`
         : `console.log(process.argv[2] === '--version' ? ${JSON.stringify(harness.version)} : 'opencode/test-model');`;
     if (broken && harness.command === "codex") source = "console.error('broken install'); process.exit(7);";
     writeFileSync(script, source);
@@ -94,6 +94,23 @@ for (const broken of [false, true]) {
           availability: { type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED" },
         }),
       );
+    }
+    if (broken) {
+      // The registry deadline can answer before the process timeout finishes
+      // stopping the wrapper. Keep its owner alive until cleanup has completed.
+      const pid = Number(await Bun.file(join(prefix, "hanging.pid")).text());
+      expect(pid).toBeGreaterThan(0);
+      let alive = true;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        try {
+          process.kill(pid, 0);
+        } catch {
+          alive = false;
+          break;
+        }
+        await Bun.sleep(20);
+      }
+      expect(alive).toBe(false);
     }
     if (!broken) {
       const models = await fetch(
