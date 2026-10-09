@@ -23,6 +23,10 @@ export const createSessionQueueService = (raw: Queue, touch: (sessionId: string)
     ...raw,
     create: async (...args) => notifyRow(await raw.create(...args)),
     createDispatchStarted: async (...args) => notifyRow(await raw.createDispatchStarted(...args)),
+    claimSteering: async (...args) => notifyRow(await raw.claimSteering(...args)),
+    releaseSteering: async (...args) => notifyRow(await raw.releaseSteering(...args)),
+    movePending: async (...args) => notifyRow(await raw.movePending(...args)),
+    combinePending: async (...args) => notifyRow(await raw.combinePending(...args)),
     updatePending: async (...args) => notifyRow(await raw.updatePending(...args)),
     markDispatchStarted: async (...args) => notifyRow(await raw.markDispatchStarted(...args)),
     swapPending: async (...args) => {
@@ -40,9 +44,9 @@ export const createSessionQueueService = (raw: Queue, touch: (sessionId: string)
       await raw.remove(position);
       if (entry) await notify(entry.session_id);
     },
-    removePending: async (position) => {
+    removePending: async (position, revision) => {
       const entry = await raw.get(position);
-      const removed = await raw.removePending(position);
+      const removed = await raw.removePending(position, revision);
       if (removed && entry) await notify(entry.session_id);
       return removed;
     },

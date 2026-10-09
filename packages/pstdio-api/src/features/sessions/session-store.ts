@@ -1,6 +1,5 @@
 import type {
   ApprovalRequest,
-  ApprovalService,
   EventStore,
   HarnessSession,
   QuestionService,
@@ -18,13 +17,14 @@ export type SessionChannelHooks = {
 
 export type ActiveSession = {
   eventStore: EventStore & { close(): void };
-  approvalService: ApprovalService;
+  approvalService: ReturnType<typeof createApprovalService>;
   questionService: QuestionService;
   session: HarnessSession | null;
   cancellationRequested: boolean;
   submittedAttachmentFileIds: Set<string>;
   conversationReady: Promise<SessionConversation>;
   controlInvocations: Set<{ done: Promise<void>; abort: AbortController }>;
+  executionSettings?: { model: string | null; params: Record<string, string | boolean> };
   checkpointPromise?: Promise<SessionMessage[] | null>;
 };
 

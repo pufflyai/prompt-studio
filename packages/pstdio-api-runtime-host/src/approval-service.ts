@@ -1,4 +1,4 @@
-import type { ApprovalRequest, ApprovalResponse, ApprovalService } from "pstdio-api-contracts";
+import type { ApprovalRequest, ApprovalResponse } from "pstdio-api-contracts";
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -11,7 +11,7 @@ type Options = {
   timeoutMs?: number;
 };
 
-export const createApprovalService = (send: (request: ApprovalRequest) => void, options?: Options): ApprovalService => {
+export const createApprovalService = (send: (request: ApprovalRequest) => void, options?: Options) => {
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const pending = new Map<string, PendingEntry>();
 
@@ -43,5 +43,5 @@ export const createApprovalService = (send: (request: ApprovalRequest) => void, 
     pending.clear();
   };
 
-  return { requestApproval, handleResponse, dispose };
+  return { requestApproval, handleResponse, dispose, hasPending: () => pending.size > 0 };
 };

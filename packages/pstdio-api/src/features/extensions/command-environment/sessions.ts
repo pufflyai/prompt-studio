@@ -8,6 +8,9 @@ import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extens
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
 import { resolveHarnessRunParams } from "../../sessions/harness-params";
+import { pendingQueuedRequests } from "../../sessions/pending-queued-requests";
+import { combineQueuedRequests, updateQueuedRequest } from "../../sessions/queued-request-operations";
+import { steerQueuedFollowUp } from "../../sessions/queued-steering";
 import { resolveSessionCwd } from "../../sessions/resolve-session-cwd";
 import { resolveSessionAttachments } from "../../sessions/session-attachments";
 import { createSessionScheduler } from "../../sessions/session-scheduler";
@@ -44,6 +47,25 @@ export const createSessionsApi = (
   };
 
   return {
+    getQueuedFollowUps: async (id) => {
+      await read(() => requireProjectSession(id));
+      return read(() => pendingQueuedRequests(deps, id));
+    },
+    updateQueuedFollowUp: async (id, position, request) => {
+      input.signal?.throwIfAborted();
+      await requireProjectSession(id);
+      return updateQueuedRequest(deps, id, position, request);
+    },
+    combineQueuedFollowUps: async (id, position, request) => {
+      input.signal?.throwIfAborted();
+      await requireProjectSession(id);
+      return combineQueuedRequests(deps, id, position, request);
+    },
+    steerQueuedFollowUp: async (id, position, request) => {
+      input.signal?.throwIfAborted();
+      await requireProjectSession(id);
+      return steerQueuedFollowUp(deps, id, position, request);
+    },
     get: async (id) => toExtensionSession(await read(() => getProjectSession(id))),
     list: async () => {
       const sessions = await read(() => deps.sessionService.list(input.projectId));

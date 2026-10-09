@@ -69,6 +69,14 @@ test("opens the Help menu with pointer and keyboard", async ({ page, request }) 
   const help = page.getByRole("button", { name: "Help", exact: true });
   await help.click();
   await expect(page.getByRole("menuitem", { name: /^Keyboard shortcuts/ })).toBeVisible();
+  const menu = page.getByRole("menu").filter({ has: page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }) });
+  await expect
+    .poll(async () => {
+      const [anchor, content] = await Promise.all([help.boundingBox(), menu.boundingBox()]);
+      if (!anchor || !content) return false;
+      return Math.abs(content.x - anchor.x) < 12 && Math.abs(content.y + content.height - anchor.y) < 20;
+    })
+    .toBe(true);
   await page.keyboard.press("Escape");
   await help.focus();
   await page.keyboard.press("Enter");

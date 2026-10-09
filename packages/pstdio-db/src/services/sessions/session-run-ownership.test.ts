@@ -99,3 +99,19 @@ test.each([
   await sessions.updateStatus(active.id, status);
   expect(await queue.listPendingBySession(active.id)).toHaveLength(1);
 });
+
+test("cancelling ordinary queued work retains an uncertain native delivery for recovery", async () => {
+  const session = await sessions.create({ project_id: projectId, title: "Held delivery", agent: "test" });
+  const ordinary = await queue.create({ session_id: session.id, prompt: "Ordinary", request_kind: "follow_up" });
+  const held = await queue.create({ session_id: session.id, prompt: "Possibly delivered", request_kind: "follow_up" });
+  await queue.claimSteering(held.queue_position, held.revision, {
+    id: "delivery",
+    runStartedAt: session.last_request_started!,
+  });
+  await sessions.updateStatus(session.id, "cancelled");
+  expect(await queue.get(ordinary.queue_position)).toBeNull();
+  expect(await queue.get(held.queue_position)).toMatchObject({
+    prompt: "Possibly delivered",
+    steering_delivery_json: { id: "delivery" },
+  });
+});

@@ -65,6 +65,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
     input.signal,
   );
   markSubmittedAttachments(entry, input.attachments);
+  entry.executionSettings = { model: input.model ?? null, params: input.params ?? {} };
 
   const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();
@@ -144,6 +145,7 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
     input.signal,
   );
   markSubmittedAttachments(entry, input.attachments);
+  entry.executionSettings = { model: input.model ?? null, params: input.params ?? {} };
 
   const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();

@@ -20,7 +20,10 @@ test("new sessions expose empty history sources and queued messages before a pro
       checkpointError: null,
       nativeError: null,
     });
-    expect(await queued.json()).toEqual({ messages: [] });
+    expect(await queued.json()).toMatchObject({
+      messages: [],
+      queue: { requests: [], steeringAvailable: false },
+    });
   } finally {
     await handle.close();
   }

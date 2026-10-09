@@ -42,10 +42,10 @@ declare const agentModelSchema: z.ZodObject<{
 type AgentModel = z.infer<typeof agentModelSchema>;
 declare const automationRunStatusSchema: z.ZodEnum<{
   failed: "failed";
-  running: "running";
-  cancelled: "cancelled";
   queued: "queued";
+  running: "running";
   succeeded: "succeeded";
+  cancelled: "cancelled";
   rejected: "rejected";
 }>;
 declare const createAutomationRunInputSchema: z.ZodObject<{
@@ -72,10 +72,10 @@ declare const automationRunSchema: z.ZodObject<{
   commandId: z.ZodString;
   status: z.ZodEnum<{
     failed: "failed";
-    running: "running";
-    cancelled: "cancelled";
     queued: "queued";
+    running: "running";
     succeeded: "succeeded";
+    cancelled: "cancelled";
     rejected: "rejected";
   }>;
   createdAt: z.ZodString;
@@ -97,8 +97,8 @@ declare const boardViewSchema: z.ZodObject<{
   title: z.ZodString;
   settings: z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodEnum<{
-      list: "list";
       board: "board";
+      list: "list";
     }>;
     columnGrouping: z.ZodString;
     rowGrouping: z.ZodString;
@@ -189,8 +189,8 @@ declare const boardViewsSchema: z.ZodObject<{
     title: z.ZodString;
     settings: z.ZodUnion<readonly [z.ZodObject<{
       viewMode: z.ZodEnum<{
-        list: "list";
         board: "board";
+        list: "list";
       }>;
       columnGrouping: z.ZodString;
       rowGrouping: z.ZodString;
@@ -280,8 +280,8 @@ declare const boardViewUpdateSchema: z.ZodObject<{
   title: z.ZodOptional<z.ZodString>;
   settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodOptional<z.ZodEnum<{
-      list: "list";
       board: "board";
+      list: "list";
     }>>;
     columnGrouping: z.ZodOptional<z.ZodString>;
     rowGrouping: z.ZodOptional<z.ZodString>;
@@ -367,8 +367,8 @@ declare const boardViewUpdateSchema: z.ZodObject<{
 declare const boardViewCreateSchema: z.ZodObject<{
   settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodOptional<z.ZodEnum<{
-      list: "list";
       board: "board";
+      list: "list";
     }>>;
     columnGrouping: z.ZodOptional<z.ZodString>;
     rowGrouping: z.ZodOptional<z.ZodString>;
@@ -781,20 +781,6 @@ interface ListNotificationsResponse {
   items: Notification[];
   nextCursor?: string | null;
 }
-declare const sessionStatusSchema: z.ZodEnum<{
-  failed: "failed";
-  completed: "completed";
-  cancelled: "cancelled";
-  disconnected: "disconnected";
-  in_progress: "in_progress";
-  awaiting_input: "awaiting_input";
-  queued: "queued";
-}>;
-declare const sessionAttachmentRefSchema: z.ZodObject<{
-  file_id: z.ZodString;
-}, z.core.$strip>;
-type SessionStatus = z.infer<typeof sessionStatusSchema>;
-type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
 declare const skillSchema: z.ZodObject<{
   id: z.ZodString;
   project_id: z.ZodString;
@@ -891,6 +877,160 @@ interface ExtensionViewsApi {
   }>;
   reorder(board: ViewRef, ids: string[]): Promise<BoardViews>;
   setDefault(board: ViewRef, id: string | null): Promise<BoardViews>;
+}
+declare const queuedFollowUpSchema: z.ZodObject<{
+  queuePosition: z.ZodNumber;
+  revision: z.ZodString;
+  prompt: z.ZodString;
+  steeringUnavailableReason: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+  steeringDelivery: z.ZodNullable<z.ZodObject<{
+    id: z.ZodString;
+    runStartedAt: z.ZodString;
+  }, z.core.$strip>>;
+  model: z.ZodNullable<z.ZodString>;
+  params: z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodBoolean]>>;
+  attachments: z.ZodArray<z.ZodObject<{
+    file_id: z.ZodString;
+  }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const updateQueuedFollowUpInputSchema: z.ZodObject<{
+  prompt: z.ZodString;
+  expectedRevision: z.ZodOptional<z.ZodString>;
+  model: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+  params: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodBoolean]>>>>;
+  attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
+    file_id: z.ZodString;
+  }, z.core.$strip>>>;
+}, z.core.$strip>;
+declare const combineQueuedFollowUpsInputSchema: z.ZodObject<{
+  sourcePosition: z.ZodNumber;
+  sourceRevision: z.ZodString;
+  targetRevision: z.ZodString;
+}, z.core.$strip>;
+declare const pendingQueuedFollowUpsResponseSchema: z.ZodObject<{
+  requests: z.ZodArray<z.ZodObject<{
+    queuePosition: z.ZodNumber;
+    revision: z.ZodString;
+    prompt: z.ZodString;
+    steeringUnavailableReason: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    steeringDelivery: z.ZodNullable<z.ZodObject<{
+      id: z.ZodString;
+      runStartedAt: z.ZodString;
+    }, z.core.$strip>>;
+    model: z.ZodNullable<z.ZodString>;
+    params: z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodBoolean]>>;
+    attachments: z.ZodArray<z.ZodObject<{
+      file_id: z.ZodString;
+    }, z.core.$strip>>;
+  }, z.core.$strip>>;
+  activeRunStartedAt: z.ZodNullable<z.ZodString>;
+  steeringAvailable: z.ZodBoolean;
+  steeringUnavailableReason: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+type QueuedFollowUpRequest = z.infer<typeof queuedFollowUpSchema>;
+type UpdateQueuedFollowUpInput = z.infer<typeof updateQueuedFollowUpInputSchema>;
+type CombineQueuedFollowUpsInput = z.infer<typeof combineQueuedFollowUpsInputSchema>;
+type PendingQueuedFollowUpsResponse = z.infer<typeof pendingQueuedFollowUpsResponseSchema>;
+declare const steerQueuedFollowUpInputSchema: z.ZodObject<{
+  expectedRevision: z.ZodString;
+  expectedRunStartedAt: z.ZodString;
+}, z.core.$strip>;
+declare const queuedSteeringResultSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+  status: z.ZodLiteral<"accepted">;
+  deliveryId: z.ZodString;
+}, z.core.$strip>, z.ZodObject<{
+  status: z.ZodLiteral<"rejected">;
+  reason: z.ZodEnum<{
+    unsupported: "unsupported";
+    inactive: "inactive";
+    stale_run: "stale_run";
+    blocking_input: "blocking_input";
+    missing: "missing";
+    stale_revision: "stale_revision";
+    different_settings: "different_settings";
+    delivery_failed: "delivery_failed";
+    invalid_attachments: "invalid_attachments";
+  }>;
+  message: z.ZodString;
+}, z.core.$strip>, z.ZodObject<{
+  status: z.ZodLiteral<"uncertain">;
+  deliveryId: z.ZodString;
+  message: z.ZodString;
+}, z.core.$strip>], "status">;
+type SteerQueuedFollowUpInput = z.infer<typeof steerQueuedFollowUpInputSchema>;
+type QueuedSteeringResult = z.infer<typeof queuedSteeringResultSchema>;
+declare const sessionAttachmentRefSchema: z.ZodObject<{
+  file_id: z.ZodString;
+}, z.core.$strip>;
+declare const sessionStatusSchema: z.ZodEnum<{
+  failed: "failed";
+  queued: "queued";
+  cancelled: "cancelled";
+  completed: "completed";
+  disconnected: "disconnected";
+  in_progress: "in_progress";
+  awaiting_input: "awaiting_input";
+}>;
+type SessionStatus = z.infer<typeof sessionStatusSchema>;
+type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
+interface ExtensionSessionResource {
+  type: "session";
+  id: string;
+  title: string;
+  status: SessionStatus;
+}
+interface ExtensionSessionsApi {
+  getQueuedFollowUps(sessionId: string): Promise<PendingQueuedFollowUpsResponse>;
+  updateQueuedFollowUp(sessionId: string, queuePosition: number, input: UpdateQueuedFollowUpInput): Promise<QueuedFollowUpRequest>;
+  combineQueuedFollowUps(sessionId: string, queuePosition: number, input: CombineQueuedFollowUpsInput): Promise<QueuedFollowUpRequest>;
+  steerQueuedFollowUp(sessionId: string, queuePosition: number, input: SteerQueuedFollowUpInput): Promise<QueuedSteeringResult>;
+  get(id: string): Promise<{
+    id: string;
+    title: string;
+    status?: string;
+    original_session_id?: string | null;
+    cwd?: string | null;
+    updated_at?: string | null;
+    anchors_json?: ResourceAnchor[];
+  } | null>;
+  list(): Promise<Array<{
+    id: string;
+    title: string;
+    status: SessionStatus;
+    last_request_started?: string | null;
+    last_request_ended?: string | null;
+    updated_at?: string | null;
+    anchors_json?: ResourceAnchor[];
+  }>>;
+  listByWorkspace(workspaceId: string): Promise<Array<{
+    id: string;
+    title: string;
+    status: SessionStatus;
+    created_at?: string | null;
+    updated_at?: string | null;
+    anchors_json?: ResourceAnchor[];
+  }>>;
+  create(input: {
+    title: string;
+    prompt?: string;
+    harness?: ExtensionHarnessInput;
+    workspaceId?: string;
+    anchors?: ResourceAnchor[];
+    attachments?: SessionAttachmentRef[];
+    originalSessionId?: string;
+  }): Promise<ExtensionSessionResource>;
+  followup(input: {
+    sessionId: string;
+    prompt?: string;
+    attachments?: SessionAttachmentRef[];
+  }): Promise<void>;
+  addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
+  removeAnchors(sessionId: string, refs: ResourceRef[]): Promise<void>;
+}
+interface ExtensionHarnessInput {
+  harnessId: string;
+  model?: string;
+  params?: Record<string, string | boolean>;
 }
 type UiSlotKind = "menu" | "panel" | "settings" | "renderer" | "kanbanRenderer" | "dataTableRenderer";
 interface SlotOptions<TKind extends UiSlotKind = UiSlotKind> {
@@ -1700,6 +1840,7 @@ type HarnessSession = {
   done: Promise<HarnessExit>;
   stop(): void | Promise<void>;
   replyQuestion?(response: QuestionResponse): Promise<void>;
+  steer?(input: HarnessSteeringInput): Promise<HarnessSteeringResult>;
   timeoutStrategy?: TimeoutStrategy;
   pid?: number;
 };
@@ -1746,6 +1887,21 @@ type HarnessRecoveryResult = {
 } | {
   kind: "conflict";
   category: string;
+};
+interface HarnessSteeringInput {
+  deliveryId: string;
+  prompt: string;
+  attachments: HarnessAttachment[];
+  signal?: AbortSignal;
+}
+type HarnessSteeringResult = {
+  status: "accepted";
+} | {
+  status: "rejected";
+  reason: string;
+} | {
+  status: "uncertain";
+  reason: string;
 };
 declare const harnessCommandStateSchema: z.ZodObject<{
   commands: z.ZodArray<z.ZodObject<{
@@ -2829,61 +2985,6 @@ interface ExtensionFilesApi {
 interface ExtensionSkillsApi {
   list(): Promise<Skill[]>;
 }
-interface ExtensionSessionResource {
-  type: "session";
-  id: string;
-  title: string;
-  status: SessionStatus;
-}
-interface ExtensionSessionsApi {
-  get(id: string): Promise<{
-    id: string;
-    title: string;
-    status?: string;
-    original_session_id?: string | null;
-    cwd?: string | null;
-    updated_at?: string | null;
-    anchors_json?: ResourceAnchor[];
-  } | null>;
-  list(): Promise<Array<{
-    id: string;
-    title: string;
-    status: SessionStatus;
-    last_request_started?: string | null;
-    last_request_ended?: string | null;
-    updated_at?: string | null;
-    anchors_json?: ResourceAnchor[];
-  }>>;
-  listByWorkspace(workspaceId: string): Promise<Array<{
-    id: string;
-    title: string;
-    status: SessionStatus;
-    created_at?: string | null;
-    updated_at?: string | null;
-    anchors_json?: ResourceAnchor[];
-  }>>;
-  create(input: {
-    title: string;
-    prompt?: string;
-    harness?: ExtensionHarnessInput;
-    workspaceId?: string;
-    anchors?: ResourceAnchor[];
-    attachments?: SessionAttachmentRef[];
-    originalSessionId?: string;
-  }): Promise<ExtensionSessionResource>;
-  followup(input: {
-    sessionId: string;
-    prompt?: string;
-    attachments?: SessionAttachmentRef[];
-  }): Promise<void>;
-  addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
-  removeAnchors(sessionId: string, refs: ResourceRef[]): Promise<void>;
-}
-interface ExtensionHarnessInput {
-  harnessId: string;
-  model?: string;
-  params?: Record<string, string | boolean>;
-}
 interface ExtensionEventsApi {
   emit<TPayload extends Struct>(event: EventRef<TPayload> | string, payload: TPayload): Promise<EventDeliveryResult>;
 }
@@ -3948,4 +4049,4 @@ export declare const matchesResourceWhen: (when: Pick<WhenExpression, "resourceT
 export declare const projectPrefix: () => {
   $prefix: "project";
 };
-export type { ActionOption, ActionsControl, ActivityItemContribution, AgentCapability, AgentModel, AnchorGridControl, AnchorGridValue, ApprovalRequest, ApprovalResponse, ArtifactFile, ArtifactMount, ArtifactMountContribution, ArtifactMountKey, AssetContributions, AutomationRun, AutomationRunStatus, BaseControl, BehaviourContributions, BoardView, BoardViewCreate, BoardViewUpdate, BoardViews, BooleanControl, BooleanParam, CliContribution, CollectionBadgeItem, ColorControl, CommandCompletedEvent, CommandContext, CommandContinue, CommandDefinition, CommandDiagnostic, CommandFailedEvent, CommandHelpersApi, CommandInvocation, CommandLifecycleEventPayload, CommandLifecyclePhase, CommandMiddlewareContext, CommandMiddlewareHandler, CommandMiddlewareResult, CommandNotice, CommandOutcome, CommandPaletteContribution, CommandPaletteResourceContribution, CommandPaletteResourceItem, CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult, CommandPaletteResourceTarget, CommandPatchParams, CommandRef, CommandReject, CommandRejectedEvent, CommandReplaceInvocation, CommandReplaceParams, CommandRequestedEvent, CommandResponse, CommandRunHandler, CommandSource, CommandStartedEvent, CommandStream, CommandStreamDeclaration, CommandStreamOptions, CommandStreamWriter, CommandTarget, CommitPayload, ConflictPayload, ConnectionRef, ContributionDefinition, ContributionInput, ContributionKind, ContributionRef, ControlGroup, ControlParam, ControlValue, ControlValueMap, ControlsApplyInput, ControlsQueryParams, ControlsQueryResult, ControlsRendererContribution, ControlsResetInput, ControlsResourceRef, ControlsUpdateValueInput, ControlsViewBody, CreateExtensionWorkspaceInput, CreateNotificationInput, CreateWorkspaceCommandParams, DataTableRendererColumn, DataTableRendererColumnRenderer, DataTableRendererColumnStat, DataTableRendererContribution, DataTableRendererQueryParams, DataTableRendererQueryResult, DataTableRendererResourceRef, DataTableRendererRow, DataTableRendererRowAction, DataTableRendererRowActivationHandler, DataTableRendererSavedView, DataTableRendererSelectionAction, DataTableRendererSettings, DataTableRendererThemeColor, DataTableViewBody, DateControl, DockedWorkbenchRegion, ErrorPart, EventContext, EventDeliveryResult, EventRef, ExtensionActivityApi, ExtensionArtifactApi, ExtensionAutomationApi, ExtensionBlobInput, ExtensionBlobRef, ExtensionBlobsApi, ExtensionConnectionContribution, ExtensionConnectionMethod, ExtensionConnectionRequest, ExtensionConnectionResponse, ExtensionConnectionStreamEvent, ExtensionConnectionsApi, ExtensionContextBase, ExtensionDefinition, ExtensionEventsApi, ExtensionFilesApi, ExtensionHarnessInput, ExtensionLoadScope, ExtensionLoggerApi, ExtensionNetApi, ExtensionNotifyApi, ExtensionPackageFilesApi, ExtensionPanelRegion, ExtensionProcessApi, ExtensionProjectContext, ExtensionResourcesApi, ExtensionSessionResource, ExtensionSessionsApi, ExtensionSettingProperty, ExtensionSettingScope, ExtensionSettingValueForType, ExtensionSettingValueType, ExtensionSettingsApi, ExtensionSettingsContribution, ExtensionSkillsApi, ExtensionSourceKind, ExtensionStorageApi, ExtensionStorageCollectionApi, ExtensionTerminalApi, ExtensionViewModule, ExtensionViewRender, ExtensionViewRenderContext, ExtensionViewsApi, ExtensionWorkspace, ExtensionWorkspaceProvider, ExtensionWorkspacesApi, FileIconThemeContribution, FilePart, FileRendererContribution, FileRendererLoadParams, FileRendererLoadResult, FileRendererResourceRef, FileRendererSaveParams, FileRendererSectionAnchor, FileRendererSectionTarget, FileSourcePosition, FileViewBody, FilesParam, GuestHost, HarnessApprovalChannel, HarnessAttachment, HarnessCommandContext, HarnessCommandDiscoveryContext, HarnessCommandState, HarnessContext, HarnessDetectionResult, HarnessEventSink, HarnessExit, HarnessExitStatus, HarnessMessagesInput, HarnessOperation, HarnessOperationResult, HarnessParam, HarnessParamDescriptor, HarnessParamValue, HarnessParams, HarnessParamsSchema, HarnessProvider, HarnessQuestion, HarnessQuestionChannel, HarnessQuestionOption, HarnessQuestionReplyError, HarnessQuestionRequest, HarnessReattachInput, HarnessRecoveryInput, HarnessRecoveryResult, HarnessResumeInput, HarnessSession, HarnessSkillsLayout, HarnessStartInput, HarnessStateApi, HistoryProjection, HistoryRecoveryInput, HistoryRecoveryResult, HookDefinition, JsonObject, JsonParam, JsonPatch, JsonPrimitive, JsonValue, KanbanRendererAttributeDescriptor, KanbanRendererAttributeDisplay, KanbanRendererAttributeType, KanbanRendererBoardColumnConfig, KanbanRendererColumnAction, KanbanRendererContribution, KanbanRendererCreateRowContribution, KanbanRendererEnumOption, KanbanRendererFilterState, KanbanRendererQueryParams, KanbanRendererQueryResult, KanbanRendererResourceRef, KanbanRendererRow, KanbanRendererRowAction, KanbanRendererRowActivationHandler, KanbanRendererSavedView, KanbanRendererSettings, KanbanRendererSortDirection, KanbanRendererViewMode, KanbanRendererViewSettings, KanbanViewBody, KeybindingChord, KeybindingContribution, ListNotificationsQuery, ListNotificationsResponse, ListParam, LoadingPart, LocalExtensionSource, Localizable, LocalizedString, LongTextParam, MarkdownControl, MarkdownParam, MaybePromise, MenuContribution, MergePayload, MiddlewareDefinition, MigrationContext, ModeContribution, ModeRef, ModeRegionSettings, MultiSelectParam, NavigationItemContribution, NavigationOwnerRef, NavigationTarget, NavigationTargetCommand, NavigationTargetCompound, NavigationTargetHref, NavigationTargetItem, NavigationTargetPage, NavigationTargetPanel, NavigationTreeContribution, NavigationTreeSlot, Notification, NotificationAction, NotificationActorType, NotificationKind, NotificationOrigin, NotificationPriority, NotificationStatus, NumberControl, NumberParam, PackageAssetDescriptor, PackageManifest, PageContribution, PageDocumentDeclaration, PageLocation, PageMain, PageMainPanels, PageMainView, PageOpenIntent, PageRef, PageSlot, PageSlotCardinality, PageSlotRef, PageSlotRegion, PageSlotRole, PageUrlDefinition, PanelRef, ParamDescriptor, ParamEditorReadOnlyContent, ParamEditorReadOnlyImage, ParamObjectSchema, ParamOption, ParamOptionSource, ParamType, ParamValue, ParamValueRef, ParamsOf, ParsedWorkbenchPageUrl, PatchPart, PlacementContribution, PlacementIdentity, PlacementItem, PlacementMountStrategy, PlacementOwner, PlacementPresence, PlacementPresentation, PlacementRef, PlacementTabMenuGroup, PlacementTabMenuRow, PlacementTabPresentation, PlacementTabSnapshot, PreparedHarnessOperation, ProcessRunInput, ProcessRunResult, PropsStore, ProviderContributions, QualifiedRef, QuestionResponse, RangeControl, RangeValue, ReadOnlyControl, ReasoningPart, RebasePayload, RegionSize, RendererCallback, RendererContext, RendererContributionBase, RendererEventReference, RendererInvocationContext, ResourceAnchor, ResourceAnchorChangeEvent, ResourceAnchorPage, ResourceAnchorQuery, ResourceAnchorValidationInput, ResourceAnchorValidationResult, ResourceBinding, ResourceConstraint, ResourceControl, ResourceHierarchyProvider, ResourceKindDefinition, ResourceKindRef, ResourceMenuSlotDefinition, ResourceOption, ResourceParam, ResourceRef, ResourceRefValue, ResourceRemovedEvent, ResourceResolution, ResourceRole, RetryableHarnessReattachError, ScheduleContribution, ScheduleExpression, SegmentedControl, SegmentedOption, SelectParam, SelectionControl, SelectionGroup, SelectionOption, SerializedError, SessionLifecyclePayload, SessionMessage, SessionMessagePart, SessionMessageRole, SettingsPanelContribution, SettingsSectionContribution, SettingsSectionRef, SettingsSlotRef, SetupContext, SkillContribution, SlotInvocationContext, SlotOptions, SlotRef, StatusActionDefinition, StatusBarItemContribution, StatusBarSlotRef, StatusContribution, StatusRef, StepFinishPart, StepStartPart, StorageScope, Struct, TemplateContribution, TemplateParam, TemplateTypeContribution, TerminalEvent, TerminalSessionAdapter, TerminalSessionBridge, TerminalSessionExit, TerminalSessionHandle, TerminalSessionRequest, TextControl, TextParam, TextPart, ThemeContribution, ThemeMode, ThemeRef, TimeoutStrategy, TokenUsagePart, ToolPart, ToolPartActionType, ToolPartStatus, TreeAction, TreeNode, TreeNodeRowVariant, TreeNodeTarget, TreeRendererActionParams, TreeRendererChildrenParams, TreeRendererCommandResult, TreeRendererContribution, TreeRendererMoveParams, TreeRendererQueryParams, TreeRendererResourceRef, TreeRendererState, TreeSectionEmptyState, TreeViewBody, TreeViewSection, UiContributions, UiSlotKind, UpdateNotificationInput, VectorControl, VectorValue, ViewBody, ViewContribution, ViewFieldKind, ViewFilterCondition, ViewFilterGroup, ViewFilterRule, ViewHierarchyParent, ViewMenuContribution, ViewRef, ViewSort, ViewSortDirection, ViewToolbarAction, WebviewArtifactFile, WebviewArtifactsClient, WebviewArtifactsReadParams, WebviewCapabilityDeclaration, WebviewClient, WebviewClientOptions, WebviewCommandStreamEvent, WebviewCommandsClient, WebviewCommandsExecuteParams, WebviewCommandsStreamParams, WebviewContribution, WebviewDeclarableCapability, WebviewEventsClient, WebviewExtensionEvent, WebviewExtensionSettingKeyParams, WebviewExtensionSettingSetParams, WebviewFileScope, WebviewFilesClient, WebviewFilesDeleteParams, WebviewFilesListParams, WebviewFilesUploadParams, WebviewHostCapability, WebviewHostCapabilityParams, WebviewHostCapabilityResult, WebviewHostCapabilityResults, WebviewKeyboardEventParams, WebviewNavigationOpenParams, WebviewNotificationActionParams, WebviewNotificationDismissParams, WebviewNotificationResolveParams, WebviewNotificationShowParams, WebviewPreferencesGetParams, WebviewPreferencesSetParams, WebviewScopedDeclarableCapability, WebviewSettingsClient, WebviewStreamsClient, WebviewViewBody, WhenExpression, WorkbenchAttachmentInvocationContext, WorkflowStatus, WorkspaceCapabilities, WorkspaceExecutionTarget, WorkspaceFilesMount, WorkspaceParam, WorkspaceProviderCreateInput, WorkspaceProviderMutationInput, WorkspaceProviderRef, WorkspaceProviderResolveInput, WorkspaceProviderResult, WorkspaceProviderState, WorkspaceProvisionPayload, WorkspaceSyncFile, WorkspaceType, WorkspaceTypeProvider, WorktreeRemovedPayload, parseExtensionApiDeclaration, supportsExtensionApiVersion };
+export type { ActionOption, ActionsControl, ActivityItemContribution, AgentCapability, AgentModel, AnchorGridControl, AnchorGridValue, ApprovalRequest, ApprovalResponse, ArtifactFile, ArtifactMount, ArtifactMountContribution, ArtifactMountKey, AssetContributions, AutomationRun, AutomationRunStatus, BaseControl, BehaviourContributions, BoardView, BoardViewCreate, BoardViewUpdate, BoardViews, BooleanControl, BooleanParam, CliContribution, CollectionBadgeItem, ColorControl, CommandCompletedEvent, CommandContext, CommandContinue, CommandDefinition, CommandDiagnostic, CommandFailedEvent, CommandHelpersApi, CommandInvocation, CommandLifecycleEventPayload, CommandLifecyclePhase, CommandMiddlewareContext, CommandMiddlewareHandler, CommandMiddlewareResult, CommandNotice, CommandOutcome, CommandPaletteContribution, CommandPaletteResourceContribution, CommandPaletteResourceItem, CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult, CommandPaletteResourceTarget, CommandPatchParams, CommandRef, CommandReject, CommandRejectedEvent, CommandReplaceInvocation, CommandReplaceParams, CommandRequestedEvent, CommandResponse, CommandRunHandler, CommandSource, CommandStartedEvent, CommandStream, CommandStreamDeclaration, CommandStreamOptions, CommandStreamWriter, CommandTarget, CommitPayload, ConflictPayload, ConnectionRef, ContributionDefinition, ContributionInput, ContributionKind, ContributionRef, ControlGroup, ControlParam, ControlValue, ControlValueMap, ControlsApplyInput, ControlsQueryParams, ControlsQueryResult, ControlsRendererContribution, ControlsResetInput, ControlsResourceRef, ControlsUpdateValueInput, ControlsViewBody, CreateExtensionWorkspaceInput, CreateNotificationInput, CreateWorkspaceCommandParams, DataTableRendererColumn, DataTableRendererColumnRenderer, DataTableRendererColumnStat, DataTableRendererContribution, DataTableRendererQueryParams, DataTableRendererQueryResult, DataTableRendererResourceRef, DataTableRendererRow, DataTableRendererRowAction, DataTableRendererRowActivationHandler, DataTableRendererSavedView, DataTableRendererSelectionAction, DataTableRendererSettings, DataTableRendererThemeColor, DataTableViewBody, DateControl, DockedWorkbenchRegion, ErrorPart, EventContext, EventDeliveryResult, EventRef, ExtensionActivityApi, ExtensionArtifactApi, ExtensionAutomationApi, ExtensionBlobInput, ExtensionBlobRef, ExtensionBlobsApi, ExtensionConnectionContribution, ExtensionConnectionMethod, ExtensionConnectionRequest, ExtensionConnectionResponse, ExtensionConnectionStreamEvent, ExtensionConnectionsApi, ExtensionContextBase, ExtensionDefinition, ExtensionEventsApi, ExtensionFilesApi, ExtensionHarnessInput, ExtensionLoadScope, ExtensionLoggerApi, ExtensionNetApi, ExtensionNotifyApi, ExtensionPackageFilesApi, ExtensionPanelRegion, ExtensionProcessApi, ExtensionProjectContext, ExtensionResourcesApi, ExtensionSessionResource, ExtensionSessionsApi, ExtensionSettingProperty, ExtensionSettingScope, ExtensionSettingValueForType, ExtensionSettingValueType, ExtensionSettingsApi, ExtensionSettingsContribution, ExtensionSkillsApi, ExtensionSourceKind, ExtensionStorageApi, ExtensionStorageCollectionApi, ExtensionTerminalApi, ExtensionViewModule, ExtensionViewRender, ExtensionViewRenderContext, ExtensionViewsApi, ExtensionWorkspace, ExtensionWorkspaceProvider, ExtensionWorkspacesApi, FileIconThemeContribution, FilePart, FileRendererContribution, FileRendererLoadParams, FileRendererLoadResult, FileRendererResourceRef, FileRendererSaveParams, FileRendererSectionAnchor, FileRendererSectionTarget, FileSourcePosition, FileViewBody, FilesParam, GuestHost, HarnessApprovalChannel, HarnessAttachment, HarnessCommandContext, HarnessCommandDiscoveryContext, HarnessCommandState, HarnessContext, HarnessDetectionResult, HarnessEventSink, HarnessExit, HarnessExitStatus, HarnessMessagesInput, HarnessOperation, HarnessOperationResult, HarnessParam, HarnessParamDescriptor, HarnessParamValue, HarnessParams, HarnessParamsSchema, HarnessProvider, HarnessQuestion, HarnessQuestionChannel, HarnessQuestionOption, HarnessQuestionReplyError, HarnessQuestionRequest, HarnessReattachInput, HarnessRecoveryInput, HarnessRecoveryResult, HarnessResumeInput, HarnessSession, HarnessSkillsLayout, HarnessStartInput, HarnessStateApi, HarnessSteeringInput, HarnessSteeringResult, HistoryProjection, HistoryRecoveryInput, HistoryRecoveryResult, HookDefinition, JsonObject, JsonParam, JsonPatch, JsonPrimitive, JsonValue, KanbanRendererAttributeDescriptor, KanbanRendererAttributeDisplay, KanbanRendererAttributeType, KanbanRendererBoardColumnConfig, KanbanRendererColumnAction, KanbanRendererContribution, KanbanRendererCreateRowContribution, KanbanRendererEnumOption, KanbanRendererFilterState, KanbanRendererQueryParams, KanbanRendererQueryResult, KanbanRendererResourceRef, KanbanRendererRow, KanbanRendererRowAction, KanbanRendererRowActivationHandler, KanbanRendererSavedView, KanbanRendererSettings, KanbanRendererSortDirection, KanbanRendererViewMode, KanbanRendererViewSettings, KanbanViewBody, KeybindingChord, KeybindingContribution, ListNotificationsQuery, ListNotificationsResponse, ListParam, LoadingPart, LocalExtensionSource, Localizable, LocalizedString, LongTextParam, MarkdownControl, MarkdownParam, MaybePromise, MenuContribution, MergePayload, MiddlewareDefinition, MigrationContext, ModeContribution, ModeRef, ModeRegionSettings, MultiSelectParam, NavigationItemContribution, NavigationOwnerRef, NavigationTarget, NavigationTargetCommand, NavigationTargetCompound, NavigationTargetHref, NavigationTargetItem, NavigationTargetPage, NavigationTargetPanel, NavigationTreeContribution, NavigationTreeSlot, Notification, NotificationAction, NotificationActorType, NotificationKind, NotificationOrigin, NotificationPriority, NotificationStatus, NumberControl, NumberParam, PackageAssetDescriptor, PackageManifest, PageContribution, PageDocumentDeclaration, PageLocation, PageMain, PageMainPanels, PageMainView, PageOpenIntent, PageRef, PageSlot, PageSlotCardinality, PageSlotRef, PageSlotRegion, PageSlotRole, PageUrlDefinition, PanelRef, ParamDescriptor, ParamEditorReadOnlyContent, ParamEditorReadOnlyImage, ParamObjectSchema, ParamOption, ParamOptionSource, ParamType, ParamValue, ParamValueRef, ParamsOf, ParsedWorkbenchPageUrl, PatchPart, PlacementContribution, PlacementIdentity, PlacementItem, PlacementMountStrategy, PlacementOwner, PlacementPresence, PlacementPresentation, PlacementRef, PlacementTabMenuGroup, PlacementTabMenuRow, PlacementTabPresentation, PlacementTabSnapshot, PreparedHarnessOperation, ProcessRunInput, ProcessRunResult, PropsStore, ProviderContributions, QualifiedRef, QuestionResponse, RangeControl, RangeValue, ReadOnlyControl, ReasoningPart, RebasePayload, RegionSize, RendererCallback, RendererContext, RendererContributionBase, RendererEventReference, RendererInvocationContext, ResourceAnchor, ResourceAnchorChangeEvent, ResourceAnchorPage, ResourceAnchorQuery, ResourceAnchorValidationInput, ResourceAnchorValidationResult, ResourceBinding, ResourceConstraint, ResourceControl, ResourceHierarchyProvider, ResourceKindDefinition, ResourceKindRef, ResourceMenuSlotDefinition, ResourceOption, ResourceParam, ResourceRef, ResourceRefValue, ResourceRemovedEvent, ResourceResolution, ResourceRole, RetryableHarnessReattachError, ScheduleContribution, ScheduleExpression, SegmentedControl, SegmentedOption, SelectParam, SelectionControl, SelectionGroup, SelectionOption, SerializedError, SessionLifecyclePayload, SessionMessage, SessionMessagePart, SessionMessageRole, SettingsPanelContribution, SettingsSectionContribution, SettingsSectionRef, SettingsSlotRef, SetupContext, SkillContribution, SlotInvocationContext, SlotOptions, SlotRef, StatusActionDefinition, StatusBarItemContribution, StatusBarSlotRef, StatusContribution, StatusRef, StepFinishPart, StepStartPart, StorageScope, Struct, TemplateContribution, TemplateParam, TemplateTypeContribution, TerminalEvent, TerminalSessionAdapter, TerminalSessionBridge, TerminalSessionExit, TerminalSessionHandle, TerminalSessionRequest, TextControl, TextParam, TextPart, ThemeContribution, ThemeMode, ThemeRef, TimeoutStrategy, TokenUsagePart, ToolPart, ToolPartActionType, ToolPartStatus, TreeAction, TreeNode, TreeNodeRowVariant, TreeNodeTarget, TreeRendererActionParams, TreeRendererChildrenParams, TreeRendererCommandResult, TreeRendererContribution, TreeRendererMoveParams, TreeRendererQueryParams, TreeRendererResourceRef, TreeRendererState, TreeSectionEmptyState, TreeViewBody, TreeViewSection, UiContributions, UiSlotKind, UpdateNotificationInput, VectorControl, VectorValue, ViewBody, ViewContribution, ViewFieldKind, ViewFilterCondition, ViewFilterGroup, ViewFilterRule, ViewHierarchyParent, ViewMenuContribution, ViewRef, ViewSort, ViewSortDirection, ViewToolbarAction, WebviewArtifactFile, WebviewArtifactsClient, WebviewArtifactsReadParams, WebviewCapabilityDeclaration, WebviewClient, WebviewClientOptions, WebviewCommandStreamEvent, WebviewCommandsClient, WebviewCommandsExecuteParams, WebviewCommandsStreamParams, WebviewContribution, WebviewDeclarableCapability, WebviewEventsClient, WebviewExtensionEvent, WebviewExtensionSettingKeyParams, WebviewExtensionSettingSetParams, WebviewFileScope, WebviewFilesClient, WebviewFilesDeleteParams, WebviewFilesListParams, WebviewFilesUploadParams, WebviewHostCapability, WebviewHostCapabilityParams, WebviewHostCapabilityResult, WebviewHostCapabilityResults, WebviewKeyboardEventParams, WebviewNavigationOpenParams, WebviewNotificationActionParams, WebviewNotificationDismissParams, WebviewNotificationResolveParams, WebviewNotificationShowParams, WebviewPreferencesGetParams, WebviewPreferencesSetParams, WebviewScopedDeclarableCapability, WebviewSettingsClient, WebviewStreamsClient, WebviewViewBody, WhenExpression, WorkbenchAttachmentInvocationContext, WorkflowStatus, WorkspaceCapabilities, WorkspaceExecutionTarget, WorkspaceFilesMount, WorkspaceParam, WorkspaceProviderCreateInput, WorkspaceProviderMutationInput, WorkspaceProviderRef, WorkspaceProviderResolveInput, WorkspaceProviderResult, WorkspaceProviderState, WorkspaceProvisionPayload, WorkspaceSyncFile, WorkspaceType, WorkspaceTypeProvider, WorktreeRemovedPayload, parseExtensionApiDeclaration, supportsExtensionApiVersion };

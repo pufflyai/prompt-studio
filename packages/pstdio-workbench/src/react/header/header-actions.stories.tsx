@@ -49,13 +49,16 @@ const createHeaderWorkbench = () => {
     ],
   });
   workbench.commands.registerCommand(
-    { id: "related", label: "Related resources" },
+    { id: "publish-artifact", label: "Publish artifact" },
     {
       execute: () => undefined,
       isVisible: () => Boolean(workbench.getActiveResource()),
     },
   );
-  workbench.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, { commandId: "related", group: "primary" });
+  workbench.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
+    commandId: "publish-artifact",
+    group: "primary",
+  });
   workbench.pageLocations.setProject("storybook");
   workbench.pageLocations.navigate({ kind: "page", page });
   return workbench;
@@ -81,11 +84,11 @@ export const FocusedResourceInLibrary: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.queryByRole("button", { name: "Related resources" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Publish artifact" })).toBeNull();
     await userEvent.click(canvas.getByRole("button", { name: "Open artifact tab" }));
-    await expect(await canvas.findByRole("button", { name: "Related resources" })).toBeVisible();
+    await expect(await canvas.findByRole("button", { name: "Publish artifact" })).toBeVisible();
     const library = canvas.getAllByRole("tab", { name: "Library" })[0];
     await userEvent.click(library!);
-    await expect(canvas.queryByRole("button", { name: "Related resources" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Publish artifact" })).toBeNull();
   },
 };

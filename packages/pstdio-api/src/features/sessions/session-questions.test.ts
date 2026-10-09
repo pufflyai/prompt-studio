@@ -126,7 +126,10 @@ describe("harness questions", () => {
     expect(handle.asking.state.resumeCalls).toBe(0);
 
     const queued = await handle.app.request(`/v1/sessions/${session.id}/queued-messages`);
-    expect(await queued.json()).toEqual({ messages: [] });
+    expect(await queued.json()).toMatchObject({
+      messages: [],
+      queue: { requests: [], steeringAvailable: false },
+    });
   });
 
   test("an answer cannot carry files, so the question stays open instead of losing them", async () => {

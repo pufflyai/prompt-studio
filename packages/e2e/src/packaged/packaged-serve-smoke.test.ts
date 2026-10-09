@@ -15,6 +15,7 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
+import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
@@ -38,6 +39,8 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+// Queue drag targets follow live-input support and retain padded delete actions.
+import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
@@ -45,6 +48,7 @@ import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
+// It also creates, renames, and removes persisted Sidenav groups without deleting their rows.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
@@ -424,6 +428,7 @@ registerCoreDefaultExtensionSmokeTests();
 registerExtensionDiagnosticsSmokeTests();
 registerLinkedWebviewSmokeTests();
 registerRemoteExecutionSmokeTests();
+registerConcurrentHostsSmokeTests();
 
 test("packaged CLI includes automation and machine authentication", () => {
   const result = spawnSync(PACKAGED_BINARY_PATH, ["--help"], { encoding: "utf8" });
@@ -455,3 +460,5 @@ registerBoardPanningSmokeTests();
 registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
+// Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
+registerQueuedRequestSmokeTests();
