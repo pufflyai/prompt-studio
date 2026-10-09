@@ -1,4 +1,4 @@
-import { beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -7,7 +7,17 @@ import { join } from "node:path";
 import { writeSmokeExtension } from "./extension-smoke-fixtures";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
-beforeAll(buildBinary, 180_000);
+const browserHome = mkdtempSync(join(tmpdir(), "extension-smoke-browser-home-"));
+const smokeEnv = { ...process.env, PSTDIO_HOME: browserHome };
+beforeAll(() => {
+  buildBinary();
+  const setup = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
+    env: smokeEnv,
+    encoding: "utf8",
+  });
+  expect({ code: setup.status, output: setup.stderr }).toMatchObject({ code: 0 });
+}, 180_000);
+afterAll(() => rmSync(browserHome, { recursive: true, force: true }));
 for (const [behavior, code] of [
   ["pass", 0],
   ["throw", 1],
@@ -40,8 +50,7 @@ for (const [behavior, code] of [
         {
           cwd: root,
           env: {
-            ...process.env,
-            PSTDIO_HOME: join(root, "caller-home"),
+            ...smokeEnv,
             PSTDIO_API_URL: "http://127.0.0.1:1",
             PSTDIO_PROJECT_ID: "caller",
             PSTDIO_DEFAULT_EXTENSIONS: '["must-not-load"]',
@@ -51,7 +60,7 @@ for (const [behavior, code] of [
           timeout: 29_000,
         },
       );
-      expect(existsSync(join(root, "caller-home"))).toBe(false);
+      expect(existsSync(join(browserHome, "runtime.json"))).toBe(false);
       const result = JSON.parse(run.stdout);
       retained = result.evidence?.directory;
       expect({ code: run.status, result }).toMatchObject({ code, result: { exitCode: code } });
@@ -90,7 +99,7 @@ test("missing Chromium produces a setup result without changing source", () => {
     const source = writeSmokeExtension(root);
     const run = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json"], {
       cwd: root,
-      env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: join(root, "missing-browser") },
+      env: { ...smokeEnv, PLAYWRIGHT_BROWSERS_PATH: join(root, "missing-browser") },
       encoding: "utf8",
     });
     expect(run.status).toBe(3);
@@ -100,6 +109,7 @@ test("missing Chromium produces a setup result without changing source", () => {
         status: "failed",
         id: "setup",
         phase: "setup",
+        message: expect.stringContaining("pst extensions install-browser"),
       }),
     );
     expect(existsSync(join(source, "bun.lock"))).toBe(false);
@@ -113,7 +123,7 @@ test("interruption stops the browser and host while retaining requested evidence
   const source = writeSmokeExtension(root);
   const child = spawn(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json", "--keep-home"], {
     cwd: root,
-    env: { ...process.env, TMPDIR: root, TMP: root, TEMP: root },
+    env: { ...smokeEnv, TMPDIR: root, TMP: root, TEMP: root },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const exited = once(child, "exit");
@@ -151,7 +161,7 @@ test("a successful run removes disposable disk state by default", () => {
     const source = writeSmokeExtension(root, "commands");
     const run = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json"], {
       cwd: root,
-      env: { ...process.env, TMPDIR: root, TMP: root, TEMP: root },
+      env: { ...smokeEnv, TMPDIR: root, TMP: root, TEMP: root },
       encoding: "utf8",
       timeout: 29_000,
     });

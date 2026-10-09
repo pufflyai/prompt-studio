@@ -5,6 +5,7 @@ import { createClient, createRequest, PstdioApiError } from "@pstdio/sdk/client"
 import type { BrowserContext } from "playwright-core";
 import { CLI_VERSION } from "../cli-version";
 import { exerciseSmokeDashboard } from "./smoke-browser";
+import { loadSmokePlaywright } from "./smoke-browser-package";
 import { finishExtensionSmoke } from "./smoke-cleanup";
 import { startSmokeHost } from "./smoke-host";
 import { createSmokeContext } from "./smoke-isolation";
@@ -36,7 +37,7 @@ export const runExtensionSmoke = async (input: {
     process.stderr.write(`Extension smoke: ${name}\n`);
   };
   try {
-    const { chromium } = await import("playwright-core");
+    const { chromium } = loadSmokePlaywright();
     const executablePath = chromium.executablePath();
     if (!existsSync(executablePath))
       throw new Error(`Chromium is missing. Run: pst extensions install-browser\nExpected browser: ${executablePath}`);
