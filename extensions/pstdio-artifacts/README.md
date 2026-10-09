@@ -12,6 +12,10 @@ Artifacts is an optional extension in the extension catalog. Its install name is
 pst extensions add pstdio-artifacts
 ```
 
+## Create a page
+
+Open **Artifacts** and choose **Project brief** or **Project dashboard** under **Make something new**. Each example starts and opens an agent session using your project’s configured agent. The agent uses the project’s available context and the `publish-artifact` skill to publish the result here. You can also ask any session to create and publish another kind of interactive page.
+
 ## Publish a page
 
 Agents publish pages with the `pst pstdio-artifacts` commands. Artifacts gives agents a `publish-artifact` skill that explains the steps, so you can simply ask an agent to publish a page.
