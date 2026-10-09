@@ -22,16 +22,18 @@ Codex reports a status dot with native state: active is green, paused/blocked/us
 | --- | --- | --- |
 | Codex | 0.157.0 | Oldest release whose app-server protocol matches every request, notification, and item the harness uses. Older releases change thread, item, and tool output shapes. The comparison and live checks are recorded in [ADR 0064](../../adrs/0064-codex-app-server-runtime.md#supported-versions). |
 | Claude Code | 2.1.203 | First release that reports `background_tasks_changed` in stream JSON. Older releases end the run at the first result and kill the agent's background tasks. The flags, model discovery, and `AskUserQuestion` channel the harness uses work from 2.1.100. |
-| OpenCode | None | Any release that prints a version is accepted. |
+| OpenCode | 1.0.175 | First release that serves `/global/health` and `/question`. The harness finds its server through the health check and asks the agent's questions through the question API. Every other endpoint it calls works from 1.0.0. |
 
-No harness has a maximum. Both CLIs ship every one to three days, and the harnesses ignore events and items they do not know. A maximum would report the newest CLI as not installed.
+No harness has a maximum. The CLIs ship every one to three days, and the harnesses ignore events and items they do not know. A maximum would report the newest CLI as not installed.
+
+Below the minimum, or when `--version` fails, detection returns a `reason` that names the found and required versions or the failed check.
 
 Tests keep these versions supported:
 
-- `src/supported-versions.test.ts` in each harness replays real CLI output from the minimum and the latest version through the harness. Codex runs a shell command and reads it back from history. Claude Code keeps a run open until its background task finishes and answers a question. Each test requires a recording at the current `MINIMUM_VERSION`.
-- `src/installed-cli.test.ts` runs the harness against the installed CLI without a login: detection, model listing, and the Codex app-server thread and goal calls or the Claude Code session arguments. It runs when `INSTALLED_CLI_TESTS=1`. Test and Build installs the minimum versions when a Codex or Claude Code harness changes. Release readiness also installs the latest versions.
+- `src/supported-versions.test.ts` in the Codex and Claude Code harnesses replays real CLI output from the minimum and the latest version through the harness. Codex runs a shell command and reads it back from history. Claude Code keeps a run open until its background task finishes and answers a question. Each test requires a recording at the current `MINIMUM_VERSION`.
+- `src/installed-cli.test.ts` in each harness runs the harness against the installed CLI without a login: detection, model listing, and the Codex app-server thread and goal calls, the Claude Code session arguments, or a real OpenCode turn on a free model. It runs when `INSTALLED_CLI_TESTS=1`. Test and Build installs the minimum versions when a harness changes. Release readiness also installs the latest versions. The OpenCode test keeps OpenCode's data in temporary `XDG_*` folders.
 
-To change a minimum, update `MINIMUM_VERSION` in the harness's `src/detection.ts`. Then record new output with `bun scripts/record-cli-output.ts <executable>` at the new minimum and the latest version, and delete recordings older than the minimum. Recording needs a signed-in CLI. The scripts remove machine paths and account details.
+To change a minimum, update `MINIMUM_VERSION` in the harness's `src/detection.ts`. For Codex and Claude Code, record new output with `bun scripts/record-cli-output.ts <executable>` at the new minimum and the latest version, and delete recordings older than the minimum. Recording needs a signed-in CLI. The scripts remove machine paths and account details.
 
 The current Codex protocol types come from 0.160.1. The original native integration checks used Codex 0.159.3, Claude Code 2.1.287, and OpenCode 1.18.25. Regenerate the checked-in Codex types with `bun extensions/harness-codex/scripts/generate-protocol.ts` using the supported Codex executable.
 

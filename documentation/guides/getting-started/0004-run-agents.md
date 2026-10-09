@@ -10,9 +10,9 @@ Each new project has a harness extension for each supported agent. A harness con
 | --- | --- | --- | --- |
 | Claude Code | `claude` | 2.1.203 and newer | [Claude Code](../../../extensions/harness-claude-code/README.md) |
 | Codex | `codex` | 0.157.0 and newer | [Codex](../../../extensions/harness-codex/README.md) |
-| OpenCode | `opencode` | Any version | [OpenCode](../../../extensions/harness-open-code/README.md) |
+| OpenCode | `opencode` | 1.0.175 and newer | [OpenCode](../../../extensions/harness-open-code/README.md) |
 
-An older version shows as not installed. Update the agent, then restart the runtime.
+An older version shows as unavailable with the reason, such as the version it found and the version it needs. Update the agent, then restart the runtime.
 
 Install the agent and sign in as its own documentation describes. Then check what Prompt Studio finds:
 

@@ -36,12 +36,12 @@ test("accepts the CLI version on stdout or stderr", async () => {
 
 for (const output of ["", "login required", "command not found"]) {
   test(`rejects a successful exit without a valid version: ${JSON.stringify(output)}`, async () => {
-    expect((await probe(output)).available).toBe(false);
+    expect(await probe(output)).toEqual({ available: false, reason: expect.stringMatching(/\S/) });
   });
 }
 
 test("rejects a failed command even when it prints a version", async () => {
-  expect((await probe("codex-cli 0.160.1", "", 1)).available).toBe(false);
+  expect(await probe("codex-cli 0.160.1", "", 1)).toEqual({ available: false, reason: expect.stringMatching(/\S/) });
 });
 
 test("accepts Codex 0.157.0 and every newer release", async () => {
@@ -50,6 +50,12 @@ test("accepts Codex 0.157.0 and every newer release", async () => {
   }
 });
 
-test("rejects Codex releases older than 0.157.0", async () => {
-  expect((await probe("codex-cli 0.156.1")).available).toBe(false);
+test("rejects Codex releases older than 0.157.0 and names both versions", async () => {
+  const result = await probe("codex-cli 0.156.1");
+  // The reason names the version found and the version required.
+  expect(result).toMatchObject({
+    available: false,
+    version: "codex-cli 0.156.1",
+    reason: expect.stringMatching(/^(?=.*0\.156\.1)(?=.*0\.157\.0)/),
+  });
 });

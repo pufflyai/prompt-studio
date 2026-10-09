@@ -1,7 +1,8 @@
 name: Harness CLI support
 
 # Runs each harness against the real agent CLI. `minimum` reads the version the harness detection
-# accepts as its oldest; `latest` is the newest release on npm. No agent login is needed.
+# accepts as its oldest; `latest` is the newest release on npm. No agent login is needed: OpenCode
+# runs a real turn on one of its free models.
 on:
   workflow_call:
     inputs:
@@ -31,6 +32,8 @@ jobs:
             package: "@openai/codex"
           - extension: harness-claude-code
             package: "@anthropic-ai/claude-code"
+          - extension: harness-open-code
+            package: opencode-ai
     steps:
       - uses: actions/checkout@v5
         with:

@@ -30,7 +30,7 @@ const readOpencodeModels = async (ctx: HarnessContext) => {
 };
 
 type OpencodeHarnessDeps = {
-  detect: typeof detectOpencode;
+  detect: NonNullable<HarnessProvider["detect"]>;
   getModelsOutput: (ctx: HarnessContext) => Promise<string>;
 };
 

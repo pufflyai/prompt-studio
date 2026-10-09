@@ -127,8 +127,9 @@ test("published extensions are checked for extension and public contract changes
   expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"]).publishedExtensions).toBe(false);
 });
 
-test("installed CLI checks run for Codex and Claude Code harness changes", () => {
+test("installed CLI checks run for harness changes", () => {
   expect(pullRequest(["extensions/harness-codex/src/detection.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/harness-claude-code/src/spawn.ts"]).harnessCli).toBe(true);
-  expect(pullRequest(["extensions/harness-open-code/src/detection.ts"]).harnessCli).toBe(false);
+  expect(pullRequest(["extensions/harness-open-code/src/detection.ts"]).harnessCli).toBe(true);
+  expect(pullRequest(["extensions/pstdio-planner/extension.ts"]).harnessCli).toBe(false);
 });

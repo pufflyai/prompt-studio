@@ -13,7 +13,7 @@ bun add --global @openai/codex
 codex --version
 ```
 
-Prompt Studio supports Codex 0.157.0 and newer. An older version shows as not installed. Update it with `bun add --global @openai/codex@latest`.
+Prompt Studio supports Codex 0.157.0 and newer. An older version shows as unavailable, with the version it found and the version it needs. Update it with `bun add --global @openai/codex@latest`.
 
 Run `codex login` once and sign in. Prompt Studio uses that sign-in and never asks for your OpenAI credentials.
 

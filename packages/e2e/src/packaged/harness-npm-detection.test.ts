@@ -11,7 +11,7 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 beforeAll(buildBinary, 180_000);
 
 const harnesses = [
-  { command: "opencode", extension: "harness-open-code", id: "opencode", version: "1.18.34" },
+  { command: "opencode", extension: "harness-open-code", id: "opencode", version: "1.0.175" },
   { command: "codex", extension: "harness-codex", id: "codex", version: "codex-cli 0.157.0" },
   { command: "claude", extension: "harness-claude-code", id: "claude-code", version: "2.1.203 (Claude Code)" },
 ];
