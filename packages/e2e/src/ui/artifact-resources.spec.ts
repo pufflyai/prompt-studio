@@ -33,7 +33,8 @@ test("finds published artifacts as resources and opens the latest version", asyn
     await execute("publish", { file_path: "page.html", url: first.url });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(`/projects/${project.id}/extensions/${extensionId}/artifacts`);
-    await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+    const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
+    await expect(frame.getByRole("button", { name: "Project brief", exact: true })).toBeVisible();
     await page.keyboard.press("ControlOrMeta+KeyP");
     const palette = page.getByRole("dialog");
     await palette.getByRole("textbox").fill("Launch report");
@@ -41,7 +42,6 @@ test("finds published artifacts as resources and opens the latest version", asyn
     await expect(result).toHaveCount(1);
     await result.click();
     await expect(page.getByRole("tab", { name: "Launch report", exact: true })).toBeVisible();
-    const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "Latest report" })).toBeVisible();
     await page.keyboard.press("ControlOrMeta+KeyP");
