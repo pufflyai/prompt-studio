@@ -116,14 +116,12 @@ export const createWorkbenchExtensionTabPresentation = (
         );
         if (!affected.length) return;
         revision++;
-        for (const instance of affected) snapshots.delete(instance.instanceId);
         await Promise.all(affected.map(load));
       });
       const refreshSubscription = input.subscribeRefreshEvents?.((event: WorkbenchExtensionRefreshEvent) => {
         if (!refreshEvents.has(event.id)) return;
         revision++;
-        snapshots.clear();
-        listener();
+        for (const instance of instances.values()) void load(instance).catch(() => undefined);
       });
       const disposable: Disposable = {
         dispose() {
