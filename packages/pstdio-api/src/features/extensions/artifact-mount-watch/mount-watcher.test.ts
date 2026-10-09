@@ -181,12 +181,18 @@ describe("watchArtifactMount", () => {
   });
 
   test("asks listeners to reload everything after more than 200 paths", async () => {
-    const { changes, root } = await startWatch();
+    // A fake handle sends one burst of events, however fast the disk writes them.
+    let emit: (eventType: string, filename: string) => void = () => {};
+    const { changes } = await startWatch({
+      watch: (_path, listener) => {
+        emit = listener;
+        return { close: () => {} };
+      },
+    });
 
-    for (let index = 0; index < 201; index += 1) writeFileSync(join(root, `${index}.json`), "{}");
+    for (let index = 0; index < 201; index += 1) emit("rename", `${index}.json`);
 
     await waitFor(() => changes.length > 0);
-    await Bun.sleep(1_100);
-    expect(changes.flat()).toEqual([]);
+    expect(changes).toEqual([[]]);
   });
 });
