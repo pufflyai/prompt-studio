@@ -187,9 +187,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
       ) : null}
       <IconButton
         size="xs"
-        variant="ghost"
-        color="fg.subtle"
-        _groupHover={{ color: "fg.error", bg: "bg.error" }}
+        variant="destructive-ghost"
         onClick={onDelete}
         disabled={disabled || value.isDefault}
         aria-label={`Delete ${value.name}`}

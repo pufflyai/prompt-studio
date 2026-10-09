@@ -72,8 +72,13 @@ export type {
 export type { CreateProjectInput, UpdateProjectInput } from "./projects";
 export type {
   ApprovalInput,
+  CombineQueuedFollowUpsInput,
   CreateSessionInput,
   FollowUpInput,
+  PendingQueuedFollowUpsResponse,
+  QueuedFollowUpRequest,
+  QueuedFollowUpUpdateResponse,
+  QueuedSteeringResult,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
   SessionAttachment,
@@ -81,6 +86,8 @@ export type {
   SessionConversationResponse,
   SessionConversationSources,
   SessionQueuedMessagesResponse,
+  SteerQueuedFollowUpInput,
+  UpdateQueuedFollowUpInput,
 } from "./sessions";
 export { sessionAttachmentMimeTypesByExtension } from "./sessions";
 export type { Settings, UpdateSettingsInput } from "./settings";

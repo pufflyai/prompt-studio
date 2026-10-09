@@ -119,6 +119,7 @@ export const isSessionAttachmentSubmitted = async (
 
   const queueEntries = [
     ...(await deps.sessionQueueEntriesService.listPending()),
+    ...(await deps.sessionQueueEntriesService.listSteeringDeliveries()),
     ...(await deps.sessionQueueEntriesService.listDispatchStarted()),
   ];
 

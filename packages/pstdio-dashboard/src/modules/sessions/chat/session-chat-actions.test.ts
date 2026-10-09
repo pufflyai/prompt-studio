@@ -3,12 +3,7 @@ import { resourceKey, workbenchPages, workbenchPanels } from "@pstdio/sdk/extens
 import { createWorkbench, type ResourceRef, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { MutationObserver, QueryClient } from "@tanstack/react-query";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import {
-  type CreateSessionMutation,
-  moveQueuedFollowUpBySteps,
-  openCreatedSessionFromDraft,
-  submitSessionMessage,
-} from "./session-chat-actions";
+import { type CreateSessionMutation, openCreatedSessionFromDraft, submitSessionMessage } from "./session-chat-actions";
 import { getPendingFollowUp } from "./session-chat-state";
 
 const draftResource: ResourceRef = {
@@ -266,39 +261,5 @@ describe("submitSessionMessage", () => {
     expect(created).toBe("session-after-unmount");
     expect(getPendingFollowUp("draft-unmounted")).toBeNull();
     expect(getPendingFollowUp("session-after-unmount")).toMatchObject({ prompt: "Start here" });
-  });
-});
-describe("moveQueuedFollowUpBySteps", () => {
-  test("uses each returned adjacent queue position for a multi-step move", async () => {
-    const mutateAsync = mock(async (input: { queuePosition: number }) => ({
-      ok: true as const,
-      queuePosition: input.queuePosition === 9 ? 4 : 1,
-    }));
-    const reconnect = mock(() => undefined);
-    await moveQueuedFollowUpBySteps({
-      sessionId: "session-1",
-      queuePosition: 9,
-      direction: "up",
-      steps: 2,
-      mutation: { mutateAsync },
-      reconnect,
-    });
-    expect(mutateAsync.mock.calls.map(([input]) => input.queuePosition)).toEqual([9, 4]);
-    expect(reconnect).toHaveBeenCalledTimes(1);
-  });
-  test("reconnects after a move mutation fails", async () => {
-    const mutateAsync = mock(async () => {
-      throw new Error("move failed");
-    });
-    const reconnect = mock(() => undefined);
-    await moveQueuedFollowUpBySteps({
-      sessionId: "session-1",
-      queuePosition: 9,
-      direction: "up",
-      steps: 2,
-      mutation: { mutateAsync },
-      reconnect,
-    });
-    expect(reconnect).toHaveBeenCalledTimes(1);
   });
 });

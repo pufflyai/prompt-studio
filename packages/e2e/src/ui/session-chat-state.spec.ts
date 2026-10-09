@@ -33,14 +33,15 @@ test("keeps the unsent draft after editing a queued follow-up", async ({ page, r
   await editor.fill("Queued note");
   await expect(send).toHaveAttribute("aria-label", "Queue message");
   await send.click();
-  const edit = side.getByRole("button", { name: "Edit queued follow-up" });
+  const edit = side.getByRole("button", { name: "Edit queued message: Queued note", exact: true });
   await expect(edit).toBeVisible();
   await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.fill("Half-written note");
   await edit.click();
   await expect(editor).toHaveText("Queued note");
+  await expect(side.getByRole("button", { name: "Edit saved draft", exact: true })).toHaveText("Half-written note");
   await editor.fill("Queued note, edited");
-  await editor.press("Enter");
+  await side.getByRole("button", { name: "Update", exact: true }).click();
 
   await expect(side.getByText("Queued note, edited", { exact: true })).toBeVisible();
   await expect(editor).toHaveText("Half-written note");

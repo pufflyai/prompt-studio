@@ -114,3 +114,7 @@ Extensions depend on the API, so an API is never removed in the release that rep
 3. Remove deprecated APIs together in one breaking release, either one that already breaks the API or one planned for the removals. List each removal and its replacement in the release notes.
 
 Prompt Studio maintainers follow the release checks in [Extension API version checks](../architecture/0024-extension-api-version-checks.md).
+
+## Optional queued-input capability
+
+The optional `HarnessSession.steer` capability and host-provided `ctx.sessions` queue methods are additive. Existing adapters keep loading without steering. The current unreleased 0.1.2 API already contains additive changes since 0.1.1; these additions share that one release step. Publish the SDK contract before adopting it in harness extensions.

@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { tmpdir } from "node:os";
+import type { HarnessStartInput } from "pstdio-api-contracts";
+
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { dispatchQueuedEntry } from "./session-queue-dispatch";
@@ -64,6 +66,61 @@ test.each(["start", "follow_up", "resume"])("keeps a queued %s for retry when st
     }
     expect(starts).toBe(1);
     expect(await app.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});
+
+test("dispatch uses the saved request model and complete parameters after the draft selection changes", async () => {
+  const started = Promise.withResolvers<HarnessStartInput>();
+  const app = await createTestApp({
+    harnessRegistry: createTestHarnessRegistry([
+      createTestHarnessRecord("saved-settings", {
+        provider: {
+          params: {
+            thinking: {
+              type: "select",
+              defaultValue: "low",
+              options: [
+                { label: "Low", value: "low" },
+                { label: "High", value: "high" },
+              ],
+            },
+            safe: { type: "boolean", defaultValue: true },
+          },
+          listModels: () => [{ id: "saved" }, { id: "draft" }],
+          start: (_ctx, input) => {
+            started.resolve(input);
+            return { agentSessionId: "accepted", done: new Promise(() => {}), stop: () => {} };
+          },
+        },
+      }),
+    ]),
+  });
+  try {
+    const project = await app.deps.projectService.create({ name: "Saved settings" });
+    const session = await app.deps.sessionService.createQueuedWithEntry(
+      {
+        project_id: project.id,
+        title: "Saved settings",
+        agent: testHarnessId("saved-settings"),
+        prompt: "Saved",
+        request_kind: "start",
+        last_selected_model: "saved",
+        params_json: { thinking: "high", safe: false },
+      },
+      { emitStartedHook: false },
+    );
+    await app.deps.sessionService.update(session.id, {
+      last_selected_model: "draft",
+      params_json: { thinking: "low", safe: true },
+    });
+    const [entry] = await app.deps.sessionQueueEntriesService.listPendingBySession(session.id);
+    const result = await dispatchQueuedEntry(app.deps, (await app.deps.sessionService.get(session.id))!, entry);
+    await result?.settled;
+    const input = await started.promise;
+    expect(input.model).toBe("saved");
+    expect(input.params).toEqual({ thinking: "high", safe: false });
   } finally {
     await app.close();
   }

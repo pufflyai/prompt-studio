@@ -102,11 +102,17 @@ export type SessionMessage = {
 };
 
 export type QueuedFollowUp = {
+  revision?: string;
+  model?: string | null;
+  params?: Record<string, string | boolean>;
+  steeringUnavailableReason?: string | null;
+  steeringDelivery?: { id: string; runStartedAt: string } | null;
   id: string;
   prompt: string;
   attachments?: Array<{
     id: string;
     name: string;
+    size?: number;
     mediaType?: string;
     url?: string;
   }>;

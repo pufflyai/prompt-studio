@@ -1,183 +1,120 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { queuedFollowUpUpdateResponseSchema, updateQueuedFollowUpInputSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
+import { HarnessParamError } from "../harness-params";
+import { QueuedRequestConflict, updateQueuedRequest } from "../queued-request-operations";
+import { SessionAttachmentError } from "../session-attachments";
+import { withSchedulingLock } from "../session-scheduler-internals";
 
-const queuedFollowUpParamsSchema = z
-  .object({
-    id: z.string(),
-    queuePosition: z.coerce.number().int().positive(),
-  })
+export const queuedFollowUpParamsSchema = z
+  .object({ id: z.string(), queuePosition: z.coerce.number().int().positive() })
   .strict();
-
-const queuedFollowUpResponseSchema = z.object({ ok: z.literal(true) });
-
-const queuedFollowUpMoveResponseSchema = queuedFollowUpResponseSchema.extend({
-  queuePosition: z.number().int().positive(),
-});
-
-const queuedFollowUpEditBodySchema = z.object({
-  prompt: z.string().trim().min(1),
-});
-
-const queuedFollowUpMoveBodySchema = z.object({
-  direction: z.enum(["up", "down"]),
-});
-
-const okResponse = { ok: true } as const;
+const okSchema = z.object({ ok: z.literal(true) });
+const moveSchema = okSchema.extend({ queuePosition: z.number().int().positive() });
+export const queueErrorResponses = {
+  404: {
+    description: "Queued request not found.",
+    content: { "application/json": { schema: notFoundResponseSchema } },
+  },
+  409: {
+    description: "Queued request changed or is being consumed.",
+    content: { "application/json": { schema: notFoundResponseSchema } },
+  },
+  400: { description: "Invalid queued request.", content: { "application/json": { schema: notFoundResponseSchema } } },
+};
+const requestParams = { query: z.object({}).strict(), params: queuedFollowUpParamsSchema };
 
 export const updateQueuedFollowUpRoute = createRoute({
   method: "patch",
   path: "/sessions/{id}/queued-follow-ups/{queuePosition}",
-  description: "Update a pending queued follow-up prompt.",
   tags: ["Sessions"],
-  request: {
-    query: z.object({}).strict(),
-    params: queuedFollowUpParamsSchema,
-    body: { content: { "application/json": { schema: queuedFollowUpEditBodySchema } } },
-  },
+  description: "Update a pending queued request without sending input.",
+  request: { ...requestParams, body: { content: { "application/json": { schema: updateQueuedFollowUpInputSchema } } } },
   responses: {
     200: {
-      description: "Queued follow-up updated.",
-      content: { "application/json": { schema: queuedFollowUpResponseSchema } },
+      description: "Queued request updated.",
+      content: { "application/json": { schema: queuedFollowUpUpdateResponseSchema } },
     },
-    404: {
-      description: "Queued follow-up not found.",
-      content: { "application/json": { schema: notFoundResponseSchema } },
-    },
+    ...queueErrorResponses,
   },
 });
-
 export const deleteQueuedFollowUpRoute = createRoute({
   method: "delete",
   path: "/sessions/{id}/queued-follow-ups/{queuePosition}",
-  description: "Delete a pending queued follow-up.",
   tags: ["Sessions"],
-  request: {
-    query: z.object({}).strict(),
-    params: queuedFollowUpParamsSchema,
-  },
+  request: { ...requestParams, query: z.object({ expectedRevision: z.string().optional() }).strict() },
   responses: {
-    200: {
-      description: "Queued follow-up deleted.",
-      content: { "application/json": { schema: queuedFollowUpResponseSchema } },
-    },
-    404: {
-      description: "Queued follow-up not found.",
-      content: { "application/json": { schema: notFoundResponseSchema } },
-    },
+    200: { description: "Queued request deleted.", content: { "application/json": { schema: okSchema } } },
+    ...queueErrorResponses,
   },
 });
-
 export const moveQueuedFollowUpRoute = createRoute({
   method: "post",
   path: "/sessions/{id}/queued-follow-ups/{queuePosition}/move",
-  description: "Move a pending queued follow-up one slot.",
   tags: ["Sessions"],
   request: {
-    query: z.object({}).strict(),
-    params: queuedFollowUpParamsSchema,
-    body: { content: { "application/json": { schema: queuedFollowUpMoveBodySchema } } },
+    ...requestParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            direction: z.enum(["up", "down"]),
+            expectedRevision: z.string().optional(),
+            steps: z.number().int().positive().default(1),
+            expectedOrder: z
+              .array(z.object({ queuePosition: z.number().int().positive(), revision: z.string() }))
+              .optional(),
+          }),
+        },
+      },
+    },
   },
   responses: {
-    200: {
-      description: "Queued follow-up moved.",
-      content: { "application/json": { schema: queuedFollowUpMoveResponseSchema } },
-    },
-    404: {
-      description: "Queued follow-up not found.",
-      content: { "application/json": { schema: notFoundResponseSchema } },
-    },
+    200: { description: "Queued request moved.", content: { "application/json": { schema: moveSchema } } },
+    ...queueErrorResponses,
   },
 });
-
-const getPendingQueueEntry = async (deps: SessionsRouteDeps, input: { sessionId: string; queuePosition: number }) => {
-  const entries = await deps.sessionQueueEntriesService.listPendingBySession(input.sessionId);
-  return entries.find((entry) => entry.queue_position === input.queuePosition) ?? null;
-};
-
-const queuePayload = (entry: NonNullable<Awaited<ReturnType<typeof getPendingQueueEntry>>>) => ({
-  prompt: entry.prompt,
-  request_kind: entry.request_kind,
-  attachments_json: entry.attachments_json,
-  question_response_json: entry.question_response_json,
-  created_at: entry.created_at,
-});
-
-const updateEntryPrompt = async (
-  deps: SessionsRouteDeps,
-  input: { sessionId: string; queuePosition: number; prompt: string },
-) => {
-  const entry = await getPendingQueueEntry(deps, input);
-  if (!entry) return false;
-
-  await deps.sessionQueueEntriesService.updatePending(input.queuePosition, { prompt: input.prompt });
-  return true;
-};
-
-const removeEntry = async (deps: SessionsRouteDeps, input: { sessionId: string; queuePosition: number }) => {
-  const entry = await getPendingQueueEntry(deps, input);
-  if (!entry) return false;
-
-  return deps.sessionQueueEntriesService.removePending(input.queuePosition);
-};
-
-const moveEntry = async (
-  deps: SessionsRouteDeps,
-  input: { sessionId: string; queuePosition: number; direction: "up" | "down" },
-) => {
-  const entries = await deps.sessionQueueEntriesService.listPendingBySession(input.sessionId);
-  const currentIndex = entries.findIndex((entry) => entry.queue_position === input.queuePosition);
-  if (currentIndex === -1) return null;
-
-  const targetIndex = input.direction === "up" ? currentIndex - 1 : currentIndex + 1;
-  if (targetIndex < 0 || targetIndex >= entries.length) return null;
-
-  const current = entries[currentIndex]!;
-  const target = entries[targetIndex]!;
-  const swapped = await deps.sessionQueueEntriesService.swapPending(
-    current.queue_position,
-    queuePayload(target),
-    target.queue_position,
-    queuePayload(current),
-  );
-  return swapped ? target.queue_position : null;
-};
-
-const sessionExists = async (deps: SessionsRouteDeps, sessionId: string) =>
-  Boolean(await deps.sessionService.get(sessionId));
 
 export const updateQueuedFollowUpHandler =
   (deps: SessionsRouteDeps): AppRouteHandler<typeof updateQueuedFollowUpRoute> =>
   async (c) => {
     const { id, queuePosition } = c.req.valid("param");
-    const { prompt } = c.req.valid("json");
-    if (!(await sessionExists(deps, id))) return c.json({ error: `Session not found: ${id}` }, 404);
-
-    const updated = await updateEntryPrompt(deps, { sessionId: id, queuePosition, prompt });
-    if (!updated) return c.json({ error: `Queued follow-up not found: ${queuePosition}` }, 404);
-    return c.json(okResponse, 200);
+    const input = c.req.valid("json");
+    const session = await deps.sessionService.get(id);
+    if (!session) return c.json({ error: `Session not found: ${id}` }, 404);
+    try {
+      return c.json({ ok: true as const, request: await updateQueuedRequest(deps, id, queuePosition, input) }, 200);
+    } catch (error) {
+      if (error instanceof QueuedRequestConflict) return c.json({ error: error.message }, 409);
+      if (error instanceof HarnessParamError || error instanceof SessionAttachmentError)
+        return c.json({ error: error.message }, 400);
+      throw error;
+    }
   };
 
 export const deleteQueuedFollowUpHandler =
   (deps: SessionsRouteDeps): AppRouteHandler<typeof deleteQueuedFollowUpRoute> =>
   async (c) => {
     const { id, queuePosition } = c.req.valid("param");
-    if (!(await sessionExists(deps, id))) return c.json({ error: `Session not found: ${id}` }, 404);
-
-    const removed = await removeEntry(deps, { sessionId: id, queuePosition });
-    if (!removed) return c.json({ error: `Queued follow-up not found: ${queuePosition}` }, 404);
-    return c.json(okResponse, 200);
+    return withSchedulingLock(async () => {
+      const entry = await deps.sessionQueueEntriesService.get(queuePosition);
+      if (!entry || entry.session_id !== id) return c.json({ error: "Queued request not found." }, 404);
+      if (!(await deps.sessionQueueEntriesService.removePending(queuePosition, c.req.valid("query").expectedRevision)))
+        return c.json({ error: "Queued request is being consumed." }, 409);
+      return c.json({ ok: true as const }, 200);
+    });
   };
 
 export const moveQueuedFollowUpHandler =
   (deps: SessionsRouteDeps): AppRouteHandler<typeof moveQueuedFollowUpRoute> =>
   async (c) => {
     const { id, queuePosition } = c.req.valid("param");
-    const { direction } = c.req.valid("json");
-    if (!(await sessionExists(deps, id))) return c.json({ error: `Session not found: ${id}` }, 404);
-
-    const movedQueuePosition = await moveEntry(deps, { sessionId: id, queuePosition, direction });
-    if (movedQueuePosition === null) return c.json({ error: `Queued follow-up not found: ${queuePosition}` }, 404);
-    return c.json({ ok: true as const, queuePosition: movedQueuePosition }, 200);
+    const input = c.req.valid("json");
+    return withSchedulingLock(async () => {
+      const moved = await deps.sessionQueueEntriesService.movePending({ sessionId: id, queuePosition, ...input });
+      if (!moved) return c.json({ error: "The queue changed. Refresh before moving this request." }, 409);
+      return c.json({ ok: true as const, queuePosition: moved.queuePosition }, 200);
+    });
   };

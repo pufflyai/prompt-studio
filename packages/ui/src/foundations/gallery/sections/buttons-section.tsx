@@ -67,10 +67,10 @@ export const ButtonsSection = () => {
           <IconButton variant="outline" aria-label="Settings">
             <Icon as={Settings} />
           </IconButton>
-          <IconButton variant="ghost" aria-label="Delete">
+          <IconButton variant="destructive-ghost" aria-label="Delete">
             <Icon as={Trash2} />
           </IconButton>
-          <IconButton variant="destructive" aria-label="Delete permanently">
+          <IconButton variant="destructive-ghost" aria-label="Delete permanently">
             <Icon as={Trash2} />
           </IconButton>
         </HStack>

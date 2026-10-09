@@ -48,3 +48,13 @@ Use `stream` to follow live output in the terminal. When the agent asks for perm
 `resolve-session-id` finds the Prompt Studio session for a session ID from the agent itself, such as a Claude Code session ID. `--cwd` picks the right one when the same external ID appears in more than one working folder.
 
 Run `pst sessions <command> --help` for current options.
+
+## Read and change queued requests
+
+Use `pst sessions queue --id SESSION` to read saved requests, their revisions, and the active run identity.
+
+`pst sessions update-queued --id SESSION --queue-position POSITION --expected-revision REVISION --prompt TEXT` saves without sending. Optional `--model MODEL`, `--params '{"thinking":"high"}'`, and `--attachments '[{"file_id":"FILE"}]'` update those fields. Use an empty model string for the provider default, JSON null for default parameters, and an empty attachment array to clear references.
+
+`pst sessions combine-queued --id SESSION --target-position TARGET --source-position SOURCE --target-revision TARGET_REVISION --source-revision SOURCE_REVISION` combines compatible pending follow-ups atomically.
+
+`pst sessions steer --id SESSION --queue-position POSITION --expected-revision REVISION --expected-run-started-at RUN` uses native live input when supported. It prints a typed outcome and exits nonzero for rejection or uncertain delivery. Never automatically retry an uncertain result.

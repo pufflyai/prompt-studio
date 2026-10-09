@@ -1,5 +1,6 @@
 export type {
   ApprovalInput,
+  CombineQueuedFollowUpsInput,
   CreateSessionInput,
   CreateSessionResponse,
   DraftHarnessCommandInput,
@@ -10,6 +11,10 @@ export type {
   HarnessOperation,
   ListSessionActivityInput,
   ListSessionActivityResponse,
+  PendingQueuedFollowUpsResponse,
+  QueuedFollowUpRequest,
+  QueuedFollowUpUpdateResponse,
+  QueuedSteeringResult,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
   SessionAttachment,
@@ -17,5 +22,7 @@ export type {
   SessionConversationResponse,
   SessionConversationSources,
   SessionQueuedMessagesResponse,
+  SteerQueuedFollowUpInput,
+  UpdateQueuedFollowUpInput,
 } from "pstdio-api-contracts";
 export { sessionAttachmentMimeTypesByExtension } from "pstdio-api-contracts";

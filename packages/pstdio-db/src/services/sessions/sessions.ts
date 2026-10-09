@@ -45,6 +45,7 @@ type CreateQueuedInput = Omit<CreateInput, "status"> & {
 };
 
 type QueueExistingInput = {
+  model?: string | null;
   id: string;
   prompt: string;
   request_kind: string;
@@ -131,6 +132,8 @@ export const createSessionsDBService = (db: DbClient) => {
       await writeLegacyResourceLinks(tx, "session", record, input.anchors ?? []);
       await tx.insert(session_queue_entries).values({
         session_id: record.id,
+        model: input.last_selected_model ?? null,
+        revision: crypto.randomUUID(),
         prompt: input.prompt,
         request_kind: input.request_kind,
         question_response_json: input.question_response_json ?? null,
@@ -164,6 +167,8 @@ export const createSessionsDBService = (db: DbClient) => {
         .insert(session_queue_entries)
         .values({
           session_id: input.id,
+          model: input.model ?? null,
+          revision: crypto.randomUUID(),
           prompt: input.prompt,
           request_kind: input.request_kind,
           question_response_json: input.question_response_json ?? null,
@@ -188,6 +193,8 @@ export const createSessionsDBService = (db: DbClient) => {
         .insert(session_queue_entries)
         .values({
           session_id: input.id,
+          model: input.model ?? null,
+          revision: crypto.randomUUID(),
           prompt: input.prompt,
           request_kind: input.request_kind,
           question_response_json: input.question_response_json ?? null,

@@ -42,40 +42,6 @@ export type FollowUpMutation = {
   }) => Promise<{ status: string; followUp?: FollowUpDecision }>;
 };
 
-export type MoveQueuedFollowUpMutation = {
-  mutateAsync: (input: {
-    sessionId: string;
-    queuePosition: number;
-    direction: "up" | "down";
-  }) => Promise<{ ok: true; queuePosition: number }>;
-};
-
-export const moveQueuedFollowUpBySteps = async (input: {
-  sessionId: string;
-  queuePosition: number;
-  direction: "up" | "down";
-  steps: number;
-  mutation: MoveQueuedFollowUpMutation;
-  reconnect: () => void;
-}) => {
-  let currentPosition = input.queuePosition;
-
-  try {
-    for (let step = 0; step < input.steps; step += 1) {
-      const result = await input.mutation.mutateAsync({
-        sessionId: input.sessionId,
-        queuePosition: currentPosition,
-        direction: input.direction,
-      });
-      currentPosition = result.queuePosition;
-    }
-  } catch {
-    return;
-  } finally {
-    input.reconnect();
-  }
-};
-
 const createSessionTitle = (prompt: string) => prompt.slice(0, 100) || "Session";
 
 // The user may have moved the panel to another session while the request was open.
