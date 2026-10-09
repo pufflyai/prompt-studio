@@ -6,4 +6,4 @@
 "pstdio-planner": patch
 "pstdio-artifacts": patch
 ---
-Show assigned shortcuts under extension names, add main navigation and creation defaults, and let idle navigation labels use the space released by hidden actions.
+Show assigned shortcuts under extension names, add main navigation and creation defaults with matching command palette hints, and let idle navigation labels use the space released by hidden actions.

@@ -23,6 +23,22 @@ export const verifyPackagedShortcutReference = async (
   await expect(dialog.getByText("https://example.com/shortcuts", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Close Keyboard shortcuts", exact: true }).click();
   await expect(dialog).not.toBeVisible();
+  await page.getByText("Search", { exact: true }).first().click();
+  const palette = page.getByRole("dialog").last();
+  for (const [label, key] of [
+    ["Open workspaces", "W"],
+    ["Open sessions", "S"],
+    ["New workspace", "W"],
+    ["Open settings", ","],
+    ["Shortcut greeting", "g"],
+  ]) {
+    await palette.locator("input").fill(`>${label}`);
+    const entry = palette.getByRole("option", { name: new RegExp(label) });
+    await expect(entry.locator("kbd").last()).toHaveText(key);
+  }
+  await palette.locator("input").fill("");
+  await page.keyboard.press("Escape");
+  await expect(palette).not.toBeVisible();
   await page.goto(`${origin}/projects/${projectId}/extensions/e2e.shortcut-reference/reference`);
   await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Help", exact: true }).focus();

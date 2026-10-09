@@ -199,10 +199,6 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
       registerSessionsPage(ctx);
       registerSidenavSessions(ctx);
-      ctx.keybindings.registerKeybinding({
-        action: { kind: "page", page: workbenchPages.sessions },
-        keybinding: "Alt+Shift+S",
-      });
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.keybindings.registerKeybinding({
           action: { kind: "command", commandId: dashboardCommandIds.createSession },
@@ -224,6 +220,10 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         },
         { execute: () => openSessionsNavigation(ctx) },
       );
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "command", commandId: dashboardCommandIds.openSessions },
+        keybinding: "Alt+Shift+S",
+      });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openSessions,
         order: 30,

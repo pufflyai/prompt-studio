@@ -268,8 +268,12 @@ export const createWorkspacesModule = () =>
         commandId: dashboardCommandIds.openWorkspaces,
         order: 10,
       });
+      ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+        commandId: dashboardCommandIds.createWorkspace,
+        order: 11,
+      });
       ctx.keybindings.registerKeybinding({
-        action: { kind: "page", page: workbenchPages.workspaces },
+        action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
         keybinding: "Alt+Shift+W",
       });
       ctx.keybindings.registerKeybinding({

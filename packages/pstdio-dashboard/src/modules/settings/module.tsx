@@ -55,6 +55,7 @@ export const createSettingsModule = () =>
       // in the dashboard's command palette menu.
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+        args: createSettingsFooterNode().target.args,
         order: 40,
       });
 
