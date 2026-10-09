@@ -1,31 +1,20 @@
-import { Box, Button, IconButton, Menu, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Menu, Stack, Text } from "@chakra-ui/react";
 import { createGlyphIcon, Header } from "@pstdio/ui";
-import { useState } from "react";
 import type { ArtifactContent, ArtifactSummary } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
-import { DeleteArtifactDialog } from "./delete-artifact-dialog";
 import { HtmlPreview } from "./html-preview";
-import { RenameArtifactDialog } from "./rename-artifact-dialog";
 
 const ChevronDown = createGlyphIcon("arrow-down-1");
 const History = createGlyphIcon("history");
-const Actions = createGlyphIcon("more");
-const Rename = createGlyphIcon("edit");
-const Delete = createGlyphIcon("trash");
-const Library = createGlyphIcon("grid-4");
 interface ArtifactReaderProps {
   content: ArtifactContent;
   revisions: ArtifactSummary[];
   onSelect: (revisionId: string) => void;
-  onBack: () => void;
-  onRename: (name: string) => Promise<void>;
-  onDelete: () => Promise<void>;
 }
 
 export const ArtifactReader = (props: ArtifactReaderProps) => {
-  const { content, revisions, onSelect, onBack, onRename, onDelete } = props;
+  const { content, revisions, onSelect } = props;
   const { t } = useArtifactTranslations();
-  const [dialog, setDialog] = useState<"rename" | "delete">();
   const latest = revisions[0];
   const title = latest?.title ?? content.title;
   const selectedIndex = revisions.findIndex((revision) => revision.id === content.id);
@@ -71,30 +60,6 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
             </Menu.Content>
           </Menu.Positioner>
         </Menu.Root>
-        <Menu.Root positioning={{ placement: "bottom-end" }}>
-          <Menu.Trigger asChild>
-            <IconButton variant="ghost" aria-label={t("reader.actions", "Artifact actions")}>
-              <Actions />
-            </IconButton>
-          </Menu.Trigger>
-          <Menu.Positioner>
-            <Menu.Content>
-              <Menu.Item value="rename" onClick={() => setDialog("rename")}>
-                <Rename />
-                {t("reader.rename", "Rename artifact…")}
-              </Menu.Item>
-              <Menu.Separator />
-              <Menu.Item value="library" onClick={onBack}>
-                <Library />
-                {t("reader.all", "All artifacts")}
-              </Menu.Item>
-              <Menu.Item value="delete" onClick={() => setDialog("delete")}>
-                <Delete />
-                {t("reader.delete", "Delete artifact…")}
-              </Menu.Item>
-            </Menu.Content>
-          </Menu.Positioner>
-        </Menu.Root>
       </Header>
       <Box flex="1" minHeight="0" width="full" bg="bg.muted" overflow="hidden">
         <HtmlPreview
@@ -103,12 +68,6 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
           html={content.html}
         />
       </Box>
-      {dialog === "rename" ? (
-        <RenameArtifactDialog name={title} onRename={onRename} onClose={() => setDialog(undefined)} />
-      ) : null}
-      {dialog === "delete" ? (
-        <DeleteArtifactDialog title={title} onDelete={onDelete} onClose={() => setDialog(undefined)} />
-      ) : null}
     </Stack>
   );
 };

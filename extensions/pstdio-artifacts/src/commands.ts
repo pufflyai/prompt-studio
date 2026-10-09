@@ -1,6 +1,8 @@
 import { isAbsolute, relative } from "node:path";
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
+import { deleteResource, renameResource } from "./artifact-actions";
 import { serviceFor } from "./artifact-context";
+import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { HTML_LIMIT_BYTES } from "./artifacts";
 import { artifactIdFromUrl, artifactTarget, changedEvent } from "./contracts";
 import { startCreation } from "./create-artifact";
@@ -88,11 +90,7 @@ const rename = defineCommand({
   title: l10n("commands.rename", "Rename artifact"),
   cli: true,
   params: { url: params.text({ required: true }), name: params.text({ required: true }) },
-  async run(ctx, input) {
-    const result = await serviceFor(ctx).rename(input.url, input.name);
-    await ctx.events.emit(changedEvent, { artifactId: result.artifactId });
-    return result;
-  },
+  run: (ctx, input) => renameArtifact(ctx, input.url, input.name),
 });
 
 const remove = defineCommand({
@@ -100,12 +98,7 @@ const remove = defineCommand({
   title: l10n("commands.delete", "Delete artifact"),
   cli: true,
   params: { url: params.text({ required: true }) },
-  async run(ctx, input) {
-    const result = await serviceFor(ctx).remove(input.url);
-    await ctx.resources.removed({ type: "artifact", id: result.artifactId });
-    await ctx.events.emit(changedEvent, result);
-    return result;
-  },
+  run: (ctx, input) => removeArtifact(ctx, input.url),
 });
 
 export const commands = {
@@ -117,4 +110,6 @@ export const commands = {
   rename,
   delete: remove,
   "start-creation": startCreation,
+  "rename-resource": renameResource,
+  "delete-resource": deleteResource,
 };
