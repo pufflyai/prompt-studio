@@ -116,4 +116,13 @@ const remove = defineCommand({
   },
 });
 
-export const commands = { publish, list, read, revisions, open, rename, delete: remove, startCreation };
+export const commands = {
+  publish,
+  list,
+  read,
+  revisions,
+  open,
+  rename,
+  delete: remove,
+  "start-creation": startCreation,
+};

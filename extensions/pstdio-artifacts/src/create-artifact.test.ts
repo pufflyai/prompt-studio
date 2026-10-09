@@ -12,7 +12,7 @@ test.each(["brief", "dashboard"])("starts and opens a project creation session f
     title: "Creation session",
     status: "in_progress" as const,
   };
-  const result = await commands.startCreation.run(
+  const result = await commands["start-creation"].run(
     ...makeCommandArgs({
       storage: createMemoryStorage(),
       params: { example },
@@ -45,7 +45,7 @@ test.each(["brief", "dashboard"])("starts and opens a project creation session f
 test("a failed session creation does not open a missing session", async () => {
   const opened: NavigationTarget[] = [];
   await expect(
-    commands.startCreation.run(
+    commands["start-creation"].run(
       ...makeCommandArgs({
         storage: createMemoryStorage(),
         params: { example: "brief" },
