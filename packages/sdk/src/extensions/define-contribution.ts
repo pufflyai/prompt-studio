@@ -156,6 +156,7 @@ export const defineStatusBarItem = defineContribution("status-bar-item") as <
   definition: Definition,
 ) => Definition & ContributionDefinition<"status-bar-item">;
 
+/** @deprecated Use extension-owned values and commands, a settings panel, and query-returned enum attributes. */
 export const defineStatuses = defineContribution("status") as <Definition extends Omit<StatusContribution, "ref">>(
   definition: Definition,
 ) => Definition & ContributionDefinition<"status">;
