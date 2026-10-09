@@ -17,7 +17,7 @@ import { CommandParamField, type CommandParamFieldRenderer } from "./command-par
 import { useCommandOptions } from "./use-command-options";
 
 export interface CommandParamsRequest {
-  record: { command: Pick<Command, "id" | "label" | "description" | "params"> };
+  record: { command: Pick<Command, "id" | "label" | "description" | "params" | "resourceMutation"> };
   action?: RegisteredMenuItem;
   label: string;
   // Confirm-button label for the dialog (defaults to "Run").
@@ -38,6 +38,7 @@ interface CommandParamsDialogProps {
     context?: WorkbenchCommandExecutionContext;
     onArgsChange: (args: unknown) => void;
   }) => Promise<unknown>;
+  onRunError?: (label: string, error: unknown) => void;
   onClose: () => void;
   onRun: (input: {
     commandId: string;
@@ -63,7 +64,7 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
 };
 
 const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandParamsRequest }) => {
-  const { request, renderParamField, prepareArgs, executeOptionCommand, onClose, onRun } = props;
+  const { request, renderParamField, prepareArgs, executeOptionCommand, onClose, onRun, onRunError } = props;
   const [values, setValues] = useState<Record<string, CommandParamValue>>(() =>
     buildCommandParamInitialValues(request.record.command.params, request.args, request.context),
   );
@@ -102,12 +103,18 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
               setValues(buildCommandParamInitialValues(request.record.command.params, nextArgs, request.context)),
           })
         : args;
-      await onRun({
+      const submission = {
         commandId: request.record.command.id,
         args: preparedArgs,
         context: request.context,
         label: request.label,
-      });
+      };
+      if (request.record.command.resourceMutation) {
+        onClose();
+        void onRun(submission).catch((caught) => onRunError?.(request.label, caught));
+        return;
+      }
+      await onRun(submission);
       onClose();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Command failed.");

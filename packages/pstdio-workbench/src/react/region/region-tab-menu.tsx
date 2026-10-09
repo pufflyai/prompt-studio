@@ -1,23 +1,13 @@
 import { Box, Menu, Portal } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
+import { useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
+import type { WorkbenchCommandParamsRequest } from "../../core/controllers/command-palette/command-palette-controller";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
-import { runUserAction } from "../../core/shared/run-user-action";
-import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { WorkbenchIcon } from "../shared/icon";
+import { runPlacementAction } from "../shared/run-placement-action";
 import { getPanelLabel } from "./panel-widget-open";
 
-const activate = (workbench: WorkbenchCore, action: NonNullable<WorkbenchTabMenuGroup["rows"][number]["action"]>) => {
-  if (action.kind === "command") {
-    const command = workbench.commands.getCommand(action.commandId)?.command;
-    if (command && hasCommandParameters(command.params)) {
-      workbench.commandPalette.requestParams({ record: { command }, label: command.label, args: action.args });
-    } else
-      void runUserAction(workbench, command?.label ?? "Command", () =>
-        workbench.commands.executeCommand(action.commandId, action.args),
-      );
-  } else void runUserAction(workbench, "Open", () => workbench.navigation.openTarget(action.target));
-};
 const SharedAction = (props: { value: string; label: string; icon: string; onActivate(): void }) => {
   const { value, label, icon, onActivate } = props;
   return (
@@ -25,7 +15,6 @@ const SharedAction = (props: { value: string; label: string; icon: string; onAct
       <ListRow
         asChild
         variant="full-width"
-        id={value}
         label={label}
         icon={<WorkbenchIcon name={icon} size={14} />}
         onActivate={onActivate}
@@ -44,6 +33,7 @@ interface RegionTabMenuProps {
 }
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { anchor, label, open, setOpen, groups, placement, workbench } = props;
+  const pendingRequest = useRef<WorkbenchCommandParamsRequest | null>(null);
   const currentRegion = findPlacementByWidgetId(workbench.layout.getLayout(), placement.widgetId)?.regionId;
   const destinations = workbench.getPanelDestinations(placement.widgetId).filter((region) => region !== currentRegion);
   const pin = () => {
@@ -59,6 +49,12 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     <Menu.Root
       open={open}
       onOpenChange={(details) => setOpen(details.open)}
+      onExitComplete={() => {
+        const request = pendingRequest.current;
+        pendingRequest.current = null;
+        // Finish the menu's focus restoration before opening a dialog.
+        if (request) workbench.commandPalette.requestParams(request);
+      }}
       positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
     >
       <Portal>
@@ -74,13 +70,20 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
                       <ListRow
                         asChild
                         variant="full-width"
-                        id={row.id}
                         label={row.label}
                         icon={row.icon ? <WorkbenchIcon name={row.icon} size={14} /> : undefined}
                         iconColor={row.iconColor}
                         isSelected={row.selected}
                         disabled={row.disabled}
-                        onActivate={row.action ? () => activate(workbench, row.action!) : undefined}
+                        onActivate={
+                          row.action
+                            ? () => {
+                                runPlacementAction(workbench, row.action!, (request) => {
+                                  pendingRequest.current = request;
+                                });
+                              }
+                            : undefined
+                        }
                       />
                     </Menu.Item>
                   ))}

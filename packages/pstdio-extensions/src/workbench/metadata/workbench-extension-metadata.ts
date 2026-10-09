@@ -46,6 +46,7 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   automation: command.automation,
+  resourceMutation: command.resourceMutation,
   params: command.params as WorkbenchExtensionMetadata["commands"][number]["params"],
 });
 

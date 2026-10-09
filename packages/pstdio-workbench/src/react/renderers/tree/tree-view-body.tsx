@@ -36,7 +36,7 @@ interface TreeViewBodyProps {
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
   canMove?: TreeListMovePolicy;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
+  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
   onNavigate: (event: Parameters<NonNullable<Parameters<typeof TreeList>[0]["onNavigate"]>>[0]) => void;
 }
 

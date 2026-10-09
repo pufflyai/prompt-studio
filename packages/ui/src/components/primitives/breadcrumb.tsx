@@ -1,4 +1,4 @@
-import { Breadcrumb as ChakraBreadcrumb, type SystemStyleObject } from "@chakra-ui/react";
+import { Breadcrumb as ChakraBreadcrumb, chakra, type SystemStyleObject } from "@chakra-ui/react";
 import * as React from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 
@@ -60,7 +60,11 @@ const BreadcrumbItemLink = (props: BreadcrumbItemContentProps) => {
   const { item, isCurrent, linkComponent: LinkComponent } = props;
 
   if (isCurrent && !isInteractiveItem(item)) {
-    return <ChakraBreadcrumb.CurrentLink {...staticProps}>{item.title}</ChakraBreadcrumb.CurrentLink>;
+    return (
+      <ChakraBreadcrumb.CurrentLink {...staticProps} tabIndex={item.contextMenuActions?.length ? 0 : undefined}>
+        {item.title}
+      </ChakraBreadcrumb.CurrentLink>
+    );
   }
 
   if (item.url && LinkComponent) {
@@ -88,7 +92,7 @@ const BreadcrumbItemLink = (props: BreadcrumbItemContentProps) => {
   }
 
   return (
-    <ChakraBreadcrumb.Link as="span" {...staticProps}>
+    <ChakraBreadcrumb.Link as="span" {...staticProps} tabIndex={item.contextMenuActions?.length ? 0 : undefined}>
       {item.title}
     </ChakraBreadcrumb.Link>
   );
@@ -102,7 +106,9 @@ const BreadcrumbItemContent = (props: BreadcrumbItemContentProps) => {
 
   return (
     <ResourceContextMenu actions={item.contextMenuActions} positioning={{ placement: "bottom-start" }}>
-      {content}
+      <chakra.span display="inline-flex" minW="0" tabIndex={-1}>
+        {content}
+      </chakra.span>
     </ResourceContextMenu>
   );
 };

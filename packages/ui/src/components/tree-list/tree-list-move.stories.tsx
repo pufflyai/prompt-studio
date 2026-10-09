@@ -2,6 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FileText, Folder } from "lucide-react";
 import { useState } from "react";
+import { expect, fireEvent, waitFor, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
@@ -77,4 +78,102 @@ const MovableFilesStory = () => {
 
 export const MovableFiles: Story = {
   render: () => <MovableFilesStory />,
+};
+
+const MovableNotes = () => {
+  const [inFolder, setInFolder] = useState(false);
+  const [order, setOrder] = useState(["note", "second"]);
+  const [navigationOrder, setNavigationOrder] = useState(["workspaces", "notes"]);
+  const note = { id: "note", label: "Research note", canDrag: true, canDrop: true };
+  const second = { id: "second", label: "Meeting notes", canDrag: true, canDrop: true };
+  return (
+    <TreeList
+      draggable
+      expandedNodeIds={["notes", "folder"]}
+      sections={[
+        {
+          id: "navigation",
+          nodes: [
+            { id: "workspaces", label: "Workspaces" },
+            {
+              id: "notes",
+              label: "Notes",
+              canDrop: true,
+              children: [
+                { id: "folder", label: "Ideas", canDrop: true, isContainer: true, children: inFolder ? [note] : [] },
+                ...order.flatMap((id) => {
+                  if (id === "second") return [second];
+                  return inFolder ? [] : [note];
+                }),
+              ],
+            },
+          ].sort((a, b) => navigationOrder.indexOf(a.id) - navigationOrder.indexOf(b.id)),
+        },
+      ]}
+      onReorderNodes={(_, ids) => setNavigationOrder(ids)}
+      onMoveNode={(source, target, position) => {
+        if (source !== "note" || !target) return;
+        setInFolder(target === "folder");
+        if (target === "second") setOrder(position === "after" ? ["second", "note"] : ["note", "second"]);
+      }}
+    />
+  );
+};
+
+export const NotesInSortableNavigation: Story = {
+  render: () => <MovableNotes />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const transfer = new DataTransfer();
+    const drag = (type: string, element: HTMLElement, clientY = 0) =>
+      fireEvent(element, new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: transfer, clientY }));
+    const moveAt = (after: boolean) => {
+      const row = canvas.getByRole("option", { name: "Research note" });
+      const second = canvas.getByRole("option", { name: "Meeting notes" });
+      const bounds = second.parentElement!.getBoundingClientRect();
+      drag("dragstart", row.parentElement!);
+      drag("dragover", second.parentElement!, after ? bounds.bottom - 1 : bounds.top + 1);
+      drag("drop", second.parentElement!, after ? bounds.bottom - 1 : bounds.top + 1);
+    };
+    moveAt(true);
+    await waitFor(() =>
+      expect(
+        canvas
+          .getByRole("option", { name: "Meeting notes" })
+          .compareDocumentPosition(canvas.getByRole("option", { name: "Research note" })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy(),
+    );
+    moveAt(false);
+    await waitFor(() =>
+      expect(
+        canvas
+          .getByRole("option", { name: "Research note" })
+          .compareDocumentPosition(canvas.getByRole("option", { name: "Meeting notes" })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy(),
+    );
+
+    drag("dragstart", canvas.getByRole("option", { name: "Research note" }).parentElement!);
+    drag("drop", canvas.getByRole("option", { name: "Ideas" }).parentElement!);
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "3"),
+    );
+    drag("dragstart", canvas.getByRole("option", { name: "Research note" }).parentElement!);
+    drag("drop", canvas.getByRole("option", { name: "Notes" }).parentElement!);
+    await waitFor(() =>
+      expect(canvas.getByRole("option", { name: "Research note" })).toHaveAttribute("aria-level", "2"),
+    );
+  },
+};
+
+export const ExpandedNavigation: Story = {
+  render: () => <MovableNotes />,
+  parameters: {
+    docs: {
+      description: {
+        story: "Drag Workspaces below expanded Notes. The placement line appears after the last visible descendant.",
+      },
+    },
+  },
 };
