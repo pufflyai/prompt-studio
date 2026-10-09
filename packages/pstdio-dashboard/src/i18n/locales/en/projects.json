@@ -70,7 +70,7 @@
       },
       "dropZone": {
         "title": "Drop an extension folder here",
-        "hint": "It is copied to .pstdio/extensions and loaded from there.",
+        "hint": "The host installs it in the scope declared by the extension.",
         "uploading": "Adding {{name}}…",
         "succeeded": "{{name}} added",
         "failed": "Could not add the extension folder",
@@ -143,7 +143,12 @@
         "button": "Delete",
         "notificationShared": "This deletes \"{{name}}\"'s extension files and removes it from every project that uses it. Its stored data is kept so reinstalling restores it."
       },
-      "enabledInProject": "Enabled in this project"
+      "enabledInProject": "Enabled in this project",
+      "replace": {
+        "title": "Replace {{name}}?",
+        "message": "This replaces the installed files. Other projects using this extension will use the new files too.",
+        "action": "Replace"
+      }
     },
     "machineTokens": {
       "title": "Machine tokens",

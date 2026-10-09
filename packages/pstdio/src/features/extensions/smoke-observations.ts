@@ -1,6 +1,6 @@
 import { appendFileSync } from "node:fs";
 import type { Page, Request } from "playwright-core";
-import { EXTENSION_HOST_LOG_PREFIX, type ExtensionHostDiagnostic } from "pstdio-api/extensions/host-diagnostics";
+import { EXTENSION_HOST_LOG_PREFIX, type ExtensionHostDiagnostic } from "pstdio-extensions/bridge/diagnostics";
 import type { SmokeResult } from "./smoke-result";
 
 const prefix = EXTENSION_HOST_LOG_PREFIX;

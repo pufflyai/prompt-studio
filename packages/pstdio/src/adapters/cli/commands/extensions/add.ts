@@ -1,18 +1,11 @@
-import {
-  ExtensionAlreadyInstalledError,
-  formatAlreadyInstalledMessage,
-  type InstallExtensionSourceInput,
-  type InstalledExtensionSource,
-  installExtensionSource,
-  isLocalExtensionSource,
-} from "pstdio-api/extensions/install-extension-source";
+import { PstdioApiError } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
-import { CLI_VERSION } from "@/features/cli-version";
+import { apiClient } from "@/features/api-client";
 import { findProjectRoot, readConfig } from "@/features/config/config";
 import { ensureApi } from "@/features/ensure-api";
-import { getProjectFolder } from "@/features/projects/project-folder";
-import { installDefaultSkills } from "@/features/skills/install-default-skills";
-import { type ExtensionsAddArgs, enableInstalledExtension, formatInstallOutput } from "./shared";
+import { localExtensionSourceRequest } from "@/features/extensions/local-source-request";
+import { isLocalExtensionSource, type uploadExtensionSource } from "@/features/extensions/upload-source";
+import { type ExtensionsAddArgs, formatInstallOutput } from "./shared";
 
 export const command = "add <source>";
 export const describe = "Install editable extension source";
@@ -45,26 +38,25 @@ export const builder = (yargs: Argv) =>
 
 type Deps = {
   cwd: () => string;
-  enableInstalledExtension: (projectId: string, installed: InstalledExtensionSource) => Promise<unknown>;
-  ensureApi: (apiUrl?: string) => Promise<unknown>;
+  ensureApi: typeof ensureApi;
   findProjectRoot: typeof findProjectRoot;
-  getProjectFolder: typeof getProjectFolder;
-  installExtensionSource: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
-  installDefaultSkills: typeof installDefaultSkills;
-  log: (message: string) => void;
   readConfig: typeof readConfig;
+  install: ReturnType<typeof apiClient>["extensions"]["install"];
+  upload: (
+    source: string,
+    options: Parameters<typeof uploadExtensionSource>[1],
+    projectId: string,
+  ) => Promise<Awaited<ReturnType<typeof localExtensionSourceRequest>>>;
+  log: (message: string) => void;
 };
-
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  enableInstalledExtension,
   ensureApi,
   findProjectRoot,
-  getProjectFolder,
-  installDefaultSkills,
-  installExtensionSource,
-  log: console.log,
   readConfig,
+  install: (...args) => apiClient().extensions.install(...args),
+  upload: (source, options, projectId) => localExtensionSourceRequest(projectId, source, options ?? {}),
+  log: console.log,
 };
 
 const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findProjectRoot" | "readConfig">) => {
@@ -78,39 +70,25 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsAddArgs>) => {
     const project = resolveLinkedProject(deps);
-    if (project) {
-      await deps.ensureApi(process.env.PSTDIO_API_URL);
-      project.root = await deps.getProjectFolder(project.projectId);
-    }
-    let installed: InstalledExtensionSource;
+    if (!project)
+      throw new Error("Run `pst extensions add` inside a linked project. Create or link the project first.");
+    await deps.ensureApi(process.env.PSTDIO_API_URL);
+    const options = { installName: argv.name, force: argv.force, skipInstall: argv["skip-install"] };
     try {
-      installed = await deps.installExtensionSource({
-        source: argv.source,
-        installName: argv.name,
-        force: argv.force,
-        ref: argv.branch,
-        ...(!isLocalExtensionSource(argv.source) ? { hostReleaseRef: `pstdio@${CLI_VERSION}` } : {}),
-        ...(project ? { repoPath: project.root } : {}),
-        skipInstall: argv["skip-install"],
-      });
+      const result = await deps.install(
+        project.projectId,
+        isLocalExtensionSource(argv.source)
+          ? await deps.upload(argv.source, options, project.projectId)
+          : { ...options, source: { kind: "catalog", name: argv.source, ref: argv.branch } },
+      );
+      deps.log(formatInstallOutput(result.source, project.projectId));
     } catch (error) {
-      if (error instanceof ExtensionAlreadyInstalledError) {
-        deps.log(formatAlreadyInstalledMessage(error));
+      if (error instanceof PstdioApiError && error.status === 409) {
+        deps.log(error.message);
         process.exitCode = 1;
         return;
       }
       throw error;
     }
-
-    if (!project) {
-      deps.log(formatInstallOutput(installed, { state: "skipped" }));
-      return;
-    }
-
-    await deps.ensureApi(process.env.PSTDIO_API_URL);
-    await deps.enableInstalledExtension(project.projectId, installed);
-    await deps.installDefaultSkills(project.root, project.projectId);
-    deps.log(formatInstallOutput(installed, { state: "enabled", projectId: project.projectId }));
   };
-
 export const handler = createHandler();

@@ -10,8 +10,8 @@ const isLongRunningExtensionMutation = (request: Request) => {
   if (!isProjectExtensionRoute) return false;
 
   const isUpgrade = segments.length === 6 && segments[5] === "upgrade";
-  const isMarketplaceInstall = segments.length === 7 && segments[4] === "marketplace" && segments[6] === "install";
-  return isUpgrade || isMarketplaceInstall;
+  const isInstall = segments.length === 5 && segments[4] === "install";
+  return isUpgrade || isInstall;
 };
 
 export const disableExtensionMutationTimeout = (request: Request, server: object) => {

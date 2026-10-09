@@ -25,15 +25,15 @@ export const registerExtensionDiagnosticsSmokeTests = () => {
       renameSync(nodeModules, sourceNodeModules);
       symlinkSync(sourceNodeModules, nodeModules, "junction");
 
-      const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", "--scope", "user", "--json"], {
+      const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", extensionPath, "--json"], {
         cwd: root,
         env: { ...process.env, PSTDIO_HOME: root },
         encoding: "utf8",
       });
       expect(result.status, result.stdout || result.stderr).toBe(0);
       const report = JSON.parse(result.stdout);
-      expect(report.checks[0]).toMatchObject({ errorCount: 0, warningCount: 0 });
-      expect(report.checks[0].templates).toHaveLength(1);
+      expect(report.check).toMatchObject({ errorCount: 0, warningCount: 0 });
+      expect(report.check.runtime.templates).toHaveLength(1);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -57,14 +57,14 @@ export const registerExtensionDiagnosticsSmokeTests = () => {
       );
       writeFileSync(join(extensionPath, "extension.ts"), 'export { default } from "missing-desktop-dependency";');
 
-      const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", "--scope", "user", "--json"], {
+      const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", extensionPath, "--json"], {
         cwd: root,
         env: { ...process.env, PSTDIO_HOME: root },
         encoding: "utf8",
       });
       expect(result.status).toBe(1);
       const report = JSON.parse(result.stdout);
-      expect(report.checks[0].diagnostics).toContainEqual(
+      expect(report.check.runtime.diagnostics).toContainEqual(
         expect.objectContaining({
           code: "extension_import_failed",
           message: expect.stringContaining("missing-desktop-dependency"),

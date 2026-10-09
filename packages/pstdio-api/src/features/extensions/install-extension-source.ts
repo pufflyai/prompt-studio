@@ -1,14 +1,4 @@
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  renameSync,
-  rmSync,
-  statSync,
-  unlinkSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
@@ -28,6 +18,7 @@ import type {
   InstalledExtensionSource,
 } from "./install-extension-source-types";
 import { prepareInstallDependencies } from "./prepare-extension-dependencies";
+import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
 
 export { dashboardExtensionHostCapabilities } from "pstdio-extensions";
 export {
@@ -44,15 +35,7 @@ export { checkExtensionsRoot, formatExtensionsCheck };
 
 export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 
-export class ExtensionAlreadyInstalledError extends Error {
-  targetPath: string;
-
-  constructor(targetPath: string) {
-    super(`Installed extension already exists: ${targetPath}`);
-    this.name = "ExtensionAlreadyInstalledError";
-    this.targetPath = targetPath;
-  }
-}
+export { ExtensionAlreadyInstalledError } from "./promote-extension-source";
 
 export class RepoScopedExtensionNeedsProjectFolderError extends Error {
   constructor(extensionId: string) {
@@ -68,18 +51,20 @@ type ExtensionsCheck = Awaited<ReturnType<typeof checkExtensionSource>>["check"]
 /** The message can be a full check report for the CLI; callers that show one line use `firstError`. */
 export class ExtensionValidationFailedError extends Error {
   firstError: string;
+  diagnostics?: ExtensionsCheck["diagnostics"];
 
-  constructor(message: string, firstError = message) {
+  constructor(message: string, firstError = message, diagnostics?: ExtensionsCheck["diagnostics"]) {
     super(message);
     this.name = "ExtensionValidationFailedError";
     this.firstError = firstError;
+    this.diagnostics = diagnostics;
   }
 }
 
 const checkFailed = (check: ExtensionsCheck) => {
   const report = `Extension validation failed:\n${formatExtensionsCheck(check)}`;
   const first = check.diagnostics.find((diagnostic) => diagnostic.severity === "error");
-  return new ExtensionValidationFailedError(report, first?.message ?? report);
+  return new ExtensionValidationFailedError(report, first?.message ?? report, check.diagnostics);
 };
 
 export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
@@ -114,7 +99,13 @@ const isLocalSource = (source: string) =>
   isAbsolute(source);
 
 const validateInstallName = (installName: string) => {
-  if (!installName.trim() || basename(installName) !== installName) {
+  if (
+    !installName.trim() ||
+    installName === "." ||
+    installName === ".." ||
+    /[\\/:]/.test(installName) ||
+    basename(installName) !== installName
+  ) {
     throw new Error(`Invalid extension install name: ${installName}`);
   }
 };
@@ -158,32 +149,6 @@ export const removePathBestEffort = (path: string, remove: (path: string) => voi
   try {
     remove(path);
   } catch {}
-};
-
-const promotePreparedSource = (
-  preparedPath: string,
-  targetPath: string,
-  replaceExisting: boolean,
-  preserveDependencies: boolean,
-) => {
-  const backupPath = join(dirname(preparedPath), ".previous");
-
-  if (existsSync(targetPath)) {
-    if (!replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);
-    renameSync(targetPath, backupPath);
-  }
-
-  try {
-    renameSync(preparedPath, targetPath);
-    const previousNodeModules = join(backupPath, "node_modules");
-    if (preserveDependencies && existsSync(previousNodeModules)) {
-      renameSync(previousNodeModules, join(targetPath, "node_modules"));
-    }
-  } catch (error) {
-    removePathBestEffort(targetPath);
-    if (existsSync(backupPath)) renameSync(backupPath, targetPath);
-    throw error;
-  }
 };
 
 export const isLocalExtensionSource = (source: string) => isLocalSource(source);

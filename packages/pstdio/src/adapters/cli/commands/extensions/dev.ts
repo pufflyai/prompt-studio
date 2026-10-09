@@ -1,19 +1,17 @@
 import { existsSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
+import type { InstallExtensionResponse, InstalledExtensionSource, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import {
   createExtensionSourceWatcher,
   extensionDependencyInputNames,
   hashExtensionDependencyInputs,
   hashExtensionSource,
-  syncExtensionDevelopmentSource,
-} from "pstdio-api/extensions/extension-development";
-import type { InstalledExtensionSource } from "pstdio-api/extensions/install-extension-source";
+} from "pstdio-extensions/authoring";
 import type { Arguments, Argv } from "yargs";
 import { apiClient } from "@/features/api-client";
 import { findProjectRoot, readConfig } from "@/features/config/config";
-import { getProjectFolder } from "@/features/projects/project-folder";
-import { enableInstalledExtension } from "./shared";
+import { ensureApi } from "@/features/ensure-api";
+import { localExtensionSourceRequest } from "@/features/extensions/local-source-request";
 
 export type ExtensionsDevArgs = {
   name?: string;
@@ -41,18 +39,19 @@ type Deps = {
   error: (message: string) => void;
   exists: (path: string) => boolean;
   findProjectRoot: typeof findProjectRoot;
-  getProjectFolder: typeof getProjectFolder;
+  ensureApi: typeof ensureApi;
   hashExtensionDependencyInputs: typeof hashExtensionDependencyInputs;
   hashExtensionSource: typeof hashExtensionSource;
   log: (message: string) => void;
   offSignal: (signal: NodeJS.Signals, listener: () => void) => void;
   onSignal: (signal: NodeJS.Signals, listener: () => void) => void;
   readConfig: typeof readConfig;
-  refreshDevelopmentExtension: (
+  install: (
     projectId: string,
-    installed: InstalledExtensionSource,
-  ) => Promise<ProjectExtensionInstance>;
-  syncExtensionDevelopmentSource: typeof syncExtensionDevelopmentSource;
+    sourcePath: string,
+    installName: string,
+    signal: AbortSignal,
+  ) => Promise<InstallExtensionResponse>;
 };
 
 type DevelopmentCycleState = {
@@ -66,20 +65,10 @@ type DevelopmentCycleInput = {
   initial: boolean;
   installName: string;
   projectId: string;
-  repoPath: string;
   signal: AbortSignal;
   sourcePath: string;
   state: DevelopmentCycleState;
   stopped: () => boolean;
-};
-
-const refreshDevelopmentExtension = async (projectId: string, installed: InstalledExtensionSource) => {
-  const client = apiClient().extensions;
-  const enabled = await enableInstalledExtension(projectId, installed);
-  const projectExtensions = await client.listProject(projectId);
-  const instance = projectExtensions.extensions.find((candidate) => candidate.id === enabled.instanceId);
-  if (!instance) throw new Error(`Extension instance not found after refresh: ${enabled.instanceId}`);
-  return instance;
 };
 
 const defaultDeps: Deps = {
@@ -88,15 +77,19 @@ const defaultDeps: Deps = {
   error: console.error,
   exists: existsSync,
   findProjectRoot,
-  getProjectFolder,
+  ensureApi,
   hashExtensionDependencyInputs,
   hashExtensionSource,
   log: console.log,
   offSignal: (signal, listener) => process.off(signal, listener),
   onSignal: (signal, listener) => process.on(signal, listener),
   readConfig,
-  refreshDevelopmentExtension,
-  syncExtensionDevelopmentSource,
+  install: async (projectId, sourcePath, installName, signal) =>
+    apiClient().extensions.install(
+      projectId,
+      await localExtensionSourceRequest(projectId, sourcePath, { installName, force: true, development: true }),
+      { signal },
+    ),
 };
 
 const contributionIds = (check: InstalledExtensionSource["check"]) => {
@@ -170,13 +163,12 @@ const syncDevelopmentCycle = async (input: DevelopmentCycleInput) => {
 
   if (dependenciesChanged) input.deps.log(`dependency inputs changed for ${input.installName}`);
 
-  const installed = await input.deps.syncExtensionDevelopmentSource({
-    installName: input.installName,
-    repoPath: input.repoPath,
-    signal: input.signal,
-    source: input.sourcePath,
-  });
-  const instance = await input.deps.refreshDevelopmentExtension(input.projectId, installed);
+  const { source: installed, extension: instance } = await input.deps.install(
+    input.projectId,
+    input.sourcePath,
+    input.installName,
+    input.signal,
+  );
   input.state.lastDependencyHash = dependencyHash;
   input.state.lastSourceHash = sourceHash;
   return { installed, instance };
@@ -211,7 +203,7 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsDevArgs>) => {
     const { projectId } = resolveProject(deps);
-    const repoPath = await deps.getProjectFolder(projectId);
+    await deps.ensureApi(process.env.PSTDIO_API_URL);
     const sourcePath = resolve(deps.cwd(), argv.source);
     if (!deps.exists(sourcePath)) throw new Error(`Extension source folder not found: ${sourcePath}`);
     const installName = argv.name ?? basename(sourcePath);
@@ -236,7 +228,6 @@ export const createHandler =
           initial,
           installName,
           projectId,
-          repoPath,
           signal: abortController.signal,
           sourcePath,
           state,

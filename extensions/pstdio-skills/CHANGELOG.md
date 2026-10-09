@@ -1,5 +1,16 @@
 # Prompt Studio Skills
 
+## 0.41.0
+
+_2026-10-08_
+
+### Patch Changes
+
+- 42d62b5: Delete unused ticket workspaces, mark tickets done on merge, and replace workspace archiving with deletion.
+- 7b1d280: Document command-backed setting options in the create-pstdio-extension skill.
+- d20bd9a: Document declared clipboard writes and guest copy buttons for extension authors.
+- 913c1c2: The extension API and CLI skill references describe view filter rules, multi-level sorts, and shared data table views.
+
 ## 0.40.0
 
 _2026-10-02_

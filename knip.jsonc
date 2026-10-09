@@ -110,7 +110,14 @@
       "ignore": ["dist/**"]
     },
     "packages/pstdio-extensions": {
-      "entry": ["package.json", "scripts/**/*.ts", "src/index.ts", "src/bridge/guest/bootstrap.ts", "src/**/*.test.ts"],
+      "entry": [
+        "package.json",
+        "scripts/**/*.ts",
+        "src/index.ts",
+        "src/bridge/guest/bootstrap.ts",
+        "src/**/*.test.ts",
+        "src/**/*.fixture.ts"
+      ],
       "project": ["scripts/**/*.ts", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**"]
     },

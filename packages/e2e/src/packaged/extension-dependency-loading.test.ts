@@ -14,30 +14,34 @@ beforeAll(() => {
 
 describe("packaged pstdio — extension dependency loading", () => {
   test(
-    "loads an installed extension that imports an on-disk node_modules dependency",
+    "checks an authoring source that imports an on-disk node_modules dependency",
     () => {
       const home = mkdtempSync(join(tmpdir(), "pstdio-ext-home-"));
       try {
-        writeExtensionWithDependency(home);
+        const source = writeExtensionWithDependency(home);
 
-        const result = runPackagedSafe("extensions check --json", home, { PSTDIO_HOME: home });
+        const result = runPackagedSafe(`extensions check ${source} --json`, home, { PSTDIO_HOME: home });
         const payload = JSON.parse(result.stdout);
         const checks: Array<{
           errorCount: number;
           warningCount: number;
-          diagnostics: Array<{ code: string }>;
-          extensions: Array<{ name: string }>;
-          templates: Array<{ id: string }>;
-        }> = payload.checks ?? [payload];
+          runtime: {
+            diagnostics: Array<{ code: string }>;
+            extensions: Array<{ name: string }>;
+            templates: Array<{ id: string }>;
+          };
+        }> = [payload.check];
 
         const importFailure = checks
-          .flatMap((check) => check.diagnostics)
+          .flatMap((check) => check.runtime.diagnostics)
           .find((diagnostic) => diagnostic.code === "extension_import_failed");
         expect(importFailure).toBeUndefined();
         expect(checks.reduce((total, check) => total + check.errorCount, 0)).toBe(0);
         expect(checks.reduce((total, check) => total + check.warningCount, 0)).toBe(0);
-        expect(checks.flatMap((check) => check.extensions).map((extension) => extension.name)).toContain("dep-ext");
-        expect(checks.flatMap((check) => check.templates).map((template) => template.id)).toContain(
+        expect(checks.flatMap((check) => check.runtime.extensions).map((extension) => extension.name)).toContain(
+          "dep-ext",
+        );
+        expect(checks.flatMap((check) => check.runtime.templates).map((template) => template.id)).toContain(
           "test.dep-ext.template.packaged-asset",
         );
       } finally {

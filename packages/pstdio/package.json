@@ -1,6 +1,6 @@
 {
   "name": "pstdio",
-  "version": "0.40.0",
+  "version": "0.41.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -43,12 +43,12 @@
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.40.0",
-    "@pstdio/cli-darwin-x64": "0.40.0",
-    "@pstdio/cli-linux-x64": "0.40.0",
-    "@pstdio/cli-linux-arm64": "0.40.0",
-    "@pstdio/cli-win-x64": "0.40.0",
-    "@pstdio/cli-win-arm64": "0.40.0"
+    "@pstdio/cli-darwin-arm64": "0.41.0",
+    "@pstdio/cli-darwin-x64": "0.41.0",
+    "@pstdio/cli-linux-x64": "0.41.0",
+    "@pstdio/cli-linux-arm64": "0.41.0",
+    "@pstdio/cli-win-x64": "0.41.0",
+    "@pstdio/cli-win-arm64": "0.41.0"
   },
   "devDependencies": {
     "@pstdio/sdk": "workspace:*",
@@ -58,6 +58,7 @@
     "@types/yargs": "^17.0.35",
     "playwright-core": "1.60.0",
     "pstdio-api": "workspace:*",
+    "pstdio-extensions": "workspace:*",
     "pstdio-logging": "workspace:*",
     "pstdio-paths": "workspace:*",
     "pstdio-wt": "workspace:*",

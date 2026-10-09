@@ -294,3 +294,17 @@ describe("checkExtensionHostCompatibility", () => {
     ]);
   });
 });
+
+test("checks an explicit source without treating its subfolders as installed packages", async () => {
+  const home = createTempHome();
+  writeExtension(home, "authoring-tool", "export default {};");
+  const source = join(home, "extensions/authoring-tool");
+  mkdirSync(join(source, "src"));
+  writeFileSync(join(source, "src/title.ts"), "export const title = 'Tool';");
+  const result = await checkExtensions({
+    extensionsRoot: source,
+    extensionPackages: [{ path: source, sourceKind: "local_path" }],
+  });
+  expect(result.errorCount).toBe(0);
+  expect(result.runtime.extensions.map((extension) => extension.name)).toEqual(["authoring-tool"]);
+});

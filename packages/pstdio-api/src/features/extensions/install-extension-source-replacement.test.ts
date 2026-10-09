@@ -3,7 +3,6 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, wr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { syncExtensionDevelopmentSource } from "./extension-development";
 import { installExtensionSource, removePathBestEffort } from "./install-extension-source";
 
 // The host never runs package scripts and installs exactly what a shipped lockfile names.
@@ -86,7 +85,9 @@ describe("installExtensionSource replacement", () => {
     mkdirSync(join(source, "node_modules", "example"), { recursive: true });
     writeFileSync(join(source, "user-edit.txt"), "preserve");
 
-    const result = await syncExtensionDevelopmentSource({
+    const result = await installExtensionSource({
+      force: true,
+      reuseInstalledDependencies: true,
       source,
       repoPath,
       env: { PSTDIO_HOME: pstdioHome },
@@ -152,20 +153,17 @@ describe("installExtensionSource replacement", () => {
       return { exitCode: 0, stderr: "", stdout: "" };
     });
 
-    await syncExtensionDevelopmentSource({
+    await installExtensionSource({
+      force: true,
+      reuseInstalledDependencies: true,
       source,
       env: { PSTDIO_HOME: pstdioHome },
       homedir: () => "/unused",
       runCommand,
     });
 
-    expect(runCommand).toHaveBeenCalledWith(
-      "bun",
-      sourceCheckoutInstallArgs,
-      expect.objectContaining({
-        cwd: source,
-      }),
-    );
+    expect(runCommand).toHaveBeenCalledWith("bun", sourceCheckoutInstallArgs, expect.anything());
+    expect(existsSync(join(target, "node_modules", "example"))).toBe(true);
   });
 
   test("preserves the live install when replacement preparation fails", async () => {
