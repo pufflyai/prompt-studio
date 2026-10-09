@@ -66,7 +66,11 @@ export const resolveMigrationsFolder = async (
   } = {},
 ) => {
   const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
-  const embedded = embeddedSource.filter((file) => normalizeEmbeddedFileName(file.name).startsWith(DRIZZLE_PREFIX));
+  // Schema snapshots belong to migration generation; extracting them delays packaged startup.
+  const embedded = embeddedSource.filter((file) => {
+    const name = normalizeEmbeddedFileName(file.name);
+    return name.startsWith(DRIZZLE_PREFIX) && (name.endsWith(".sql") || name === `${DRIZZLE_PREFIX}meta/_journal.json`);
+  });
 
   if (embedded.length > 0) {
     const root = path.join(options.tmpDir ?? os.tmpdir(), DRIZZLE_EXTRACT_DIR);
