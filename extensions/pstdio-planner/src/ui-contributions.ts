@@ -27,6 +27,7 @@ import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STAT
 import { ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
+import { ticketCreateForm } from "./ticket-create-form";
 import { ticketStatuses } from "./ticket-status-provider";
 
 export { ticketResourceKind } from "./resource-kinds";
@@ -96,32 +97,12 @@ export const createPlannerUi = (baseUrl: string) => {
       createRow: {
         command: createTicketCommand.ref,
         columnParam: "statusId",
-        title: l10n("kanbanRenderers.tickets.createRow.title", "New ticket"),
-        submitLabel: l10n("kanbanRenderers.tickets.createRow.submitLabel", "Create ticket"),
-        params: {
-          content: {
-            type: "markdown",
-            label: l10n("kanbanRenderers.tickets.createRow.content.label", "Description"),
-            placeholder: l10n("kanbanRenderers.tickets.createRow.content.placeholder", "Describe the ticket..."),
-            required: true,
-          },
-          files: {
-            type: "files",
-            label: l10n("kanbanRenderers.tickets.createRow.attachments.label", "Attach files"),
-            multiple: true,
-          },
-        },
+        ...ticketCreateForm,
         attributesParam: "attributes",
         attachments: {
           command: attachTicketFileCommand.ref,
           resourceParam: "ticketId",
           fileParam: "ref",
-        },
-        labels: {
-          cancel: l10n("kanbanRenderers.tickets.createRow.cancel", "Cancel"),
-          properties: l10n("kanbanRenderers.tickets.createRow.properties", "Properties"),
-          submitError: l10n("kanbanRenderers.tickets.createRow.submitError", "Could not create ticket"),
-          removeFile: l10n("kanbanRenderers.tickets.createRow.removeFile", "Remove file"),
         },
       },
       defaultSettings: {

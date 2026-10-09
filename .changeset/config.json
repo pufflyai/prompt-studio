@@ -19,8 +19,7 @@
       "pstdio-planner",
       "pstdio-reports",
       "pstdio-skills",
-      "remote-workspaces",
-      "ticket-timeline"
+      "remote-workspaces"
     ]
   ],
   "linked": [],

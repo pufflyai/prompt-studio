@@ -34,6 +34,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
@@ -385,6 +386,12 @@ test(
       expectExamplePages(metadata);
       await expectPackagedWebviewRuntime(started.baseUrl, metadata);
       await expectPackagedArtifacts({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+        metadata,
+      });
+      await expectPackagedPlannerTimeline({
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),

@@ -20,6 +20,9 @@ import { gitMergedHook } from "./src/hooks/git-merged";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { ticketStatuses } from "./src/ticket-status-provider";
+import { commands as timelineCommands } from "./src/timeline/commands";
+import { actionCleanup } from "./src/timeline/commands/action-cleanup";
+import { timelineNavigation, timelinePage, timelineView } from "./src/timeline/pages";
 import { createPlannerUi, ticketResourceKind } from "./src/ui-contributions";
 
 const plannerUi = createPlannerUi(import.meta.url);
@@ -117,12 +120,12 @@ export default defineExtension({
     "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
   },
 
-  commands: plannerCommands,
-  views: plannerUi.views,
-  pages: plannerUi.pages,
+  commands: [...plannerCommands, ...Object.values(timelineCommands)],
+  views: [...plannerUi.views, timelineView],
+  pages: [...plannerUi.pages, timelinePage],
   viewMenus: plannerUi.viewMenus,
   resourceKinds: [ticketResourceKind],
-  navigationItems: plannerUi.navigationItems,
+  navigationItems: [...plannerUi.navigationItems, timelineNavigation],
   navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,
   statuses: [ticketStatuses],
@@ -131,6 +134,7 @@ export default defineExtension({
   hooks: [
     gitMergedHook,
     worktreeCreatedHook,
+    actionCleanup,
     defineHook({
       id: "session-awaiting-input",
       event: sessionEvents.awaitingInput,

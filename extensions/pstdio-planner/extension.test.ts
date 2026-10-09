@@ -245,6 +245,7 @@ describe("pstdio planner workspace contributions", () => {
     expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
       "git-merged-mark-done",
       "session-awaiting-input",
+      "timeline.action-cleanup",
       "worktree-created",
     ]);
   });

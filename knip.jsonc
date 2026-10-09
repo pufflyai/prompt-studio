@@ -188,7 +188,8 @@
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/views/tags-settings-panel.tsx"
+        "src/views/tags-settings-panel.tsx",
+        "src/timeline/view/entry.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
@@ -196,10 +197,6 @@
       // The skill's example extensions are typechecked source.
       "entry": ["extension.ts", "*.test.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"],
       "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
-    },
-    "extensions/ticket-timeline": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/view/entry.tsx", "src/style-types.ts"],
-      "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "infra/local/extensions/*": {
       "entry": ["extension.ts", "*.test.ts"],
