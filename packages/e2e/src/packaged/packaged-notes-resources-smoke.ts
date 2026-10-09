@@ -47,6 +47,25 @@ export const expectNotesResources = async (input: {
   const folder = (await execute("pstdio.pstdio-notes.command.folders.create", { title: "Packaged folder" })) as {
     id: string;
   };
+  for (const [command, params] of [
+    ["folders.create", { title: " packaged FOLDER " }],
+    ["folders.rename", { folderId: folder.id, title: "Existing folder" }],
+  ] as const) {
+    if (command === "folders.rename") {
+      await execute("pstdio.pstdio-notes.command.folders.create", { title: "Existing folder" });
+    }
+    const response = await fetch(
+      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-notes.command.${command}/execute`,
+      {
+        method: "POST",
+        headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({ params, source: "api" }),
+      },
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).outcome.ok).toBe(false);
+  }
+  await execute("pstdio.pstdio-notes.command.folders.rename", { folderId: folder.id, title: "PACKAGED FOLDER" });
   const results = await execute(provider!.queryHandlerId, { query: "packaged note", limit: 5 });
   expect(results).toMatchObject({
     items: [
