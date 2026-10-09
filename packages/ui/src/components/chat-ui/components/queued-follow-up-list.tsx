@@ -65,7 +65,8 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
   const steerReason =
     source?.steeringUnavailableReason ??
     steeringUnavailableReason ??
-    (source && dirtyItemIds.includes(source.id) ? "Update or Cancel this edit before sending." : null);
+    (source && dirtyItemIds.includes(source.id) ? "Update or Cancel this edit before sending." : null) ??
+    (onSteer ? null : "This conversation cannot accept live input.");
   const combineReason = (target: QueuedFollowUp) => {
     if (!source || source.id === target.id) return "Choose another request.";
     if (dirtyItemIds.includes(source.id) || dirtyItemIds.includes(target.id))
@@ -90,6 +91,7 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
   const performDrop = (selected: QueuedFollowUp, target: { kind: string; item?: QueuedFollowUp }) => {
     if (target.kind === "steer") {
       if (!steerReason) return onSteer?.(selected);
+      setError(steerReason);
       return;
     }
     if (!target.item) return;

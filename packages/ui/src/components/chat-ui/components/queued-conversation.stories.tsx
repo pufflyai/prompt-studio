@@ -1,7 +1,7 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp } from "./message-types";
 
@@ -221,4 +221,53 @@ export const SavedUpdate: Story = {
   },
 };
 export const Overflow: Story = { args: { count: 20 } };
-export const Unsupported: Story = { args: { unsupported: true } };
+export const Unsupported: Story = {
+  args: { unsupported: true },
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement);
+    await userEvent.click(c.getByRole("button", { name: "Drag queued follow-up 1" }));
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard("{Home}");
+    await userEvent.keyboard(" ");
+    await waitFor(() => expect(c.getByRole("alert")).toHaveTextContent("This harness cannot accept live input."));
+    await expect(c.getByRole("button", { name: "Edit queued message: Queued message 1" })).toBeVisible();
+  },
+};
+export const EscapeCancelsDragBeforeEdit: Story = {
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement);
+    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
+    await userEvent.click(c.getByRole("textbox"));
+    await userEvent.keyboard(" keep this edit");
+    await userEvent.click(c.getByRole("button", { name: "Drag queued follow-up 2" }));
+    await userEvent.keyboard(" ");
+    await waitFor(() => expect(canvasElement.querySelector("[data-queue-send-now]")).toBeInTheDocument());
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(canvasElement.querySelector("[data-queue-send-now]")).not.toBeInTheDocument());
+    await expect(c.getByRole("button", { name: "Update", exact: true })).toBeVisible();
+    await expect(c.getByRole("textbox")).toHaveTextContent("keep this edit");
+    await userEvent.click(c.getByRole("textbox"));
+    await userEvent.keyboard("{Escape}");
+    await expect(c.getByRole("textbox")).toHaveTextContent("Unsent draft");
+  },
+};
+export const EscapeCancelsEdit: Story = {
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement);
+    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
+    await userEvent.click(c.getByRole("button", { name: "Codex", exact: true }));
+    await userEvent.click(c.getByRole("button", { name: "high", exact: true }));
+    await userEvent.click(c.getByRole("button", { name: "Attach context" }));
+    await userEvent.click(c.getByRole("textbox"));
+    await userEvent.keyboard(" discarded{Escape}");
+    await waitFor(() => expect(c.queryByRole("button", { name: "Update", exact: true })).not.toBeInTheDocument());
+    await expect(c.getByRole("textbox")).toHaveTextContent("Unsent draft");
+    await userEvent.click(c.getByRole("button", { name: "Edit queued message: Queued message 2" }));
+    await expect(c.getByRole("textbox")).toHaveTextContent("Queued message 2");
+    await expect(c.getByRole("textbox")).not.toHaveTextContent("discarded");
+    await expect(c.getByRole("button", { name: "Codex", exact: true })).toBeVisible();
+    await expect(c.getByRole("button", { name: "high", exact: true })).toBeVisible();
+    await expect(c.queryByRole("button", { name: "context.txt", exact: true })).not.toBeInTheDocument();
+    await expect(c.getByRole("button", { name: "notes.txt", exact: true })).toBeVisible();
+  },
+};

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expectPackagedQueuedEditorCancellation } from "./packaged-queued-editor-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 export const registerQueuedRequestSmokeTests = () => {
@@ -89,6 +90,12 @@ export const registerQueuedRequestSmokeTests = () => {
             })
           ).follow_up.status,
         ).toBe("queued");
+      await expectPackagedQueuedEditorCancellation(
+        started.baseUrl,
+        runtimeAuthorization(started.descriptor),
+        project.id,
+        session.id,
+      );
       const queue = await request(path);
       const [first, second, other] = queue.requests;
       expect(first.params).toEqual({ thinking: "high" });
