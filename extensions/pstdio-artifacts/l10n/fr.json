@@ -40,5 +40,13 @@
   "rename.name": "Nom de l’artefact",
   "common.cancel": "Annuler",
   "common.save": "Enregistrer",
-  "common.close": "Fermer"
+  "common.close": "Fermer",
+  "commands.startCreation": "Créer un artefact",
+  "params.example": "Exemple",
+  "library.makeNew": "Créer quelque chose",
+  "library.creationHint": "Choisissez un exemple pour démarrer une session avec un agent, ou demandez à une session de créer et publier une page interactive. Elle apparaîtra ici.",
+  "library.briefTitle": "Présentation du projet",
+  "library.briefDescription": "Objectifs, décisions et prochaines étapes",
+  "library.dashboardTitle": "Tableau de bord du projet",
+  "library.dashboardDescription": "Avancement, tâches ouvertes et jalons"
 }
