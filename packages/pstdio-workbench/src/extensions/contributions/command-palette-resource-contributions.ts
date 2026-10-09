@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk/api";
-import type { NavigationTarget } from "@pstdio/sdk/extensions";
+import type { NavigationTarget, ResourceRef } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { CommandPaletteResourceResult, Disposable } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
@@ -49,6 +49,11 @@ const activateTarget = async (
     }),
   );
 };
+const targetResource = (target: NavigationTarget): ResourceRef | undefined => {
+  if (target.kind === "page" || target.kind === "panel") return target.resource;
+  if (target.kind === "compound") return target.targets.find((step) => step.resource)?.resource;
+  return undefined;
+};
 const toResult = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionCommandPaletteResourceRecord,
@@ -56,6 +61,16 @@ const toResult = (
   item: ResourceItem,
 ): CommandPaletteResourceResult => ({
   id: `${record.id}:${item.id}`,
+  resource: (() => {
+    const resource = targetResource(item.target);
+    return resource
+      ? {
+          ...resource,
+          projectId: resource.projectId ?? context.projectId,
+          extensionId: resource.extensionId ?? record.extensionId,
+        }
+      : undefined;
+  })(),
   label: item.label,
   description: item.description,
   icon: item.icon,
@@ -75,9 +90,10 @@ export const registerWorkbenchExtensionCommandPaletteResources = (
         id: record.id,
         title: groupLabel,
         refreshEventIds: record.refreshEventIds,
-        query: async ({ query, limit }) => {
+        query: async ({ query, limit, signal }) => {
           const activeResource = context.workbench.getActiveResource();
           const value = await executeWorkbenchExtensionCommand(context, record.queryHandlerId, {
+            signal,
             params: {
               projectId: context.projectId,
               modeId: context.workbench.modes.getActiveModeId(),

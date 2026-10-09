@@ -156,6 +156,19 @@ jobs:
       - name: Build monorepo
         run: bun run build
 
+      - name: Test Windows npm command shims
+        run: bun --conditions=source test --timeout 15000 packages/pstdio-api/src/features/extensions/process-command.test.ts packages/pstdio-api/src/features/extensions/process-command.windows.test.ts
+
+      - name: Compile Windows runtime for harness detection
+        env:
+          PSTDIO_BUILD_PLATFORM_PKG: cli-win-x64
+        run: bun run --cwd scripts build:all
+
+      - name: Test packaged Windows npm harness detection
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
+        run: bun test packages/e2e/src/packaged/opencode-npm-detection.test.ts --timeout 30000
+
       - name: Lint monorepo
         run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
 

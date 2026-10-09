@@ -1,5 +1,6 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk/api";
+import { PstdioApiError } from "@pstdio/sdk/client";
 import { toaster } from "@pstdio/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +17,7 @@ import {
 } from "@/shared/extensions/use-project-extensions";
 import { AvailableExtensionDetail } from "./available-extension-detail";
 import { ExtensionDetailContainer } from "./extension-detail-container";
+import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
 interface ExtensionsPanelProps {
@@ -32,6 +34,10 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const upgrade = useUpgradeProjectExtension(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
   const addLocalFolder = useAddLocalExtensionFolder(projectId);
+  const [replacement, setReplacement] = useState<{ name: string; retry: () => Promise<void> } | null>(null);
+  const replacementDialog = (
+    <ExtensionReplacementConfirmation replacement={replacement} onClose={() => setReplacement(null)} />
+  );
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const [selectedMarketplaceName, setSelectedMarketplaceName] = useState<string | null>(null);
   const [installingMarketplaceNames, setInstallingMarketplaceNames] = useState<string[]>([]);
@@ -68,16 +74,20 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     (extension) => extension.installName === selectedMarketplaceName && !extension.installed,
   );
 
-  const handleInstallMarketplace = async (extension: MarketplaceExtension) => {
+  const handleInstallMarketplace = async (extension: MarketplaceExtension, force = false) => {
     setInstallingMarketplaceNames((current) => [...new Set([...current, extension.installName])]);
     try {
-      await installMarketplace.mutateAsync({ installName: extension.installName });
+      await installMarketplace.mutateAsync({ installName: extension.installName, force });
       toaster.create({
         type: "success",
         title: t("projectSettings.extensionsPanel.marketplace.installSucceeded", { name: extension.displayName }),
       });
       if (selectedMarketplaceName === extension.installName) setSelectedMarketplaceName(null);
     } catch (error) {
+      if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !force) {
+        setReplacement({ name: extension.displayName, retry: () => handleInstallMarketplace(extension, true) });
+        return;
+      }
       toaster.create({
         type: "error",
         title: t("projectSettings.extensionsPanel.marketplace.installFailed"),
@@ -101,17 +111,20 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
 
   if (selectedMarketplace) {
     return (
-      <AvailableExtensionDetail
-        extension={selectedMarketplace}
-        metadata={marketplaceContributions.data}
-        contributionsError={
-          marketplaceContributions.error instanceof Error ? marketplaceContributions.error.message : undefined
-        }
-        loadingContributions={marketplaceContributions.isLoading}
-        installing={installingMarketplaceNames.includes(selectedMarketplace.installName)}
-        onBack={() => setSelectedMarketplaceName(null)}
-        onInstall={() => void handleInstallMarketplace(selectedMarketplace)}
-      />
+      <>
+        {replacementDialog}
+        <AvailableExtensionDetail
+          extension={selectedMarketplace}
+          metadata={marketplaceContributions.data}
+          contributionsError={
+            marketplaceContributions.error instanceof Error ? marketplaceContributions.error.message : undefined
+          }
+          loadingContributions={marketplaceContributions.isLoading}
+          installing={installingMarketplaceNames.includes(selectedMarketplace.installName)}
+          onBack={() => setSelectedMarketplaceName(null)}
+          onInstall={() => void handleInstallMarketplace(selectedMarketplace)}
+        />
+      </>
     );
   }
 
@@ -193,6 +206,10 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         title: t("projectSettings.extensionsPanel.dropZone.succeeded", { name: extension.displayName }),
       });
     } catch (error) {
+      if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !folder.force) {
+        setReplacement({ name: folder.name, retry: () => handleDropFolder({ ...folder, force: true }) });
+        return;
+      }
       toaster.create({
         type: "error",
         title: t("projectSettings.extensionsPanel.dropZone.failed"),
@@ -202,23 +219,28 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   };
 
   return (
-    <ExtensionsPanelView
-      extensions={extensions}
-      marketplace={marketplace}
-      diagnostics={metadataQuery.data?.diagnostics ?? []}
-      automations={metadataQuery.data?.automations ?? []}
-      togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
-      upgradingInstanceIds={upgradingInstanceIds}
-      installingMarketplaceNames={installingMarketplaceNames}
-      onToggle={handleToggle}
-      onUpgrade={(extension) => void handleUpgrade(extension)}
-      onOpen={(extension) => setSelectedInstanceId(extension.id)}
-      onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
-      onOpenMarketplace={(extension) => setSelectedMarketplaceName(extension.installName)}
-      upgradingAll={extensions.some((extension) => extension.canUpgrade && upgradingInstanceIds.includes(extension.id))}
-      onUpgradeAll={(upgradable) => void handleUpgradeAll(upgradable)}
-      addingFolderName={addLocalFolder.isPending ? addLocalFolder.variables?.name : undefined}
-      onDropFolder={(folder) => void handleDropFolder(folder)}
-    />
+    <>
+      {replacementDialog}
+      <ExtensionsPanelView
+        extensions={extensions}
+        marketplace={marketplace}
+        diagnostics={metadataQuery.data?.diagnostics ?? []}
+        automations={metadataQuery.data?.automations ?? []}
+        togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
+        upgradingInstanceIds={upgradingInstanceIds}
+        installingMarketplaceNames={installingMarketplaceNames}
+        onToggle={handleToggle}
+        onUpgrade={(extension) => void handleUpgrade(extension)}
+        onOpen={(extension) => setSelectedInstanceId(extension.id)}
+        onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
+        onOpenMarketplace={(extension) => setSelectedMarketplaceName(extension.installName)}
+        upgradingAll={extensions.some(
+          (extension) => extension.canUpgrade && upgradingInstanceIds.includes(extension.id),
+        )}
+        onUpgradeAll={(upgradable) => void handleUpgradeAll(upgradable)}
+        addingFolderName={addLocalFolder.isPending ? addLocalFolder.variables?.name : undefined}
+        onDropFolder={(folder) => void handleDropFolder(folder)}
+      />
+    </>
   );
 };

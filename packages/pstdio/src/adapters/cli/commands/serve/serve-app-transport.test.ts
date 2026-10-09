@@ -70,10 +70,7 @@ describe("serveApp WebSocket transport", () => {
         timeoutCalls.push({ request, seconds });
       },
     } as unknown as Bun.Server<undefined>;
-    const paths = [
-      "/v1/projects/project-1/extensions/instance-1/upgrade",
-      "/v1/projects/project-1/extensions/marketplace/pstdio-planner/install",
-    ];
+    const paths = ["/v1/projects/project-1/extensions/instance-1/upgrade", "/v1/projects/project-1/extensions/install"];
 
     for (const path of paths) {
       const request = new Request(`http://localhost:19840${path}`, { method: "POST" });

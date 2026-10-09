@@ -46,9 +46,9 @@ Invalid packages produce diagnostics from `pst extensions check`. Missing manife
 
 ### Scoped checks and versions
 
-`pst extensions check` checks the user and repo-local roots. Use `--scope repo` to check only
-the current linked project folder, or `--scope user` to check only the user root. Errors outside the
-selected scope do not affect the result. The repo scope requires a linked project folder; Git is optional.
+`pst extensions check` asks the API host to check its user and repo-local roots. Run it inside a linked project. Use `--scope repo` or `--scope user` to check one host root. Errors outside the selected scope do not affect the result. Repo scope requires a local default workspace.
+
+`pst extensions check <path>` checks a local source folder for authoring. It does not install files or start the API.
 
 The command prints the CLI, extension API, SDK, and bundled dashboard versions before its
 diagnostics. `--json` returns them in `versions`, alongside `checks`. Compatibility status and
@@ -75,7 +75,7 @@ Installs and updates are explicit. Source that appears in the extensions root is
   names the Git repository, folder, and release ref. Prompt Studio records the resolved commit with
   the install, so the installed source stays pinned even when a tag or branch moves.
 - `pst extensions add <name> --branch <branch>` installs from a branch instead. A branch moves, so
-  this is for extension development only.
+  this is for extension development only. The host release chooses the default ref, even when the CLI runs a different version.
 - Editing a folder under the extensions root does not change what a project runs. The extension is
   marked as having local changes (`updateAvailable`), and the project keeps running the version it
   adopted.
@@ -101,14 +101,10 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - Every load error offers Copy error. Copy error puts the error code and message on the clipboard.
   Catalog extensions that can take a newer release also offer Upgrade. A local extension is fixed in
   its source folder, and **Reload** then adopts the fixed source.
-- Dropping an extension folder on the drop zone at the bottom of the extension panel copies it to
-  `<repo>/.pstdio/extensions/<folder-name>` and loads it as a repo extension. The dashboard skips
-  `node_modules` and `.git`. The host installs the folder the same way `pst extensions add <path>`
-  does: it installs dependencies, validates the extension in staging, and moves it into place. It
-  refuses a folder without a `package.json`, a file path that leaves the folder, and a folder name
-  that already exists under `.pstdio/extensions`. The request is
-  `POST /v1/projects/{projectId}/extensions/local` with multipart form data: a `name` field and one
-  `files` part per file, whose file name is its path relative to the folder root.
+- Dropping a folder and `pst extensions add <path>` upload source to the API host. Both follow the manifest scope: user extensions go to the host's `$PSTDIO_HOME/extensions/<name>`; repo extensions go to its `<project>/.pstdio/extensions/<name>`. Both need a linked project. Dependencies and ignored files are excluded; `.git` is preserved. The host installs dependencies, validates in staging, enables the result, and provisions workspace skills.
+- An existing install is refused unless `--force` is set. The dashboard asks before replacing it. Replacement affects every project using that installed source. A failed validation leaves the installed files intact.
+- The shared request is `POST /v1/projects/{projectId}/extensions/install`. JSON uses `{ source: { kind: "catalog", name, ref? }, installName?, force?, skipInstall? }`. Multipart uses `kind=upload`, `folderName`, one `files` part per relative file path, and optional `installName`, `force`, `skipInstall`, and `development` fields. Boolean form fields use `"true"` or `"false"`. A successful response is HTTP 201 with `{ source, extension }`.
+- `client.extensions.install(projectId, request)` and `client.extensions.install(projectId, { upload: formData })` use that route. A host-owned project source can use `{ source: { kind: "project-folder", path: "relative/folder" } }`. Paths must stay inside the host's local default workspace, including through symlinks.
 - Webview bundles are reused across restarts while their inputs are unchanged. Startup checks them
   in the background and does not wait. Editing an installed folder still rebuilds that extension's
   webview assets, so an open webview updates while you work. Only its contributions wait for the
@@ -117,10 +113,9 @@ Installs and updates are explicit. Source that appears in the extensions root is
   `workspace.provision` hook re-provisions the workspaces of every project that runs it, so agent
   skill folders such as `.agents/skills` match the edit. A write that leaves the folder's content
   unchanged does not re-provision.
-- `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
-  not automatic adoption.
+- `pst extensions dev <path>` watches the author’s local files and sends changed source to the host. The host reuses installed dependencies when their inputs match, reinstalls changed dependencies, and reloads the extension.
 - Dependency installs never run package code. The host runs
-  `bun install --frozen-lockfile --ignore-scripts`, adding `--production` for the copies it owns.
+  `bun install --frozen-lockfile --ignore-scripts`, adding `--production` for normal installed copies. Development refreshes also install development dependencies.
   Lifecycle scripts (`preinstall`, `postinstall`, `prepare`) do not run, for the extension or for any
   dependency, and `trustedDependencies` does not change that. An extension that needs a build step
   must ship the built files. When the source has a `bun.lock`, the install uses exactly what it names
@@ -150,9 +145,7 @@ only `package.json` until a person approves the folder's content hash, is in
 ## Developing A Repo-Scoped Extension
 
 A repo-scoped extension installs into `<repo>/.pstdio/extensions/<install-name>`, which is often the
-folder you are already editing. Point `pst extensions dev` at that folder and it is validated where
-it is. Nothing is copied, replaced, or deleted, so untracked and ignored files in the folder survive
-a refresh.
+folder you are already editing. When the API is on the same machine and owns that same folder, `pst extensions dev` validates it in place through the host route. Untracked and ignored files survive. Against a remote API, the local source is uploaded into the host’s installed copy.
 
 Every refresh republishes what the folder declares now. A command you removed stops being served,
 and a command you added is available at once. Only a validated refresh is adopted. A failed refresh leaves the last valid project snapshot active, so command metadata and execution still refer to the same adopted version.
@@ -282,3 +275,10 @@ export const plannerCommands = {
 ```
 
 Consumers import `plannerCommands.publish`. They do not repeat the provider identity or rebuild runtime ids.
+
+
+## Client and host files
+
+Installing never writes extensions or agent skills into the CLI machine's home. The host provisions local workspace skills. Install global agent skills separately with `pst agents install-skills` on the agent's machine.
+
+Uploads omit `node_modules` and include confined source links as file content. `--skip-install` skips host dependency installation and can reuse matching dependencies already installed on the host. For a local API, CLI sources inside the host's local project use the project-folder input, preserving existing host dependencies and sibling packages. Uploads cannot reuse dependencies that exist only on another machine. `pst extensions test --project-path <context>` preserves dependency context in its private host.

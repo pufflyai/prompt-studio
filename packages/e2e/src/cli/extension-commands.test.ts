@@ -1,5 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { copyFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -27,7 +29,6 @@ afterEach(() => {
 
 const run = (args: string, cwd: string) =>
   runPstdio(args, cwd, { PSTDIO_API_URL: api.url, PSTDIO_DEFAULT_EXTENSIONS: "[]", PSTDIO_HOME: cliHome });
-const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 
 describe("pstdio extension commands", () => {
   test(
@@ -37,7 +38,22 @@ describe("pstdio extension commands", () => {
       dirs.push(repo);
 
       run("projects create extension-command-project", repo);
-      run(`extensions add ${extensionLabPath} --name workbench-fixture --skip-install`, repo);
+      const source = createTempDir();
+      dirs.push(source);
+      writeFileSync(
+        join(source, "package.json"),
+        JSON.stringify({
+          name: "workbench-fixture",
+          publisher: "pstdio",
+          version: "1.0.0",
+          type: "module",
+          main: "./extension.ts",
+          engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+        }),
+      );
+      copyFileSync(join(import.meta.dirname, "extension-commands.fixture.ts"), join(source, "real.ts"));
+      symlinkSync("real.ts", join(source, "extension.ts"));
+      run(`extensions add ${source} --skip-install`, repo);
 
       const rootHelp = run("--help", repo);
       expect(rootHelp).toContain("workbench-fixture [command]");

@@ -84,10 +84,10 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
 }) => {
   const project = await createProject(request);
 
-  const initialInstallResponse = await request.post(
-    `${apiBase}/v1/projects/${project.id}/extensions/marketplace/${marketplaceExtension}/install`,
-  );
-  expect(initialInstallResponse.status(), await initialInstallResponse.text()).toBe(200);
+  const initialInstallResponse = await request.post(`${apiBase}/v1/projects/${project.id}/extensions/install`, {
+    data: { source: { kind: "catalog", name: marketplaceExtension }, force: true },
+  });
+  expect(initialInstallResponse.status(), await initialInstallResponse.text()).toBe(201);
 
   const listResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions`);
   expect(listResponse.ok()).toBe(true);
@@ -129,12 +129,10 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
 
   const installReads = await holdProjectExtensionReads(page, project.id);
   const installResponse = page.waitForResponse(
-    (response) =>
-      response.url().includes(`/extensions/marketplace/${marketplaceExtension}/install`) &&
-      response.request().method() === "POST",
+    (response) => response.url().includes(`/extensions/install`) && response.request().method() === "POST",
   );
   await availableRow.getByTestId("marketplace-extension-install").click();
-  expect((await installResponse).status()).toBe(200);
+  expect((await installResponse).status()).toBe(201);
   await expect(installedRow).toBeVisible();
   await expect(availableRow).toHaveCount(0);
   expect(existsSync(installedManifestPath())).toBe(true);

@@ -2,7 +2,6 @@ import { describe, expect, mock, test } from "bun:test";
 import { join, resolve } from "node:path";
 import { RepoScopedExtensionNeedsProjectFolderError } from "../features/extensions/install-extension-source";
 import { createExtensionUpgradeService } from "./extension-upgrade-service";
-import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 
 const repoToolsCatalog = {
   version: 1 as const,
@@ -123,24 +122,19 @@ describe("marketplace extension installation", () => {
       },
     });
 
-    expect(await service.installMarketplaceExtension("project-1", "repo-tools")).toMatchObject({
-      installedSource: { install_name: "repo-tools" },
-      instance: { id: "instance-1" },
-    });
+    expect(await service.installSource("project-1", { source: { kind: "catalog", name: "repo-tools" } })).toMatchObject(
+      {
+        installName: "repo-tools",
+        targetPath,
+      },
+    );
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
-        force: true,
+        force: undefined,
         installName: "repo-tools",
         repoPath,
         skipInstall: true,
         source: join(sourceRoot, ".pstdio", "extensions", "repo-tools"),
-      }),
-    );
-    expect(enableInstalledSourceForProject).toHaveBeenCalledWith(
-      expect.objectContaining({
-        installName: "repo-tools",
-        projectId: "project-1",
-        sourcePath: targetPath,
       }),
     );
   });
@@ -159,11 +153,11 @@ describe("marketplace extension installation", () => {
         throw new RepoScopedExtensionNeedsProjectFolderError("pstdio.repo-tools");
       },
       release: { source: "workspace", ref: "workspace-ref", root: resolve("/checkout/prompt-studio") },
-      workspaceService: { getDefault: async () => ({ root_path: null }) },
+      workspaceService: { getDefault: async () => ({ root_path: null, execution_kind: "remote" }) },
     });
 
-    await expect(service.installMarketplaceExtension("project-1", "repo-tools")).rejects.toBeInstanceOf(
-      ExtensionUpgradeUnavailableError,
-    );
+    await expect(
+      service.installSource("project-1", { source: { kind: "catalog", name: "repo-tools" } }),
+    ).rejects.toBeInstanceOf(RepoScopedExtensionNeedsProjectFolderError);
   });
 });

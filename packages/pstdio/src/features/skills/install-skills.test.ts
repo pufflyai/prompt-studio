@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { resetApiClient } from "@/features/api-client";
-import { installDefaultSkills, installSkillsForAgent } from "./install-default-skills";
+import { installSkillsForAgent } from "./install-skills";
 
 const tmpBase = join(import.meta.dirname, "__test-tmp__");
 
 const TEST_PROJECT_ID = "test-project-123";
-const TEST_BASE_URL = "http://test:3000";
 
 const SKILL_FIXTURES = [
   {
@@ -54,12 +53,6 @@ const CLAUDE_AGENT = {
   id: "pstdio.harness-claude-code.harness.claude-code",
   availability: { type: "INSTALLED" as const },
   skills: { dir: ".claude/skills", global_dir: ".claude/skills" },
-};
-
-const OPENCODE_AGENT = {
-  id: "pstdio.harness-open-code.harness.opencode",
-  availability: { type: "INSTALLED" as const },
-  skills: { dir: ".agents/skills", global_dir: ".agents/skills" },
 };
 
 const originalFetch = globalThis.fetch;
@@ -116,8 +109,6 @@ const setup = (name: string) => {
   return dir;
 };
 
-const FAKE_HOME = join(tmpBase, "__fake-home__");
-
 beforeEach(() => {
   resetApiClient();
   mkdirSync(tmpBase, { recursive: true });
@@ -127,99 +118,6 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
   resetApiClient();
   rmSync(tmpBase, { recursive: true, force: true });
-});
-
-describe("installDefaultSkills", () => {
-  test("installs skills to the claude-code dir when its harness is installed", async () => {
-    mockApi([CLAUDE_AGENT]);
-    const root = setup("claude-agent");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-
-    for (const skill of SKILL_NAMES) {
-      expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
-    }
-    expect(existsSync(join(root, ".claude", "skills", "create-ticket", "templates", "example.md"))).toBe(true);
-    expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
-  });
-
-  test("installs skills to the shared agent dir when the opencode harness is installed", async () => {
-    mockApi([OPENCODE_AGENT]);
-    const root = setup("opencode-agent");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-
-    for (const skill of SKILL_NAMES) {
-      expect(existsSync(join(root, ".agents", "skills", skill, "SKILL.md"))).toBe(true);
-    }
-    expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
-  });
-
-  test("installs skills to both dirs when both harnesses are installed", async () => {
-    mockApi([CLAUDE_AGENT, OPENCODE_AGENT]);
-    const root = setup("both-agents");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-
-    for (const skill of SKILL_NAMES) {
-      expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
-      expect(existsSync(join(root, ".agents", "skills", skill, "SKILL.md"))).toBe(true);
-    }
-  });
-
-  test("does nothing when no harness is installed", async () => {
-    mockApi([]);
-    const root = setup("no-agents");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-
-    expect(existsSync(join(root, ".claude", "skills"))).toBe(false);
-    expect(existsSync(join(root, ".agents", "skills"))).toBe(false);
-  });
-
-  test("replaces same-name installed skills with the managed catalog version", async () => {
-    mockApi([CLAUDE_AGENT]);
-    const root = setup("skip-existing");
-
-    const existingSkillDir = join(root, ".claude", "skills", SKILL_FIXTURES[0].name);
-    mkdirSync(existingSkillDir, { recursive: true });
-    writeFileSync(join(existingSkillDir, "SKILL.md"), "custom content");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-
-    const content = readFileSync(join(existingSkillDir, "SKILL.md"), "utf8");
-    expect(content).toBe(SKILL_FIXTURES[0].files[0].content);
-  });
-
-  test("is idempotent", async () => {
-    mockApi([CLAUDE_AGENT]);
-    const root = setup("idempotent");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, FAKE_HOME);
-
-    const skillFile = join(root, ".claude", "skills", SKILL_FIXTURES[0].name, "SKILL.md");
-    expect(existsSync(skillFile)).toBe(true);
-  });
-
-  test("updates an existing global copy instead of creating a shadowing local copy", async () => {
-    mockApi([CLAUDE_AGENT]);
-    const root = setup("skip-global");
-    const fakeHome = setup("fake-home-global");
-
-    const globalSkillName = SKILL_FIXTURES[0].name;
-    const globalSkillDir = join(fakeHome, ".claude", "skills", globalSkillName);
-    mkdirSync(globalSkillDir, { recursive: true });
-    writeFileSync(join(globalSkillDir, "SKILL.md"), "global version");
-
-    await installDefaultSkills(root, TEST_PROJECT_ID, TEST_BASE_URL, fakeHome);
-
-    expect(existsSync(join(root, ".claude", "skills", globalSkillName))).toBe(false);
-    expect(readFileSync(join(globalSkillDir, "SKILL.md"), "utf8")).toBe(SKILL_FIXTURES[0].files[0].content);
-
-    const otherSkill = SKILL_NAMES.find((s) => s !== globalSkillName)!;
-    expect(existsSync(join(root, ".claude", "skills", otherSkill, "SKILL.md"))).toBe(true);
-  });
 });
 
 describe("installSkillsForAgent", () => {

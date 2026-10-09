@@ -43,8 +43,10 @@ export const registerResourceLinksSmokeTests = () => {
         writeFileSync(
           join(sourcePath, "extension.ts"),
           `export default {
-          resourceKinds: [{id:"item", ref:{kind:"resource-kind",id:"item"}}],
+          resourceKinds: [{id:"item", ref:{kind:"resource-kind",id:"item"}, resolveMany:{kind:"command",id:"resolve-many"}}],
+          commandPaletteResources: [{id:"items", ref:{kind:"command-palette-resource",id:"items"}, title:"Items", resourceKind:{kind:"resource-kind",id:"item"}, refreshEvents:["view.resource-anchors.changed"], query:async () => ({items:[]})}],
           commands: [
+            {id:"resolve-many", ref:{kind:"command",id:"resolve-many"}, title:"Resolve resources", async run(_ctx, params) { return params.resources.map(resource => ({resource:{...resource,label:resource.id}})); }},
             {id:"link", ref:{kind:"command",id:"link"}, title:"Link", async run(ctx) { await ctx.resources.addAnchors({type:"item",id:"one"}, [{type:"item",id:"two",extensionId:"test.art",role:"result",metadata:{revision:2}}]); }},
             {id:"read", ref:{kind:"command",id:"read"}, title:"Read", async run(ctx) { return ctx.resources.listAnchors({resource:{type:"item",id:"two"},direction:"incoming"}); }},
             {id:"removed", ref:{kind:"command",id:"removed"}, title:"Removed", async run(ctx) { await ctx.resources.removed({type:"item",id:"two"}); }}
@@ -67,6 +69,25 @@ export const registerResourceLinksSmokeTests = () => {
         request(`/v1/projects/${project.id}/extensions/commands/test.${owner}.command.${command}/execute`, {
           source: "api",
         });
+      const batch = await request(
+        `/v1/projects/${project.id}/extensions/commands/test.art.command.resolve-many/execute`,
+        {
+          params: { resources: [{ type: "item", id: "two", extensionId: "test.art", projectId: project.id }] },
+          source: "api",
+        },
+      );
+      expect(batch).toMatchObject({ outcome: { ok: true, value: [{ resource: { id: "two", label: "two" } }] } });
+      const metadata = await fetch(`${runtime.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
+        headers: runtimeAuthorization(runtime.descriptor),
+      }).then((response) => response.json());
+      expect(
+        metadata.resourceKinds.find((kind: { extensionId: string }) => kind.extensionId === "test.art"),
+      ).toMatchObject({ resolveManyCommand: "test.art.command.resolve-many" });
+      expect(
+        metadata.commandPaletteResources.find(
+          (provider: { extensionId: string }) => provider.extensionId === "test.art",
+        ),
+      ).toMatchObject({ refreshEventIds: ["view.resource-anchors.changed"] });
       expect(await execute("notes", "link")).toMatchObject({ outcome: { ok: true } });
       expect(await execute("art", "read")).toMatchObject({
         outcome: {

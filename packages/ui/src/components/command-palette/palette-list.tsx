@@ -1,10 +1,10 @@
 import { Box, HStack, Icon, Text } from "@chakra-ui/react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { Check } from "lucide-react";
 import { type RefObject, useEffect } from "react";
 import type { PaletteEntry } from "@/components/command-palette/palette";
 import { ListRow } from "@/components/list-row/list-row";
 import type { ListRowItem } from "@/components/list-row/list-row.types";
+import { useVirtualizer } from "@/utils/use-virtualizer";
 
 type PaletteRow<T extends PaletteEntry> =
   | { type: "group"; id: string; label: string }

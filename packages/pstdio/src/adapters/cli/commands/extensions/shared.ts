@@ -1,9 +1,5 @@
-import {
-  formatExtensionsCheck,
-  type InstalledExtensionSource,
-  toExtensionEnableInput,
-} from "pstdio-api/extensions/install-extension-source";
-import { apiClient } from "@/features/api-client";
+import type { InstalledExtensionSource } from "@pstdio/sdk/api";
+import { formatExtensionsCheck } from "pstdio-extensions/authoring";
 
 export type ExtensionsAddArgs = {
   branch?: string;
@@ -16,31 +12,17 @@ export type ExtensionsAddArgs = {
 export type ExtensionsCheckArgs = {
   json?: boolean;
   scope?: "repo" | "user";
+  source?: string;
 };
 
-export const enableInstalledExtension = async (projectId: string, installed: InstalledExtensionSource) =>
-  apiClient().extensions.enableInstalled(projectId, installed.installName, toExtensionEnableInput(installed));
-
-export const formatInstallOutput = (
-  installed: InstalledExtensionSource,
-  project:
-    | { state: "enabled"; projectId: string }
-    | {
-        state: "skipped";
-      },
-) => {
+export const formatInstallOutput = (installed: InstalledExtensionSource, projectId: string) => {
   const lines = ["Installed extension:", `  Id: ${installed.metadata.id}`, `  Name: ${installed.metadata.name}`];
-
   if (installed.metadata.version) lines.push(`  Version: ${installed.metadata.version}`);
-  lines.push(`  Source: ${installed.targetPath}`);
-
-  if (project.state === "enabled") {
-    lines.push(`  Project: enabled for ${project.projectId}`);
-  } else {
-    lines.push("  Project: not enabled");
-    lines.push("  Run inside a linked project to enable automatically.");
-  }
-
-  lines.push("", formatExtensionsCheck(installed.check));
+  lines.push(
+    `  Source: ${installed.targetPath}`,
+    `  Project: enabled for ${projectId}`,
+    "",
+    formatExtensionsCheck(installed.check),
+  );
   return lines.join("\n");
 };

@@ -1,82 +1,79 @@
-import { join } from "node:path";
+import { resolve } from "node:path";
 import { EXTENSION_API_VERSION, SDK_VERSION } from "@pstdio/sdk/extensions";
-import {
-  checkExtensionsRoot,
-  dashboardExtensionHostCapabilities,
-  formatExtensionsCheck,
-  resolvePstdioHome,
-} from "pstdio-api/extensions/install-extension-source";
+import { checkExtensions, formatCheckReport } from "pstdio-extensions";
+import { formatExtensionsCheck } from "pstdio-extensions/authoring";
 import type { Arguments, Argv } from "yargs";
+import { apiClient } from "@/features/api-client";
 import { CLI_VERSION } from "@/features/cli-version";
-import { findProjectRoot } from "@/features/config/config";
+import { findProjectRoot, readConfig } from "@/features/config/config";
+import { ensureApi } from "@/features/ensure-api";
 import type { ExtensionsCheckArgs } from "./shared";
 
-export const command = "check";
-export const describe = "Validate installed extension sources";
-
+export const command = "check [source]";
+export const describe = "Validate a local source or the host's installed extensions";
 export const builder = (yargs: Argv) =>
   yargs
+    .positional("source", { type: "string", describe: "Local authoring folder" })
     .option("scope", {
       choices: ["repo", "user"] as const,
-      describe: "Check only repo-local or user extensions; checks both when omitted",
+      describe: "Check the host's repo or user extensions; checks both when omitted",
     })
-    .option("json", {
-      type: "boolean",
-      default: false,
-      describe: "Print diagnostics as JSON",
-    });
+    .option("json", { type: "boolean", default: false, describe: "Print diagnostics as JSON" });
 
 type Deps = {
-  checkExtensionsRoot: typeof checkExtensionsRoot;
   cwd: () => string;
   findProjectRoot: typeof findProjectRoot;
+  readConfig: typeof readConfig;
+  ensureApi: typeof ensureApi;
+  diagnostics: ReturnType<typeof apiClient>["extensions"]["diagnostics"];
+  checkLocal: typeof checkExtensions;
   log: (message: string) => void;
-  resolvePstdioHome: typeof resolvePstdioHome;
 };
-
 const defaultDeps: Deps = {
-  checkExtensionsRoot,
   cwd: () => process.cwd(),
   findProjectRoot,
+  readConfig,
+  ensureApi,
+  diagnostics: (...args) => apiClient().extensions.diagnostics(...args),
+  checkLocal: checkExtensions,
   log: console.log,
-  resolvePstdioHome,
 };
-
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsCheckArgs>) => {
-    const projectRoot = argv.scope === "user" ? null : deps.findProjectRoot(deps.cwd());
-    if (argv.scope === "repo" && !projectRoot) throw new Error("Run the repo scope inside a project folder.");
-    const roots: string[] = [];
-    if (argv.scope !== "repo") roots.push(join(deps.resolvePstdioHome({ env: process.env }), "extensions"));
-    if (projectRoot) roots.push(join(projectRoot, ".pstdio", "extensions"));
-    const checks = [];
     const versions = {
       cli: CLI_VERSION,
       extensionApi: EXTENSION_API_VERSION,
       sdk: SDK_VERSION,
       dashboard: CLI_VERSION,
     };
-
-    for (const root of roots) {
-      checks.push(
-        await deps.checkExtensionsRoot(root, {
-          hostCapabilities: { ...dashboardExtensionHostCapabilities, hostVersion: CLI_VERSION },
-        }),
-      );
+    if (argv.source) {
+      if (argv.scope) throw new Error("Choose a local source or an installed scope.");
+      const path = resolve(deps.cwd(), argv.source);
+      const check = await deps.checkLocal({
+        extensionsRoot: path,
+        extensionPackages: [{ path, sourceKind: "local_path" }],
+        extensionRoots: [],
+      });
+      deps.log(argv.json ? JSON.stringify({ versions, check }, null, 2) : formatCheckReport(check));
+      if (check.errorCount) throw new Error(`Extension check failed with ${check.errorCount} error(s)`);
+      return;
     }
-
-    const versionSummary = `CLI: ${versions.cli}\nExtension API: ${versions.extensionApi}\nSDK: ${versions.sdk}\nDashboard (bundled): ${versions.dashboard}`;
+    const root = deps.findProjectRoot(deps.cwd());
+    const projectId = root && deps.readConfig(root)?.project_id;
+    if (!projectId) throw new Error("Run installed extension checks inside a linked project.");
+    await deps.ensureApi(process.env.PSTDIO_API_URL);
+    const { roots } = await deps.diagnostics(projectId, { scope: argv.scope });
+    const checks = roots.map((root) => root.check);
     deps.log(
       argv.json
         ? JSON.stringify({ versions, checks }, null, 2)
-        : [versionSummary, ...checks.map(formatExtensionsCheck)].join("\n\n"),
+        : [
+            `CLI: ${versions.cli}\nExtension API: ${versions.extensionApi}\nSDK: ${versions.sdk}\nDashboard (bundled): ${versions.dashboard}`,
+            ...checks.map(formatExtensionsCheck),
+          ].join("\n\n"),
     );
-
-    const errorCount = checks.reduce((total, check) => total + check.errorCount, 0);
-    if (errorCount > 0) {
-      throw new Error(`Extension check failed with ${errorCount} error(s)`);
-    }
+    const errors = checks.reduce((count, check) => count + check.errorCount, 0);
+    if (errors) throw new Error(`Extension check failed with ${errors} error(s)`);
   };
-
 export const handler = createHandler();
