@@ -87,7 +87,7 @@ const ArtifactsApp = (props: AppProps) => {
     setCreating(example);
     setError(undefined);
     try {
-      await client.commands.startCreation({ example });
+      await client.commands["start-creation"]({ example });
     } catch (error) {
       setError(String(error));
     } finally {
