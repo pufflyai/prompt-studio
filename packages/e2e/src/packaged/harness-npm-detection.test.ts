@@ -1,5 +1,4 @@
-import { beforeAll, expect, test } from "bun:test";
-import type { ChildProcess } from "node:child_process";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
@@ -46,60 +45,66 @@ const installFixtures = (prefix: string, broken: boolean) => {
   }
 };
 
+const root = mkdtempSync(join(tmpdir(), "packaged-harness-discovery-"));
+const prefix = join(root, "User Å Name & Tools", "custom-prefix");
+let runtime: Awaited<ReturnType<typeof startPackagedServe>>;
+
+// Both projects use one runtime: changing the CLI fixtures also proves discovery
+// observes the current installation instead of caching a previous success.
+beforeAll(async () => {
+  installFixtures(prefix, false);
+  runtime = await startPackagedServe(root, {
+    PATH: `${prefix}${delimiter}${process.env.PATH}`,
+    PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(...harnesses.map((harness) => harness.extension)),
+  });
+}, 30_000);
+
+afterAll(async () => {
+  if (runtime) await stopProcess(runtime.child);
+  rmSync(root, { recursive: true, force: true });
+});
+
 for (const broken of [false, true]) {
   test(broken
     ? "lists healthy harnesses beside failed and hanging npm probes"
     : "detects all npm harnesses from a custom prefix", async () => {
-    const root = mkdtempSync(join(tmpdir(), "packaged-harness-discovery-"));
-    const prefix = join(root, "User Å Name & Tools", broken ? "npm" : "custom-prefix");
     installFixtures(prefix, broken);
-
-    let child: ChildProcess | undefined;
-    try {
-      const started = await startPackagedServe(root, {
-        PATH: `${prefix}${delimiter}${process.env.PATH}`,
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(...harnesses.map((harness) => harness.extension)),
+    const started = runtime;
+    const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
+    const createProject = async (name: string, agents?: string[]) => {
+      const folder = join(root, name);
+      mkdirSync(folder);
+      const created = await fetch(`${started.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(folderProjectInput({ name, ...(agents ? { agents } : {}) }, folder)),
       });
-      child = started.child;
-      const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
-      const createProject = async (name: string, agents?: string[]) => {
-        const folder = join(root, name);
-        mkdirSync(folder);
-        const created = await fetch(`${started.baseUrl}/v1/projects`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(folderProjectInput({ name, ...(agents ? { agents } : {}) }, folder)),
-        });
-        expect(created.status).toBe(201);
-        return (await created.json()) as { id: string };
-      };
-      const project = await createProject("harnesses");
-      const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
-      expect(agents.status).toBe(200);
-      const result = (await agents.json()) as Array<{ id: string; availability: { type: string } }>;
-      expect(result).toHaveLength(3);
-      for (const harness of harnesses) {
-        expect(result).toContainEqual(
-          expect.objectContaining({
-            id: harnessId(harness),
-            availability: { type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED" },
-          }),
-        );
-      }
-      if (!broken) {
-        const models = await fetch(
-          `${started.baseUrl}/v1/agents/${harnessId(harnesses[0])}/models?project=${project.id}`,
-          { headers },
-        );
-        expect(models.status).toBe(200);
-        expect(await models.json()).toEqual([expect.objectContaining({ id: "opencode/test-model" })]);
-        const selected = await createProject("selected", [harnessId(harnesses[0])]);
-        const scoped = await fetch(`${started.baseUrl}/v1/agents/info?project=${selected.id}`, { headers });
-        expect(((await scoped.json()) as Array<{ id: string }>).map(({ id }) => id)).toEqual([harnessId(harnesses[0])]);
-      }
-    } finally {
-      if (child) await stopProcess(child);
-      rmSync(root, { recursive: true, force: true });
+      expect(created.status).toBe(201);
+      return (await created.json()) as { id: string };
+    };
+    const project = await createProject(broken ? "broken-harnesses" : "healthy-harnesses");
+    const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
+    expect(agents.status).toBe(200);
+    const result = (await agents.json()) as Array<{ id: string; availability: { type: string } }>;
+    expect(result).toHaveLength(3);
+    for (const harness of harnesses) {
+      expect(result).toContainEqual(
+        expect.objectContaining({
+          id: harnessId(harness),
+          availability: { type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED" },
+        }),
+      );
+    }
+    if (!broken) {
+      const models = await fetch(
+        `${started.baseUrl}/v1/agents/${harnessId(harnesses[0])}/models?project=${project.id}`,
+        { headers },
+      );
+      expect(models.status).toBe(200);
+      expect(await models.json()).toEqual([expect.objectContaining({ id: "opencode/test-model" })]);
+      const selected = await createProject("selected", [harnessId(harnesses[0])]);
+      const scoped = await fetch(`${started.baseUrl}/v1/agents/info?project=${selected.id}`, { headers });
+      expect(((await scoped.json()) as Array<{ id: string }>).map(({ id }) => id)).toEqual([harnessId(harnesses[0])]);
     }
   }, 30_000);
 }
