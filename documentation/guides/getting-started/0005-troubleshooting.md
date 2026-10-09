@@ -51,6 +51,7 @@ Prompt Studio looks for the agent's command, such as `claude`, `codex`, or `open
 - Make sure the command runs in a terminal.
 - The runtime reads `PATH` when it starts. After you install an agent, restart the runtime: quit the desktop app, or run `pst close` and then `pst`.
 - On macOS and Linux, the desktop app reads `PATH` from your login shell. Add the agent's folder to `PATH` in your shell's startup file, not only in one terminal window.
+- On Windows, run `where.exe opencode` in PowerShell to check an npm installation. It should include `opencode.cmd` in your npm global folder, usually `%APPDATA%\npm`. Keep that folder on your Windows user `PATH` so the desktop app can find it.
 
 ## An extension does not load
 
