@@ -66,7 +66,7 @@ test("starts and opens creation sessions from both artifact examples", async ({ 
       const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
       const response = page.waitForResponse(
         (response) =>
-          response.url().endsWith(`${extensionId}.command.startCreation/execute`) &&
+          response.url().endsWith(`${extensionId}.command.start-creation/execute`) &&
           response.request().method() === "POST",
       );
       await frame.getByRole("button", { name: title, exact: true }).click();
