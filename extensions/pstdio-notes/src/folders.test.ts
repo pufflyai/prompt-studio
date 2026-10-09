@@ -36,3 +36,16 @@ test("rejects missing folders and blank folder names without moving a note", asy
   await expect(moveNote(mount, note.id, "missing")).rejects.toThrow("Folder not found");
   expect((await listNotes(mount))[0].folderId).toBeUndefined();
 });
+
+test("rejects duplicate folder names on creation and rename, ignoring case and surrounding space", async () => {
+  const mount = createNotesMount();
+  const first = await createFolder(mount, "Research");
+  await expect(createFolder(mount, " research ")).rejects.toThrow("already exists");
+  const second = await createFolder(mount, "Ideas");
+  await expect(renameFolder(mount, second.id, "RESEARCH")).rejects.toThrow("already exists");
+  await renameFolder(mount, first.id, "RESEARCH");
+  expect(await listFolders(mount)).toEqual([
+    { id: second.id, title: "Ideas" },
+    { id: first.id, title: "RESEARCH" },
+  ]);
+});
