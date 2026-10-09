@@ -60,6 +60,22 @@ afterAll(async () => {
   rmSync(root, { recursive: true, force: true });
 });
 
+const expectProbeExited = async (command: string) => {
+  const pid = Number(await Bun.file(join(prefix, `${command}.pid`)).text());
+  expect(pid).toBeGreaterThan(0);
+  // A timeout response can arrive just before the OS finishes stopping the child.
+  // Keep the runtime alive and still require the child to exit within one second.
+  for (let attempt = 0; attempt < 50; attempt++) {
+    try {
+      process.kill(pid, 0);
+    } catch {
+      return;
+    }
+    await Bun.sleep(20);
+  }
+  throw new Error(`Version probe ${command} is still alive after its deadline.`);
+};
+
 for (const broken of [false, true]) {
   test(broken
     ? "refreshes the same project and lists healthy harnesses beside failed and hanging npm probes"
@@ -94,21 +110,7 @@ for (const broken of [false, true]) {
       );
     }
     if (broken) {
-      // The registry deadline can answer before the process timeout finishes
-      // stopping the wrapper. Keep its owner alive until cleanup has completed.
-      const pid = Number(await Bun.file(join(prefix, "opencode.pid")).text());
-      expect(pid).toBeGreaterThan(0);
-      let alive = true;
-      for (let attempt = 0; attempt < 50; attempt++) {
-        try {
-          process.kill(pid, 0);
-        } catch {
-          alive = false;
-          break;
-        }
-        await Bun.sleep(20);
-      }
-      expect(alive).toBe(false);
+      await expectProbeExited("opencode");
     }
     if (!broken) {
       const models = await fetch(
@@ -141,11 +143,7 @@ test("returns no models and stops every hanging version probe", async () => {
     );
     for (const result of results)
       expect(result.status, result.status === "rejected" ? String(result.reason) : undefined).toBe("fulfilled");
-    for (const harness of harnesses) {
-      const pid = Number(await Bun.file(join(prefix, `${harness.command}.pid`)).text());
-      expect(pid).toBeGreaterThan(0);
-      expect(() => process.kill(pid, 0)).toThrow();
-    }
+    await Promise.all(harnesses.map((harness) => expectProbeExited(harness.command)));
   } finally {
     // A failing regression must not leave fixtures alive after the test runtime exits.
     for (const harness of harnesses) {
