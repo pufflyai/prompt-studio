@@ -4,7 +4,7 @@ import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -79,6 +79,8 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
       ...(state === "changes-preparing" || state === "changes-recovery"
         ? { workspaceProviderState: "provisioning" }
         : {}),
+      workspaceSupportsFiles: state !== "remote",
+      workspaceSupportsDelete: state === "remote",
       workspaceSupportsDiff: state !== "default" && state !== "remote",
       ...(state === "failed"
         ? {
@@ -224,7 +226,22 @@ export const MonacoTextFile: Story = { args: { state: "text" } };
 export const ImagePreview: Story = { args: { state: "image" } };
 export const DefaultWorkspace: Story = { args: { state: "default" } };
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
-export const RemoteWithoutFileViews: Story = { args: { state: "remote" } };
+export const RemoteWithoutFileViews: Story = {
+  args: { state: "remote" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Workspace state: Ready")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Rename workspace" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Delete workspace" })).toBeVisible();
+    await expect(canvas.queryByRole("region", { name: "Files" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: "Files" })).not.toBeInTheDocument();
+    await expect(canvas.queryByText("Select a file")).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "Open terminal" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Rename workspace" }));
+    await waitFor(() => expect(within(document.body).getByRole("dialog", { name: "Rename workspace" })).toBeVisible());
+    await userEvent.click(within(document.body).getByRole("button", { name: "Cancel" }));
+  },
+};
 
 export const PreparingWorkspace: Story = { args: { state: "preparing" } };
 
