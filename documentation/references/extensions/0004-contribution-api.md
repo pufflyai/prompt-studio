@@ -207,6 +207,9 @@ menus: [
 Workspace resources use the host project mode. Target workspace actions with
 `workbenchResourceKinds.workspace`; the SDK does not export a host workspace mode.
 
+The host adds **Copy link** to the breadcrumb menu on every page. It copies the page URL, including the selected
+document. Do not add a separate copy-link action or view to an extension.
+
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
 
 ## Native view toolbar actions

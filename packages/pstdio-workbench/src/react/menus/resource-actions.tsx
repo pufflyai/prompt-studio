@@ -1,7 +1,7 @@
 import { Icon } from "@chakra-ui/react";
 import type { ResourceContextAction, TreeListActionMenuItem } from "@pstdio/ui";
 import type { ResourceRef, WorkbenchCoreContributionContext } from "../../core";
-import { resourceContextMenuPath } from "../../core";
+import { resourceContextMenuPath, workbenchBreadcrumbLocationMenuPath } from "../../core";
 import { createTreeContextMenuItems } from "../renderers/tree/tree-actions";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -20,6 +20,16 @@ export const createWorkbenchResourceActions = (workbench: WorkbenchCoreContribut
     menuPath: resourceContextMenuPath(resource.type),
     workbench,
     context: { resource },
+    onRequestParams: ({ request }) => workbench.commandPalette.requestParams(request),
+  }).map(toResourceContextAction);
+export const createWorkbenchLocationActions = (
+  workbench: WorkbenchCoreContributionContext,
+  resource: ResourceRef | undefined,
+) =>
+  createTreeContextMenuItems({
+    menuPath: workbenchBreadcrumbLocationMenuPath,
+    workbench,
+    context: resource ? { resource } : undefined,
     onRequestParams: ({ request }) => workbench.commandPalette.requestParams(request),
   }).map(toResourceContextAction);
 export const useWorkbenchResourceActionResolver = (workbench: WorkbenchCoreContributionContext) => {

@@ -262,6 +262,7 @@ export {
   runUserAction,
   settleReadBatch,
   standardResourceIcons,
+  workbenchBreadcrumbLocationMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchPanelRegions,
   workbenchRegions,
