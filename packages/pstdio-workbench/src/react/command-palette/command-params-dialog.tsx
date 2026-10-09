@@ -12,6 +12,7 @@ import {
   listCommandParamEntries,
   mergeCommandParamArgs,
   normalizeCommandParamValues,
+  resolveCommandResourceParams,
 } from "./command-palette-params";
 import { CommandParamField, type CommandParamFieldRenderer } from "./command-param-field";
 import { useCommandOptions } from "./use-command-options";
@@ -68,6 +69,9 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
   const [values, setValues] = useState<Record<string, CommandParamValue>>(() =>
     buildCommandParamInitialValues(request.record.command.params, request.args, request.context),
   );
+  const [resolved] = useState(() =>
+    resolveCommandResourceParams(request.record.command.params, request.args, request.context),
+  );
   const [error, setError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const entries = listCommandParamEntries(request?.record.command.params);
@@ -81,7 +85,13 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
     setValues((current) => ({ ...current, [key]: value }));
   };
 
-  const options = useCommandOptions(request.record.command.params ?? {}, values, executeOptionCommand, setValue);
+  const options = useCommandOptions(
+    request.record.command.params ?? {},
+    values,
+    executeOptionCommand,
+    setValue,
+    resolved,
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const run = async () => {
@@ -93,7 +103,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
     setError(undefined);
     try {
       const params = normalizeCommandParamValues(request.record.command.params, values);
-      const args = mergeCommandParamArgs(request.args, params, request.record.command.params);
+      const args = mergeCommandParamArgs(request.args, { ...resolved, ...params }, request.record.command.params);
       const preparedArgs = prepareArgs
         ? await prepareArgs({
             commandId: request.record.command.id,
