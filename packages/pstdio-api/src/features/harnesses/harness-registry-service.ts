@@ -45,8 +45,12 @@ export const resolveHarnessName = (handle: Pick<HarnessHandle, "label" | "localI
   return handle.label;
 };
 
-export const toAvailabilityInfo = (detection: { available: boolean }): { type: AgentAvailabilityType } => ({
+export const toAvailabilityInfo = (detection: {
+  available: boolean;
+  reason?: string;
+}): { type: AgentAvailabilityType; reason?: string } => ({
   type: detection.available ? "INSTALLED" : "NOT_FOUND",
+  ...(detection.reason ? { reason: detection.reason } : {}),
 });
 
 const harnessLogger = (extensionId: string) => ({

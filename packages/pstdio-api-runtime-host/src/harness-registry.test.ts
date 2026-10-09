@@ -75,7 +75,7 @@ describe("harness detection isolation", () => {
       buildContext,
     );
     expect(await Promise.all(registry.list().map((handle) => handle.detect()))).toEqual([
-      { available: false },
+      { available: false, reason: expect.stringMatching(/\S/) },
       { available: true },
     ]);
   });
@@ -89,9 +89,15 @@ describe("harness detection isolation", () => {
       buildContext,
     );
     expect(await Promise.all(registry.list().map((handle) => handle.detect()))).toEqual([
-      { available: false },
+      { available: false, reason: expect.stringMatching(/\S/) },
       { available: true },
     ]);
+  });
+
+  it("keeps the reason a provider gives for being unavailable", async () => {
+    const detection = { available: false, version: "0.1.0", reason: "The CLI is too old." };
+    const registry = createHarnessRegistry([record({ detect: () => detection })], buildContext);
+    expect(await registry.list()[0].detect()).toEqual(detection);
   });
 });
 

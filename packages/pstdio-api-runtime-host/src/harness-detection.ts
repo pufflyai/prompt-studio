@@ -31,7 +31,10 @@ export const detectHarness = async (provider: HarnessProvider, context: HarnessC
   } catch {
     // Do not log raw provider output: it can include credentials or other host data.
     context.logger.warn(`Harness ${provider.id} detection failed or exceeded ${DETECTION_TIMEOUT_MS} ms.`);
-    return { available: false };
+    return {
+      available: false,
+      reason: `The availability check failed or took longer than ${DETECTION_TIMEOUT_MS / 1000} seconds. Run pst logs for details.`,
+    };
   } finally {
     finished = true;
     clearTimeout(timer);

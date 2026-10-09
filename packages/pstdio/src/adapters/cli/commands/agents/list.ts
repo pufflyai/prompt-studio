@@ -10,6 +10,7 @@ export const handler = async () => {
     Harness: harness.name,
     Id: harness.id,
     Installed: harness.availability.type === "INSTALLED" ? "yes" : "no",
+    Problem: harness.availability.reason ?? "",
   }));
 
   console.table(rows);

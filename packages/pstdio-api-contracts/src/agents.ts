@@ -38,7 +38,11 @@ export const harnessParamsSchema = z.record(z.string(), harnessParamDescriptorSc
 export const agentInfoSchema = z.object({
   id: z.string(),
   name: z.string(),
-  availability: z.object({ type: agentAvailabilityTypeSchema }),
+  availability: z.object({
+    type: agentAvailabilityTypeSchema,
+    /** Why the harness cannot run, such as a missing or too-old CLI. */
+    reason: z.string().optional(),
+  }),
   /** Present when the harness declares skill directories. */
   skills: agentSkillsLayoutSchema.optional(),
   /** Present when the harness declares discrete run params. */

@@ -138,6 +138,8 @@ export const DisabledAgentSwitch: Story = {
   },
 };
 
+const unavailableReason = "Requires Codex 0.157.0 or newer. Found 0.155.0.";
+
 export const WithDisabledAgent: Story = {
   render: () => {
     const [selectedAgent, setSelectedAgent] = useState("claude-code");
@@ -145,7 +147,13 @@ export const WithDisabledAgent: Story = {
 
     const allAgents = [
       ...agentOptions,
-      { label: "Unavailable Agent", value: "unavailable", icon: Cpu, disabled: true },
+      {
+        label: "Outdated Agent",
+        value: "unavailable",
+        icon: Cpu,
+        disabled: true,
+        description: unavailableReason,
+      },
     ];
 
     const handleSelectAgent = (agent: string) => {
@@ -163,6 +171,12 @@ export const WithDisabledAgent: Story = {
         onSelectModel={setSelectedModel}
       />
     );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Select model" }));
+    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Select harness" }));
+    // An unavailable harness says why it cannot run.
+    await expect(await within(document.body).findByText(unavailableReason)).toBeVisible();
   },
 };
 
