@@ -195,6 +195,7 @@
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        "src/views/document-link.tsx",
         "src/views/tags-settings-panel.tsx",
         "src/timeline/view/entry.tsx"
       ],

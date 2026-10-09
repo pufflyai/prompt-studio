@@ -27,6 +27,7 @@ import type {
   MaybePromise,
 } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
+import { detectHarness } from "./harness-detection";
 
 export type HarnessCallOptions = {
   /** Project the call runs on behalf of, when there is one (session dispatch). */
@@ -199,7 +200,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     supportsReattach: typeof provider.reattach === "function",
     supportsHistory: typeof provider.getMessages === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
-    detect: async (options) => (provider.detect ? provider.detect(await ctx(options)) : { available: true }),
+    detect: async (options) => detectHarness(provider, await ctx(options)),
     listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),
     start: async (input, options) => {
       await validateInputParams(input, options);

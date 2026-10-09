@@ -2,6 +2,25 @@ import { describe, expect, test } from "bun:test";
 import { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
 
 describe("createExtensionProcessEnvironment", () => {
+  test("preserves Windows runtime variables and merges overrides without case duplicates", () => {
+    const env = createExtensionProcessEnvironment(
+      {
+        Path: "old",
+        COMSPEC: "cmd.exe",
+        SYSTEMROOT: "C:\\Windows",
+        PSMODULEPATH: "C:\\Modules",
+        openai_api_key: "secret",
+      },
+      { PATH: "new" },
+      "win32",
+    );
+    expect(env).toEqual({ PATH: "new", ComSpec: "cmd.exe", SystemRoot: "C:\\Windows", PSModulePath: "C:\\Modules" });
+  });
+
+  test("keeps Unix environment names case sensitive", () => {
+    expect(createExtensionProcessEnvironment({ Path: "ignored", PATH: "/bin" }, {}, "linux")).toEqual({ PATH: "/bin" });
+  });
+
   test("inherits only runtime-safe host variables and explicit overrides", () => {
     const env = createExtensionProcessEnvironment(
       {
@@ -39,22 +58,25 @@ describe("createExtensionProcessEnvironment", () => {
 
 describe("createExtensionInstallEnvironment", () => {
   test("inherits package network configuration without exposing unrelated host secrets", () => {
-    const env = createExtensionInstallEnvironment({
-      PATH: "/bin",
-      HTTPS_PROXY: "https://proxy.example.com",
-      http_proxy: "http://proxy.example.com",
-      NO_PROXY: "127.0.0.1,localhost",
-      BUN_CONFIG_REGISTRY: "https://registry.example.com",
-      npm_config_registry: "https://npm.example.com",
-      NPM_TOKEN: "registry-secret",
-      NODE_EXTRA_CA_CERTS: "/certs/company.pem",
-      npm_config_cafile: "/certs/npm.pem",
-      SSL_CERT_FILE: "/certs/system.pem",
-      PSTDIO_API_TOKEN: "runtime-secret",
-      OPENAI_API_KEY: "provider-secret",
-      GITHUB_TOKEN: "github-secret",
-      NODE_OPTIONS: "--require malicious.js",
-    });
+    const env = createExtensionInstallEnvironment(
+      {
+        PATH: "/bin",
+        HTTPS_PROXY: "https://proxy.example.com",
+        http_proxy: "http://proxy.example.com",
+        NO_PROXY: "127.0.0.1,localhost",
+        BUN_CONFIG_REGISTRY: "https://registry.example.com",
+        npm_config_registry: "https://npm.example.com",
+        NPM_TOKEN: "registry-secret",
+        NODE_EXTRA_CA_CERTS: "/certs/company.pem",
+        npm_config_cafile: "/certs/npm.pem",
+        SSL_CERT_FILE: "/certs/system.pem",
+        PSTDIO_API_TOKEN: "runtime-secret",
+        OPENAI_API_KEY: "provider-secret",
+        GITHUB_TOKEN: "github-secret",
+        NODE_OPTIONS: "--require malicious.js",
+      },
+      "linux",
+    );
 
     expect(env).toEqual({
       PATH: "/bin",

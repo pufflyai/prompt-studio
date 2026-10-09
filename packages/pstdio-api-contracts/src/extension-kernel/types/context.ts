@@ -12,7 +12,7 @@ import type {
 } from "./commands";
 import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
 import type { EventDeliveryResult, EventRef } from "./events";
-import type { JsonObject, MaybePromise, Struct } from "./json";
+import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { ExtensionResourcesApi, RendererContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
@@ -301,8 +301,16 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   settings: ExtensionSettingsApi<TSettings>;
 }
 
-export interface CommandContext<TSettings extends Record<string, unknown> = Record<string, unknown>>
-  extends ExtensionContextBase<TSettings> {
+export interface CommandStreamWriter<TChunk extends JsonValue = JsonValue> {
+  /** Waits for the reader. Ordinary command calls discard chunks. */
+  write(chunk: TChunk): Promise<void>;
+}
+
+export interface CommandContext<
+  TSettings extends Record<string, unknown> = Record<string, unknown>,
+  TChunk extends JsonValue = JsonValue,
+> extends ExtensionContextBase<TSettings> {
+  stream: CommandStreamWriter<TChunk>;
   commandId: string;
   invocationId: string;
   /** Aborts when the host cancels this command run. Handlers must stop external side effects when it fires. */
@@ -329,7 +337,8 @@ export type CommandRunHandler<
   TParams extends Struct = Struct,
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
-> = (ctx: CommandContext<TSettings>, params: TParams) => MaybePromise<TResult>;
+  TChunk extends JsonValue = JsonValue,
+> = (ctx: CommandContext<TSettings, TChunk>, params: TParams) => MaybePromise<TResult>;
 
 export type RendererCallback<
   TInput extends Struct = Struct,

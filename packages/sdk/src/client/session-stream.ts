@@ -13,8 +13,12 @@ export interface SessionStreamListener {
   onError(error: unknown): void;
 }
 
+export type ClientStreamSubscription =
+  | { session_id: string }
+  | { command: { project_id: string; command_id: string; body: import("pstdio-api-contracts").CommandExecuteBody } };
+
 interface Subscription extends SessionStreamListener {
-  sessionId: string;
+  input: ClientStreamSubscription;
   started?: Promise<void>;
 }
 
@@ -34,7 +38,7 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
   const subscribe = (connectionId: string, id: string, subscription: Subscription) => {
     subscription.started = request(`/v1/session-stream/${connectionId}/subscriptions`, {
       method: "POST",
-      body: { subscription_id: id, session_id: subscription.sessionId },
+      body: { subscription_id: id, ...subscription.input },
     }).then(
       () => {},
       (error: unknown) => {
@@ -63,6 +67,7 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
   };
 
   const dispatch = (current: Connection, event: string, payload: Envelope) => {
+    if (connection !== current) return;
     if (event === "connected") {
       current.id = payload.connection_id;
       for (const [id, subscription] of subscriptions) subscribe(current.id!, id, subscription);
@@ -71,7 +76,12 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
     const subscription = subscriptions.get(payload.subscription_id ?? "");
     if (!subscription) return;
     if (event === "end" || event === "error") release(payload.subscription_id!, false);
-    if (event === "error") subscription.onError(new Error((payload.data as { message: string }).message));
+    if (event === "error")
+      subscription.onError(
+        Object.assign(new Error((payload.data as { message: string }).message), {
+          code: (payload.data as { code?: string }).code,
+        }),
+      );
     else subscription.onEvent(event, payload.data);
   };
 
@@ -103,9 +113,9 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
   };
 
   return {
-    subscribe(sessionId: string, listener: SessionStreamListener) {
+    subscribe(input: string | ClientStreamSubscription, listener: SessionStreamListener) {
       const id = crypto.randomUUID();
-      const subscription = { ...listener, sessionId };
+      const subscription = { ...listener, input: typeof input === "string" ? { session_id: input } : input };
       subscriptions.set(id, subscription);
       const current = connection ?? open();
       if (current.id) subscribe(current.id, id, subscription);

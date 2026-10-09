@@ -1,4 +1,5 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { win32 } from "node:path";
 
 type WhichCommand = (command: string) => string | null;
 type ExistsCommand = (path: string) => boolean;
@@ -38,6 +39,38 @@ const whichCommand: WhichCommand = (command) => {
   return Bun.which(command);
 };
 
+const findWindowsCommand = (command: string, env: NodeJS.ProcessEnv, cwd: string) => {
+  const extensions = (env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean);
+  const names = win32.extname(command) ? [command] : extensions.map((extension) => command + extension);
+  for (const entry of (env.PATH ?? "").split(";").filter(Boolean)) {
+    const directory = entry.replace(/^"(.*)"$/, "$1");
+    for (const name of names) {
+      const path = win32.resolve(cwd, directory, name);
+      try {
+        if (statSync(path).isFile()) return path;
+      } catch {}
+    }
+  }
+  return null;
+};
+
+export const resolveProcessEnvironmentCommand = (
+  command: readonly string[],
+  env: NodeJS.ProcessEnv,
+  cwd = process.cwd(),
+) =>
+  resolveProcessCommand(
+    command,
+    (name) =>
+      process.platform === "win32"
+        ? findWindowsCommand(name, env, cwd)
+        : Bun.which(name, { PATH: env.PATH ?? "", cwd }),
+    process.platform,
+    env.ComSpec,
+    existsSync,
+    cwd,
+  );
+
 // cmd.exe re-parses its command line, so a batch argument containing `&`, `"`,
 // `%`, `^`, ... would be reinterpreted (or inject a second command) unless it is
 // escaped. Escaping ported from cross-spawn (MIT): quote the token, fix up
@@ -46,7 +79,16 @@ const whichCommand: WhichCommand = (command) => {
 // twice.
 const CMD_METACHARS = /([()\][%!^"`<>&|;, *?])/g;
 
-const isNpmStyleShim = (path: string) => /[\\/](?:\.bin|npm)[\\/][^\\/]+\.(?:cmd|bat)$/i.test(path);
+const isNpmStyleShim = (path: string) => {
+  if (/[\\/](?:\.bin|npm)[\\/][^\\/]+\.(?:cmd|bat)$/i.test(path)) return true;
+  // A user-defined npm prefix need not be named "npm". Its wrapper still
+  // forwards arguments to a package entry point through a second cmd parse.
+  try {
+    return /node_modules[^\r\n]*%\*/i.test(readFileSync(path, "utf8"));
+  } catch {
+    return false;
+  }
+};
 
 export const escapeForCmd = (arg: string, doubleEscapeMetachars: boolean) => {
   let out = `${arg}`.replace(/(?=(\\+?)?)\1"/g, '$1$1\\"').replace(/(?=(\\+?)?)\1$/, "$1$1");
@@ -62,7 +104,7 @@ export const escapeForCmd = (arg: string, doubleEscapeMetachars: boolean) => {
  * run through `cmd.exe /c` with every argument escaped for cmd (and the result
  * marked verbatim); a `.ps1` falls back to its sibling shim, or
  * `powershell -File` when it stands alone. Commands that already contain a path
- * separator, or that can't be resolved, are passed through untouched.
+ * separator are resolved relative to the child working directory as well.
  */
 export const resolveProcessCommand = (
   command: readonly string[],
@@ -70,11 +112,13 @@ export const resolveProcessCommand = (
   platform = process.platform,
   comspec = process.env.ComSpec,
   exists: ExistsCommand = existsSync,
+  cwd = process.cwd(),
 ): ResolvedProcessCommand => {
   const [executable, ...args] = command;
-  if (!executable || hasPathSeparator(executable)) return { argv: [...command] };
+  if (!executable) return { argv: [...command] };
+  if (platform !== "win32" && hasPathSeparator(executable)) return { argv: [...command] };
 
-  const resolved = which(executable);
+  const resolved = hasPathSeparator(executable) ? win32.resolve(cwd, executable) : which(executable);
   if (!resolved) return { argv: [...command] };
   if (platform !== "win32") return { argv: [resolved, ...args] };
 
@@ -92,7 +136,9 @@ export const resolveProcessCommand = (
     };
   }
   if (target.toLowerCase().endsWith(".ps1")) {
-    return { argv: ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", target, ...args] };
+    return {
+      argv: ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", target, ...args],
+    };
   }
   return { argv: [target, ...args] };
 };

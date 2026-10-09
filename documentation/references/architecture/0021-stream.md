@@ -115,3 +115,9 @@ There is no optimistic state layer — the UI updates only after the SSE event a
 4. **Session content stays out of the stream.** Sessions reference files via `session_file_id`. Content is fetched on demand.
 5. **Planner ticket data stays out of core table sync.** Dashboard ticket views use planner commands for planner-owned data and core sync for host rows such as sessions/workspaces.
 6. **Y.js tables are excluded.** Y.js has its own binary sync protocol.
+
+### Command subscriptions
+
+The shared `/v1/session-stream` transport also carries extension command streams. `createClient` owns one transport for both sessions and commands. A command subscription body is `{ subscription_id, command: { project_id, command_id, body } }`. Existing session subscription bodies remain valid.
+
+Command events are `chunk`, `end`, and `error`, wrapped in `{ subscription_id, data }`. `end` contains the full command response, including emitted event IDs. Deleting a subscription or closing its connection aborts the command's signal. Commands do not resume after connection loss. See [ADR 0065](../../adrs/0065-stream-command-results-over-the-shared-client-stream.md).

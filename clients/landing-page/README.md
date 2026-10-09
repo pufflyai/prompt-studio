@@ -177,6 +177,13 @@ The same markdown works on GitHub and on the site. At build time the
 ## Blog
 
 Posts are markdown files in `src/content/blog/<slug>.md`, served at `/blog/<slug>/`.
+
+Unpublished posts live in `src/content/blog/drafts/<slug>.md`. The collection loader
+reads only top-level post files, so drafts stay out of routes, document JSON, the
+blog index, sidebars, search, and the sitemap. Drafts do not need a publication date
+or banner until they are ready to publish. Follow the [blog instructions](src/content/blog/AGENTS.md)
+before moving a draft to the top level.
+
 The collection schema checks the frontmatter, and a missing or malformed field fails
 the build:
 

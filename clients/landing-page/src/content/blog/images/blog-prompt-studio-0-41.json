@@ -1,0 +1,18 @@
+{
+  "seed": "release-041-workbench",
+  "width": 1600,
+  "height": 400,
+  "layout": "scatter",
+  "kinds": ["page", "command", "editor", "skill", "hook", "automation"],
+  "count": 12,
+  "scale": 0.85,
+  "offsetX": 0.02054601201787591,
+  "offsetY": 0.00938930984586478,
+  "backgroundTop": "#0A0C10",
+  "backgroundBottom": "#141A28",
+  "bleed": 0.4725530157331377,
+  "layers": 35,
+  "texture": 0.7323439533123747,
+  "gradient": 0.5927429225994274,
+  "grain": 0.5492083730990999
+}

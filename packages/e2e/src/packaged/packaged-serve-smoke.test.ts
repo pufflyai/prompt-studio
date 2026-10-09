@@ -14,9 +14,10 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
-// ticket cleanup/merge settings, and continuous ticket/workspace navigation.
+// ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
@@ -27,7 +28,7 @@ import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// npm harness detection and model discovery are covered by opencode-npm-detection.test.ts.
+// npm harness detection and model discovery are covered by harness-npm-detection.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
@@ -448,3 +449,5 @@ registerBoardViewsSmokeTests();
 registerBoardPanningSmokeTests();
 
 registerResourceLinksSmokeTests();
+
+registerCommandStreamSmokeTests();

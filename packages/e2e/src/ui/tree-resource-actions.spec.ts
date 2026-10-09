@@ -127,6 +127,7 @@ test("tree file menus rename and delete files while workspace menus delete the c
     );
     // Explicit handler navigation qualifies the destination with its project owner.
     const ticketUrl = new URL(openedUrl);
+    ticketUrl.searchParams.delete("document");
     const resourceUrl = new URL(ticketUrl.searchParams.get("resource")!);
     resourceUrl.searchParams.set("projectId", project.id);
     ticketUrl.searchParams.set("resource", resourceUrl.toString());

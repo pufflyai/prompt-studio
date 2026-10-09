@@ -190,3 +190,57 @@ describe("session stream client", () => {
     expect(server.calls("GET")[0]!.signal?.aborted).toBe(true);
   });
 });
+
+it("command streams and sessions share one connection and release independently", async () => {
+  const server = createFakeStreamServer();
+  const client = createClient({ baseUrl: "http://test:1234", fetch: server.fetchFn });
+  const session = client.sessions.connectStream("session", {});
+  const stream = client.extensions.stream("logs", { projectId: "p1" });
+  const collecting = Array.fromAsync(stream);
+  await tick();
+  server.send("connected", { connection_id: "c1" });
+  await tick();
+  const command = server.calls("POST").find((call) => call.body?.command)!;
+  expect(server.calls("GET")).toHaveLength(1);
+  server.send("chunk", { subscription_id: command.body!.subscription_id, data: "one" });
+  server.send("chunk", { subscription_id: command.body!.subscription_id, data: "two" });
+  const response = {
+    commandId: "logs",
+    extensionId: "logs",
+    outcome: { ok: true, status: "success" as const, value: 2 },
+  };
+  server.send("end", { subscription_id: command.body!.subscription_id, data: response });
+  expect(await collecting).toEqual([
+    { type: "data", data: "one" },
+    { type: "data", data: "two" },
+    { type: "end", response },
+  ]);
+  expect(server.calls("GET")[0]!.signal!.aborted).toBe(false);
+  session.close();
+  expect(server.calls("GET")[0]!.signal!.aborted).toBe(true);
+});
+
+it("aborting a command stream releases its subscription and wakes its reader", async () => {
+  const server = createFakeStreamServer();
+  const client = createClient({ baseUrl: "http://test:1234", fetch: server.fetchFn });
+  const controller = new AbortController();
+  const stream = client.extensions.stream("logs", { projectId: "p1" }, { signal: controller.signal });
+  const pending = stream[Symbol.asyncIterator]().next();
+  controller.abort();
+  await expect(pending).rejects.toMatchObject({ code: "command_stream_cancelled" });
+  expect(server.calls("GET")[0]!.signal!.aborted).toBe(true);
+});
+
+it("keeps the server's command rejection code", async () => {
+  const server = createFakeStreamServer();
+  const fetchFn = (async (url: string | URL | Request, init?: RequestInit) => {
+    if (init?.method === "POST")
+      return Response.json({ error: "Not streamable", code: "command_not_streamable" }, { status: 409 });
+    return server.fetchFn(url, init);
+  }) as typeof fetch;
+  const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+  const pending = client.extensions.stream("plain", { projectId: "p1" })[Symbol.asyncIterator]().next();
+  await tick();
+  server.send("connected", { connection_id: "c1" });
+  await expect(pending).rejects.toMatchObject({ code: "command_not_streamable" });
+});
