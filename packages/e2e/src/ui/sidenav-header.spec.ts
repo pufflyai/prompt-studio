@@ -259,7 +259,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   };
   const top = async (target: Locator) => (await target.boundingBox())!.y;
 
-  await drag(option("Search"), lowerHalfOf(option("Tickets")));
+  await drag(option("Search"), lowerHalfOf(option("Workspaces")));
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).not.toHaveAttribute(
     "data-tree-list-node-id",
     "search",
@@ -268,8 +268,8 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   await drag(option("Search"), middleOf(zone));
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
 
-  await drag(option("Settings"), lowerHalfOf(option("Tickets")));
-  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Tickets")));
+  await drag(option("Settings"), lowerHalfOf(option("Workspaces")));
+  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
   expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
   await drag(option("Settings"), middleOf(zone));
   expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));
