@@ -1,18 +1,11 @@
 // Turn the resolved execution order into deadline sections with steps, tags, blockers, and risk flags.
-import type { Deadline, Plan, PlanFlag, PlanLink, PlanRow, PlanSection, PlanTag, StoredPlan } from "../contracts";
-import {
-  blockedStatusId,
-  dependencyIds,
-  doneStatusId,
-  humanRequestedTagId,
-  type PlannerStatus,
-  type PlannerTicket,
-  ticketTarget,
-} from "../planner";
+import type { Deadline, PlanFlag, PlanLink, PlanRow, PlanTag, StoredPlan } from "../contracts";
+import { dependencyIds, humanRequestedTagId, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
 import type { TicketAction } from "./action-types";
 import { daysBetween } from "./days";
 import { ticketState } from "./state";
 import { trackProperty } from "./tracks";
+import { workflowName } from "./workflow";
 
 // Deadlines inside this many days are shown as due soon.
 const dueSoonDays = 7;
@@ -40,12 +33,13 @@ interface PlanIndex {
   gates: Set<string>;
 }
 
-const isDone = (ticket: PlannerTicket) => ticket.statusId === doneStatusId;
+const statusName = (ticket: PlannerTicket, index: PlanIndex) => index.statuses.get(ticket.statusId ?? "");
+const isDone = (ticket: PlannerTicket, index: PlanIndex) => workflowName(statusName(ticket, index)) === "done";
 
-const link = (ticket: PlannerTicket): PlanLink => ({
+const link = (ticket: PlannerTicket, index: PlanIndex) => ({
   id: ticket.id,
   shorthand: ticket.shorthand,
-  done: isDone(ticket),
+  done: isDone(ticket, index),
 });
 
 const dependencies = (ticket: PlannerTicket, index: PlanIndex) =>
@@ -60,7 +54,7 @@ function executionOrder(plan: StoredPlan) {
   }));
 }
 
-function indexInput(input: PlanInput, groups: ReturnType<typeof executionOrder>): PlanIndex {
+function indexInput(input: PlanInput, groups: ReturnType<typeof executionOrder>) {
   const dependents = new Map<string, PlannerTicket[]>();
   for (const ticket of input.tickets) {
     for (const id of dependencyIds(ticket.dependsOn)) {
@@ -107,11 +101,11 @@ function ancestors(ticket: PlannerTicket, index: PlanIndex) {
     parent = parent.parentId ? index.tickets.get(parent.parentId) : undefined;
   }
 
-  return chain.map(link);
+  return chain.map((ticket) => link(ticket, index));
 }
 
 function flagsFor(ticket: PlannerTicket, deadline: Deadline | undefined, late: PlanLink[], index: PlanIndex) {
-  if (isDone(ticket)) {
+  if (isDone(ticket, index)) {
     return [];
   }
 
@@ -124,11 +118,11 @@ function flagsFor(ticket: PlannerTicket, deadline: Deadline | undefined, late: P
 
   if (needsHuman(ticket, index)) {
     flags.push("human-needed");
-  } else if (ticket.statusId === blockedStatusId || ticket.blockedReason?.trim()) {
+  } else if (workflowName(statusName(ticket, index)) === "blocked" || ticket.blockedReason?.trim()) {
     flags.push("blocked");
   }
 
-  if (dependencies(ticket, index).some((dependency) => !isDone(dependency))) {
+  if (dependencies(ticket, index).some((dependency) => !isDone(dependency, index))) {
     flags.push("waiting");
   }
 
@@ -139,37 +133,50 @@ function flagsFor(ticket: PlannerTicket, deadline: Deadline | undefined, late: P
   return flags;
 }
 
-function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: PlanIndex): PlanRow {
+function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: PlanIndex) {
   const step = index.steps.get(ticket.id) ?? 0;
   const dependsOn = dependencies(ticket, index);
-  const late = dependsOn.filter((dependency) => !isDone(dependency) && (index.steps.get(dependency.id) ?? 0) > step);
-  const blockedReason = isDone(ticket) ? undefined : ticket.blockedReason?.trim() || undefined;
+  const late = dependsOn.filter(
+    (dependency) => !isDone(dependency, index) && (index.steps.get(dependency.id) ?? 0) > step,
+  );
+  const blockedReason = isDone(ticket, index) ? undefined : ticket.blockedReason?.trim() || undefined;
   const documents = documentsFor(ticket, index);
-  const flags = flagsFor(ticket, deadline, late.map(link), index);
+  const flags = flagsFor(
+    ticket,
+    deadline,
+    late.map((ticket) => link(ticket, index)),
+    index,
+  );
   const humanNeeded = flags.includes("human-needed");
   const gate = index.gates.has(ticket.id);
   return {
     id: ticket.id,
     shorthand: ticket.shorthand,
     title: ticket.title,
-    state: ticketState(ticket, {
-      humanNeeded,
-      inputReceived: !humanNeeded && answered(ticket, index),
-      unmet: dependsOn.some((dependency) => !isDone(dependency)),
-    }),
+    state: ticketState(
+      ticket,
+      {
+        humanNeeded,
+        inputReceived: !humanNeeded && answered(ticket, index),
+        unmet: dependsOn.some((dependency) => !isDone(dependency, index)),
+      },
+      statusName(ticket, index),
+    ),
     trackId: ticket.tagIds?.find((id) => index.trackOptionIds.has(id)) ?? null,
     actions: documents.actions,
     actionErrors: documents.errors,
     instructions: ticket.content ?? "",
     status: (ticket.statusId && index.statuses.get(ticket.statusId)) || "No status",
-    done: isDone(ticket),
+    done: isDone(ticket, index),
     step,
     ancestors: ancestors(ticket, index),
     ...(gate ? { gate: true as const } : {}),
     deadlineId: deadline?.id ?? null,
-    dependsOn: dependsOn.map(link),
-    blocks: (index.dependents.get(ticket.id) ?? []).filter((dependent) => !isDone(dependent)).map(link),
-    laterDependencies: late.map(link),
+    dependsOn: dependsOn.map((ticket) => link(ticket, index)),
+    blocks: (index.dependents.get(ticket.id) ?? [])
+      .filter((dependent) => !isDone(dependent, index))
+      .map((ticket) => link(ticket, index)),
+    laterDependencies: late.map((ticket) => link(ticket, index)),
     ...(blockedReason ? { blockedReason } : {}),
     tagIds: ticket.tagIds ?? [],
     flags,
@@ -183,7 +190,7 @@ const atRisk = (row: PlanRow) =>
     (flag) => flag === "human-needed" || flag === "blocked" || flag === "waiting" || flag === "out-of-order",
   );
 
-function toSection(deadline: Deadline | undefined, rows: PlanRow[], today: string): PlanSection {
+function toSection(deadline: Deadline | undefined, rows: PlanRow[], today: string) {
   return {
     deadline: deadline ? { ...deadline, daysLeft: daysBetween(today, deadline.date) } : null,
     rows,
@@ -198,7 +205,7 @@ function toSection(deadline: Deadline | undefined, rows: PlanRow[], today: strin
   };
 }
 
-export function buildPlan(input: PlanInput): Plan {
+export function buildPlan(input: PlanInput) {
   const groups = executionOrder(input.plan);
   const index = indexInput(input, groups);
   const sections = groups.map(({ deadline, ticketIds }) =>

@@ -14,7 +14,7 @@ export async function loadPlan(ctx: CommandContext) {
     readTicketStatuses(ctx.storage),
     ctx.storage.get<StoredPlan>(planKey),
   ]);
-  return { tickets, statuses: statuses.statuses, plan: resolvePlan(stored, tickets) };
+  return { tickets, statuses: statuses.statuses, plan: resolvePlan(stored, tickets, statuses.statuses) };
 }
 
 export async function savePlan(ctx: CommandContext, plan: StoredPlan, reason: string) {

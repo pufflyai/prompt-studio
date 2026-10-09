@@ -1,9 +1,11 @@
 // Create immutable human requests and atomically save one answer per request.
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { findTicket } from "../../data/resolve";
+import { readTicketStatuses } from "../../data/status-operations";
 import { planChanged } from "../contracts";
 import type { ActionResponse, HumanAction } from "../model/action-types";
 import { parseAction, resolveAction } from "../model/actions";
+import { isCompletedTicket } from "../model/workflow";
 import { keepOwnedAction, ownedAction } from "./action-owner";
 import { readActionStore, requests, saveOutcome } from "./action-store";
 
@@ -39,7 +41,7 @@ export const requestActionCommand = defineCommand({
   },
   async run(ctx, { ticket, action }) {
     const current = await findTicket(ctx.storage, ticket);
-    if (!current || current.statusId === "done") {
+    if (!current || isCompletedTicket(current, (await readTicketStatuses(ctx.storage)).statuses)) {
       throw new Error("The ticket is removed or complete.");
     }
     const value = parseAction(

@@ -4,8 +4,6 @@ import type { StoredStatus, StoredTicket } from "../data/types";
 
 export { plannerTicketsChanged } from "../events";
 export const plannerExtensionId = "pstdio.pstdio-planner";
-export const doneStatusId = "done";
-export const blockedStatusId = "blocked";
 export const humanRequestedTagId = "default-human-requested-true";
 export type PlannerTicket = Pick<
   StoredTicket,

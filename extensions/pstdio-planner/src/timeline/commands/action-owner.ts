@@ -1,11 +1,13 @@
 // Check a request's ticket owner and clean up writes racing with ticket deletion.
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { findTicket } from "../../data/resolve";
+import { readTicketStatuses } from "../../data/status-operations";
+import { isCompletedTicket } from "../model/workflow";
 import { readAction, requests, responses, type StoredAction } from "./action-store";
 
 export async function ownedAction(ctx: CommandContext, ticket: string, actionId: string) {
   const current = await findTicket(ctx.storage, ticket);
-  if (!current || current.statusId === "done") {
+  if (!current || isCompletedTicket(current, (await readTicketStatuses(ctx.storage)).statuses)) {
     throw new Error("The ticket is removed or complete.");
   }
   const stored = await requests(ctx).get(actionId);

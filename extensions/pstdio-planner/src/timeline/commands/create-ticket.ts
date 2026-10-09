@@ -25,7 +25,7 @@ export async function createPlacedTicket(ctx: CommandContext, input: TicketInput
       const ticket = await createPlannerTicket.run(ctx, ticketInput);
       created = ticket;
       try {
-        const next = resolvePlan(loaded.plan, [...loaded.tickets, ticket]);
+        const next = resolvePlan(loaded.plan, [...loaded.tickets, ticket], loaded.statuses);
         await savePlan(ctx, moveTicket(next, { ticketId: ticket.id, deadlineId }), "ticket");
         return { ticket, placementError: null as string | null };
       } catch (reason) {

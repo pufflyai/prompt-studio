@@ -1,5 +1,7 @@
 // Derive one displayed state from the ticket's workflow, requests, and prerequisites.
+
 import type { PlannerTicket } from "../planner";
+import { workflowName } from "./workflow";
 
 export type TicketState = "await-input" | "input-received" | "done" | "not-started" | "in-progress" | "blocked";
 
@@ -10,21 +12,22 @@ export interface StateSignals {
   unmet: boolean;
 }
 
-export function ticketState(ticket: PlannerTicket, signals: StateSignals): TicketState {
-  if (ticket.statusId === "done") {
-    return "done";
+export function ticketState(ticket: PlannerTicket, signals: StateSignals, statusName: string | undefined) {
+  const status = workflowName(statusName);
+  if (status === "done") {
+    return "done" as const;
   }
   if (signals.humanNeeded) {
-    return "await-input";
+    return "await-input" as const;
   }
   if (signals.inputReceived) {
-    return "input-received";
+    return "input-received" as const;
   }
-  if (ticket.statusId === "blocked" || ticket.blockedReason?.trim() || signals.unmet) {
-    return "blocked";
+  if (status === "blocked" || ticket.blockedReason?.trim() || signals.unmet) {
+    return "blocked" as const;
   }
-  if (ticket.statusId === "in-progress" || ticket.statusId === "in-review") {
-    return "in-progress";
+  if (status === "in-progress" || status === "in-review") {
+    return "in-progress" as const;
   }
-  return "not-started";
+  return "not-started" as const;
 }
