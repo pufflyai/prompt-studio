@@ -1,17 +1,9 @@
 import { isAbsolute, relative } from "node:path";
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
-import { type ArtifactRevision, createArtifactService, HTML_LIMIT_BYTES } from "./artifacts";
+import { serviceFor } from "./artifact-context";
+import { HTML_LIMIT_BYTES } from "./artifacts";
 import { artifactIdFromUrl, artifactTarget, changedEvent } from "./contracts";
 import { startCreation } from "./create-artifact";
-
-const serviceFor = (ctx: ExtensionContextBase) =>
-  createArtifactService({
-    projectId: ctx.projectId,
-    artifacts: ctx.storage.collection<{ id: string }>("artifacts"),
-    revisions: ctx.storage.collection<ArtifactRevision>("revisions"),
-    names: ctx.storage.collection<{ title: string }>("names"),
-    snapshots: ctx.artifacts.mount("sites"),
-  });
 
 const publishFile = async (
   ctx: ExtensionContextBase,

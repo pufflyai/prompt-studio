@@ -1,48 +1,15 @@
-import { Box, SimpleGrid, Spinner, Stack, Text } from "@chakra-ui/react";
-import { SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { Button, Stack, Text } from "@chakra-ui/react";
+import { createGlyphIcon, Tooltip } from "@pstdio/ui";
 import type { ArtifactExample } from "../create-artifact";
 import { useArtifactTranslations } from "../translations";
+
+const BriefIcon = createGlyphIcon("document-text-1");
+const DashboardIcon = createGlyphIcon("chart-1");
 
 interface ArtifactCreationExamplesProps {
   onCreate: (example: ArtifactExample) => void;
   creating?: ArtifactExample;
 }
-
-const ExampleIllustration = (props: { example: ArtifactExample }) => {
-  const { example } = props;
-  const color = example === "brief" ? "vis.categorical.1" : "vis.categorical.3";
-  return (
-    <Stack aria-hidden="true" bg="bg.muted" aspectRatio={16 / 10} align="center" justify="center" p="lg">
-      {example === "brief" ? (
-        <Stack
-          gap="xs"
-          p="sm"
-          borderWidth="1px"
-          borderColor={color}
-          borderRadius="xs"
-          width="var(--chakra-spacing-5xl)"
-        >
-          <Box bg={color} height="var(--chakra-spacing-xs)" width="full" borderRadius="2xs" />
-          <Box bg={color} height="var(--chakra-spacing-2xs)" width="full" borderRadius="2xs" />
-          <Box bg={color} height="var(--chakra-spacing-2xs)" width="2/3" borderRadius="2xs" />
-          <Box bg={color} height="var(--chakra-spacing-2xs)" width="full" borderRadius="2xs" />
-        </Stack>
-      ) : (
-        <Stack direction="row" gap="xs" align="end" p="sm" borderWidth="1px" borderColor={color} borderRadius="xs">
-          {["md", "xl", "3xl", "lg"].map((height) => (
-            <Box
-              key={height}
-              bg={color}
-              width="var(--chakra-spacing-sm)"
-              height={`var(--chakra-spacing-${height})`}
-              borderRadius="2xs"
-            />
-          ))}
-        </Stack>
-      )}
-    </Stack>
-  );
-};
 
 export const ArtifactCreationExamples = (props: ArtifactCreationExamplesProps) => {
   const { onCreate, creating } = props;
@@ -50,11 +17,13 @@ export const ArtifactCreationExamples = (props: ArtifactCreationExamplesProps) =
   const examples = [
     {
       id: "brief" as const,
+      Icon: BriefIcon,
       title: t("library.briefTitle", "Project brief"),
       description: t("library.briefDescription", "Goals, decisions, and next steps"),
     },
     {
       id: "dashboard" as const,
+      Icon: DashboardIcon,
       title: t("library.dashboardTitle", "Project dashboard"),
       description: t("library.dashboardDescription", "Progress, open work, and milestones"),
     },
@@ -70,40 +39,25 @@ export const ArtifactCreationExamples = (props: ArtifactCreationExamplesProps) =
           )}
         </Text>
       </Stack>
-      <SimpleGrid columns={{ base: 1, sm: 2 }} gap="md" maxWidth="md">
+      <Stack direction="row" flexWrap="wrap" gap="sm">
         {examples.map((example) => (
-          <SimpleCard
-            asChild
-            key={example.id}
-            overflow="hidden"
-            textAlign="left"
-            cursor="pointer"
-            focusVisibleRing="outside"
-            _hover={{ borderColor: "border" }}
-          >
-            <button
-              type="button"
+          <Tooltip key={example.id} content={example.description} openDelay={300}>
+            <Button
+              variant="outline"
+              size="sm"
+              borderRadius="pill"
               aria-label={example.title}
               aria-busy={creating === example.id}
               disabled={!!creating}
+              loading={creating === example.id}
               onClick={() => onCreate(example.id)}
             >
-              <ExampleIllustration example={example.id} />
-              <SimpleCardBody>
-                <Stack gap="xs">
-                  <Stack direction="row" align="center" gap="xs">
-                    <Text textStyle="paragraph/S/medium">{example.title}</Text>
-                    {creating === example.id ? <Spinner size="xs" /> : null}
-                  </Stack>
-                  <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                    {example.description}
-                  </Text>
-                </Stack>
-              </SimpleCardBody>
-            </button>
-          </SimpleCard>
+              <example.Icon aria-hidden="true" />
+              {example.title}
+            </Button>
+          </Tooltip>
         ))}
-      </SimpleGrid>
+      </Stack>
     </Stack>
   );
 };

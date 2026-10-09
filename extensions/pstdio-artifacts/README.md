@@ -14,7 +14,7 @@ pst extensions add pstdio-artifacts
 
 ## Create a page
 
-Open **Artifacts** and choose **Project brief** or **Project dashboard** under **Make something new**. Each example starts and opens an agent session using your project’s configured agent. The agent uses the project’s available context and the `publish-artifact` skill to publish the result here. You can also ask any session to create and publish another kind of interactive page.
+Open **Artifacts** and click the **Project brief** or **Project dashboard** button under **Make something new**. Each example starts and opens an agent session using your project’s configured agent. The agent uses the project’s available context and the `publish-artifact` skill to publish the result here. You can also ask any session to create and publish another kind of interactive page.
 
 ## Publish a page
 
@@ -40,6 +40,8 @@ The command reads the file from the agent's current workspace. Without one, it r
 ## Browse artifacts
 
 Open **Artifacts** in the project navigation. The library shows a grid of page previews with their names and edit dates. Select a card to open the artifact. Cards also work with the keyboard.
+
+Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once, opens its latest version, and disappears from search when deleted.
 
 The library stays open as an **Artifacts** tab next to each artifact you open. Switching tabs keeps the state of each interactive preview. Click **Artifacts** in the breadcrumb to return to the library tab. A link to a published URL opens the matching artifact tab.
 

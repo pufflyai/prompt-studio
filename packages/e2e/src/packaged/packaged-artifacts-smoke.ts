@@ -39,6 +39,16 @@ export const expectPackagedArtifacts = async (input: {
   expect(metadata.commands).toContainEqual(
     expect.objectContaining({ id: "pstdio.pstdio-artifacts.command.start-creation" }),
   );
+  expect(metadata.resourceKinds).toContainEqual(
+    expect.objectContaining({ extensionId: "pstdio.pstdio-artifacts", id: "artifact" }),
+  );
+  expect(metadata.commandPaletteResources).toContainEqual(
+    expect.objectContaining({
+      extensionId: "pstdio.pstdio-artifacts",
+      resourceKind: "artifact",
+      refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
+    }),
+  );
   const skillsRes = await fetch(`${baseUrl}/v1/projects/${projectId}/skills`, {
     headers,
   });
