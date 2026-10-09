@@ -1,6 +1,7 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { createFolder, deleteFolder, moveNote, renameFolder } from "./folders";
 import { notesChanged, notesMount } from "./pages";
+import { writeResourceInOrder } from "./resource-writes";
 
 export const createFolderCommand = defineCommand({
   id: "folders.create",
@@ -9,7 +10,9 @@ export const createFolderCommand = defineCommand({
   mutating: true,
   params: { title: params.text({ label: l10n("params.folderName", "Folder name"), required: true }) },
   async run(ctx, input) {
-    const folder = await createFolder(notesMount(ctx), input.title);
+    const folder = await writeResourceInOrder(`folders:${ctx.projectId}`, () =>
+      createFolder(notesMount(ctx), input.title),
+    );
     await ctx.events.emit(notesChanged, {});
     return folder;
   },
@@ -25,7 +28,9 @@ export const renameFolderCommand = defineCommand({
     title: params.text({ label: l10n("params.folderName", "Folder name"), required: true }),
   },
   async run(ctx, input) {
-    const folder = await renameFolder(notesMount(ctx), input.folderId, input.title);
+    const folder = await writeResourceInOrder(`folders:${ctx.projectId}`, () =>
+      renameFolder(notesMount(ctx), input.folderId, input.title),
+    );
     await ctx.events.emit(notesChanged, {});
     return folder;
   },
@@ -38,7 +43,9 @@ export const deleteFolderCommand = defineCommand({
   mutating: true,
   params: { folderId: params.text({ label: l10n("params.folder", "Folder"), required: true }) },
   async run(ctx, input) {
-    const result = await deleteFolder(notesMount(ctx), input.folderId);
+    const result = await writeResourceInOrder(`folders:${ctx.projectId}`, () =>
+      deleteFolder(notesMount(ctx), input.folderId),
+    );
     await ctx.events.emit(notesChanged, {});
     return result;
   },

@@ -24,7 +24,7 @@ The sidebar keeps your notes within reach while the open tab shows the note's bo
 - Selecting a note opens it in a tab and keeps the project navigation in the sidebar.
 - The first nonempty save gives an untitled note a title from the beginning of its content, up to 80 characters. That title is saved in Markdown front matter and stays unchanged through later edits or clearing the body. A title you choose prevents the automatic rename.
 - Right-click a note and choose **Rename note** to change its title. The sidebar and open tabs update. The body stays the same.
-- Choose **New folder** next to **Notes** to group notes. Drag notes into folders or back onto **Notes** to return them to the root.
+- Choose **New folder** next to **Notes** to group notes. Folder names must be unique within the project, ignoring capitalization and surrounding spaces. Drag notes into folders or back onto **Notes** to return them to the root.
 - Right-click a folder to rename it or remove it. Removing a folder keeps its notes at the root.
 - Right-click a note or its tab to rename or delete it.
 - Drag a note to the upper or lower half of another note to place it before or after that note. The placement line shows the destination. Notes can move only within the Notes subtree, and the order is saved.
