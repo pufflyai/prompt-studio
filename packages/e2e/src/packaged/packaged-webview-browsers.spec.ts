@@ -23,6 +23,7 @@ import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
+import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
@@ -152,8 +153,14 @@ test.describe("packaged extension webviews", () => {
           await page.reload();
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
           await verifyPackagedWebviewRetention(page);
+          await verifyPackagedShortcutReference(
+            page,
+            started.baseUrl,
+            project.id,
+            runtimeAuthorization(started.descriptor),
+          );
 
-          await page.getByText("Settings", { exact: true }).last().click();
+          await page.getByRole("option", { name: "Settings", exact: true }).click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           const settingsFrame = page.frameLocator('iframe[title="Lab (project)"]');
           expect(await page.locator('iframe[title="Lab (project)"]').getAttribute("sandbox")).not.toContain(

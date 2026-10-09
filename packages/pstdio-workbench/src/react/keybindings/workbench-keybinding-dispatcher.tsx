@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getKeybindingSteps, type KeybindingSequence, type WorkbenchCore } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
+import { hasCommandParameters } from "../command-palette/command-palette-params";
 import { useTanStackWorkbenchHotkeys } from "./tanstack-hotkey-adapter";
 
 export interface WorkbenchHotkeyRegistration {
@@ -72,7 +73,18 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
           hotkey: normalizeWorkbenchKeybinding(keybinding.keybinding),
           enabled,
           ignoreInputs: true,
-          execute: () => runUserAction(workbench, record.command.label, () => workbench.navigation.openTarget(action)),
+          execute: async () => {
+            if (action.args === undefined && hasCommandParameters(record.command.params)) {
+              const resource = workbench.getPrimaryResource();
+              workbench.commandPalette.requestParams({
+                record,
+                label: record.command.label,
+                context: resource ? { resource } : undefined,
+              });
+              return;
+            }
+            return runUserAction(workbench, record.command.label, () => workbench.navigation.openTarget(action));
+          },
         } satisfies WorkbenchHotkeyRegistration,
       ];
     }

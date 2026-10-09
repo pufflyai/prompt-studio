@@ -6,7 +6,8 @@ export const expectPackagedStatusBarOrder = async (page: Page) => {
   await toggle.focus();
   await toggle.press("Space");
   await expect(toggle).toBeChecked();
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Close Performance", exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   const connection = page.getByRole("group", { name: "Backend connection", exact: true });
   const performance = page.getByRole("group", { name: "Performance", exact: true });
   const isConnectionFirst = async () => {
@@ -57,6 +58,7 @@ export const expectPackagedStatusBarOrder = async (page: Page) => {
   await meter.click({ delay: 100 });
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await page.getByRole("option", { name: "Settings", exact: true }).click();
   await page.getByRole("option", { name: "Performance", exact: true }).click();
   await toggle.focus();
@@ -64,7 +66,8 @@ export const expectPackagedStatusBarOrder = async (page: Page) => {
   await expect(performance).not.toBeVisible();
   await toggle.press("Space");
   await expect(toggle).toBeChecked();
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Close Performance", exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect.poll(isConnectionFirst).toBe(true);
   await page.getByRole("option", { name: "Settings", exact: true }).click();
   await page.getByText("Connection", { exact: true }).click();

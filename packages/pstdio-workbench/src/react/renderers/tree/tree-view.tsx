@@ -17,7 +17,6 @@ import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
 import type { TreeActionParamsRequest } from "./tree-actions";
-import { resolveTreeActiveResource } from "./tree-active-resource";
 import { findNodeInSections, resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
@@ -25,6 +24,7 @@ import { TreeViewBody } from "./tree-view-body";
 import { createToggleTreeSection, shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
 import { useTreeData } from "./use-tree-data";
+import { useTreeNavigationState } from "./use-tree-navigation-state";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
 
 interface WorkbenchTreeViewProps {
@@ -135,14 +135,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const treeState =
     useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
     EMPTY_TREE_STATE;
-  const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const activeLocation = useWorkbenchStore(workbench.pages.store, (state) => state.location);
-  const activePage = useWorkbenchStore(workbench.pages.store, (state) =>
-    state.activePageId ? state.pages[state.activePageId] : undefined,
-  );
-  const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolveTreeActiveResource(state.layout, activePage),
-  );
+  const { projectId, activeLocation, activeResource } = useTreeNavigationState(workbench);
   const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry } = useTreeData(
     workbench,
     treeViewId,

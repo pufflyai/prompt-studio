@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { PageLocation, PageRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
+import { Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
@@ -185,29 +185,8 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   if (node.resource) return node.resource;
   return undefined;
 };
-const renderShortcutEndContent = (binding: string | string[] | undefined) => {
-  if (!binding) return undefined;
-  return (
-    <Box
-      opacity="0"
-      pointerEvents="none"
-      display="inline-flex"
-      alignItems="center"
-      transition="opacity 120ms ease"
-      _groupHover={{ opacity: "1" }}
-    >
-      <PaletteShortcut binding={binding} />
-    </Box>
-  );
-};
-const resolveTreeNodeEndContent = (
-  node: TreeNode,
-  resource: ResourceRef | undefined,
-  binding: string | string[] | undefined,
-) => {
+const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined) => {
   if (node.endContent !== undefined) return node.endContent as ReactNode;
-  const shortcut = renderShortcutEndContent(binding);
-  if (shortcut) return shortcut;
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
   if (resource?.type !== "workspace" || typeof additions !== "number" || typeof deletions !== "number") {
@@ -243,10 +222,6 @@ const toTreeListNode = (
     onRequestParams: context.onRequestParams,
   });
   const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
-  const shortcuts = new Map(
-    context.workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]),
-  );
-  const binding = node.commandId ? shortcuts.get(node.commandId) : undefined;
   const treeNode: TreeListNode = {
     id: node.id,
     moveScope: node.moveScope,
@@ -270,7 +245,7 @@ const toTreeListNode = (
       onCommandError: context.onCommandError,
       onRequestParams: context.onRequestParams,
     }),
-    endContent: resolveTreeNodeEndContent(node, resource, binding),
+    endContent: resolveTreeNodeEndContent(node, resource),
     menuItems,
     contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),

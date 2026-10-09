@@ -107,24 +107,14 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       event.preventDefault();
       return;
     }
-    handleActivate();
-  };
-
-  const handleMenuClick = (event: ReactMouseEvent<HTMLElement>) => {
-    onClick?.(event);
-    if (event.defaultPrevented) return;
-
-    if (isDisabled) {
-      event.preventDefault();
-      return;
-    }
-
-    setMenuOpen((current) => !current);
+    if (hasMenuItems) setMenuOpen((current) => !current);
+    else handleActivate();
   };
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(event);
     if (event.defaultPrevented) return;
+    if (event.target !== event.currentTarget) return;
     if (event.key !== "Enter" && event.key !== " ") return;
 
     event.preventDefault();
@@ -140,7 +130,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const hasDescription = item.description !== undefined;
   const paddingLeft = computePaddingLeft(depth);
   const verticalPadding = variant === "default" || hasDescription ? "xs" : "2xs";
-  const activationProps = hasMenuItems ? { onClick: handleMenuClick } : { onClick: handleClick };
+  const activationProps = { onClick: handleClick };
   const { rowHeight, minHeight } = resolveListRowSizing(variant, hasDescription);
   const rowRole = roleProp ?? (hasMenuItems ? "button" : "option");
 

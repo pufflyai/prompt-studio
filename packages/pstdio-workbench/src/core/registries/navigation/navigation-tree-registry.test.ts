@@ -270,3 +270,21 @@ test("lazy children retain their owner resource and use the current cancellation
   await registry.getChildren(section!.nodes[0]!.children![0]!, context);
   expect(seen).toEqual(Array.from({ length: 3 }, () => ({ resource: ticket, signal })));
 });
+
+test("declared navigation actions follow contribution lifetime without reading dynamic trees", () => {
+  const registry = createNavigationTreeRegistry();
+  const action = { kind: "href" as const, href: "https://example.com" };
+  const registration = registry.registerContribution({
+    id: "links",
+    owner: project,
+    sourceExtensionId: "tools.links",
+    declarationIndex: 0,
+    getSections: () => {
+      throw new Error("Must not fetch tree data for shortcut discovery");
+    },
+    listActions: () => [{ label: "Visit site", action }],
+  });
+  expect(registry.listActions()).toEqual([{ label: "Visit site", action, ownerId: "tools.links" }]);
+  registration.dispose();
+  expect(registry.listActions()).toEqual([]);
+});

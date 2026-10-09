@@ -1,4 +1,4 @@
-import { Box, HStack, IconButton, Menu, Portal } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Menu, Portal, useRecipe } from "@chakra-ui/react";
 import { Fragment, type ReactElement } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowAction } from "./list-row.types";
@@ -23,16 +23,13 @@ const keyedTooltip = (action: ListRowAction, child: ReactElement) => {
 
 export const RowActions = (props: RowActionsProps) => {
   const { actions, alwaysVisible = false, context } = props;
+  const accessoryRecipe = useRecipe({ key: "listRowAccessory" });
   if (actions.length === 0) return null;
 
   return (
     <HStack
       gap="0"
-      opacity={alwaysVisible ? "1" : "0"}
-      pointerEvents={alwaysVisible ? "auto" : "none"}
-      _groupHover={{ opacity: "1", pointerEvents: "auto" }}
-      _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
-      transition="opacity 120ms ease"
+      css={accessoryRecipe({ visibility: alwaysVisible ? "always" : "hover" })}
       onClick={(event) => event.stopPropagation()}
     >
       {actions.map((action) => {

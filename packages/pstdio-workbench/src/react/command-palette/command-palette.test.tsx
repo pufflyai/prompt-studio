@@ -43,6 +43,48 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       { group: "Sessions", label: "Open sessions" },
     ]);
   });
+  test("shows an extension command shortcut on its palette placement", () => {
+    const workbench = createWorkbench();
+    for (const id of ["notes.create", "notes.palette.create"]) {
+      workbench.commands.registerCommand({ id, label: "New note" }, { execute: () => undefined });
+    }
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: "notes.create" },
+      keybinding: "Mod+Alt+N",
+    });
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+      commandId: "notes.palette.create",
+      sourceCommandId: "notes.create",
+    });
+    const [entry] = createWorkbenchCommandPaletteEntries({
+      workbench,
+      menuPath: workbenchCommandPaletteMenuPath,
+      onClose: () => undefined,
+    });
+    expect(entry?.shortcut).toMatchObject({ props: { binding: "Mod+Alt+N" } });
+  });
+  test("matches shortcut arguments to the palette action", () => {
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand({ id: "notes.open", label: "Open note" }, { execute: () => undefined });
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: "notes.open", args: { noteId: "one" } },
+      keybinding: "Alt+1",
+    });
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: "notes.open", args: { noteId: "two" } },
+      keybinding: "Alt+2",
+    });
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+      commandId: "notes.open",
+      args: { noteId: "one" },
+    });
+    const [entry] = createWorkbenchCommandPaletteEntries({
+      workbench,
+      menuPath: workbenchCommandPaletteMenuPath,
+      onClose: () => undefined,
+    });
+    expect(entry?.shortcut).toMatchObject({ props: { binding: "Alt+1" } });
+  });
   test("tags command palette entries with the command mode", () => {
     const workbench = createWorkbench();
     workbench.commands.registerCommand(

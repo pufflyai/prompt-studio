@@ -17,6 +17,7 @@ import { folderPickerSlotRecipe } from "./recipes/folder-picker";
 import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
 import { kbdRecipe } from "./recipes/kbd";
+import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
 import { numberInputSlotRecipe } from "./recipes/number-input";
 import { paletteSlotRecipe } from "./recipes/palette";
@@ -60,6 +61,7 @@ const config = defineConfig({
       divider: dividerRecipe,
       input: inputRecipe,
       kbd: kbdRecipe,
+      listRowAccessory: listRowAccessoryRecipe,
       skeleton: skeletonRecipe,
       textarea: textareaRecipe,
     },

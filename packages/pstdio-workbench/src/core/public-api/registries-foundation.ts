@@ -151,6 +151,7 @@ export type {
   RegisteredNavigationParser,
 } from "../registries/navigation/navigation-registry";
 export { createNavigationRegistry } from "../registries/navigation/navigation-registry";
+export { getNavigationTargetKey } from "../registries/navigation/navigation-target-key";
 export type {
   NavigationTreeContext,
   NavigationTreeContribution,

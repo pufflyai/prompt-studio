@@ -3,6 +3,31 @@ import { createWorkbench } from "../../core";
 import { createWorkbenchHotkeyRegistrations, normalizeWorkbenchKeybinding } from "./workbench-keybinding-dispatcher";
 
 describe("createWorkbenchHotkeyRegistrations", () => {
+  test("asks for command parameters before a shortcut executes a creation action", async () => {
+    const workbench = createWorkbench();
+    let title: unknown;
+    workbench.commands.registerCommand(
+      { id: "notes.create", label: "New note", params: { title: { type: "text", required: true } } },
+      {
+        execute: (args) => {
+          title = args;
+        },
+      },
+    );
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: "notes.create" },
+      keybinding: "Mod+Alt+N",
+    });
+    await createWorkbenchHotkeyRegistrations({ workbench })
+      .find((item) => item.id === "notes.create")!
+      .execute();
+    expect(workbench.commandPalette.store.getState().paramsRequest).toMatchObject({
+      label: "New note",
+      record: { command: { id: "notes.create" } },
+    });
+    await workbench.commands.executeCommand("notes.create", { title: "My note" });
+    expect(title).toEqual({ title: "My note" });
+  });
   test("maps active keybindings to command-backed hotkey registrations", async () => {
     const workbench = createWorkbench();
     let executed = false;

@@ -49,11 +49,13 @@ export const createSettingsModule = () =>
       }).activate(ctx);
 
       registerSettingsSidenavs(ctx);
+      ctx.keybindings.registerKeybinding({ action: createSettingsFooterNode().target, keybinding: "Mod+," });
 
       // The surface registers the "Open settings" command itself; just surface it
       // in the dashboard's command palette menu.
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+        args: createSettingsFooterNode().target.args,
         order: 40,
       });
 
