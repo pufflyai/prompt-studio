@@ -113,6 +113,10 @@ export const expectPackagedQueuedEditRecovery = async (
         await expect(page.getByRole("button", { name: "Update", exact: true })).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Edit saved draft", exact: true })).toHaveCount(0);
         await expect(notice).toContainText("moved to the draft");
+        await editor.fill("Retained complete edit changed");
+        await expect(notice).toHaveCount(0);
+        await editor.fill("Retained complete edit");
+        await expect(notice).toHaveCount(0);
         await page.getByRole("button", { name: "Remove saved-context.txt", exact: true }).click();
         await expect(page.getByRole("button", { name: "Remove saved-context.txt", exact: true })).toHaveCount(0);
         const retainedFile = await page.request.get(

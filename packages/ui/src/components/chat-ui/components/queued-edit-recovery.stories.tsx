@@ -93,6 +93,9 @@ export const EmptyDraft: Story = {
     await expect(c.queryByRole("button", { name: "Edit saved draft" })).not.toBeInTheDocument();
     await expect(c.getByRole("textbox")).toHaveTextContent("Queued request amended");
     await expect(c.getByRole("status", { name: "Queued edit notice" })).toHaveTextContent("moved to the draft");
+    await userEvent.click(c.getByRole("textbox"));
+    await userEvent.keyboard(" changed");
+    await expect(c.queryByRole("status", { name: "Queued edit notice" })).not.toBeInTheDocument();
   },
 };
 export const OccupiedDraft: Story = {

@@ -5,4 +5,4 @@
 "@pstdio/workbench": patch
 ---
 
-Add complete queued request editing with recovery after dispatch, atomic combining, native steering contracts, and spaced delete icon buttons; hide unsupported send-now targets and isolate packaged migration extraction between hosts.
+Add complete queued request editing with recovery after dispatch and notices that clear on draft edits, atomic combining, native steering contracts, and spaced delete icon buttons; hide unsupported send-now targets and isolate packaged migration extraction between hosts.

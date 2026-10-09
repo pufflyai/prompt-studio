@@ -96,6 +96,7 @@ export const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) =>
   ]);
   const change = (text: string) => {
     if (!editingItem) {
+      if (text !== defaultValue) setNotice(null);
       onChange?.(text);
       return;
     }
