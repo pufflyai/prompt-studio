@@ -5,6 +5,7 @@ import { PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } fro
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
+  getNavigationTargetKey,
   getWorkbenchSelectionResourceKeys,
   type NavigationTarget,
   type ResourceRef,
@@ -187,18 +188,7 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
 };
 const renderShortcutEndContent = (binding: string | string[] | undefined) => {
   if (!binding) return undefined;
-  return (
-    <Box
-      opacity="0"
-      pointerEvents="none"
-      display="inline-flex"
-      alignItems="center"
-      transition="opacity 120ms ease"
-      _groupHover={{ opacity: "1" }}
-    >
-      <PaletteShortcut binding={binding} />
-    </Box>
-  );
+  return <PaletteShortcut binding={binding} variant="sidenav" />;
 };
 const resolveTreeNodeEndContent = (
   node: TreeNode,
@@ -243,10 +233,12 @@ const toTreeListNode = (
     onRequestParams: context.onRequestParams,
   });
   const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
-  const shortcuts = new Map(
-    context.workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]),
-  );
-  const binding = node.commandId ? shortcuts.get(node.commandId) : undefined;
+  const action = node.target ?? (node.commandId ? { kind: "command" as const, commandId: node.commandId } : undefined);
+  const binding = action
+    ? context.workbench.keybindings
+        .listActiveKeybindings()
+        .find((candidate) => getNavigationTargetKey(candidate.action) === getNavigationTargetKey(action))?.keybinding
+    : undefined;
   const treeNode: TreeListNode = {
     id: node.id,
     moveScope: node.moveScope,

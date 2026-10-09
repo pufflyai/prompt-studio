@@ -25,6 +25,7 @@ export const installShortcutReferenceExtension = async (
     join(sourcePath, "package.json"),
     JSON.stringify({
       name: "shortcut-reference",
+      displayName: "Shortcut reference",
       publisher: "e2e",
       version: "0.1.0",
       main: "extension.ts",

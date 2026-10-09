@@ -20,7 +20,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const BoundAndUnassigned: Story = {
+export const AssignedShortcuts: Story = {
   args: {
     shortcuts: [
       { id: "palette", label: "Toggle Command Palette", category: "Workbench", keybindings: ["Mod+P"] },
@@ -30,7 +30,7 @@ export const BoundAndUnassigned: Story = {
         category: "Notes",
         keybindings: [["Mod+K", "Mod+O"], ["Mod+K", "Mod+N"], ["Mod+K", "Mod+D"], "Alt+O"],
       },
-      { id: "note", label: "Create note", category: "Notes", keybindings: [] },
+      { id: "note", label: "New note", category: "Notes", keybindings: ["Alt+Shift+C"] },
       { id: "link", label: "https://example.com/documentation", category: "Notes", keybindings: ["Mod+Shift+H"] },
       { id: "panel", label: "Notes + Inspector", category: "Notes", keybindings: ["Alt+Shift+N"] },
     ],

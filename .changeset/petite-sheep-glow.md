@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Show extension shortcuts and unassigned actions in the live keyboard shortcut reference.
+Show assigned extension shortcuts in the live keyboard shortcut reference.

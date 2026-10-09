@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
-import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -26,7 +25,6 @@ import { seedSidenavStory } from "./dashboard-sidenav-story-data";
 import { createSidenavModule } from "./module";
 
 const PROJECT_ID = "demo-project";
-const WORKSPACES_KEYBINDING = "mod+shift+w";
 const STORY_TICKET_PAGE_ID = "story.page.ticket";
 const STORY_TICKET_PAGE_REF = { extensionId: "story", kind: "page" as const, id: "ticket" };
 const queryClient = new QueryClient({
@@ -213,10 +211,6 @@ const bootstrapWorkbench = () => {
   ]) {
     workbench.registerModule(module);
   }
-  workbench.keybindings.registerKeybinding({
-    action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
-    keybinding: WORKSPACES_KEYBINDING,
-  });
   selectDashboardProject(workbench, { id: PROJECT_ID, name: "Prompt Studio" });
   workbench.pageLocations.setProject(PROJECT_ID);
   return workbench;

@@ -268,6 +268,14 @@ export const createWorkspacesModule = () =>
         commandId: dashboardCommandIds.openWorkspaces,
         order: 10,
       });
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "page", page: workbenchPages.workspaces },
+        keybinding: "Alt+Shift+W",
+      });
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "command", commandId: dashboardCommandIds.createWorkspace },
+        keybinding: "Mod+Alt+W",
+      });
       const unsubscribePage = ctx.pages.store.subscribeSelector(
         (state) => state.location,
         () => syncActiveWorkspacePage(ctx),

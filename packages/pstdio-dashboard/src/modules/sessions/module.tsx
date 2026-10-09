@@ -199,6 +199,16 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
       registerSessionsPage(ctx);
       registerSidenavSessions(ctx);
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "page", page: workbenchPages.sessions },
+        keybinding: "Alt+Shift+S",
+      });
+      if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
+        ctx.keybindings.registerKeybinding({
+          action: { kind: "command", commandId: dashboardCommandIds.createSession },
+          keybinding: "Mod+Alt+S",
+        });
+      }
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
           commandId: dashboardCommandIds.createSession,

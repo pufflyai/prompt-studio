@@ -39,15 +39,25 @@ type DashboardExtensionMenuRegistration = Omit<BaseDashboardExtensionMenuRegistr
 
 export const emptyDashboardExtensionMetadata = emptyWorkbenchExtensionMetadata as DashboardExtensionMetadata;
 
+const metadataListeners = new Set<() => void>();
+export const subscribeDashboardExtensionMetadata = (listener: () => void) => {
+  metadataListeners.add(listener);
+  return () => {
+    metadataListeners.delete(listener);
+  };
+};
+
 const metadataByProjectId = new Map<string, DashboardExtensionMetadata>();
 
 export const setCachedDashboardExtensionMetadata = (projectId: string, metadata: DashboardExtensionMetadata) => {
   metadataByProjectId.set(projectId, metadata);
+  for (const listener of metadataListeners) listener();
 };
 
 export const clearCachedDashboardExtensionMetadata = (projectId: string | undefined) => {
   if (!projectId) return;
   metadataByProjectId.delete(projectId);
+  for (const listener of metadataListeners) listener();
 };
 
 export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>

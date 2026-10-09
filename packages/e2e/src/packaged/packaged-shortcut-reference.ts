@@ -18,10 +18,13 @@ export const verifyPackagedShortcutReference = async (
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
   const dialog = page.getByRole("dialog").last();
   await expect(dialog.getByRole("menuitem", { name: /Shortcut greeting/ })).toHaveCount(1);
-  await expect(dialog.getByRole("menuitem", { name: /Unassigned greeting/ })).toContainText("Not assigned");
+  await expect(dialog.getByRole("group", { name: "Shortcut reference", exact: true })).toBeVisible();
   await expect(dialog.getByRole("menuitem", { name: /Open shortcut destination/ })).toContainText(/J/i);
   await expect(dialog.getByText("https://example.com/shortcuts", { exact: true })).toBeVisible();
-  await expect(dialog.getByRole("menuitem", { name: /Archive shortcut record/ })).toContainText("Not assigned");
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
+  await page.goto(`${origin}/projects/${projectId}/extensions/e2e.shortcut-reference/reference`);
+  const navigation = page.getByRole("option", { name: /Open shortcut destination/ }).first();
+  await navigation.hover();
+  await expect(navigation.locator("kbd").last()).toBeVisible();
 };

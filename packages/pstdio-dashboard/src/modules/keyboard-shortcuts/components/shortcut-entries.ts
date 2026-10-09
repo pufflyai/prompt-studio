@@ -1,5 +1,10 @@
 import { contributionRefId, isLocalizedString } from "@pstdio/sdk/extensions";
-import type { KeybindingSequence, NavigationTarget, WorkbenchCore } from "@pstdio/workbench";
+import {
+  getNavigationTargetKey,
+  type KeybindingSequence,
+  type NavigationTarget,
+  type WorkbenchCore,
+} from "@pstdio/workbench";
 
 export interface ShortcutEntry {
   id: string;
@@ -8,32 +13,6 @@ export interface ShortcutEntry {
   keybindings: KeybindingSequence[];
 }
 
-// Object property order must not turn repeated parameterized placements into separate actions.
-const stableValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(stableValue);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, item]) => [key, stableValue(item)]),
-    );
-  }
-  return value;
-};
-const normalizeAction = (action: NavigationTarget) => {
-  if (
-    action.kind === "command" &&
-    action.args &&
-    !Array.isArray(action.args) &&
-    typeof action.args === "object" &&
-    Object.keys(action.args).length === 0
-  ) {
-    const { args: _args, ...target } = action;
-    return target;
-  }
-  return action;
-};
-const actionId = (action: NavigationTarget) => JSON.stringify(stableValue(normalizeAction(action)));
 const commandOwner = (commandId: string, fallback: string) =>
   commandId.split(".command.")[0] === commandId ? fallback : commandId.split(".command.")[0]!;
 
@@ -49,7 +28,14 @@ const actionOwner = (action: NavigationTarget, fallback: string): string => {
   return fallback;
 };
 
-export const readShortcutSources = (workbench: WorkbenchCore) => ({
+interface ShortcutExtension {
+  id: string;
+  name: string;
+  displayName?: string;
+}
+
+export const readShortcutSources = (workbench: WorkbenchCore, extensions: ShortcutExtension[] = []) => ({
+  extensions,
   commands: workbench.commands.store.getState().commands,
   keybindings: workbench.keybindings.store.getState().keybindings,
   menus: workbench.layout.menuStore.getState().itemsByPath,
@@ -139,12 +125,21 @@ const userFacingActions = (sources: ShortcutSources) => {
 export const buildShortcutEntries = (sources: ShortcutSources) => {
   const entries = new Map<string, ShortcutEntry>();
   const add = (action: NavigationTarget, label: string, owner: string, category?: string) => {
-    const id = actionId(action);
+    const id = getNavigationTargetKey(action);
     let entry = entries.get(id);
     if (!entry) {
       const extension = actionOwner(action, owner);
-      const group =
-        extension === "workbench.core" || extension.startsWith("dashboard.") ? (category ?? "Workbench") : extension;
+      let group = category ?? "Workbench";
+      if (extension === "pstdio") group = "Dashboard";
+      else if (extension !== "workbench.core" && !extension.startsWith("dashboard.")) {
+        group = extension
+          .split(" + ")
+          .map((id) => {
+            const metadata = sources.extensions.find((candidate) => candidate.id === id);
+            return metadata?.displayName || metadata?.name || "Extensions";
+          })
+          .join(" + ");
+      }
       entry = { id, label, category: group, keybindings: [] };
       entries.set(id, entry);
     }
@@ -163,7 +158,7 @@ export const buildShortcutEntries = (sources: ShortcutSources) => {
     if (!entry.keybindings.some((existing) => JSON.stringify(existing) === chord))
       entry.keybindings.push(binding.keybinding);
   }
-  return [...entries.values()].sort(
-    (a, b) => a.category.localeCompare(b.category) || a.label.localeCompare(b.label) || a.id.localeCompare(b.id),
-  );
+  return [...entries.values()]
+    .filter((entry) => entry.keybindings.length > 0)
+    .sort((a, b) => a.category.localeCompare(b.category) || a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
 };

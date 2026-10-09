@@ -1,20 +1,20 @@
 import { Dialog, Flex, Menu, Stack, Text } from "@chakra-ui/react";
 import { ListRow, PaletteShortcut, ScrollArea } from "@pstdio/ui";
 import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  getCachedDashboardExtensionMetadata,
+  subscribeDashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { buildShortcutEntries, type ShortcutEntry } from "./shortcut-entries";
 
 const ShortcutHints = (props: { shortcut: ShortcutEntry }) => {
   const { shortcut } = props;
   return (
     <Flex gap="xs" align="center" flexWrap="wrap">
-      {shortcut.keybindings.length > 0 ? (
-        shortcut.keybindings.map((binding) => <PaletteShortcut key={JSON.stringify(binding)} binding={binding} />)
-      ) : (
-        <Text textStyle="label/S/regular" color="fg.muted" whiteSpace="nowrap">
-          Not assigned
-        </Text>
-      )}
+      {shortcut.keybindings.map((binding) => (
+        <PaletteShortcut key={JSON.stringify(binding)} binding={binding} />
+      ))}
     </Flex>
   );
 };
@@ -64,6 +64,10 @@ export const ShortcutReference = (props: { shortcuts: ShortcutEntry[] }) => {
 export const KeyboardShortcutsWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const workbench = input.workbench;
+  const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
+  const metadata = useSyncExternalStore(subscribeDashboardExtensionMetadata, () =>
+    getCachedDashboardExtensionMetadata(projectId),
+  );
   const keybindings = useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const menus = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -90,7 +94,16 @@ export const KeyboardShortcutsWidget = (props: { input: WorkbenchPanelRenderInpu
   }, [workbench]);
   return (
     <ShortcutReference
-      shortcuts={buildShortcutEntries({ keybindings, commands, menus, pages, views, widgets, ...navigation })}
+      shortcuts={buildShortcutEntries({
+        keybindings,
+        commands,
+        menus,
+        pages,
+        views,
+        widgets,
+        extensions: metadata?.extensions ?? [],
+        ...navigation,
+      })}
     />
   );
 };
