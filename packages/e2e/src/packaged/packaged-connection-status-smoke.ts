@@ -42,12 +42,16 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     await expect(warning).toBeVisible();
     await page.keyboard.press("Escape");
     await warning.focus();
-    await expect(page.getByRole("tooltip")).toHaveText((await warning.getAttribute("aria-label")) ?? "");
+    await expect(
+      page.getByRole("tooltip", { name: (await warning.getAttribute("aria-label")) ?? "", exact: true }),
+    ).toBeVisible();
     await page.context().setOffline(false);
     await page.reload();
     await expect(connected).toBeVisible();
     await connected.hover();
-    await expect(page.getByRole("tooltip")).toHaveText((await connected.getAttribute("aria-label")) ?? "");
+    await expect(
+      page.getByRole("tooltip", { name: (await connected.getAttribute("aria-label")) ?? "", exact: true }),
+    ).toBeVisible();
     await page.getByRole("option", { name: "Settings", exact: true }).click();
     await page.getByText("Connection", { exact: true }).click();
     await toggle.focus();

@@ -51,3 +51,29 @@ const identity = resourceKey(document);
 `resourceKey` uses extension ID, project ID, type, and ID. Labels and metadata do
 not affect identity. URI conversion belongs to host routing and persistence.
 See the [composition cookbook](../../guides/extensions/0002-workbench-cookbook.md) for page and panel targets.
+
+## Related resources
+
+The shared workbench **Related resources** action lists incoming and outgoing links
+for the current resource. **Link resource** searches enabled owner contributions,
+lets a person choose a purpose, and calls the same service as `pst resources link`.
+Missing or disabled destinations keep their stored reference and remove action.
+A link does not grant access to the destination's content.
+
+An owner can declare `resolveMany` on a resource kind. Its command receives
+`params.resources` in its second handler argument, a bounded array of references, and returns
+`ResourceResolution[]`. Each item contains the current `resource` and an optional
+`target` from the public navigation API. Omit missing resources. The workbench
+compares the complete owner, project, kind, and ID before using the result.
+Resources without a resolvable navigation target show as unavailable.
+
+Use one batch command for several kinds owned by the same extension. The shared
+list groups a visible page by command and resolves each group once. The existing
+single-resource `resolve` command continues to refresh open resource pages.
+Declare the owner data events in the discovery provider's `refreshEvents` so open
+lists refresh after edits. Command lifecycle events do not cause another lookup.
+
+Native owner views that show linked resources should include
+`viewDataEvents.resourceAnchorsChanged` in `refreshEvents`. The host delivers this
+project-scoped dependency after committed link changes, including changes made by
+another client or through the CLI.
