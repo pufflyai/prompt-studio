@@ -52,6 +52,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # Harnesses import SDK helpers at runtime, not only its types.
+      - name: Build the SDK
+        run: bun run build -- --scope @pstdio/sdk --include-dependencies
+
       - name: Install the agent CLI
         env:
           EXTENSION: ${{ matrix.harness.extension }}
@@ -61,7 +65,8 @@ jobs:
           if [ "$VERSION" = minimum ]; then
             VERSION=$(bun -e "console.log((await import('./extensions/$EXTENSION/src/detection.ts')).MINIMUM_VERSION)")
           fi
-          npm install --global "$PACKAGE@$VERSION"
+          # npm runs a global package's install scripts only when allowed. They download the native CLI.
+          npm install --global --allow-scripts="$PACKAGE" "$PACKAGE@$VERSION"
 
       - name: Test the harness against the installed CLI
         working-directory: extensions/${{ matrix.harness.extension }}
