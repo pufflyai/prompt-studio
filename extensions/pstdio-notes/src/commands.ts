@@ -1,4 +1,5 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { moveNote, requireFolder } from "./folders";
 import { createNote, deleteNote, renameNote } from "./notes";
 import { notesChanged, notesMount, noteTarget } from "./pages";
 
@@ -8,24 +9,28 @@ export const createNoteCommand = defineCommand({
   cli: true,
   mutating: true,
   params: {
-    title: params.text({ label: l10n("params.title", "Title"), required: true }),
+    title: params.text({ label: l10n("params.title", "Title") }),
+    folderId: params.text({ label: l10n("params.folder", "Folder") }),
   },
   async run(ctx, commandParams) {
+    if (commandParams.folderId) await requireFolder(notesMount(ctx), commandParams.folderId);
     const note = await createNote(notesMount(ctx), commandParams.title);
+    if (commandParams.folderId) await moveNote(notesMount(ctx), note.id, commandParams.folderId);
     await ctx.events.emit(notesChanged, { noteId: note.id });
 
-    ctx.navigation.open(noteTarget(note.id, note.title));
+    ctx.navigation.open(noteTarget(note.id, note.title, ctx));
     return note;
   },
 });
 
 export const deleteNoteCommand = defineCommand({
   id: "notes.delete",
+  resourceMutation: { kind: "remove", resourceType: "note", idParam: "noteId" },
   title: l10n("commands.deleteNote", "Delete note"),
   cli: true,
   mutating: true,
   params: {
-    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true }),
+    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true, resolvedFrom: "resource" }),
   },
   async run(ctx, commandParams) {
     const mount = notesMount(ctx);
@@ -39,11 +44,12 @@ export const deleteNoteCommand = defineCommand({
 
 export const renameNoteCommand = defineCommand({
   id: "notes.rename",
+  resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", labelParam: "title" },
   title: l10n("commands.renameNote", "Rename note"),
   cli: true,
   mutating: true,
   params: {
-    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true }),
+    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true, resolvedFrom: "resource" }),
     title: params.text({ label: l10n("params.title", "Title"), required: true }),
   },
   async run(ctx, commandParams) {
