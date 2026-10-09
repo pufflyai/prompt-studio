@@ -21,7 +21,7 @@ const installFixtures = (prefix: string, broken: boolean) => {
     const bin = join(prefix, "node_modules", harness.command, "bin");
     mkdirSync(bin, { recursive: true });
     const script = join(bin, "cli.cjs");
-    let source = `console.error(${JSON.stringify(harness.version)});`;
+    let source = `console.error(${JSON.stringify(`\u001b[32m${harness.version}\u001b[0m`)});`;
     if (harness.command === "opencode")
       source = broken
         ? `require('node:fs').writeFileSync(${JSON.stringify(join(prefix, "hanging.pid"))}, String(process.pid)); setInterval(() => {}, 1000);`

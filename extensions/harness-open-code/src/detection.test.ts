@@ -27,6 +27,8 @@ test("accepts the CLI version on stdout or stderr", async () => {
   for (const [stdout, stderr] of [
     ["1.18.34\n", ""],
     ["", "1.18.34\n"],
+    ["\u001b[32m1.18.34\u001b[0m\n", ""],
+    ["", "\u001b[32m1.18.34\u001b[0m\n"],
   ]) {
     expect(await probe(stdout, stderr)).toEqual({ available: true, version: "1.18.34" });
   }

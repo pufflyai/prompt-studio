@@ -27,6 +27,8 @@ test("accepts the CLI version on stdout or stderr", async () => {
   for (const [stdout, stderr] of [
     ["codex-cli 0.160.1\n", ""],
     ["", "codex-cli 0.160.1\n"],
+    ["\u001b[32mcodex-cli 0.160.1\u001b[0m\n", ""],
+    ["", "\u001b[32mcodex-cli 0.160.1\u001b[0m\n"],
   ]) {
     expect(await probe(stdout, stderr)).toEqual({ available: true, version: "codex-cli 0.160.1" });
   }

@@ -36,7 +36,7 @@ test("uses the per-call PATH for lookup as well as child execution", async () =>
 });
 
 test("preserves PATH order and does not silently bypass a broken installation", async () => {
-  const first = fixture("first", "discovery-cli", "console.error('broken install'); process.exit(7)");
+  const first = fixture("first", "discovery-cli", "process.stderr.write('broken install\\n'); process.exit(7)");
   const second = fixture("second", "discovery-cli");
   const api = createProcessApi();
   const run = (paths: string[]) => api.run({ command: ["discovery-cli"], env: { PATH: paths.join(delimiter) } });

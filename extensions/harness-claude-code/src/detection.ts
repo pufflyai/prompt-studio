@@ -9,7 +9,7 @@ export const detectClaude = async (ctx: HarnessContext) => {
       return { available: false };
     }
     const version = [result.stdout, result.stderr]
-      .map((value) => value.trim())
+      .map((value) => Bun.stripANSI(value).trim())
       .find((value) => /^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?(?:\s+\(Claude Code\))?$/i.test(value));
     if (!version) {
       ctx.logger.warn(

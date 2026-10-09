@@ -8,7 +8,7 @@ export const detectCodex = async (ctx: HarnessContext) => {
       return { available: false };
     }
     const version = [result.stdout, result.stderr]
-      .map((value) => value.trim())
+      .map((value) => Bun.stripANSI(value).trim())
       .find((value) => /^(?:codex-cli\s+)?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(value));
     if (!version) {
       ctx.logger.warn("Codex did not return a recognized CLI version. Check the CLI selected by the runtime PATH.");

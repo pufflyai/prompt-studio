@@ -8,7 +8,7 @@ export const detectOpencode = async (ctx: HarnessContext) => {
       return { available: false };
     }
     const version = [result.stdout, result.stderr]
-      .map((value) => value.trim())
+      .map((value) => Bun.stripANSI(value).trim())
       .find((value) => /^(?:opencode\s+)?v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/i.test(value));
     if (!version) {
       ctx.logger.warn("OpenCode did not return a recognized CLI version. Check the CLI selected by the runtime PATH.");
