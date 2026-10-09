@@ -16,7 +16,7 @@ const examples = {
 };
 
 export const startCreation = defineCommand({
-  id: "startCreation",
+  id: "start-creation",
   title: l10n("commands.startCreation", "Create an artifact"),
   cli: true,
   mutating: true,
