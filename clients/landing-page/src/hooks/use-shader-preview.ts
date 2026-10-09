@@ -29,9 +29,7 @@ export const useShaderPreview = (source: string, scale: number, speed: number, c
     const visibility = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
     visibility.observe(canvas);
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const respectMotion = () => {
-      if (motion.matches) setPlaying(false);
-    };
+    const respectMotion = () => setPlaying(!motion.matches);
     respectMotion();
     motion.addEventListener("change", respectMotion);
     return () => {
@@ -89,5 +87,5 @@ export const useShaderPreview = (source: string, scale: number, speed: number, c
     return () => cancelAnimationFrame(frame);
   }, [playing, inView, speed]);
 
-  return { canvasRef, error, playing, toggle: () => setPlaying((value) => !value) };
+  return { canvasRef, error };
 };

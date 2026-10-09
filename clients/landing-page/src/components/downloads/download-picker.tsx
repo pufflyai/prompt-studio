@@ -1,11 +1,12 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { SearchableMenu } from "@pstdio/ui";
-import { ChevronDown, Download, Monitor, SquareTerminal } from "lucide-react";
+import { ChevronDown, Download, SquareTerminal } from "lucide-react";
 import { SITE_LINKS } from "../../content/landing-content";
 import { useDesktopDownloads } from "../../hooks/use-desktop-downloads";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { DESKTOP_RELEASES_URL } from "../../services/desktop-releases";
 import { downloadDescription } from "../../services/release-assets";
+import { platformIcon } from "../icons/os-logo";
 
 export const DownloadPicker = () => {
   const styles = useLandingStyles();
@@ -33,10 +34,16 @@ export const DownloadPicker = () => {
           </a>
         </Button>
       )}
-      <Text id="download-build" textStyle="label/S/regular" color="fg.muted" aria-live="polite">
+      <Text
+        css={styles.downloadDescription}
+        id="download-build"
+        textStyle="label/S/regular"
+        color="fg.muted"
+        aria-live="polite"
+      >
         {description}
       </Text>
-      <HStack gap="xs">
+      <HStack css={styles.downloadPlatforms}>
         {release && (
           <SearchableMenu
             searchPlaceholder="Find a build"
@@ -52,7 +59,7 @@ export const DownloadPicker = () => {
             items={release.downloads.map((download) => ({
               id: download.id,
               label: `${download.platform} · ${download.architecture} · ${download.format.toUpperCase()}`,
-              icon: Monitor,
+              icon: platformIcon(download.platform),
               isSelected: download.id === selected?.id,
               onSelect: () => selectDownload(download.id),
             }))}

@@ -76,6 +76,14 @@ const ActionMenuTitleBar = () => {
 
 export const TabBarActionMenu: Story = { render: () => <ActionMenuTitleBar /> };
 
+export const MobileNavigation: Story = {
+  render: () => <CommandPaletteModal open pages={STORY_PAGES} onClose={noop} onNavigate={noop} />,
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  parameters: {
+    docs: { description: { story: "Mobile navigation fills the screen without focusing search on open." } },
+  },
+};
+
 export const TabBarActionMenuDark: Story = {
   render: () => (
     <Box className="dark">
@@ -92,6 +100,19 @@ export const DocsSidebar: Story = {
   ),
 };
 
+export const DocsSidebarShortWindow: Story = {
+  render: () => (
+    <Box width="220px" height="320px">
+      <ResourceSidebar page={STORY_SESSIONS} pages={STORY_PAGES} onNavigate={noop} />
+    </Box>
+  ),
+  parameters: {
+    docs: {
+      description: { story: "Long navigation remains scrollable in a short window without a visible scrollbar." },
+    },
+  },
+};
+
 export const BlogSidebar: Story = {
   render: () => (
     <Box width="220px" height="full">
@@ -102,9 +123,23 @@ export const BlogSidebar: Story = {
 
 export const DocsHome: Story = { render: () => <DocsHomeView page={STORY_DOCS_HOME} pages={STORY_PAGES} /> };
 
+export const DocsHomeMobile: Story = {
+  ...DocsHome,
+  parameters: {
+    docs: { description: { story: "Mobile docs links fill their row and have a minimum 44-pixel touch target." } },
+  },
+};
+
+export const DocsPageMobile: Story = {
+  render: () => <DocsPageView page={STORY_SESSIONS} document={STORY_DOCUMENT} />,
+  parameters: {
+    docs: { description: { story: "Inline documentation links have added padding and height on mobile." } },
+  },
+};
+
 /** Tables, code, and the outline. The outline appears from the `xl` breakpoint. */
 export const DocsPage: Story = {
-  render: () => <DocsPageView page={STORY_SESSIONS} pages={STORY_PAGES} document={STORY_DOCUMENT} />,
+  render: () => <DocsPageView page={STORY_SESSIONS} document={STORY_DOCUMENT} />,
 };
 
 export const BlogIndex: Story = { render: () => <BlogIndexView page={STORY_BLOG_HOME} pages={STORY_PAGES} /> };

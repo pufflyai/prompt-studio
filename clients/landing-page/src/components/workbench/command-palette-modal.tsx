@@ -1,3 +1,4 @@
+import { useBreakpointValue } from "@chakra-ui/react";
 import { filterPaletteEntries, Palette, type PaletteEntry, useThemePreference } from "@pstdio/ui";
 import {
   ArrowUpRight,
@@ -33,6 +34,7 @@ interface CommandPaletteModalProps {
 export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
   const { open, pages, onClose, onNavigate } = props;
   const { toggleThemePreference } = useThemePreference();
+  const mobile = useBreakpointValue({ base: true, lg: false }) ?? true;
 
   const run = (action: () => void) => () => {
     onClose();
@@ -127,6 +129,8 @@ export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
   return (
     <Palette
       open={open}
+      fullScreen={mobile}
+      searchAutoFocus={!mobile}
       entries={[...viewEntries, ...externalEntries, ...documentEntries, ...commandEntries]}
       filterEntries={(entries, query) => filterPaletteEntries(entries, { query, defaultAssetLimit: 0 })}
       placeholder="Search or run a command…"

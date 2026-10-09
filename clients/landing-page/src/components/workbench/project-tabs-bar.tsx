@@ -1,5 +1,5 @@
-import { Box, chakra, HStack, Text } from "@chakra-ui/react";
-import { BookOpen, Maximize2, Minimize2, Minus, Newspaper, X } from "lucide-react";
+import { Box, chakra, HStack, IconButton, Text } from "@chakra-ui/react";
+import { BookOpen, Maximize2, Menu, Minimize2, Minus, Newspaper, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { SiteSection } from "../../content/landing-pages";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
@@ -95,8 +95,24 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
   return (
     <>
       <Box css={styles.mobileTitlebar}>
-        <SiteTabs selected={selected} sectionPath={sectionPath} />
-        <ActionMenuButton open={actionMenuOpen} onOpen={onOpenActionMenu} />
+        <chakra.a href="/" css={styles.siteTab} aria-label="Prompt Studio home">
+          <Box css={styles.siteTabIcon}>
+            <PromptStudioIcon />
+          </Box>
+          <Text as="span" css={styles.siteTabLabel}>
+            Prompt Studio
+          </Text>
+        </chakra.a>
+        <IconButton
+          aria-label="Open navigation menu"
+          aria-haspopup="dialog"
+          aria-expanded={actionMenuOpen}
+          variant="ghost"
+          size="sm"
+          onClick={onOpenActionMenu}
+        >
+          <Menu />
+        </IconButton>
       </Box>
       <Box css={styles.titlebar} onPointerDown={onTitleBarPointerDown} onDoubleClick={onTitleBarDoubleClick}>
         <Box

@@ -1,12 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AGENT_BOARD_TASKS, type AgentTaskStage, isTaskActive, SESSION_STAGES } from "../content/agent-board-content";
+import { useDemoCli } from "./use-demo-cli";
 
 export const useAgentBoardDemo = () => {
-  const hostRef = useRef<HTMLDivElement>(null);
   const [tasks, setTasks] = useState(AGENT_BOARD_TASKS);
   const [selectedId, setSelectedId] = useState("TOOL-16");
   const [playing, setPlaying] = useState(true);
   const [inView, setInView] = useState(false);
+  const hostRef = useDemoCli("agents", (command) => {
+    setSelectedId(command.id);
+    setTasks((current) => current.map((task) => (task.id === command.id ? { ...task, stage: "coding" } : task)));
+    setPlaying(true);
+  });
   const active = tasks.some((task) => isTaskActive(task.stage));
 
   useEffect(() => {
@@ -22,7 +27,7 @@ export const useAgentBoardDemo = () => {
       observer.disconnect();
       motion.removeEventListener("change", respectMotion);
     };
-  }, []);
+  }, [hostRef]);
 
   useEffect(() => {
     if (!playing || !inView || !active) return;
@@ -48,7 +53,6 @@ export const useAgentBoardDemo = () => {
     playing,
     active,
     select: setSelectedId,
-    toggle: () => setPlaying((value) => !value),
     replay: () => {
       setTasks(AGENT_BOARD_TASKS);
       setSelectedId("TOOL-16");

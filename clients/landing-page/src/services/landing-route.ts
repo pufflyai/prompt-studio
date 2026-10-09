@@ -1,4 +1,4 @@
-import { SIDEBAR_VIEWS, type SidebarView } from "../content/landing-content";
+import type { SidebarView } from "../content/landing-content";
 import { LANDING_PAGES, type LandingPage, type SiteSection } from "../content/landing-pages";
 import type { ToolExampleId } from "../content/tool-examples-content";
 
@@ -6,15 +6,6 @@ export const landingPathForView = (view: SidebarView) => LANDING_PAGES.find((pag
 
 export const landingPathForExample = (exampleId: ToolExampleId) =>
   LANDING_PAGES.find((page) => page.view === "examples" && page.exampleId === exampleId)!.path;
-
-export const nextLandingView = (view: SidebarView) => {
-  return SIDEBAR_VIEWS[(SIDEBAR_VIEWS.indexOf(view) + 1) % SIDEBAR_VIEWS.length];
-};
-
-export const previousLandingView = (view: SidebarView) => {
-  if (view === "start") return null;
-  return SIDEBAR_VIEWS[SIDEBAR_VIEWS.indexOf(view) - 1];
-};
 
 export const landingPageFromPath = (pages: LandingPage[], path: string) => {
   const pathname = `${path.split(/[?#]/)[0].replace(/\/+$/, "")}/`;
@@ -35,7 +26,3 @@ export const sectionForPage = (page: LandingPage): SiteSection => {
 
 /** Pages whose main content is markdown HTML that the site fetches on navigation. */
 export const isDocumentPage = (page: LandingPage) => ["legal", "doc", "post"].includes(page.view);
-
-/** Docs pages in sidebar order, starting with the Docs home, for previous and next links. */
-export const docsReadingOrder = (pages: LandingPage[]) =>
-  pages.filter((page) => page.view === "docs" || page.view === "doc");

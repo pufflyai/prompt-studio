@@ -1,15 +1,29 @@
+import { Suspense } from "react";
 import { AURORA_SHADER } from "../../content/shader-demo-content";
 import type { ToolExampleId } from "../../content/tool-examples-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
-import { AgentDashboardDemo } from "./agent-dashboard-demo";
-import { FormulaGlossaryDemo } from "./formula-glossary-demo";
+import { AgentDemo, FormulaDemo, ShaderDemo } from "../../services/landing-modules";
 import { IconSetEditorDemo } from "./icon-set-editor-demo";
-import { ShaderEditorDemo } from "./shader-editor-demo";
 
 export const ToolDemo = (props: { example: ToolExampleId; highlighted?: ToolShapeKind }) => {
   const { example, highlighted } = props;
-  if (example === "shaders") return <ShaderEditorDemo shader={AURORA_SHADER} withControls highlighted={highlighted} />;
-  if (example === "agents") return <AgentDashboardDemo highlighted={highlighted} />;
-  if (example === "formulas") return <FormulaGlossaryDemo highlighted={highlighted} />;
+  if (example === "shaders")
+    return (
+      <Suspense fallback={null}>
+        <ShaderDemo.Component shader={AURORA_SHADER} withControls highlighted={highlighted} />
+      </Suspense>
+    );
+  if (example === "agents")
+    return (
+      <Suspense fallback={null}>
+        <AgentDemo.Component highlighted={highlighted} />
+      </Suspense>
+    );
+  if (example === "formulas")
+    return (
+      <Suspense fallback={null}>
+        <FormulaDemo.Component highlighted={highlighted} />
+      </Suspense>
+    );
   return <IconSetEditorDemo highlighted={highlighted} />;
 };

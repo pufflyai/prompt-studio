@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import type { LandingPage, SiteSection } from "../content/landing-pages";
 import { trackActionMenuOpened } from "../services/landing-analytics";
 import { updateLandingMetadata } from "../services/landing-metadata";
@@ -21,19 +21,23 @@ export const useLandingNavigation = (initialPath: string, pages: LandingPage[]) 
   const show = (nextPath: string) => {
     const nextPage = landingPageFromPath(pages, nextPath);
     if (!nextPage) return;
-    setPath(nextPath);
-    setLastPaths((paths) => ({ ...paths, [sectionForPage(nextPage)]: nextPath }));
+    // Keep the current page visible while a deferred page module loads.
+    startTransition(() => {
+      setPath(nextPath);
+      setLastPaths((paths) => ({ ...paths, [sectionForPage(nextPage)]: nextPath }));
+    });
   };
 
-  const navigate = (href: string) => {
+  const navigate = (href: string, replace = false) => {
     const url = new URL(href, window.location.href);
     const target = `${url.pathname}${url.hash}`;
-    if (target !== `${window.location.pathname}${window.location.hash}`) window.history.pushState({}, "", target);
+    if (target !== `${window.location.pathname}${window.location.hash}`)
+      window.history[replace ? "replaceState" : "pushState"]({}, "", target);
     show(url.pathname);
   };
 
   // Every same-site link, including links inside docs HTML, opens without a
-  // reload, so the tool scene, window mode, and sidebar width survive.
+  // reload, so window mode and sidebar width survive.
   // biome-ignore lint/correctness/useExhaustiveDependencies: listeners only call state setters and the fixed page list.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
