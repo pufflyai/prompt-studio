@@ -99,17 +99,22 @@ for (const broken of [false, true]) {
     if (broken) await Bun.sleep(5_001);
     const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
     expect(agents.status).toBe(200);
-    const result = (await agents.json()) as Array<{ id: string; availability: { type: string } }>;
+    const result = (await agents.json()) as Array<{ id: string; availability: { type: string; reason?: string } }>;
     expect(result).toHaveLength(3);
     for (const harness of harnesses) {
       expect(result).toContainEqual(
         expect.objectContaining({
           id: harnessId(harness),
-          availability: { type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED" },
+          availability: expect.objectContaining({
+            type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED",
+          }),
         }),
       );
     }
     if (broken) {
+      // The host stops the hanging probe and says why the harness is unavailable.
+      const opencode = result.find((agent) => agent.id === harnessId(harnesses[0]));
+      expect(opencode?.availability.reason).toMatch(/\S/);
       await expectProbeExited("opencode");
     }
     if (!broken) {
