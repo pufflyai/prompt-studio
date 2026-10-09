@@ -1,7 +1,13 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
 import { Box, Flex, Text } from "@chakra-ui/react";
 import type { GuestHost } from "@pstdio/sdk/extensions";
-import { useKanbanRendererStore } from "@pstdio/ui/kanban-renderer";
+import {
+  type CollectionViewsSource,
+  filterRowsByView,
+  searchRows,
+  useCollectionViewStore,
+} from "@pstdio/ui/collection-view";
+import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 import { stepReview } from "../model/review";
 import { BackgroundMenu } from "./background-menu";
@@ -10,20 +16,48 @@ import { PlanEditor } from "./plan-editor";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
-import { timelineQueryData } from "./timeline-query";
+import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { useDisplay } from "./use-display";
-import { usePlan } from "./use-plan";
+import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
+import { useTimelineViews } from "./use-timeline-views";
 
-export function PlanRoot(props: { host: GuestHost; t: (key: string, fallback?: string) => string }) {
+interface PlanRootProps {
+  host: GuestHost;
+  t: (key: string, fallback?: string) => string;
+}
+
+export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
   const { client, plan, error } = usePlan(host);
+  const { source: viewsSource, error: viewsError } = useTimelineViews(client);
+  if (!plan || !viewsSource)
+    return (
+      <Text p="md" role={error || viewsError ? "alert" : undefined}>
+        {error ?? viewsError ?? "Loading tickets…"}
+      </Text>
+    );
+  return (
+    <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} error={error ?? viewsError} />
+  );
+}
+
+interface PlanContentProps extends PlanRootProps {
+  client: PlanClient;
+  plan: Awaited<ReturnType<PlanClient["commands"]["timeline.plan.read"]>>;
+  viewsSource: CollectionViewsSource<KanbanRendererSettings>;
+  error?: string;
+}
+
+function PlanContent(props: PlanContentProps) {
+  const { host, t, client, plan, viewsSource, error } = props;
   const { display, update, error: displayError } = useDisplay(client);
   const [search, setSearch] = useState("");
-  const queryData = timelineQueryData(plan);
-  const filters = useKanbanRendererStore(queryData.storageKey, (state) => state.filters);
-  const query = { search, filters, tags: plan?.tags ?? [] };
-  const { sections, tracks, toggle } = useViewSections(plan, display, query);
+  const queryData = timelineQueryData(plan, t);
+  const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
+  const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
+  const matching = searchRows(filtered, search, (row) => [row.title, String(row.attributes.id)]);
+  const { sections, tracks, toggle } = useViewSections(plan, display, new Set(matching.map(({ id }) => id)));
   const {
     viewProps,
     selected,
@@ -41,47 +75,44 @@ export function PlanRoot(props: { host: GuestHost; t: (key: string, fallback?: s
     <Flex direction="column" h="full" minH="0" minW="0">
       <PlanHeader
         data={queryData}
+        viewsSource={viewsSource}
         display={display}
         onDisplayChange={update}
         search={search}
         onSearchChange={setSearch}
-        resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${queryData.rows.length}`}
+        resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${filtered.length}`}
       />
       {[error, displayError, actionError].filter(Boolean).map((message) => (
         <Text key={message} role="alert" color="fg.error" px="md" pt="sm" flexShrink="0">
           {message}
         </Text>
       ))}
-      {plan ? (
-        <Flex flex="1" minH="0" minW="0">
-          <Box flex="1" minH="0" minW="0">
-            <PlanGraph {...viewProps} today={plan.today} squareArrows={display.squareArrows} />
-          </Box>
-          {selected ? (
-            <Details
-              key={selected.id}
-              row={selected}
-              plan={plan}
-              client={client}
-              onOpen={open}
-              onSelect={setSelectedId}
-              onClose={() => setSelectedId(undefined)}
-              review={
-                review?.includes(selected.id)
-                  ? {
-                      position: review.indexOf(selected.id) + 1,
-                      total: review.length,
-                      onStep: (direction) => setSelectedId(stepReview(review, selected.id, direction)),
-                    }
-                  : undefined
-              }
-            />
-          ) : null}
-        </Flex>
-      ) : (
-        !error && <Text p="md">Loading tickets…</Text>
-      )}
-      {editor && plan ? (
+      <Flex flex="1" minH="0" minW="0">
+        <Box flex="1" minH="0" minW="0">
+          <PlanGraph {...viewProps} today={plan.today} squareArrows={display.squareArrows} />
+        </Box>
+        {selected ? (
+          <Details
+            key={selected.id}
+            row={selected}
+            plan={plan}
+            client={client}
+            onOpen={open}
+            onSelect={setSelectedId}
+            onClose={() => setSelectedId(undefined)}
+            review={
+              review?.includes(selected.id)
+                ? {
+                    position: review.indexOf(selected.id) + 1,
+                    total: review.length,
+                    onStep: (direction) => setSelectedId(stepReview(review, selected.id, direction)),
+                  }
+                : undefined
+            }
+          />
+        ) : null}
+      </Flex>
+      {editor ? (
         <PlanEditor
           key={JSON.stringify(editor)}
           host={host}

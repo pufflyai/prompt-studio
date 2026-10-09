@@ -8,7 +8,9 @@ Right-click an empty track or milestone to create a ticket or an agent review ga
 
 Use **New track** to add a value to the single-select Track tag. Create milestones on the date gutter, then drag tickets between tracks and milestones. Prerequisites form the dependency graph. Selecting a ticket shows its instructions, dependencies, review gate, and pending human actions.
 
-Use the filter and search controls to find work. The display menu controls completed tickets, past deadlines, work needing attention, and arrow shape. Menu choices include icons. Resource previews are deferred to ticket resource links.
+The header uses the same saved views, search, filter menus, and filter rules as Kanban and data tables. Ticket views are shared with **Tickets**: create, rename, duplicate, delete, and save filters from either board. Advanced filters support groups and negative conditions. Search stays local to the screen.
+
+The display menu controls completed tickets, past deadlines, work needing attention, and arrow shape. These timeline preferences belong to the project; saving a ticket filter preserves Kanban's display settings and sorts. The graph keeps its dependency execution order. The timeline includes active tickets; archived tickets remain available in Tickets. Menu choices include icons. Resource previews are deferred to ticket resource links.
 
 ## CLI
 

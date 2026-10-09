@@ -25,6 +25,15 @@ test("uses Planner's configured status identities for progress, completion, and 
   const blocked = await createTicketCommand.run(ctx, { content: "# Blocked work", statusId: "project-blocked" });
   const wip = await createTicketCommand.run(ctx, { content: "# Work in progress", statusId: "project-wip" });
   const plan = await readPlanCommand.run(ctx, {});
+  expect(plan.ticketRows).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: progress.id,
+        attributes: expect.objectContaining({ status: "project-in-progress" }),
+      }),
+      expect.objectContaining({ id: wip.id, attributes: expect.objectContaining({ status: "project-wip" }) }),
+    ]),
+  );
   const rows = plan.sections.flatMap((section) => section.rows);
   expect(rows.find((row) => row.id === completed.id)).toMatchObject({ done: true, state: "done", status: "Done" });
   expect(rows.find((row) => row.id === progress.id)).toMatchObject({

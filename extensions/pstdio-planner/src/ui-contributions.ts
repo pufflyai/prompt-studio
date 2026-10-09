@@ -24,6 +24,7 @@ import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
+import { ticketBoard } from "./data/ticket-board";
 import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
@@ -90,7 +91,7 @@ export const createPlannerUi = (baseUrl: string) => {
     },
   });
   const tickets = defineView({
-    id: "tickets",
+    id: ticketBoard.id,
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
     icon: "square-kanban",
     body: {

@@ -10,7 +10,7 @@ const retryDelayMs = 5000;
 export function useLiveValue<T>(
   client: PlanClient,
   read: (client: PlanClient) => Promise<T>,
-  events: readonly EventRef<{ reason?: string; ticketId?: string }>[],
+  events: readonly EventRef[],
 ) {
   const [value, setValue] = useState<T>();
   const [error, setError] = useState<string>();

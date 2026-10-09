@@ -12,8 +12,20 @@ import { launchGateCommand } from "./launch-gate";
 import { moveTicketCommand } from "./move-ticket";
 import { readPlanCommand } from "./read-plan";
 import { assignTrackCommand, createTrackCommand, renameTrackCommand } from "./track-commands";
+import {
+  createViewCommand,
+  defaultViewCommand,
+  deleteViewCommand,
+  readViewsCommand,
+  updateViewCommand,
+} from "./view-commands";
 
 export const commands = {
+  "timeline.views.read": readViewsCommand,
+  "timeline.views.create": createViewCommand,
+  "timeline.views.update": updateViewCommand,
+  "timeline.views.delete": deleteViewCommand,
+  "timeline.views.default": defaultViewCommand,
   "timeline.plan.read": readPlanCommand,
   "timeline.plan.move": moveTicketCommand,
   "timeline.track.create": createTrackCommand,

@@ -1,5 +1,6 @@
 // Return the execution plan with its deadlines, blockers, risk, and the Planner tags tracks can use.
 import { defineCommand } from "@pstdio/sdk/extensions";
+import { queryTickets } from "../../commands/query-tickets";
 import { readTicketTags } from "../../data/tag-operations";
 import { buildPlan } from "../model/build-plan";
 import { readActionStore } from "./action-store";
@@ -15,8 +16,16 @@ export const readPlanCommand = defineCommand({
   title: "Read execution plan",
   cli: { description: "Print the execution order, deadlines, blockers, and risk as JSON." },
   async run(ctx) {
-    const [loaded, { tags }] = await Promise.all([loadPlan(ctx), readTicketTags(ctx.storage)]);
+    const [loaded, { tags }, { rows: ticketRows }] = await Promise.all([
+      loadPlan(ctx),
+      readTicketTags(ctx.storage),
+      queryTickets(ctx, { filters: { archived: ["active"] } }),
+    ]);
     const [actions, gates, track] = await Promise.all([readActionStore(ctx), readGates(ctx), readTrack(ctx)]);
-    return buildPlan({ ...loaded, actions, gates, track, tags, today: localToday() });
+    return {
+      ...buildPlan({ ...loaded, actions, gates, track, tags, today: localToday() }),
+      projectId: ctx.projectId,
+      ticketRows,
+    };
   },
 });

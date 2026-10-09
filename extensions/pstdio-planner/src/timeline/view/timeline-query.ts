@@ -1,62 +1,46 @@
-// Adapt saved Planner properties and timeline milestones to the Planner's shared filter toolbar.
-import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import type { Plan } from "../contracts";
-import { ticketFilterValues } from "../model/ticket-query";
+import { EMPTY_VIEW_FILTER, withTitleField } from "@pstdio/ui/collection-view";
+import {
+  type AttributeDescriptor,
+  DEFAULT_KANBAN_RENDERER_SETTINGS,
+  type KanbanRendererRow,
+} from "@pstdio/ui/kanban-renderer";
+import { buildTicketAttributes } from "../../data/mappers";
+import { localizeTicketFormValue } from "../../ticket-create-form";
+import type { PlanClient } from "./use-plan";
 
-export function timelineQueryData(plan: Plan | undefined) {
-  const tickets = plan?.sections.flatMap(({ rows }) => rows) ?? [];
-  const tags = plan?.tags ?? [];
-  const attributes: AttributeDescriptor[] = [
-    {
-      id: "status",
-      label: "Status",
-      filterable: true,
-      type: {
-        kind: "enum",
-        options: [...new Set(tickets.map(({ status }) => status))].map((value) => ({
-          value,
-          label: value,
-          icon: plan?.statuses.find((status) => status.name === value)?.icon ?? "circle",
-        })),
-      },
-    },
-    {
-      id: "milestone",
-      label: "Milestone",
-      filterable: true,
-      type: {
-        kind: "enum",
-        options:
-          plan?.sections.map(({ deadline }) => ({
-            value: deadline?.id ?? "none",
-            label: deadline?.name ?? deadline?.date ?? "Unscheduled",
-            icon: "calendar",
-          })) ?? [],
-      },
-    },
-    ...tags
-      .filter((tag) => tag.options.length > 0)
-      .map(
-        (tag): AttributeDescriptor => ({
-          id: tag.id,
-          label: tag.name,
-          filterable: true,
+export const timelineInitialState = {
+  settings: DEFAULT_KANBAN_RENDERER_SETTINGS,
+  filter: EMPTY_VIEW_FILTER,
+  sorts: [],
+};
+
+export function timelineQueryData(
+  plan: Awaited<ReturnType<PlanClient["commands"]["timeline.plan.read"]>>,
+  t: (key: string, fallback?: string) => string,
+) {
+  const attributes = buildTicketAttributes(plan.statuses, plan.tags).flatMap<AttributeDescriptor>((attribute) => {
+    const type = attribute.type;
+    if (type.kind === "status") return [];
+    if (type.kind === "enum" || type.kind === "enum-multi") {
+      return [
+        {
+          ...attribute,
+          label: localizeTicketFormValue(attribute.label, t),
           type: {
-            kind: "enum-multi",
-            options: tag.options.map(({ id, name, icon, color }) => ({
-              value: id,
-              label: name,
-              icon: icon ?? "circle",
-              color,
-            })),
+            ...type,
+            options: Array.isArray(type.options)
+              ? type.options.map((option) => ({ ...option, label: localizeTicketFormValue(option.label, t) }))
+              : [],
           },
-        }),
-      ),
-  ];
-  const rows: KanbanRendererRow[] = tickets.map((row) => ({
-    id: row.id,
-    title: `${row.shorthand} ${row.title}`,
-    attributes: { ...ticketFilterValues(row, tags), status: row.status, milestone: row.deadlineId ?? "none" },
-  }));
-  return { rows, attributes, storageKey: `pstdio.pstdio-planner.timeline:${plan?.trackProperty?.id ?? "loading"}` };
+        },
+      ];
+    }
+    return [{ ...attribute, label: localizeTicketFormValue(attribute.label, t), type }];
+  });
+  const rows: KanbanRendererRow[] = plan.ticketRows;
+  return {
+    rows,
+    attributes: withTitleField(attributes),
+    storageKey: `pstdio.pstdio-planner.timeline-views:${plan.projectId}`,
+  };
 }

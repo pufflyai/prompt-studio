@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import type { DisplaySettings, Plan, PlanRow } from "../contracts";
 import { filterRows, visibleSections } from "../model/filter";
-import { matchesTicketQuery, type TicketQuery } from "../model/ticket-query";
 import { buildTracks } from "../model/tracks";
 import type { DropTarget } from "./drag";
 import type { Relation } from "./plan-view";
@@ -71,7 +70,11 @@ export function useDragAndDrop(client: PlanClient, onError: (error: string) => v
   return { dragId, dropTarget: dragId ? dropTarget : undefined, setDragId, setDropTarget, drop };
 }
 
-export function useViewSections(plan: Plan | undefined, display: DisplaySettings, query: TicketQuery) {
+export function useViewSections(
+  plan: Plan | undefined,
+  display: DisplaySettings,
+  visibleTicketIds: ReadonlySet<string>,
+) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const toggle = (id: string | null) =>
     setCollapsed((current) => {
@@ -85,7 +88,7 @@ export function useViewSections(plan: Plan | undefined, display: DisplaySettings
   const shown = plan ? visibleSections(plan.sections, display) : [];
   const sections = shown.map((section) => ({
     section,
-    rows: filterRows(section.rows, display).filter((row) => matchesTicketQuery(row, query)),
+    rows: filterRows(section.rows, display).filter((row) => visibleTicketIds.has(row.id)),
     collapsed: collapsed.has(section.deadline?.id ?? "none"),
   }));
   const tracks = buildTracks(plan?.trackProperty, plan?.sections.flatMap(({ rows }) => rows) ?? []);

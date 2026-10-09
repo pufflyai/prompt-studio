@@ -1,12 +1,16 @@
-// Reuse the Planner's header, filter menu, filter chips, and display placement above the canvas.
-import { DEFAULT_KANBAN_RENDERER_SETTINGS, KanbanRendererToolbar } from "@pstdio/ui/kanban-renderer";
-import type { ComponentProps } from "react";
+import { CollectionViewBar, type CollectionViewsSource, useCollectionViews } from "@pstdio/ui/collection-view";
+import {
+  buildFilterCategories,
+  getAttributeStringValues,
+  type KanbanRendererSettings,
+} from "@pstdio/ui/kanban-renderer";
 import type { DisplaySettings } from "../contracts";
 import { DisplayMenu } from "./display-menu";
-import { TimelineSearch } from "./timeline-search";
+import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 
 interface PlanHeaderProps {
-  data: Pick<ComponentProps<typeof KanbanRendererToolbar>, "rows" | "attributes" | "storageKey">;
+  data: ReturnType<typeof timelineQueryData>;
+  viewsSource: CollectionViewsSource<KanbanRendererSettings>;
   display: DisplaySettings;
   onDisplayChange: (change: Partial<DisplaySettings>) => void;
   search: string;
@@ -15,15 +19,32 @@ interface PlanHeaderProps {
 }
 
 export function PlanHeader(props: PlanHeaderProps) {
-  const { data, display, onDisplayChange, search, onSearchChange, resultLabel } = props;
+  const { data, viewsSource, display, onDisplayChange, search, onSearchChange, resultLabel } = props;
+  const { views } = useCollectionViews({
+    storageKey: data.storageKey,
+    fields: data.attributes,
+    initialState: timelineInitialState,
+    viewsSource,
+  });
+  const categories = buildFilterCategories(data.attributes, data.rows);
   return (
-    <KanbanRendererToolbar
-      {...data}
-      defaultViews={[
-        { id: "default", title: "Ticket timeline", settings: DEFAULT_KANBAN_RENDERER_SETTINGS, filters: {} },
-      ]}
+    <CollectionViewBar
+      itemLabel="Ticket"
+      storageKey={data.storageKey}
+      initialState={timelineInitialState}
+      views={views}
+      viewsSource={viewsSource}
+      fields={data.attributes}
+      optionsFor={(field) =>
+        (categories.find(({ id }) => id === field.id)?.options ?? []).map((option) => ({
+          ...option,
+          count: data.rows.filter((row) => getAttributeStringValues(row, field).includes(option.value)).length,
+        }))
+      }
+      search={search}
+      onSearchChange={onSearchChange}
+      searchResultLabel={resultLabel}
       displayControl={<DisplayMenu display={display} onChange={onDisplayChange} />}
-      actions={<TimelineSearch value={search} onChange={onSearchChange} resultLabel={resultLabel} />}
     />
   );
 }
