@@ -40,6 +40,7 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
         getInstalledSourceRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
       },
       extensionService: {
+        enableInstalledSourceForProject: async () => ({ instance: extensionInstance(true), installedSource }),
         getProjectExtensionInstance: mock(async () => ({ instance: extensionInstance(true), installedSource })),
         setProjectExtensionEnabled,
         uninstallProjectExtension: mock(async () => ({
@@ -50,7 +51,13 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       },
       extensionUpgradeService: {
         canUpgrade: mock(async () => false),
-        installMarketplaceExtension: mock(async () => ({ instance: extensionInstance(true), installedSource })),
+        installSource: mock(async () => ({
+          installName: "test",
+          metadata: { id: "test", name: "test" },
+          manifest: {},
+          targetPath: "/test",
+          source: { kind: "local" },
+        })),
       },
       provisionProjectWorkspaces,
       workspaceService: {
@@ -67,7 +74,7 @@ describe("project extension lifecycle", () => {
     const { deps, provisionProjectWorkspaces } = createDeps();
     const lifecycle = createProjectExtensionLifecycle(deps as never);
 
-    const result = await lifecycle.installMarketplace("project-1", "example");
+    const result = await lifecycle.install("project-1", { source: { kind: "catalog", name: "example" } });
 
     expect(result.extension).toMatchObject({ installName: "example", enabled: true });
     expect(provisionProjectWorkspaces).not.toHaveBeenCalled();

@@ -1,6 +1,5 @@
-// Installed dependencies and version history are not part of an extension's source. The host
-// installs dependencies itself.
-const skippedDirectories = new Set(["node_modules", ".git"]);
+// Installed dependencies are not uploaded. The host installs them itself.
+const skippedDirectories = new Set(["node_modules"]);
 
 const readBatch = (reader: FileSystemDirectoryReader) =>
   new Promise<FileSystemEntry[]>((resolve, reject) => reader.readEntries(resolve, reject));

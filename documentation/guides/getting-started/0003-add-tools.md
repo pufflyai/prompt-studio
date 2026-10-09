@@ -97,3 +97,8 @@ Tools can work together when their authors expose commands, events, or resource 
 If you want to write the code yourself, read [Write an extension](../extensions/0001-authoring.md). To learn how extensions load and run, read [Extensions](../concepts/0002-extensions.md).
 
 Next, [run agents](0004-run-agents.md).
+
+
+## Install against another host
+
+Run `pst extensions add` inside a linked project. A local folder is uploaded to the API you are connected to. The host installs and enables it using the scope in its manifest. Your CLI home does not receive another copy. In the dashboard, dropping the same folder uses the same installation path. When files already exist, the dashboard asks before replacing them; the CLI requires `--force`.

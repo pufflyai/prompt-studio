@@ -13,8 +13,8 @@ import {
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
 import { compatibilityError } from "../features/extensions/project-extension-instance";
-import { createMarketplaceExtensionInstaller } from "./extension-marketplace-install";
 import type { createExtensionService } from "./extension-service";
+import { createExtensionSourceInstaller } from "./extension-source-installer";
 import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
 import { ExtensionUpgradeUnavailableError } from "./extension-upgrade-unavailable-error";
 
@@ -27,7 +27,9 @@ export type ExtensionService = Pick<
   | "registerInstalledSource"
 >;
 
-type WorkspaceService = { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
+type WorkspaceService = {
+  getDefault(projectId: string): Promise<{ root_path: string | null; execution_kind?: string } | null>;
+};
 
 export type ExtensionUpgradeServiceDeps = {
   extensionService: ExtensionService;
@@ -173,11 +175,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     return preview;
   };
 
-  const installMarketplaceExtension = createMarketplaceExtensionInstaller({
-    deps,
-    installForRelease,
-    requireCatalogEntry,
-  });
+  const installSource = createExtensionSourceInstaller({ deps, install, catalogEntry, releaseRefFor });
 
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
@@ -227,7 +225,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   return {
     canUpgrade,
     enabled: true,
-    installMarketplaceExtension,
+    installSource,
     prepareMarketplaceExtensionSource,
     releaseRef: deps.release?.ref,
     upgrade,

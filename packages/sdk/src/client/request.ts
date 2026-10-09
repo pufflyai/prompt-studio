@@ -6,7 +6,11 @@ export type ClientOptions = {
 
 export class PstdioApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    readonly code?: string,
+  ) {
     super(message);
     this.name = "PstdioApiError";
     this.status = status;
@@ -139,7 +143,11 @@ export const createRequest = (options: ClientOptions): RequestFn => {
       if (!response.ok) {
         const errorBody: unknown = await response.json().catch(() => null);
         const message = readErrorMessage(errorBody, response.status);
-        throw new PstdioApiError(message, response.status);
+        const code =
+          errorBody && typeof errorBody === "object" && "code" in errorBody && typeof errorBody.code === "string"
+            ? errorBody.code
+            : undefined;
+        throw new PstdioApiError(message, response.status, code);
       }
 
       if (response.status === 204) return undefined as T;

@@ -2,7 +2,6 @@ import { strict as assert } from "node:assert";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { syncExtensionDevelopmentSource } from "./extension-development";
 import { installExtensionSource } from "./install-extension-source";
 import { makeExtension } from "./install-extension-source-test-fixtures";
 
@@ -33,11 +32,12 @@ await (async () => {
       env: { ...process.env, PSTDIO_HOME: join(root, "home") },
       isPackagedRuntime: () => false,
     };
-    const first = await syncExtensionDevelopmentSource(input);
+    const development = { ...input, force: true, reuseInstalledDependencies: true };
+    const first = await installExtensionSource(development);
     assert.equal(first.check.errorCount, 0);
     assert.equal(first.check.warningCount, 0);
     writeFileSync(join(consumer, "extension.ts"), source.replaceAll('id: "hello"', 'id: "updated"'));
-    const second = await syncExtensionDevelopmentSource(input);
+    const second = await installExtensionSource(development);
     assert.equal(second.check.errorCount, 0);
     assert.ok(readFileSync(join(second.targetPath, "extension.ts"), "utf8").includes('id: "updated"'));
     const manifest = readFileSync(join(consumer, "package.json"), "utf8");

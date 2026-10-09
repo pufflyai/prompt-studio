@@ -217,7 +217,7 @@ pst extensions add ../bookmarks
 
 The path must start with `./`, `../`, or `~/`, or be absolute. A plain name such as `bookmarks` installs a published extension instead.
 
-Prompt Studio copies the folder, installs its dependencies, checks it, and turns it on for the project. The output shows the extension ID and `Project: enabled for <project-id>`.
+The CLI uploads the folder to the API host. The host installs its dependencies, checks it, and turns it on for the project. The manifest chooses user or repo scope on that host. A linked project is required. The output shows the extension ID and `Project: enabled for <project-id>`.
 
 Try the command:
 
@@ -248,7 +248,13 @@ It checks and reloads the extension each time you save a file. Keep it running w
 
 ## 5. Check it
 
-Check the installed declarations:
+Check local source without an API:
+
+```sh
+pst extensions check ../bookmarks
+```
+
+Check the declarations installed on the host:
 
 ```sh
 pst extensions check

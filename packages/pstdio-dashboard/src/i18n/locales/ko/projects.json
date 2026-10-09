@@ -78,7 +78,7 @@
       },
       "dropZone": {
         "title": "확장 폴더를 여기에 놓으세요",
-        "hint": ".pstdio/extensions에 복사되고 그곳에서 로드됩니다.",
+        "hint": "호스트가 확장에 선언된 범위에 설치합니다.",
         "uploading": "{{name}} 추가 중…",
         "succeeded": "{{name}}이(가) 추가되었습니다",
         "failed": "확장 폴더를 추가할 수 없습니다",
@@ -151,7 +151,12 @@
         "button": "삭제",
         "notificationShared": "\"{{name}}\"의 확장 파일을 삭제하고 이 확장을 사용하는 모든 프로젝트에서 제거합니다. 저장된 데이터는 유지되므로 재설치하면 복원됩니다."
       },
-      "enabledInProject": "이 프로젝트에서 사용"
+      "enabledInProject": "이 프로젝트에서 사용",
+      "replace": {
+        "title": "{{name}}을(를) 교체할까요?",
+        "message": "설치된 파일을 교체합니다. 이 확장을 사용하는 다른 프로젝트도 새 파일을 사용합니다.",
+        "action": "교체"
+      }
     }
   },
   "list": {

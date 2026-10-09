@@ -253,7 +253,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await marketplaceRow.waitFor();
 
     const reinstallResponse = page.waitForResponse(
-      (response) => response.url().includes("/marketplace/pstdio-planner/install") && response.status() === 200,
+      (response) => response.url().endsWith("/extensions/install") && response.status() === 201,
     );
     await marketplaceRow.getByTestId("marketplace-extension-install").click();
     await reinstallResponse;
