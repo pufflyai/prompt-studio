@@ -33,6 +33,8 @@ smaller screens. Other pages use the full content area beside the navigation.
 The download column retains its original 480-pixel width and horizontal padding on desktop.
 Compact vertical spacing and an editor sized from its container leave room for the pile without
 scrolling in a 1080p browser window, including windowed mode.
+Narrow layouts use 95% of the fitted editor width, aligning more closely with the
+download content. Desktop layouts keep their compact 85% fit.
 The download button uses a download icon. The platform menu uses monochrome macOS,
 Windows, or Linux logos for each build.
 All 28 building-block shapes start in a settled pile beneath the editor. Matter.js supplies gravity,

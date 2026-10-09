@@ -21,7 +21,7 @@ export const BOARD_HEIGHT = 462;
 export const SLOT_TRAY_HEIGHT = 78;
 export const BOARD_PREVIEW_HEIGHT = BOARD_HEIGHT - SLOT_TRAY_HEIGHT;
 const PILE_CLEARANCE = 140;
-const BOARD_SCALE = 0.85;
+export const BOARD_SCALE = { wide: 0.85, narrow: 0.95 };
 export interface BoardLayout {
   x: number;
   y: number;
@@ -76,7 +76,8 @@ export const assemblyLayout = (
   // Grow the whole editor with its container, leaving physical space for the slot tray and pile.
   const previewHeight = Math.max(1, size.height - y - SLOT_TRAY_HEIGHT - PILE_CLEARANCE);
   const scale =
-    BOARD_SCALE * Math.min(available / (BOARD_WIDTH * unitScale), previewHeight / (BOARD_PREVIEW_HEIGHT * unitScale));
+    (wide ? BOARD_SCALE.wide : BOARD_SCALE.narrow) *
+    Math.min(available / (BOARD_WIDTH * unitScale), previewHeight / (BOARD_PREVIEW_HEIGHT * unitScale));
   const width = BOARD_WIDTH * unitScale * scale;
   const x = wide ? copy.width + 24 + (available - width) / 2 : (size.width - width) / 2;
   const board = { x, y, scale, unitScale };

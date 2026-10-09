@@ -30,7 +30,7 @@ export const landingAssemblySlotRecipe = defineSlotRecipe({
       transform: "translateX(-50%)",
       // Use the same width/height fit as the live board, before any script can run.
       width:
-        "calc(0.85 * min(100cqw - var(--assembly-horizontal-space), max(1px, max(var(--assembly-min-height), 100cqh) + var(--assembly-bottom-space) - 242px) * 5 / 3))",
+        "calc(var(--assembly-board-scale) * min(100cqw - var(--assembly-horizontal-space), max(1px, max(var(--assembly-min-height), 100cqh) + var(--assembly-bottom-space) - 242px) * 5 / 3))",
       bg: "bg",
       outline: "1px solid",
       outlineColor: "border",

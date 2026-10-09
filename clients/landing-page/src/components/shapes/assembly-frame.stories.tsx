@@ -31,6 +31,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const BeforeJavaScript: Story = {};
 export const Narrow: Story = {
+  parameters: {
+    docs: { description: { story: "Narrow editors use 95% of the fitted space, aligning with the mobile copy." } },
+  },
   decorators: [
     (Story) => (
       <Box width="80">

@@ -1,4 +1,5 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
+import { BOARD_SCALE } from "../../services/shapes/assembly-layout";
 
 export const landingSlotRecipe = defineSlotRecipe({
   slots: [
@@ -175,10 +176,12 @@ export const landingSlotRecipe = defineSlotRecipe({
       "--assembly-min-height": "32rem",
       "--assembly-horizontal-space": "32px",
       "--assembly-bottom-space": "96px",
+      "--assembly-board-scale": BOARD_SCALE.narrow,
       "@container hero (min-width: 54rem)": {
         "--assembly-min-height": "36rem",
         "--assembly-horizontal-space": "48px",
         "--assembly-bottom-space": "16px",
+        "--assembly-board-scale": BOARD_SCALE.wide,
       },
     },
     heroCopy: {
