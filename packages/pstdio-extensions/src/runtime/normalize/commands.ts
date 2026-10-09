@@ -202,7 +202,6 @@ export const registerCommands = (
       automation: command.automation === true,
       mutating: command.mutating === true,
       stream: command.stream,
-
       resourceMutation: command.resourceMutation,
       run: command.run as RuntimeCommandRecord["run"],
     };
