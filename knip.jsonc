@@ -161,7 +161,7 @@
         // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
         "src/theme/index.ts",
-        "src/components/{rich-text,chat-ui,diff-viewer,kanban-renderer,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/{rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.stories.tsx",
         "src/**/*.test.ts",

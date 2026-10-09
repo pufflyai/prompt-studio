@@ -30,6 +30,7 @@ import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
 import { createStorageApi } from "./storage";
 import { type CommandEnvironmentRuntimeDeps, type EnabledSource, findEnabledSource } from "./types";
+import { createViewsApi } from "./views";
 
 import { createWorkspaceFileMount, type FileAccess, resolveWorkspaceFilesPath } from "./workspace-files";
 
@@ -139,6 +140,7 @@ export const createCommandEnvironment = (
     workspaceId: input.workspaceId,
     ...hostApis,
     resources: createResourcesApi(deps, input),
+    views: createViewsApi(deps, input),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     automation: createAutomationApi(() => deps.automationService, {

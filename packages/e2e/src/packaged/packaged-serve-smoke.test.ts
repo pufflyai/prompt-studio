@@ -24,6 +24,7 @@ import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -62,6 +63,7 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerExtensionInstallSmokeTests();
+registerExtensionViewsSmokeTests();
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {

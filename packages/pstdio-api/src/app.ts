@@ -205,6 +205,7 @@ const buildApp = async (
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
   const sessionHookDeps = (): SessionHookDeps => ({
+    boardViewsService: dbs.boardViewsService,
     automationService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesService,
     resourceLinksService: dbs.resourceLinksService,
