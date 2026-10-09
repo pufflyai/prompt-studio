@@ -14,6 +14,7 @@ import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
 import { ArtifactReader } from "./components/artifact-reader";
 import { artifactUrl, changedEvent, libraryTarget } from "./contracts";
+import type { ArtifactExample } from "./create-artifact";
 import { ArtifactTranslations } from "./translations";
 
 interface HostProps {
@@ -35,6 +36,7 @@ const ArtifactsApp = (props: AppProps) => {
   const [selected, setSelected] = useState<string>();
   const [refresh, setRefresh] = useState(0);
   const [error, setError] = useState<string>();
+  const [creating, setCreating] = useState<ArtifactExample>();
   const id = hostProps.resource?.id;
   const url = id ? artifactUrl(hostProps.projectId, id) : undefined;
   useEffect(() => client.events.subscribe(changedEvent, () => setRefresh((value) => value + 1)), [client]);
@@ -81,6 +83,18 @@ const ArtifactsApp = (props: AppProps) => {
     await host.call("navigation.open", { target: item.target });
   };
 
+  const create = async (example: ArtifactExample) => {
+    setCreating(example);
+    setError(undefined);
+    try {
+      await client.commands.startCreation({ example });
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setCreating(undefined);
+    }
+  };
+
   let body = (
     <Center flex="1">
       <Spinner />
@@ -113,6 +127,10 @@ const ArtifactsApp = (props: AppProps) => {
     body = (
       <ArtifactLibrary
         items={items}
+        creating={creating}
+        onCreate={(example) => {
+          void create(example);
+        }}
         onOpen={(item) => {
           void open(item);
         }}

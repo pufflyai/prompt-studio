@@ -2,6 +2,7 @@ import { isAbsolute, relative } from "node:path";
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { type ArtifactRevision, createArtifactService, HTML_LIMIT_BYTES } from "./artifacts";
 import { artifactIdFromUrl, artifactTarget, changedEvent } from "./contracts";
+import { startCreation } from "./create-artifact";
 
 const serviceFor = (ctx: ExtensionContextBase) =>
   createArtifactService({
@@ -115,4 +116,4 @@ const remove = defineCommand({
   },
 });
 
-export const commands = { publish, list, read, revisions, open, rename, delete: remove };
+export const commands = { publish, list, read, revisions, open, rename, delete: remove, startCreation };
