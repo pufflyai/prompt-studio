@@ -53,6 +53,8 @@ export interface TreeListSection {
   menuLabel?: string;
   collapsible?: boolean;
   actions?: TreeListAction[];
+  contextMenuItems?: TreeListActionMenuItem[];
+  inlineInput?: TreeListInlineInput;
   emptyState?: ReactNode;
   nodes: TreeListNode[];
   hiddenByDefault?: boolean;
