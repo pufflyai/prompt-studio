@@ -30,6 +30,13 @@ export const expectPackagedArtifacts = async (input: {
           region: "main",
           item: expect.objectContaining({ kind: "view", presence: "fixed" }),
         }),
+        expect.objectContaining({
+          id: "artifact",
+          tab: expect.objectContaining({
+            queryHandlerId: expect.any(String),
+            refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
+          }),
+        }),
       ]),
     }),
   );
@@ -39,8 +46,16 @@ export const expectPackagedArtifacts = async (input: {
   expect(metadata.commands).toContainEqual(
     expect.objectContaining({ id: "pstdio.pstdio-artifacts.command.start-creation" }),
   );
+  for (const action of ["rename-resource", "delete-resource"]) {
+    expect(metadata.commands).toContainEqual(
+      expect.objectContaining({ id: `pstdio.pstdio-artifacts.command.${action}` }),
+    );
+  }
   expect(metadata.resourceKinds).toContainEqual(
-    expect.objectContaining({ extensionId: "pstdio.pstdio-artifacts", id: "artifact" }),
+    expect.objectContaining({
+      extensionId: "pstdio.pstdio-artifacts",
+      id: "artifact",
+    }),
   );
   expect(metadata.commandPaletteResources).toContainEqual(
     expect.objectContaining({
