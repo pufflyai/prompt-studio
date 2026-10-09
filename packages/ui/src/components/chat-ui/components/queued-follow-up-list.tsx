@@ -67,6 +67,7 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
     steeringUnavailableReason ??
     (source && dirtyItemIds.includes(source.id) ? "Update or Cancel this edit before sending." : null) ??
     (onSteer ? null : "This conversation cannot accept live input.");
+  const showSendNow = Boolean(source && onSteer && !steeringUnavailableReason);
   const combineReason = (target: QueuedFollowUp) => {
     if (!source || source.id === target.id) return "Choose another request.";
     if (dirtyItemIds.includes(source.id) || dirtyItemIds.includes(target.id))
@@ -139,8 +140,8 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
           .finally(() => setPending(false));
       }}
     >
-      <Box css={styles.root} data-dragging={Boolean(source)} aria-busy={pending}>
-        <QueueSendNow visible={Boolean(source)} targeted={destination?.kind === "steer"} reason={steerReason} />
+      <Box css={styles.root} data-send-now-visible={showSendNow} aria-busy={pending}>
+        <QueueSendNow visible={showSendNow} targeted={destination?.kind === "steer"} reason={steerReason} />
         <ScrollArea maxH="queue-viewport" minH="0" viewportProps={{ maxH: "queue-viewport" }}>
           {items.map((item, index) => (
             <QueuedFollowUpRow

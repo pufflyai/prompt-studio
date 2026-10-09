@@ -38,7 +38,11 @@ export const registerQueuedRequestSmokeTests = () => {
               add({id:delivery.deliveryId,role:"user",parts:[{type:"text",text:delivery.prompt}]});return {status:"accepted"};
             }};
           },resume(){throw new Error("Steering must keep the current run");}
-        };export default {harnesses:[harness]};
+        };
+        const queuedHarness={...harness,id:"queued-worker",ref:{kind:"harness",id:"queued-worker"},
+          start(...args){const {steer,...handle}=harness.start(...args);return handle;}
+        };
+        export default {harnesses:[harness,queuedHarness]};
       `,
       );
       const started = await startPackagedServe(root);
@@ -136,6 +140,29 @@ export const registerQueuedRequestSmokeTests = () => {
           })
         ).status,
       ).toBe("rejected");
+      const queuedSession = await request("/sessions", "POST", {
+        project_id: project.id,
+        title: "Queue without live input",
+        agent: "test.queue-smoke.harness.queued-worker",
+        prompt: "Original work",
+        model: "one",
+        params: { thinking: "high" },
+      });
+      for (let attempt = 0; attempt < 50; attempt++) {
+        if ((await request(`/sessions/${queuedSession.id}/conversation`)).messages.length) break;
+        await Bun.sleep(20);
+      }
+      await request(`/sessions/${queuedSession.id}/follow-up`, "POST", { prompt: "First" });
+      const unavailable = await request(`/sessions/${queuedSession.id}/queued-follow-ups`);
+      expect(unavailable.activeRunStartedAt).toBeString();
+      expect(unavailable.steeringAvailable).toBe(false);
+      await expectPackagedQueuedEditorCancellation(
+        started.baseUrl,
+        runtimeAuthorization(started.descriptor),
+        project.id,
+        queuedSession.id,
+        false,
+      );
     } finally {
       if (child) await stopProcess(child);
       rmSync(root, { recursive: true, force: true });

@@ -38,6 +38,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+// Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";

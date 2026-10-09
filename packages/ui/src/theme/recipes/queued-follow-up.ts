@@ -26,7 +26,7 @@ export const queuedFollowUpRecipe = defineSlotRecipe({
       borderBottomWidth: "0",
       borderTopRadius: "xs",
       bg: "bg",
-      "&[data-dragging=true]": { borderTopRadius: "0" },
+      "&[data-send-now-visible=true]": { borderTopRadius: "0" },
     },
     row: {
       position: "relative",
@@ -43,7 +43,12 @@ export const queuedFollowUpRecipe = defineSlotRecipe({
       "&[data-combine-target=true]": { bg: "bg.button.primary.default", color: "fg.button.primary.default" },
       _focusVisible: { outline: "2px solid {colors.border.accent}", outlineOffset: "-2px" },
     },
-    actions: { opacity: 0, pointerEvents: "none", "&[data-visible=true]": { opacity: 1, pointerEvents: "auto" } },
+    actions: {
+      pe: "2xs",
+      opacity: 0,
+      pointerEvents: "none",
+      "&[data-visible=true]": { opacity: 1, pointerEvents: "auto" },
+    },
     sendNow: {
       position: "absolute",
       bottom: "0",

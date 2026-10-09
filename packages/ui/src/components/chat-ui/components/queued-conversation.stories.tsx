@@ -9,9 +9,10 @@ interface QueueHostProps {
   count?: number;
   fail?: boolean;
   unsupported?: boolean;
+  liveInputHandler?: boolean;
 }
 const QueueHost = (props: QueueHostProps) => {
-  const { count = 2, fail = false, unsupported = false } = props;
+  const { count = 2, fail = false, unsupported = false, liveInputHandler = true } = props;
   const [items, setItems] = useState<QueuedFollowUp[]>(
     Array.from({ length: count }, (_, index) => ({
       id: `item-${index}`,
@@ -157,10 +158,14 @@ const QueueHost = (props: QueueHostProps) => {
               );
           })
         }
-        onQueuedFollowUpSteer={async (item) => {
-          setItems((state) => state.filter((saved) => saved.id !== item.id));
-          setResult(`Accepted: ${item.prompt}`);
-        }}
+        onQueuedFollowUpSteer={
+          liveInputHandler
+            ? async (item) => {
+                setItems((state) => state.filter((saved) => saved.id !== item.id));
+                setResult(`Accepted: ${item.prompt}`);
+              }
+            : undefined
+        }
       />
       <Text textStyle="label/XS">{result}</Text>
     </Box>
@@ -227,11 +232,23 @@ export const Unsupported: Story = {
     const c = within(canvasElement);
     await userEvent.click(c.getByRole("button", { name: "Drag queued follow-up 1" }));
     await userEvent.keyboard(" ");
-    await userEvent.keyboard("{Home}");
+    await waitFor(() =>
+      expect(canvasElement.querySelector("[data-queued-follow-up-id][data-drag-source=true]")).toBeInTheDocument(),
+    );
+    await expect(canvasElement.querySelector("[data-queue-send-now]")).not.toBeInTheDocument();
+    await userEvent.keyboard("{End}");
     await userEvent.keyboard(" ");
-    await waitFor(() => expect(c.getByRole("alert")).toHaveTextContent("This harness cannot accept live input."));
-    await expect(c.getByRole("button", { name: "Edit queued message: Queued message 1" })).toBeVisible();
+    await waitFor(() =>
+      expect(canvasElement.querySelector("[data-queued-follow-up-id]:last-child")).toHaveTextContent(
+        "Queued message 1",
+      ),
+    );
+    await expect(c.queryByRole("alert")).not.toBeInTheDocument();
   },
+};
+export const NoLiveInputHandler: Story = {
+  args: { liveInputHandler: false },
+  play: Unsupported.play,
 };
 export const EscapeCancelsDragBeforeEdit: Story = {
   play: async ({ canvasElement }) => {
