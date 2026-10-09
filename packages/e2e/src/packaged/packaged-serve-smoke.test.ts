@@ -63,6 +63,8 @@ beforeAll(() => {
 
 registerExtensionInstallSmokeTests();
 
+// extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
+
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
     encoding: "utf8",

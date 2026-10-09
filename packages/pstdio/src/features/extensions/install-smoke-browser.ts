@@ -1,8 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { version } from "playwright-core/package.json";
-import { resolvePstdioHome } from "pstdio-paths";
+import { smokeBrowserInstallDirectory, smokePlaywrightVersion } from "./smoke-browser-package";
 
 const runBundledBun = (args: string[], cwd: string) => {
   const child = spawn(process.execPath, args, {
@@ -17,11 +16,11 @@ const runBundledBun = (args: string[], cwd: string) => {
 };
 
 export const installSmokeBrowser = async (input: { withDeps: boolean }) => {
-  const directory = join(resolvePstdioHome(), "cache", "extension-browser-install", version);
+  const directory = smokeBrowserInstallDirectory();
   mkdirSync(directory, { recursive: true });
   writeFileSync(
     join(directory, "package.json"),
-    JSON.stringify({ private: true, dependencies: { "playwright-core": version } }),
+    JSON.stringify({ private: true, dependencies: { "playwright-core": smokePlaywrightVersion } }),
   );
   const installed = await runBundledBun(["install", "--ignore-scripts"], directory);
   if (installed !== 0) return installed;
