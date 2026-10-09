@@ -71,3 +71,53 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     expect(activateCall?.body).toMatchObject({ params: { slideId: "intro" } });
   });
 });
+
+test("keeps canonical resource identity from owner navigation results", async () => {
+  const workbench = createWorkbench();
+  registerWorkbenchExtensionCommandPaletteResources(
+    {
+      projectId: "p1",
+      workbench,
+      executeCommand: () => ({
+        items: [
+          {
+            id: "intro",
+            label: "Intro",
+            target: {
+              kind: "page",
+              page: { kind: "page", id: "slides" },
+              resource: { type: "slide", id: "intro" },
+            },
+          },
+        ],
+      }),
+    },
+    [record],
+  );
+  const groups = await workbench.commandPaletteResources.queryProviders({ query: "", limit: 10 });
+  expect(groups[0]?.results[0]?.resource).toEqual({
+    type: "slide",
+    id: "intro",
+    projectId: "p1",
+    extensionId: "pstdio.lab",
+  });
+});
+
+test("passes search cancellation to the owner command", async () => {
+  const workbench = createWorkbench();
+  const signal = new AbortController().signal;
+  let received: AbortSignal | undefined;
+  registerWorkbenchExtensionCommandPaletteResources(
+    {
+      projectId: "p1",
+      workbench,
+      executeCommand: (_id, _body, requestSignal) => {
+        received = requestSignal;
+        return { items: [] };
+      },
+    },
+    [record],
+  );
+  await workbench.commandPaletteResources.queryProviders({ query: "", limit: 25, signal });
+  expect(received).toBe(signal);
+});

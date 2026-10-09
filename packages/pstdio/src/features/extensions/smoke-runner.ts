@@ -1,14 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createClient, createRequest } from "@pstdio/sdk/client";
+import { createClient, createRequest, PstdioApiError } from "@pstdio/sdk/client";
 import type { BrowserContext } from "playwright-core";
-import { toExtensionEnableInput } from "pstdio-api/extensions/install-extension-source";
 import { CLI_VERSION } from "../cli-version";
 import { exerciseSmokeDashboard } from "./smoke-browser";
 import { finishExtensionSmoke } from "./smoke-cleanup";
 import { startSmokeHost } from "./smoke-host";
-import { installSmokeSource, SmokeInstallError } from "./smoke-install";
 import { createSmokeContext } from "./smoke-isolation";
 import type { SmokeResult } from "./smoke-result";
 
@@ -50,10 +48,6 @@ export const runExtensionSmoke = async (input: {
     writeFileSync(hostLog, "");
     writeFileSync(browserLog, "");
     if (input.keepHome) result.evidence = { directory: context.root, hostLog, browserLog };
-    next("install-check");
-    const installed = await installSmokeSource(context, input.signal);
-    result.extension = { id: installed.metadata.id, sourceHash: installed.sourceHash };
-    result.checks.push({ id: "install-check", status: "passed", extensionId: installed.metadata.id });
     next("host-setup");
     host = await startSmokeHost({
       home: context.home,
@@ -67,7 +61,19 @@ export const runExtensionSmoke = async (input: {
       name: "Extension smoke test",
       initial_workspace: { provider_id: "pstdio.root", params: { path: context.project } },
     });
-    await client.extensions.enableInstalled(project.id, installed.installName, toExtensionEnableInput(installed));
+    next("install-check");
+    const { source: installed } = await client.extensions.install(
+      project.id,
+      {
+        source: {
+          kind: "project-folder",
+          path: relative(context.project, context.source).replaceAll("\\", "/") || ".",
+        },
+      },
+      { signal: input.signal },
+    );
+    result.extension = { id: installed.metadata.id, sourceHash: installed.sourceHash };
+    result.checks.push({ id: "install-check", status: "passed", extensionId: installed.metadata.id });
     const request = createRequest({ baseUrl: host.origin, token: host.token });
     const inventory = await request<WorkbenchExtensionMetadata>(`/v1/projects/${project.id}/extensions/ui`, {
       signal: input.signal,
@@ -111,7 +117,7 @@ export const runExtensionSmoke = async (input: {
     input.signal.throwIfAborted();
     const message = error instanceof Error ? error.message : String(error);
     let exitCode = 3;
-    if (error instanceof SmokeInstallError) exitCode = error.exitCode;
+    if (error instanceof PstdioApiError && error.status === 422) exitCode = 2;
     if (phase === "dashboard") exitCode = 1;
     result.exitCode = Math.max(result.exitCode, exitCode);
     result.checks.push({ id: phase === "install-check" ? "install-check" : "setup", status: "failed", phase, message });

@@ -6,9 +6,10 @@ import {
   type SyncWriter,
   type SyncWriterProvider,
 } from "@pstdio/sdk/client";
-import type { ResourceRemovedEvent } from "@pstdio/sdk/extensions";
+import type { ResourceAnchorChangeEvent, ResourceRemovedEvent } from "@pstdio/sdk/extensions";
 import { readBrowserSession } from "@/lib/browser-session";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
+import { publishResourceAnchorChange } from "@/shared/extensions/resource-anchor-feed";
 import { publishResourceRemoval } from "@/shared/extensions/resource-removal-feed";
 import { getWriter, type SyncedTable } from "./collections";
 
@@ -38,10 +39,17 @@ const extensionEventWriter: SyncWriter = {
 export const createDashboardSyncWriterProvider = (): SyncWriterProvider => ({
   getWriter: (table) => {
     if (table === "extension_events") return extensionEventWriter;
+    if (table === "resource_anchor_events") return resourceAnchorEventWriter;
     if (table === "resource_events") return resourceEventWriter;
     return getWriter(table as SyncedTable);
   },
 });
+
+const resourceAnchorEventWriter: SyncWriter = {
+  truncateAndWrite: () => undefined,
+  upsert: (row) => publishResourceAnchorChange(row as unknown as ResourceAnchorChangeEvent),
+  remove: () => undefined,
+};
 
 const resourceEventWriter: SyncWriter = {
   truncateAndWrite: () => undefined,

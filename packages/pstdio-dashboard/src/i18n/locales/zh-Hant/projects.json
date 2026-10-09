@@ -78,7 +78,7 @@
       },
       "dropZone": {
         "title": "將擴充功能資料夾拖放到這裡",
-        "hint": "它會被複製到 .pstdio/extensions 並從那裡載入。",
+        "hint": "主機會按擴充功能宣告的範圍安裝。",
         "uploading": "正在新增 {{name}}…",
         "succeeded": "已新增 {{name}}",
         "failed": "無法新增擴充功能資料夾",
@@ -151,7 +151,12 @@
         "button": "刪除",
         "notificationShared": "這將刪除\"{{name}}\"的擴充功能檔案並將其從所有使用它的專案中移除。其儲存的資料會保留，重新安裝後即可還原。"
       },
-      "enabledInProject": "在此專案中啟用"
+      "enabledInProject": "在此專案中啟用",
+      "replace": {
+        "title": "取代 {{name}}？",
+        "message": "這將取代已安裝的檔案。使用此擴充功能的其他專案也會使用新檔案。",
+        "action": "取代"
+      }
     }
   },
   "list": {

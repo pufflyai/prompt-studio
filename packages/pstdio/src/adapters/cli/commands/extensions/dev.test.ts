@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { resolve } from "node:path";
-import type { InstalledExtensionSource } from "pstdio-api/extensions/install-extension-source";
+import type { InstalledExtensionSource } from "@pstdio/sdk/api";
 import type { Arguments } from "yargs";
 import { createHandler, type ExtensionsDevArgs } from "./dev";
 
@@ -172,7 +172,7 @@ const makeDeps = () => {
     error: (message: string) => errors.push(message),
     exists: () => true,
     findProjectRoot: () => "/repo",
-    getProjectFolder: async () => "/repo",
+    ensureApi: async () => undefined,
     hashExtensionDependencyInputs: () => dependencyHash,
     hashExtensionSource: () => sourceHash,
     log: (message: string) => logs.push(message),
@@ -181,6 +181,10 @@ const makeDeps = () => {
     readConfig: () => ({ project_id: "project-1" }),
     refreshDevelopmentExtension,
     syncExtensionDevelopmentSource: mock(async (_input: { signal?: AbortSignal }) => installed),
+    install: async (_projectId: string, _path: string, _name: string, signal: AbortSignal) => ({
+      source: await deps.syncExtensionDevelopmentSource({ signal }),
+      extension: await refreshDevelopmentExtension(),
+    }),
   };
 
   return {

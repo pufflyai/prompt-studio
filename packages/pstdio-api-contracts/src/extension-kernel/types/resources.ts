@@ -1,4 +1,10 @@
 import type { JsonObject } from "./json";
+import type { NavigationTarget } from "./navigation-target";
+
+export interface ResourceResolution {
+  resource: ResourceRef;
+  target?: Extract<NavigationTarget, { kind: "page" | "panel" | "compound" }>;
+}
 
 export type ResourceRole = "primary" | "context" | "source" | "result";
 

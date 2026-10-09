@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, win32 } from "node:path";
 import { resetApiClient } from "@/features/api-client";
-import { installSkillsForAgent, resolveSafeSkillFilePath } from "./install-default-skills";
+import { installSkillsForAgent, resolveSafeSkillFilePath } from "./install-skills";
 
 const originalFetch = globalThis.fetch;
 
@@ -50,7 +50,7 @@ afterEach(() => {
 
 describe("installSkillsForAgent security", () => {
   test("rejects traversal paths in skill files", async () => {
-    const root = mkdtempSync(join(tmpdir(), "install-default-skills-security-"));
+    const root = mkdtempSync(join(tmpdir(), "install-skills-security-"));
 
     try {
       resetApiClient();
@@ -118,7 +118,7 @@ describe("installSkillsForAgent security", () => {
   });
 
   test("rejects path-traversal skill names during install", async () => {
-    const root = mkdtempSync(join(tmpdir(), "install-default-skills-name-security-"));
+    const root = mkdtempSync(join(tmpdir(), "install-skills-name-security-"));
 
     try {
       resetApiClient();

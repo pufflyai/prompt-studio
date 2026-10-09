@@ -2,7 +2,7 @@ import type { Arguments, Argv } from "yargs";
 import { resolveHarnessId } from "@/features/agents/api/resolve-harness-id";
 import { findProjectRoot, readConfig } from "@/features/config/config";
 import { getProjectFolder } from "@/features/projects/project-folder";
-import { installSkillsForAgent } from "@/features/skills/install-default-skills";
+import { installSkillsForAgent } from "@/features/skills/install-skills";
 
 export const command = "setup <agent-id>";
 export const describe = "Configure an agent and install skills";

@@ -6,7 +6,7 @@ const projectId = "project-1";
 describe("extension request timeout", () => {
   test.each([
     `/v1/projects/${projectId}/extensions/instance-1/upgrade`,
-    `/v1/projects/${projectId}/extensions/marketplace/pstdio-planner/install`,
+    `/v1/projects/${projectId}/extensions/install`,
   ])("keeps long-running extension mutations connected for %s", (pathname) => {
     const request = new Request(`http://localhost:19840${pathname}`, { method: "POST" });
     const timeout = mock(() => {});

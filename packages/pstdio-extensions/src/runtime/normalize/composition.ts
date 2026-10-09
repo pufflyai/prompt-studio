@@ -104,17 +104,20 @@ const validateResourceMenuOwnership = (runtime: Accumulator) => {
 const validateResourceKindResolvers = (runtime: Accumulator) => {
   const commands = new Map(runtime.commands.map((command) => [command.id, command]));
   runtime.resourceKinds = runtime.resourceKinds.map((kind) => {
-    if (!kind.resolveCommandId) return kind;
-    if (commands.get(kind.resolveCommandId)?.extensionId === kind.extensionId) return kind;
-    addDiagnostic(
-      runtime,
-      kind,
-      "extension_resource_kind_resolver_invalid",
-      kind.resolveCommandId,
-      `Resource kind "${kind.id}" must resolve with a command of its own extension`,
-    );
-    const { resolveCommandId: _dropped, ...rest } = kind;
-    return rest;
+    const result = { ...kind };
+    for (const key of ["resolveCommandId", "resolveManyCommandId"] as const) {
+      const commandId = kind[key];
+      if (!commandId || commands.get(commandId)?.extensionId === kind.extensionId) continue;
+      addDiagnostic(
+        runtime,
+        kind,
+        "extension_resource_kind_resolver_invalid",
+        commandId,
+        `Resource kind "${kind.id}" must resolve with a command of its own extension`,
+      );
+      delete result[key];
+    }
+    return result;
   });
 };
 

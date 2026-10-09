@@ -5,8 +5,8 @@ import {
   createApp,
   resolveAppConfig,
 } from "pstdio-api/app";
-import { disableExtensionMutationTimeout } from "pstdio-api/extensions/extension-request-timeout";
 import type { RuntimeHost, RuntimeOwnerType } from "pstdio-api/runtime";
+import { disableExtensionMutationTimeout } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
 import { injectConfig } from "../../dashboard/serve-dashboard";

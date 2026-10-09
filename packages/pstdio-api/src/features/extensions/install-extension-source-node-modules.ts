@@ -3,13 +3,12 @@ import {
   existsSync,
   readdirSync,
   readFileSync,
-  readlinkSync,
   realpathSync,
   statSync,
   symlinkSync,
   unlinkSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { mirrorNodeModules } from "pstdio-extensions";
 
 const dependencyPath = (nodeModulesPath: string, dependencyName: string) =>
@@ -64,22 +63,25 @@ export const linkUsableNodeModules = (sourcePath: string, targetPath: string) =>
   mirrorNodeModules(sourceNodeModules, targetNodeModules);
 };
 
-const rebaseCopiedLink = (copied: string, source: string, target: string) => {
+const rebaseCopiedLink = (copied: string, source: string, target: string, sourcePath: string, targetPath: string) => {
   const original = join(source, relative(target, copied));
 
-  let linkText: string;
+  let destination: string;
   try {
-    linkText = readlinkSync(original);
+    destination = realpathSync.native(original);
   } catch {
     // The workspace link vanished between the copy and this pass. Keep the
     // verbatim link cpSync already wrote rather than aborting the install.
     return;
   }
 
-  const destination = resolve(dirname(original), linkText);
   const sourceRelative = relative(source, destination);
   const inside = !sourceRelative.startsWith("..") && !isAbsolute(sourceRelative);
-  const rebased = inside ? relative(dirname(copied), join(target, sourceRelative)) : destination;
+  const extensionRelative = relative(sourcePath, destination);
+  const insideExtension = !extensionRelative.startsWith("..") && !isAbsolute(extensionRelative);
+  let rebased = destination;
+  if (inside) rebased = relative(dirname(copied), join(target, sourceRelative));
+  else if (insideExtension) rebased = relative(dirname(copied), join(targetPath, extensionRelative));
 
   let isDirectory = true;
   try {
@@ -91,21 +93,55 @@ const rebaseCopiedLink = (copied: string, source: string, target: string) => {
   }
 
   unlinkSync(copied);
-  symlinkSync(rebased, copied, isDirectory ? "junction" : "file");
+  symlinkSync(resolve(dirname(copied), rebased), copied, isDirectory ? "junction" : "file");
+};
+
+// Junctions store absolute destinations on Windows. Update links into the moved
+// install while retaining links to dependencies owned by a sibling checkout.
+export const prepareNodeModulesRelocation = (sourcePath: string, targetPath: string) => {
+  const nodeModules = join(sourcePath, "node_modules");
+  const canonicalSource = realpathSync.native(sourcePath);
+  const canonicalTarget = join(realpathSync.native(dirname(targetPath)), basename(targetPath));
+  const links: { path: string; destination: string; directory: boolean }[] = [];
+  const collect = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) collect(path);
+      if (!entry.isSymbolicLink()) continue;
+      const destination = realpathSync.native(path);
+      const within = relative(canonicalSource, destination);
+      if (within.startsWith("..") || isAbsolute(within)) continue;
+      links.push({
+        path: join(canonicalTarget, relative(sourcePath, path)),
+        destination: join(canonicalTarget, within),
+        directory: statSync(path).isDirectory(),
+      });
+    }
+  };
+  if (existsSync(nodeModules)) collect(nodeModules);
+  return () => {
+    for (const { path, destination, directory } of links) {
+      unlinkSync(path);
+      symlinkSync(destination, path, directory ? "junction" : "file");
+    }
+  };
 };
 
 export const copyUsableNodeModules = (sourcePath: string, targetPath: string) => {
   const usable = findUsableNodeModules(sourcePath);
   if (!usable) return;
-  const source = realpathSync(usable);
+  // Native realpath expands Windows short names such as RUNNER~1. The JS
+  // walker can retain them while resolving file links to a long-name path.
+  const source = realpathSync.native(usable);
+  const extensionSource = realpathSync.native(sourcePath);
   const target = join(targetPath, "node_modules");
-  if (existsSync(target) && realpathSync(target) === source) return;
+  if (existsSync(target) && realpathSync.native(target) === source) return;
   cpSync(source, target, { recursive: true, verbatimSymlinks: true });
   const rebaseLinks = (directory: string) => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const copied = join(directory, entry.name);
       if (entry.isDirectory()) rebaseLinks(copied);
-      if (entry.isSymbolicLink()) rebaseCopiedLink(copied, source, target);
+      if (entry.isSymbolicLink()) rebaseCopiedLink(copied, source, target, extensionSource, targetPath);
     }
   };
   rebaseLinks(target);

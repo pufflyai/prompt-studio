@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -21,11 +21,13 @@ import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensio
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
+import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+// npm harness detection and model discovery are covered by opencode-npm-detection.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
@@ -36,6 +38,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
+// Resource links include owner batch-resolution commands and their public workbench metadata.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 // Includes the declared clipboard permission on the packaged webview fixture.
@@ -53,39 +56,7 @@ beforeAll(() => {
   }
 }, BUILD_TIMEOUT);
 
-test("checks project-local extensions and reports bundled versions despite an invalid user extension", () => {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), "packaged-extension-check-")));
-  try {
-    mkdirSync(join(root, ".pstdio"));
-    writeFileSync(join(root, ".pstdio/config.json"), JSON.stringify({ project_id: "project" }));
-    const home = join(root, "user-home");
-    const invalidExtension = join(home, "extensions", "invalid");
-    mkdirSync(invalidExtension, { recursive: true });
-    writeFileSync(join(invalidExtension, "package.json"), "{}");
-    const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", "--scope", "repo", "--json"], {
-      cwd: root,
-      env: { ...process.env, PSTDIO_HOME: home },
-      encoding: "utf8",
-    });
-    expect(result.status).toBe(0);
-    const body = JSON.parse(result.stdout);
-    const version = spawnSync(PACKAGED_BINARY_PATH, ["--version"], { encoding: "utf8" }).stdout.trim();
-    expect(body.versions).toMatchObject({
-      cli: version,
-      dashboard: version,
-      sdk: expect.any(String),
-      extensionApi: expect.any(String),
-    });
-    expect(body.checks).toHaveLength(1);
-    expect(body.checks[0]).toMatchObject({
-      errorCount: 0,
-      extensionsRoot: join(root, ".pstdio", "extensions"),
-      hostCompatibility: { status: "verified", host: { hostVersion: version } },
-    });
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
+registerExtensionInstallSmokeTests();
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
