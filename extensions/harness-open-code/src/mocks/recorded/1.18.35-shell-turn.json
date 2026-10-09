@@ -1,0 +1,181 @@
+[
+  {
+    "info": {
+      "id": "msg_121c398df001GUwNIdGQQkZbPi",
+      "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+      "role": "user",
+      "time": {
+        "created": 1791567829215
+      },
+      "summary": {
+        "diffs": []
+      },
+      "agent": "build",
+      "model": {
+        "providerID": "opencode",
+        "modelID": "big-pickle"
+      }
+    },
+    "parts": [
+      {
+        "id": "prt_121c398e10014m5rRNTxn9ycxm",
+        "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+        "messageID": "msg_121c398df001GUwNIdGQQkZbPi",
+        "type": "text",
+        "text": "Run the shell command `echo hi` with your bash tool, then reply with only the word done."
+      }
+    ]
+  },
+  {
+    "info": {
+      "id": "msg_121c39960001J8OgVX1cJaYZLv",
+      "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+      "role": "assistant",
+      "time": {
+        "created": 1791567829344,
+        "completed": 1791567833154
+      },
+      "parentID": "msg_121c398df001GUwNIdGQQkZbPi",
+      "modelID": "big-pickle",
+      "providerID": "opencode",
+      "mode": "build",
+      "agent": "build",
+      "path": {
+        "cwd": "/workspace",
+        "root": "/"
+      },
+      "cost": 0,
+      "tokens": {
+        "total": 13635,
+        "input": 11805,
+        "output": 38,
+        "reasoning": 0,
+        "cache": {
+          "read": 1792,
+          "write": 0
+        }
+      },
+      "finish": "tool-calls"
+    },
+    "parts": [
+      {
+        "id": "prt_121c3a79d0017ibVQEUkp07lhf",
+        "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+        "messageID": "msg_121c39960001J8OgVX1cJaYZLv",
+        "type": "step-start"
+      },
+      {
+        "id": "prt_121c3a7d60010bWOoUztHS0Ui6",
+        "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+        "messageID": "msg_121c39960001J8OgVX1cJaYZLv",
+        "type": "tool",
+        "callID": "call_00_no1r1py97ivzxytq95ud1r31",
+        "tool": "bash",
+        "state": {
+          "status": "completed",
+          "input": {
+            "command": "echo hi"
+          },
+          "output": "hi\n",
+          "title": "echo hi",
+          "metadata": {
+            "output": "hi\n",
+            "exit": 0,
+            "truncated": false
+          },
+          "time": {
+            "start": 1791567833118,
+            "end": 1791567833137
+          }
+        }
+      },
+      {
+        "id": "prt_121c3a840001ESL8MYqnF4h1Fr",
+        "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+        "messageID": "msg_121c39960001J8OgVX1cJaYZLv",
+        "type": "step-finish",
+        "reason": "tool-calls",
+        "cost": 0,
+        "tokens": {
+          "total": 13635,
+          "input": 11805,
+          "output": 38,
+          "reasoning": 0,
+          "cache": {
+            "read": 1792,
+            "write": 0
+          }
+        }
+      }
+    ]
+  },
+  {
+    "info": {
+      "id": "msg_121c3a843001nfGJMaPIaKRXF1",
+      "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+      "role": "assistant",
+      "time": {
+        "created": 1791567833155,
+        "completed": 1791567835203
+      },
+      "parentID": "msg_121c398df001GUwNIdGQQkZbPi",
+      "modelID": "big-pickle",
+      "providerID": "opencode",
+      "mode": "build",
+      "agent": "build",
+      "path": {
+        "cwd": "/workspace",
+        "root": "/"
+      },
+      "cost": 0,
+      "tokens": {
+        "total": 13651,
+        "input": 81,
+        "output": 2,
+        "reasoning": 0,
+        "cache": {
+          "read": 13568,
+          "write": 0
+        }
+      },
+      "finish": "stop"
+    },
+    "parts": [
+      {
+        "id": "prt_121c3b011001Ub4Ff31Kj4dEbs",
+        "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+        "messageID": "msg_121c3a843001nfGJMaPIaKRXF1",
+        "type": "step-start"
+      },
+      {
+        "id": "prt_121c3b037001fAgbRM4hLUS5OY",
+        "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+        "messageID": "msg_121c3a843001nfGJMaPIaKRXF1",
+        "type": "text",
+        "text": "done",
+        "time": {
+          "start": 1791567835191,
+          "end": 1791567835197
+        }
+      },
+      {
+        "id": "prt_121c3b03f001lK5JXqwfcuMnti",
+        "sessionID": "ses_ede3c6730ffeBfygYqybSLG2cc",
+        "messageID": "msg_121c3a843001nfGJMaPIaKRXF1",
+        "type": "step-finish",
+        "reason": "stop",
+        "cost": 0,
+        "tokens": {
+          "total": 13651,
+          "input": 81,
+          "output": 2,
+          "reasoning": 0,
+          "cache": {
+            "read": 13568,
+            "write": 0
+          }
+        }
+      }
+    ]
+  }
+]

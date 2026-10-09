@@ -84,12 +84,12 @@ describe("detect", () => {
         ...ctx.process,
         run: async ({ command }) =>
           command[1] === "--version"
-            ? { exitCode: 0, stdout: "0.6.0\n", stderr: "" }
+            ? { exitCode: 0, stdout: "1.18.35\n", stderr: "" }
             : { exitCode: 1, stdout: "", stderr: "" },
       },
     };
 
-    expect(await h.detect!(versionCtx)).toEqual({ available: true, version: "0.6.0" });
+    expect(await h.detect!(versionCtx)).toEqual({ available: true, version: "1.18.35" });
   });
 
   test("default detection reports unavailable on non-zero exit", async () => {
@@ -99,7 +99,7 @@ describe("detect", () => {
       process: { ...ctx.process, run: async () => ({ exitCode: 1, stdout: "", stderr: "" }) },
     };
 
-    expect(await h.detect!(missingCtx)).toEqual({ available: false });
+    expect(await h.detect!(missingCtx)).toMatchObject({ available: false, reason: expect.stringMatching(/\S/) });
   });
 });
 
@@ -186,7 +186,7 @@ describe("listModels", () => {
         ...ctx.process,
         run: async ({ command }) => ({
           exitCode: 0,
-          stdout: command[1] === "models" ? "openai/gpt-4\n" : "0.6.0",
+          stdout: command[1] === "models" ? "openai/gpt-4\n" : "1.18.35",
           stderr: "",
         }),
       },

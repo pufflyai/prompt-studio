@@ -14,6 +14,9 @@ import { createPackagedProject, openPackagedProject } from "./packaged-project-h
 
 const environments =
   process.platform === "win32" ? ["Windows PATH"] : ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"];
+// The oldest versions each harness accepts, so detection proves its minimum stays supported.
+const versions = { codex: "codex-cli 0.157.0", claude: "2.1.203 (Claude Code)", opencode: "1.0.175" };
+const executableSuffix = process.platform === "win32" ? ".exe" : "";
 
 for (const shell of environments) {
   test(`selects installed harnesses after a desktop launch with ${shell}`, async () => {
@@ -21,13 +24,16 @@ for (const shell of environments) {
     const home = createPackagedHome();
     const toolsPath = join(home, "agent tools");
     mkdirSync(toolsPath);
-    const bunPath = execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });
-    for (const executable of ["codex", "claude", "opencode"]) {
-      if (process.platform === "win32") {
-        copyFileSync(bunPath, join(toolsPath, `${executable}.exe`));
-      } else {
-        writeFileSync(join(toolsPath, executable), `#!${bunPath}\nconsole.log("1.0.0");\n`, { mode: 0o755 });
-      }
+    // A compiled executable stands in for each CLI, so Windows PATH lookup finds a real .exe too.
+    const source = join(home, "fake-harness.ts");
+    writeFileSync(
+      source,
+      `console.log(${JSON.stringify(versions)}[require("node:path").parse(process.execPath).name]);\n`,
+    );
+    const compiled = join(home, `fake-harness${executableSuffix}`);
+    execFileSync("bun", ["build", "--compile", "--outfile", compiled, source]);
+    for (const executable of Object.keys(versions)) {
+      copyFileSync(compiled, join(toolsPath, `${executable}${executableSuffix}`));
     }
     writeFileSync(join(home, ".bash_profile"), 'source "$HOME/.bashrc"\n');
     writeFileSync(join(home, ".bashrc"), 'export PATH="$HOME/agent tools:$PATH"\n');

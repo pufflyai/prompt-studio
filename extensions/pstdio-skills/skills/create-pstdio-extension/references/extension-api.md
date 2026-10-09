@@ -451,7 +451,9 @@ const myAgent = defineHarness({
   capabilities: () => ["ContextUsage"],
   detect: async (ctx) => {
     const result = await ctx.process.run({ command: ["my-agent", "--version"] });
-    return result.exitCode === 0 ? { available: true, version: result.stdout.trim() } : { available: false };
+    // `reason` tells the person why the harness cannot run. The harness menu and `pst agents list` show it.
+    if (result.exitCode !== 0) return { available: false, reason: "`my-agent --version` failed. Install My Agent." };
+    return { available: true, version: result.stdout.trim() };
   },
   listModels: () => [{ id: "my-model" }],
   start: (ctx, input): HarnessSession => {
