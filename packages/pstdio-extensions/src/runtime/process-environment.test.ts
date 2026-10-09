@@ -4,11 +4,17 @@ import { createExtensionInstallEnvironment, createExtensionProcessEnvironment } 
 describe("createExtensionProcessEnvironment", () => {
   test("preserves Windows runtime variables and merges overrides without case duplicates", () => {
     const env = createExtensionProcessEnvironment(
-      { Path: "old", COMSPEC: "cmd.exe", SYSTEMROOT: "C:\\Windows", openai_api_key: "secret" },
+      {
+        Path: "old",
+        COMSPEC: "cmd.exe",
+        SYSTEMROOT: "C:\\Windows",
+        PSMODULEPATH: "C:\\Modules",
+        openai_api_key: "secret",
+      },
       { PATH: "new" },
       "win32",
     );
-    expect(env).toEqual({ PATH: "new", ComSpec: "cmd.exe", SystemRoot: "C:\\Windows" });
+    expect(env).toEqual({ PATH: "new", ComSpec: "cmd.exe", SystemRoot: "C:\\Windows", PSModulePath: "C:\\Modules" });
   });
 
   test("keeps Unix environment names case sensitive", () => {

@@ -87,7 +87,9 @@ test.skipIf(process.platform !== "win32")("runs a standalone PowerShell script",
   const { prefix } = fixture("PowerShell Å tools");
   const script = join(prefix, "only.ps1");
   writeFileSync(script, 'Write-Output "1.2.3"');
-  expect((await createProcessApi().run({ command: [script] })).stdout.trim()).toBe("1.2.3");
+  const result = await createProcessApi().run({ command: [script], timeoutMs: 3000 });
+  expect(result.exitCode, result.stderr).toBe(0);
+  expect(result.stdout.trim()).toBe("1.2.3");
 });
 
 test("stops a timed-out wrapper and the child it started", async () => {

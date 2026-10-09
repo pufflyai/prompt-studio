@@ -10,6 +10,9 @@ const SAFE_HOST_VARIABLES = [
   "NO_COLOR",
   "PATH",
   "PATHEXT",
+  // Windows PowerShell can stall while rebuilding its default module search
+  // path when this is absent. Like PATH, it contains runtime search directories.
+  "PSModulePath",
   "SHELL",
   "SystemRoot",
   "TEMP",
