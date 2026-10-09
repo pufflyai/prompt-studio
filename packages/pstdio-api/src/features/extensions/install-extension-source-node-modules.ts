@@ -95,7 +95,37 @@ const rebaseCopiedLink = (copied: string, source: string, target: string, source
   }
 
   unlinkSync(copied);
-  symlinkSync(rebased, copied, isDirectory ? "junction" : "file");
+  symlinkSync(resolve(dirname(copied), rebased), copied, isDirectory ? "junction" : "file");
+};
+
+// Junctions store absolute destinations on Windows. Update links into the moved
+// install while retaining links to dependencies owned by a sibling checkout.
+export const prepareNodeModulesRelocation = (sourcePath: string, targetPath: string) => {
+  const nodeModules = join(sourcePath, "node_modules");
+  const links: { path: string; destination: string; directory: boolean }[] = [];
+  const collect = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) collect(path);
+      if (!entry.isSymbolicLink()) continue;
+      const destination = readlinkSync(path);
+      if (!isAbsolute(destination)) continue;
+      const within = relative(sourcePath, destination);
+      if (within.startsWith("..") || isAbsolute(within)) continue;
+      links.push({
+        path: join(targetPath, relative(sourcePath, path)),
+        destination: join(targetPath, within),
+        directory: statSync(path).isDirectory(),
+      });
+    }
+  };
+  if (existsSync(nodeModules)) collect(nodeModules);
+  return () => {
+    for (const { path, destination, directory } of links) {
+      unlinkSync(path);
+      symlinkSync(destination, path, directory ? "junction" : "file");
+    }
+  };
 };
 
 export const copyUsableNodeModules = (sourcePath: string, targetPath: string) => {

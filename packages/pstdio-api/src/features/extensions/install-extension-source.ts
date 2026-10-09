@@ -1,14 +1,4 @@
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  renameSync,
-  rmSync,
-  statSync,
-  unlinkSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
@@ -28,6 +18,7 @@ import type {
   InstalledExtensionSource,
 } from "./install-extension-source-types";
 import { prepareInstallDependencies } from "./prepare-extension-dependencies";
+import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
 
 export { dashboardExtensionHostCapabilities } from "pstdio-extensions";
 export {
@@ -44,15 +35,7 @@ export { checkExtensionsRoot, formatExtensionsCheck };
 
 export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 
-export class ExtensionAlreadyInstalledError extends Error {
-  targetPath: string;
-
-  constructor(targetPath: string) {
-    super(`Installed extension already exists: ${targetPath}`);
-    this.name = "ExtensionAlreadyInstalledError";
-    this.targetPath = targetPath;
-  }
-}
+export { ExtensionAlreadyInstalledError } from "./promote-extension-source";
 
 export class RepoScopedExtensionNeedsProjectFolderError extends Error {
   constructor(extensionId: string) {
@@ -166,32 +149,6 @@ export const removePathBestEffort = (path: string, remove: (path: string) => voi
   try {
     remove(path);
   } catch {}
-};
-
-const promotePreparedSource = (
-  preparedPath: string,
-  targetPath: string,
-  replaceExisting: boolean,
-  preserveDependencies: boolean,
-) => {
-  const backupPath = join(dirname(preparedPath), ".previous");
-
-  if (existsSync(targetPath)) {
-    if (!replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);
-    renameSync(targetPath, backupPath);
-  }
-
-  try {
-    renameSync(preparedPath, targetPath);
-    const previousNodeModules = join(backupPath, "node_modules");
-    if (preserveDependencies && existsSync(previousNodeModules)) {
-      renameSync(previousNodeModules, join(targetPath, "node_modules"));
-    }
-  } catch (error) {
-    removePathBestEffort(targetPath);
-    if (existsSync(backupPath)) renameSync(backupPath, targetPath);
-    throw error;
-  }
 };
 
 export const isLocalExtensionSource = (source: string) => isLocalSource(source);
