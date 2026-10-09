@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { Page } from "playwright-core";
-import type { ExtensionHostDiagnostic } from "pstdio-api/extensions/host-diagnostics";
+import type { ExtensionHostDiagnostic } from "pstdio-extensions/bridge/diagnostics";
 import type { observeSmokePage } from "./smoke-observations";
 import type { SmokeResult } from "./smoke-result";
 

@@ -52,3 +52,21 @@ describe("createDashboardSyncWriterProvider", () => {
     }
   });
 });
+
+it("delivers committed anchor changes to views of both endpoints", async () => {
+  const { subscribeToResourceAnchorChanges } = await import("@/shared/extensions/resource-anchor-feed");
+  const events: unknown[] = [];
+  const unsubscribe = subscribeToResourceAnchorChanges((event) => events.push(event));
+  const event = {
+    id: "link-event",
+    projectId: "project",
+    operation: "add",
+    items: [{ source: { type: "note", id: "one" }, target: { type: "slide", id: "two" } }],
+  };
+  try {
+    createDashboardSyncWriterProvider().getWriter("resource_anchor_events")?.upsert(event);
+    expect(events).toEqual([event]);
+  } finally {
+    unsubscribe();
+  }
+});

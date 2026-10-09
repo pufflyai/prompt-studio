@@ -1,5 +1,5 @@
 {
-  "version": "2.20",
+  "version": "2.21",
   "children": [
     {
       "type": "frame",
@@ -166007,6 +166007,447 @@
                       "height": 6
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "xgxAe",
+      "x": 29345,
+      "y": 0,
+      "name": "Resource links · Shared workbench controls · PS-490",
+      "width": 1120,
+      "height": 680,
+      "fill": "$ds-bg-subtle",
+      "gap": 32,
+      "padding": 24,
+      "children": [
+        {
+          "type": "frame",
+          "id": "SZuKv",
+          "name": "Related resources",
+          "width": 520,
+          "fill": "$ds-bg",
+          "cornerRadius": "$overlay-radius",
+          "stroke": "$ds-border-subtle",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "p8lUMa",
+              "name": "Header",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Q9TFT",
+                  "name": "Title",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Related resources",
+                  "fontFamily": "$font-label",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "XrMa6",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Close",
+                  "width": 28,
+                  "height": 28,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "x"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mu1AL",
+              "name": "Body",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eSIK1",
+                  "name": "Resource name",
+                  "fill": "$ds-fg-muted",
+                  "content": "PS-490 · General resource linking",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "ZF56W",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "OlPPW",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "Interaction prototype"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Outgoing · Result"
+                        }
+                      }
+                    },
+                    {
+                      "id": "NZs5f",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Remove link",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "unlink"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MBRMY",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "MVzxW",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "WS-180 · Implementation"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Incoming · Primary"
+                        }
+                      }
+                    },
+                    {
+                      "id": "bhxJ1",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Remove link",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "unlink"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FVnGn",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "WqBgK",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "note: deleted-resource"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Unavailable"
+                        }
+                      }
+                    },
+                    {
+                      "id": "XUWD9",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Remove link",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "unlink"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "ePzHl",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Link resource action",
+                  "height": 32,
+                  "descendants": {
+                    "DsEVd": {
+                      "icon": "link"
+                    },
+                    "Hf4GT": {
+                      "content": "Link resource"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "SkbcQ",
+          "name": "Link resource",
+          "width": 520,
+          "fill": "$ds-bg",
+          "cornerRadius": "$overlay-radius",
+          "stroke": "$ds-border-subtle",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "b61Qn",
+              "name": "Header",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "LgIPQ",
+                  "name": "Title",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Link resource",
+                  "fontFamily": "$font-label",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "Ge7W4",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Close",
+                  "width": 28,
+                  "height": 28,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "x"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uDOFu",
+              "name": "Body",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "IVKkj",
+                  "name": "Resource name",
+                  "fill": "$ds-fg-muted",
+                  "content": "PS-490 · General resource linking",
+                  "fontFamily": "$font-label",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "GcO1V",
+                  "type": "ref",
+                  "ref": "nbn0J",
+                  "name": "Search enabled resources",
+                  "width": "fill_container",
+                  "height": 32,
+                  "descendants": {
+                    "hcIyD": {
+                      "content": "Search resources…"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "XUUnS",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "aUEl8",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "Interaction prototype"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Artifacts"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "R7bJV",
+                  "name": "Related resource row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "OmsEm",
+                      "type": "ref",
+                      "ref": "hIyB7",
+                      "name": "Resource",
+                      "width": "fill_container",
+                      "height": 52,
+                      "descendants": {
+                        "h0cJn": {
+                          "content": "Project notes"
+                        },
+                        "lTPwv": {
+                          "enabled": true,
+                          "content": "Artifacts"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "oIeJY",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Purpose selector",
+                  "height": 32,
+                  "descendants": {
+                    "DsEVd": {
+                      "icon": "chevron-down"
+                    },
+                    "Hf4GT": {
+                      "content": "Purpose: Result"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HCY74",
+              "name": "Footer",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": 16,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "id": "jSazo",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Cancel",
+                  "height": 32,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Cancel"
+                    }
+                  }
+                },
+                {
+                  "id": "hjmdc",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Link",
+                  "height": 32,
+                  "theme": {
+                    "btn": "primary",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Link",
+                      "fill": "$btn-fg"
+                    }
+                  }
                 }
               ]
             }

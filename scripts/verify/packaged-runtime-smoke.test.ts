@@ -7,17 +7,23 @@ describe("resolvePackagedRuntimeTestArgs", () => {
     expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-darwin-x64" })).toEqual(["run", "test:packaged"]);
   });
 
-  test("runs runtime lifecycle and supported browser setup checks on Windows", () => {
-    const expected = ["test", "src/packaged/runtime-lifecycle.test.ts", "--timeout", "30000", "--silent"];
-
+  test("runs runtime lifecycle, npm harness detection and supported browser setup checks on Windows", () => {
     expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-x64" })).toEqual([
       "test",
       "src/packaged/runtime-lifecycle.test.ts",
+      "src/packaged/opencode-npm-detection.test.ts",
       "src/packaged/extension-browser-install.test.ts",
       "--timeout",
       "30000",
       "--silent",
     ]);
-    expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-arm64" })).toEqual(expected);
+    expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-arm64" })).toEqual([
+      "test",
+      "src/packaged/runtime-lifecycle.test.ts",
+      "src/packaged/opencode-npm-detection.test.ts",
+      "--timeout",
+      "30000",
+      "--silent",
+    ]);
   });
 });

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "pstdio-api/pglite-recovery-hint";
+import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "pstdio-api/runtime";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
 import { runApi as defaultRunApi, shouldAutoStartApi } from "@/adapters/cli/dashboard/api";

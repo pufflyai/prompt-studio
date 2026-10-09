@@ -15,7 +15,7 @@ The runtime is one background process that serves the API and the dashboard on t
 
 ## Automatic start
 
-Most commands need the runtime. Before they run, the CLI looks for a running runtime and starts one when none is found. `pst close`, `pst logs`, `pst serve`, and the local `pst extensions add`, `check`, `install-browser`, and `test` commands skip this step.
+Most commands need the runtime. Before they run, the CLI looks for a running runtime and starts one when none is found. `pst close`, `pst logs`, `pst serve`, and `pst extensions install-browser`, and `pst extensions test` skip this step. `extensions add` starts or connects to the API after it resolves the linked project. Installed-scope `extensions check` does the same; `extensions check <path>` stays local.
 
 The CLI finds the runtime through `$PSTDIO_HOME/runtime.json`. This file records the runtime's process ID, address, and access token. The CLI checks that the process is alive and answers authenticated requests before it uses that address. Set `PSTDIO_API_URL` or pass `--api-port` to use a specific address instead. The CLI starts a runtime for a specific address only when it is on this machine (`127.0.0.1`, `localhost`, or `[::1]`). When an address on another machine does not answer, the command fails with "Cannot reach the Prompt Studio API" and starts nothing.
 

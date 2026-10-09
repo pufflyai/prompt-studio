@@ -118,29 +118,3 @@ export const installSkillsForAgent = async (options: InstallSkillsOptions) => {
 
   return installed;
 };
-
-export const installDefaultSkills = async (
-  root: string,
-  projectId: string,
-  baseUrl = resolveApiUrl(),
-  homedir = defaultHomedir(),
-) => {
-  const agents = (await listAvailableAgents(baseUrl, projectId)).filter(
-    (agent) => agent.availability.type === "INSTALLED" && agent.skills,
-  );
-  if (agents.length === 0) return;
-
-  const skills = await listSkillsWithFiles(projectId);
-
-  for (const agent of agents) {
-    const localDir = join(root, agent.skills!.dir);
-    const globalDir = join(homedir, agent.skills!.global_dir);
-
-    for (const skill of skills) {
-      const localDest = resolveSafeSkillDir(localDir, skill.name);
-      const globalDest = resolveSafeSkillDir(globalDir, skill.name);
-      const destination = !existsSync(localDest) && existsSync(globalDest) ? globalDest : localDest;
-      writeSkillTree(destination, skill.files);
-    }
-  }
-};
