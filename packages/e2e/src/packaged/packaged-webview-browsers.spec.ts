@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -61,7 +61,7 @@ test.describe("packaged extension webviews", () => {
     browserTest(
       `persists commands and settings through authenticated opaque webviews in ${browserCase.name}`,
       async () => {
-        const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-"));
+        const tempRoot = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-")));
         let child: ChildProcess | null = null;
         let browser: Browser | null = null;
 

@@ -91,6 +91,372 @@ declare const automationRunSchema: z.ZodObject<{
 type AutomationRunStatus = z.infer<typeof automationRunStatusSchema>;
 type CreateAutomationRunInput = z.infer<typeof createAutomationRunInputSchema>;
 type AutomationRun = z.infer<typeof automationRunSchema>;
+declare const boardViewSchema: z.ZodObject<{
+  id: z.ZodString;
+  boardId: z.ZodString;
+  title: z.ZodString;
+  settings: z.ZodUnion<readonly [z.ZodObject<{
+    viewMode: z.ZodEnum<{
+      list: "list";
+      board: "board";
+    }>;
+    columnGrouping: z.ZodString;
+    rowGrouping: z.ZodString;
+    displayProperties: z.ZodArray<z.ZodString>;
+  }, z.core.$strip>, z.ZodObject<{
+    grouping: z.ZodString;
+    rowNumbers: z.ZodBoolean;
+    wrapRows: z.ZodBoolean;
+    showStats: z.ZodBoolean;
+    hiddenColumns: z.ZodArray<z.ZodString>;
+    columnOrder: z.ZodArray<z.ZodString>;
+  }, z.core.$strip>]>;
+  filter: z.ZodObject<{
+    conjunction: z.ZodEnum<{
+      and: "and";
+      or: "or";
+    }>;
+    rules: z.ZodArray<z.ZodObject<{
+      attributeId: z.ZodString;
+      condition: z.ZodEnum<{
+        contains: "contains";
+        "does-not-contain": "does-not-contain";
+        is: "is";
+        "is-not": "is-not";
+        gt: "gt";
+        gte: "gte";
+        lt: "lt";
+        lte: "lte";
+        "is-before": "is-before";
+        "is-after": "is-after";
+        "is-on-or-before": "is-on-or-before";
+        "is-on-or-after": "is-on-or-after";
+        "is-any-of": "is-any-of";
+        "is-none-of": "is-none-of";
+        "has-any-of": "has-any-of";
+        "has-all-of": "has-all-of";
+        "has-none-of": "has-none-of";
+        "is-empty": "is-empty";
+        "is-not-empty": "is-not-empty";
+      }>;
+      value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+    }, z.core.$strip>>;
+    groups: z.ZodOptional<z.ZodArray<z.ZodObject<{
+      conjunction: z.ZodEnum<{
+        and: "and";
+        or: "or";
+      }>;
+      rules: z.ZodArray<z.ZodObject<{
+        attributeId: z.ZodString;
+        condition: z.ZodEnum<{
+          contains: "contains";
+          "does-not-contain": "does-not-contain";
+          is: "is";
+          "is-not": "is-not";
+          gt: "gt";
+          gte: "gte";
+          lt: "lt";
+          lte: "lte";
+          "is-before": "is-before";
+          "is-after": "is-after";
+          "is-on-or-before": "is-on-or-before";
+          "is-on-or-after": "is-on-or-after";
+          "is-any-of": "is-any-of";
+          "is-none-of": "is-none-of";
+          "has-any-of": "has-any-of";
+          "has-all-of": "has-all-of";
+          "has-none-of": "has-none-of";
+          "is-empty": "is-empty";
+          "is-not-empty": "is-not-empty";
+        }>;
+        value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+      }, z.core.$strip>>;
+    }, z.core.$strict>>>;
+  }, z.core.$strict>;
+  sorts: z.ZodArray<z.ZodObject<{
+    attributeId: z.ZodString;
+    direction: z.ZodEnum<{
+      asc: "asc";
+      desc: "desc";
+    }>;
+  }, z.core.$strip>>;
+  builtIn: z.ZodBoolean;
+}, z.core.$strip>;
+declare const boardViewsSchema: z.ZodObject<{
+  views: z.ZodArray<z.ZodObject<{
+    id: z.ZodString;
+    boardId: z.ZodString;
+    title: z.ZodString;
+    settings: z.ZodUnion<readonly [z.ZodObject<{
+      viewMode: z.ZodEnum<{
+        list: "list";
+        board: "board";
+      }>;
+      columnGrouping: z.ZodString;
+      rowGrouping: z.ZodString;
+      displayProperties: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>, z.ZodObject<{
+      grouping: z.ZodString;
+      rowNumbers: z.ZodBoolean;
+      wrapRows: z.ZodBoolean;
+      showStats: z.ZodBoolean;
+      hiddenColumns: z.ZodArray<z.ZodString>;
+      columnOrder: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>]>;
+    filter: z.ZodObject<{
+      conjunction: z.ZodEnum<{
+        and: "and";
+        or: "or";
+      }>;
+      rules: z.ZodArray<z.ZodObject<{
+        attributeId: z.ZodString;
+        condition: z.ZodEnum<{
+          contains: "contains";
+          "does-not-contain": "does-not-contain";
+          is: "is";
+          "is-not": "is-not";
+          gt: "gt";
+          gte: "gte";
+          lt: "lt";
+          lte: "lte";
+          "is-before": "is-before";
+          "is-after": "is-after";
+          "is-on-or-before": "is-on-or-before";
+          "is-on-or-after": "is-on-or-after";
+          "is-any-of": "is-any-of";
+          "is-none-of": "is-none-of";
+          "has-any-of": "has-any-of";
+          "has-all-of": "has-all-of";
+          "has-none-of": "has-none-of";
+          "is-empty": "is-empty";
+          "is-not-empty": "is-not-empty";
+        }>;
+        value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+      }, z.core.$strip>>;
+      groups: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        conjunction: z.ZodEnum<{
+          and: "and";
+          or: "or";
+        }>;
+        rules: z.ZodArray<z.ZodObject<{
+          attributeId: z.ZodString;
+          condition: z.ZodEnum<{
+            contains: "contains";
+            "does-not-contain": "does-not-contain";
+            is: "is";
+            "is-not": "is-not";
+            gt: "gt";
+            gte: "gte";
+            lt: "lt";
+            lte: "lte";
+            "is-before": "is-before";
+            "is-after": "is-after";
+            "is-on-or-before": "is-on-or-before";
+            "is-on-or-after": "is-on-or-after";
+            "is-any-of": "is-any-of";
+            "is-none-of": "is-none-of";
+            "has-any-of": "has-any-of";
+            "has-all-of": "has-all-of";
+            "has-none-of": "has-none-of";
+            "is-empty": "is-empty";
+            "is-not-empty": "is-not-empty";
+          }>;
+          value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+        }, z.core.$strip>>;
+      }, z.core.$strict>>>;
+    }, z.core.$strict>;
+    sorts: z.ZodArray<z.ZodObject<{
+      attributeId: z.ZodString;
+      direction: z.ZodEnum<{
+        asc: "asc";
+        desc: "desc";
+      }>;
+    }, z.core.$strip>>;
+    builtIn: z.ZodBoolean;
+  }, z.core.$strip>>;
+  defaultViewId: z.ZodString;
+}, z.core.$strip>;
+declare const boardViewUpdateSchema: z.ZodObject<{
+  title: z.ZodOptional<z.ZodString>;
+  settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
+    viewMode: z.ZodOptional<z.ZodEnum<{
+      list: "list";
+      board: "board";
+    }>>;
+    columnGrouping: z.ZodOptional<z.ZodString>;
+    rowGrouping: z.ZodOptional<z.ZodString>;
+    displayProperties: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>, z.ZodObject<{
+    grouping: z.ZodOptional<z.ZodString>;
+    rowNumbers: z.ZodOptional<z.ZodBoolean>;
+    wrapRows: z.ZodOptional<z.ZodBoolean>;
+    showStats: z.ZodOptional<z.ZodBoolean>;
+    hiddenColumns: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    columnOrder: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>]>>;
+  filter: z.ZodOptional<z.ZodObject<{
+    conjunction: z.ZodEnum<{
+      and: "and";
+      or: "or";
+    }>;
+    rules: z.ZodArray<z.ZodObject<{
+      attributeId: z.ZodString;
+      condition: z.ZodEnum<{
+        contains: "contains";
+        "does-not-contain": "does-not-contain";
+        is: "is";
+        "is-not": "is-not";
+        gt: "gt";
+        gte: "gte";
+        lt: "lt";
+        lte: "lte";
+        "is-before": "is-before";
+        "is-after": "is-after";
+        "is-on-or-before": "is-on-or-before";
+        "is-on-or-after": "is-on-or-after";
+        "is-any-of": "is-any-of";
+        "is-none-of": "is-none-of";
+        "has-any-of": "has-any-of";
+        "has-all-of": "has-all-of";
+        "has-none-of": "has-none-of";
+        "is-empty": "is-empty";
+        "is-not-empty": "is-not-empty";
+      }>;
+      value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+    }, z.core.$strip>>;
+    groups: z.ZodOptional<z.ZodArray<z.ZodObject<{
+      conjunction: z.ZodEnum<{
+        and: "and";
+        or: "or";
+      }>;
+      rules: z.ZodArray<z.ZodObject<{
+        attributeId: z.ZodString;
+        condition: z.ZodEnum<{
+          contains: "contains";
+          "does-not-contain": "does-not-contain";
+          is: "is";
+          "is-not": "is-not";
+          gt: "gt";
+          gte: "gte";
+          lt: "lt";
+          lte: "lte";
+          "is-before": "is-before";
+          "is-after": "is-after";
+          "is-on-or-before": "is-on-or-before";
+          "is-on-or-after": "is-on-or-after";
+          "is-any-of": "is-any-of";
+          "is-none-of": "is-none-of";
+          "has-any-of": "has-any-of";
+          "has-all-of": "has-all-of";
+          "has-none-of": "has-none-of";
+          "is-empty": "is-empty";
+          "is-not-empty": "is-not-empty";
+        }>;
+        value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+      }, z.core.$strip>>;
+    }, z.core.$strict>>>;
+  }, z.core.$strict>>;
+  sorts: z.ZodOptional<z.ZodArray<z.ZodObject<{
+    attributeId: z.ZodString;
+    direction: z.ZodEnum<{
+      asc: "asc";
+      desc: "desc";
+    }>;
+  }, z.core.$strip>>>;
+}, z.core.$strict>;
+declare const boardViewCreateSchema: z.ZodObject<{
+  settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
+    viewMode: z.ZodOptional<z.ZodEnum<{
+      list: "list";
+      board: "board";
+    }>>;
+    columnGrouping: z.ZodOptional<z.ZodString>;
+    rowGrouping: z.ZodOptional<z.ZodString>;
+    displayProperties: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>, z.ZodObject<{
+    grouping: z.ZodOptional<z.ZodString>;
+    rowNumbers: z.ZodOptional<z.ZodBoolean>;
+    wrapRows: z.ZodOptional<z.ZodBoolean>;
+    showStats: z.ZodOptional<z.ZodBoolean>;
+    hiddenColumns: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    columnOrder: z.ZodOptional<z.ZodArray<z.ZodString>>;
+  }, z.core.$strict>]>>;
+  filter: z.ZodOptional<z.ZodObject<{
+    conjunction: z.ZodEnum<{
+      and: "and";
+      or: "or";
+    }>;
+    rules: z.ZodArray<z.ZodObject<{
+      attributeId: z.ZodString;
+      condition: z.ZodEnum<{
+        contains: "contains";
+        "does-not-contain": "does-not-contain";
+        is: "is";
+        "is-not": "is-not";
+        gt: "gt";
+        gte: "gte";
+        lt: "lt";
+        lte: "lte";
+        "is-before": "is-before";
+        "is-after": "is-after";
+        "is-on-or-before": "is-on-or-before";
+        "is-on-or-after": "is-on-or-after";
+        "is-any-of": "is-any-of";
+        "is-none-of": "is-none-of";
+        "has-any-of": "has-any-of";
+        "has-all-of": "has-all-of";
+        "has-none-of": "has-none-of";
+        "is-empty": "is-empty";
+        "is-not-empty": "is-not-empty";
+      }>;
+      value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+    }, z.core.$strip>>;
+    groups: z.ZodOptional<z.ZodArray<z.ZodObject<{
+      conjunction: z.ZodEnum<{
+        and: "and";
+        or: "or";
+      }>;
+      rules: z.ZodArray<z.ZodObject<{
+        attributeId: z.ZodString;
+        condition: z.ZodEnum<{
+          contains: "contains";
+          "does-not-contain": "does-not-contain";
+          is: "is";
+          "is-not": "is-not";
+          gt: "gt";
+          gte: "gte";
+          lt: "lt";
+          lte: "lte";
+          "is-before": "is-before";
+          "is-after": "is-after";
+          "is-on-or-before": "is-on-or-before";
+          "is-on-or-after": "is-on-or-after";
+          "is-any-of": "is-any-of";
+          "is-none-of": "is-none-of";
+          "has-any-of": "has-any-of";
+          "has-all-of": "has-all-of";
+          "has-none-of": "has-none-of";
+          "is-empty": "is-empty";
+          "is-not-empty": "is-not-empty";
+        }>;
+        value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
+      }, z.core.$strip>>;
+    }, z.core.$strict>>>;
+  }, z.core.$strict>>;
+  sorts: z.ZodOptional<z.ZodArray<z.ZodObject<{
+    attributeId: z.ZodString;
+    direction: z.ZodEnum<{
+      asc: "asc";
+      desc: "desc";
+    }>;
+  }, z.core.$strip>>>;
+  title: z.ZodString;
+  copyFrom: z.ZodOptional<z.ZodString>;
+}, z.core.$strict>;
+type BoardView = z.infer<typeof boardViewSchema>;
+type BoardViews = z.infer<typeof boardViewsSchema>;
+type BoardViewCreate = z.infer<typeof boardViewCreateSchema>;
+type BoardViewUpdate = z.infer<typeof boardViewUpdateSchema>;
 declare const parseExtensionApiDeclaration: (declaration: string) => string[] | null;
 declare const supportsExtensionApiVersion: (declaration: string, hostVersion: string) => boolean;
 type ViewFilterCondition = "contains" | "does-not-contain" | "is" | "is-not" | "gt" | "gte" | "lt" | "lte" | "is-before" | "is-after" | "is-on-or-before" | "is-on-or-after" | "is-any-of" | "is-none-of" | "has-any-of" | "has-all-of" | "has-none-of" | "is-empty" | "is-not-empty";
@@ -515,6 +881,16 @@ interface EventRef<TPayload extends Struct = Struct> {
 interface EventDeliveryResult {
   delivered: number;
   diagnostics?: CommandDiagnostic[];
+}
+interface ExtensionViewsApi {
+  list(board: ViewRef): Promise<BoardViews>;
+  create(board: ViewRef, input: BoardViewCreate): Promise<BoardView>;
+  update(board: ViewRef, id: string, input: BoardViewUpdate): Promise<BoardView>;
+  remove(board: ViewRef, id: string): Promise<{
+    deleted: boolean;
+  }>;
+  reorder(board: ViewRef, ids: string[]): Promise<BoardViews>;
+  setDefault(board: ViewRef, id: string | null): Promise<BoardViews>;
 }
 type UiSlotKind = "menu" | "panel" | "settings" | "renderer" | "kanbanRenderer" | "dataTableRenderer";
 interface SlotOptions<TKind extends UiSlotKind = UiSlotKind> {
@@ -2584,6 +2960,7 @@ interface ExtensionContextBase<TSettings extends Record<string, unknown> = Recor
   source?: CommandSource;
   storage: ExtensionStorageApi;
   resources: ExtensionResourcesApi;
+  views: ExtensionViewsApi;
   navigation: {
     open(target: NavigationTarget): void;
   };
@@ -3147,6 +3524,9 @@ export declare const projectEvents: {
   }>;
 };
 export declare const viewDataEvents: {
+  boardViewsChanged: EventRef<{
+    projectId: string;
+  }>;
   resourceAnchorsChanged: EventRef<{
     projectId: string;
   }>;
@@ -3568,4 +3948,4 @@ export declare const matchesResourceWhen: (when: Pick<WhenExpression, "resourceT
 export declare const projectPrefix: () => {
   $prefix: "project";
 };
-export type { ActionOption, ActionsControl, ActivityItemContribution, AgentCapability, AgentModel, AnchorGridControl, AnchorGridValue, ApprovalRequest, ApprovalResponse, ArtifactFile, ArtifactMount, ArtifactMountContribution, ArtifactMountKey, AssetContributions, AutomationRun, AutomationRunStatus, BaseControl, BehaviourContributions, BooleanControl, BooleanParam, CliContribution, CollectionBadgeItem, ColorControl, CommandCompletedEvent, CommandContext, CommandContinue, CommandDefinition, CommandDiagnostic, CommandFailedEvent, CommandHelpersApi, CommandInvocation, CommandLifecycleEventPayload, CommandLifecyclePhase, CommandMiddlewareContext, CommandMiddlewareHandler, CommandMiddlewareResult, CommandNotice, CommandOutcome, CommandPaletteContribution, CommandPaletteResourceContribution, CommandPaletteResourceItem, CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult, CommandPaletteResourceTarget, CommandPatchParams, CommandRef, CommandReject, CommandRejectedEvent, CommandReplaceInvocation, CommandReplaceParams, CommandRequestedEvent, CommandResponse, CommandRunHandler, CommandSource, CommandStartedEvent, CommandStream, CommandStreamDeclaration, CommandStreamOptions, CommandStreamWriter, CommandTarget, CommitPayload, ConflictPayload, ConnectionRef, ContributionDefinition, ContributionInput, ContributionKind, ContributionRef, ControlGroup, ControlParam, ControlValue, ControlValueMap, ControlsApplyInput, ControlsQueryParams, ControlsQueryResult, ControlsRendererContribution, ControlsResetInput, ControlsResourceRef, ControlsUpdateValueInput, ControlsViewBody, CreateExtensionWorkspaceInput, CreateNotificationInput, CreateWorkspaceCommandParams, DataTableRendererColumn, DataTableRendererColumnRenderer, DataTableRendererColumnStat, DataTableRendererContribution, DataTableRendererQueryParams, DataTableRendererQueryResult, DataTableRendererResourceRef, DataTableRendererRow, DataTableRendererRowAction, DataTableRendererRowActivationHandler, DataTableRendererSavedView, DataTableRendererSelectionAction, DataTableRendererSettings, DataTableRendererThemeColor, DataTableViewBody, DateControl, DockedWorkbenchRegion, ErrorPart, EventContext, EventDeliveryResult, EventRef, ExtensionActivityApi, ExtensionArtifactApi, ExtensionAutomationApi, ExtensionBlobInput, ExtensionBlobRef, ExtensionBlobsApi, ExtensionConnectionContribution, ExtensionConnectionMethod, ExtensionConnectionRequest, ExtensionConnectionResponse, ExtensionConnectionStreamEvent, ExtensionConnectionsApi, ExtensionContextBase, ExtensionDefinition, ExtensionEventsApi, ExtensionFilesApi, ExtensionHarnessInput, ExtensionLoadScope, ExtensionLoggerApi, ExtensionNetApi, ExtensionNotifyApi, ExtensionPackageFilesApi, ExtensionPanelRegion, ExtensionProcessApi, ExtensionProjectContext, ExtensionResourcesApi, ExtensionSessionResource, ExtensionSessionsApi, ExtensionSettingProperty, ExtensionSettingScope, ExtensionSettingValueForType, ExtensionSettingValueType, ExtensionSettingsApi, ExtensionSettingsContribution, ExtensionSkillsApi, ExtensionSourceKind, ExtensionStorageApi, ExtensionStorageCollectionApi, ExtensionTerminalApi, ExtensionViewModule, ExtensionViewRender, ExtensionViewRenderContext, ExtensionWorkspace, ExtensionWorkspaceProvider, ExtensionWorkspacesApi, FileIconThemeContribution, FilePart, FileRendererContribution, FileRendererLoadParams, FileRendererLoadResult, FileRendererResourceRef, FileRendererSaveParams, FileRendererSectionAnchor, FileRendererSectionTarget, FileSourcePosition, FileViewBody, FilesParam, GuestHost, HarnessApprovalChannel, HarnessAttachment, HarnessCommandContext, HarnessCommandDiscoveryContext, HarnessCommandState, HarnessContext, HarnessDetectionResult, HarnessEventSink, HarnessExit, HarnessExitStatus, HarnessMessagesInput, HarnessOperation, HarnessOperationResult, HarnessParam, HarnessParamDescriptor, HarnessParamValue, HarnessParams, HarnessParamsSchema, HarnessProvider, HarnessQuestion, HarnessQuestionChannel, HarnessQuestionOption, HarnessQuestionReplyError, HarnessQuestionRequest, HarnessReattachInput, HarnessRecoveryInput, HarnessRecoveryResult, HarnessResumeInput, HarnessSession, HarnessSkillsLayout, HarnessStartInput, HarnessStateApi, HistoryProjection, HistoryRecoveryInput, HistoryRecoveryResult, HookDefinition, JsonObject, JsonParam, JsonPatch, JsonPrimitive, JsonValue, KanbanRendererAttributeDescriptor, KanbanRendererAttributeDisplay, KanbanRendererAttributeType, KanbanRendererBoardColumnConfig, KanbanRendererColumnAction, KanbanRendererContribution, KanbanRendererCreateRowContribution, KanbanRendererEnumOption, KanbanRendererFilterState, KanbanRendererQueryParams, KanbanRendererQueryResult, KanbanRendererResourceRef, KanbanRendererRow, KanbanRendererRowAction, KanbanRendererRowActivationHandler, KanbanRendererSavedView, KanbanRendererSettings, KanbanRendererSortDirection, KanbanRendererViewMode, KanbanRendererViewSettings, KanbanViewBody, KeybindingChord, KeybindingContribution, ListNotificationsQuery, ListNotificationsResponse, ListParam, LoadingPart, LocalExtensionSource, Localizable, LocalizedString, LongTextParam, MarkdownControl, MarkdownParam, MaybePromise, MenuContribution, MergePayload, MiddlewareDefinition, MigrationContext, ModeContribution, ModeRef, ModeRegionSettings, MultiSelectParam, NavigationItemContribution, NavigationOwnerRef, NavigationTarget, NavigationTargetCommand, NavigationTargetCompound, NavigationTargetHref, NavigationTargetItem, NavigationTargetPage, NavigationTargetPanel, NavigationTreeContribution, NavigationTreeSlot, Notification, NotificationAction, NotificationActorType, NotificationKind, NotificationOrigin, NotificationPriority, NotificationStatus, NumberControl, NumberParam, PackageAssetDescriptor, PackageManifest, PageContribution, PageDocumentDeclaration, PageLocation, PageMain, PageMainPanels, PageMainView, PageOpenIntent, PageRef, PageSlot, PageSlotCardinality, PageSlotRef, PageSlotRegion, PageSlotRole, PageUrlDefinition, PanelRef, ParamDescriptor, ParamEditorReadOnlyContent, ParamEditorReadOnlyImage, ParamObjectSchema, ParamOption, ParamOptionSource, ParamType, ParamValue, ParamValueRef, ParamsOf, ParsedWorkbenchPageUrl, PatchPart, PlacementContribution, PlacementIdentity, PlacementItem, PlacementMountStrategy, PlacementOwner, PlacementPresence, PlacementPresentation, PlacementRef, PlacementTabMenuGroup, PlacementTabMenuRow, PlacementTabPresentation, PlacementTabSnapshot, PreparedHarnessOperation, ProcessRunInput, ProcessRunResult, PropsStore, ProviderContributions, QualifiedRef, QuestionResponse, RangeControl, RangeValue, ReadOnlyControl, ReasoningPart, RebasePayload, RegionSize, RendererCallback, RendererContext, RendererContributionBase, RendererEventReference, RendererInvocationContext, ResourceAnchor, ResourceAnchorChangeEvent, ResourceAnchorPage, ResourceAnchorQuery, ResourceAnchorValidationInput, ResourceAnchorValidationResult, ResourceBinding, ResourceConstraint, ResourceControl, ResourceHierarchyProvider, ResourceKindDefinition, ResourceKindRef, ResourceMenuSlotDefinition, ResourceOption, ResourceParam, ResourceRef, ResourceRefValue, ResourceRemovedEvent, ResourceResolution, ResourceRole, RetryableHarnessReattachError, ScheduleContribution, ScheduleExpression, SegmentedControl, SegmentedOption, SelectParam, SelectionControl, SelectionGroup, SelectionOption, SerializedError, SessionLifecyclePayload, SessionMessage, SessionMessagePart, SessionMessageRole, SettingsPanelContribution, SettingsSectionContribution, SettingsSectionRef, SettingsSlotRef, SetupContext, SkillContribution, SlotInvocationContext, SlotOptions, SlotRef, StatusActionDefinition, StatusBarItemContribution, StatusBarSlotRef, StatusContribution, StatusRef, StepFinishPart, StepStartPart, StorageScope, Struct, TemplateContribution, TemplateParam, TemplateTypeContribution, TerminalEvent, TerminalSessionAdapter, TerminalSessionBridge, TerminalSessionExit, TerminalSessionHandle, TerminalSessionRequest, TextControl, TextParam, TextPart, ThemeContribution, ThemeMode, ThemeRef, TimeoutStrategy, TokenUsagePart, ToolPart, ToolPartActionType, ToolPartStatus, TreeAction, TreeNode, TreeNodeRowVariant, TreeNodeTarget, TreeRendererActionParams, TreeRendererChildrenParams, TreeRendererCommandResult, TreeRendererContribution, TreeRendererMoveParams, TreeRendererQueryParams, TreeRendererResourceRef, TreeRendererState, TreeSectionEmptyState, TreeViewBody, TreeViewSection, UiContributions, UiSlotKind, UpdateNotificationInput, VectorControl, VectorValue, ViewBody, ViewContribution, ViewFieldKind, ViewFilterCondition, ViewFilterGroup, ViewFilterRule, ViewHierarchyParent, ViewMenuContribution, ViewRef, ViewSort, ViewSortDirection, ViewToolbarAction, WebviewArtifactFile, WebviewArtifactsClient, WebviewArtifactsReadParams, WebviewCapabilityDeclaration, WebviewClient, WebviewClientOptions, WebviewCommandStreamEvent, WebviewCommandsClient, WebviewCommandsExecuteParams, WebviewCommandsStreamParams, WebviewContribution, WebviewDeclarableCapability, WebviewEventsClient, WebviewExtensionEvent, WebviewExtensionSettingKeyParams, WebviewExtensionSettingSetParams, WebviewFileScope, WebviewFilesClient, WebviewFilesDeleteParams, WebviewFilesListParams, WebviewFilesUploadParams, WebviewHostCapability, WebviewHostCapabilityParams, WebviewHostCapabilityResult, WebviewHostCapabilityResults, WebviewKeyboardEventParams, WebviewNavigationOpenParams, WebviewNotificationActionParams, WebviewNotificationDismissParams, WebviewNotificationResolveParams, WebviewNotificationShowParams, WebviewPreferencesGetParams, WebviewPreferencesSetParams, WebviewScopedDeclarableCapability, WebviewSettingsClient, WebviewStreamsClient, WebviewViewBody, WhenExpression, WorkbenchAttachmentInvocationContext, WorkflowStatus, WorkspaceCapabilities, WorkspaceExecutionTarget, WorkspaceFilesMount, WorkspaceParam, WorkspaceProviderCreateInput, WorkspaceProviderMutationInput, WorkspaceProviderRef, WorkspaceProviderResolveInput, WorkspaceProviderResult, WorkspaceProviderState, WorkspaceProvisionPayload, WorkspaceSyncFile, WorkspaceType, WorkspaceTypeProvider, WorktreeRemovedPayload, parseExtensionApiDeclaration, supportsExtensionApiVersion };
+export type { ActionOption, ActionsControl, ActivityItemContribution, AgentCapability, AgentModel, AnchorGridControl, AnchorGridValue, ApprovalRequest, ApprovalResponse, ArtifactFile, ArtifactMount, ArtifactMountContribution, ArtifactMountKey, AssetContributions, AutomationRun, AutomationRunStatus, BaseControl, BehaviourContributions, BoardView, BoardViewCreate, BoardViewUpdate, BoardViews, BooleanControl, BooleanParam, CliContribution, CollectionBadgeItem, ColorControl, CommandCompletedEvent, CommandContext, CommandContinue, CommandDefinition, CommandDiagnostic, CommandFailedEvent, CommandHelpersApi, CommandInvocation, CommandLifecycleEventPayload, CommandLifecyclePhase, CommandMiddlewareContext, CommandMiddlewareHandler, CommandMiddlewareResult, CommandNotice, CommandOutcome, CommandPaletteContribution, CommandPaletteResourceContribution, CommandPaletteResourceItem, CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult, CommandPaletteResourceTarget, CommandPatchParams, CommandRef, CommandReject, CommandRejectedEvent, CommandReplaceInvocation, CommandReplaceParams, CommandRequestedEvent, CommandResponse, CommandRunHandler, CommandSource, CommandStartedEvent, CommandStream, CommandStreamDeclaration, CommandStreamOptions, CommandStreamWriter, CommandTarget, CommitPayload, ConflictPayload, ConnectionRef, ContributionDefinition, ContributionInput, ContributionKind, ContributionRef, ControlGroup, ControlParam, ControlValue, ControlValueMap, ControlsApplyInput, ControlsQueryParams, ControlsQueryResult, ControlsRendererContribution, ControlsResetInput, ControlsResourceRef, ControlsUpdateValueInput, ControlsViewBody, CreateExtensionWorkspaceInput, CreateNotificationInput, CreateWorkspaceCommandParams, DataTableRendererColumn, DataTableRendererColumnRenderer, DataTableRendererColumnStat, DataTableRendererContribution, DataTableRendererQueryParams, DataTableRendererQueryResult, DataTableRendererResourceRef, DataTableRendererRow, DataTableRendererRowAction, DataTableRendererRowActivationHandler, DataTableRendererSavedView, DataTableRendererSelectionAction, DataTableRendererSettings, DataTableRendererThemeColor, DataTableViewBody, DateControl, DockedWorkbenchRegion, ErrorPart, EventContext, EventDeliveryResult, EventRef, ExtensionActivityApi, ExtensionArtifactApi, ExtensionAutomationApi, ExtensionBlobInput, ExtensionBlobRef, ExtensionBlobsApi, ExtensionConnectionContribution, ExtensionConnectionMethod, ExtensionConnectionRequest, ExtensionConnectionResponse, ExtensionConnectionStreamEvent, ExtensionConnectionsApi, ExtensionContextBase, ExtensionDefinition, ExtensionEventsApi, ExtensionFilesApi, ExtensionHarnessInput, ExtensionLoadScope, ExtensionLoggerApi, ExtensionNetApi, ExtensionNotifyApi, ExtensionPackageFilesApi, ExtensionPanelRegion, ExtensionProcessApi, ExtensionProjectContext, ExtensionResourcesApi, ExtensionSessionResource, ExtensionSessionsApi, ExtensionSettingProperty, ExtensionSettingScope, ExtensionSettingValueForType, ExtensionSettingValueType, ExtensionSettingsApi, ExtensionSettingsContribution, ExtensionSkillsApi, ExtensionSourceKind, ExtensionStorageApi, ExtensionStorageCollectionApi, ExtensionTerminalApi, ExtensionViewModule, ExtensionViewRender, ExtensionViewRenderContext, ExtensionViewsApi, ExtensionWorkspace, ExtensionWorkspaceProvider, ExtensionWorkspacesApi, FileIconThemeContribution, FilePart, FileRendererContribution, FileRendererLoadParams, FileRendererLoadResult, FileRendererResourceRef, FileRendererSaveParams, FileRendererSectionAnchor, FileRendererSectionTarget, FileSourcePosition, FileViewBody, FilesParam, GuestHost, HarnessApprovalChannel, HarnessAttachment, HarnessCommandContext, HarnessCommandDiscoveryContext, HarnessCommandState, HarnessContext, HarnessDetectionResult, HarnessEventSink, HarnessExit, HarnessExitStatus, HarnessMessagesInput, HarnessOperation, HarnessOperationResult, HarnessParam, HarnessParamDescriptor, HarnessParamValue, HarnessParams, HarnessParamsSchema, HarnessProvider, HarnessQuestion, HarnessQuestionChannel, HarnessQuestionOption, HarnessQuestionReplyError, HarnessQuestionRequest, HarnessReattachInput, HarnessRecoveryInput, HarnessRecoveryResult, HarnessResumeInput, HarnessSession, HarnessSkillsLayout, HarnessStartInput, HarnessStateApi, HistoryProjection, HistoryRecoveryInput, HistoryRecoveryResult, HookDefinition, JsonObject, JsonParam, JsonPatch, JsonPrimitive, JsonValue, KanbanRendererAttributeDescriptor, KanbanRendererAttributeDisplay, KanbanRendererAttributeType, KanbanRendererBoardColumnConfig, KanbanRendererColumnAction, KanbanRendererContribution, KanbanRendererCreateRowContribution, KanbanRendererEnumOption, KanbanRendererFilterState, KanbanRendererQueryParams, KanbanRendererQueryResult, KanbanRendererResourceRef, KanbanRendererRow, KanbanRendererRowAction, KanbanRendererRowActivationHandler, KanbanRendererSavedView, KanbanRendererSettings, KanbanRendererSortDirection, KanbanRendererViewMode, KanbanRendererViewSettings, KanbanViewBody, KeybindingChord, KeybindingContribution, ListNotificationsQuery, ListNotificationsResponse, ListParam, LoadingPart, LocalExtensionSource, Localizable, LocalizedString, LongTextParam, MarkdownControl, MarkdownParam, MaybePromise, MenuContribution, MergePayload, MiddlewareDefinition, MigrationContext, ModeContribution, ModeRef, ModeRegionSettings, MultiSelectParam, NavigationItemContribution, NavigationOwnerRef, NavigationTarget, NavigationTargetCommand, NavigationTargetCompound, NavigationTargetHref, NavigationTargetItem, NavigationTargetPage, NavigationTargetPanel, NavigationTreeContribution, NavigationTreeSlot, Notification, NotificationAction, NotificationActorType, NotificationKind, NotificationOrigin, NotificationPriority, NotificationStatus, NumberControl, NumberParam, PackageAssetDescriptor, PackageManifest, PageContribution, PageDocumentDeclaration, PageLocation, PageMain, PageMainPanels, PageMainView, PageOpenIntent, PageRef, PageSlot, PageSlotCardinality, PageSlotRef, PageSlotRegion, PageSlotRole, PageUrlDefinition, PanelRef, ParamDescriptor, ParamEditorReadOnlyContent, ParamEditorReadOnlyImage, ParamObjectSchema, ParamOption, ParamOptionSource, ParamType, ParamValue, ParamValueRef, ParamsOf, ParsedWorkbenchPageUrl, PatchPart, PlacementContribution, PlacementIdentity, PlacementItem, PlacementMountStrategy, PlacementOwner, PlacementPresence, PlacementPresentation, PlacementRef, PlacementTabMenuGroup, PlacementTabMenuRow, PlacementTabPresentation, PlacementTabSnapshot, PreparedHarnessOperation, ProcessRunInput, ProcessRunResult, PropsStore, ProviderContributions, QualifiedRef, QuestionResponse, RangeControl, RangeValue, ReadOnlyControl, ReasoningPart, RebasePayload, RegionSize, RendererCallback, RendererContext, RendererContributionBase, RendererEventReference, RendererInvocationContext, ResourceAnchor, ResourceAnchorChangeEvent, ResourceAnchorPage, ResourceAnchorQuery, ResourceAnchorValidationInput, ResourceAnchorValidationResult, ResourceBinding, ResourceConstraint, ResourceControl, ResourceHierarchyProvider, ResourceKindDefinition, ResourceKindRef, ResourceMenuSlotDefinition, ResourceOption, ResourceParam, ResourceRef, ResourceRefValue, ResourceRemovedEvent, ResourceResolution, ResourceRole, RetryableHarnessReattachError, ScheduleContribution, ScheduleExpression, SegmentedControl, SegmentedOption, SelectParam, SelectionControl, SelectionGroup, SelectionOption, SerializedError, SessionLifecyclePayload, SessionMessage, SessionMessagePart, SessionMessageRole, SettingsPanelContribution, SettingsSectionContribution, SettingsSectionRef, SettingsSlotRef, SetupContext, SkillContribution, SlotInvocationContext, SlotOptions, SlotRef, StatusActionDefinition, StatusBarItemContribution, StatusBarSlotRef, StatusContribution, StatusRef, StepFinishPart, StepStartPart, StorageScope, Struct, TemplateContribution, TemplateParam, TemplateTypeContribution, TerminalEvent, TerminalSessionAdapter, TerminalSessionBridge, TerminalSessionExit, TerminalSessionHandle, TerminalSessionRequest, TextControl, TextParam, TextPart, ThemeContribution, ThemeMode, ThemeRef, TimeoutStrategy, TokenUsagePart, ToolPart, ToolPartActionType, ToolPartStatus, TreeAction, TreeNode, TreeNodeRowVariant, TreeNodeTarget, TreeRendererActionParams, TreeRendererChildrenParams, TreeRendererCommandResult, TreeRendererContribution, TreeRendererMoveParams, TreeRendererQueryParams, TreeRendererResourceRef, TreeRendererState, TreeSectionEmptyState, TreeViewBody, TreeViewSection, UiContributions, UiSlotKind, UpdateNotificationInput, VectorControl, VectorValue, ViewBody, ViewContribution, ViewFieldKind, ViewFilterCondition, ViewFilterGroup, ViewFilterRule, ViewHierarchyParent, ViewMenuContribution, ViewRef, ViewSort, ViewSortDirection, ViewToolbarAction, WebviewArtifactFile, WebviewArtifactsClient, WebviewArtifactsReadParams, WebviewCapabilityDeclaration, WebviewClient, WebviewClientOptions, WebviewCommandStreamEvent, WebviewCommandsClient, WebviewCommandsExecuteParams, WebviewCommandsStreamParams, WebviewContribution, WebviewDeclarableCapability, WebviewEventsClient, WebviewExtensionEvent, WebviewExtensionSettingKeyParams, WebviewExtensionSettingSetParams, WebviewFileScope, WebviewFilesClient, WebviewFilesDeleteParams, WebviewFilesListParams, WebviewFilesUploadParams, WebviewHostCapability, WebviewHostCapabilityParams, WebviewHostCapabilityResult, WebviewHostCapabilityResults, WebviewKeyboardEventParams, WebviewNavigationOpenParams, WebviewNotificationActionParams, WebviewNotificationDismissParams, WebviewNotificationResolveParams, WebviewNotificationShowParams, WebviewPreferencesGetParams, WebviewPreferencesSetParams, WebviewScopedDeclarableCapability, WebviewSettingsClient, WebviewStreamsClient, WebviewViewBody, WhenExpression, WorkbenchAttachmentInvocationContext, WorkflowStatus, WorkspaceCapabilities, WorkspaceExecutionTarget, WorkspaceFilesMount, WorkspaceParam, WorkspaceProviderCreateInput, WorkspaceProviderMutationInput, WorkspaceProviderRef, WorkspaceProviderResolveInput, WorkspaceProviderResult, WorkspaceProviderState, WorkspaceProvisionPayload, WorkspaceSyncFile, WorkspaceType, WorkspaceTypeProvider, WorktreeRemovedPayload, parseExtensionApiDeclaration, supportsExtensionApiVersion };

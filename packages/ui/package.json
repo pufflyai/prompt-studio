@@ -62,6 +62,10 @@
       "import": "./dist/data-table.js",
       "types": "./dist/data-table.d.ts"
     },
+    "./collection-view": {
+      "import": "./dist/collection-view.js",
+      "types": "./dist/collection-view.d.ts"
+    },
     "./mermaid": {
       "import": "./dist/mermaid.js",
       "types": "./dist/mermaid.d.ts"

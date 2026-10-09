@@ -22,6 +22,7 @@ import type {
   ExtensionSkillsApi,
   ExtensionStorageApi,
   ExtensionTerminalApi,
+  ExtensionViewsApi,
   ExtensionWorkspacesApi,
   JsonObject,
   JsonValue,
@@ -63,6 +64,7 @@ export interface CommandRunnerEnvironment {
   workspaceId?: string;
   storage: ExtensionStorageApi;
   resources: ExtensionResourcesApi;
+  views?: ExtensionViewsApi;
   artifacts: ExtensionArtifactApi;
   projectFiles?: ArtifactMount;
   workspaceFiles?: WorkspaceFilesMount;

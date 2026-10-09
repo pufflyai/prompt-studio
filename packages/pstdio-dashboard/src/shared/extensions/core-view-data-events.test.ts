@@ -38,3 +38,16 @@ test("view events coalesce by project and dependency, including old workspace ow
   await Promise.resolve();
   expect(events).toHaveLength(4);
 });
+
+test("saved view and default changes refresh custom collection views once per project", async () => {
+  const events: { id: string; projectId?: string }[] = [];
+  const dispose = subscribeCoreViewDataEvents((event) => events.push(event));
+  getWriter("board_views")!.upsert({ id: "view", project_id: "views-project" });
+  getWriter("board_default_views")!.upsert({ id: "default", project_id: "views-project" });
+  await Promise.resolve();
+  expect(events).toEqual([{ id: "view.board-views.changed", projectId: "views-project" }]);
+  dispose();
+  getWriter("board_views")!.remove("view");
+  await Promise.resolve();
+  expect(events).toHaveLength(1);
+});

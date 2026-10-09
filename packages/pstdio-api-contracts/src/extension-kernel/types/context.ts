@@ -15,6 +15,7 @@ import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { ExtensionResourcesApi, RendererContext, ResourceAnchor, ResourceRef } from "./resources";
+import type { ExtensionViewsApi } from "./saved-views";
 import type { SlotInvocationContext } from "./slots";
 import type { ExtensionWorkspacesApi } from "./workspaces";
 
@@ -271,6 +272,7 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   source?: CommandSource;
   storage: ExtensionStorageApi;
   resources: ExtensionResourcesApi;
+  views: ExtensionViewsApi;
   /** Records navigation for the invoking UI; headless execution opens nothing. */
   navigation: { open(target: NavigationTarget): void };
   artifacts: ExtensionArtifactApi;
