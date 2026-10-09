@@ -66,13 +66,12 @@ function trackBoxes(trackLanes: number[]) {
   return { tracks, contentLeft };
 }
 
-// Count row height once for both band boundaries and node positions.
-const rowSpan = (count: number) => count * (card.height + rowGap);
-
-function bandBoxes(bands: GraphBand[]) {
+function bandBoxes(bands: GraphBand[], rowOffsets: number[]) {
   let y = padding;
   const boxes: BandBox[] = bands.map((band) => {
-    const body = band.collapsed ? 0 : Math.max(rowSpan(band.rowCount), emptyHeight);
+    const body = band.collapsed
+      ? 0
+      : Math.max(rowOffsets[band.startRow + band.rowCount] - rowOffsets[band.startRow], emptyHeight);
     const box = { ...band, top: y, bodyTop: y + headerHeight, height: headerHeight + body };
     y += box.height + bandGap;
     return box;
@@ -80,9 +79,22 @@ function bandBoxes(bands: GraphBand[]) {
   return { boxes, height: y };
 }
 
-export function geometry(layout: { bands: GraphBand[]; nodes: GraphNode[]; trackLanes: number[] }) {
+export function geometry(
+  layout: { bands: GraphBand[]; nodes: GraphNode[]; trackLanes: number[] },
+  cardHeights: ReadonlyMap<string, number> = new Map(),
+) {
   const { tracks, contentLeft } = trackBoxes(layout.trackLanes);
-  const { boxes, height } = bandBoxes(layout.bands);
+  // Native Kanban cards keep their full titles; each graph row takes its tallest card.
+  const rowHeights = Array.from(
+    { length: Math.max(0, ...layout.bands.map((band) => band.startRow + band.rowCount)) },
+    () => card.height,
+  );
+  for (const node of layout.nodes) {
+    rowHeights[node.row] = Math.max(rowHeights[node.row], cardHeights.get(node.id) ?? card.height);
+  }
+  const rowOffsets = [0];
+  for (const height of rowHeights) rowOffsets.push(rowOffsets.at(-1)! + height + rowGap);
+  const { boxes, height } = bandBoxes(layout.bands, rowOffsets);
   const bandFor = (row: number) =>
     boxes.find((box) => row >= box.startRow && row < box.startRow + box.rowCount) ?? boxes[0];
   const positions = new Map(
@@ -92,8 +104,9 @@ export function geometry(layout: { bands: GraphBand[]; nodes: GraphNode[]; track
         node.id,
         {
           x: tracks[node.track].x + node.lane * (card.width + laneGap),
-          y: band.bodyTop + rowSpan(node.row - band.startRow) + 20,
-          ...card,
+          y: band.bodyTop + rowOffsets[node.row] - rowOffsets[band.startRow] + 20,
+          width: card.width,
+          height: cardHeights.get(node.id) ?? card.height,
         },
       ];
     }),

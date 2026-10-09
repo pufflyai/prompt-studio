@@ -2,7 +2,7 @@
 import type { PlanRow } from "../contracts";
 
 export function blockReason(row: Pick<PlanRow, "blockedReason" | "dependsOn" | "state">) {
-  if (row.state === "done") {
+  if (row.state === "done" || row.dependsOn.some(({ done }) => !done)) {
     return undefined;
   }
 
@@ -15,6 +15,5 @@ export function blockReason(row: Pick<PlanRow, "blockedReason" | "dependsOn" | "
     return undefined;
   }
 
-  const prerequisites = row.dependsOn.filter(({ done }) => !done).map(({ shorthand }) => shorthand);
-  return prerequisites.length ? `Waiting for ${prerequisites.join(", ")}.` : "No block reason provided.";
+  return "No block reason provided.";
 }

@@ -110,6 +110,7 @@ function flagsFor(ticket: PlannerTicket, deadline: Deadline | undefined, late: P
   }
 
   const flags: PlanFlag[] = [];
+  const waiting = dependencies(ticket, index).some((dependency) => !isDone(dependency, index));
   if (deadline && deadline.date < index.today) {
     flags.push("overdue");
   } else if (deadline && daysBetween(index.today, deadline.date) <= dueSoonDays) {
@@ -118,11 +119,11 @@ function flagsFor(ticket: PlannerTicket, deadline: Deadline | undefined, late: P
 
   if (needsHuman(ticket, index)) {
     flags.push("human-needed");
-  } else if (workflowName(statusName(ticket, index)) === "blocked" || ticket.blockedReason?.trim()) {
+  } else if (!waiting && (workflowName(statusName(ticket, index)) === "blocked" || ticket.blockedReason?.trim())) {
     flags.push("blocked");
   }
 
-  if (dependencies(ticket, index).some((dependency) => !isDone(dependency, index))) {
+  if (waiting) {
     flags.push("waiting");
   }
 
@@ -158,7 +159,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
       {
         humanNeeded,
         inputReceived: !humanNeeded && answered(ticket, index),
-        unmet: dependsOn.some((dependency) => !isDone(dependency, index)),
+        unmet: flags.includes("waiting"),
       },
       statusName(ticket, index),
     ),

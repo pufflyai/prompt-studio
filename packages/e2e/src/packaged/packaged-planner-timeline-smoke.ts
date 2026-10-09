@@ -42,6 +42,16 @@ export async function expectPackagedPlannerTimeline(input: {
     ticket: { title: "Timeline smoke ticket", content: "# Timeline smoke ticket\n\nShared Planner body" },
     placementError: null,
   });
+  const waiting = await execute("timeline.ticket.create", {
+    content: "# Waiting for the smoke prerequisite",
+    dependsOn: [result.ticket.id],
+    deadline: deadline.id,
+  });
+  const blocked = await execute("timeline.ticket.create", {
+    content: "# Available work with a blocker",
+    deadline: deadline.id,
+  });
+  await execute("update-ticket", { id: blocked.ticket.id, blockedReason: "Missing credentials" });
   const plan = await execute("timeline.plan.read", {});
   expect(plan.sections).toContainEqual(
     expect.objectContaining({
@@ -49,6 +59,23 @@ export async function expectPackagedPlannerTimeline(input: {
       rows: expect.arrayContaining([expect.objectContaining({ id: result.ticket.id })]),
     }),
   );
+  const rows = plan.sections.flatMap((section: { rows: unknown[] }) => section.rows);
+  expect(rows).toContainEqual(
+    expect.objectContaining({
+      id: waiting.ticket.id,
+      state: "not-started",
+      flags: expect.arrayContaining(["waiting"]),
+    }),
+  );
+  expect(rows).toContainEqual(
+    expect.objectContaining({ id: blocked.ticket.id, state: "blocked", flags: expect.arrayContaining(["blocked"]) }),
+  );
+  await execute("update-ticket", { id: result.ticket.id, status: "Done" });
+  const availablePlan = await execute("timeline.plan.read", {});
+  const available = availablePlan.sections.flatMap(
+    (section: { rows: { id: string; flags: string[] }[] }) => section.rows,
+  );
+  expect(available.find((row: { id: string }) => row.id === waiting.ticket.id).flags).not.toContain("waiting");
   const tickets = await execute("read-tickets", {});
   expect(tickets).toContainEqual(expect.objectContaining({ id: result.ticket.id }));
 }

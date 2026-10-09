@@ -1,6 +1,7 @@
 // Draw one ticket card in the graph: gate marker, shorthand, status, and title.
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
+import { KanbanRendererCard } from "@pstdio/ui/kanban-renderer";
 import { ShieldCheck } from "lucide-react";
 import type { PlanRow } from "../contracts";
 import { card } from "./graph-geometry";
@@ -20,19 +21,12 @@ interface GraphCardProps {
   onDrop: () => void;
 }
 
-function borderColor(relation: Relation | undefined) {
-  if (relation === "selected") {
-    return "fg";
-  }
-
-  return relation ? "fg.muted" : "border";
-}
-
 export function GraphCard(props: GraphCardProps) {
   const { row, x, y, relation, dropBefore, ...actions } = props;
-  const ready = row.state === "not-started";
-  const border = !relation && ready ? "green.muted" : borderColor(relation);
-  const size = card;
+  const waiting = row.flags.includes("waiting");
+  let opacity = 1;
+  if (waiting) opacity = 0.8;
+  if (row.done) opacity = 0.6;
   return (
     <Box
       data-ticket={row.id}
@@ -48,29 +42,13 @@ export function GraphCard(props: GraphCardProps) {
       position="absolute"
       left={`${x}px`}
       top={`${y}px`}
-      w={`${size.width}px`}
-      h={`${size.height}px`}
+      w={`${card.width}px`}
       zIndex={relation ? graphLayers.hierarchyNode : graphLayers.node}
-      px="sm"
-      py="xs"
-      bg={row.gate ? "bg.subtle" : "bg"}
-      borderWidth="1px"
-      borderColor={row.gate && !relation ? "border.accent/40" : border}
-      borderStyle={row.gate ? "dashed" : "solid"}
-      borderRadius="md"
       outline={dropBefore ? "1px solid" : "none"}
       outlineColor="border.accent/60"
       outlineOffset="3px"
-      opacity={row.done ? 0.6 : 1}
-      cursor="grab"
-      draggable
+      opacity={opacity}
       title={`${row.shorthand} ${row.title}`}
-      onClick={() => actions.onSelect(row.id)}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", row.id);
-        actions.onDragStart(row.id);
-      }}
       onDragOver={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -82,16 +60,19 @@ export function GraphCard(props: GraphCardProps) {
         actions.onDrop();
       }}
     >
-      <Flex align="center" gap="xs" h="20px">
-        {row.gate ? <GateMark /> : null}
-        <Text textStyle="label/S/medium" color="fg.muted">
-          {row.shorthand}
-        </Text>
-        <StatusIcon row={row} />
-      </Flex>
-      <Text textStyle="label/S/regular" lineClamp={2} color={row.done ? "fg.muted" : "fg"}>
-        {row.title}
-      </Text>
+      <KanbanRendererCard
+        eyebrow={[...row.ancestors, row].map(({ shorthand }) => shorthand).join("/")}
+        title={row.title}
+        isSelected={relation === "selected"}
+        customSlots={[<StatusIcon key="status" row={row} />, row.gate ? <GateMark key="gate" /> : null]}
+        onClick={() => actions.onSelect(row.id)}
+        draggable
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", row.id);
+          actions.onDragStart(row.id);
+        }}
+      />
     </Box>
   );
 }

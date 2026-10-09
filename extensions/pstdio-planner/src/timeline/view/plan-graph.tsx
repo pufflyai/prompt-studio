@@ -1,7 +1,7 @@
 // Show the plan as a dependency graph: the milestone timeline runs down the left, execution order runs down,
 // parallel work sits side by side, each milestone is a band, and collapsible tracks split every band into columns.
 import { Box } from "@chakra-ui/react";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import { layoutGraph } from "../model/graph-layout";
 import { dropRegion } from "./drop-region";
 import { GraphContent } from "./graph-content";
@@ -10,6 +10,7 @@ import { TrackHeader } from "./graph-tracks";
 import type { PlanViewProps } from "./plan-view";
 import { useCanvasPan } from "./use-canvas-pan";
 import { useCanvasZoom } from "./use-canvas-zoom";
+import { useCardHeights } from "./use-card-heights";
 import { useRevealCard } from "./use-reveal-card";
 import { useSize } from "./use-size";
 import { ZoomControls } from "./zoom-controls";
@@ -33,6 +34,7 @@ function useGraphBox(
   sections: PlanViewProps["sections"],
   tracks: PlanViewProps["tracks"],
   collapsed: ReadonlySet<string>,
+  ref: RefObject<HTMLDivElement | null>,
 ) {
   const layout = layoutGraph(
     sections.map(({ section, rows, collapsed: closed }) => ({
@@ -46,7 +48,8 @@ function useGraphBox(
       collapsedTracks: new Set(tracks.list.flatMap((track, index) => (collapsed.has(track.id) ? [index] : []))),
     },
   );
-  const box = geometry(layout);
+  const heights = useCardHeights(ref, layout.nodes.map(({ id }) => id).join(","));
+  const box = geometry(layout, heights);
   const trackAt = (x: number) => {
     const index = box.tracks.findIndex((entry) => x >= entry.x && x <= entry.x + entry.width);
     const id = tracks.list[Math.max(0, index)]?.id;
@@ -65,7 +68,7 @@ export function PlanGraph(props: PlanViewProps & { squareArrows: boolean }) {
   const { zoom, change } = useCanvasZoom(ref);
   const [scrollLeft, setScrollLeft] = useState(0);
   const { collapsed, toggle } = useCollapsedTracks();
-  const { box, trackAt, rows } = useGraphBox(sections, tracks, collapsed);
+  const { box, trackAt, rows } = useGraphBox(sections, tracks, collapsed, ref);
   const sourceTrackId = sections.flatMap(({ section }) => section.rows).find(({ id }) => id === props.dragId)?.trackId;
   const region = dropRegion(
     box,

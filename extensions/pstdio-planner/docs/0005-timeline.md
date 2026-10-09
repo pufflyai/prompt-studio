@@ -2,6 +2,8 @@
 
 Open **Ticket timeline** in the project sidebar. The timeline is part of Planner and uses the same tickets, statuses, tags, and ticket form as the Tickets board.
 
+Both boards use the shared Kanban card. Timeline cards keep their full titles. Tickets waiting for unfinished prerequisites appear slightly dimmed. The timeline shows **Blocked** only when prerequisites are complete and the ticket has a blocked status or another recorded blocker.
+
 Right-click an empty track or milestone to create a ticket or an agent review gate. Write the ticket body in the shared markdown editor and choose its properties. Planner derives the title from the body. Attachments use Planner's existing file upload.
 
 Use **New track** to add a value to the single-select Track tag. Create milestones on the date gutter, then drag tickets between tracks and milestones. Prerequisites form the dependency graph. Selecting a ticket shows its instructions, dependencies, review gate, and pending human actions.

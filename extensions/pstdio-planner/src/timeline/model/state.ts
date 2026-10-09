@@ -23,7 +23,7 @@ export function ticketState(ticket: PlannerTicket, signals: StateSignals, status
   if (signals.inputReceived) {
     return "input-received" as const;
   }
-  if (status === "blocked" || ticket.blockedReason?.trim() || signals.unmet) {
+  if (!signals.unmet && (status === "blocked" || ticket.blockedReason?.trim())) {
     return "blocked" as const;
   }
   if (status === "in-progress" || status === "in-review") {
