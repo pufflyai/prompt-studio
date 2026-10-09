@@ -1,13 +1,17 @@
 import { SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import type { ArtifactSummary } from "../artifacts";
+import type { ArtifactExample } from "../create-artifact";
 import { useArtifactTranslations } from "../translations";
+import { ArtifactCreationExamples } from "./artifact-creation-examples";
 import { ArtifactThumbnail, type LoadArtifactPreview } from "./artifact-thumbnail";
 
 interface ArtifactLibraryProps {
   items: ArtifactSummary[];
   onOpen: (item: ArtifactSummary) => void;
   loadPreview: LoadArtifactPreview;
+  onCreate: (example: ArtifactExample) => void;
+  creating?: ArtifactExample;
 }
 
 const editedDate = (value: string, { t, locale }: ReturnType<typeof useArtifactTranslations>) => {
@@ -25,13 +29,14 @@ const editedDate = (value: string, { t, locale }: ReturnType<typeof useArtifactT
 };
 
 export const ArtifactLibrary = (props: ArtifactLibraryProps) => {
-  const { items, onOpen, loadPreview } = props;
+  const { items, onOpen, loadPreview, onCreate, creating } = props;
   const translations = useArtifactTranslations();
   const { t } = translations;
   return (
     <Stack height="full" minHeight="0" gap="0">
       <ScrollArea flex="1" minHeight="0">
         <Stack gap="lg" p="lg" width="full" maxWidth="4xl" mx="auto">
+          <ArtifactCreationExamples onCreate={onCreate} creating={creating} />
           {items.length ? (
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="lg">
               {items.map((item) => (
