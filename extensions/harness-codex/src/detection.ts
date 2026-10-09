@@ -1,5 +1,10 @@
 import type { HarnessContext } from "@pstdio/sdk/extensions";
 
+// 0.157.0 is the oldest release whose app-server protocol matches every request, notification, and
+// item this harness uses. There is no upper bound: Codex ships every few days with additive protocol
+// changes, and the harness ignores items it does not know. See ADR 0064.
+const MINIMUM_VERSION = "0.157.0";
+
 export const detectCodex = async (ctx: HarnessContext) => {
   try {
     // Model listing also calls this probe without the host availability wrapper.
@@ -16,8 +21,9 @@ export const detectCodex = async (ctx: HarnessContext) => {
       return { available: false };
     }
     const number = version.match(/\d+\.\d+\.\d+/)?.[0];
-    const available = Boolean(number && Bun.semver.satisfies(number, "^0.160.1"));
-    if (!available) ctx.logger.warn("The selected Codex CLI must satisfy version ^0.160.1. Upgrade that installation.");
+    const available = Boolean(number && Bun.semver.satisfies(number, `>=${MINIMUM_VERSION}`));
+    if (!available)
+      ctx.logger.warn(`The selected Codex CLI must be version ${MINIMUM_VERSION} or newer. Upgrade that installation.`);
     return { available, version };
   } catch {
     // Avoid logging raw process output or environment values.

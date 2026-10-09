@@ -13,6 +13,10 @@ on:
         description: Git revision with desktop checks compatible with the release tag
         required: false
         type: string
+      source_ref:
+        description: Git revision to rehearse before the release tag exists. A rehearsal publishes nothing.
+        required: false
+        type: string
     secrets:
       MACOS_CERTIFICATE:
         required: true
@@ -40,6 +44,10 @@ on:
         description: Git revision with compatible desktop checks (defaults to the workflow revision)
         required: false
         type: string
+      source_ref:
+        description: Git revision to rehearse before the release tag exists. A rehearsal publishes nothing.
+        required: false
+        type: string
 
 concurrency:
   group: desktop-release-${{ inputs.tag }}
@@ -56,6 +64,9 @@ jobs:
       id-token: write
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      # Packaged apps install default extensions from this ref. A rehearsal runs before the tag exists.
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_ref || inputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -82,7 +93,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ inputs.source_ref || inputs.tag }}
           fetch-depth: 0
 
       - name: Isolate hosted Intel runner indexing
@@ -305,6 +316,7 @@ jobs:
 
   publish:
     needs: native
+    if: inputs.source_ref == ''
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

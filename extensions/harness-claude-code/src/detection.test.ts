@@ -25,12 +25,12 @@ const probe = async (stdout: string, stderr = "", exitCode = 0) => {
 
 test("accepts the CLI version on stdout or stderr", async () => {
   for (const [stdout, stderr] of [
-    ["2.1.0 (Claude Code)\n", ""],
-    ["", "2.1.0 (Claude Code)\n"],
-    ["\u001b[32m2.1.0 (Claude Code)\u001b[0m\n", ""],
-    ["", "\u001b[32m2.1.0 (Claude Code)\u001b[0m\n"],
+    ["2.1.295 (Claude Code)\n", ""],
+    ["", "2.1.295 (Claude Code)\n"],
+    ["\u001b[32m2.1.295 (Claude Code)\u001b[0m\n", ""],
+    ["", "\u001b[32m2.1.295 (Claude Code)\u001b[0m\n"],
   ]) {
-    expect(await probe(stdout, stderr)).toEqual({ available: true, version: "2.1.0 (Claude Code)" });
+    expect(await probe(stdout, stderr)).toEqual({ available: true, version: "2.1.295 (Claude Code)" });
   }
 });
 
@@ -41,5 +41,20 @@ for (const output of ["", "login required", "command not found"]) {
 }
 
 test("rejects a failed command even when it prints a version", async () => {
-  expect((await probe("2.1.0 (Claude Code)", "", 1)).available).toBe(false);
+  expect((await probe("2.1.295 (Claude Code)", "", 1)).available).toBe(false);
+});
+
+test("accepts Claude Code 2.1.203 and every newer release", async () => {
+  for (const version of [
+    "2.1.203 (Claude Code)",
+    "2.1.295 (Claude Code)",
+    "2.2.0 (Claude Code)",
+    "3.0.0 (Claude Code)",
+  ]) {
+    expect(await probe(version)).toEqual({ available: true, version });
+  }
+});
+
+test("rejects Claude Code releases older than 2.1.203", async () => {
+  expect((await probe("2.1.202 (Claude Code)")).available).toBe(false);
 });
