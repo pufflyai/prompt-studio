@@ -79,6 +79,24 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(reply.locator(".katex")).toHaveCount(2);
     await expect(reply.locator(".katex-display")).toBeVisible();
     await expect(reply.locator(".katex-error")).toHaveCount(0);
+
+    await editor.fill(
+      "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",
+    );
+    await editor.press("Enter");
+    const table = page.getByRole("log").locator('table[data-edit-mode="true"]').last();
+    const detail = table.getByRole("cell", { name: /Read the changes/ });
+    await expect(detail).toBeVisible();
+    await expect(table.locator('[data-column-id="rowIndex"]')).toHaveCount(0);
+    await expect(table.locator("col")).toHaveCount(2);
+    await expect(detail).toHaveCSS("white-space", "normal");
+    await table.getByRole("button", { name: "Display settings" }).click();
+    const wrap = page.getByRole("switch", { name: "Wrap rows" });
+    await expect(wrap).toBeChecked();
+    await page.getByText("Wrap rows", { exact: true }).click();
+    await expect(detail).toHaveCSS("white-space", "nowrap");
+    await page.getByText("Wrap rows", { exact: true }).click();
+    await page.keyboard.press("Escape");
   } finally {
     await browser.close();
   }

@@ -14,12 +14,14 @@ import {
   UNDO_COMMAND,
 } from "lexical";
 import type React from "react";
-import { type FocusEvent, type KeyboardEvent, type MouseEvent, useRef, useState } from "react";
+import { type FocusEvent, type KeyboardEvent, type MouseEvent, useContext, useRef, useState } from "react";
 import { EditModeDataTable } from "@/components/data-table/edit-mode-data-table";
 import type { DataTableEditModeColumn, RowData } from "@/components/data-table/types";
+import { HostStorageProvider } from "@/utils/host-storage";
 import { LazyMarkdownEditor } from "../../lazy-markdown-editor";
 import { MarkdownInline } from "../markdown-inline";
 import type { MarkdownTableValue } from "../markdown-table";
+import { MarkdownTableSettingsContext } from "../markdown-table-settings-context";
 
 interface MarkdownDataTableProps {
   editor: LexicalEditor;
@@ -33,6 +35,9 @@ const projectColumns = (table: MarkdownTableValue): DataTableEditModeColumn[] =>
 
 const MarkdownDataTable = (props: MarkdownDataTableProps) => {
   const { editor, nodeKey, table } = props;
+  const defaultSettings = useContext(MarkdownTableSettingsContext);
+  // Document tables own their view state; generated column ids repeat across documents.
+  const [storage] = useState(() => ({ getItem: () => null, setItem: () => undefined }));
   const [isSelected, setSelected] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -88,6 +93,7 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
+    if (!event.currentTarget.contains(target)) return;
     if (target.closest("button, input, textarea, [contenteditable='true'], [role='menuitem']")) return;
 
     event.preventDefault();
@@ -136,31 +142,34 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
       onClick={handleClick}
       onKeyDownCapture={handleKeyDown}
     >
-      <EditModeDataTable
-        data={projectRows(table)}
-        editMode={{
-          columns: projectColumns(table),
-          onColumnsChange: handleColumnsChange,
-          onDataChange: handleDataChange,
-          renderHeader: (column) => <MarkdownInline value={column.label} />,
-          renderCell: (context) => <MarkdownInline value={String(context.value ?? "")} />,
-          renderCellEditor: ({ value, onChange }) => (
-            <LazyMarkdownEditor
-              autoFocus
-              defaultState={value}
-              fullWidth
-              isEditable
-              padding="xs"
-              scrollable={false}
-              onChange={onChange}
-            />
-          ),
-        }}
-        fullWidth
-        getRowId={(row) => String(row.id)}
-        initialPageSize={30}
-        isReadOnly={!editor.isEditable()}
-      />
+      <HostStorageProvider storage={storage}>
+        <EditModeDataTable
+          data={projectRows(table)}
+          defaultSettings={defaultSettings}
+          editMode={{
+            columns: projectColumns(table),
+            onColumnsChange: handleColumnsChange,
+            onDataChange: handleDataChange,
+            renderHeader: (column) => <MarkdownInline value={column.label} />,
+            renderCell: (context) => <MarkdownInline value={String(context.value ?? "")} />,
+            renderCellEditor: ({ value, onChange }) => (
+              <LazyMarkdownEditor
+                autoFocus
+                defaultState={value}
+                fullWidth
+                isEditable
+                padding="xs"
+                scrollable={false}
+                onChange={onChange}
+              />
+            ),
+          }}
+          fullWidth
+          getRowId={(row) => String(row.id)}
+          initialPageSize={30}
+          isReadOnly={!editor.isEditable()}
+        />
+      </HostStorageProvider>
     </Box>
   );
 };

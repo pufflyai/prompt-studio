@@ -54,6 +54,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
     hiddenColumns: Object.keys(data[0] ?? {}).filter((key) => !columnKeys.includes(key)),
   });
   const wrapRows = view.settings.wrapRows;
+  const rowNumbers = view.settings.rowNumbers;
   const setWrapRows = (next: boolean) => view.setSettings({ wrapRows: next });
   const filteredRendererRows = view.shownRows;
   const filteredData = filteredRendererRows.map((row) => row.sourceRow);
@@ -169,7 +170,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
             borderColor="border.subtle"
           >
             <colgroup>
-              <Box as="col" width="9" />
+              {rowNumbers ? <Box as="col" width="9" /> : null}
               {enableSelection ? <Box as="col" width="9" /> : null}
               {columns.map((column) => (
                 <col key={column.id} />
@@ -183,6 +184,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
               data={data}
               editMode={editMode}
               isReadOnly={isReadOnly}
+              rowNumbers={rowNumbers}
               rowDisplayControl={toolbarStorageKey ? undefined : rowDisplayControl}
               onAddColumn={addColumn}
               onCancelHeaderEdit={() => setActiveHeader(null)}
@@ -212,6 +214,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
               pageIndex={pageIndex}
               pageRows={pageRows}
               pageSize={pageSize}
+              rowNumbers={rowNumbers}
               selectedRowIds={selectedRowIds}
               showNewRow={pageIndex === pageCount - 1}
               wrapRows={wrapRows}
