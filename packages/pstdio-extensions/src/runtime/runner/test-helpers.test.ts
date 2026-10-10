@@ -58,6 +58,7 @@ export const stubEnvironment = (
       delete: async () => {},
     },
     sessions: {
+      query: async () => ({ items: [], nextCursor: null }),
       get: async () => null,
       list: async () => [],
       listByWorkspace: async () => [],
