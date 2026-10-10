@@ -40,7 +40,10 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
             `/v1/projects/${projectId}/extensions/commands/pstdio.desktop-process-fixture.command.spawn-detached-probe/execute`,
             {
               method: "POST",
-              headers: { "content-type": "application/json" },
+              headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+              },
               body: JSON.stringify({ params }),
             },
           );

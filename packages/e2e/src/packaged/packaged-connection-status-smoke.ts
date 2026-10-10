@@ -40,7 +40,8 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     await expect(warning).not.toBeVisible();
     await toggle.press("Space");
     await expect(warning).toBeVisible();
-    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Close Connection", exact: true }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
     await warning.focus();
     await expect(
       page.getByRole("tooltip", { name: (await warning.getAttribute("aria-label")) ?? "", exact: true }),
