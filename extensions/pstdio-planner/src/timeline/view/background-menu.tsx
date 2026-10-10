@@ -16,7 +16,11 @@ export function BackgroundMenu(props: BackgroundMenuProps) {
   return (
     <Menu.Root
       open
-      anchorPoint={{ x: context.x, y: context.y }}
+      positioning={{
+        strategy: "fixed",
+        placement: "bottom-start",
+        getAnchorRect: () => ({ x: context.x, y: context.y, width: 0, height: 0 }),
+      }}
       onOpenChange={({ open }) => {
         if (!open) onClose();
       }}

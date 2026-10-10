@@ -41,7 +41,7 @@ function TrackName(props: { track: Track } & Pick<TrackHeaderProps, "onRename">)
   );
 }
 
-// Track names stay above the canvas; every track moves horizontally while only the date gutter stays pinned.
+// Each name stays at the visible edge of its track until the next track reaches it.
 export function TrackHeader(props: TrackHeaderProps) {
   const { tracks, boxes, width, contentLeft, collapsed, targetTrackId, onToggle, onRename, onNewTrack } = props;
   const right = Math.max(contentLeft, ...boxes.map((box) => box.x + box.width));
@@ -88,22 +88,24 @@ export function TrackHeader(props: TrackHeaderProps) {
             top="4px"
             bg={targetTrackId === track.id ? "border.accent/6" : undefined}
             boxShadow={targetTrackId === track.id ? "inset 0 -1px var(--chakra-colors-border-accent)" : undefined}
-            align="center"
-            gap="2xs"
+            role="group"
+            aria-label={`${track.label} track header`}
           >
-            <TrackName track={track} onRename={onRename} />
-            <Tooltip content={`Collapse ${track.label}`}>
-              <IconButton
-                size="2xs"
-                variant="ghost"
-                color="fg.subtle"
-                flexShrink="0"
-                aria-label={`Collapse ${track.label}`}
-                onClick={() => onToggle(track.id)}
-              >
-                <ChevronsRightLeft size={12} />
-              </IconButton>
-            </Tooltip>
+            <Flex position="sticky" left={`${gutterWidth}px`} align="center" gap="2xs" minW="0" maxW="full">
+              <TrackName track={track} onRename={onRename} />
+              <Tooltip content={`Collapse ${track.label}`}>
+                <IconButton
+                  size="2xs"
+                  variant="ghost"
+                  color="fg.subtle"
+                  flexShrink="0"
+                  aria-label={`Collapse ${track.label}`}
+                  onClick={() => onToggle(track.id)}
+                >
+                  <ChevronsRightLeft size={12} />
+                </IconButton>
+              </Tooltip>
+            </Flex>
           </Flex>
         );
       })}

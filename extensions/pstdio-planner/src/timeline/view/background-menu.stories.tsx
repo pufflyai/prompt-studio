@@ -10,3 +10,7 @@ type Story = StoryObj<typeof meta>;
 export const TicketAndGate: Story = {
   args: { context: { x: 160, y: 160 }, onCreate: () => {}, onClose: () => {} },
 };
+
+export const AwayFromOrigin: Story = {
+  args: { context: { x: 480, y: 320 }, onCreate: () => {}, onClose: () => {} },
+};

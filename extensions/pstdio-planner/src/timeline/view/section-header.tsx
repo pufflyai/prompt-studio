@@ -1,6 +1,6 @@
 // Draw a milestone header as one line: toggle, editable name, status icons, a rule to the progress bar, and delete.
-import { Box, Flex, Icon, IconButton, Text } from "@chakra-ui/react";
-import { Tooltip } from "@pstdio/ui";
+import { Box, Flex, Icon, IconButton, Text, useRecipe } from "@chakra-ui/react";
+import { psTheme, Tooltip } from "@pstdio/ui";
 import { CheckCircle2, ChevronsDownUp, ChevronsUpDown, Trash2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { isComplete } from "../model/filter";
@@ -42,14 +42,14 @@ function Progress(props: { entry: ViewSection }) {
 // Deleting asks for a second click, so a stray click cannot remove a milestone.
 function DeleteButton(props: { deadlineId: string; label: string } & Pick<Props, "onDelete">) {
   const { deadlineId, label, onDelete } = props;
+  const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const [confirming, setConfirming] = useState(false);
   return (
     <Tooltip content={confirming ? "Click again to delete; its tickets become unscheduled" : "Delete milestone"}>
       <IconButton
         size="2xs"
-        variant="ghost"
+        css={button({ variant: "destructive-ghost", size: "2xs" })}
         aria-label={confirming ? `Confirm deleting ${label}` : `Delete ${label}`}
-        color={confirming ? "red.fg" : "fg.subtle"}
         onBlur={() => setConfirming(false)}
         onMouseLeave={() => setConfirming(false)}
         onClick={() => (confirming ? onDelete(deadlineId) : setConfirming(true))}
