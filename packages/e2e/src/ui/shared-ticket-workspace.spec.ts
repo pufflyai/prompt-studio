@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { uiOrigin } from "../ui-server";
-import { getSidenavEntry } from "./helpers/sidenav-navigation";
+import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
 test("ticket work opens a shared non-Git folder and loads files without Git requests", async ({ page, request }) => {
   const home = await (await request.get(`${uiOrigin}/v1/filesystem/list`)).json();
@@ -32,7 +32,7 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
       if (/\/v1\/workspaces\/[^/]+\/diff/.test(request.url())) gitRequests.push(request.url());
     });
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
-    const workspaceNavigation = await getSidenavEntry(page, "Workspaces");
+    const workspaceNavigation = await showSidenavEntry(page, "Workspaces");
     await workspaceNavigation.hover();
     await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
     await workspaceNavigation.click();
