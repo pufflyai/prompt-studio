@@ -357,7 +357,7 @@ export const reindexBoards = defineHook({
   has paths only; reading the files still needs the owner's commands.
 - Events are hints. A client that reconnects reloads anyway, so a missed event is safe.
 
-The decision is recorded in [ADR 0066](../../adrs/0066-host-owned-artifact-mount-watching.md).
+The decision is recorded in [ADR 0069](../../adrs/0069-host-owned-artifact-mount-watching.md).
 
 ## Client events and workspace scope
 
