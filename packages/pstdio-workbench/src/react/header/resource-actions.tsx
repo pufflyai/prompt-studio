@@ -30,7 +30,8 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
     ? [...resourceActions, { ...firstLocationAction, separatorBefore: resourceActions.length > 0 }, ...locationActions]
     : resourceActions;
   if (items.length === 0 || actions.length === 0) return null;
-  const resourceLabel = (contributed.length ? snapshot.label : undefined) ?? resource?.label ?? resource?.id ?? resource?.type;
+  const resourceLabel =
+    (contributed.length ? snapshot.label : undefined) ?? resource?.label ?? resource?.id ?? resource?.type;
   const label = resource ? `Actions for ${resourceLabel}` : "Page actions";
   return (
     <ResourceActionMenu actions={actions} positioning={{ placement: "bottom-start" }}>
