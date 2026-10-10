@@ -280,6 +280,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
 
   return {
     get,
+    query: raw.query,
     list,
     listActive,
     listByStatus,

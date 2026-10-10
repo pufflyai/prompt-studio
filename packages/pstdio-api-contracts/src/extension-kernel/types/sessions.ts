@@ -9,11 +9,59 @@ import type {
 import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type { ResourceAnchor, ResourceRef } from "./resources";
 
+export interface ExtensionSessionUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+}
+
+export interface ExtensionSessionSummary {
+  id: string;
+  title: string;
+  status: SessionStatus;
+  archived: boolean;
+  agent: string | null;
+  last_selected_model: string | null;
+  workspace_id: string | null;
+  original_session_id: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Start and end of the latest run only. */
+  last_request_started: string | null;
+  last_request_ended: string | null;
+  anchors_json: ResourceAnchor[];
+  /** Totals at the last conversation save. Null when no usage was recorded. */
+  usage: ExtensionSessionUsage | null;
+}
+
+export interface ExtensionSessionQuery {
+  status?: SessionStatus[];
+  agent?: string;
+  workspaceId?: string;
+  anchor?: Pick<ResourceRef, "type" | "id">;
+  /** Inclusive ISO timestamp bounds. */
+  createdFrom?: string;
+  createdTo?: string;
+  updatedFrom?: string;
+  includeArchived?: boolean;
+  /** Default 50. Clamped to 1..200. */
+  limit?: number;
+  cursor?: string;
+}
+
+export interface ExtensionSessionPage {
+  /** Newest first: created_at descending, then id descending. */
+  items: ExtensionSessionSummary[];
+  nextCursor: string | null;
+}
+
 export interface ExtensionSessionResource {
   type: "session";
   id: string;
   title: string;
   status: SessionStatus;
+  agent?: string | null;
 }
 
 export interface ExtensionSessionsApi {
@@ -41,13 +89,25 @@ export interface ExtensionSessionsApi {
     cwd?: string | null;
     updated_at?: string | null;
     anchors_json?: ResourceAnchor[];
+    archived?: boolean;
+    agent?: string | null;
+    last_selected_model?: string | null;
+    workspace_id?: string | null;
+    created_at?: string | null;
+    last_request_started?: string | null;
+    last_request_ended?: string | null;
+    usage?: ExtensionSessionUsage | null;
   } | null>;
 
+  query(input?: ExtensionSessionQuery): Promise<ExtensionSessionPage>;
+
+  /** @deprecated Use query() for filters, paging and session details. */
   list(): Promise<
     Array<{
       id: string;
       title: string;
       status: SessionStatus;
+      agent?: string | null;
       last_request_started?: string | null;
       last_request_ended?: string | null;
       updated_at?: string | null;
@@ -55,12 +115,13 @@ export interface ExtensionSessionsApi {
     }>
   >;
 
-  /** Sessions linked to a workspace (via the workspace-session join), oldest first. */
+  /** @deprecated Use query({ workspaceId }). query() orders newest first. */
   listByWorkspace(workspaceId: string): Promise<
     Array<{
       id: string;
       title: string;
       status: SessionStatus;
+      agent?: string | null;
       created_at?: string | null;
       updated_at?: string | null;
       anchors_json?: ResourceAnchor[];
