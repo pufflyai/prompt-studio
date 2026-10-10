@@ -1,5 +1,37 @@
 # pstdio
 
+## 0.42.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- 72a70c7: Add typed command streams with shared transport and cancellation for webviews, SDK clients, and the CLI.
+- 184548f: Expose the shared collection view header and filters; let extensions manage project saved views.
+- c42bf30: Add persisted Sidenav groups with inline names, drag-and-drop membership, rename/remove group actions, and anchored Help and nested Hide/show items menus.
+- d8d669f: Install and validate extensions on the API host through one shared CLI, SDK, and dashboard route.
+- 73ed54c: Add complete queued request editing with recovery after dispatch and notices that clear on draft edits, atomic combining, native steering contracts, and spaced delete icon buttons; hide unsupported send-now targets and isolate packaged migration extraction between hosts.
+- 59dbcbb: Expose owner-handled resource drops with immediate previews and placement feedback, preserve identities and scopes within sortable navigation, and show selected panel resources and their actions in breadcrumbs, and support confirmed resource removals and optimistic renames across host UI surfaces, and retain loaded tab titles and actions during refresh.
+
+### Patch Changes
+
+- 510c87b: Keep optional markdown editors behind their lazy imports in kanban and parameter controls.
+- 6fef4ca: Reduce repeated chat rendering and scrollbar style work during streaming.
+- fc7db3a: Remove the automatic Related resources action from the shared header.
+- c7713f3: Show assigned shortcuts under extension names, add main navigation and creation defaults with matching command palette hints, let idle navigation labels use the space released by hidden actions, and avoid unused schema snapshot extraction at startup.
+- f486e8e: Show why a harness is unavailable, such as a missing or too-old agent CLI, in the harness menu, `pst agents list` and the agents API.
+- cdf7e0a: Let React batch virtualized row measurements to prevent flushSync console errors when sending messages.
+- 6fef4ca: Stop terminal input before shutdown closes the PTY pipe.
+- 355984a: Respect harness process environments and Windows wrappers, validate CLI versions, and bound availability and model-listing version probes.
+- 5d47dfb: Add shared resource linking controls with owner search, live updates, and unavailable destinations.
+- 510c87b: Support full-screen palettes with optional search autofocus for mobile navigation.
+- c7713f3: Show assigned extension shortcuts in the live keyboard shortcut reference.
+- c2f0c1a: Fix shortcut key spacing and invert keys inside tooltips.
+- c4a6794: Load extension smoke Playwright from the installed browser cache in compiled CLI builds.
+- 8bcc4f9: Recognize npm-installed OpenCode and other agent commands on Windows.
+- ad6d9bd: Give floating panel webviews a usable viewport.
+- bf2bf8d: Keep the workbench fast while extension webviews stay open. Messages to a webview no longer leave a listener behind on the host window.
+
 ## 0.41.0
 
 _2026-10-08_
