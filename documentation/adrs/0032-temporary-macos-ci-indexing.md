@@ -63,9 +63,17 @@ runs only the two packaged tests tagged `@essential`, so the timed cold start is
 the first launch of the freshly signed app and includes macOS's launch checks. These limits describe
 hosted runner speed; they are not a product target for Intel users.
 
+## Update: startup benchmark (2026-10-10)
+
+The cold-start and startup-window budgets moved from the packaged transport test
+into the cold-start benchmark, which runs in its own step before the
+packaged suite ([ADR 0067](0067-separate-performance-budgets-from-execution-allowances.md)).
+Intel runs only that benchmark, so it is still the first launch of the freshly
+signed app. The budgets are unchanged.
+
 ## Removal
 
 Remove the setup when the hosted image provides a quiet indexing state before
 jobs start, or a dedicated native runner provides that isolation. Verify the
-Intel essential packaged tests within their limits, and retain system-load
+Intel essential benchmark and packaged tests within their limits, and retain system-load
 evidence when removing it.

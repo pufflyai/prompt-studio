@@ -164,12 +164,15 @@ the target artifacts are eligible for publication:
 - an injected sidecar exit displays recovery within 500 milliseconds, then Retry
   starts a replacement runtime in the existing Electron process.
 
+Startup, recovery, and renderer budgets run as packaged benchmarks in a separate
+step before the packaged suite ([ADR 0067](../../adrs/0067-separate-performance-budgets-from-execution-allowances.md)).
 Hosted Intel macOS runners are slow and costly. The Intel target runs only the
-packaged tests tagged `@essential`. They prove the clean start, both transport
-paths, `pst close`, and a terminal and extension page in the x64 build. The Intel
-clean start may take up to 20 seconds. The other targets run the full suite.
+benchmark and packaged tests tagged `@essential`. They prove the clean start, both
+transport paths, `pst close`, and a terminal and extension page in the x64 build.
+The Intel clean start may take up to 20 seconds. The other targets run the full
+suites.
 
-The workflow uploads the Playwright JSON result as
+The workflow uploads the Playwright JSON results as
 `release-readiness-<platform>-<architecture>` with 14-day retention. A release
 owner links every native job run and their evidence artifacts from the
 ticket validation report. Contract tests in the owning packages separately

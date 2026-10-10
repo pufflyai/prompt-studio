@@ -116,7 +116,7 @@ To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=
 
 Read the first failure and its trace. Check setup, teardown, and server logs before attributing the failure to an assertion. Storybook startup failures include the tail of the server output. Readiness checks must cancel stalled HTTP requests within their deadline.
 
-Keep the existing job and test time limits. A timeout needs a performance investigation. A passing rerun alone does not explain the failure.
+Keep the existing job and test time limits. A timeout needs an investigation of the slow phase; see [Time limits](#time-limits). A passing rerun alone does not explain the failure.
 
 The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. After building the SDK dependencies, command discovery tests exercise real process launches with PATH overrides, PATHEXT order, PowerShell siblings, explicit wrapper paths, custom npm prefixes, spaces, Unicode, shell operators, conflicting installations, missing targets, and timeout cleanup. npm fixtures use the pinned `cmd-shim` generator and check both adjacent Node and PATH fallback. Argument round trips include literal percent signs, exclamation marks, and variable-like strings with values present in the child environment. Environment tests cover Windows case-insensitive names without passing host secrets to extensions. The same portable cases run on Linux.
 
@@ -130,11 +130,51 @@ Readable attachments share their stored bytes through hard links and are removed
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 
-## Desktop performance budgets
+## Time limits
 
-`clients/desktop/src/e2e/packaged-performance.spec.ts` runs with the other packaged desktop tests in the release workflow. It is not tagged `@essential`, so Intel macOS skips it. The budget tests took 10–17 seconds each on Apple Silicon, within the existing 30-second packaged test limit; Linux and Windows release runs have not been measured yet.
+Tests have two kinds of time limit. [ADR 0067](../../adrs/0067-separate-performance-budgets-from-execution-allowances.md) records the decision.
 
-The tests read Chrome DevTools Protocol `Performance.getMetrics` deltas for one renderer. `ScriptDuration` and `TaskDuration` are main-thread proxies. They are not OS CPU, GPU, or paint measurements. Each budget is the share of measured wall time the renderer may spend in scripts or tasks.
+- A **performance budget** limits one named product operation with a fixed workload. A benchmark owns it and defines the scenario, workload, measured process, start and end events, and unit. Exceeding a budget is a product regression, even when the test finishes well inside its timeout.
+- An **execution allowance** limits a whole test, fixture, or job. It covers setup, the operation, and cleanup. Reaching it means the work did not finish. A timed-out run gives a lower bound, not a measured duration.
+
+Functional tests do not assert timings. Benchmarks do not measure test-only setup, tracing, or cleanup, but they include initialization a person waits for, such as macOS checks on the first launch of a signed app. Helpers wait within the deadline of the test that calls them. Do not add a shorter cap inside a helper; it can end a slow but valid phase before the test can report it. Keep prompt failures for real errors, such as a process that exits.
+
+To review a timeout:
+
+1. Find the slow phase: dependency setup, app readiness, the operation, cleanup, reporting, or the whole job. Playwright steps and benchmark attachments show phase timings.
+2. Check for hangs, leaked processes, blocked event loops, and expensive setup first.
+3. Collect timings from representative local runs with the same workload and build mode as CI. Include cold setup when the test needs it.
+4. Inspect several runs on each applicable CI platform, including slow successes and failures. Keep local and CI timings separate; do not average different environments. Record the revision, command, OS and architecture, runner, and cold or warm state.
+5. Propose an exact value that covers the slowest legitimate phase with stated headroom. Use platform-specific values only when the evidence shows different work. When relevant local or CI evidence is missing, say so and collect it first.
+6. Get approval for that exact value (see AGENTS.md), then verify it locally and in the affected CI jobs. Check that a never-ready case still fails and cleanup still completes.
+
+When tests are added, review the job allowance or sharding. Do not lengthen the per-test limit because a suite has more tests.
+
+## Desktop benchmarks
+
+Desktop budgets live in `clients/desktop/src/e2e/*.bench.ts`. Run them against a packaged app:
+
+```bash
+bun run --cwd clients/desktop package
+bun run --cwd clients/desktop test:benchmark
+```
+
+The release workflow runs them in a separate step before the functional packaged suite. One worker runs files in name order and tests in declaration order. Intel macOS runs only the benchmark tagged `@essential`, the cold start, so it measures the first launch of the freshly signed app, including macOS launch checks. Other platforms run the cold start after the warm-attach and recovery launches. Before benchmarks were separated, it ran after two other packaged launches there too, so their budgets do not cover first-launch checks. The functional packaged suite and package checks still run after a benchmark failure, and the job still fails. The Windows signing workflow runs the benchmarks the same way. Benchmarks run without Electron traces, because trace screenshots and DOM snapshots add renderer work. Use the traced functional suite or a separate profile to diagnose a failure.
+
+Each benchmark attaches `benchmark-<name>.json` before checking its budgets. It records the scenario, workload, measured process, start and end events, every metric with its unit and budget, the source revision, the sidecar checksum, and the runner. A metric must be below its budget. A missing or non-finite measurement fails the benchmark. `test-results/packaged-benchmarks.json` collects the run.
+
+| Benchmark | Measured interval | Budget |
+| --- | --- | --- |
+| Cold start (empty home) | Process spawn to visible workbench root; process spawn to visible startup window | 8 s cold start (20 s on Intel macOS); startup window 1.5 s on macOS (10 s on Intel), 1 s on Linux and Windows |
+| Warm attach | Process spawn against a persistent runtime with one open project to visible workbench root; startup window as above | 3 s; startup window as above |
+| Sidecar crash recovery | Runtime kill to visible recovery heading | 500 ms |
+| Idle workbench, monitoring off or on | Renderer CPU share over 10 s after a 2 s settle | See the renderer table below; Electron main at most 10% of one core with monitoring on |
+| Idle extension preview | Workbench and Lab renderer CPU share over 10 s after a 2 s settle | See the renderer table below |
+| Long streaming replay | Renderer CPU share from Step 1 until the API reports completion | See the renderer table below |
+
+Renderer benchmarks took 10–17 seconds each on Apple Silicon, within the existing 30-second packaged test limit. Linux and Windows release runs have not been measured yet.
+
+Renderer benchmarks read Chrome DevTools Protocol `Performance.getMetrics` deltas for each measured renderer and attach the raw counter deltas. `ScriptDuration` and `TaskDuration` are main-thread proxies. They are not OS CPU, GPU, or paint measurements. Each budget is the share of measured wall time the renderer may spend in scripts or tasks.
 
 | Check | Window | Budget (script / task) | Apple Silicon baseline, 3 runs |
 | --- | --- | --- | --- |
@@ -143,9 +183,11 @@ The tests read Chrome DevTools Protocol `Performance.getMetrics` deltas for one 
 | Idle extension preview (workbench and Lab frame) | 10 s after a 2 s settle | 2% / 5% each | ≤ 0.05% / ≤ 0.15% |
 | Long streaming replay | about 6 s, until the session completes | 60% / 90% | 28–38% / 51–68% |
 
-The idle budgets catch a constant render or polling loop. The streaming budget leaves room for slower hosted runners; tighten it once release runs record Linux and Windows baselines. Every test attaches its measurements with the platform, architecture, CPU model, and core count.
+The idle budgets catch a constant render or polling loop. The streaming budget leaves room for slower hosted runners; tighten it once release runs record Linux and Windows baselines.
 
-The tests turn monitoring on and off through the Settings switch, so the dashboard's slow-frame observer and frame counter run during the monitoring-on measurements. Monitoring itself runs in Electron main, which renderer metrics cannot see. The monitoring-on test also attaches the snapshot and requires the main process to stay at or below 10% of one core; on Apple Silicon it measured 0.1–0.8% while idle with monitoring on. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the status bar popover and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. The streaming test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
+The idle benchmarks turn monitoring on and off through the Settings switch, so the dashboard's slow-frame observer and frame counter run during the monitoring-on measurements. Monitoring itself runs in Electron main, which renderer metrics cannot see, so the monitoring-on benchmark also records the main process share from the snapshot. On Apple Silicon it measured 0.1–0.8% while idle with monitoring on.
+
+`clients/desktop/src/e2e/packaged-performance-monitoring.spec.ts` covers the monitoring feature without budgets. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the status bar popover and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. A snapshot test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
 
 The fake agent replays the long conversation when a prompt contains `__fake_long_stream__`: 30 assistant turns, 8 text updates each at 25 ms intervals, and one tool result per turn.
 
