@@ -28,7 +28,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `modes`                                           | Typed Workbench mode contributions.                                                                |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
-| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<package-name>/`.                                      |
+| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<package-name>/`. `watch: true` adds change events.   |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
 | `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 
@@ -206,6 +206,9 @@ menus: [
 
 Workspace resources use the host project mode. Target workspace actions with
 `workbenchResourceKinds.workspace`; the SDK does not export a host workspace mode.
+
+The host adds **Copy link** to the breadcrumb menu on every page. It copies the page URL, including the selected
+document. Do not add a separate copy-link action or view to an extension.
 
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
 

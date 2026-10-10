@@ -1,4 +1,5 @@
 import type {
+  ArtifactChangedPayload,
   CommandLifecycleEventPayload,
   CommandLifecyclePhase,
   CommandRef,
@@ -20,4 +21,15 @@ export const commandEvent = <TPhase extends CommandLifecyclePhase, TParams exten
   ...(command.extensionId ? { extensionId: command.extensionId } : {}),
   kind: "event",
   id: `command.${phase}:${command.id}`,
+});
+
+/**
+ * Build the `EventRef` the host emits when files in a watched artifact mount change outside the
+ * mount API. Pass the value returned by `defineArtifactMount`, or `{ id, extensionId }` for
+ * another extension's mount.
+ */
+export const artifactChanged = (mount: { id: string; extensionId?: string }): EventRef<ArtifactChangedPayload> => ({
+  ...(mount.extensionId ? { extensionId: mount.extensionId } : {}),
+  kind: "event",
+  id: `artifact.changed:${mount.id}`,
 });

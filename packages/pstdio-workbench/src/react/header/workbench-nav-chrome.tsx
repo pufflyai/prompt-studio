@@ -9,7 +9,7 @@ import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderActions } from "./header-actions";
-import { WorkbenchBreadcrumbResourceActions } from "./resource-actions";
+import { WorkbenchBreadcrumbActions } from "./resource-actions";
 
 export interface WorkbenchNavRegionControl {
   id: "sidenav" | "secondary" | "side";
@@ -142,7 +142,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
           justifyContent="center"
           minW="6"
         >
-          <WorkbenchBreadcrumbResourceActions workbench={workbench} />
+          <WorkbenchBreadcrumbActions workbench={workbench} />
         </HStack>
         <Box flex="1" minW="0" />
         <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />

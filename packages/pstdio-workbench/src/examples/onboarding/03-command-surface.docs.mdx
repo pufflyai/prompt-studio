@@ -41,6 +41,8 @@ Try it in the story:
 `ctx.layout.registerMenuItem(path, item)` exposes a command in one surface:
 
 - `workbenchTopHeaderTrailingMenuPath` places the item in the header's trailing menu.
+- `workbenchBreadcrumbLocationMenuPath` places a location action, such as Copy link, in the breadcrumb menu on every
+  page. It follows the page resource's own actions. Resource rows in trees do not show it.
 - `workbenchCommandPaletteMenuPath` places the item in the command palette. The palette is a menu path like any other
   menu: registering an item there makes the command searchable by label and category. Commands never appear in the
   palette automatically.

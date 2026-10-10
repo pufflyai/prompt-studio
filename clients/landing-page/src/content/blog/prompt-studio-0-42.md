@@ -1,11 +1,12 @@
 ---
 title: "Prompt Studio 0.42"
 description: "Organize tools into sidebar groups, reorder and edit queued messages, use native agent goals and planning, and open saved Planner documents through stable links."
+published: 2026-10-10T15:49:58Z
 author: aurelien-franky
 category: release
 image:
-  light: ../images/blog-prompt-studio-0-42-light.png
-  dark: ../images/blog-prompt-studio-0-42.png
+  light: ./images/blog-prompt-studio-0-42-light.png
+  dark: ./images/blog-prompt-studio-0-42.png
 ---
 
 Prompt Studio 0.42 adds sidebar groups, complete queued-message editing, native agent commands, and saved Planner document links. Group tools for a project, revise a follow-up while an agent works, or give Codex a goal you can change in the same conversation.
@@ -14,9 +15,9 @@ Prompt Studio 0.42 adds sidebar groups, complete queued-message editing, native 
 
 Right-click a sidebar row and choose **New group**, enter a name, then drag rows onto the group. Collapse it to hide its tools, or rename it as your project changes.
 
-![Creating a Writing group, moving Notes into it, and renaming the group](../../../../../../documentation/images/prompt-studio-0-42-sidebar-light.gif)
+![Creating a Writing group, moving Notes into it, and renaming the group](../../../../../documentation/images/prompt-studio-0-42-sidebar-light.gif)
 
-![Creating a Writing group, moving Notes into it, and renaming the group](../../../../../../documentation/images/prompt-studio-0-42-sidebar-dark.gif)
+![Creating a Writing group, moving Notes into it, and renaming the group](../../../../../documentation/images/prompt-studio-0-42-sidebar-dark.gif)
 
 Create a Writing group, move Notes into it, and rename it to Project writing. Recorded in the isolated 0.42 build with a disposable project and sample extensions.
 
@@ -28,9 +29,9 @@ Assigned extension shortcuts now appear under extension names and in the keyboar
 
 Edit a queued follow-up without interrupting the current run. The editor preserves its model, options, and attachments, and keeps your separate unsent draft while you revise the queued request.
 
-![Dragging queued messages into a new order, editing a follow-up, and returning to an unsent draft](../../../../../../documentation/images/prompt-studio-0-42-queue-light.gif)
+![Dragging queued messages into a new order, editing a follow-up, and returning to an unsent draft](../../../../../documentation/images/prompt-studio-0-42-queue-light.gif)
 
-![Dragging queued messages into a new order, editing a follow-up, and returning to an unsent draft](../../../../../../documentation/images/prompt-studio-0-42-queue-dark.gif)
+![Dragging queued messages into a new order, editing a follow-up, and returning to an unsent draft](../../../../../documentation/images/prompt-studio-0-42-queue-dark.gif)
 
 Drag follow-ups into the order you want, revise a queued message, and save it with Update. Your unsent draft stays in the editor. Recorded in the isolated 0.42 build with a sample Codex conversation.
 
@@ -44,9 +45,9 @@ If a request starts running while you are editing it, keep your changes as a new
 
 The command interface introduced in 0.41 gains native implementations in the Codex, Claude Code, and OpenCode harnesses. Available commands and controls follow the selected agent's capabilities.
 
-![Choosing a native Codex goal command, pausing the goal, and editing its objective](../../../../../../documentation/images/prompt-studio-0-42-native-commands-light.gif)
+![Choosing a native Codex goal command, pausing the goal, and editing its objective](../../../../../documentation/images/prompt-studio-0-42-native-commands-light.gif)
 
-![Choosing a native Codex goal command, pausing the goal, and editing its objective](../../../../../../documentation/images/prompt-studio-0-42-native-commands-dark.gif)
+![Choosing a native Codex goal command, pausing the goal, and editing its objective](../../../../../documentation/images/prompt-studio-0-42-native-commands-dark.gif)
 
 Choose `/goal` from the command menu, set an objective, then pause and edit it through the Goal controls. Recorded in the isolated 0.42 build with a sample Codex conversation.
 
@@ -63,9 +64,9 @@ Open a saved Planner document through a stable link, including links shared in c
 
 An agent can get the ticket body link with `pst tickets document-link --id PS-12`, or add `--file research.md` to link a saved file. You can also share the open document's URL.
 
-![Opening a saved Planner document link from a conversation](../../../../../../documentation/images/prompt-studio-0-42-document-links-light.gif)
+![Opening a saved Planner document link from a conversation](../../../../../documentation/images/prompt-studio-0-42-document-links-light.gif)
 
-![Opening a saved Planner document link from a conversation](../../../../../../documentation/images/prompt-studio-0-42-document-links-dark.gif)
+![Opening a saved Planner document link from a conversation](../../../../../documentation/images/prompt-studio-0-42-document-links-dark.gif)
 
 Click the Reading list brief link in the conversation to open its saved Planner document. Recorded in the isolated 0.42 build with sample Planner content.
 
@@ -106,7 +107,7 @@ For tool authors, `pst extensions check <path>` checks local source without inst
 
 ## Release sources
 
-These highlights were checked against the 0.42 changelogs at commit [`c5030d0001f867b5661dd51cda16256503419715`](https://github.com/pufflyai/prompt-studio/tree/c5030d0001f867b5661dd51cda16256503419715).
+These highlights were checked against the [0.42 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.42.0) and the changelogs at the [`pstdio@0.42.0`](https://github.com/pufflyai/prompt-studio/tree/c5030d0001f867b5661dd51cda16256503419715) tag.
 
 - [Core changelog](https://github.com/pufflyai/prompt-studio/blob/c5030d0001f867b5661dd51cda16256503419715/packages/pstdio/CHANGELOG.md#0420), [SDK changelog](https://github.com/pufflyai/prompt-studio/blob/c5030d0001f867b5661dd51cda16256503419715/packages/sdk/CHANGELOG.md#0420), [UI changelog](https://github.com/pufflyai/prompt-studio/blob/c5030d0001f867b5661dd51cda16256503419715/packages/ui/CHANGELOG.md#0420), and [workbench changelog](https://github.com/pufflyai/prompt-studio/blob/c5030d0001f867b5661dd51cda16256503419715/packages/pstdio-workbench/CHANGELOG.md#0420).
 - [Planner changelog](https://github.com/pufflyai/prompt-studio/blob/c5030d0001f867b5661dd51cda16256503419715/extensions/pstdio-planner/CHANGELOG.md#0420).

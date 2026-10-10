@@ -148,6 +148,10 @@ export interface RuntimeArtifactMount {
   /** Full repo-relative path (.pstdio/extension-storage/<name>/<relativePath>). */
   fullPath: string;
   label: Localizable<string>;
+  /** The host watches this mount in the project's default workspace. */
+  watch: boolean;
+  /** Event the host emits when files in this mount change outside the mount API. */
+  changedEventId: string;
 }
 
 export interface RuntimeScheduleRecord {

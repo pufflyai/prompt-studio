@@ -136,7 +136,7 @@ export {
 } from "./page-url";
 export { params } from "./params";
 export { type QualifiedRef, qualifyRef } from "./qualify-ref";
-export { commandEvent, commandRef, eventRef } from "./refs";
+export { artifactChanged, commandEvent, commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
 export {
   createTerminalSessionBridge,

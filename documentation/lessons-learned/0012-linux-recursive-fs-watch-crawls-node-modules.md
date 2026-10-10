@@ -20,7 +20,7 @@ The earlier fix that stopped a dangling `node_modules` symlink from crashing the
 ## How it was solved
 
 - A temporary `debug/api-test-hang` workflow reran the failing step under a watchdog and, on hang, dumped `ps auxwwf`, per-pid cmdline/cwd/fd tables, and kernel thread stacks. The fd table named the mechanism precisely.
-- On Linux, the [source watcher](../../packages/pstdio-api/src/features/extensions/extension-source-watcher.ts) walks the source tree and registers non-recursive watches. It skips dependency contents, `.git`, ignored directories, and symlinked directories. Separate shallow watches on `node_modules` and scope directories detect package replacement without crawling installed packages.
+- On Linux, the [source watcher](../../packages/pstdio-extensions/src/authoring/extension-source-watcher.ts) walks the source tree and registers non-recursive watches through the shared [directory-tree watcher](../../packages/pstdio-extensions/src/fs-watch/directory-tree-watcher.ts). It skips dependency contents, `.git`, ignored directories, and symlinked directories. Separate shallow watches on `node_modules` and scope directories detect package replacement without crawling installed packages.
 - macOS and Windows use native recursive notifications from the source root.
 - Regression tests cover excluded directory contents, dependency replacement, and source-directory replacement.
 - Verified by rerunning the previously hanging step on CI: the non-e2e test step completes in ~3.5 minutes.
