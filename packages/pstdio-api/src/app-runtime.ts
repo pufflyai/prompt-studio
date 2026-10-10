@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { RouteDeps } from "./features/deps";
+import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import type { RuntimeHost } from "./features/runtime/routes";
@@ -95,6 +96,12 @@ export const startAppExtensionScheduler = (
     watermarkPath: join(storageRoot, EXTENSION_SCHEDULE_WATERMARK_FILE),
   });
 
+export const startAppArtifactMountWatch = (deps: RouteDeps, projectService: ReturnType<typeof createProjectService>) =>
+  createArtifactMountWatchService({
+    deps,
+    listProjectIds: async () => (await projectService.list()).map((project) => project.id),
+  });
+
 const createAppCloser = (input: {
   startupAbort: AbortController;
   startupDone: Promise<void>;
@@ -103,6 +110,7 @@ const createAppCloser = (input: {
   unsubscribeExtensionEvents: () => void;
   extensionRuntime: { dispose(): void };
   extensionScheduler: { dispose(): Promise<void> };
+  artifactMountWatch: { dispose(): Promise<void> };
   automationService: { close(): Promise<void> };
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;
@@ -127,6 +135,7 @@ const createAppCloser = (input: {
         clearInterval(input.notificationWakeTimer);
         input.unsubscribeExtensionEvents();
         input.extensionRuntime.dispose();
+        await input.artifactMountWatch.dispose();
         await input.extensionScheduler.dispose();
         await input.automationService.close();
         await input.terminalSupervisor.dispose();
@@ -146,6 +155,7 @@ export const startAppLifecycle = async (input: {
   unsubscribeExtensionEvents: () => void;
   extensionRuntime: { dispose(): void };
   extensionScheduler: { dispose(): Promise<void> };
+  artifactMountWatch: { dispose(): Promise<void> };
   automationService: Pick<RouteDeps["automationService"], "close" | "recoverQueuedRuns">;
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;

@@ -1,19 +1,26 @@
 import { createHash } from "node:crypto";
 import { open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { join, posix, resolve } from "node:path";
+import { join, posix, relative, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { createReadBoundary } from "../runtime/read-boundary";
 import { normalizeArtifactMountPath } from "./path-normalization";
 import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
 import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
 
-type CreateArtifactMountInput = {
+type ArtifactMountLocation = {
   repoRoot: string;
   /** Package name of the owning extension. */
   name: string;
   mountPath: string;
-  signal?: AbortSignal;
 };
+
+type CreateArtifactMountInput = ArtifactMountLocation & {
+  signal?: AbortSignal;
+  /** Called after each write, update, or delete with the changed path under the mount root. */
+  onWrite?: (path: string) => void;
+};
+
+type FileMountOptions = Pick<CreateArtifactMountInput, "signal" | "onWrite">;
 
 const globPatternToRegExp = (pattern: string) => {
   const body = pattern.replace(/\*\*\/|\*\*|\*|[.+^${}()|[\]\\]/g, (token) => {
@@ -62,19 +69,24 @@ const walkFiles = async (root: string, current: string, files: ArtifactFile[], s
 };
 
 /** Build an ArtifactMount scoped to an absolute filesystem root, rejecting path escapes. */
-const createFileMountState = (mountRoot: string, signal?: AbortSignal) => {
+const createFileMountState = (mountRoot: string, { signal, onWrite }: FileMountOptions = {}) => {
   const safeRoot = createSafeFileRoot(mountRoot);
   const read = createReadBoundary(signal);
+  // Report paths under the root as given, not the root's resolved real path, so they match what a
+  // watcher on that root reports. A write through a linked file changes the file it points to.
+  const reportWrite = (relativePath: string, linkTarget = "") =>
+    onWrite?.(join(resolve(mountRoot), ...relativePath.split("/"), linkTarget));
   const mount: ArtifactMount = {
     exists: (path) => read(async () => Boolean(await safeRoot.tryResolveExisting(path))),
     readText: (path) =>
       read(async () => readFile((await safeRoot.resolveExisting(path)).operationPath, { encoding: "utf8", signal })),
     writeText: async (path, value) => {
-      const { operationPath } = await safeRoot.resolveForWrite(path);
+      const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(path);
       await writeFile(operationPath, value, "utf8");
+      reportWrite(relativePath, relative(operationPath, realPath));
     },
     updateText: async (path, value) => {
-      const { operationPath } = await safeRoot.resolveExisting(path);
+      const { operationPath, realPath, relativePath } = await safeRoot.resolveExisting(path);
       // Opening without O_CREAT keeps a racing delete authoritative. An unlinked
       // file handle can finish writing, but cannot put the file back in the mount.
       const file = await open(operationPath, "r+");
@@ -84,14 +96,16 @@ const createFileMountState = (mountRoot: string, signal?: AbortSignal) => {
       } finally {
         await file.close();
       }
+      reportWrite(relativePath, relative(operationPath, realPath));
     },
     readBytes: (path) =>
       read(
         async () => new Uint8Array(await readFile((await safeRoot.resolveExisting(path)).operationPath, { signal })),
       ),
     writeBytes: async (path, value) => {
-      const { operationPath } = await safeRoot.resolveForWrite(path);
+      const { operationPath, realPath, relativePath } = await safeRoot.resolveForWrite(path);
       await writeFile(operationPath, value);
+      reportWrite(relativePath, relative(operationPath, realPath));
     },
     list: (pattern) =>
       read(async () => {
@@ -121,6 +135,7 @@ const createFileMountState = (mountRoot: string, signal?: AbortSignal) => {
       const { operationPath, relativePath } = await safeRoot.resolveExisting(path);
       if (!relativePath) throw new Error("Artifact path is required");
       await rm(operationPath, { recursive: true, force: true });
+      reportWrite(relativePath);
     },
   };
   return { mount, safeRoot };
@@ -128,7 +143,7 @@ const createFileMountState = (mountRoot: string, signal?: AbortSignal) => {
 
 /** Build an ArtifactMount scoped to an absolute filesystem root, rejecting path escapes. */
 export const createFileMount = (mountRoot: string, signal?: AbortSignal): ArtifactMount =>
-  createFileMountState(mountRoot, signal).mount;
+  createFileMountState(mountRoot, { signal }).mount;
 
 let syncTmpCounter = 0;
 
@@ -181,7 +196,7 @@ export const createWorkspaceFilesMount = (
   mountRoot: string,
   options: { syncStateRoot?: string; signal?: AbortSignal } = {},
 ): WorkspaceFilesMount & WorkspaceFileAccess => {
-  const { mount, safeRoot } = createFileMountState(mountRoot, options.signal);
+  const { mount, safeRoot } = createFileMountState(mountRoot, { signal: options.signal });
 
   const writeSyncedDir: WorkspaceFilesMount["syncDir"] = async (dir, files) => {
     if (!options.syncStateRoot) throw new Error("Workspace sync state root is required");
@@ -228,12 +243,14 @@ export const createWorkspaceFilesMount = (
 // reports, extensions, or config.json.
 export const ARTIFACT_MOUNT_ROOT = ".pstdio/extension-storage";
 
-export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount => {
+/** The absolute folder of a mount in one workspace root. */
+export const resolveArtifactMountRoot = (input: ArtifactMountLocation) => {
   const normalized = normalizeArtifactMountPath(input.mountPath);
   if (!normalized) {
     throw new Error(`Artifact mount path "${input.mountPath}" must stay under ${ARTIFACT_MOUNT_ROOT}/${input.name}/`);
   }
-
-  const mountRoot = resolve(input.repoRoot, ...ARTIFACT_MOUNT_ROOT.split("/"), input.name, ...normalized.split("/"));
-  return createFileMount(mountRoot, input.signal);
+  return resolve(input.repoRoot, ...ARTIFACT_MOUNT_ROOT.split("/"), input.name, ...normalized.split("/"));
 };
+
+export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount =>
+  createFileMountState(resolveArtifactMountRoot(input), input).mount;

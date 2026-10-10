@@ -167,6 +167,30 @@ describe("checkExtensions", () => {
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.runtime.diagnostics.map((d) => d.code)).toContain("unsafe_artifact_mount_path");
   });
+  test("loads the artifact mount watch flag and treats a non-boolean flag as unwatched", async () => {
+    const home = createTempHome();
+    writeExtension(
+      home,
+      "watched-mounts",
+      `export default {
+        artifactMounts: [
+          { id: "boards", ref: { kind: "artifact-mount", id: "boards" }, path: "boards", label: "Boards", watch: true },
+          { id: "runs", ref: { kind: "artifact-mount", id: "runs" }, path: "runs", label: "Runs" },
+          { id: "drafts", ref: { kind: "artifact-mount", id: "drafts" }, path: "drafts", label: "Drafts", watch: "yes" },
+        ],
+      };`,
+    );
+    const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
+    expect(result.runtime.artifactMounts.map((mount) => [mount.localId, mount.watch])).toEqual([
+      ["boards", true],
+      ["runs", false],
+      ["drafts", false],
+    ]);
+    expect(result.runtime.diagnostics.map((d) => d.code)).toEqual(["invalid_artifact_mount_watch"]);
+    expect(result.runtime.artifactMounts[0]?.changedEventId).toBe(
+      "artifact.changed:pstdio.watched-mounts.artifact.boards",
+    );
+  });
   test("flags webview artifact grants on mounts the extension does not define", async () => {
     const home = createTempHome();
     writeExtension(

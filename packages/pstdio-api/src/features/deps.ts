@@ -25,6 +25,7 @@ import type { createSyncService } from "../services/sync-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createAutomationService } from "./automation/automation-service";
+import type { ArtifactMountWriteLedger } from "./extensions/artifact-mount-watch/write-ledger";
 import type { createExtensionConnectionService } from "./extensions/extension-connection-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
 import type { ExtensionWebviewAccess } from "./extensions/extension-webview-access";
@@ -76,6 +77,8 @@ export interface RouteDeps {
   extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSettingsService: ReturnType<typeof createExtensionSettingsService>;
   extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
+  /** Writes made through the artifact mount API, so the mount watcher does not report them. */
+  artifactMountWrites: ArtifactMountWriteLedger;
   syncService: ReturnType<typeof createSyncService>;
   activityEventsService: ReturnType<typeof createActivityEventsDBService>;
   /** Host PTY supervisor api; owned by the app runtime, disposed on app close. */

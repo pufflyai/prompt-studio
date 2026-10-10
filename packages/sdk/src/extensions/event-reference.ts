@@ -7,5 +7,7 @@ export const resolveEventReferenceId = (ref: RendererEventReference, ownerExtens
   if (!extensionId || extensionId === "pstdio") return ref.id;
   const lifecycle = /^(command\.(?:requested|started|completed|rejected|failed):)(.+)$/.exec(ref.id);
   if (lifecycle) return `${lifecycle[1]}${extensionId}.command.${lifecycle[2]}`;
+  const artifact = /^artifact\.changed:(.+)$/.exec(ref.id);
+  if (artifact) return `artifact.changed:${extensionId}.artifact.${artifact[1]}`;
   return `${extensionId}.event.${ref.id}`;
 };

@@ -28,7 +28,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `modes`                                           | Typed Workbench mode contributions.                                                                |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
-| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<package-name>/`.                                      |
+| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<package-name>/`. `watch: true` adds change events.   |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
 | `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 

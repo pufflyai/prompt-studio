@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInvocationScope } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createCommandEnvironment } from "./index";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
@@ -13,7 +14,10 @@ test("cancelling scoped reads leaves artifact, project and extension saves indep
   const controller = new AbortController();
   const workspace = Promise.withResolvers<Record<string, unknown>>();
   const environment = createCommandEnvironment(
-    { workspaceService: { getDefault: () => workspace.promise } } as never,
+    {
+      artifactMountWrites: createArtifactMountWriteLedger(),
+      workspaceService: { getDefault: () => workspace.promise },
+    } as never,
     [
       {
         instance: { id: "instance" },

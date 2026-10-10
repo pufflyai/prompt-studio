@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createArtifactMount, createFileMount } from "./artifact-mount";
+import { createArtifactMount, createFileMount, resolveArtifactMountRoot } from "./artifact-mount";
 
 const tempDirs: string[] = [];
 
@@ -33,6 +33,57 @@ describe("createArtifactMount", () => {
     expect(await mount.readText("PS-1/ticket.md")).toBe("# hello");
     expect(await mount.exists("PS-1/ticket.md")).toBe(true);
     expect(await mount.exists("missing.md")).toBe(false);
+  });
+
+  test("reports each write, update, and delete at its path under the mount root", async () => {
+    const repo = createTempDir();
+    const written: string[] = [];
+    const input = { repoRoot: repo, name: "dashboards", mountPath: "boards" };
+    const mount = createArtifactMount({ ...input, onWrite: (path) => written.push(path) });
+    const root = resolveArtifactMountRoot(input);
+
+    await mount.writeText("sales/q3.json", "{}");
+    await mount.updateText("sales/q3.json", "[]");
+    await mount.writeBytes("logo.png", new Uint8Array([1]));
+    await mount.readText("sales/q3.json");
+    await mount.delete("sales");
+
+    expect(root).toBe(join(repo, ".pstdio", "extension-storage", "dashboards", "boards"));
+    expect(written).toEqual([
+      join(root, "sales", "q3.json"),
+      join(root, "sales", "q3.json"),
+      join(root, "logo.png"),
+      join(root, "sales"),
+    ]);
+  });
+
+  test("reports a write through a linked file at the file it changes", async () => {
+    const repo = createTempDir();
+    const written: string[] = [];
+    const input = { repoRoot: repo, name: "dashboards", mountPath: "boards" };
+    const mount = createArtifactMount({ ...input, onWrite: (path) => written.push(path) });
+    const root = resolveArtifactMountRoot(input);
+    await mount.writeText("sales/q3.json", "{}");
+    symlinkSync(join(root, "sales", "q3.json"), join(root, "latest.json"));
+
+    await mount.writeText("latest.json", "[]");
+    await mount.updateText("latest.json", "[1]");
+
+    expect(written.slice(1)).toEqual([join(root, "sales", "q3.json"), join(root, "sales", "q3.json")]);
+  });
+
+  test("reports a new file written through a linked folder at the folder it lands in", async () => {
+    const repo = createTempDir();
+    const written: string[] = [];
+    const input = { repoRoot: repo, name: "dashboards", mountPath: "boards" };
+    const mount = createArtifactMount({ ...input, onWrite: (path) => written.push(path) });
+    const root = resolveArtifactMountRoot(input);
+    await mount.writeText("sales/q3.json", "{}");
+    symlinkSync(join(root, "sales"), join(root, "current"), "junction");
+
+    await mount.writeText("current/q4.json", "{}");
+
+    expect(written.at(-1)).toBe(join(root, "sales", "q4.json"));
   });
 
   test("rejects path escaping mount root", async () => {

@@ -37,6 +37,7 @@ export const toCheckArtifactMounts = (artifactMounts: ExtensionRuntime["artifact
     fullPath: mount.fullPath,
     label: mount.label,
     relativePath: mount.relativePath,
+    watch: mount.watch,
   }));
 
 export const toCheckThemes = (themes: ExtensionRuntime["themes"]): ExtensionThemeRecord[] =>
