@@ -20,11 +20,12 @@ import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { gitMergedHook } from "./src/hooks/git-merged";
+import { reviewRequestCleanupHook } from "./src/hooks/review-request-cleanup";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { ticketStatuses } from "./src/ticket-status-provider";
 import { commands as timelineCommands } from "./src/timeline/commands";
-import { actionCleanup } from "./src/timeline/commands/action-cleanup";
+import { gateCleanup } from "./src/timeline/commands/gate-cleanup";
 import { timelineNavigation, timelinePage, timelineView } from "./src/timeline/pages";
 import { createPlannerUi, ticketResourceKind } from "./src/ui-contributions";
 
@@ -149,7 +150,8 @@ export default defineExtension({
   hooks: [
     gitMergedHook,
     worktreeCreatedHook,
-    actionCleanup,
+    reviewRequestCleanupHook,
+    gateCleanup,
     defineHook({
       id: "session-awaiting-input",
       event: sessionEvents.awaitingInput,

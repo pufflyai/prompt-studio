@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { createTicketCommand } from "../../commands/create-ticket";
-import { putTicket, statusesCollection } from "../../data/collections";
+import { requestHumanCommand, reviewCommand } from "../../commands/review-requests";
+import { putTicket, statusesCollection, ticketsCollection } from "../../data/collections";
 import { DEFAULT_STATUSES } from "../../data/seed";
 import { readPlanCommand } from "./read-plan";
 
@@ -89,4 +90,45 @@ test("waiting for prerequisites is distinct from a blocker on otherwise availabl
     state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
+});
+
+test("answering one request keeps another open request awaiting input", async () => {
+  const storage = createMemoryStorage();
+  const sessions = { create: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }) };
+  const [ctx] = makeCommandArgs({ storage, params: {}, overrides: { sessions: sessions as never } });
+  const ticket = await createTicketCommand.run(ctx, { content: "# Mixed requests", statusId: "in-review" });
+  const handoff = {
+    kind: "decision",
+    questions: [{ id: "result", label: "Result", required: true, input: { kind: "text" } }],
+  };
+  await requestHumanCommand.run(ctx, {
+    ticket: ticket.id,
+    reason: "approved-revision",
+    title: "Approve the revision",
+    instructions: "Select or merge it.",
+    request: handoff,
+  } as never);
+  const task = await requestHumanCommand.run(ctx, {
+    ticket: ticket.id,
+    title: "Check the preview",
+    instructions: "Confirm its layout.",
+    request: { kind: "task" },
+  } as never);
+  await reviewCommand.run(ctx, { requestId: task.id, response: { confirmed: true } });
+
+  const plan = await readPlanCommand.run(ctx, {});
+  const row = plan.sections.flatMap((section) => section.rows).find((entry) => entry.id === ticket.id);
+  expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(row?.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
+  expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.humanNeeded).toBe(1);
+
+  const handoffId = row?.requests.find((request) => request.state === "open")?.id as string;
+  await reviewCommand.run(ctx, { requestId: handoffId, response: { answers: { result: "Merged A1." } } });
+  const stateWith = async (statusId: string) => {
+    await putTicket(storage, { ...(await ticketsCollection(storage).get(ticket.id))!, statusId });
+    const rows = (await readPlanCommand.run(ctx, {})).sections.flatMap((section) => section.rows);
+    return rows.find((entry) => entry.id === ticket.id)?.state;
+  };
+  expect(await stateWith("ready")).toBe("input-received");
+  expect(await stateWith("in-progress")).toBe("in-progress");
 });

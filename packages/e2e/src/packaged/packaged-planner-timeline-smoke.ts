@@ -1,13 +1,32 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
+// Run a Planner command through the packaged HTTP API and return its value.
+const commandRunner =
+  (input: { baseUrl: string; projectId: string; headers: Record<string, string> }) =>
+  async (command: string, params: unknown) => {
+    const { baseUrl, projectId, headers } = input;
+    const response = await fetch(
+      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      {
+        method: "POST",
+        headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({ params }),
+      },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.outcome.status, JSON.stringify(body)).toBe("success");
+    return body.outcome.value;
+  };
+
 export async function expectPackagedPlannerTimeline(input: {
   baseUrl: string;
   projectId: string;
   headers: Record<string, string>;
   metadata: WorkbenchExtensionMetadata;
 }) {
-  const { baseUrl, projectId, headers, metadata } = input;
+  const { metadata } = input;
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({
       extensionId: "pstdio.pstdio-planner",
@@ -27,20 +46,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[0]?.group).toBeTruthy();
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
-  const execute = async (command: string, params: unknown) => {
-    const response = await fetch(
-      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
-      {
-        method: "POST",
-        headers: { ...headers, "content-type": "application/json" },
-        body: JSON.stringify({ params }),
-      },
-    );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.outcome.status, JSON.stringify(body)).toBe("success");
-    return body.outcome.value;
-  };
+  const execute = commandRunner(input);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
     content: "# Timeline smoke ticket\n\nShared Planner body",
@@ -86,4 +92,72 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(available.find((row: { id: string }) => row.id === waiting.ticket.id).flags).not.toContain("waiting");
   const tickets = await execute("read-tickets", {});
   expect(tickets).toContainEqual(expect.objectContaining({ id: result.ticket.id }));
+  await expectReviewRequests(execute, deadline.id);
+}
+
+type Execute = ReturnType<typeof commandRunner>;
+const reviewNeeded = "default-human-requested-true";
+
+// Review requests start from empty storage; answering one request must not hide another.
+async function expectReviewRequests(execute: Execute, deadlineId: string) {
+  const { ticket } = await execute("timeline.ticket.create", {
+    content: "# Review request smoke",
+    deadline: deadlineId,
+  });
+  const handoff = await execute("request-human", {
+    ticket: ticket.id,
+    reason: "approved-revision",
+    title: "Approve the revision",
+    instructions: "Select or merge it.",
+    request: {
+      kind: "decision",
+      questions: [{ id: "result", label: "Result", required: true, input: { kind: "text" } }],
+    },
+  });
+  const task = await execute("request-human", {
+    ticket: ticket.id,
+    title: "Check the preview",
+    instructions: "Confirm its layout.",
+    request: { kind: "task" },
+  });
+  const decision = await execute("request-human", {
+    ticket: ticket.id,
+    title: "Choose platforms",
+    instructions: "Pick the release platforms.",
+    request: {
+      kind: "decision",
+      questions: [
+        {
+          id: "platforms",
+          label: "Platforms",
+          required: true,
+          input: {
+            kind: "multiple-choice",
+            options: [
+              { id: "mac", label: "macOS" },
+              { id: "win", label: "Windows" },
+            ],
+          },
+        },
+      ],
+    },
+  });
+  expect(handoff).toMatchObject({ state: "open", context: { sessionId: expect.any(String) } });
+
+  await execute("review", { requestId: task.id, response: { confirmed: true } });
+  await execute("review", { requestId: decision.id, response: { answers: { platforms: ["mac", "win"] } } });
+  const mixed = await execute("timeline.plan.read", {});
+  const row = mixed.sections
+    .flatMap((section: { rows: Array<{ id: string }> }) => section.rows)
+    .find((entry: { id: string }) => entry.id === ticket.id);
+  expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["human-needed"]) });
+  expect(await execute("review-requests.list", { ticket: ticket.id, openOnly: true })).toMatchObject({
+    requests: [{ id: handoff.id }],
+  });
+
+  await execute("review-requests.cancel", { requestId: handoff.id, reason: "Superseded by a new revision." });
+  const settled = await execute("review-requests.read", { requestId: decision.id });
+  expect(settled).toMatchObject({ state: "answered", outcomeText: "Platforms: macOS, Windows" });
+  const [stored] = (await execute("read-tickets", {})).filter((entry: { id: string }) => entry.id === ticket.id);
+  expect(stored.tagIds ?? []).not.toContain(reviewNeeded);
 }

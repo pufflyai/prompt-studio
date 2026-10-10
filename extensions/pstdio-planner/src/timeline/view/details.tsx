@@ -3,11 +3,11 @@ import { Box, Button, CloseButton, Flex, Stack, Text } from "@chakra-ui/react";
 import type { NavigationTarget } from "@pstdio/sdk/extensions";
 import { ScrollArea } from "@pstdio/ui";
 import type { Plan, PlanLink, PlanRow } from "../contracts";
-import { ActionsPanel } from "./actions-panel";
 import { BlockReasonPanel } from "./block-reason-panel";
 import { toneColor } from "./flags";
 import { GatePanel } from "./gate-panel";
 import { InstructionLinks } from "./instruction-navigation";
+import { RequestsPanel } from "./requests-panel";
 import { type Review, ReviewBar } from "./review-bar";
 import { StatusIcon } from "./status-icon";
 import type { PlanClient } from "./use-plan";
@@ -70,7 +70,11 @@ export function Details(props: DetailsProps) {
           </InstructionLinks>
           {row.gate ? <GatePanel row={row} client={client} /> : null}
           <InstructionLinks row={row} plan={plan} onOpen={onOpen}>
-            <ActionsPanel row={row} client={client} />
+            <RequestsPanel
+              row={row}
+              onAnswer={(requestId, response) => client.commands.review({ requestId, response })}
+              onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
+            />
           </InstructionLinks>
           {row.laterDependencies.length ? (
             <Text textStyle="label/S/regular" color={toneColor.warning}>

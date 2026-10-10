@@ -244,8 +244,9 @@ describe("pstdio planner workspace contributions", () => {
   test("contributes ticket workspace and merge hooks", () => {
     expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
       "git-merged-mark-done",
+      "review-request-cleanup",
       "session-awaiting-input",
-      "timeline.action-cleanup",
+      "timeline.gate-cleanup",
       "worktree-created",
     ]);
   });

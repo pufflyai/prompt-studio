@@ -20,7 +20,8 @@ export function ticketState(ticket: PlannerTicket, signals: StateSignals, status
   if (signals.humanNeeded) {
     return "await-input" as const;
   }
-  if (signals.inputReceived) {
+  // Active work supersedes old answers; input-received only marks idle tickets an agent should pick up.
+  if (signals.inputReceived && status !== "in-progress" && status !== "in-review") {
     return "input-received" as const;
   }
   if (!signals.unmet && (status === "blocked" || ticket.blockedReason?.trim())) {

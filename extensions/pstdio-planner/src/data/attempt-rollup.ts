@@ -1,13 +1,15 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { listAttempts } from "./attempt-storage";
 import { statusesCollection, ticketsCollection } from "./collections";
-
-const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
+import { HUMAN_REQUESTED_OPTION_ID } from "./review-request-service";
+import { hasPendingInput, listTicketReviewRequests } from "./review-request-storage";
 
 export const rollUpAttemptTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
   const ticket = await ticketsCollection(storage).get(ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${ticketId}"`);
+  // Open requests pause status updates even when an interrupted write left the flag unset.
   if ((ticket.tagIds ?? []).includes(HUMAN_REQUESTED_OPTION_ID)) return ticket;
+  if (hasPendingInput(await listTicketReviewRequests(storage, ticketId))) return ticket;
 
   const statuses = await statusesCollection(storage).list();
   const statusId = (name: string) =>

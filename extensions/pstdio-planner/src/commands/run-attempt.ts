@@ -1,14 +1,15 @@
 import { defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, launchClaimsCollection, putAttempt } from "../data/attempt-storage";
-import type { AttemptLaunchClaim, AttemptRecord, HumanRequestReason } from "../data/attempt-types";
+import type { AttemptLaunchClaim, AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
+import { createReviewRequest, handoffRequest } from "../data/review-request-create";
+import type { HumanRequestReason } from "../data/review-request-types";
 import { renderOwnedTemplate } from "../data/template-store";
 import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness } from "./attempt-readiness";
-import { requestHuman } from "./human-requests";
 import {
   createAnchoredWorkspace,
   harnessInput,
@@ -72,12 +73,13 @@ export const runAttemptCommand = defineCommand({
         if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
           // The readiness reason is what the person who started the attempt needs, so a
           // failed handoff must not replace it.
-          await requestHuman(ctx, {
+          await createReviewRequest(ctx, {
             ticket: storedTicket.id,
             reason: readiness.reason as HumanRequestReason,
-            question: message,
-            expectedAction:
-              "Repair the dependency graph or select the intended dependency attempt, then resolve this request.",
+            title: message,
+            request: handoffRequest,
+            instructions:
+              "Repair the dependency graph or select the intended dependency attempt, then answer this request.",
             expectedTicketStatusId: storedTicket.statusId,
           }).catch((error: unknown) =>
             ctx.logger.warn("Could not request human input for a ticket that cannot start", {

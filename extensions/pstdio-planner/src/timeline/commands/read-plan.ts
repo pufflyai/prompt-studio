@@ -1,9 +1,9 @@
 // Return the execution plan with its deadlines, blockers, risk, and the Planner tags tracks can use.
 import { defineCommand } from "@pstdio/sdk/extensions";
 import { queryTickets } from "../../commands/query-tickets";
+import { readTicketReviewRequests } from "../../data/review-request-storage";
 import { readTicketTags } from "../../data/tag-operations";
 import { buildPlan } from "../model/build-plan";
-import { readActionStore } from "./action-store";
 import { readGates } from "./gate-store";
 import { loadPlan } from "./plan-store";
 import { readTrack } from "./track-commands";
@@ -21,9 +21,13 @@ export const readPlanCommand = defineCommand({
       readTicketTags(ctx.storage),
       queryTickets(ctx, { filters: { archived: ["active"] } }),
     ]);
-    const [actions, gates, track] = await Promise.all([readActionStore(ctx), readGates(ctx), readTrack(ctx)]);
+    const [requests, gates, track] = await Promise.all([
+      readTicketReviewRequests(ctx.storage),
+      readGates(ctx),
+      readTrack(ctx),
+    ]);
     return {
-      ...buildPlan({ ...loaded, actions, gates, track, tags, today: localToday() }),
+      ...buildPlan({ ...loaded, requests, gates, track, tags, today: localToday() }),
       projectId: ctx.projectId,
       ticketRows,
     };

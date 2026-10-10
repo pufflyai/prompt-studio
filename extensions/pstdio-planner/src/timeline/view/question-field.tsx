@@ -1,8 +1,8 @@
 import { SelectionInput } from "@pstdio/ui/param-editor";
-import type { Question } from "../model/action-types";
+import type { ReviewQuestion } from "../../data/review-request-types";
 
 interface QuestionFieldProps {
-  question: Question;
+  question: ReviewQuestion;
   prefix: string;
   value: string | string[] | undefined;
   disabled: boolean;
@@ -10,7 +10,7 @@ interface QuestionFieldProps {
 }
 export function QuestionField(props: QuestionFieldProps) {
   const { question, prefix, value, disabled, onChange } = props;
-  if (question.kind === "text") {
+  if (question.input.kind === "text") {
     return <TextAnswer {...props} />;
   }
   return (
@@ -21,8 +21,8 @@ export function QuestionField(props: QuestionFieldProps) {
       disabled={disabled}
       defaultValue={value ?? ""}
       placeholder="Choose an answer"
-      options={question.options?.map(({ id, label }) => ({ id, name: label, icon: "circle" })) ?? []}
-      multiSelect={question.kind === "multiple-choice"}
+      options={question.input.options.map(({ id, label }) => ({ id, name: label, icon: "circle" }))}
+      multiSelect={question.input.kind === "multiple-choice"}
       onChange={(_id, next) => onChange(next)}
     />
   );

@@ -1,8 +1,8 @@
 // Share the execution plan's JSON shapes and events between commands and the browser view.
 
 import { eventRef, type NavigationTargetPage } from "@pstdio/sdk/extensions";
+import type { ReviewRequestView } from "../data/review-request-types";
 import type { StoredStatus, StoredTag } from "../data/types";
-import type { TicketAction } from "./model/action-types";
 import type { TicketState } from "./model/state";
 
 export const planChanged = eventRef<{ reason: string }>({
@@ -48,8 +48,8 @@ export interface PlanRow {
   status: string;
   state: TicketState;
   trackId: string | null;
-  actions: TicketAction[];
-  actionErrors: string[];
+  requests: ReviewRequestView[];
+  requestErrors: string[];
   instructions: string;
   done: boolean;
   // Position in the whole execution order, starting at 1.

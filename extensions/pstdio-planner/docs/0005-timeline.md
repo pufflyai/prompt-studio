@@ -6,7 +6,7 @@ Both boards use the shared Kanban card. Timeline cards keep their full titles. T
 
 Right-click an empty track or milestone to create a ticket or an agent review gate. Write the ticket body in the shared markdown editor and choose its properties. Planner derives the title from the body. Attachments use Planner's existing file upload.
 
-Use **New track** to add a value to the single-select Track tag. Create milestones on the date gutter, then drag tickets between tracks and milestones. Prerequisites form the dependency graph. Selecting a ticket shows its instructions, dependencies, review gate, and pending human actions.
+Use **New track** to add a value to the single-select Track tag. Create milestones on the date gutter, then drag tickets between tracks and milestones. Prerequisites form the dependency graph. Selecting a ticket shows its instructions, dependencies, review gate, and review requests. Answer tasks and decisions in the panel, or use **Open chat** to get help from the request's linked chat. These are Planner [review requests](0006-review-requests.md), the same ones the CLI and attempt workflows use. A ticket shows **Input received** when every request is settled, at least one was answered, and no one has moved the ticket back into progress or review.
 
 The header uses the same saved views, search, filter menus, and filter rules as Kanban and data tables. Ticket views are shared with **Tickets**: create, rename, duplicate, delete, and save filters from either board. Advanced filters support groups and negative conditions. Search stays local to the screen.
 

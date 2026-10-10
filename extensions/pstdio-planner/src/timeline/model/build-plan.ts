@@ -1,7 +1,8 @@
 // Turn the resolved execution order into deadline sections with steps, tags, blockers, and risk flags.
+import { hasPendingInput } from "../../data/review-request-storage";
+import type { TicketReviewRequests } from "../../data/review-request-types";
 import type { Deadline, PlanFlag, PlanLink, PlanRow, PlanTag, StoredPlan } from "../contracts";
 import { dependencyIds, humanRequestedTagId, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
-import type { TicketAction } from "./action-types";
 import { daysBetween } from "./days";
 import { ticketState } from "./state";
 import { trackProperty } from "./tracks";
@@ -11,7 +12,7 @@ import { workflowName } from "./workflow";
 const dueSoonDays = 7;
 
 export interface PlanInput {
-  actions?: Map<string, { actions: TicketAction[]; errors: string[] }>;
+  requests?: Map<string, TicketReviewRequests>;
   gates?: Set<string>;
   track?: PlanTag;
   tickets: PlannerTicket[];
@@ -29,7 +30,7 @@ interface PlanIndex {
   dependents: Map<string, PlannerTicket[]>;
   today: string;
   trackOptionIds: Set<string>;
-  actions: Map<string, { actions: TicketAction[]; errors: string[] }>;
+  requests: Map<string, TicketReviewRequests>;
   gates: Set<string>;
 }
 
@@ -68,27 +69,18 @@ function indexInput(input: PlanInput, groups: ReturnType<typeof executionOrder>)
     steps: new Map(groups.flatMap(({ ticketIds }) => ticketIds).map((id, position) => [id, position + 1])),
     dependents,
     today: input.today,
-    actions: input.actions ?? new Map(),
+    requests: input.requests ?? new Map(),
     gates: input.gates ?? new Set(),
     trackOptionIds: new Set((input.track ?? trackProperty(input.tags))?.options.map(({ id }) => id)),
   };
 }
 
-const documentsFor = (ticket: PlannerTicket, index: PlanIndex) =>
-  index.actions.get(ticket.id) ?? { actions: [], errors: [] };
+const requestsFor = (ticket: PlannerTicket, index: PlanIndex) =>
+  index.requests.get(ticket.id) ?? { requests: [], errors: [] };
 
-const answered = (ticket: PlannerTicket, index: PlanIndex) =>
-  documentsFor(ticket, index).actions.some((action) => action.resolution);
-
-// The Human Needed tag asks for input until a request is answered; open requests and errors always ask.
-function needsHuman(ticket: PlannerTicket, index: PlanIndex) {
-  const documents = documentsFor(ticket, index);
-  return (
-    documents.actions.some((action) => !action.resolution && !action.cancellation) ||
-    documents.errors.length > 0 ||
-    (ticket.tagIds?.includes(humanRequestedTagId) === true && !answered(ticket, index))
-  );
-}
+// Any open request or an explicit Review Needed flag asks for input. Answers to other requests never hide them.
+const needsHuman = (ticket: PlannerTicket, index: PlanIndex) =>
+  hasPendingInput(requestsFor(ticket, index)) || ticket.tagIds?.includes(humanRequestedTagId) === true;
 
 // Walk up the parent chain once; a cycle stops at the first repeated ticket.
 function ancestors(ticket: PlannerTicket, index: PlanIndex) {
@@ -141,7 +133,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
     (dependency) => !isDone(dependency, index) && (index.steps.get(dependency.id) ?? 0) > step,
   );
   const blockedReason = isDone(ticket, index) ? undefined : ticket.blockedReason?.trim() || undefined;
-  const documents = documentsFor(ticket, index);
+  const { requests, errors } = requestsFor(ticket, index);
   const flags = flagsFor(
     ticket,
     deadline,
@@ -158,14 +150,14 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
       ticket,
       {
         humanNeeded,
-        inputReceived: !humanNeeded && answered(ticket, index),
+        inputReceived: !humanNeeded && requests.some((request) => request.state === "answered"),
         unmet: flags.includes("waiting"),
       },
       statusName(ticket, index),
     ),
     trackId: ticket.tagIds?.find((id) => index.trackOptionIds.has(id)) ?? null,
-    actions: documents.actions,
-    actionErrors: documents.errors,
+    requests,
+    requestErrors: errors,
     instructions: ticket.content ?? "",
     status: (ticket.statusId && index.statuses.get(ticket.statusId)) || "No status",
     done: isDone(ticket, index),

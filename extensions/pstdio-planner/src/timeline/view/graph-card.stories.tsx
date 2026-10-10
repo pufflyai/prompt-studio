@@ -20,8 +20,8 @@ const row: PlanRow = {
   laterDependencies: [],
   flags: [],
   tagIds: [],
-  actions: [],
-  actionErrors: [],
+  requests: [],
+  requestErrors: [],
   instructions: "",
   target: ticketTarget({ id: "shared-card", shorthand: "P-1", title: "Use the same card on both boards" }),
 };

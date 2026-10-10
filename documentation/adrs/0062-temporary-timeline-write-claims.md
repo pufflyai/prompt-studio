@@ -12,7 +12,7 @@ The public extension storage API offers key-value writes and atomic collection c
 
 ## Temporary workaround
 
-Keep atomic owner claims inside Planner's timeline commands. Claim creation excludes concurrent timeline writers; conditional deletion releases only the exact owner. Timeline placement, track creation, and ticket action writes use their own keys. This is a temporary workaround, not the intended storage design.
+Keep atomic owner claims inside Planner's timeline commands. Claim creation excludes concurrent timeline writers; conditional deletion releases only the exact owner. Timeline placement and track writes use their own keys. Review requests do not use claims; see [ADR 0068](0068-planner-owns-review-requests.md). This is a temporary workaround, not the intended storage design.
 
 A ticket created before a later placement or release failure is returned with its identity and a placement error. The form retries placement on that ticket instead of creating another one.
 
