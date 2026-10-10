@@ -114,6 +114,7 @@ export {
   headerLeadingMenuPath,
   headerTrailingMenuPath,
   resourceContextMenuPath,
+  workbenchBreadcrumbLocationMenuPath,
   workbenchCommandPaletteMenuPath,
   workbenchRegionTabAddMenuPath,
   workbenchRegionTabLeadingMenuPath,

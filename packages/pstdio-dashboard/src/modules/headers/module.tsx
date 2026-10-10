@@ -3,6 +3,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { ProjectHeader } from "../projects/components/project-header";
 import type { DesktopProjectTabsController } from "../projects/desktop-project-tabs-controller";
 import { DesktopProjectBreadcrumb } from "./components/desktop-project-breadcrumb";
+import { registerCopyPageLink } from "./copy-page-link";
 
 const registerHeaders = (ctx: WorkbenchModuleContext, projectTabs?: DesktopProjectTabsController) => {
   ctx.views.registerView({
@@ -31,5 +32,6 @@ export const createHeadersModule = (projectTabs?: DesktopProjectTabsController) 
     id: "dashboard.headers",
     activate(ctx) {
       registerHeaders(ctx, projectTabs);
+      registerCopyPageLink(ctx);
     },
   }) satisfies WorkbenchModuleContribution;
