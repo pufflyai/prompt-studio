@@ -11,7 +11,8 @@ export const visibleSessionMessages = (messages: readonly SessionMessage[]) =>
     const parts = message.parts.filter(
       (part) => !((part.type === "text" || part.type === "reasoning") && !part.text.trim()),
     );
-    return parts.length ? [{ ...message, parts }] : [];
+    if (parts.length === 0) return [];
+    return [parts.length === message.parts.length ? message : { ...message, parts }];
   });
 
 export const applyDashboardSessionMessagePatch = (messages: SessionMessage[], patch: DashboardSessionMessagePatch) => {
