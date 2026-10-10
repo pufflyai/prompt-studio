@@ -26,6 +26,7 @@ jobs:
       - name: Initialize the required release-readiness status
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           POLICY_PR: ${{ github.event.pull_request.number || inputs.pr-number }}
         with:
           script: |
@@ -41,7 +42,7 @@ jobs:
             const status = await policy.initializeReleaseReadiness({
               apiUrl: process.env.GITHUB_API_URL,
               repository: `${context.repo.owner}/${context.repo.repo}`,
-              token: github.token,
+              token: process.env.GITHUB_TOKEN,
               pullNumber: Number(process.env.POLICY_PR),
               runUrl: `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
             });
