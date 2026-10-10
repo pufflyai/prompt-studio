@@ -89,6 +89,7 @@ describe("createWorkspacesModule", () => {
     expect(dataTableViewBody(workbench, dashboardWidgetIds.workspaces)).toBeDefined();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-296_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceSupportsFiles: true,
       workspaceShorthand: "PS-296_A1",
       workspaceIsDefault: false,
       workspaceExecutionKind: "local",
@@ -105,6 +106,7 @@ describe("createWorkspacesModule", () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceSupportsFiles: true,
       workspaceSupportsDiff: true,
       workspaceShorthand: "PS-307_A1",
     });
@@ -168,6 +170,7 @@ describe("createWorkspacesModule", () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceSupportsFiles: true,
       workspaceShorthand: "PS-307_A1",
     });
     const fileResource = {
@@ -263,6 +266,7 @@ describe("createWorkspacesModule sidenav state", () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceSupportsFiles: true,
       workspaceShorthand: "PS-307_A1",
     });
     workbench.registerModule(createSidenavModule());
@@ -285,6 +289,7 @@ describe("createWorkspacesModule sidenav state", () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceSupportsFiles: true,
       workspaceShorthand: "PS-307_A1",
     });
     workbench.registerModule(createSidenavModule());

@@ -37,6 +37,9 @@ export const createDashboardWorkspaceCapabilityMetadata = (workspace: DashboardW
   workspaceSupportsDiff: workspace.supportsDiff,
 });
 
+export const supportsWorkspaceFiles = (executionKind: "local" | "remote", files: string | undefined) =>
+  executionKind === "local" && files !== "none";
+
 const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): DashboardWorkspaceOption => {
   const executionKind = workspace.execution_kind === "remote" ? "remote" : "local";
   const capabilities = workspace.provider_capabilities_json as
@@ -53,7 +56,7 @@ const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): Dash
     isDefault: Boolean(workspace.is_default),
     executionKind,
     providerState: workspaceState(workspace),
-    supportsFiles: capabilities ? capabilities.files !== "none" : executionKind === "local",
+    supportsFiles: supportsWorkspaceFiles(executionKind, capabilities?.files),
     supportsDiff: capabilities?.diff === true,
     supportsDelete: capabilities?.delete === true,
     workspacePath,

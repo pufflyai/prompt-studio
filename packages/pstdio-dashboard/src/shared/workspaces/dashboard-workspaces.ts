@@ -14,7 +14,10 @@ import {
   formatDashboardWorkspaceDiffOverview,
   getDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
-import { createDashboardWorkspaceCapabilityMetadata } from "@/shared/workspaces/workspace-options";
+import {
+  createDashboardWorkspaceCapabilityMetadata,
+  supportsWorkspaceFiles,
+} from "@/shared/workspaces/workspace-options";
 import { workspaceIcon, workspaceKind } from "./workspace-kind";
 import { workspaceState } from "./workspace-state";
 export interface DashboardWorkspace {
@@ -87,7 +90,7 @@ const createWorkspaceResourceMetadata = (input: {
       executionKind,
       providerState,
       supportsDelete: providerCapabilities?.delete === true,
-      supportsFiles: providerCapabilities ? providerCapabilities.files !== "none" : executionKind === "local",
+      supportsFiles: supportsWorkspaceFiles(executionKind, providerCapabilities?.files),
       supportsDiff: providerCapabilities?.diff === true,
     }),
     ...(input.workspace.provider_id ? { workspaceProviderId: input.workspace.provider_id } : {}),
