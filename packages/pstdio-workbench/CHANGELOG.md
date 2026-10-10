@@ -1,5 +1,19 @@
 # @pstdio/workbench
 
+## 0.43.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- 6001b76: Copy a link to the current page from the breadcrumb menu on every page.
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+
+### Patch Changes
+
+- f1022ff: Pass hidden resource parameters to dependent command choices.
+- 7ba285b: Load command-backed workspace choices in standalone and nested forms.
+
 ## 0.42.0
 
 _2026-10-10_

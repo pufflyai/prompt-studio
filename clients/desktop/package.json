@@ -1,7 +1,7 @@
 {
   "name": "@pstdio/desktop",
   "productName": "Prompt Studio",
-  "version": "0.42.0",
+  "version": "0.43.0",
   "private": true,
   "description": "The local-first Prompt Studio desktop application.",
   "author": "Prompt Studio <support@prompt.studio>",

@@ -1,5 +1,18 @@
 # @pstdio/ui
 
+## 0.43.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+
+### Patch Changes
+
+- f0b78fc: Restore composer focus after delayed re-enabling.
+- f822341: Wrap chat table cells by default and hide row numbers.
+
 ## 0.42.0
 
 _2026-10-10_

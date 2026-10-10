@@ -1,5 +1,13 @@
 # pstdio-planner
 
+## 0.43.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+
 ## 0.42.0
 
 _2026-10-10_

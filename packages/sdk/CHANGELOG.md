@@ -1,5 +1,19 @@
 # @pstdio/sdk
 
+## 0.43.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- 0851ba5: Add paged session queries, shared filters, harness details and saved token totals.
+- 98b1708: Let extensions watch artifact mounts with `watch: true` and refresh views and hooks through `artifactChanged(mount)` when files change outside the mount API.
+
+### Patch Changes
+
+- ec9f15f: Advance the extension API to 0.1.3 for workflow status deprecations after the 0.1.2 release.
+- 357240c: Deprecate workflow status APIs in favor of extension-owned commands, settings panels, and query-owned enums.
+
 ## 0.42.0
 
 _2026-10-10_

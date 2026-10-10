@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.43.0
+
+_2026-10-10_
+
+### Patch Changes
+
+- 7ba285b: Load command-backed workspace choices in standalone and nested forms.
+
 ## 0.42.0
 
 _2026-10-10_
