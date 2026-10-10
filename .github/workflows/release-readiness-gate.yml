@@ -1,0 +1,48 @@
+name: Release readiness gate
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Open PR whose release gate should be initialized
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  gate:
+    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Read policy from main. Never check out or execute the PR's code here.
+      - name: Initialize the required release-readiness status
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          POLICY_PR: ${{ github.event.pull_request.number || inputs.pr-number }}
+        with:
+          script: |
+            const { stripTypeScriptTypes } = await import('node:module');
+            const { writeFile } = await import('node:fs/promises');
+            const { pathToFileURL } = await import('node:url');
+            const { data: file } = await github.rest.repos.getContent({
+              ...context.repo, path: 'scripts/ci/release-readiness-gate.ts', ref: context.sha,
+            });
+            const path = `${process.env.RUNNER_TEMP}/release-readiness-gate.mjs`;
+            await writeFile(path, stripTypeScriptTypes(Buffer.from(file.content, 'base64').toString('utf8')));
+            const policy = await import(pathToFileURL(path).href);
+            const status = await policy.initializeReleaseReadiness({
+              apiUrl: process.env.GITHUB_API_URL,
+              repository: `${context.repo.owner}/${context.repo.repo}`,
+              token: github.token,
+              pullNumber: Number(process.env.POLICY_PR),
+              runUrl: `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+            await core.summary.addRaw(status.description).write();
