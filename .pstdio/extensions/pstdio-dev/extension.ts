@@ -3,6 +3,8 @@ import {
   defineExtension,
   defineHook,
   defineSchedule,
+  defineSkill,
+  packageAsset,
   params,
   workspaceEvents,
   workspaceSlots,
@@ -159,6 +161,13 @@ const stopIsolationCommand = defineCommand({
 
 export default defineExtension({
   commands: [discoverHighImpactIssuesCommand, openInVscodeCommand, openInIsolationCommand, stopIsolationCommand],
+  skills: [
+    defineSkill({
+      id: "discord-release-announcement",
+      title: "Discord release announcement",
+      source: packageAsset("./skills/discord-release-announcement", import.meta.url),
+    }),
+  ],
   schedules: [
     defineSchedule({
       id: "daily-issue-discovery",
