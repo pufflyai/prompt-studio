@@ -1,5 +1,28 @@
 # pstdio
 
+## 0.43.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- 6001b76: Copy a link to the current page from the breadcrumb menu on every page.
+- 0851ba5: Add paged session queries, shared filters, harness details and saved token totals.
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+- 7ba285b: Load command-backed workspace choices in standalone and nested forms.
+- 98b1708: Let extensions watch artifact mounts with `watch: true` and refresh views and hooks through `artifactChanged(mount)` when files change outside the mount API.
+
+### Patch Changes
+
+- ec9f15f: Advance the extension API to 0.1.3 for workflow status deprecations after the 0.1.2 release.
+- f1022ff: Pass hidden resource parameters to dependent command choices.
+- d10dabf: Keep sessions idle until their first prompt or attachment is submitted.
+- f0b78fc: Restore composer focus after delayed re-enabling.
+- f822341: Wrap chat table cells by default and hide row numbers.
+- c7e5a85: Hide file views for workspaces without local file access.
+- 7e4e145: Build an extension's webviews once it loads after a failed load, such as after installing its dependencies, without restarting the runtime.
+- 357240c: Deprecate workflow status APIs in favor of extension-owned commands, settings panels, and query-owned enums.
+
 ## 0.42.0
 
 _2026-10-10_

@@ -132,7 +132,7 @@
     },
     "clients/desktop": {
       "name": "@pstdio/desktop",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
@@ -202,7 +202,7 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -223,7 +223,7 @@
     },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.41.0",
       },
@@ -234,7 +234,7 @@
     },
     "extensions/harness-codex": {
       "name": "harness-codex",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.41.0",
       },
@@ -245,7 +245,7 @@
     },
     "extensions/harness-open-code": {
       "name": "harness-open-code",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.41.0",
       },
@@ -256,7 +256,7 @@
     },
     "extensions/pstdio-artifacts": {
       "name": "pstdio-artifacts",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -276,7 +276,7 @@
     },
     "extensions/pstdio-base-themes": {
       "name": "pstdio-base-themes",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -287,7 +287,7 @@
     },
     "extensions/pstdio-notes": {
       "name": "pstdio-notes",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -298,7 +298,7 @@
     },
     "extensions/pstdio-planner": {
       "name": "pstdio-planner",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -320,7 +320,7 @@
     },
     "extensions/pstdio-reports": {
       "name": "pstdio-reports",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -331,7 +331,7 @@
     },
     "extensions/pstdio-skills": {
       "name": "pstdio-skills",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -349,7 +349,7 @@
     },
     "extensions/remote-workspaces": {
       "name": "remote-workspaces",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },
@@ -394,7 +394,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -419,12 +419,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.42.0",
-        "@pstdio/cli-darwin-x64": "0.42.0",
-        "@pstdio/cli-linux-arm64": "0.42.0",
-        "@pstdio/cli-linux-x64": "0.42.0",
-        "@pstdio/cli-win-arm64": "0.42.0",
-        "@pstdio/cli-win-x64": "0.42.0",
+        "@pstdio/cli-darwin-arm64": "0.43.0",
+        "@pstdio/cli-darwin-x64": "0.43.0",
+        "@pstdio/cli-linux-arm64": "0.43.0",
+        "@pstdio/cli-linux-x64": "0.43.0",
+        "@pstdio/cli-win-arm64": "0.43.0",
+        "@pstdio/cli-win-x64": "0.43.0",
       },
     },
     "packages/pstdio-api": {
@@ -621,7 +621,7 @@
     },
     "packages/pstdio-workbench": {
       "name": "@pstdio/workbench",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@pstdio/sdk": "workspace:^",
@@ -675,7 +675,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "mustache": "^4.2.0",
         "zod": "^4.3.6",
@@ -702,7 +702,7 @@
     },
     "packages/ui": {
       "name": "@pstdio/ui",
-      "version": "0.42.0",
+      "version": "0.43.0",
       "dependencies": {
         "@chakra-ui/charts": "^3.36.0",
         "@dnd-kit/core": "^6.3.1",
