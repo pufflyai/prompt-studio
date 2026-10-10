@@ -48,6 +48,7 @@
         "playwright.config.ts",
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
+        "src/**/*.perf.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
         // Specs install fixture extensions by path.

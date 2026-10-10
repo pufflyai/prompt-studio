@@ -136,9 +136,10 @@ signature checks for local convenience. See [Desktop distribution and
 updates](../../requirements/platform/0002-desktop-distribution.md) for the native matrix and
 required repository secrets.
 
-After creating a local package, run its packaged smoke suite with:
+After creating a local package, run its benchmarks and packaged smoke suite with:
 
 ```bash
+bun run --cwd clients/desktop test:benchmark
 bun run --cwd clients/desktop test:packaged
 ```
 

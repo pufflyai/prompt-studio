@@ -215,7 +215,9 @@ jobs:
         shell: bash
         env:
           DESKTOP_VALIDATION_REF: ${{ inputs.validation_ref || github.sha }}
-        run: git restore --source="$DESKTOP_VALIDATION_REF" -- clients/desktop/src/e2e
+        run: >-
+          git restore --source="$DESKTOP_VALIDATION_REF" --
+          clients/desktop/src/e2e clients/desktop/src/testing clients/desktop/playwright.benchmark.config.ts
 
       - name: Test source Electron
         if: matrix.platform != 'linux' && !matrix.essential_only
@@ -227,14 +229,23 @@ jobs:
         working-directory: clients/desktop
         run: xvfb-run -a bunx playwright test --config playwright.config.ts
 
+      # Benchmarks run before other packaged launches. On Intel, the cold start is the first launch of the signed app.
+      - name: Benchmark packaged application
+        id: benchmark
+        working-directory: clients/desktop
+        run: >-
+          ${{ matrix.platform == 'linux' && 'xvfb-run -a' || '' }}
+          bunx playwright test --config playwright.benchmark.config.ts ${{ matrix.essential_only && '--grep @essential' || '' }}
+
+      # A failed budget must not hide functional or package results for the same artifact. The job still fails.
       - name: Smoke packaged application
-        if: matrix.platform != 'linux'
+        if: matrix.platform != 'linux' && !cancelled() && (success() || steps.benchmark.outcome == 'failure')
         env:
           DEBUG: pw:api,pw:browser
         run: bun run --cwd clients/desktop test:packaged ${{ matrix.essential_only && '--grep @essential' || '' }}
 
       - name: Smoke packaged Linux application
-        if: matrix.platform == 'linux'
+        if: matrix.platform == 'linux' && !cancelled() && (success() || steps.benchmark.outcome == 'failure')
         env:
           DEBUG: pw:api,pw:browser
         run: xvfb-run -a bun run --cwd clients/desktop test:packaged
@@ -249,7 +260,7 @@ jobs:
           retention-days: 14
 
       - name: Verify macOS signatures and notarization
-        if: matrix.platform == 'darwin'
+        if: matrix.platform == 'darwin' && !cancelled() && (success() || steps.benchmark.outcome == 'failure')
         shell: bash
         run: |
           set -euo pipefail
@@ -260,15 +271,15 @@ jobs:
           spctl --assess --type execute --verbose=2 "$APP_PATH"
 
       - name: Verify Windows signatures and update payload
-        if: matrix.platform == 'win32'
+        if: matrix.platform == 'win32' && !cancelled() && (success() || steps.benchmark.outcome == 'failure')
         run: bun clients/desktop/scripts/verify-windows-signatures.ts
 
       - name: Verify installed Windows command
-        if: matrix.platform == 'win32'
+        if: matrix.platform == 'win32' && !cancelled() && (success() || steps.benchmark.outcome == 'failure')
         run: bun clients/desktop/scripts/verify-windows-cli-install.ts
 
       - name: Verify Linux package
-        if: matrix.platform == 'linux'
+        if: matrix.platform == 'linux' && !cancelled() && (success() || steps.benchmark.outcome == 'failure')
         shell: bash
         run: |
           set -euo pipefail

@@ -43,9 +43,14 @@ jobs:
         if: runner.os == 'Windows'
         uses: ./.github/actions/setup-windows-desktop-tests
 
+      - name: Benchmark signed packaged application
+        id: benchmark
+        run: bun run --cwd clients/desktop test:benchmark
       - name: Smoke signed packaged application
+        if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
         run: bun run --cwd clients/desktop test:packaged
       - name: Verify installed Windows command
+        if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
         run: bun clients/desktop/scripts/verify-windows-cli-install.ts
       - name: Upload evidence
         if: always()

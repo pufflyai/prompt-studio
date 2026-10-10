@@ -23,7 +23,8 @@ export const createWorkspaceSessionsDBService = (db: DbClient) => {
       .select({ workspace: workspaceColumns })
       .from(workspace_sessions)
       .innerJoin(workspaces, eq(workspace_sessions.workspace_id, workspaces.id))
-      .where(eq(workspace_sessions.session_id, sessionId));
+      .where(eq(workspace_sessions.session_id, sessionId))
+      .orderBy(workspace_sessions.created_at, workspace_sessions.id);
 
     return row?.workspace ?? null;
   };

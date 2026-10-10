@@ -5,6 +5,11 @@ type ListOptions = {
   agent?: string;
   workspaceId?: string;
   archived?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  updatedFrom?: string;
+  anchorType?: string;
+  anchorId?: string;
 };
 
 export const listSessions = async (baseUrl: string, projectId: string, options?: ListOptions) => {

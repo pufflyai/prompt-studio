@@ -248,6 +248,7 @@ export interface UiContributions {
   navigationItems?: readonly NavigationItemContribution[];
   navigationTrees?: readonly NavigationTreeContribution[];
   statusBarItems?: readonly StatusBarItemContribution[];
+  /** @deprecated Use extension-owned values and commands, a settings panel, and query-returned enum attributes. */
   statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];
