@@ -263,7 +263,7 @@ test(
 );
 
 test(
-  "loads a default extension that imports an on-disk node_modules dependency",
+  "loads default extension dependencies, native actions and command-backed workspace choices",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;

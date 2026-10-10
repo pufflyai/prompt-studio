@@ -29,6 +29,15 @@ export default {
     {id:"choices",ref:choices,title:"Choices",params:{},run:()=>[{id:"one",name:"One"}]},
     {id:"run",ref:run,title:"Run",params:input,run:(_ctx:unknown,params:unknown)=>params},
   ],
+  workspaceTypes:[{
+    id:"machine",ref:{kind:"workspace-type",id:"machine"},label:"Agent machine",params:input,
+    create:(_ctx,input)=>({
+      state:"ready",executionKind:"remote",providerRef:{version:1,data:{value:input.params.value}},
+      capabilities:{files:"none",diff:false,merge:false,rebase:false,archive:false,delete:false},
+    }),
+    resolve:(_ctx,input)=>({state:"ready",executionKind:"remote",providerRef:input.providerRef,
+      capabilities:{files:"none",diff:false,merge:false,rebase:false,archive:false,delete:false}}),
+  }],
   views:["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
 };
 `,
@@ -79,5 +88,36 @@ export const expectPackagedNativeActions = async (input: {
   });
   expect(await (await execute("run", { value: "explicit" })).json()).toMatchObject({
     outcome: { status: "success", value: { value: "explicit" } },
+  });
+  const providers = await fetch(`${input.baseUrl}/v1/projects/${input.projectId}/workspace-providers`, {
+    headers: input.headers,
+  });
+  expect(providers.status).toBe(200);
+  expect(await providers.json()).toContainEqual(
+    expect.objectContaining({
+      id: "test.native-actions.workspace-type.machine",
+      params: {
+        value: expect.objectContaining({
+          options: expect.objectContaining({
+            command: { kind: "command", id: "choices", extensionId: "test.native-actions" },
+          }),
+        }),
+      },
+    }),
+  );
+  const created = await fetch(`${input.baseUrl}/v1/workspaces`, {
+    method: "POST",
+    headers: { ...input.headers, "content-type": "application/json" },
+    body: JSON.stringify({
+      project_id: input.projectId,
+      provider_id: "test.native-actions.workspace-type.machine",
+      params: { value: "one" },
+    }),
+  });
+  expect(created.status).toBe(202);
+  expect(await created.json()).toMatchObject({
+    provider_state: "ready",
+    provider_params_json: { value: "one" },
+    provider_ref_json: { version: 1, data: { value: "one" } },
   });
 };

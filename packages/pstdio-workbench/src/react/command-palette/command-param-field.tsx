@@ -10,6 +10,10 @@ export interface CommandParamFieldProps {
   context?: WorkbenchCommandExecutionContext;
   disabled: boolean;
   onChange: (value: CommandParamValue) => void;
+  /** Updates a compound field using its latest stored value. */
+  onUpdateValue?: (update: (current: CommandParamValue) => CommandParamValue) => void;
+  /** Reports host field validation to the containing command form. */
+  onValidationChange?: (error: string | undefined) => void;
 }
 
 // Lets the host supply field UI for param types the workbench cannot render on its

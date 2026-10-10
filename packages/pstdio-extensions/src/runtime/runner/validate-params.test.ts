@@ -48,14 +48,20 @@ describe("declared provider params", () => {
     expect(resolveDeclaredParams(schema, { image: "custom" })).toEqual({ image: "custom" });
   });
 
-  test("reports unsupported command-backed provider choices clearly", async () => {
+  test("accepts command-backed provider choices and keeps required and type validation", async () => {
     const { resolveDeclaredParams } = await import("./validate-params");
     const schema = {
       image: params.select({
+        required: true,
         options: { command: { kind: "command", id: "images" }, valueField: "id", labelField: "name" },
       }),
     };
-    expect(() => resolveDeclaredParams(schema, { image: "small" })).toThrow("requires fixed options");
+    expect(resolveDeclaredParams(schema, { image: "small" })).toEqual({ image: "small" });
+    expect(() => resolveDeclaredParams(schema, {})).toThrow("Missing required");
+    expect(() => resolveDeclaredParams(schema, { image: 42 })).toThrow("must be a string");
+    const multiple = { images: params.multiSelect({ options: schema.image.options }) };
+    expect(resolveDeclaredParams(multiple, { images: ["small", "large"] })).toEqual({ images: ["small", "large"] });
+    expect(() => resolveDeclaredParams(multiple, { images: [42] })).toThrow("string array");
   });
 
   test("fills defaults and rejects unknown keys and options", async () => {

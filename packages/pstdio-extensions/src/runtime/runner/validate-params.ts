@@ -86,7 +86,8 @@ export const validateCommandParams = (schema: ParamObjectSchema, params: unknown
 const validateDeclaredChoice = (key: string, descriptor: ParamDescriptor, value: unknown) => {
   if (value === undefined || (descriptor.type !== "select" && descriptor.type !== "multi-select")) return;
   const options = descriptor.options;
-  if (!Array.isArray(options)) throw new Error(`Param "${key}" requires fixed options for a workspace provider`);
+  // Command-backed choices are discovery. The provider validates its own remote resources.
+  if (!Array.isArray(options)) return;
   if (descriptor.allowCustomValues) return;
   const values = Array.isArray(value) ? value : [value];
   if (values.some((entry) => !options.some((option) => option.value === entry))) {

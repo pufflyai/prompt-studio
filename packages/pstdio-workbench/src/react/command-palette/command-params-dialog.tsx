@@ -74,6 +74,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
   );
   const [error, setError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
+  const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string | undefined>>({});
   const entries = listCommandParamEntries(request?.record.command.params);
 
   const close = () => {
@@ -97,6 +98,9 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
   const run = async () => {
     if (!request || submitting) return;
     const invalid = options.validate(values);
+    for (const [key, error] of Object.entries(customFieldErrors)) {
+      if (error) invalid[key] = error;
+    }
     setFieldErrors(invalid);
     if (Object.keys(invalid).length > 0) return;
     setSubmitting(true);
@@ -135,6 +139,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
 
   const isValid =
     Object.keys(options.validate(values)).length === 0 &&
+    !Object.values(customFieldErrors).some(Boolean) &&
     entries.every((entry) => !entry.required || isFilled(entry, values[entry.key]));
 
   return (
@@ -178,6 +183,12 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
                     value: values[entry.key],
                     disabled: submitting || Boolean(dynamic && state?.status !== "ready"),
                     onChange: (value: CommandParamValue) => setValue(entry.key, value),
+                    onUpdateValue: (update: (current: CommandParamValue) => CommandParamValue) =>
+                      setValues((current) => ({ ...current, [entry.key]: update(current[entry.key]) })),
+                    onValidationChange: (error: string | undefined) =>
+                      setCustomFieldErrors((current) =>
+                        current[entry.key] === error ? current : { ...current, [entry.key]: error },
+                      ),
                   };
                   const custom = renderParamField?.({ ...fieldProps, context: request?.context });
                   return (
