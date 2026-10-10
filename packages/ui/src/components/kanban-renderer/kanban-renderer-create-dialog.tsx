@@ -1,21 +1,11 @@
-import {
-  Button,
-  ButtonGroup,
-  CloseButton,
-  Dialog,
-  HStack,
-  Icon,
-  IconButton,
-  Menu,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { handleDialogAcceptShortcut } from "@/components/overlays/dialog-accept-shortcut";
 import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
+import { useKanbanCreatePreference } from "./kanban-create-preference.store";
+import { KanbanCreateSubmit } from "./kanban-create-submit";
 import { CreateFieldControl } from "./kanban-renderer-create-field";
 import { getCreateAttributeValues } from "./kanban-renderer-create-values";
 import { getEnumOptions } from "./kanban-renderer-helpers";
@@ -97,6 +87,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   const { open, columnId, columnAttributeId, attributes, config, draftKey, filter, onClose, onSubmit } = props;
   const localKey = useId();
   const { draft, setDraft, clearDraft } = useKanbanCreateDraft(draftKey ?? localKey);
+  const { openCreatedRow, setOpenCreatedRow } = useKanbanCreatePreference();
   const values = draft?.values ?? {};
   const attributeValues = draft?.attributeValues ?? {};
   const [submitting, setSubmitting] = useState(false);
@@ -174,7 +165,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
 
   const valid = config.fields.every((field) => isFilled(field, values[field.id]));
 
-  const submit = async (openCreatedRow = true) => {
+  const submit = async () => {
     if (!valid || submitting) return;
     setSubmitting(true);
     setError("");
@@ -183,7 +174,14 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
       const files = [...fileFieldIds].flatMap((id) => (Array.isArray(values[id]) ? (values[id] as File[]) : []));
       const declaredValues = Object.fromEntries(Object.entries(values).filter(([id]) => !fileFieldIds.has(id)));
 
-      await onSubmit({ columnId, columnAttributeId, values: declaredValues, attributeValues, files, openCreatedRow });
+      await onSubmit({
+        columnId,
+        columnAttributeId,
+        values: declaredValues,
+        attributeValues,
+        files,
+        openCreatedRow: config.labels.submitWithoutOpening ? openCreatedRow : true,
+      });
       clearDraft();
       onClose();
     } catch (caught) {
@@ -199,6 +197,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     <Dialog.Root
       open={open}
       size="lg"
+      variant="create"
       scrollBehavior="inside"
       closeOnInteractOutside={false}
       onOpenChange={(details) => !details.open && close()}
@@ -211,7 +210,7 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
         >
           <Dialog.Header>
             <Dialog.Title>{config.title}</Dialog.Title>
-            <CloseButton size="sm" disabled={submitting} onClick={discard} />
+            <CloseButton size="xs" disabled={submitting} onClick={discard} />
           </Dialog.Header>
           <Dialog.Body>
             <Stack gap="md">
@@ -261,30 +260,15 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
               <Button size="sm" variant="ghost" disabled={submitting} onClick={close}>
                 {config.labels.cancel}
               </Button>
-              <ButtonGroup size="sm" variant="primary" attached>
-                <Button disabled={!valid} loading={submitting} onClick={() => void submit()}>
-                  {config.submitLabel}
-                </Button>
-                {config.labels.submitWithoutOpening ? (
-                  <Menu.Root positioning={{ placement: "top-end" }}>
-                    <Menu.Trigger asChild>
-                      <IconButton aria-label={config.labels.submitWithoutOpening} disabled={!valid || submitting}>
-                        <Icon as={ChevronDown} />
-                      </IconButton>
-                    </Menu.Trigger>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        <Menu.Item value="create" onSelect={() => void submit()}>
-                          {config.submitLabel}
-                        </Menu.Item>
-                        <Menu.Item value="create-without-opening" onSelect={() => void submit(false)}>
-                          {config.labels.submitWithoutOpening}
-                        </Menu.Item>
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Menu.Root>
-                ) : null}
-              </ButtonGroup>
+              <KanbanCreateSubmit
+                label={config.submitLabel}
+                withoutOpeningLabel={config.labels.submitWithoutOpening}
+                openCreatedRow={openCreatedRow}
+                onChoose={setOpenCreatedRow}
+                onSubmit={() => void submit()}
+                disabled={!valid}
+                submitting={submitting}
+              />
             </HStack>
           </Dialog.Footer>
         </Dialog.Content>

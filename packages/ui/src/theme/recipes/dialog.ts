@@ -15,4 +15,11 @@ export const dialogSlotRecipe = defineSlotRecipe({
       overflow: "hidden",
     },
   },
+  variants: {
+    variant: {
+      create: {
+        header: { display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+      },
+    },
+  },
 });

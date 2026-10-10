@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Preserve ticket creation drafts, inherit board filters, add creation without opening, and improve settings and editor spacing.
+Keep ticket drafts and attachments, inherit matching view properties, remember the selected create action, align the modal close button, and keep settings Save controls visible.
