@@ -62,7 +62,7 @@
     "@pstdio/ui": "workspace:^",
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.557.0",
-    "rimless": "0.8.2",
+    "rimless": "0.8.3",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
