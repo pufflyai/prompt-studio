@@ -68,7 +68,7 @@ test("returns to a resource's parent after deleting the open resource", async ({
   expect((await deleteResponse).ok()).toBe(true);
 
   await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
-  await expect(page.locator("[data-workbench-breadcrumb-resource-actions]")).toHaveCount(0);
+  await expect(page.locator("[data-workbench-breadcrumb-resource-actions]")).toHaveAccessibleName("Page actions");
   expect(new URL(page.url()).pathname).toBe(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   await expect(page.getByText("Delete open resource", { exact: true }).filter({ visible: true })).toHaveCount(0);
   await expect

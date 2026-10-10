@@ -83,11 +83,12 @@ export const createSafeFileRoot = (mountRoot: string) => {
     const root = await resolveRoot(true);
     const parent = posix.dirname(relativePath);
     const safeParent = parent === "." ? "" : parent;
-    await ensureDirectory(root, safeParent);
+    const realParent = await ensureDirectory(root, safeParent);
     const operationPath = relativePath ? join(root, ...relativePath.split("/")) : root;
     const existing = await tryResolveExisting(relativePath);
     if (existing) return existing;
-    return { operationPath, realPath: operationPath, relativePath };
+    const realPath = relativePath ? join(realParent, posix.basename(relativePath)) : root;
+    return { operationPath, realPath, relativePath };
   };
 
   return { resolveExisting, resolveForWrite, tryResolveExisting };

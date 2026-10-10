@@ -19,6 +19,10 @@ export const workbenchTopHeaderLeadingMenuPath = headerLeadingMenuPath("nav");
 
 export const workbenchTopHeaderTrailingMenuPath = headerTrailingMenuPath("nav");
 
+// Actions on the current location, such as copying its link. Resource row menus never show them,
+// because a row's location is not the current page.
+export const workbenchBreadcrumbLocationMenuPath = ["workbench", "breadcrumb", "location"] as const satisfies MenuPath;
+
 export const resourceContextMenuPath = (resourceKind: string): MenuPath => [
   "workbench",
   "resource",

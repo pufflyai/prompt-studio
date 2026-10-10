@@ -12,6 +12,7 @@ export {
   type ResolvedPackageAsset,
   readPackageAssetBytes,
   readPackageAssetText,
+  resolveArtifactMountRoot,
   resolvePackageAsset,
   resolvePackageAssetPath,
   WorkspaceFileAccessError,
@@ -20,6 +21,12 @@ export {
   type WorkspaceMountResolvedEntry,
   type WorkspaceMountSearchResult,
 } from "./artifacts";
+
+export {
+  createDirectoryTreeWatcher,
+  type DirectoryTreeWatcher,
+  type WatchDirectory,
+} from "./fs-watch/directory-tree-watcher";
 
 export {
   type BuildEnvironmentInput,

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type WorkspaceCapabilities, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { folderWorkspaceCapabilities } from "pstdio-db";
+import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createCommandEnvironment } from "./index";
 
 let root: string;
@@ -40,7 +41,10 @@ afterEach(async () => {
 
 const environment = (eventId?: string, home = () => workspace) =>
   createCommandEnvironment(
-    { workspaceService: { get: async () => workspace, getDefault: async () => home() } } as never,
+    {
+      artifactMountWrites: createArtifactMountWriteLedger(),
+      workspaceService: { get: async () => workspace, getDefault: async () => home() },
+    } as never,
     [
       { instance: { id: "instance-1" }, installedSource: { extension_id: "example.tools", source_path: root } },
     ] as never,

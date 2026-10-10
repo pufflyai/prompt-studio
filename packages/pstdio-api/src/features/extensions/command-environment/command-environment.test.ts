@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderWorkspaceCapabilities } from "pstdio-db";
+import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
 import { createSessionsApi } from "./sessions";
@@ -425,6 +426,7 @@ describe("createCommandEnvironment", () => {
 
     const env = createCommandEnvironment(
       {
+        artifactMountWrites: createArtifactMountWriteLedger(),
         extensionStorageService: makeStorageService(),
         workspaceService: {
           setInitializing: async () => null,
@@ -451,6 +453,8 @@ describe("createCommandEnvironment", () => {
             relativePath: "reports",
             fullPath: ".pstdio/extension-storage/extension-lab/reports",
             label: "Reports",
+            watch: false,
+            changedEventId: "artifact.changed:pstdio.extension-lab.artifact.reports",
           },
         ],
         extensionId: "pstdio.extension-lab",

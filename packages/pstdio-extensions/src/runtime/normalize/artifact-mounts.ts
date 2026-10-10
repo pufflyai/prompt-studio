@@ -1,4 +1,4 @@
-import type { ArtifactMountContribution } from "@pstdio/sdk/extensions";
+import { type ArtifactMountContribution, artifactChanged } from "@pstdio/sdk/extensions";
 import { ARTIFACT_MOUNT_ROOT } from "../../artifacts/artifact-mount";
 import { normalizeArtifactMountPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeArtifactMount } from "../../types/runtime";
@@ -7,6 +7,7 @@ import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
+import { resolveEventRef } from "./references";
 
 export const registerArtifactMounts = (
   ext: NormalizedExtension,
@@ -53,11 +54,26 @@ export const registerArtifactMounts = (
       continue;
     }
 
+    // A bad flag leaves the mount readable and writable; only the watch is skipped.
+    if (mount.watch !== undefined && typeof mount.watch !== "boolean") {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "invalid_artifact_mount_watch",
+          message: `Artifact mount "${ext.name}.${localId}" watch must be true or false; the mount is not watched`,
+          severity: "warning",
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+        }),
+      );
+    }
+
     const record: RuntimeArtifactMount = {
       ...contributionRecordBase(ext, source, "artifact-mount", localId),
       relativePath,
       fullPath,
       label: mount.label,
+      watch: mount.watch === true,
+      changedEventId: resolveEventRef(ext, artifactChanged({ id: localId })),
     };
     index.mountKeys.set(collisionKey, record);
     runtime.artifactMounts.push(record);

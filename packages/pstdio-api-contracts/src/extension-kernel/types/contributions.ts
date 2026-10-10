@@ -185,9 +185,14 @@ export interface ExtensionSettingsContribution<
 }
 
 export interface ArtifactMountContribution extends ContributionDefinition<"artifact-mount"> {
-  /** Relative path under .pstdio/<extension.name>/. */
+  /** Relative path under .pstdio/extension-storage/<extension.name>/. */
   path: string;
   label: Localizable<string>;
+  /**
+   * Watch this mount in the project's default workspace. The host emits
+   * `artifactChanged(mount)` when a file changes outside the mount API.
+   */
+  watch?: boolean;
 }
 
 export interface TemplateTypeContribution extends ContributionDefinition<"template-type"> {

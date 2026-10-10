@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { RendererEventReference } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
+import { artifactChanged } from "./refs";
 import { createWebviewClient } from "./webview-client";
 
 describe("webview change subscriptions", () => {
@@ -15,6 +16,8 @@ describe("webview change subscriptions", () => {
     ],
     [{ kind: "event", extensionId: "pstdio", id: "command.completed:save" }, "command.completed:save"],
     ["other.notes.event.changed", "other.notes.event.changed"],
+    [artifactChanged({ id: "boards" }), "artifact.changed:acme.notes.artifact.boards"],
+    [artifactChanged({ id: "boards", extensionId: "other.notes" }), "artifact.changed:other.notes.artifact.boards"],
   ] satisfies Array<[RendererEventReference, string]>)("matches %j, resets, and disposes", (event, eventId) => {
     const listeners = new Set<(payload: unknown) => void>();
     const host: GuestHost = {
