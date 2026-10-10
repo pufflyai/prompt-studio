@@ -9,7 +9,7 @@ export type Relation = "selected" | "needed-first" | "waits-on-selected";
 
 export interface ViewSection {
   section: PlanSection;
-  // Only the rows the display settings show.
+  // Only the rows matching the shared ticket filters and search.
   rows: PlanRow[];
   collapsed: boolean;
 }

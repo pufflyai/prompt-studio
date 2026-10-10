@@ -81,11 +81,13 @@ export function useViewSections(plan: Plan | undefined, visibleTicketIds: Readon
       return next;
     });
   const shown = plan?.sections ?? [];
-  const sections = shown.map((section) => ({
-    section,
-    rows: section.rows.filter((row) => visibleTicketIds.has(row.id)),
-    collapsed: collapsed.has(section.deadline?.id ?? "none"),
-  }));
+  const sections = shown
+    .map((section) => ({
+      section,
+      rows: section.rows.filter((row) => visibleTicketIds.has(row.id)),
+      collapsed: collapsed.has(section.deadline?.id ?? "none"),
+    }))
+    .filter(({ section, rows }) => section.rows.length === 0 || rows.length > 0);
   const tracks = buildTracks(plan?.trackProperty, plan?.sections.flatMap(({ rows }) => rows) ?? []);
   return { shown, sections, tracks, toggle };
 }
