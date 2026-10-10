@@ -8,6 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { isSingleSelectTicketTag, ticketTagAttributeId } from "../../data/mappers";
 import type { StoredStatus, StoredTag, StoredTicket } from "../../data/types";
+import type { StoredPlan } from "../../timeline/contracts";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
 
 export interface TicketRef {
@@ -21,6 +22,7 @@ export interface TicketPropertiesInput {
   tags: StoredTag[];
   dependencies: TicketRef[];
   parent: TicketRef | null;
+  plan?: StoredPlan;
 }
 
 // Labels are localized by the host, so the query command emits `l10n()` tokens; the
@@ -138,7 +140,7 @@ const ticketRefParam = (
 // chip, editable status/tag resource dropdowns, and
 // panel-only ticket/review resource chips (which open via href or the host).
 export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
-  const { ticket, statuses, tags, dependencies, parent } = input;
+  const { ticket, statuses, tags, dependencies, parent, plan } = input;
 
   const params: WireParam[] = [
     idParam(ticket),
@@ -146,6 +148,24 @@ export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
     timestampControl("updated", l10n("ticketDetail.updatedAt", "Updated at"), ticket.updatedAt),
     reviewLinksParam(ticket),
     statusParam(ticket, statuses),
+    ...(plan
+      ? [
+          {
+            id: "milestone",
+            name: l10n("ticketProperties.milestone", "Milestone"),
+            type: "resource" as const,
+            editable: true,
+            defaultValue: plan.order.find((entry) => entry.ticketId === ticket.id)?.deadlineId ?? "",
+            emptyText: l10n("ticketProperties.unscheduled", "Unscheduled"),
+            options: plan.deadlines.map((deadline) => ({
+              id: deadline.id,
+              name: deadline.name || deadline.date,
+              icon: "calendar",
+              description: deadline.date,
+            })),
+          },
+        ]
+      : []),
     ...(ticket.archived
       ? [readOnlyControl("archived", l10n("ticketDetail.archived", "Archived"), l10n("ticketDetail.yes", "Yes"))]
       : []),

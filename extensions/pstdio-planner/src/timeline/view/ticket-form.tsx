@@ -8,6 +8,7 @@ import { useState } from "react";
 import { buildTicketAttributes } from "../../data/mappers";
 import { createTicketFormConfig, localizeTicketFormValue } from "../../ticket-create-form";
 import type { Plan } from "../contracts";
+import { timelineTicketProperties } from "../model/ticket-properties";
 import type { PlanClient } from "./use-plan";
 
 export interface CreateContext {
@@ -34,9 +35,13 @@ export function TicketForm(props: TicketFormProps) {
       deadline ? [{ value: deadline.id, label: deadline.name ?? deadline.date, icon: "calendar" }] : [],
     ),
   ];
-  const attributes: AttributeDescriptor[] = buildTicketAttributes(plan.statuses, plan.tags).flatMap((attribute) => {
+  const attributes: AttributeDescriptor[] = [
+    ...buildTicketAttributes(plan.statuses, plan.tags),
+    ...timelineTicketProperties(plan).attributes,
+  ].flatMap((attribute) => {
     const type = attribute.type;
-    if (!attribute.editable || (type.kind !== "enum" && type.kind !== "enum-multi")) return [];
+    if (!attribute.editable || attribute.id === "milestone" || (type.kind !== "enum" && type.kind !== "enum-multi"))
+      return [];
     return [
       {
         ...attribute,
@@ -77,7 +82,7 @@ export function TicketForm(props: TicketFormProps) {
     config.submitLabel = created.pending === "placement" ? "Retry placement" : "Launch review";
   }
   const submit = async (submission: KanbanRendererCreateSubmission) => {
-    const deadline = String(submission.values.deadline ?? context.deadlineId ?? "none");
+    const deadline = String(submission.values.deadline ?? (submission.attributeValues.milestone || "none"));
     if (created) {
       if (created.pending === "placement")
         await client.commands["timeline.plan.move"]({ ticket: created.id, deadline });
@@ -134,7 +139,22 @@ export function TicketForm(props: TicketFormProps) {
       columnId={context.trackId ?? defaultStatusId}
       columnAttributeId={columnAttributeId}
       attributes={created ? [] : attributes}
-      config={created ? { ...config, fields: config.fields.filter((field) => field.id === "deadline") } : config}
+      config={
+        created
+          ? {
+              ...config,
+              fields: [
+                {
+                  id: "deadline",
+                  label: "Milestone",
+                  type: "select",
+                  defaultValue: context.deadlineId ?? "none",
+                  options: milestoneOptions,
+                },
+              ],
+            }
+          : config
+      }
       onClose={() => onDone()}
       onSubmit={submit}
     />

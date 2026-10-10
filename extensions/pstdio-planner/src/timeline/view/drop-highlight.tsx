@@ -19,9 +19,9 @@ export function DropHighlight(props: { region: ReturnType<typeof dropRegion>; wi
         top={`${band.top}px`}
         w={`${width - gutterWidth}px`}
         h={`${band.height}px`}
-        bg="border.accent/3"
+        bg="bg.accent-primary.default/3"
         borderBlockWidth="1px"
-        borderColor="border.accent/20"
+        borderColor="bg.accent-primary.default/20"
       />
       {track ? (
         <>
@@ -32,9 +32,9 @@ export function DropHighlight(props: { region: ReturnType<typeof dropRegion>; wi
             top="0"
             w={`${track.width}px`}
             h={`${height}px`}
-            bg="border.accent/3"
+            bg="bg.accent-primary.default/3"
             borderInlineWidth="1px"
-            borderColor="border.accent/20"
+            borderColor="bg.accent-primary.default/20"
           />
           <Box
             data-drop-cell
@@ -43,9 +43,9 @@ export function DropHighlight(props: { region: ReturnType<typeof dropRegion>; wi
             top={`${band.top}px`}
             w={`${track.width}px`}
             h={`${band.height}px`}
-            bg="border.accent/4"
+            bg="bg.accent-primary.default/4"
             borderWidth="1px"
-            borderColor="border.accent/60"
+            borderColor="bg.accent-primary.default"
           />
         </>
       ) : null}

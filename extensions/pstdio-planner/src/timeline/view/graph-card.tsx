@@ -7,7 +7,7 @@ import type { PlanRow } from "../contracts";
 import { card } from "./graph-geometry";
 import { graphLayers } from "./graph-layers";
 import type { Relation } from "./plan-view";
-import { StatusIcon } from "./status-icon";
+import { ReviewStatusIcon, StatusIcon } from "./status-icon";
 
 interface GraphCardProps {
   row: PlanRow;
@@ -45,7 +45,7 @@ export function GraphCard(props: GraphCardProps) {
       w={`${card.width}px`}
       zIndex={relation ? graphLayers.hierarchyNode : graphLayers.node}
       outline={dropBefore ? "1px solid" : "none"}
-      outlineColor="border.accent/60"
+      outlineColor="bg.accent-primary.default"
       outlineOffset="3px"
       opacity={opacity}
       title={`${row.shorthand} ${row.title}`}
@@ -64,7 +64,11 @@ export function GraphCard(props: GraphCardProps) {
         eyebrow={[...row.ancestors, row].map(({ shorthand }) => shorthand).join("/")}
         title={row.title}
         isSelected={relation === "selected"}
-        customSlots={[<StatusIcon key="status" row={row} />, row.gate ? <GateMark key="gate" /> : null]}
+        customSlots={[
+          <StatusIcon key="status" row={row} />,
+          <ReviewStatusIcon key="review" row={row} />,
+          row.gate ? <GateMark key="gate" /> : null,
+        ]}
         onClick={() => actions.onSelect(row.id)}
         draggable
         onDragStart={(event) => {

@@ -90,7 +90,7 @@ const row: PlanRow = {
   id: "ticket",
   shorthand: "PS-32",
   title: "Ship the preview",
-  status: "In Review",
+  status: { id: "in-review", name: "In Review", icon: "eye", color: "orange" },
   state: "await-input",
   done: false,
   trackId: null,

@@ -50,7 +50,7 @@ const Bubble = ({ y, color, ghost }: { y: number; color: string; ghost?: boolean
     borderRadius="full"
     borderWidth="2px"
     borderStyle={ghost ? "dashed" : "solid"}
-    borderColor={ghost ? "fg.muted" : "bg"}
+    borderColor={ghost ? "bg.accent-primary.default" : "bg"}
     bg={ghost ? "bg" : color}
     pointerEvents="none"
   />
@@ -116,7 +116,7 @@ export function GraphTimeline(props: Props) {
           data-canvas-control
           aria-label={`Create milestone on ${ghost.date}`}
           position="absolute"
-          zIndex={graphLayers.milestone}
+          zIndex={graphLayers.milestonePreview}
           left={`${contentLeft}px`}
           right={`${padding / 2}px`}
           top={`${ghost.y - headerHeight / 2}px`}
@@ -126,10 +126,9 @@ export function GraphTimeline(props: Props) {
           px="sm"
           borderWidth="1px"
           borderStyle="dashed"
-          borderColor="fg.muted"
+          borderColor="bg.accent-primary.default"
           borderRadius="md"
           bg="bg"
-          opacity="0.8"
           color="fg.muted"
           cursor="pointer"
           onMouseLeave={leave}

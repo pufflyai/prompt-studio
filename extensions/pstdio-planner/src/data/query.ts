@@ -5,6 +5,10 @@ import type {
   KanbanRendererQueryResult,
 } from "@pstdio/sdk/extensions";
 import { ticketStatuses } from "../ticket-status-provider";
+import { readStoredPlan } from "../timeline/commands/plan-store";
+import { buildPlan } from "../timeline/model/build-plan";
+import { resolvePlan } from "../timeline/model/resolve-plan";
+import { timelineTicketProperties } from "../timeline/model/ticket-properties";
 import { sortedBySortOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
@@ -17,6 +21,7 @@ import {
   TICKET_ARCHIVE_STATE_ARCHIVED,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
+import { readTicketReviewRequests } from "./review-request-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
@@ -38,11 +43,24 @@ export const runTicketsQuery = async ({
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
-  const [tickets, tags, statuses] = await Promise.all([
+  const [tickets, tags, statuses, storedPlan, requests] = await Promise.all([
     ticketsCollection(storage).list(),
     seedDefaultTags(storage),
     seedDefaultStatuses(storage),
+    readStoredPlan(storage),
+    readTicketReviewRequests(storage),
   ]);
+  const activeTickets = sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
+  const timeline = timelineTicketProperties(
+    buildPlan({
+      tickets: activeTickets,
+      tags,
+      statuses,
+      requests,
+      plan: resolvePlan(storedPlan, activeTickets, statuses),
+      today: new Intl.DateTimeFormat("en-CA").format(new Date()),
+    }),
+  );
 
   const toTicketRow = createTicketRowMapper(
     projectId,
@@ -60,11 +78,25 @@ export const runTicketsQuery = async ({
     tickets.filter((ticket) =>
       requestedArchiveStates.has(ticket.archived ? TICKET_ARCHIVE_STATE_ARCHIVED : TICKET_ARCHIVE_STATE_ACTIVE),
     ),
-  ).map(toTicketRow);
+  ).map((ticket) => {
+    const row = toTicketRow(ticket);
+    return {
+      ...row,
+      attributes: {
+        ...row.attributes,
+        ...(timeline.values.get(ticket.id) ?? {
+          milestone: "",
+          milestoneDate: null,
+          milestoneState: "unscheduled",
+          needsAttention: "no",
+        }),
+      },
+    };
+  });
 
   return {
     rows,
-    attributes: buildTicketAttributes(ticketStatuses.ref, tags),
+    attributes: [...buildTicketAttributes(ticketStatuses.ref, tags), ...timeline.attributes],
     boardColumnConfigs: Object.fromEntries(statuses.map((status) => [status.id, statusToColumnConfig(status)])),
   };
 };

@@ -4,7 +4,6 @@ import {
   DEFAULT_KANBAN_RENDERER_SETTINGS,
   type KanbanRendererRow,
 } from "@pstdio/ui/kanban-renderer";
-import { buildTicketAttributes } from "../../data/mappers";
 import { localizeTicketFormValue } from "../../ticket-create-form";
 import type { PlanClient } from "./use-plan";
 
@@ -18,7 +17,7 @@ export function timelineQueryData(
   plan: Awaited<ReturnType<PlanClient["commands"]["timeline.plan.read"]>>,
   t: (key: string, fallback?: string) => string,
 ) {
-  const attributes = buildTicketAttributes(plan.statuses, plan.tags).flatMap<AttributeDescriptor>((attribute) => {
+  const attributes = plan.ticketAttributes.flatMap<AttributeDescriptor>((attribute) => {
     const type = attribute.type;
     if (type.kind === "status") return [];
     if (type.kind === "enum" || type.kind === "enum-multi") {

@@ -25,7 +25,7 @@ export interface PlanInput {
 
 interface PlanIndex {
   tickets: Map<string, PlannerTicket>;
-  statuses: Map<string, string>;
+  statuses: Map<string, PlannerStatus>;
   steps: Map<string, number>;
   dependents: Map<string, PlannerTicket[]>;
   today: string;
@@ -34,7 +34,7 @@ interface PlanIndex {
   gates: Set<string>;
 }
 
-const statusName = (ticket: PlannerTicket, index: PlanIndex) => index.statuses.get(ticket.statusId ?? "");
+const statusName = (ticket: PlannerTicket, index: PlanIndex) => index.statuses.get(ticket.statusId ?? "")?.name;
 const isDone = (ticket: PlannerTicket, index: PlanIndex) => workflowName(statusName(ticket, index)) === "done";
 
 const link = (ticket: PlannerTicket, index: PlanIndex) => ({
@@ -65,7 +65,7 @@ function indexInput(input: PlanInput, groups: ReturnType<typeof executionOrder>)
 
   return {
     tickets: new Map(input.tickets.map((ticket) => [ticket.id, ticket])),
-    statuses: new Map(input.statuses.map((status) => [status.id, status.name])),
+    statuses: new Map(input.statuses.map((status) => [status.id, status])),
     steps: new Map(groups.flatMap(({ ticketIds }) => ticketIds).map((id, position) => [id, position + 1])),
     dependents,
     today: input.today,
@@ -159,7 +159,7 @@ function toRow(ticket: PlannerTicket, deadline: Deadline | undefined, index: Pla
     requests,
     requestErrors: errors,
     instructions: ticket.content ?? "",
-    status: (ticket.statusId && index.statuses.get(ticket.statusId)) || "No status",
+    status: index.statuses.get(ticket.statusId ?? "") ?? null,
     done: isDone(ticket, index),
     step,
     ancestors: ancestors(ticket, index),

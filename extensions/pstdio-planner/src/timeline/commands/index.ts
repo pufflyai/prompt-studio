@@ -3,7 +3,6 @@
 import { readClaimsCommand, releaseClaimCommand } from "./claim-commands";
 import { createTicketCommand } from "./create-ticket";
 import { createDeadlineCommand, deleteDeadlineCommand, updateDeadlineCommand } from "./deadline-commands";
-import { readDisplayCommand, saveDisplayCommand } from "./display-commands";
 import { createGateCommand } from "./gate-commands";
 import { launchGateCommand } from "./launch-gate";
 import { moveTicketCommand } from "./move-ticket";
@@ -36,6 +35,4 @@ export const commands = {
   "timeline.deadline.create": createDeadlineCommand,
   "timeline.deadline.update": updateDeadlineCommand,
   "timeline.deadline.delete": deleteDeadlineCommand,
-  "timeline.display.read": readDisplayCommand,
-  "timeline.display.save": saveDisplayCommand,
 };

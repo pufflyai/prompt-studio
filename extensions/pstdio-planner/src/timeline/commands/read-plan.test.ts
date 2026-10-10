@@ -36,7 +36,11 @@ test("uses Planner's configured status identities for progress, completion, and 
     ]),
   );
   const rows = plan.sections.flatMap((section) => section.rows);
-  expect(rows.find((row) => row.id === completed.id)).toMatchObject({ done: true, state: "done", status: "Done" });
+  expect(rows.find((row) => row.id === completed.id)).toMatchObject({
+    done: true,
+    state: "done",
+    status: { name: "Done" },
+  });
   expect(rows.find((row) => row.id === progress.id)).toMatchObject({
     state: "in-progress",
     dependsOn: [{ id: completed.id, done: true }],
@@ -45,7 +49,19 @@ test("uses Planner's configured status identities for progress, completion, and 
     state: "blocked",
     flags: expect.arrayContaining(["blocked"]),
   });
-  expect(rows.find((row) => row.id === wip.id)).toMatchObject({ state: "in-progress", status: "WIP" });
+  expect(rows.find((row) => row.id === wip.id)).toMatchObject({ state: "in-progress", status: { name: "WIP" } });
+});
+
+test("preserves the configured status presentation independently of review state", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const status = { ...DEFAULT_STATUSES[0]!, id: "custom-backlog", name: "Queued", icon: "flag", color: "purple" };
+  await statusesCollection(storage).put(status.id, status);
+  const ticket = await createTicketCommand.run(ctx, { content: "# Custom workflow status", statusId: status.id });
+  const row = (await readPlanCommand.run(ctx, {})).sections
+    .flatMap((section) => section.rows)
+    .find((row) => row.id === ticket.id);
+  expect(row?.status).toMatchObject({ id: status.id, name: "Queued", icon: "flag", color: "purple" });
 });
 
 test("waiting for prerequisites is distinct from a blocker on otherwise available work", async () => {

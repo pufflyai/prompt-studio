@@ -2,14 +2,12 @@ import type { CollectionViewsSource } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { defaultDisplay } from "../model/display";
 import { PlanHeader } from "./plan-header";
 import { timelineInitialState } from "./timeline-query";
 
 function HeaderStory(props: { filtered?: boolean }) {
   const { filtered } = props;
   const [search, setSearch] = useState("");
-  const [display, setDisplay] = useState(defaultDisplay);
   const [views, setViews] = useState<CollectionViewsSource<KanbanRendererSettings>["views"]>([
     { id: "all", title: "All", ...timelineInitialState, builtIn: true },
     {
@@ -62,8 +60,6 @@ function HeaderStory(props: { filtered?: boolean }) {
         storageKey: `timeline-header-story:${filtered ? "filtered" : "all"}`,
       }}
       viewsSource={source}
-      display={display}
-      onDisplayChange={(change) => setDisplay((current) => ({ ...current, ...change }))}
       search={search}
       onSearchChange={setSearch}
       resultLabel="2 of 2"

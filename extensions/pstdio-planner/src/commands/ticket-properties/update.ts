@@ -1,9 +1,8 @@
 import { defineCommand, type ExtensionContextBase, params, type ResourceRef } from "@pstdio/sdk/extensions";
-import { plannerTicketsChanged } from "../../events";
-import { applyTicketAttribute } from "../set-ticket-attribute";
+import { setTicketAttribute } from "../set-ticket-attribute";
 
 export const updateTicketProperty = async (
-  ctx: Pick<ExtensionContextBase, "events" | "storage">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events">,
   resource: ResourceRef | undefined,
   input: { controlId: string; value?: unknown },
 ) => {
@@ -15,14 +14,11 @@ export const updateTicketProperty = async (
       ? input.value
       : undefined;
 
-  const ticket = await applyTicketAttribute({
-    storage: ctx.storage,
+  return setTicketAttribute(ctx, {
     rowId,
     attributeId: input.controlId,
     value,
   });
-  if (ticket) await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
-  return ticket;
 };
 
 // Persists an edit from the ticket properties panel. The control id doubles as the

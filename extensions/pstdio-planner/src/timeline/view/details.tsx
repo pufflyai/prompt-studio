@@ -9,7 +9,7 @@ import { GatePanel } from "./gate-panel";
 import { InstructionLinks } from "./instruction-navigation";
 import { RequestsPanel } from "./requests-panel";
 import { type Review, ReviewBar } from "./review-bar";
-import { StatusIcon } from "./status-icon";
+import { ReviewStatusIcon, StatusIcon } from "./status-icon";
 import type { PlanClient } from "./use-plan";
 
 interface DetailsProps {
@@ -57,6 +57,7 @@ export function Details(props: DetailsProps) {
             <Stack gap="xs" flex="1" minW="0">
               <Flex align="center" gap="xs">
                 <StatusIcon row={row} />
+                <ReviewStatusIcon row={row} />
                 <Text textStyle="label/S/medium" color="fg.muted">
                   {[...row.ancestors, row].map(({ shorthand }) => shorthand).join("/")}
                 </Text>

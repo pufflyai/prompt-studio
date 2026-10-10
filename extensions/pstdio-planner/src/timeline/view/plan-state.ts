@@ -1,7 +1,6 @@
 // Keep transient selection, collapsing, and drag operations outside the composed page.
 import { useEffect, useState } from "react";
-import type { DisplaySettings, Plan, PlanRow } from "../contracts";
-import { filterRows, visibleSections } from "../model/filter";
+import type { Plan, PlanRow } from "../contracts";
 import { buildTracks } from "../model/tracks";
 import type { DropTarget } from "./drag";
 import type { Relation } from "./plan-view";
@@ -70,11 +69,7 @@ export function useDragAndDrop(client: PlanClient, onError: (error: string) => v
   return { dragId, dropTarget: dragId ? dropTarget : undefined, setDragId, setDropTarget, drop };
 }
 
-export function useViewSections(
-  plan: Plan | undefined,
-  display: DisplaySettings,
-  visibleTicketIds: ReadonlySet<string>,
-) {
+export function useViewSections(plan: Plan | undefined, visibleTicketIds: ReadonlySet<string>) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const toggle = (id: string | null) =>
     setCollapsed((current) => {
@@ -85,10 +80,10 @@ export function useViewSections(
       }
       return next;
     });
-  const shown = plan ? visibleSections(plan.sections, display) : [];
+  const shown = plan?.sections ?? [];
   const sections = shown.map((section) => ({
     section,
-    rows: filterRows(section.rows, display).filter((row) => visibleTicketIds.has(row.id)),
+    rows: section.rows.filter((row) => visibleTicketIds.has(row.id)),
     collapsed: collapsed.has(section.deadline?.id ?? "none"),
   }));
   const tracks = buildTracks(plan?.trackProperty, plan?.sections.flatMap(({ rows }) => rows) ?? []);

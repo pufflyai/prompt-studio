@@ -30,6 +30,7 @@ import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
 import { ticketStatuses } from "./ticket-status-provider";
+import { planChanged } from "./timeline/contracts";
 
 export { ticketResourceKind } from "./resource-kinds";
 
@@ -88,7 +89,12 @@ export const createPlannerUi = (baseUrl: string) => {
       kind: "kanban",
       attributes: buildTicketAttributes(ticketStatuses.ref),
       query: queryTickets,
-      refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
+      refreshEvents: [
+        plannerTicketsChanged,
+        planChanged,
+        viewDataEvents.sessionsChanged,
+        viewDataEvents.workspacesChanged,
+      ],
       onRowActivate: (ctx, { row }) => {
         if (row.resource) ctx.navigation.open(ticketPageTarget(row.resource));
       },
@@ -149,7 +155,7 @@ export const createPlannerUi = (baseUrl: string) => {
       kind: "controls",
       query: (ctx, input) => queryTicketProperties(ctx, input.renderer.resource),
       onValueChange: (ctx, input) => updateTicketProperty(ctx, input.renderer.resource, input),
-      refreshEvents: [plannerTicketsChanged],
+      refreshEvents: [plannerTicketsChanged, planChanged],
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   });

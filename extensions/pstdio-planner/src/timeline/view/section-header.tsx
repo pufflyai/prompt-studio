@@ -67,7 +67,9 @@ export function SectionHeader(props: Props) {
   const label = deadline ? (deadline.name ?? formatDay(deadline.date)) : "Unscheduled";
   return (
     <Flex align="center" gap="xs" h="full" minW="0" pr="sm" bg="bg" position="relative" isolation="isolate">
-      {targeted ? <Box position="absolute" inset="0" bg="border.accent/6" zIndex="-1" pointerEvents="none" /> : null}
+      {targeted ? (
+        <Box position="absolute" inset="0" bg="bg.accent-primary.default/6" zIndex="-1" pointerEvents="none" />
+      ) : null}
       <Tooltip content={`${entry.collapsed ? "Expand" : "Collapse"} ${label}`}>
         <IconButton
           size="2xs"
@@ -113,7 +115,7 @@ export function SectionHeader(props: Props) {
           </Box>
         </Tooltip>
       ) : null}
-      <Box flex="1" minW="16px" h="1px" bg={targeted ? "border.accent/60" : "border"} mx="xs" />
+      <Box flex="1" minW="16px" h="1px" bg={targeted ? "bg.accent-primary.default" : "border"} mx="xs" />
       <Progress entry={entry} />
       {deadline ? <DeleteButton deadlineId={deadline.id} label={label} onDelete={onDelete} /> : null}
     </Flex>

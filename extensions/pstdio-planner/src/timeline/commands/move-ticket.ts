@@ -1,9 +1,27 @@
 // Move a ticket in the execution order, into another deadline, or both.
 
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
 import { moveTicket } from "../model/edit-plan";
 import { deadlineOrNone, findTicket, loadPlan, savePlan } from "./plan-store";
 import { withWriteGuard } from "./write-guard";
+export const moveTicketInPlan = async (
+  ctx: Pick<ExtensionContextBase, "storage" | "events">,
+  input: { ticket: string; deadline?: string; before?: string },
+) => {
+  const { ticket: ticketKey, deadline, before } = input;
+  return withWriteGuard(ctx, "plan", async () => {
+    const { tickets, plan } = await loadPlan(ctx);
+    const ticket = findTicket(tickets, ticketKey);
+    const current = plan.order.find(({ ticketId }) => ticketId === ticket.id)?.deadlineId ?? null;
+    const moved = moveTicket(plan, {
+      ticketId: ticket.id,
+      deadlineId: deadline === undefined ? current : deadlineOrNone(plan, deadline),
+      ...(before ? { beforeId: findTicket(tickets, before).id } : {}),
+    });
+    await savePlan(ctx, moved, "move");
+    return moved.order.find(({ ticketId }) => ticketId === ticket.id);
+  });
+};
 
 export const moveTicketCommand = defineCommand({
   id: "timeline.plan.move",
@@ -25,18 +43,5 @@ export const moveTicketCommand = defineCommand({
     }),
     before: params.text({ label: "Before", description: "Place the ticket before this ticket. Omit to add it last." }),
   },
-  async run(ctx, { ticket: ticketKey, deadline, before }) {
-    return withWriteGuard(ctx, "plan", async () => {
-      const { tickets, plan } = await loadPlan(ctx);
-      const ticket = findTicket(tickets, ticketKey);
-      const current = plan.order.find(({ ticketId }) => ticketId === ticket.id)?.deadlineId ?? null;
-      const moved = moveTicket(plan, {
-        ticketId: ticket.id,
-        deadlineId: deadline === undefined ? current : deadlineOrNone(plan, deadline),
-        ...(before ? { beforeId: findTicket(tickets, before).id } : {}),
-      });
-      await savePlan(ctx, moved, "move");
-      return moved.order.find(({ ticketId }) => ticketId === ticket.id);
-    });
-  },
+  run: moveTicketInPlan,
 });

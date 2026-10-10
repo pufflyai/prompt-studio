@@ -2,6 +2,7 @@ import { defineCommand, type ExtensionContextBase, type ExtensionStorageApi, par
 import { tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
 import { plannerTicketsChanged } from "../events";
+import { moveTicketInPlan } from "../timeline/commands/move-ticket";
 
 const selectedTagOptionIds = (value: string | string[] | undefined, tagOptionIds: Set<string>) => {
   if (Array.isArray(value)) return value.filter((id) => tagOptionIds.has(id));
@@ -49,9 +50,16 @@ export const applyTicketAttribute = async (input: {
 };
 
 export const setTicketAttribute = async (
-  ctx: Pick<ExtensionContextBase, "events" | "storage">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events">,
   input: { rowId: string; attributeId: string; value?: unknown },
 ) => {
+  if (input.attributeId === "milestone") {
+    await moveTicketInPlan(ctx, {
+      ticket: input.rowId,
+      deadline: typeof input.value === "string" && input.value ? input.value : "none",
+    });
+    return ticketsCollection(ctx.storage).get(input.rowId);
+  }
   const value =
     typeof input.value === "string" ||
     (Array.isArray(input.value) && input.value.every((item) => typeof item === "string"))

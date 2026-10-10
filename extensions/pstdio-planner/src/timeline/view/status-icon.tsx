@@ -1,28 +1,13 @@
-// Render exactly one accessible state icon with its source workflow and prerequisite tooltip.
 import { Box, Icon } from "@chakra-ui/react";
-import { Tooltip } from "@pstdio/ui";
-import { Ban, CheckCircle2, Circle, LoaderCircle, UserCheck, UserRound } from "lucide-react";
+import { getIconComponent, Tooltip } from "@pstdio/ui";
+import { UserCheck, UserRound } from "lucide-react";
 import type { PlanRow } from "../contracts";
-
-const states = {
-  "await-input": { label: "Await input", icon: UserRound, color: "orange.fg" },
-  "input-received": { label: "Input received", icon: UserCheck, color: "green.fg" },
-  done: { label: "Done", icon: CheckCircle2, color: "green.fg" },
-  "not-started": { label: "Not started", icon: Circle, color: "fg.muted" },
-  "in-progress": { label: "In progress", icon: LoaderCircle, color: "blue.fg" },
-  blocked: { label: "Blocked", icon: Ban, color: "red.fg" },
-};
 
 export function StatusIcon(props: { row: PlanRow }) {
   const { row } = props;
-  const state = states[row.state];
+  const label = row.status?.name ?? "No status";
   const prerequisites = row.dependsOn.filter(({ done }) => !done).map(({ shorthand }) => shorthand);
-  const tooltip = [
-    state.label,
-    row.status !== state.label ? `Planner: ${row.status}` : "",
-    prerequisites.length ? `Needs ${prerequisites.join(", ")}` : "",
-    row.blockedReason ?? "",
-  ]
+  const tooltip = [label, prerequisites.length ? `Needs ${prerequisites.join(", ")}` : "", row.blockedReason ?? ""]
     .filter(Boolean)
     .join(" · ");
   return (
@@ -30,13 +15,39 @@ export function StatusIcon(props: { row: PlanRow }) {
       <Box
         as="span"
         role="img"
-        aria-label={state.label}
+        aria-label={label}
         tabIndex={0}
-        color={state.color}
+        color={row.status?.color ? `${row.status.color}.fg` : "fg.muted"}
         display="inline-flex"
         flexShrink="0"
       >
-        <Icon as={state.icon} boxSize="16px" />
+        <Icon as={getIconComponent(row.status?.icon ?? "circle")} boxSize="4" />
+      </Box>
+    </Tooltip>
+  );
+}
+
+export function ReviewStatusIcon(props: { row: PlanRow }) {
+  const { row } = props;
+  const pending =
+    row.requestErrors.length > 0 ||
+    row.requests.some((request) => request.state === "open") ||
+    row.flags.includes("human-needed");
+  const answered = row.requests.some((request) => request.state === "answered");
+  if (!pending && !answered) return null;
+  const label = pending ? "Review requested" : "Review answered";
+  return (
+    <Tooltip content={label}>
+      <Box
+        as="span"
+        role="img"
+        aria-label={label}
+        tabIndex={0}
+        color={pending ? "orange.fg" : "green.fg"}
+        display="inline-flex"
+        flexShrink="0"
+      >
+        <Icon as={pending ? UserRound : UserCheck} boxSize="4" />
       </Box>
     </Tooltip>
   );

@@ -8,4 +8,5 @@ export const graphLayers = {
   gutter: 8,
   date: 9,
   tracks: 10,
+  milestonePreview: 11,
 };

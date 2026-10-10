@@ -10,11 +10,6 @@ export const planChanged = eventRef<{ reason: string }>({
   id: "timeline.plan.changed",
 });
 
-export const displayChanged = eventRef<{ reason: string }>({
-  extensionId: "pstdio.pstdio-planner",
-  id: "timeline.display.changed",
-});
-
 export interface Deadline {
   id: string;
   date: string;
@@ -45,7 +40,7 @@ export interface PlanRow {
   id: string;
   shorthand: string;
   title: string;
-  status: string;
+  status: Pick<StoredStatus, "id" | "name" | "icon" | "color"> | null;
   state: TicketState;
   trackId: string | null;
   requests: ReviewRequestView[];
@@ -88,12 +83,4 @@ export interface Plan {
   sections: PlanSection[];
   tags: PlanTag[];
   trackProperty?: PlanTag;
-}
-
-// How the timeline is shown. It is saved for the project so the view opens the way it was left.
-export interface DisplaySettings {
-  showDone: boolean;
-  showCompletedPastDeadlines: boolean;
-  attentionOnly: boolean;
-  squareArrows: boolean;
 }

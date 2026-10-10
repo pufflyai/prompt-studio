@@ -17,7 +17,6 @@ import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
-import { useDisplay } from "./use-display";
 import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
 import { useTimelineViews } from "./use-timeline-views";
@@ -51,13 +50,12 @@ interface PlanContentProps extends PlanRootProps {
 
 function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource, error } = props;
-  const { display, update, error: displayError } = useDisplay(client);
   const [search, setSearch] = useState("");
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
   const matching = searchRows(filtered, search, (row) => [row.title, String(row.attributes.id)]);
-  const { sections, tracks, toggle } = useViewSections(plan, display, new Set(matching.map(({ id }) => id)));
+  const { sections, tracks, toggle } = useViewSections(plan, new Set(matching.map(({ id }) => id)));
   const {
     viewProps,
     selected,
@@ -76,20 +74,18 @@ function PlanContent(props: PlanContentProps) {
       <PlanHeader
         data={queryData}
         viewsSource={viewsSource}
-        display={display}
-        onDisplayChange={update}
         search={search}
         onSearchChange={setSearch}
         resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${filtered.length}`}
       />
-      {[error, displayError, actionError].filter(Boolean).map((message) => (
+      {[error, actionError].filter(Boolean).map((message) => (
         <Text key={message} role="alert" color="fg.error" px="md" pt="sm" flexShrink="0">
           {message}
         </Text>
       ))}
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
-          <PlanGraph {...viewProps} today={plan.today} squareArrows={display.squareArrows} />
+          <PlanGraph {...viewProps} today={plan.today} squareArrows />
         </Box>
         {selected ? (
           <Details

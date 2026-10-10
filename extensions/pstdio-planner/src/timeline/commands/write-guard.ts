@@ -1,5 +1,5 @@
 // Use atomic owner claims to prevent overlapping timeline writes across callers.
-import type { CommandContext } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 
 export interface WriteClaim {
   key: string;
@@ -7,7 +7,11 @@ export interface WriteClaim {
   startedAt: string;
 }
 
-export async function withWriteGuard<T>(ctx: CommandContext, key: string, write: () => Promise<T>) {
+export async function withWriteGuard<T>(
+  ctx: Pick<ExtensionContextBase, "storage">,
+  key: string,
+  write: () => Promise<T>,
+) {
   const claims = ctx.storage.collection<WriteClaim>("timeline.write-claims");
   const claim = { key, token: crypto.randomUUID(), startedAt: new Date().toISOString() };
   if (!(await claims.createIfAbsent(key, claim))) {
