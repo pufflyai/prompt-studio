@@ -20,7 +20,7 @@ Do not edit versions by hand. Add new released workspace packages to the fixed g
 
 `.github/workflows/release-packages.yml` runs on `main` with Bun from the root `packageManager` field and Node 24. It validates and builds the monorepo, compiles platform binaries, verifies packaged output and generates checksums.
 
-Before publishing a host version that is not yet on npm, the workflow verifies the compiled CLI on native Linux, Intel macOS and Windows runners. Other commits skip these native release checks.
+Before publishing a host version that is not yet on npm, the workflow verifies the compiled CLI on native Linux, Intel macOS and Windows runners with `verify-packaged-toolchain.yml`. Other commits skip these native release checks. The build, compile, verify and checksum steps live in the `build-release` action so a rehearsal runs the same steps.
 
 The workflow publishes generated `@pstdio/cli-*` platform packages at the host version. `changesets/action` then either opens the version PR or runs `changeset publish`. npm receives pstdio, SDK, UI and workbench at the shared version, including packages with no code changes.
 
@@ -33,6 +33,17 @@ Publishing creates local npm package tags, but CI pushes only `pstdio@<version>`
 - CLI binaries, checksums and `install.sh`.
 
 The desktop workflow builds, signs and verifies native artifacts, attaches them to that draft and publishes it only after its checks pass. Desktop assets and updater URLs retain the `pstdio@` prefix. Core extension catalog entries use `{hostRelease}` to install from that same tag. No separate extension tags, tarballs or GitHub releases are produced.
+
+## Release readiness
+
+Rehearse a release before merging the version PR. Start the `Release readiness` workflow from `main` and keep its `ref` input at `changeset-release/main`. Windows signing trusts only runs started from `main` or a release tag.
+
+The rehearsal publishes nothing. It runs:
+
+- `scripts/release/check-npm-publishing.ts`. It fails when the pstdio version is already on npm or a public workspace package does not exist on npm. Trusted publishing cannot create a package, so publish its first version by hand or make it private.
+- The native packaged CLI checks on Linux, Intel macOS and Windows.
+- The release job's build steps, `npm publish --dry-run` for each package that would publish, and the release notes.
+- The desktop workflow with `source_ref`. It builds, signs, notarizes and tests every desktop target from the branch and skips publishing. Packaged apps install default extensions from the branch because the release tag does not exist yet.
 
 ## Validation
 
@@ -50,6 +61,6 @@ After PS-410 merges, inventory the obsolete extension and private-package tags a
 | --- | --- |
 | No version PR | Confirm pending changesets reached main. |
 | Version validation fails | Add the named released package to the fixed group or ignore a private helper. |
-| Publish fails | Check registry trust, package metadata and build output. |
+| Publish fails | Check registry trust, package metadata and build output. Run the release readiness workflow first. |
 | Notes generation fails | Check that every existing changelog includes the release version. |
 | Desktop release stays draft | Check native credentials, signatures, launch validation, checksums and version agreement. |

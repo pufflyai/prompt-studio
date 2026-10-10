@@ -48,7 +48,7 @@ export const KeepDraftAfterQueuedEdit: StoryObj<typeof meta> = {
     await userEvent.click(editor());
     await userEvent.keyboard("Half-written note");
     await waitFor(() => expect(canvas.getByText("Stored draft: Half-written note")).toBeVisible());
-    await userEvent.click(canvas.getByRole("button", { name: "Edit queued follow-up" }));
+    await userEvent.click(canvas.getByRole("button", { name: /^Edit queued message:/ }));
     await waitFor(() => expect(editor()).toHaveTextContent("Run the validation suite next."));
     await userEvent.click(editor());
     await userEvent.keyboard(" Then summarize.{Enter}");
@@ -64,7 +64,7 @@ export const KeepMatchingDraftAfterQueuedEdit: StoryObj<typeof meta> = {
     const editor = () => canvas.getAllByTestId("content-editable").at(-1)!;
     await userEvent.click(editor());
     await userEvent.keyboard("Run the validation suite next.");
-    await userEvent.click(canvas.getByRole("button", { name: "Edit queued follow-up" }));
+    await userEvent.click(canvas.getByRole("button", { name: /^Edit queued message:/ }));
     await userEvent.click(editor());
     await userEvent.keyboard(" Then summarize.{Enter}");
     await waitFor(() => expect(canvas.getByText("Run the validation suite next. Then summarize.")).toBeVisible());

@@ -37,42 +37,9 @@ jobs:
   verify_packaged_bun_toolchain:
     needs: plan
     if: needs.plan.outputs.pstdio_release == 'true'
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform_pkg: cli-linux-x64
-          - os: macos-15-intel
-            platform_pkg: cli-darwin-x64
-          - os: windows-latest
-            platform_pkg: cli-win-x64
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
-      - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
-
-      - name: Install Chromium for packaged extension smoke tests
-        if: runner.os != 'Windows'
-        run: bunx playwright@1.60.0 install chromium --with-deps
-
-      - name: Verify packaged Bun toolchain
-        env:
-          PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
-        run: bun run --cwd scripts verify:packages
+    uses: ./.github/workflows/verify-packaged-toolchain.yml
+    with:
+      ref: ${{ github.sha }}
 
   release:
     # Every main commit keeps the version PR current. A skipped native check means
@@ -114,29 +81,8 @@ jobs:
           node -v
           npm -v
 
-      - name: Install dependencies
-        run: node scripts/ci/install-native-dependencies.ts
-
-      - name: Validate changesets
-        run: bun run validate:changesets
-
-      - name: Build monorepo
-        run: bun run build
-
-      - name: Compile platform binaries
-        run: bun run --cwd scripts build:all
-
-      - name: Scaffold platform packages
-        run: bun run --cwd scripts release:platforms:scaffold
-
-      - name: Install Chromium for packaged extension smoke tests
-        run: bunx playwright@1.60.0 install chromium --with-deps
-
-      - name: Verify binaries
-        run: bun run --cwd scripts verify:packages
-
-      - name: Generate checksums
-        run: bun run --cwd scripts release:checksums
+      - name: Build release artifacts
+        uses: ./.github/actions/build-release
 
       - name: Publish platform packages
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'

@@ -200,7 +200,7 @@ export const ListRowContent = (props: {
         variant={variant}
       />
       {item.endContent ? (
-        <Box id={`${labelId}-end`} flexShrink={0} color="fg.muted" display="flex" alignItems="center">
+        <Box id={`${labelId}-end`} color="fg.muted" flexShrink={0} display="flex" alignItems="center">
           {item.endContent}
         </Box>
       ) : null}

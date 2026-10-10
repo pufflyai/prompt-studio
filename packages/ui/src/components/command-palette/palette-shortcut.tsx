@@ -1,6 +1,9 @@
-import { Kbd } from "@chakra-ui/react";
+import { chakra, Kbd } from "@chakra-ui/react";
 import { ArrowLeft, ArrowRight, Command, type LucideIcon, Option } from "lucide-react";
 import { Fragment } from "react";
+import { shortcutKeysRecipe } from "../../theme/recipes/shortcut-keys";
+
+const ShortcutKeys = chakra("span", shortcutKeysRecipe);
 
 export type PaletteShortcutBinding = string | string[];
 type ShortcutPlatform = "linux" | "mac" | "win";
@@ -69,21 +72,13 @@ export const PaletteShortcut = (props: { binding: PaletteShortcutBinding }) => {
     <>
       {steps.map((step, stepIndex) => (
         <Fragment key={`${step.map((part) => part.label).join("+")}-${stepIndex}`}>
-          {step.map((part, partIndex) => (
-            <Fragment key={`${part.label}-${partIndex}`}>
-              <Kbd
-                fontSize="xs"
-                borderRadius="0"
-                display="inline-flex"
-                alignItems="center"
-                justifyContent="center"
-                aria-label={part.label}
-              >
+          <ShortcutKeys>
+            {step.map((part, partIndex) => (
+              <Kbd key={`${part.label}-${partIndex}`} aria-label={part.label}>
                 {part.Icon ? <part.Icon size={12} aria-hidden="true" /> : part.label}
               </Kbd>
-              {partIndex < step.length - 1 ? " " : null}
-            </Fragment>
-          ))}
+            ))}
+          </ShortcutKeys>
           {stepIndex < steps.length - 1 ? " then " : null}
         </Fragment>
       ))}

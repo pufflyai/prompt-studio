@@ -12,6 +12,7 @@ import {
   workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
+import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
@@ -43,6 +44,7 @@ export const isPlacementEligibleForRegion = (
   resource = workbench.getPrimaryResource(),
   modeId = workbench.modes.getActiveModeId(),
 ) => {
+  if (placement.resource && !workbench.resources.preview.resolve(placement.resource)) return false;
   const widget = workbench.layout.getWidget(placement.contributionId);
   return widget
     ? isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement, {
@@ -58,6 +60,7 @@ export const useWorkbenchRegionTabsState = (
   visibilityStorageKey?: string,
   hasPanelMenuOpeners = false,
 ) => {
+  const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
@@ -74,14 +77,18 @@ export const useWorkbenchRegionTabsState = (
   const regionState = layoutState.layout.regions[region];
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
-      placement.role === "sub-panel" && isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
+      placement.role === "sub-panel" &&
+      (!placement.resource || Boolean(resolveResourcePreview(placement.resource, changes))) &&
+      isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
   );
   const visibleSubPanels = filterVisibleTabs(subPanelPlacements, tabStore.tabOverrides, (placement) =>
     toTabKey(region, placement),
   );
   const visibleSubPanelIds = new Set(visibleSubPanels.map((placement) => placement.widgetId));
   const visiblePlacements = regionState.widgets.filter(
-    (placement) => visibleSubPanelIds.has(placement.widgetId) || placement.role === "location",
+    (placement) =>
+      (visibleSubPanelIds.has(placement.widgetId) || placement.role === "location") &&
+      (!placement.resource || Boolean(resolveResourcePreview(placement.resource, changes))),
   );
   const leadingItems = listWorkbenchMenuItemsFromState(
     { itemsByPath, commands, contextValues },

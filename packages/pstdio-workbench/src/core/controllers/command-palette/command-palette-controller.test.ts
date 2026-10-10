@@ -6,12 +6,24 @@ describe("createWorkbenchCommandPaletteController", () => {
     const controller = createWorkbenchCommandPaletteController();
 
     expect(controller.isOpen()).toBe(false);
-    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "", paramsRequest: null });
+    expect(controller.store.getState()).toEqual({
+      open: false,
+      view: "main",
+      initialQuery: "",
+      paramsRequest: null,
+      confirmation: null,
+    });
 
     controller.open();
 
     expect(controller.isOpen()).toBe(true);
-    expect(controller.store.getState()).toEqual({ open: true, view: "main", initialQuery: "", paramsRequest: null });
+    expect(controller.store.getState()).toEqual({
+      open: true,
+      view: "main",
+      initialQuery: "",
+      paramsRequest: null,
+      confirmation: null,
+    });
 
     controller.close();
 
@@ -29,7 +41,13 @@ describe("createWorkbenchCommandPaletteController", () => {
 
     controller.close();
 
-    expect(controller.store.getState()).toEqual({ open: false, view: "main", initialQuery: "", paramsRequest: null });
+    expect(controller.store.getState()).toEqual({
+      open: false,
+      view: "main",
+      initialQuery: "",
+      paramsRequest: null,
+      confirmation: null,
+    });
   });
 
   test("toggle flips between open and closed", () => {

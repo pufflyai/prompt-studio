@@ -14,6 +14,7 @@ import {
 import type { ReactNode } from "react";
 import { keepSectionsEmptiedByMoves } from "./tree-emptied-sections";
 import { withoutPinnedOnlyRows } from "./tree-pinned-only";
+import { useTreeViewGroups } from "./use-tree-view-groups";
 
 interface TreeViewRegions {
   headerSections: TreeListSection[];
@@ -51,6 +52,7 @@ interface NodeVisibilityActions {
 interface TreeViewCustomizationOptions {
   suppressNodeContextMenus?: boolean;
   pinnedOnlyNodeIds?: ReadonlySet<string>;
+  allowGroups?: boolean;
 }
 
 const toStringLabel = (label: ReactNode, fallback: string) => (typeof label === "string" ? label : fallback);
@@ -141,6 +143,13 @@ export const useTreeViewCustomization = (
   const setNodeOrder = useTreeListOrderStore(storageKey, (state) => state.setNodeOrder);
   const setSectionSlot = useTreeListOrderStore(storageKey, (state) => state.setSectionSlot);
   const resetOrder = useTreeListOrderStore(storageKey, (state) => state.reset);
+  const sourceSections = [...regions.headerSections, ...regions.sections, ...regions.footerSections];
+  const {
+    groups,
+    nodeOrderBySection: activeNodeOrder,
+    withGroupControls,
+    newGroupAction,
+  } = useTreeViewGroups(storageKey, sourceSections, nodeOrderBySection, options.allowGroups === true);
   const visibilityActions = {
     onToggleSection: toggleSection,
     onToggleNode: toggleNode,
@@ -156,10 +165,8 @@ export const useTreeViewCustomization = (
     ...regions.footerSections.map((section) => [section.id, "footer" as const] as const),
   ]);
   const orderedSectionsBySlot: Record<TreeViewSlot, TreeListSection[]> = { header: [], content: [], footer: [] };
-  const orderedAllSections = applyTreeListOrder(
-    [...regions.headerSections, ...regions.sections, ...regions.footerSections],
-    sectionOrder,
-    nodeOrderBySection,
+  const orderedAllSections = withGroupControls(
+    applyTreeListOrder(sourceSections, sectionOrder, activeNodeOrder, groups),
   );
   for (const section of orderedAllSections) {
     const slot = sectionSlotById[section.id] ?? defaultSlotBySectionId.get(section.id) ?? "content";
@@ -191,7 +198,6 @@ export const useTreeViewCustomization = (
     icons,
     includeNodeContextMenus,
   );
-  const sourceSections = [...regions.headerSections, ...regions.sections, ...regions.footerSections];
   const visibleIn = (sections: TreeListSection[]) =>
     keepSectionsEmptiedByMoves(
       sourceSections,
@@ -203,13 +209,21 @@ export const useTreeViewCustomization = (
   const visibleHeaderSections = visibleIn(headerSections);
   const visibleSections = visibleIn(contentSections);
   const visibleFooterSections = visibleIn(footerSections);
-  const backgroundContextActions = buildTreeVisibilityMenuActions(
+  const visibilityMenuItems = buildTreeVisibilityMenuActions(
     { headerSections: orderedHeaderSections, sections: orderedSections, footerSections: orderedFooterSections },
     sectionOverrides,
     nodeOverrides,
     visibilityActions,
     icons,
   );
+  const backgroundContextActions: ResourceContextAction[] = newGroupAction ? [newGroupAction] : [];
+  if (visibilityMenuItems.length > 0)
+    backgroundContextActions.push({
+      key: "tree-visibility",
+      label: "Hide/show items",
+      icon: icons.visibleIcon,
+      items: visibilityMenuItems.map((item) => ({ ...item, closeOnSelect: false })),
+    });
 
   const customizationRevision = JSON.stringify({
     header: orderedHeaderSections.map((section) => [
@@ -232,6 +246,7 @@ export const useTreeViewCustomization = (
     sectionOrder,
     nodeOrderBySection,
     sectionSlotById,
+    groups,
   });
 
   return {

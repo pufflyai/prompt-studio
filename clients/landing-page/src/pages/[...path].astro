@@ -1,6 +1,7 @@
 ---
 import { IndexPage } from "../components/index-page";
 import BaseLayout from "../layouts/base-layout.astro";
+import { BACKGROUND_MODULES } from "../services/landing-modules";
 import { landingPageFromPath, servedPaths } from "../services/landing-route";
 import { loadSiteCatalog } from "../services/site-catalog";
 
@@ -13,6 +14,7 @@ export const getStaticPaths = async () => {
 // Other documents load on navigation from `/documents/<path>.json`.
 const { pages, documents } = await loadSiteCatalog();
 const page = landingPageFromPath(pages, Astro.url.pathname)!;
+await Promise.all(BACKGROUND_MODULES.map((module) => module.preload()));
 ---
 
 <BaseLayout page={page}>

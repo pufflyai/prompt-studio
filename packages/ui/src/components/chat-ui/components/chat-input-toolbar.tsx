@@ -7,24 +7,28 @@ import { SendButton } from "./send-button";
 
 interface ChatInputToolbarProps {
   actions?: ReactNode;
+  submitActions?: ReactNode;
   questionPrompt: boolean;
   skipDisabled: boolean;
   skipTitle: string;
   onSkip: () => void;
   buttonAction: ChatInputAction;
   submitTitle?: string;
+  submitLabel?: string;
   messageTitle: string;
   runAction: (action: ChatInputAction) => void;
 }
 export const ChatInputToolbar = (props: ChatInputToolbarProps) => {
   const {
     actions,
+    submitActions,
     questionPrompt,
     skipDisabled,
     skipTitle,
     onSkip,
     buttonAction,
     submitTitle,
+    submitLabel,
     messageTitle,
     runAction,
   } = props;
@@ -35,18 +39,25 @@ export const ChatInputToolbar = (props: ChatInputToolbarProps) => {
           {actions}
         </HStack>
       </ScrollArea>
+      {submitActions}
       {questionPrompt ? (
         <Button size="xs" variant="ghost" disabled={skipDisabled} title={skipTitle} onClick={onSkip}>
           Skip
         </Button>
       ) : null}
-      <SendButton
-        canInterrupt={buttonAction === "interrupt"}
-        title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}
-        shortcut={buttonAction === "submit" ? "Enter" : undefined}
-        onClick={() => runAction(buttonAction)}
-        disabled={buttonAction === "none"}
-      />
+      {submitLabel ? (
+        <Button size="xs" variant="primary" disabled={buttonAction === "none"} onClick={() => runAction(buttonAction)}>
+          {submitLabel}
+        </Button>
+      ) : (
+        <SendButton
+          canInterrupt={buttonAction === "interrupt"}
+          title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}
+          shortcut={buttonAction === "submit" ? "Enter" : undefined}
+          onClick={() => runAction(buttonAction)}
+          disabled={buttonAction === "none"}
+        />
+      )}
     </HStack>
   );
 };

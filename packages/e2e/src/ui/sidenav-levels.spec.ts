@@ -36,13 +36,13 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await page.mouse.down();
   await page.mouse.move(from.x + 40, to.y + to.height * 0.25, { steps: 12 });
   await page.mouse.up();
-  await expect(firstRow).toHaveText("Tickets");
+  await expect(firstRow).toHaveAccessibleName("Tickets");
   // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click; a person never clicks that fast.
   await page.waitForTimeout(100);
 
   await row("Notes").click();
   await expect(row("Sessions")).toHaveCount(0);
-  await expect(firstRow).toHaveText("Tickets");
+  await expect(firstRow).toHaveAccessibleName("Tickets");
   await sidenav.getByText("Notes", { exact: true }).hover();
   await sidenav.getByRole("button", { name: "New note", exact: true }).click();
   await page.getByRole("textbox", { name: "Title", exact: true }).fill("Level note");
@@ -50,14 +50,16 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await expect(row("Level note")).toBeVisible();
   // Level rows are data, so only the Notes section can be hidden from the customize menu.
   await row("Search").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await expect(page.getByRole("menuitem", { name: "Notes", exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Level note", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await row("Level note").click();
   await expect(row("Level note")).toHaveAttribute("aria-selected", "true");
   await page.reload();
   await expect(row("Level note")).toBeVisible();
-  await expect(firstRow).toHaveText("Tickets");
+  await expect(firstRow).toHaveAccessibleName("Tickets");
 
   await row("Tickets").click();
   await expect(page).toHaveURL(/\/tickets$/);
@@ -66,7 +68,7 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await row("Level session").click();
   await expect(page).toHaveURL(/\/session\?/);
-  await expect(firstRow).toHaveText("Tickets");
+  await expect(firstRow).toHaveAccessibleName("Tickets");
   await row("Search").click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -82,7 +84,7 @@ test("Notes, Sessions and ticket levels keep rows users pinned to the header", a
   await row("Tickets").click();
   await page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
   await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand} `) })).toBeVisible();
-  await expect(firstRow).toHaveText("Tickets");
+  await expect(firstRow).toHaveAccessibleName("Tickets");
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(row("Settings")).toBeVisible();
   await page

@@ -1,5 +1,5 @@
 {
-  "version": "2.19",
+  "version": "2.21",
   "children": [
     {
       "type": "frame",
@@ -8358,7 +8358,7 @@
                                 "type": "image",
                                 "enabled": true,
                                 "url": "assets/landing/aurora-preview.png",
-                                "mode": "fill"
+                                "mode": "cover"
                               },
                               "cornerRadius": 4
                             },
@@ -9409,7 +9409,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "assets/landing/aurora-preview.png",
-                            "mode": "fill"
+                            "mode": "cover"
                           },
                           "cornerRadius": 4
                         },
@@ -9752,6 +9752,7 @@
           "type": "frame",
           "id": "XpOTN",
           "name": "cmp/Kbd",
+          "context": "Keys and shortcut key groups use a maximum 1px gap. Tooltip keys use inverted foreground, transparent fill, and inverted border.",
           "theme": {
             "kbd": "raised",
             "size": "md"
@@ -9768,7 +9769,7 @@
             "left": 1
           },
           "strokeAlignment": "inner",
-          "gap": 2,
+          "gap": 1,
           "padding": [
             0,
             "$kbd-px"
@@ -29397,7 +29398,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "art/blog-shape-art-light.png",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": "fill_container",
                                   "height": 168
@@ -29447,7 +29448,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -29570,7 +29571,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -29693,7 +29694,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -29816,7 +29817,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -29939,7 +29940,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -30062,7 +30063,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -30185,7 +30186,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -31005,7 +31006,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "art/blog-welcome-to-prompt-studio-light.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": "fill_container",
                           "height": 176
@@ -31055,7 +31056,7 @@
                                         "type": "image",
                                         "enabled": true,
                                         "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                        "mode": "fill"
+                                        "mode": "cover"
                                       },
                                       "width": 24,
                                       "height": 24
@@ -39129,7 +39130,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "art/blog-shape-art.png",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": "fill_container",
                                   "height": 168
@@ -39179,7 +39180,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -39302,7 +39303,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -39425,7 +39426,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -39548,7 +39549,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -39671,7 +39672,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -39794,7 +39795,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -39917,7 +39918,7 @@
                                                 "type": "image",
                                                 "enabled": true,
                                                 "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                                "mode": "fill"
+                                                "mode": "cover"
                                               },
                                               "width": 24,
                                               "height": 24
@@ -40737,7 +40738,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "art/blog-welcome-to-prompt-studio.png",
-                            "mode": "fit"
+                            "mode": "contain"
                           },
                           "width": "fill_container",
                           "height": 176
@@ -40787,7 +40788,7 @@
                                         "type": "image",
                                         "enabled": true,
                                         "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                        "mode": "fill"
+                                        "mode": "cover"
                                       },
                                       "width": 24,
                                       "height": 24
@@ -43466,7 +43467,7 @@
                         "type": "image",
                         "enabled": true,
                         "url": "art/blog-shape-art-light.png",
-                        "mode": "fill"
+                        "mode": "cover"
                       },
                       "width": "fill_container",
                       "height": 77.5
@@ -43516,7 +43517,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -43639,7 +43640,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -43762,7 +43763,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -43885,7 +43886,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -44008,7 +44009,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -44131,7 +44132,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -44254,7 +44255,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -44665,7 +44666,7 @@
                 "type": "image",
                 "enabled": true,
                 "url": "art/blog-welcome-to-prompt-studio-light.png",
-                "mode": "fit"
+                "mode": "contain"
               },
               "width": "fill_container",
               "height": 85.5
@@ -44715,7 +44716,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                            "mode": "fill"
+                            "mode": "cover"
                           },
                           "width": 24,
                           "height": 24
@@ -50373,7 +50374,7 @@
                         "type": "image",
                         "enabled": true,
                         "url": "art/blog-shape-art.png",
-                        "mode": "fill"
+                        "mode": "cover"
                       },
                       "width": "fill_container",
                       "height": 77.5
@@ -50423,7 +50424,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -50546,7 +50547,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -50669,7 +50670,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -50792,7 +50793,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -50915,7 +50916,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -51038,7 +51039,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -51161,7 +51162,7 @@
                                     "type": "image",
                                     "enabled": true,
                                     "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                                    "mode": "fill"
+                                    "mode": "cover"
                                   },
                                   "width": 24,
                                   "height": 24
@@ -51572,7 +51573,7 @@
                 "type": "image",
                 "enabled": true,
                 "url": "art/blog-welcome-to-prompt-studio.png",
-                "mode": "fit"
+                "mode": "contain"
               },
               "width": "fill_container",
               "height": 85.5
@@ -51622,7 +51623,7 @@
                             "type": "image",
                             "enabled": true,
                             "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                            "mode": "fill"
+                            "mode": "cover"
                           },
                           "width": 24,
                           "height": 24
@@ -52323,7 +52324,7 @@
             "type": "image",
             "enabled": true,
             "url": "art/blog-prompt-studio-0-39-light.png",
-            "mode": "fit"
+            "mode": "contain"
           },
           "width": "fill_container",
           "height": 176
@@ -52373,7 +52374,7 @@
                         "type": "image",
                         "enabled": true,
                         "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                        "mode": "fill"
+                        "mode": "cover"
                       },
                       "width": 24,
                       "height": 24
@@ -52490,7 +52491,7 @@
             "type": "image",
             "enabled": true,
             "url": "art/blog-prompt-studio-0-39.png",
-            "mode": "fit"
+            "mode": "contain"
           },
           "width": "fill_container",
           "height": 176
@@ -52540,7 +52541,7 @@
                         "type": "image",
                         "enabled": true,
                         "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                        "mode": "fill"
+                        "mode": "cover"
                       },
                       "width": 24,
                       "height": 24
@@ -52657,7 +52658,7 @@
             "type": "image",
             "enabled": true,
             "url": "art/blog-prompt-studio-0-39-light.png",
-            "mode": "fit"
+            "mode": "contain"
           },
           "width": "fill_container",
           "height": 85.5
@@ -52707,7 +52708,7 @@
                         "type": "image",
                         "enabled": true,
                         "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                        "mode": "fill"
+                        "mode": "cover"
                       },
                       "width": 24,
                       "height": 24
@@ -52824,7 +52825,7 @@
             "type": "image",
             "enabled": true,
             "url": "art/blog-prompt-studio-0-39.png",
-            "mode": "fit"
+            "mode": "contain"
           },
           "width": "fill_container",
           "height": 85.5
@@ -52874,7 +52875,7 @@
                         "type": "image",
                         "enabled": true,
                         "url": "../clients/landing-page/src/assets/authors/aurelien-franky.jpg",
-                        "mode": "fill"
+                        "mode": "cover"
                       },
                       "width": 24,
                       "height": 24
@@ -52980,7 +52981,8 @@
       "display-outline",
       "display-ghost",
       "display-link",
-      "plain"
+      "plain",
+      "destructive-ghost"
     ],
     "size": [
       "2xs",
@@ -54409,6 +54411,34 @@
             "btn": "plain",
             "btn-interaction": "disabled"
           }
+        },
+        {
+          "value": "#00000000",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "default"
+          }
+        },
+        {
+          "value": "$ds-error-subtle",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "hover"
+          }
+        },
+        {
+          "value": "$ds-error-subtle",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "pressed"
+          }
+        },
+        {
+          "value": "#00000000",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "disabled"
+          }
         }
       ]
     },
@@ -54427,6 +54457,47 @@
     "blacks-800": {
       "type": "color",
       "value": "#22252C"
+    },
+    "ds-error-subtle": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFE0E3",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#580707",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#F9267226",
+          "theme": {
+            "mode": "monokai"
+          }
+        },
+        {
+          "value": "#FF555526",
+          "theme": {
+            "mode": "dracula"
+          }
+        },
+        {
+          "value": "#DC322F33",
+          "theme": {
+            "mode": "solarized-dark"
+          }
+        },
+        {
+          "value": "#DC322F26",
+          "theme": {
+            "mode": "solarized-light"
+          }
+        }
+      ]
     },
     "btn-fg": {
       "type": "color",
@@ -54736,6 +54807,34 @@
           "value": "$ds-fg-subtle",
           "theme": {
             "btn": "plain",
+            "btn-interaction": "disabled"
+          }
+        },
+        {
+          "value": "$ds-fg-subtle",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "default"
+          }
+        },
+        {
+          "value": "$ds-error",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "hover"
+          }
+        },
+        {
+          "value": "$ds-error",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "pressed"
+          }
+        },
+        {
+          "value": "$ds-fg-subtle",
+          "theme": {
+            "btn": "destructive-ghost",
             "btn-interaction": "disabled"
           }
         }
@@ -55049,6 +55148,34 @@
           "value": "#00000000",
           "theme": {
             "btn": "plain",
+            "btn-interaction": "disabled"
+          }
+        },
+        {
+          "value": "#00000000",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "default"
+          }
+        },
+        {
+          "value": "#00000000",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "hover"
+          }
+        },
+        {
+          "value": "#00000000",
+          "theme": {
+            "btn": "destructive-ghost",
+            "btn-interaction": "pressed"
+          }
+        },
+        {
+          "value": "#00000000",
+          "theme": {
+            "btn": "destructive-ghost",
             "btn-interaction": "disabled"
           }
         }
@@ -56603,47 +56730,6 @@
         },
         {
           "value": "#85990026",
-          "theme": {
-            "mode": "solarized-light"
-          }
-        }
-      ]
-    },
-    "ds-error-subtle": {
-      "type": "color",
-      "value": [
-        {
-          "value": "#FFE0E3",
-          "theme": {
-            "mode": "light"
-          }
-        },
-        {
-          "value": "#580707",
-          "theme": {
-            "mode": "dark"
-          }
-        },
-        {
-          "value": "#F9267226",
-          "theme": {
-            "mode": "monokai"
-          }
-        },
-        {
-          "value": "#FF555526",
-          "theme": {
-            "mode": "dracula"
-          }
-        },
-        {
-          "value": "#DC322F33",
-          "theme": {
-            "mode": "solarized-dark"
-          }
-        },
-        {
-          "value": "#DC322F26",
           "theme": {
             "mode": "solarized-light"
           }
@@ -60604,6 +60690,12 @@
           "value": 1,
           "theme": {
             "btn": "plain"
+          }
+        },
+        {
+          "value": 1,
+          "theme": {
+            "btn": "destructive-ghost"
           }
         }
       ]

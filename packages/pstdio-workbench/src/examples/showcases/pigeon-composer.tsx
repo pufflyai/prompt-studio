@@ -55,7 +55,7 @@ export const PigeonComposer = (props: { input: WorkbenchPanelRenderInput }) => {
           </Button>
           <IconButton
             aria-label="Discard draft"
-            variant="ghost"
+            variant="destructive-ghost"
             onClick={() => {
               pigeonStore.setState({ draft: { to: "", subject: "", body: "" } });
               close();

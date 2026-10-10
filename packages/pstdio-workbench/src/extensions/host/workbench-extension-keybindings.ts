@@ -25,6 +25,7 @@ export const registerWorkbenchExtensionKeybindings = (input: {
 }) =>
   input.bindings.map((binding) =>
     input.workbench.keybindings.registerKeybinding({
+      sourceExtensionId: binding.extensionId,
       action: toWorkbenchNavigationTarget(binding.action as ExtensionNavigationTarget, {
         commandIdOf: (command) =>
           command.extensionId ? commandRefId({ extensionId: command.extensionId, id: command.id }) : undefined,

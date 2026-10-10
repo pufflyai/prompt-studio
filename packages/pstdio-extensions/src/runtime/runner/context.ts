@@ -8,6 +8,7 @@ import type {
   ExtensionContextBase,
   ExtensionEventsApi,
   ExtensionLoggerApi,
+  ExtensionViewsApi,
   JsonObject,
   Struct,
 } from "@pstdio/sdk/extensions";
@@ -77,6 +78,18 @@ const unavailableConnections: ExtensionConnectionsApi = {
   },
 };
 
+const unavailableViews = (): never => {
+  throw new Error("Saved views are not available in this host.");
+};
+const unavailableViewsApi: ExtensionViewsApi = {
+  list: unavailableViews,
+  create: unavailableViews,
+  update: unavailableViews,
+  remove: unavailableViews,
+  reorder: unavailableViews,
+  setDefault: unavailableViews,
+};
+
 const buildEventsApi = (dispatcher: EventDispatcher, extensionId: string): ExtensionEventsApi => ({
   emit: async (event, payload) => dispatcher.dispatch(refId(event, extensionId), payload as Struct),
 });
@@ -142,6 +155,7 @@ export const createContextFactory = (
       name: ids.name,
       storage: hostApis.storage,
       resources: env.resources,
+      views: env.views ?? unavailableViewsApi,
       navigation: {
         open: (target) => {
           if (navigationScope) navigationScope.open(qualifyNavigationTarget(target, ids.extensionId, ids.projectId));

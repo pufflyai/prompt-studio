@@ -16,6 +16,7 @@ import {
 } from "./extension-webview-build-runner";
 import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
 import { buildExtensionWebview, type ExtensionWebviewBuilder } from "./extension-webview-builder";
+import { loadWebviewSource } from "./extension-webview-source-load";
 import {
   classifyWebviewEntry,
   collectExtensionWebviews,
@@ -31,6 +32,7 @@ type ExpectedWebviewBuildSource = {
 export type CreateExtensionWebviewBuildManagerInput = {
   buildWebview?: ExtensionWebviewBuilder;
   listInstalledSources: () => Promise<InstalledSourceWithManifest[]>;
+  loadSource?: (sourcePath: string) => Promise<LoadedExtension>;
   onError?: (error: unknown) => void;
   reportBuildFailure: (
     installedExtensionId: string,
@@ -116,6 +118,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const activeBuilds = new Set<AbortController>();
   let disposed = false;
   const buildWebview = input.buildWebview ?? buildExtensionWebview;
+  const loadSource = input.loadSource ?? loadExtensionSource;
   const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
   const { reportFailure, reportSuccess } = createBuildReporters(input);
 
@@ -130,7 +133,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   }) => {
     const { buildInputs, key, packageName, row, signature, sourceEntryPath, webview } = input;
     building.set(key, signature);
-    backoff.recordBuildStart(key);
+    backoff.forget(key);
     const paths = resolveManagedWebviewPaths({
       installedExtensionId: row.id,
       webviewCacheRoot,
@@ -158,7 +161,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
             webviewBuildFailure(row.install_name, webview.id, buildSource.details),
             expectedWebviewBuildSource(row),
           );
-          backoff.recordBuildFailure(key, signature);
+          backoff.recordFailure(key, signature);
         }
         return null;
       }
@@ -178,7 +181,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       });
       if (buildOutcome !== "success" || disposed) {
         if (!disposed && buildOutcome === "failure" && building.get(key) === signature) {
-          backoff.recordBuildFailure(key, signature);
+          backoff.recordFailure(key, signature);
         }
         return null;
       }
@@ -212,7 +215,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       return { builtNow: false, key, signature, webviewId: webview.id };
     }
     if (building.get(key) === signature) return { builtNow: false, key, signature, webviewId: webview.id };
-    if (backoff.isBuildBlocked(key, signature)) return null;
+    if (backoff.isBlocked(key, signature)) return null;
     return buildNewManagedWebview({ buildInputs, key, packageName, row, signature, sourceEntryPath, webview });
   };
 
@@ -224,7 +227,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     renameSync(result.stageDir, result.distDir);
     const expectedSource = { sourcePath: row.source_path };
     if (await reportSuccess(row.id, result.webviewId, expectedSource)) {
-      backoff.recordBuildSuccess(result.key);
+      backoff.forget(result.key);
     }
   };
 
@@ -242,10 +245,11 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     return current.signature === result.signature ? currentRow : null;
   };
 
+  // Resolves true once the source loaded and every managed webview build was attempted.
   const refreshRow = async (row: InstalledSourceWithManifest, validatedSource?: LoadedExtension) => {
-    if (disposed) return;
-    const loaded = validatedSource ?? (await loadExtensionSource(row.source_path));
-    if (disposed) return;
+    if (disposed) return false;
+    const loaded = validatedSource ?? (await loadWebviewSource({ backoff, loadSource, onError: input.onError, row }));
+    if (!loaded || disposed) return false;
 
     const managedWebviews = collectExtensionWebviews(loaded).filter(
       (webview) => classifyWebviewEntry(webview.entry).kind === "managed",
@@ -268,20 +272,26 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         }
       }),
     );
+    return true;
   };
 
   const check = (installedExtensionId: string, validatedSource?: LoadedExtension) => {
     const previous = pending.get(installedExtensionId);
     const work = (async () => {
-      if (disposed) return;
+      if (disposed) return false;
       const row = (await input.listInstalledSources()).find((row) => row.id === installedExtensionId);
-      if (row) await refreshRow(row, validatedSource);
-    })().catch((error) => input.onError?.(error));
+      return row ? refreshRow(row, validatedSource) : true;
+    })().catch((error) => {
+      // Repeating an unexpected failure on every asset request would not fix it.
+      input.onError?.(error);
+      return true;
+    });
     // Asset requests wait for all builds, while watcher refreshes can finish independently.
-    const completion = Promise.all([previous, work]).then(() => {
+    const completion = Promise.all([previous, work]).then(([, complete]) => {
       if (pending.get(installedExtensionId) !== completion) return;
       pending.delete(installedExtensionId);
-      if (!disposed) checked.add(installedExtensionId);
+      // A source that failed to load stays unchecked, so a later asset request can load it again.
+      if (!disposed && complete) checked.add(installedExtensionId);
     });
     pending.set(installedExtensionId, completion);
     return work;
@@ -309,7 +319,10 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         rows
           .filter((row) => !sourcePath || row.source_path === sourcePath)
           .map((row) => {
+            // A refresh asks for the source to be read again, and some changes, such as a rebuilt
+            // linked dependency, leave the load key unchanged. So a refresh always loads.
             checked.delete(row.id);
+            backoff.forget(row.id);
             return check(row.id, validatedSource);
           }),
       );

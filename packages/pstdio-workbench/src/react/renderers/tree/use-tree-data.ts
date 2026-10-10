@@ -3,12 +3,15 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useRendererRead } from "../use-renderer-read";
+import { previewTreeResources } from "./tree-resource-preview";
 import {
   expandDefaultTreeSections,
   type LoadedTreeData,
   loadExpandedTreeChildren,
   loadTreeData,
 } from "./tree-view-load";
+import { canMoveTreeNode, createMoveTreeNode } from "./tree-view-move";
+import { useTreeMovement } from "./use-tree-movement";
 
 export const useTreeData = (
   workbench: WorkbenchCore,
@@ -17,8 +20,10 @@ export const useTreeData = (
   viewId?: string,
   filter?: string,
   ownerKey = JSON.stringify(["tree", treeViewId, viewId]),
+  onMoveError?: (error: unknown) => void,
 ) => {
   const trees = getWorkbenchRenderers(workbench);
+  const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
   const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
@@ -79,14 +84,49 @@ export const useTreeData = (
       }));
     });
   };
+  useEffect(() => {
+    const subscription = workbench.resources.preview.subscribeRefresh(async (resource) => {
+      const contains = (nodes: TreeNode[]): boolean =>
+        nodes.some(
+          (node) =>
+            (node.resource && resourceKey(node.resource) === resourceKey(resource)) ||
+            contains(read.value?.children[node.id] ?? node.children ?? []),
+        );
+      if (read.value?.body.some((section) => contains(section.nodes))) await read.retry();
+    });
+    return () => subscription.dispose();
+  }, [workbench, read.retry, read.value]);
+  const savedBody = read.value?.body ?? [];
+  const savedChildren = {
+    ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
+    ...read.value?.children,
+  };
+  const renderer = trees.getTreeRenderer(treeViewId);
+  const movement = useTreeMovement({
+    scope: queryKey,
+    body: savedBody,
+    childrenByNodeId: savedChildren,
+    canMove: (sourceId, targetId) =>
+      canMoveTreeNode({ sections: savedBody, childrenByNodeId: savedChildren }, sourceId, targetId),
+    persist: renderer
+      ? createMoveTreeNode({
+          workbench,
+          renderer,
+          resource,
+          viewId,
+          sections: savedBody,
+          childrenByNodeId: savedChildren,
+          onError: onMoveError,
+        })
+      : undefined,
+    refresh: read.retry,
+  });
   return {
-    body: read.value?.body ?? [],
+    ...movement,
+    body: previewTreeResources(movement.body, movement.childrenByNodeId, changes),
+    childrenByNodeId: {},
     header: read.value?.header ?? [],
     footer: read.value?.footer ?? [],
-    childrenByNodeId: {
-      ...(expandedChildren.queryKey === childrenKey ? expandedChildren.byNodeId : {}),
-      ...read.value?.children,
-    },
     loadChildren,
     error: read.error ?? null,
     loading: read.loading && !read.value,

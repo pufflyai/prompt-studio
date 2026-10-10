@@ -22,6 +22,7 @@ export const sp = {
 };
 
 export const spacing = {
+  "shortcut-key-gap": { value: "1px" },
   "window-tab-gap": { value: "0.4375rem" },
   "window-controls-mac": { value: "5.625rem" },
   none: { value: "0" },
@@ -46,6 +47,11 @@ export const spacing = {
 };
 
 export const sizes = {
+  "palette-width": { value: "44rem" },
+  "palette-results-height": { value: "24rem" },
+  "queue-send-now": { value: sp[250] },
+  "queue-viewport": { value: "11.75rem" },
+  "touch-target": { value: "2.75rem" },
   "status-dot": { value: "0.375rem" },
   "performance-bar": { value: sp[25] },
   "performance-meter": { value: "0.625rem" },

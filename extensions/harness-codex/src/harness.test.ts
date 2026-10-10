@@ -104,7 +104,7 @@ describe("codex harness detection", () => {
       },
     };
 
-    expect(await harness.detect!(missingCtx)).toEqual({ available: false });
+    expect(await harness.detect!(missingCtx)).toMatchObject({ available: false, reason: expect.stringMatching(/\S/) });
   });
 
   test("lists discovered models only when the CLI is present and caches the catalog", async () => {

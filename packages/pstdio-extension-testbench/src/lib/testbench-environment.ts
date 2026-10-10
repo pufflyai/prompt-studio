@@ -135,6 +135,9 @@ export const createBenchEnvironment = (
   seed?: BenchStorageSeed,
   prefixes: Record<string, string> = {},
 ): CommandRunnerEnvironment => {
+  const queuedRequestsRequireHost = async () => {
+    throw new Error("Queued requests require the host runtime.");
+  };
   const environment: CommandRunnerEnvironment = {
     project: { id: "bench-project", name: "Bench Project", shorthand: "BP" },
     storage: createStorage(seed),
@@ -154,6 +157,7 @@ export const createBenchEnvironment = (
       writeText: async () => {},
     },
     sessions: {
+      query: async () => ({ items: [], nextCursor: null }),
       addAnchors: async () => {},
       removeAnchors: async () => {},
       get: async () => null,
@@ -166,6 +170,10 @@ export const createBenchEnvironment = (
         status: "in_progress",
       }),
       followup: async () => {},
+      getQueuedFollowUps: queuedRequestsRequireHost,
+      updateQueuedFollowUp: queuedRequestsRequireHost,
+      combineQueuedFollowUps: queuedRequestsRequireHost,
+      steerQueuedFollowUp: queuedRequestsRequireHost,
     },
     workspaces: {
       addAnchors: async () => {},

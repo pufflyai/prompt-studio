@@ -60,6 +60,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     label: agent.name,
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
+    description: agent.availability.reason,
   }));
   const modelOptions = models.map((entry) => ({
     label: entry.label ?? entry.id,

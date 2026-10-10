@@ -97,7 +97,8 @@ export const insertFollowUpEntry = async (
     request_kind: "follow_up",
     question_response_json: input.questionResponse ?? null,
     attachments_json: input.attachmentRefs,
-    params_json: input.params,
+    params_json: input.params ?? input.session.params_json ?? {},
+    model: input.model ?? null,
   };
 
   if (input.transitionToQueued) {

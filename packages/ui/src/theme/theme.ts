@@ -17,11 +17,15 @@ import { folderPickerSlotRecipe } from "./recipes/folder-picker";
 import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
 import { kbdRecipe } from "./recipes/kbd";
+import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
 import { numberInputSlotRecipe } from "./recipes/number-input";
+import { paletteSlotRecipe } from "./recipes/palette";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
+import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
+import { scrollAreaSlotRecipe } from "./recipes/scroll-area";
 import { skeletonRecipe } from "./recipes/skeleton";
 import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
@@ -58,6 +62,7 @@ const config = defineConfig({
       divider: dividerRecipe,
       input: inputRecipe,
       kbd: kbdRecipe,
+      listRowAccessory: listRowAccessoryRecipe,
       skeleton: skeletonRecipe,
       textarea: textareaRecipe,
     },
@@ -76,6 +81,8 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      scrollArea: scrollAreaSlotRecipe,
+      queuedFollowUp: queuedFollowUpRecipe,
       tag: tagSlotRecipe,
       checkbox: checkboxSlotRecipe,
       windowTitleBar: windowTitleBarRecipe,
@@ -88,6 +95,7 @@ const config = defineConfig({
       popover: popoverRecipe,
       menu: menuSlotRecipe,
       numberInput: numberInputSlotRecipe,
+      palette: paletteSlotRecipe,
       editable: editableSlotRecipe,
       form: fieldsetSlotRecipe,
       dialog: dialogSlotRecipe,

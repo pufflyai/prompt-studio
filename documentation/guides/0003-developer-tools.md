@@ -108,4 +108,4 @@ Turn off the switch. The meter and its popover disappear. Sampling, the frame co
 
 Monitoring samples Electron's process metrics every 2 seconds. It keeps at most 30 seconds of CPU history per live process and the latest 50 slow frames. The workbench counts frames with `requestAnimationFrame` and reports its frame rate and paused extensions to the desktop app about once per second. Renderers send slow frames at most once per second. The meter reads a new snapshot every 2 seconds.
 
-The packaged desktop tests measure the idle workbench with monitoring off and on; see [Tests](development/0002-testing.md#desktop-performance-budgets).
+The packaged desktop benchmarks measure the idle workbench with monitoring off and on; see [Tests](development/0002-testing.md#desktop-benchmarks).

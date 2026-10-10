@@ -8,7 +8,7 @@ The local theme extends the shared theme with the landing illustration colors.
 ## Code structure
 
 - `src/components/workbench` owns page chrome, panel composition, and the reading column.
-- `src/components/sections` contains Start Here, What is Prompt Studio, Examples, and Features.
+- `src/components/sections` contains Home, What is Prompt Studio, Examples, and Features.
 - `src/components/docs` and `src/components/blog` contain the Docs and Blog sidebars and pages.
 - `src/components/downloads` contains the download picker and agent compatibility cards.
 - `src/components/examples` contains the interactive icon set editor and coding agent demos.
@@ -16,73 +16,147 @@ The local theme extends the shared theme with the landing illustration colors.
 - `src/hooks` connects browser navigation, release loading, and animation to React.
 - `src/services` builds the page catalog, resolves routes, page metadata, and structured data, loads GitHub releases, and selects desktop assets.
 - `src/services/markdown` holds the markdown plugins that rewrite links and read page descriptions.
-- `src/services/shapes` owns tool geometry, placement, collisions, dragging, and simulation cleanup.
+- `src/services/shapes` owns tool geometry, pointer dragging, and agent assembly.
 - `src/theme/recipes` owns page layouts and demo styles, with colocated Storybook stories.
 - `src/content/legal` holds the legal documents as markdown. See [Legal documents](#legal-documents).
 - `src/content/blog` holds the blog posts as markdown. See [Blog](#blog).
 
-The demos and falling tools render in code. They use no screenshot or image assets.
+The demos and tool stencils render in code. They use no screenshot or image assets.
 
 ## Layout
 
-Desktop pages keep the 480px introduction and download panel on the left. Navigation
-changes the right panel, preserving the selected download and resized panel width.
-On small screens the content comes first and the introduction and download panel
-comes last. The panels share one ScrollArea, which returns to the top when the page
-changes. CSS sets this order before hydration. Desktop panels scroll independently.
-The home page shows a tools panel. Six tools start on the
-floor at random positions and angles. One tool drops from a random position every
-three seconds until there are 30. Tools can be dragged. The scene keeps its pieces,
-positions, rotations, velocities, and spawn countdown in memory when navigating
-within the site. Returning restores that scene. Refreshing starts a fresh scene
-with six tools. Physics and spawning pause while
-the page is unfocused, hidden, or the tools panel is outside the viewport. Returning
-resumes the countdown without catching up for time away. Reduced motion keeps the
-current pieces still. Resizing keeps pieces within the panel.
+Only the home page shows the introduction and download picker. They share one
+continuous surface with the tool assembly scene, without a divider or resize handle.
+The layout places one tool editor beside the copy when the main area is at least
+1200 pixels wide and below it in narrower containers, including windowed mode.
+The copy, initial outline, shape pile, and live editor share this breakpoint.
+Other pages use the full content area beside the navigation.
 
-Embedded previews use visibility instead of keyboard focus so a preview toolbar
-does not prevent the scene from starting after refresh. Normal browser tabs also
-require focus.
+The download column retains its original 480-pixel width and horizontal padding on desktop.
+Compact vertical spacing and an editor sized from its container leave room for the pile without
+scrolling in a 1080p browser window, including windowed mode.
+Narrow layouts use 95% of the fitted editor width, aligning more closely with the
+download content. Desktop layouts keep their compact 85% fit.
+The download button uses a download icon. The platform menu uses monochrome macOS,
+Windows, or Linux logos for each build.
+All 28 building-block shapes start in a settled pile beneath the editor. Matter.js supplies gravity,
+collisions, rotation, momentum, and wall bounces across the entire main area,
+including the download area. Only docked shapes remain fixed. Drag or toss blocks
+with a mouse, touch, or pen; pulling one out of a slot makes it fall again.
+The download links remain clickable above the scene.
+The build description and platform controls reserve their space while downloads
+load, so resolving a release does not shift the scene's ground on mobile.
+The settled pile is included in the static HTML and appears before JavaScript loads.
+Its ground-relative positions are shared with the physics engine, which starts the
+shapes asleep instead of calculating their resting positions during startup. The
+editor outline also appears in the static HTML at its fitted size. The live editor
+and cursors appear once their layout is measured. Idle cursors drift slowly over
+short distances while they wait for their next task. Initialization does not
+wait for fonts, stretch the shapes, or play a falling startup animation.
+Animation starts as soon as the visible scene is measured. Desktop release info
+loads independently, and a pending or failed download request does not delay it.
+The startup bundle contains the page chrome, downloads, settled shapes, physics,
+cursor animation, and first icon demo. Shader, agent, and formula demos, secondary
+pages, their navigation, the command menu, and analytics load after the first
+paint, one module at a time during idle periods. Opening a page or menu can load
+it immediately. Shared preload promises avoid duplicate requests. Static HTML
+still includes each page's content. The website uses no rich-text editor; optional
+markdown controls in the shared UI package import their lazy loader directly.
+Shape positions, angles, velocity, sleeping state, docked slots, cursor jobs, and
+the current assembly loop survive client navigation. Reloading starts a fresh scene.
 
-The cross uses three collision rectangles that share the SVG arm dimensions. The
-half-disc uses a curved polygon and renders around its physical centre of mass, so
-its drawing and collisions stay aligned as it turns.
+One editor uses the same icon set, shader, agent dashboard, and financial formula
+components as the example pages. Each matching shape reveals another part of that
+example. Its title appears only after all required blocks are in place. Occupied
+slots lose their dashed outlines. All slot outlines use the same stroke and dash sizes.
+The editor slot outlines both edges of its hollow square. Every combination uses
+the same board dimensions within a container, with spacing reserved for the five-slot combination.
+The 640-pixel reference board grows on larger screens and shrinks on smaller ones.
+Its scale follows both the available width and height, leaving room for the pile
+and keeping shapes and the slot tray at their physical size. The board uses 85% of
+the fitted size. Its controls stay at their reference scale as the board grows,
+so larger screens show more content instead of oversized UI. The landing preview
+hides its scrollbars while allowing the animated agents to reveal their controls.
+The shader code pane fills its panel's remaining height.
+The measured download column and the theme's font scaling keep that layout
+aligned on large displays too.
+Shapes keep their original size when inserted,
+removed, or resized with the viewport. Larger slots keep room around each shape,
+and their tray stays full height on mobile. Removing a shape removes its contribution.
+Claude, Codex, and OpenCode use filled pointers without borders or tails and upright name
+labels. They enter from beyond the right edge and follow curved paths with eased motion at a relaxed pace. They assemble an example,
+use its controls, return the shapes to the pile, and build another
+combination. Grabbing a cursor's shape hands it to the person; the cursor stays
+visible and finds another task. Cursors leave recently handled shapes alone for
+four seconds. Arrow keys move focused shapes; Enter docks them in nearby slots.
+Selecting a shape does not add an outline on desktop or mobile.
+Agents select and rename icons, type a shader change and adjust its controls,
+select ticket sessions, and change formulas and inputs. These actions use the
+same local demo handlers as the example pages. Cursors show a pointer while moving,
+a closed hand while carrying a shape, and a text cursor while typing.
+Each assembled tool also demonstrates a CLI command. The cursor becomes a chat
+bubble in its own color and keeps moving while it types. The bubble stays on one
+compact line, follows the typed text horizontally, and shows a check when complete.
+Finishing the command updates the same local icon, shader, ticket, or formula state as the editor controls.
+These previews remain entirely static-site demos, with no shell or backend calls.
+Shader typing keeps the edited line in view without scrolling back and forth
+between the edges of the code field. Comment delimiters are inserted together so
+the preview keeps valid shader code throughout the edit.
+The landing preview shows four representative icons in two columns with larger
+glyphs on all screens. Search still finds icons from the full set. Other pages
+retain the full twelve-icon editor, including on mobile.
+
+The playground has no pause button or section labels. Physics pauses when the
+scene is offscreen or the browser tab is hidden. Reduced motion starts with a
+settled field and disables agent motion; dragging and docking still work.
+The canvas, collision bounds, editor, and docked shapes follow container resizing.
 
 The desktop header contains the window controls and three tabs: Prompt Studio, Docs,
-and Blog. The mobile header shows the same tabs. A shortcut indicator at the top right
+and Blog. On mobile, one hamburger button at the top right opens all main sections,
+Docs, and Blog in a full-screen navigation palette. It focuses the dialog on open;
+search only takes focus when tapped, keeping the mobile keyboard closed. A desktop shortcut indicator at the top right
 opens the action menu: Command+P on Mac, or Ctrl+P elsewhere. The selected tab follows the URL.
 Each tab has its own sidebar. Selecting another tab reopens the last page read in
 that section during this visit; selecting the open tab returns to the section's first
 page (`/`, `/docs/`, or `/blog/`). A reload starts fresh. The green control collapses
 or expands the window. Red and yellow enter window mode and are disabled there. Drag
-the title bar to move the window. On small screens the current page name below the
-header opens the command palette; desktop navigation uses the sidebar. There are no
-breadcrumbs.
+the title bar to move the window. Desktop navigation uses the sidebar. Its long
+menus remain scrollable without visible scrollbars. The mobile
+header has no separate page menu or site tabs. There are no breadcrumbs.
 
 Every same-site link, including links inside docs HTML, opens without a reload, so
-the tool scene, window mode, and sidebar width survive moving between tabs.
+window mode and sidebar width survive moving between tabs.
 
 Legal pages, docs, and posts keep the workbench shell, with the title bar, sidebar,
 and status bar, but show one centered reading column without the introduction and
 download panel.
 
-Page navigation buttons sit in a header above the introduction and download panel,
-outside that panel's scroll area. The right content panel keeps its full height. Legal documents and posts have no previous or next page links.
-Each button shows its destination page name and an arrow. Start Here
-only shows the next page. The main pages follow the sidebar order, and Features
-leads back to Start Here.
-These links use browser history without remounting the download panel.
+On mobile, docs index links fill their row with a minimum 44-pixel touch target.
+Inline reading links gain padding and height so they are easier to tap.
+
+Pages have no previous or next buttons. The sidebar, title bar tabs, and command
+palette provide navigation.
 
 ## Product examples
 
-What is Prompt Studio lives at `/what-is-prompt-studio`. It starts with the building-block cards, then shows a clean editor,
-connected tools, and tools adapted by an agent. Each entry has a title and subtitle,
-with extra space between entries. The Tweak demo focuses on the shader and its controls.
+What is Prompt Studio lives at `/what-is-prompt-studio`. Its carousel shows one
+chapter at a time: building blocks, a clean editor, connected tools, and tools
+adapted by an agent. A compact chapter tab row stays visible above the content. Both carousels
+advance every eight seconds and wrap to the first chapter. Pointer hover,
+keyboard focus, or a hidden browser tab suspends playback. Selecting a tab
+or swiping horizontally also changes the chapter. Chapters change immediately,
+without transition animations. Arrow keys navigate focused tabs. Reduced motion disables autoplay.
+Each chapter scrolls within the available panel height on desktop and mobile;
+scrolling never advances to another chapter. There is no numbered stepper or pause
+button. The Tweak demo focuses on the shader and its controls.
 The matrix speed control ranges from 0× to 4×.
 Visitors can browse an icon set, follow work in a coding agent dashboard, and add previews to that
 dashboard. These use local demo data. They do not call an agent or install extensions.
 
-Examples pairs each tool with a short description and its building blocks.
+Examples uses the same carousel and pairs each tool with a short description and its building blocks.
+Editor panels keep their content height; shader panels share a height so the code
+area fills the space beside its preview.
+Shader canvases and formula plots have bounded heights on the example pages.
 Each tab is a link to a prerendered page:
 
 - `/examples/coding-agent-dashboard/`
@@ -91,21 +165,22 @@ Each tab is a link to a prerendered page:
 - `/examples/financial-formulas/`
 
 The selected example comes from the URL. Reloading, opening a link in another tab,
-and browser history preserve that selection. `/examples/` shows the first example
+and browser history preserve that selection. Automatic changes replace the current
+history entry; manual selections add an entry. `/examples/` shows the first example
 and declares its full URL as canonical.
 
 The icon set editor uses the existing Prompt Studio icons. Visitors can search by
 name or codepoint, select an icon, and rename it in local demo state. Its grid and
 inspector follow the repository's icon editor.
-The dashboard supports agent selection, pause and resume, and approving a result.
-Each building block keeps the same shape across the page and the falling tools.
+The dashboard supports agent selection, replaying the workflow, and approving a result.
+Each building block keeps the same shape across the page and the tool stencils.
 The shapes above each example explain the blocks it uses. Search, notifications, navigation,
 extension management, and themes have a separate Features page. A single page gap separates feature sections, without extra section padding.
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
 The page layout and preview styles use the local `landingStory` and `landingToolDemo`
 recipes. The app's Storybook covers desktop and narrow-panel layouts. Preview panels respond
-to their actual container width, including when the download panel is resized.
+to their actual container width.
 
 Build these stories with `bun run --cwd clients/landing-page build-storybook`.
 The reusable component stories remain in the UI package's Storybook.
@@ -159,8 +234,8 @@ and architecture notes stay in the repo. Everything else comes from the files:
   `documentation/references/cli/0006-sessions.md` becomes `/docs/references/cli/sessions/`.
 - An extension's `README.md` is its overview page at `/docs/extensions/<slug>/`.
 
-`/docs/` lists the same tree as the sidebar. Docs pages show previous and next links
-in sidebar order and, on wide screens, an outline of their `##` headings that marks
+`/docs/` lists the same tree as the sidebar. Docs pages show, on wide screens,
+an outline of their `##` headings that marks
 the one in view. The `landingDoc` recipe styles the markdown tags, including tables
 and code. Shiki's `css-variables` theme colors code, and the recipe maps those
 variables to design tokens, so code follows the color mode.
@@ -224,6 +299,8 @@ for sample data, naming, theme selection, and playback checks.
 The existing PostHog client records custom events for action-menu opens and window
 button clicks. See the [website analytics reference](../../documentation/references/website/0001-analytics.md)
 for event names, properties, counting rules, and local validation.
+The analytics library loads in the background after the page paints. An early
+interaction queues its event until the library is ready.
 
 ## Legal documents
 
@@ -277,6 +354,8 @@ Run the image on a free localhost port. Mount `clients/landing-page/public/image
 at `/usr/share/nginx/html/images` as read-only; public images are excluded from
 the shared Docker build context. Keep this preview separate from the dashboard
 and its database.
+The static preview compresses HTML, JavaScript, CSS, and JSON responses and caches
+hashed assets. It does not require an application backend.
 
 ```sh
 docker run -d --name pstdio-landing-preview -p 127.0.0.1::80 \

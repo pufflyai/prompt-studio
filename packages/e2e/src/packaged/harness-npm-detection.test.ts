@@ -11,9 +11,9 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 beforeAll(buildBinary, 180_000);
 
 const harnesses = [
-  { command: "opencode", extension: "harness-open-code", id: "opencode", version: "1.18.34" },
-  { command: "codex", extension: "harness-codex", id: "codex", version: "codex-cli 0.160.1" },
-  { command: "claude", extension: "harness-claude-code", id: "claude-code", version: "2.1.0 (Claude Code)" },
+  { command: "opencode", extension: "harness-open-code", id: "opencode", version: "1.0.175" },
+  { command: "codex", extension: "harness-codex", id: "codex", version: "codex-cli 0.157.0" },
+  { command: "claude", extension: "harness-claude-code", id: "claude-code", version: "2.1.203 (Claude Code)" },
 ];
 const harnessId = (harness: (typeof harnesses)[number]) => `pstdio.${harness.extension}.harness.${harness.id}`;
 
@@ -99,17 +99,22 @@ for (const broken of [false, true]) {
     if (broken) await Bun.sleep(5_001);
     const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
     expect(agents.status).toBe(200);
-    const result = (await agents.json()) as Array<{ id: string; availability: { type: string } }>;
+    const result = (await agents.json()) as Array<{ id: string; availability: { type: string; reason?: string } }>;
     expect(result).toHaveLength(3);
     for (const harness of harnesses) {
       expect(result).toContainEqual(
         expect.objectContaining({
           id: harnessId(harness),
-          availability: { type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED" },
+          availability: expect.objectContaining({
+            type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED",
+          }),
         }),
       );
     }
     if (broken) {
+      // The host stops the hanging probe and says why the harness is unavailable.
+      const opencode = result.find((agent) => agent.id === harnessId(harnesses[0]));
+      expect(opencode?.availability.reason).toMatch(/\S/);
       await expectProbeExited("opencode");
     }
     if (!broken) {

@@ -175,7 +175,7 @@ const EnumOptionsEditor = (props: EnumOptionsEditorProps) => {
             value={option.value}
             onChange={(event) => update(index, { value: event.currentTarget.value })}
           />
-          <IconButton aria-label="Remove option" variant="ghost" size="xs" onClick={() => remove(index)}>
+          <IconButton aria-label="Remove option" variant="destructive-ghost" size="xs" onClick={() => remove(index)}>
             <Icon as={Trash2} boxSize="14px" />
           </IconButton>
         </HStack>
@@ -225,7 +225,7 @@ const AttributeRow = (props: AttributeRowProps) => {
           onChange={(event) => onChange({ ...attribute, id: event.currentTarget.value })}
         />
         <KindMenu value={attribute.type.kind} onChange={setKind} />
-        <IconButton aria-label="Remove attribute" variant="ghost" size="sm" onClick={onRemove}>
+        <IconButton aria-label="Remove attribute" variant="destructive-ghost" size="sm" onClick={onRemove}>
           <Icon as={Trash2} boxSize="14px" />
         </IconButton>
       </HStack>

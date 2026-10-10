@@ -232,7 +232,7 @@ const RecordRow = (props: { record: ContributionRecordRow; endContent?: React.Re
         )}
       </HStack>
       {record.keys && (
-        <HStack gap="2xs" flexShrink="0">
+        <HStack gap="shortcut-key-gap" flexShrink="0">
           {chordKeys(record.keys).map((key) => (
             <Kbd key={key} size="sm">
               {key}

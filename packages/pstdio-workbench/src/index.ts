@@ -244,6 +244,7 @@ export {
   defaultPageResourceCodec,
   dockedWorkbenchRegions,
   getKeybindingSteps,
+  getNavigationTargetKey,
   getWorkbenchModePanelForRegion,
   getWorkbenchSelectionResourceKeys,
   headerLeadingMenuPath,

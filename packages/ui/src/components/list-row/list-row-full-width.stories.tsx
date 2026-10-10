@@ -25,7 +25,7 @@ export const OverlayRows: Story = {
           description="Global commands"
           icon={<FileText size={14} />}
           endContent={
-            <HStack gap="2xs">
+            <HStack gap="shortcut-key-gap">
               <Kbd size="sm">mod</Kbd>
               <Kbd size="sm">K</Kbd>
             </HStack>

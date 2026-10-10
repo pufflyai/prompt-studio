@@ -1,175 +1,194 @@
-import { Badge, Box, Icon as ChakraIcon, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { GripVertical, Pencil, Trash2 } from "lucide-react";
-import { type DragEvent, useState } from "react";
+import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { Fragment, type ReactNode, useState } from "react";
+import { ScrollArea } from "@/components/primitives/scroll-area";
+import { queuedFollowUpRecipe } from "@/theme/recipes/queued-follow-up";
 import type { QueuedFollowUp } from "./message-types";
+import { QueueSendNow, queueKeyboardCoordinates } from "./queued-follow-up-drag";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
+import { QueuedFollowUpRow } from "./queued-follow-up-row";
 
 interface QueuedFollowUpListProps {
   items: QueuedFollowUp[];
   editingItemId?: string | null;
+  editor?: ReactNode;
+  retainedEditor?: ReactNode;
+  retainedEditorPosition?: number;
+  dirtyItemIds?: string[];
+  steeringUnavailableReason?: string | null;
   onEdit?: (item: QueuedFollowUp) => void;
   onRemove?: (itemId: string) => void;
-  onMove?: (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => void;
+  onMove?: (
+    itemId: string,
+    direction: QueuedFollowUpMoveDirection,
+    steps?: number,
+    selection?: { source: QueuedFollowUp; items: QueuedFollowUp[] },
+  ) => void | Promise<void>;
+  onSteer?: (item: QueuedFollowUp) => void | Promise<void>;
+  onCombine?: (source: QueuedFollowUp, target: QueuedFollowUp) => void | Promise<void>;
 }
-
-interface QueuedFollowUpRowProps {
-  item: QueuedFollowUp;
-  index: number;
-  isFirst: boolean;
-  isLast: boolean;
-  isEditing: boolean;
-  isDragTarget: boolean;
-  onEdit?: (item: QueuedFollowUp) => void;
-  onRemove?: (itemId: string) => void;
-  onDragStart: (itemId: string) => void;
-  onDragEnd: () => void;
-  onDragOver: (event: DragEvent<HTMLDivElement>, itemId: string) => void;
-  onDrop: (event: DragEvent<HTMLDivElement>, itemId: string) => void;
-}
-
-const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
+const settingsKey = (item: QueuedFollowUp) =>
+  JSON.stringify([item.model, Object.entries(item.params ?? {}).sort(([a], [b]) => a.localeCompare(b))]);
+export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
   const {
-    item,
-    index,
-    isFirst,
-    isLast,
-    isEditing,
-    isDragTarget,
+    items,
+    editingItemId,
+    editor,
+    retainedEditor,
+    retainedEditorPosition,
+    dirtyItemIds = [],
+    steeringUnavailableReason,
     onEdit,
     onRemove,
-    onDragStart,
-    onDragEnd,
-    onDragOver,
-    onDrop,
+    onMove,
+    onSteer,
+    onCombine,
   } = props;
-  const canEdit = Boolean(onEdit);
-  const canRemove = Boolean(onRemove);
-  const canDrag = !isFirst || !isLast;
-  const dragLabel = `Drag queued follow-up ${index + 1}`;
-
+  const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
+  const [keyboardTarget, setKeyboardTarget] = useState<string | number | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: (event, context) => queueKeyboardCoordinates(event, context, setKeyboardTarget),
+    }),
+  );
+  const [source, setSource] = useState<QueuedFollowUp | null>(null);
+  const [dragItems, setDragItems] = useState<QueuedFollowUp[]>([]);
+  const [destination, setDestination] = useState<{ kind: string; item?: QueuedFollowUp } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  if (!items.length && !retainedEditor) return null;
+  const retainedIndex = getRetainedEditorIndex(items, retainedEditorPosition);
+  const steerReason =
+    source?.steeringUnavailableReason ??
+    steeringUnavailableReason ??
+    (source && dirtyItemIds.includes(source.id) ? "Update or Cancel this edit before sending." : null) ??
+    (onSteer ? null : "This conversation cannot accept live input.");
+  const showSendNow = Boolean(source && onSteer && !steeringUnavailableReason);
+  const combineReason = (target: QueuedFollowUp) => {
+    if (!source || source.id === target.id) return "Choose another request.";
+    if (dirtyItemIds.includes(source.id) || dirtyItemIds.includes(target.id))
+      return "Update or Cancel the edits first.";
+    if (settingsKey(source) !== settingsKey(target)) return "Model and thinking settings must match.";
+    if (target.steeringDelivery) return "Delivery is still being confirmed.";
+    return null;
+  };
+  const reorder = (selected: QueuedFollowUp, target: QueuedFollowUp, kind: string) => {
+    const eligible = dragItems.filter((item) => !item.steeringDelivery);
+    const start = eligible.findIndex((item) => item.id === selected.id);
+    const end = eligible.findIndex((item) => item.id === target.id);
+    if (start < 0 || end < 0 || start === end) return;
+    const insertion = end + (kind === "after" ? 1 : 0);
+    const next = insertion - (start < insertion ? 1 : 0);
+    if (next === start) return;
+    return onMove?.(selected.id, next < start ? "up" : "down", Math.abs(next - start), {
+      source: selected,
+      items: dragItems,
+    });
+  };
+  const performDrop = (selected: QueuedFollowUp, target: { kind: string; item?: QueuedFollowUp }) => {
+    if (target.kind === "steer") {
+      if (!steerReason) return onSteer?.(selected);
+      setError(steerReason);
+      return;
+    }
+    if (!target.item) return;
+    if (target.kind === "combine") {
+      if (!combineReason(target.item)) return onCombine?.(selected, target.item);
+      return;
+    }
+    return reorder(selected, target.item, target.kind);
+  };
   return (
-    <Box
-      minWidth="0"
-      borderTopWidth={isFirst ? "0" : "1px"}
-      borderColor={isDragTarget ? "border.accent-light" : "border.subtle"}
-      paddingTop={isFirst ? "0" : "2xs"}
-      paddingBottom="2xs"
-      bg={isEditing ? "bg.muted" : undefined}
-      onDragOver={(event) => onDragOver(event, item.id)}
-      onDrop={(event) => onDrop(event, item.id)}
-      data-queued-follow-up-id={item.id}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={(args) => {
+        if (!args.pointerCoordinates && keyboardTarget !== null) return [{ id: keyboardTarget }];
+        const pointer = pointerWithin(args);
+        return pointer.length ? pointer : rectIntersection(args);
+      }}
+      autoScroll
+      onDragStart={(event) => {
+        setKeyboardTarget(null);
+        setSource(event.active.data.current?.item ?? null);
+        setDragItems(items);
+        setError(null);
+      }}
+      onDragOver={(event) =>
+        setDestination((event.over?.data.current as { kind: string; item?: QueuedFollowUp }) ?? null)
+      }
+      onDragCancel={() => {
+        setKeyboardTarget(null);
+        setSource(null);
+        setDestination(null);
+      }}
+      onDragEnd={(event) => {
+        const selected = source;
+        const target = event.over?.data.current;
+        setSource(null);
+        setDestination(null);
+        if (!selected || !target || pending) return;
+        setPending(true);
+        void Promise.resolve()
+          .then(() => performDrop(selected, target as { kind: string; item?: QueuedFollowUp }))
+          .catch((failure) =>
+            setError(failure instanceof Error ? failure.message : "Could not change the queue. Saved input is kept."),
+          )
+          .finally(() => setPending(false));
+      }}
     >
-      <HStack gap="xs" alignItems="flex-start">
-        <IconButton
-          size="2xs"
-          variant="ghost"
-          draggable={canDrag}
-          aria-label={dragLabel}
-          title={dragLabel}
-          color="fg.muted"
-          cursor={canDrag ? "grab" : "default"}
-          disabled={!canDrag}
-          onDragStart={(event) => {
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", item.id);
-            onDragStart(item.id);
-          }}
-          onDragEnd={onDragEnd}
-        >
-          <ChakraIcon as={GripVertical} boxSize="14px" />
-        </IconButton>
-        <Stack gap="2xs" flex="1" minWidth="0">
-          <Text textStyle="label/S/regular" color="fg" lineClamp={2} minWidth="0">
-            {item.prompt}
+      <Box css={styles.root} data-send-now-visible={showSendNow} aria-busy={pending}>
+        <QueueSendNow visible={showSendNow} targeted={destination?.kind === "steer"} reason={steerReason} />
+        <ScrollArea maxH="queue-viewport" minH="0" viewportProps={{ maxH: "queue-viewport" }}>
+          {items.map((item, index) => (
+            <Fragment key={item.id}>
+              {retainedEditor && index === retainedIndex ? <RetainedEditor>{retainedEditor}</RetainedEditor> : null}
+              <QueuedFollowUpRow
+                item={item}
+                index={index}
+                source={source?.id === item.id}
+                destination={destination?.item?.id === item.id ? destination.kind : undefined}
+                unavailableReason={destination?.kind === "combine" ? combineReason(item) : null}
+                editing={editingItemId === item.id}
+                editor={editingItemId === item.id ? editor : undefined}
+                onEdit={onEdit}
+                onRemove={onRemove}
+              />
+            </Fragment>
+          ))}
+          {retainedEditor && retainedIndex === items.length ? <RetainedEditor>{retainedEditor}</RetainedEditor> : null}
+        </ScrollArea>
+        {error ? (
+          <Text css={styles.notice} role="alert">
+            {error}
           </Text>
-          {item.attachments?.length ? (
-            <Badge width="fit-content" size="sm" variant="outline" colorPalette="gray">
-              {item.attachments.length} attachments
-            </Badge>
-          ) : null}
-        </Stack>
-        <HStack gap="2xs" flexShrink={0}>
-          {canEdit ? (
-            <IconButton size="2xs" variant="ghost" aria-label="Edit queued follow-up" onClick={() => onEdit?.(item)}>
-              <ChakraIcon as={Pencil} boxSize="14px" />
-            </IconButton>
-          ) : null}
-          {canRemove ? (
-            <IconButton
-              size="2xs"
-              variant="ghost"
-              aria-label="Remove queued follow-up"
-              colorPalette="red"
-              onClick={() => onRemove?.(item.id)}
-            >
-              <ChakraIcon as={Trash2} boxSize="14px" />
-            </IconButton>
-          ) : null}
-        </HStack>
-      </HStack>
-    </Box>
+        ) : null}
+      </Box>
+    </DndContext>
   );
 };
 
-export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
-  const { items, editingItemId, onEdit, onRemove, onMove } = props;
-  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
-  const [dragTargetItemId, setDragTargetItemId] = useState<string | null>(null);
-  if (items.length === 0) return null;
+const getRetainedEditorIndex = (items: QueuedFollowUp[], position = Number.POSITIVE_INFINITY) => {
+  const index = items.findIndex((item) => (item.position ?? Number.POSITIVE_INFINITY) > position);
+  return index < 0 ? items.length : index;
+};
 
-  const handleDragOver = (event: DragEvent<HTMLDivElement>, itemId: string) => {
-    if (!draggedItemId || draggedItemId === itemId) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDragTargetItemId(itemId);
-  };
-
-  const handleDrop = (event: DragEvent<HTMLDivElement>, itemId: string) => {
-    event.preventDefault();
-    const sourceItemId = draggedItemId ?? event.dataTransfer.getData("text/plain");
-    setDraggedItemId(null);
-    setDragTargetItemId(null);
-    if (!sourceItemId || sourceItemId === itemId) return;
-
-    const sourceIndex = items.findIndex((item) => item.id === sourceItemId);
-    const targetIndex = items.findIndex((item) => item.id === itemId);
-    if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
-
-    const direction: QueuedFollowUpMoveDirection = targetIndex < sourceIndex ? "up" : "down";
-    onMove?.(sourceItemId, direction, Math.abs(targetIndex - sourceIndex));
-  };
-
+const RetainedEditor = (props: { children: ReactNode }) => {
+  const { children } = props;
+  const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
   return (
-    <Stack
-      gap="2xs"
-      paddingX="0"
-      paddingY="xs"
-      borderWidth="1px"
-      borderBottomWidth="0"
-      borderColor="border"
-      borderTopRadius="xs"
-      background="bg"
-    >
-      {items.map((item, index) => (
-        <QueuedFollowUpRow
-          key={item.id}
-          item={item}
-          index={index}
-          isFirst={index === 0}
-          isLast={index === items.length - 1}
-          isEditing={editingItemId === item.id}
-          isDragTarget={dragTargetItemId === item.id}
-          onEdit={onEdit}
-          onRemove={onRemove}
-          onDragStart={setDraggedItemId}
-          onDragEnd={() => {
-            setDraggedItemId(null);
-            setDragTargetItemId(null);
-          }}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        />
-      ))}
-    </Stack>
+    <Box css={styles.row}>
+      <Box flex="1" minW="0">
+        {children}
+      </Box>
+    </Box>
   );
 };

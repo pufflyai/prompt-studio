@@ -3,6 +3,33 @@ import { createNavigationTreeRegistry } from "./navigation-tree-registry";
 
 const project = { kind: "mode" as const, id: "project", extensionId: "pstdio" };
 
+test("does not delegate resource moves from another workbench registry", async () => {
+  let moves = 0;
+  const contribution = {
+    id: "notes",
+    owner: project,
+    sourceExtensionId: "notes",
+    declarationIndex: 0,
+    viewId: "notes-view",
+  };
+  const create = () =>
+    createNavigationTreeRegistry({
+      getViewSections: () => [{ id: "notes", nodes: [{ id: "note", label: "Note", canDrag: true }] }],
+      moveViewNode: () => {
+        moves++;
+      },
+    });
+  const first = create(),
+    second = create();
+  first.registerContribution(contribution);
+  second.registerContribution(contribution);
+  const [section] = await first.getSections(project);
+  await second.moveNode(section.nodes[0], undefined);
+  expect(moves).toBe(0);
+  await first.moveNode(section.nodes[0], undefined);
+  expect(moves).toBe(1);
+});
+
 describe("navigation tree registry", () => {
   test("cancelling composed navigation prevents later contribution reads", async () => {
     const controller = new AbortController();
@@ -242,4 +269,22 @@ test("lazy children retain their owner resource and use the current cancellation
   await registry.getChildren(children[0]!, context);
   await registry.getChildren(section!.nodes[0]!.children![0]!, context);
   expect(seen).toEqual(Array.from({ length: 3 }, () => ({ resource: ticket, signal })));
+});
+
+test("declared navigation actions follow contribution lifetime without reading dynamic trees", () => {
+  const registry = createNavigationTreeRegistry();
+  const action = { kind: "href" as const, href: "https://example.com" };
+  const registration = registry.registerContribution({
+    id: "links",
+    owner: project,
+    sourceExtensionId: "tools.links",
+    declarationIndex: 0,
+    getSections: () => {
+      throw new Error("Must not fetch tree data for shortcut discovery");
+    },
+    listActions: () => [{ label: "Visit site", action }],
+  });
+  expect(registry.listActions()).toEqual([{ label: "Visit site", action, ownerId: "tools.links" }]);
+  registration.dispose();
+  expect(registry.listActions()).toEqual([]);
 });

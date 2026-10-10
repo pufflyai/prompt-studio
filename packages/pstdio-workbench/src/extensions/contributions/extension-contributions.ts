@@ -116,6 +116,7 @@ const createPaletteItem = (input: {
 
   return {
     commandId,
+    sourceCommandId: contribution.commandId,
     label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: contribution.group,

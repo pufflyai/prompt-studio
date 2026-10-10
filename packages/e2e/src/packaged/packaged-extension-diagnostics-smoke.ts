@@ -8,6 +8,49 @@ import { writeExtensionWithDependency } from "./extension-fixtures";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 export const registerExtensionDiagnosticsSmokeTests = () => {
+  test("loads deprecated status providers with a migration warning in the packaged CLI", () => {
+    const root = mkdtempSync(join(tmpdir(), "packaged-status-deprecation-"));
+    try {
+      const extensionPath = join(root, "extensions", "legacy-statuses");
+      mkdirSync(extensionPath, { recursive: true });
+      writeFileSync(
+        join(extensionPath, "package.json"),
+        JSON.stringify({
+          name: "legacy-statuses",
+          publisher: "test",
+          version: "1.0.0",
+          main: "./extension.ts",
+          engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+        }),
+      );
+      writeFileSync(
+        join(extensionPath, "extension.ts"),
+        `export default { statuses: [{
+        id: "workflow", ref: { kind: "status", id: "workflow" }, title: "Workflow",
+        query: () => ({ statuses: [{ id: "todo", label: "Todo", color: "blue", sortOrder: 0 }] }),
+        save: (_ctx, input) => input,
+      }] };`,
+      );
+      const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", extensionPath, "--json"], {
+        cwd: root,
+        env: { ...process.env, PSTDIO_HOME: root },
+        encoding: "utf8",
+      });
+      expect(result.status, result.stdout || result.stderr).toBe(0);
+      const report = JSON.parse(result.stdout);
+      expect(report.check).toMatchObject({ errorCount: 0, warningCount: 1 });
+      expect(report.check.runtime.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "deprecated_status_contribution",
+          severity: "warning",
+          message: expect.stringContaining("query-owned enum attributes"),
+        }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("loads extension dependencies reached through linked package directories", () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-linked-dependencies-"));
     try {

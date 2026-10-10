@@ -1,0 +1,54 @@
+name: Verify packaged toolchain
+
+# Native runners are slow and costly, so callers run this only before a release.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git revision to verify
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform_pkg: cli-linux-x64
+          - os: macos-15-intel
+            platform_pkg: cli-darwin-x64
+          - os: windows-latest
+            platform_pkg: cli-win-x64
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+
+      - name: Install Chromium for packaged extension smoke tests
+        if: runner.os != 'Windows'
+        run: bunx playwright@1.60.0 install chromium --with-deps
+
+      - name: Verify packaged Bun toolchain
+        env:
+          PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
+        run: bun run --cwd scripts verify:packages

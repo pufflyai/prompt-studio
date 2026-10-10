@@ -142,6 +142,10 @@ export interface CommandDefinition<
   cli?: true | CliContribution;
   /** Exposes this exact command and its params schema to scoped machine tokens. */
   automation?: true;
+  /** Preview a resource rename or removal in the dashboard while this command saves. Removal asks for confirmation. */
+  resourceMutation?:
+    | { kind: "rename"; resourceType: string; idParam: string; labelParam: string }
+    | { kind: "remove"; resourceType: string; idParam: string };
   /** Records CLI invocations of this command as mutations. */
   mutating?: true;
   stream?: CommandStreamDeclaration<TChunk>;
@@ -244,6 +248,7 @@ export interface UiContributions {
   navigationItems?: readonly NavigationItemContribution[];
   navigationTrees?: readonly NavigationTreeContribution[];
   statusBarItems?: readonly StatusBarItemContribution[];
+  /** @deprecated Use extension-owned values and commands, a settings panel, and query-returned enum attributes. */
   statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];

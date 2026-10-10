@@ -32,6 +32,8 @@ export interface KanbanRendererContribution<
   id: string;
   title: string;
   toolbarActions?: ViewToolbarAction[];
+  /** Authored row actions for discovery without querying rows or evaluating a row menu. */
+  listRowActions?: () => Pick<ViewToolbarAction, "commandId" | "label" | "args">[];
   resourceKind?: string;
   /** Host-owned scope for persisted display settings. */
   storageScope?: string;

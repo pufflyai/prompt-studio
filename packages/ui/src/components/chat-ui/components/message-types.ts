@@ -102,11 +102,17 @@ export type SessionMessage = {
 };
 
 export type QueuedFollowUp = {
+  revision?: string;
+  model?: string | null;
+  params?: Record<string, string | boolean>;
+  steeringUnavailableReason?: string | null;
+  steeringDelivery?: { id: string; runStartedAt: string } | null;
   id: string;
   prompt: string;
   attachments?: Array<{
     id: string;
     name: string;
+    size?: number;
     mediaType?: string;
     url?: string;
   }>;
@@ -207,7 +213,7 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
     const displayParts = (message.parts ?? []).filter(isDisplayRenderablePart);
     if (displayParts.length === 0) continue;
 
-    const displayMessage = { ...message, parts: displayParts };
+    const displayMessage = displayParts.length === message.parts.length ? message : { ...message, parts: displayParts };
 
     if (displayMessage.role === "user") {
       clearActivityBuffer();

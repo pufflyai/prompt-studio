@@ -83,8 +83,11 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
         await app.page.keyboard.press("Tab");
         await expect(dialog.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
         await app.finishTrace();
-        await acceptFocusedButton(app.page);
-        await waitForExit(app.child);
+        await test.step("Stop the active terminal and exit the packaged desktop gracefully", async () => {
+          await expect.poll(readTerminals).toEqual([activeTerminal]);
+          await acceptFocusedButton(app!.page);
+          await waitForExit(app!.child);
+        });
       } else {
         await app.finishTrace();
         const closed = runPackagedCli(home, ["close", "--force"]);

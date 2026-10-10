@@ -200,6 +200,12 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSessionsPage(ctx);
       registerSidenavSessions(ctx);
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
+        ctx.keybindings.registerKeybinding({
+          action: { kind: "command", commandId: dashboardCommandIds.createSession },
+          keybinding: "Mod+Alt+S",
+        });
+      }
+      if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
           commandId: dashboardCommandIds.createSession,
           order: 35,
@@ -214,6 +220,10 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         },
         { execute: () => openSessionsNavigation(ctx) },
       );
+      ctx.keybindings.registerKeybinding({
+        action: { kind: "command", commandId: dashboardCommandIds.openSessions },
+        keybinding: "Alt+Shift+S",
+      });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openSessions,
         order: 30,

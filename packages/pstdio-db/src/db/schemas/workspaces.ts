@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { files } from "./files";
 import { projects } from "./projects";
 import { sessions } from "./sessions";
@@ -116,5 +116,8 @@ export const workspace_sessions = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     created_at: text("created_at").notNull(),
   },
-  (table) => [uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id)],
+  (table) => [
+    uniqueIndex("workspace_sessions_ws_session_idx").on(table.workspace_id, table.session_id),
+    index("workspace_sessions_session_idx").on(table.session_id),
+  ],
 );

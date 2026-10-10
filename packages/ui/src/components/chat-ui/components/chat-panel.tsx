@@ -69,9 +69,27 @@ export interface ChatPanelProps extends ChatLinkProps {
   composerDecision?: ComposerDecision;
   chatInputAutoFocus?: boolean;
   queuedFollowUps?: QueuedFollowUp[];
-  onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void;
+  onQueuedFollowUpUpdate?: (itemId: string, prompt: string) => void | Promise<void>;
+  /** Submit the retained edit's settings and files as a new request. */
+  onQueuedFollowUpCreate?: (itemId: string, prompt: string) => void | Promise<void>;
+  /** Move the retained edit's settings and files into the normal draft before its text changes. */
+  onQueuedFollowUpRestoreDraft?: (itemId: string) => void;
+  /** Allow recovery only when the normal draft has no files or uploads and the host can transfer the edit. */
+  canRestoreQueuedEditToDraft?: boolean;
+  onQueuedFollowUpSelect?: (item: QueuedFollowUp | null) => void;
+  onQueuedFollowUpDiscard?: (itemId: string) => void;
+  onQueuedFollowUpSteer?: (item: QueuedFollowUp) => void | Promise<void>;
+  onQueuedFollowUpCombine?: (source: QueuedFollowUp, target: QueuedFollowUp) => void | Promise<void>;
+  queueSteeringUnavailableReason?: string | null;
+  unsavedQueueItemIds?: string[];
+
   onQueuedFollowUpRemove?: (itemId: string) => void;
-  onQueuedFollowUpMove?: (itemId: string, direction: QueuedFollowUpMoveDirection, steps?: number) => void;
+  onQueuedFollowUpMove?: (
+    itemId: string,
+    direction: QueuedFollowUpMoveDirection,
+    steps?: number,
+    selection?: { source: QueuedFollowUp; items: QueuedFollowUp[] },
+  ) => void;
   chatInputCommands?: PromptCommand[];
 }
 
@@ -111,6 +129,15 @@ export const ChatPanel = (props: ChatPanelProps) => {
     chatInputAutoFocus = false,
     queuedFollowUps = [],
     onQueuedFollowUpUpdate,
+    onQueuedFollowUpCreate,
+    onQueuedFollowUpRestoreDraft,
+    canRestoreQueuedEditToDraft,
+    onQueuedFollowUpSelect,
+    onQueuedFollowUpDiscard,
+    onQueuedFollowUpSteer,
+    onQueuedFollowUpCombine,
+    queueSteeringUnavailableReason,
+    unsavedQueueItemIds,
     onQueuedFollowUpRemove,
     onQueuedFollowUpMove,
     chatInputCommands = [],
@@ -146,6 +173,12 @@ export const ChatPanel = (props: ChatPanelProps) => {
     onChange: onChatInputChange,
     onSubmit: onSubmitMessage,
     onUpdate: onQueuedFollowUpUpdate,
+    onCreate: onQueuedFollowUpCreate,
+    onRestoreDraft: onQueuedFollowUpRestoreDraft,
+    canRestoreDraft: canRestoreQueuedEditToDraft,
+    disabled: inputDisabled,
+    onSelect: onQueuedFollowUpSelect,
+    onDiscard: onQueuedFollowUpDiscard,
   });
 
   const toggleStickyMessageExpanded = (messageId: string) => {
@@ -219,6 +252,10 @@ export const ChatPanel = (props: ChatPanelProps) => {
               onQueuedFollowUpMove={onQueuedFollowUpMove}
               onQueuedFollowUpRemove={onQueuedFollowUpRemove}
               onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
+              onQueuedFollowUpSteer={onQueuedFollowUpSteer}
+              onQueuedFollowUpCombine={onQueuedFollowUpCombine}
+              queueSteeringUnavailableReason={queueSteeringUnavailableReason}
+              unsavedQueueItemIds={unsavedQueueItemIds}
               queuedComposer={queuedComposer}
               queuedFollowUps={queuedFollowUps}
               streaming={streaming}

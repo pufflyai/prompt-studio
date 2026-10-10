@@ -1,17 +1,23 @@
 import { Box } from "@chakra-ui/react";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { DownloadPanel } from "../downloads/download-panel";
+import { AssemblyFrame } from "../shapes/assembly-frame";
 import { ShapeField } from "../shapes/shape-field";
+import { PageScroll } from "../workbench/page-scroll";
 
-interface StartHereViewProps {
-  windowOffset?: { x: number; y: number };
-}
-
-export const StartHereView = (props: StartHereViewProps) => {
-  const { windowOffset } = props;
+export const StartHereView = () => {
   const styles = useLandingStyles();
   return (
-    <Box css={styles.tools} role="region" aria-label="Your tools">
-      <ShapeField worldOffset={windowOffset} />
+    <Box css={styles.hero} as="section" aria-labelledby="download-panel-title">
+      <PageScroll>
+        <Box css={styles.heroLayout} data-assembly-area="">
+          <DownloadPanel headingLevel="h1" />
+          <Box css={styles.cardSpace} aria-hidden="true">
+            <AssemblyFrame />
+          </Box>
+          <ShapeField />
+        </Box>
+      </PageScroll>
     </Box>
   );
 };

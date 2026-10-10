@@ -70,6 +70,8 @@ const buildAgentMenuItems = (
     id: option.value,
     label: option.label,
     searchText: option.value,
+    // An unavailable harness says why, such as a missing or too-old CLI.
+    secondaryLabel: option.description,
     icon: option.icon ?? TerminalIcon,
     isSelected: option.value === selectedAgent,
     isDisabled: option.disabled,

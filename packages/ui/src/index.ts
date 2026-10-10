@@ -76,6 +76,7 @@ export type {
   TreeListSection,
 } from "@/components/tree-list/tree-list.types";
 export { TreeListDragProvider } from "@/components/tree-list/tree-list-drag-provider";
+export type { TreeListGroup } from "@/components/tree-list/tree-list-order.store";
 export { getTreeListOrderStore, useTreeListOrderStore } from "@/components/tree-list/tree-list-order.store";
 export { applyTreeListOrder } from "@/components/tree-list/tree-list-order-filter";
 export type { TreeListMove, TreeListMoveEndpoint, TreeListMovePolicy } from "@/components/tree-list/tree-list-reorder";

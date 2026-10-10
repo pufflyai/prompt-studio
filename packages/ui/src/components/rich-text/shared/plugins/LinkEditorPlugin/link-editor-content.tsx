@@ -105,7 +105,7 @@ export function LinkEditorContent(props: LinkEditorContentProps) {
       </Tooltip>
       <Tooltip content="Remove link">
         <IconButton
-          variant="ghost"
+          variant="destructive-ghost"
           size="xs"
           aria-label="Remove link"
           onMouseDown={preventFocusLoss}

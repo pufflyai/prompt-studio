@@ -27,6 +27,7 @@ import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
 import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
+import { newTicketCommand } from "./new-ticket";
 import { openTicketsCommand } from "./open-tickets";
 import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
@@ -133,6 +134,7 @@ export const plannerCommands = [
   readTicketsCommand,
   listTicketsCommand,
   createTicketCommand,
+  newTicketCommand,
   attachTicketFileCommand,
   detachTicketFileCommand,
   getTicketCommand,

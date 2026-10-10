@@ -15,14 +15,17 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
-import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
+import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
+import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
+// Includes legacy status provider loading and its migration warning.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -38,13 +41,17 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
+// Queue drag targets follow live-input support and retain padded delete actions.
+import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
+// It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
@@ -59,6 +66,10 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerExtensionInstallSmokeTests();
+registerExtensionViewsSmokeTests();
+registerConnectionStatusSmokeTests();
+
+// extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
@@ -111,7 +122,6 @@ test(
       });
       expect(renameRes.status).toBe(400);
       await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
-      await expectPackagedConnectionStatus(started.baseUrl, runtimeAuthorization(started.descriptor));
     } finally {
       if (child) {
         await stopProcess(child);
@@ -356,6 +366,15 @@ test(
 
       const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
       expectExamplePages(metadata);
+      expect(
+        metadata.commands.find(
+          (command) => command.id === "pstdio.workbench-fixture.command.glass-lab-artifacts.delete",
+        )?.resourceMutation,
+      ).toEqual({
+        kind: "remove",
+        resourceType: "glass-lab-artifact",
+        idParam: "rowId",
+      });
       await expectPackagedWebviewRuntime(started.baseUrl, metadata);
       await expectPackagedArtifacts({
         baseUrl: started.baseUrl,
@@ -420,6 +439,7 @@ registerCoreDefaultExtensionSmokeTests();
 registerExtensionDiagnosticsSmokeTests();
 registerLinkedWebviewSmokeTests();
 registerRemoteExecutionSmokeTests();
+registerConcurrentHostsSmokeTests();
 
 test("packaged CLI includes automation and machine authentication", () => {
   const result = spawnSync(PACKAGED_BINARY_PATH, ["--help"], { encoding: "utf8" });
@@ -451,3 +471,7 @@ registerBoardPanningSmokeTests();
 registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
+// Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
+registerQueuedRequestSmokeTests();
+
+registerSessionQuerySmokeTests();

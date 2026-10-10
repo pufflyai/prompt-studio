@@ -48,3 +48,24 @@ Use `stream` to follow live output in the terminal. When the agent asks for perm
 `resolve-session-id` finds the Prompt Studio session for a session ID from the agent itself, such as a Claude Code session ID. `--cwd` picks the right one when the same external ID appears in more than one working folder.
 
 Run `pst sessions <command> --help` for current options.
+
+## Read and change queued requests
+
+Use `pst sessions queue --id SESSION` to read saved requests, their revisions, and the active run identity.
+
+`pst sessions update-queued --id SESSION --queue-position POSITION --expected-revision REVISION --prompt TEXT` saves without sending. Optional `--model MODEL`, `--params '{"thinking":"high"}'`, and `--attachments '[{"file_id":"FILE"}]'` update those fields. Use an empty model string for the provider default, JSON null for default parameters, and an empty attachment array to clear references.
+
+`pst sessions combine-queued --id SESSION --target-position TARGET --source-position SOURCE --target-revision TARGET_REVISION --source-revision SOURCE_REVISION` combines compatible pending follow-ups atomically.
+
+`pst sessions steer --id SESSION --queue-position POSITION --expected-revision REVISION --expected-run-started-at RUN` uses native live input when supported. It prints a typed outcome and exits nonzero for rejection or uncertain delivery. Never automatically retry an uncertain result.
+
+### Time and anchor filters
+
+`sessions list` accepts `--created-from`, `--created-to` and `--updated-from` with inclusive ISO timestamps. Use `--anchor-type` and `--anchor-id` together to select sessions attached to a resource. These combine with the existing status, agent, workspace and archive filters.
+
+```sh
+pst sessions list --agent claude-code --created-from 2026-10-01T00:00:00.000Z
+pst sessions list --anchor-type ticket --anchor-id <ticket-id>
+```
+
+The HTTP `GET /sessions` endpoint accepts `created_from`, `created_to`, `updated_from`, `anchor_type` and `anchor_id`. It still returns an array, now ordered newest first. Items include `workspace_id` and nullable `usage_json` token totals. Extension commands use the same database filters through `ctx.sessions.query()`.

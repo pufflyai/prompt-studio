@@ -179,7 +179,7 @@ describe("createCommandEnvironment sessions listByWorkspace", () => {
     const sessions = await env.sessions.listByWorkspace("workspace-1");
 
     expect(listByWorkspace).toHaveBeenCalledWith("workspace-1");
-    expect(sessions).toEqual([
+    expect(sessions).toMatchObject([
       {
         id: "session-1",
         title: "Implement ticket: PS-1",

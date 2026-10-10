@@ -25,6 +25,7 @@ jobs:
       e2e: ${{ steps.scope.outputs.e2e }}
       license: ${{ steps.scope.outputs.license }}
       published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
+      harness_cli: ${{ steps.scope.outputs.harnessCli }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -117,6 +118,14 @@ jobs:
       - name: Check extensions against published SDK and UI packages
         run: bun run --cwd scripts verify:published-extensions
 
+  harness_cli_support:
+    needs: scope
+    if: needs.scope.outputs.harness_cli == 'true'
+    uses: ./.github/workflows/harness-cli-support.yml
+    with:
+      ref: ${{ github.sha }}
+      versions: '["minimum"]'
+
   windows_test_and_build:
     needs: scope
     if: needs.scope.outputs.windows == 'true'
@@ -205,6 +214,10 @@ jobs:
 
       - name: Build database and API dependencies
         run: bun run build -- --scope pstdio-api --include-dependencies
+
+      # This job has its own fresh runner, so it must prepare PowerShell before API tests too.
+      - name: Warm up Windows PowerShell
+        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
 
       # PGlite setup dominates these suites on Windows. Run them on their own runner
       # so the platform checks do not wait for hundreds of database initializations.
@@ -413,7 +426,7 @@ jobs:
   # Pull requests may skip jobs their changes do not need. On main every job must pass.
   ci_passed:
     if: always()
-    needs: [scope, published_extensions, test_and_build, windows_test_and_build, windows_database_tests, e2e, e2e_cli, packaged_and_vite_e2e, license_check, build_docker]
+    needs: [scope, published_extensions, harness_cli_support, test_and_build, windows_test_and_build, windows_database_tests, e2e, e2e_cli, packaged_and_vite_e2e, license_check, build_docker]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

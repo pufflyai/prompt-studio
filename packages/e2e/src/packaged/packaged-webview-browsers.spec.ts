@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -16,11 +16,14 @@ import {
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { verifyTreeGroups } from "../helpers/tree-groups";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
+import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
+import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
@@ -51,19 +54,23 @@ test.beforeAll(() => {
 test.describe("packaged extension webviews", () => {
   for (const browserCase of webviewBrowsers) {
     const browserAvailable = existsSync(browserCase.type.executablePath());
+    const defaultExtensions = e2eExtensions(
+      "workbench-fixture",
+      ...(browserCase.name === "Chromium" ? ["pstdio-artifacts"] : []),
+    );
     const browserTest = browserAvailable || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;
 
     browserTest(
       `persists commands and settings through authenticated opaque webviews in ${browserCase.name}`,
       async () => {
-        const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-"));
+        const tempRoot = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-")));
         let child: ChildProcess | null = null;
         let browser: Browser | null = null;
 
         try {
           expect(browserAvailable).toBe(true);
           const started = await startPackagedServe(tempRoot, {
-            PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+            PSTDIO_DEFAULT_EXTENSIONS: defaultExtensions,
             PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
           });
           child = started.child;
@@ -146,8 +153,14 @@ test.describe("packaged extension webviews", () => {
           await page.reload();
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
           await verifyPackagedWebviewRetention(page);
+          await verifyPackagedShortcutReference(
+            page,
+            started.baseUrl,
+            project.id,
+            runtimeAuthorization(started.descriptor),
+          );
 
-          await page.getByText("Settings", { exact: true }).last().click();
+          await page.getByRole("option", { name: "Settings", exact: true }).click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           const settingsFrame = page.frameLocator('iframe[title="Lab (project)"]');
           expect(await page.locator('iframe[title="Lab (project)"]').getAttribute("sandbox")).not.toContain(
@@ -176,6 +189,16 @@ test.describe("packaged extension webviews", () => {
               runtimeAuthorization(started.descriptor),
             );
             await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
+            await verifyPackagedCollectionBreadcrumb(
+              page,
+              started.baseUrl,
+              project.id,
+              projectFolder,
+              runtimeAuthorization(started.descriptor),
+            );
+            await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
+            const sidenav = page.locator('[data-workbench-region="sidenav"]');
+            await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));
           }
 
           expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);

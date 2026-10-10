@@ -163,3 +163,13 @@ The dashboard treats `queued` as an accepted-but-not-running state:
 Queued follow-up removal deletes only entries whose dispatch marker is still empty, in one conditional database statement. Once the scheduler claims an entry, client removal returns false and leaves scheduler-owned state intact.
 
 At startup, a dispatch marker without a live runtime is recovered before orphan-session reattachment, even when the provider supports reattachment. An old provider session ID does not prove that the newly claimed prompt was delivered. Recovery retries the durable prompt. As with any crash between provider acceptance and local acknowledgement, delivery is at least once: the provider may see the prompt again. Sessions without a claimed queue entry still use normal provider reattachment.
+
+## Saved requests and explicit live input
+
+Each entry owns its prompt, model, complete resolved harness parameters, and attachment references. A nullable model means the provider default. Legacy entries snapshot the session selection once during migration. Later session selections do not change saved requests. Dispatch reads the saved request again under the scheduler lock.
+
+A queue position is a slot. A random revision identifies the current request in that slot, including identical prompts. Editing, reordering, and combining change revisions. Dashboard operations carry revision preconditions. Reorder moves the whole payload in one transaction. Combining requires two pending ordinary follow-ups in one session with matching model and all parameters. It joins their text in queue order with a blank line, retains the target slot, deduplicates target-first attachments, and removes the source atomically. There is no item limit.
+
+Explicit steering uses the active harness handle's optional live-input capability. The host reserves one revision and captures its run owner under scheduler coordination. It keeps a control invocation open until delivery settles, while provider I/O runs outside the global scheduler lock. Questions and approvals block steering. Different saved execution settings require a future turn.
+
+Before provider I/O, the host persists a delivery identity and run identity on the request. Definite rejection releases it. Acceptance removes the request only after a correlated user message is checkpointed. Uncertain delivery stays visible, protects its attachments, and cannot drain, mutate, or replay automatically. Recovery requires positive correlated history evidence. See [ADR 0062](../../adrs/0062-native-queued-message-steering.md).

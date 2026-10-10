@@ -12,14 +12,24 @@ interface TreeListOrderSnapshot {
   sectionOrder: string[];
   nodeOrderBySection: Record<string, string[]>;
   sectionSlotById: Record<string, TreeListOrderSlot>;
+  groups: TreeListGroup[];
 }
 
 type TreeListOrderSlot = "header" | "content" | "footer";
+
+export interface TreeListGroup {
+  id: string;
+  label: string;
+  moveScope?: string;
+}
 
 interface TreeListOrderState extends TreeListOrderSnapshot {
   setSectionOrder: (nextSectionIds: string[]) => void;
   setNodeOrder: (sectionId: string, nextNodeIds: string[]) => void;
   setSectionSlot: (sectionId: string, slot: TreeListOrderSlot) => void;
+  addGroup: (group: TreeListGroup, sectionIds: string[]) => void;
+  renameGroup: (groupId: string, label: string) => void;
+  removeGroup: (groupId: string) => void;
   resetSectionOrder: () => void;
   resetNodeOrder: (sectionId: string) => void;
   reset: () => void;
@@ -34,6 +44,7 @@ const DEFAULT_SNAPSHOT: TreeListOrderSnapshot = {
   sectionOrder: [],
   nodeOrderBySection: {},
   sectionSlotById: {},
+  groups: [],
 };
 
 const STORE_NAMESPACE = "pstdio/ui/tree-list-order";
@@ -55,7 +66,14 @@ const getPersistedSnapshot = (state: TreeListOrderState) => ({
   sectionOrder: state.sectionOrder,
   nodeOrderBySection: state.nodeOrderBySection,
   sectionSlotById: state.sectionSlotById,
+  groups: state.groups,
 });
+
+const groupLabel = (label: string) => {
+  const trimmed = label.trim();
+  if (!trimmed) throw new Error("Enter a group name.");
+  return trimmed;
+};
 
 export const createTreeListOrderStore = (options: CreateTreeListOrderStoreOptions) =>
   createStore<TreeListOrderState>()(
@@ -70,6 +88,28 @@ export const createTreeListOrderStore = (options: CreateTreeListOrderStoreOption
           })),
         setSectionSlot: (sectionId, slot) =>
           set((state) => ({ ...state, sectionSlotById: { ...state.sectionSlotById, [sectionId]: slot } })),
+        addGroup: (group, sectionIds) =>
+          set((state) => ({
+            groups: [...state.groups, { ...group, label: groupLabel(group.label) }],
+            sectionOrder: dedupe([...sectionIds, group.id]),
+          })),
+        renameGroup: (groupId, label) => {
+          const nextLabel = groupLabel(label);
+          set((state) => ({
+            groups: state.groups.map((group) => (group.id === groupId ? { ...group, label: nextLabel } : group)),
+          }));
+        },
+        removeGroup: (groupId) =>
+          set((state) => {
+            const { [groupId]: _nodes, ...nodeOrderBySection } = state.nodeOrderBySection;
+            const { [groupId]: _slot, ...sectionSlotById } = state.sectionSlotById;
+            return {
+              groups: state.groups.filter((group) => group.id !== groupId),
+              sectionOrder: state.sectionOrder.filter((id) => id !== groupId),
+              nodeOrderBySection,
+              sectionSlotById,
+            };
+          }),
         resetSectionOrder: () => set((state) => ({ ...state, sectionOrder: [] })),
         resetNodeOrder: (sectionId) =>
           set((state) => {

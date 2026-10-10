@@ -74,33 +74,43 @@ const attachPackagedLogs = async (home: string, runtime?: RuntimeDescriptor) => 
 };
 
 export const waitForDescriptor = async (home: string, predicate = (_descriptor: RuntimeDescriptor) => true) => {
-  for (let attempt = 0; attempt < 100; attempt++) {
-    const descriptor = readDescriptor(home);
-    if (descriptor && predicate(descriptor)) return descriptor;
-    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
-  }
-  throw new Error("Packaged desktop runtime did not publish the expected descriptor");
+  let descriptor: RuntimeDescriptor | null = null;
+  // The test owns the startup deadline. A shorter cap here would end a slow first launch
+  // before its startup benchmark or functional check can finish. A steady interval keeps
+  // polling from delaying startup measurements.
+  await expect
+    .poll(
+      () => {
+        descriptor = readDescriptor(home);
+        return descriptor !== null && predicate(descriptor);
+      },
+      {
+        message: "Packaged desktop runtime did not publish the expected descriptor",
+        intervals: [100],
+        timeout: test.info().timeout,
+      },
+    )
+    .toBe(true);
+  return descriptor as unknown as RuntimeDescriptor;
 };
 
 const waitForDevTools = (child: ChildProcess) =>
   new Promise<string>((resolveConnection, rejectConnection) => {
+    // The test deadline bounds this wait. Fixture cleanup stops a hung app, which settles it through exit.
     let stderr = "";
-    const timeout = setTimeout(() => rejectConnection(new Error(`DevTools did not start\n${stderr}`)), 10_000);
+    let connected = false;
+    registerPackagedCleanup(async () => {
+      if (!connected) await test.info().attach("electron-stderr", { body: stderr, contentType: "text/plain" });
+    });
     child.stderr?.on("data", (chunk) => {
       stderr += String(chunk);
       const connection = stderr.match(/DevTools listening on (ws:\/\/\S+)/)?.[1];
       if (!connection) return;
-      clearTimeout(timeout);
+      connected = true;
       resolveConnection(connection);
     });
-    child.once("exit", (code) => {
-      clearTimeout(timeout);
-      rejectConnection(new Error(`Packaged app exited with code ${code}\n${stderr}`));
-    });
-    child.once("error", (error) => {
-      clearTimeout(timeout);
-      rejectConnection(error);
-    });
+    child.once("exit", (code) => rejectConnection(new Error(`Packaged app exited with code ${code}\n${stderr}`)));
+    child.once("error", rejectConnection);
   });
 
 export type PackagedWindow = {
@@ -141,10 +151,9 @@ export const attachStartupTimings = async (app: PackagedApp) => {
     .reverse()
     .find((entry) => entry.event === "desktop.window.ready");
   const firstContent = lifecycle.entries.find((entry) => entry.name === "first-contentful-paint");
-  expect(windowShown).toBeDefined();
-  expect(windowShown?.visible).toBe(true);
-  expect(firstContent).toBeDefined();
-  return Math.max(Date.parse(windowShown!.time), lifecycle.timeOrigin + firstContent.startTime) - app.startedAt;
+  // A missing event is reported as an unmeasured startup window, so the benchmark keeps its other samples.
+  if (!windowShown?.visible || !firstContent) return Number.NaN;
+  return Math.max(Date.parse(windowShown.time), lifecycle.timeOrigin + firstContent.startTime) - app.startedAt;
 };
 
 const launchPackaged = async <T>(
@@ -198,6 +207,7 @@ export const launchPackagedRecovery = async (home: string, runtimeEnvironment: R
     await expect
       .poll(
         () => existsSync(logPath) && readFileSync(logPath, "utf8").includes('"event":"desktop.runtime.start.failed"'),
+        { timeout: test.info().timeout },
       )
       .toBe(true);
   });

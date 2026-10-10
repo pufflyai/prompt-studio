@@ -11,7 +11,17 @@ const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 export default defineConfig({
   site: "https://prompt.studio",
-  integrations: [react()],
+  integrations: [react({ experimentalDisableStreaming: true })],
+  vite: {
+    build: {
+      rolldownOptions: {
+        output: {
+          // Keep startup's shared modules together instead of fetching many tiny files.
+          codeSplitting: { groups: [{ name: "landing", tags: ["$initial"] }] },
+        },
+      },
+    },
+  },
   markdown: {
     processor: satteri({ mdastPlugins: [publishedLinks(repoRoot), pageSummary, readingTime, themedImages] }),
     // Code colors are CSS variables. The `landingDoc` recipe maps them to design

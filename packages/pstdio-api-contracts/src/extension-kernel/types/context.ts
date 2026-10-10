@@ -1,6 +1,5 @@
 import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
-import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type { Skill } from "../../skills";
 import type { ExtensionAutomationApi } from "./automation";
 import type {
@@ -14,7 +13,9 @@ import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections"
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
-import type { ExtensionResourcesApi, RendererContext, ResourceAnchor, ResourceRef } from "./resources";
+import type { ExtensionResourcesApi, RendererContext, ResourceRef } from "./resources";
+import type { ExtensionViewsApi } from "./saved-views";
+import type { ExtensionSessionsApi } from "./sessions";
 import type { SlotInvocationContext } from "./slots";
 import type { ExtensionWorkspacesApi } from "./workspaces";
 
@@ -123,70 +124,15 @@ export interface ExtensionSkillsApi {
   list(): Promise<Skill[]>;
 }
 
-export interface ExtensionSessionResource {
-  type: "session";
-  id: string;
-  title: string;
-  status: SessionStatus;
-}
-
-export interface ExtensionSessionsApi {
-  get(id: string): Promise<{
-    id: string;
-    title: string;
-    status?: string;
-    original_session_id?: string | null;
-    cwd?: string | null;
-    updated_at?: string | null;
-    anchors_json?: ResourceAnchor[];
-  } | null>;
-
-  list(): Promise<
-    Array<{
-      id: string;
-      title: string;
-      status: SessionStatus;
-      last_request_started?: string | null;
-      last_request_ended?: string | null;
-      updated_at?: string | null;
-      anchors_json?: ResourceAnchor[];
-    }>
-  >;
-
-  /** Sessions linked to a workspace (via the workspace-session join), oldest first. */
-  listByWorkspace(workspaceId: string): Promise<
-    Array<{
-      id: string;
-      title: string;
-      status: SessionStatus;
-      created_at?: string | null;
-      updated_at?: string | null;
-      anchors_json?: ResourceAnchor[];
-    }>
-  >;
-
-  create(input: {
-    title: string;
-    prompt?: string;
-    harness?: ExtensionHarnessInput;
-    workspaceId?: string;
-    anchors?: ResourceAnchor[];
-    attachments?: SessionAttachmentRef[];
-    originalSessionId?: string;
-  }): Promise<ExtensionSessionResource>;
-
-  followup(input: { sessionId: string; prompt?: string; attachments?: SessionAttachmentRef[] }): Promise<void>;
-
-  addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
-  removeAnchors(sessionId: string, refs: ResourceRef[]): Promise<void>;
-}
-
-export interface ExtensionHarnessInput {
-  harnessId: string;
-  model?: string;
-  /** Run params the harness declares for the model, such as reasoning effort. They override the project's defaults. */
-  params?: Record<string, string | boolean>;
-}
+export type {
+  ExtensionHarnessInput,
+  ExtensionSessionPage,
+  ExtensionSessionQuery,
+  ExtensionSessionResource,
+  ExtensionSessionSummary,
+  ExtensionSessionsApi,
+  ExtensionSessionUsage,
+} from "./sessions";
 
 export interface ExtensionEventsApi {
   emit<TPayload extends Struct>(event: EventRef<TPayload> | string, payload: TPayload): Promise<EventDeliveryResult>;
@@ -271,6 +217,7 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   source?: CommandSource;
   storage: ExtensionStorageApi;
   resources: ExtensionResourcesApi;
+  views: ExtensionViewsApi;
   /** Records navigation for the invoking UI; headless execution opens nothing. */
   navigation: { open(target: NavigationTarget): void };
   artifacts: ExtensionArtifactApi;

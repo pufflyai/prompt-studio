@@ -13,6 +13,8 @@ bun add --global opencode-ai
 opencode --version
 ```
 
+Prompt Studio supports OpenCode 1.0.175 and newer. An older version shows as unavailable, with the version it found and the version it needs. Update it with `opencode upgrade`.
+
 Set up at least one model provider in OpenCode, for example with `opencode auth login`. Prompt Studio offers the models that `opencode models` lists, and never asks for your provider credentials.
 
 Check that Prompt Studio finds OpenCode:

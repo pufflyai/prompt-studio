@@ -1,8 +1,9 @@
 import { Box, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { ScrollArea, Slider } from "@pstdio/ui";
-import { Pause, Play } from "lucide-react";
 import { useState } from "react";
 import type { ToolShapeKind } from "../../content/tool-shapes";
+import { useDemoCli } from "../../hooks/use-demo-cli";
+import { DemoContribution } from "../../hooks/use-demo-composition";
 import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { useShaderPreview } from "../../hooks/use-shader-preview";
 import { DemoPanel } from "./demo-workbench";
@@ -19,6 +20,10 @@ export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
   const [source, setSource] = useState(shader.source);
   const [scale, setScale] = useState(shader.scale);
   const [speed, setSpeed] = useState(shader.speed);
+  const hostRef = useDemoCli("shaders", (command) => {
+    setScale(command.scale);
+    setSpeed(command.speed);
+  });
   const preview = useShaderPreview(
     source,
     withControls ? scale : shader.scale,
@@ -29,7 +34,7 @@ export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
   const styles = useToolDemoStyles();
 
   return (
-    <Box css={story.panels}>
+    <Box ref={hostRef} css={[story.panels, styles.shaderPanels]}>
       <DemoPanel title={shader.filename} kind="editor" highlighted={highlighted}>
         <ScrollArea css={styles.shaderScroll} showHorizontalScrollbar>
           <Textarea
@@ -59,36 +64,38 @@ export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
       </DemoPanel>
       <DemoPanel title="Preview" kind="page" highlighted={highlighted}>
         {withControls && (
-          <Stack gap="lg">
-            <Stack gap="sm">
-              <HStack css={styles.toolbar} textStyle="label/S/regular">
-                <Text>Scale</Text>
-                <Text as="output">{scale}</Text>
-              </HStack>
-              <Slider
-                aria-label={["Shader scale"]}
-                min={4}
-                max={36}
-                step={1}
-                value={[scale]}
-                onValueChange={({ value }) => setScale(value[0])}
-              />
+          <DemoContribution kind="hook">
+            <Stack css={styles.shaderControls} data-demo-part="hook">
+              <Stack css={styles.shaderControl}>
+                <HStack css={styles.toolbar} textStyle="label/S/regular">
+                  <Text>Scale</Text>
+                  <Text as="output">{scale}</Text>
+                </HStack>
+                <Slider
+                  aria-label={["Shader scale"]}
+                  min={4}
+                  max={36}
+                  step={1}
+                  value={[scale]}
+                  onValueChange={({ value }) => setScale(value[0])}
+                />
+              </Stack>
+              <Stack css={styles.shaderControl}>
+                <HStack css={styles.toolbar} textStyle="label/S/regular">
+                  <Text>Speed</Text>
+                  <Text as="output">{speed.toFixed(1)}×</Text>
+                </HStack>
+                <Slider
+                  aria-label={["Shader speed"]}
+                  min={0}
+                  max={shader.maxSpeed}
+                  step={0.1}
+                  value={[speed]}
+                  onValueChange={({ value }) => setSpeed(value[0])}
+                />
+              </Stack>
             </Stack>
-            <Stack gap="sm">
-              <HStack css={styles.toolbar} textStyle="label/S/regular">
-                <Text>Speed</Text>
-                <Text as="output">{speed.toFixed(1)}×</Text>
-              </HStack>
-              <Slider
-                aria-label={["Shader speed"]}
-                min={0}
-                max={shader.maxSpeed}
-                step={0.1}
-                value={[speed]}
-                onValueChange={({ value }) => setSpeed(value[0])}
-              />
-            </Stack>
-          </Stack>
+          </DemoContribution>
         )}
         <Box
           as="canvas"
@@ -97,12 +104,6 @@ export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
           role="img"
           aria-label="Live shader preview"
         />
-        <HStack justify="flex-end">
-          <Button variant="outline" onClick={preview.toggle}>
-            {preview.playing ? <Pause /> : <Play />}
-            {preview.playing ? "Pause preview" : "Play preview"}
-          </Button>
-        </HStack>
       </DemoPanel>
     </Box>
   );

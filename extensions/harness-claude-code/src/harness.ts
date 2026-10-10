@@ -69,7 +69,7 @@ const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
 });
 
 type ClaudeCodeDeps = {
-  detect: typeof detectClaude;
+  detect: NonNullable<HarnessProvider["detect"]>;
   listModels: (ctx: HarnessContext) => Promise<AgentModel[]>;
   now: () => number;
   readTranscript: (agentSessionId: string, cwd?: string) => Promise<string>;

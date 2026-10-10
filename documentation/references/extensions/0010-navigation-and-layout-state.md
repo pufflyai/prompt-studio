@@ -14,6 +14,11 @@ Workspace Changes and Files use fixed static slots. They receive the page's work
 
 A page target changes location and selects its mode. A panel target preserves location and requires an active owner. A compound target prepares its page and panel steps against proposed state, then commits once. A failed preparation changes no history, breadcrumbs, page instances, shared placements, selection, or region visibility. Commands and external links are standalone actions.
 
+On a collection page with panels, the rendered breadcrumb also shows the selected panel's
+resource. Its label and context actions use the same tab snapshot as that panel, including
+updates after renaming. Selecting another tab changes this crumb without changing the
+page URL or history. Right-click, the Context Menu key, or Shift+F10 opens its actions.
+
 An explicit target parent supplies contextual breadcrumbs. Without one, navigation uses the page's declared parent. Closing the last routed resource view follows that declared parent. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding during page navigation; closing it keeps it closed until another navigation.
 
 The browser owns history. Page location persistence stays at version 1. Layout cache version 5 stores resource identity keys, Main collections, and the Side Panel presentation in the `side` region. Incompatible layout cache entries are discarded, including their Side Panel presentation, while valid locations, resource data, tree state, and menu preferences remain intact. Collection state uses the existing location key to separate workspaces.

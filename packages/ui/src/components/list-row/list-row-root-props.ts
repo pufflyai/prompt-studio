@@ -85,6 +85,7 @@ export const createListRowRootProps = (input: {
     height: input.rowHeight,
     minHeight: input.minHeight,
     display: "flex",
+    position: "relative",
     alignItems: "center",
     justifyContent: "space-between",
     gap: "xs",

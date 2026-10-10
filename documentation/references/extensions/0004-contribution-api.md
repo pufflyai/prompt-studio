@@ -19,7 +19,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
 | `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                                   |
 | `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
-| `statuses`                                        | Workflow status providers shared by Kanban views and the host settings editor.                     |
+| `statuses`                                        | Deprecated workflow providers; use query-owned enums and an extension settings panel.                     |
 | `settings`, `settingsSections` | Extension setting definitions and grouped settings sections. |
 | `templateTypes` | Commands and metadata for extension-owned template editing. |
 | `commandPaletteResources` | Searchable resources with explicit activation targets. |
@@ -80,6 +80,10 @@ When extension UI needs dashboard placement, attach it to a host-owned target an
 ## Keybindings
 
 Keybindings bind app-level keyboard shortcuts to a navigation `action`. The action is any navigation target: a command, a page, a panel, an href, or a compound target. Pages and panels bind directly; no wrapper command is needed. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
+
+Help → Keyboard shortcuts lists assigned bindings, including bindings whose context is currently inactive. It groups extension actions by the extension display name from its package metadata. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows do not show shortcut badges. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
+
+The main destinations use `Alt+Shift`: Sessions `S`, Workspaces `W`, Notes `O`, Tickets `P`, and Artifacts `A`. Notes uses `O` because notifications already uses `N`. Creation uses `Mod+Alt`: session `S`, workspace `W`, note `N`, and ticket `P`. Settings uses `Mod+,`. Command palette placements use their source command and exact parameters to resolve shortcut hints. Sessions, Workspaces, and Tickets bind their existing open commands so the command palette shows their navigation shortcuts. These extension defaults live in their own contributions; the host does not assign shortcuts to third-party tools.
 
 Prefer `Mod+...` so the chord maps to `Cmd` on macOS and `Ctrl` on Windows/Linux without an override. Avoid chords already claimed by browsers, OSes, or developer tooling (`Mod+T`, `Mod+W`, `Mod+R`, `Mod+P`, `Mod+S`, `Mod+Shift+P`, `Mod+Shift+I`, `F5`, `F11`, `F12`, …); the extension runtime emits a `reserved_keybinding_chord` warning when a contribution hits a reserved chord on any platform. Reach for multi-step chords like `mod+k mod+t` if no single chord is safe.
 
@@ -461,3 +465,16 @@ A level page without a declared parent, such as Notes, has nothing outside the l
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
 
 Session commands contributed through `sessionSlots.headerPrimary` or `sessionSlots.headerOverflow` also appear in shared session resource menus. Session tree rows must set `resource` explicitly, even when `target.resource` already names the session. Visibility and execution use the clicked session; opening a different resource first is not required. Host session rows expose the existing Open session panel action without tab placement arguments.
+
+## Queued conversation requests
+
+The host provides these project-scoped `ctx.sessions` methods:
+
+- `getQueuedFollowUps(sessionId)` returns full saved requests, their revisions, and the active run precondition.
+- `updateQueuedFollowUp(sessionId, queuePosition, input)` saves the full request and returns its new revision. Send `expectedRevision`; omitted fields retain saved values. `model: null` selects the provider default, `params: null` resets supported defaults, and `attachments: []` clears references.
+- `combineQueuedFollowUps(sessionId, targetPosition, { sourcePosition, sourceRevision, targetRevision })` atomically combines compatible requests.
+- `steerQueuedFollowUp(sessionId, queuePosition, { expectedRevision, expectedRunStartedAt })` returns an accepted, rejected, or uncertain outcome.
+
+An active `HarnessSession` may provide `steer({ deliveryId, prompt, attachments, signal })`. It must use native input without cancelling or starting a turn. Before returning accepted, emit exactly one normalized user message whose ID is `deliveryId`. Native history must preserve that correlation for recovery. A successful pipe write alone is insufficient. A transport failure after input may have been sent is uncertain. Only return rejected when native input was definitely refused. Older harnesses remain supported without this optional method.
+
+Publish the additive SDK before harness extensions adopt it. Codex native acceptance and persisted `clientUserMessageId` were verified on 0.160.0. Claude Code 2.1.294 validation is blocked by a weekly usage limit; OpenCode is unverified. This host change enables neither adapter by itself.

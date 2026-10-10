@@ -19,6 +19,7 @@ import {
 } from "./harness-param-values";
 
 interface SessionModelControlsProps {
+  selectionScope?: "draft" | "request";
   view: DashboardSessionView;
   projectId: string | undefined;
   selectedAgent: string;
@@ -33,6 +34,7 @@ interface SessionModelControlsProps {
 export const SessionModelControls = (props: SessionModelControlsProps) => {
   const {
     view,
+    selectionScope = "draft",
     projectId,
     selectedAgent,
     setSelectedAgent,
@@ -47,6 +49,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
     label: agent.name,
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
+    description: agent.availability.reason,
   }));
   const selectedAgentInfo = agents.find((agent) => agent.id === selectedAgent);
   const defaultAgent = project?.default_agent_id;
@@ -90,11 +93,11 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
   }, [agentOptions, defaultAgent, selectedAgent, setSelectedAgent, view.agent]);
 
   useEffect(() => {
-    if (isModelsLoading) return;
+    if (isModelsLoading || selectionScope === "request") return;
 
     const nextModel = resolveRuntimeModelSelection({ models, selectedModel, preferredModel });
     if (nextModel !== selectedModel) setSelectedModel(nextModel);
-  }, [isModelsLoading, models, preferredModel, selectedModel, setSelectedModel]);
+  }, [isModelsLoading, models, preferredModel, selectedModel, setSelectedModel, selectionScope]);
 
   useEffect(() => {
     if (!baseParamSchema || isModelsLoading || (selectedModel && !selectedModelInfo)) return;
@@ -110,6 +113,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
   const handleSelectAgent = (agent: string) => {
     setSelectedAgent(agent);
     setSelectedModel("");
+    if (selectionScope === "request") return;
     const recent = readRecentHarnessSelection(projectId);
     const params = recent?.harnessId === agent ? (recent.params ?? {}) : {};
     setHarnessParamOverrides(params);
@@ -118,7 +122,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
 
   const handleSelectModel = (model: string) => {
     setSelectedModel(model);
-    if (selectedAgent)
+    if (selectedAgent && selectionScope === "draft")
       saveRecentHarnessSelection(projectId, {
         harnessId: selectedAgent,
         ...(model ? { model } : {}),
@@ -130,7 +134,8 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
     // Send explicit defaults too, so resetting a saved session value reaches the server.
     const params = { ...effectiveParamDefaults, ...overrides };
     setHarnessParamOverrides(params);
-    saveRecentHarnessSelection(projectId, { harnessId: selectedAgent, model: selectedModel, params });
+    if (selectionScope === "draft")
+      saveRecentHarnessSelection(projectId, { harnessId: selectedAgent, model: selectedModel, params });
   };
 
   return (

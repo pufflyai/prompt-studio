@@ -1,6 +1,7 @@
 import {
   defineArtifactMount,
   defineExtension,
+  defineKeybinding,
   defineNavigationItem,
   defineSkill,
   l10n,
@@ -19,6 +20,7 @@ export default defineExtension({
   resourceKinds: [artifact],
   views: [view, openView],
   pages: [library, detail],
+  keybindings: [defineKeybinding({ id: "open-artifacts", key: "Alt+Shift+A", action: libraryTarget })],
   navigationItems: [
     defineNavigationItem({
       id: "artifacts",

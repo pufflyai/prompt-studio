@@ -15,7 +15,7 @@ export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
   const { headingLevel } = props;
   const styles = useLandingStyles();
   return (
-    <Box css={styles.heroCopy}>
+    <Box css={styles.heroCopy} data-download-panel="">
       <HStack>
         <Badge css={styles.releaseBadge} size="lg">
           Alpha release

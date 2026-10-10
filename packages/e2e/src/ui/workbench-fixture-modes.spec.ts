@@ -161,6 +161,7 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
       ) && response.request().method() === "POST",
   );
   await page.getByRole("menuitem", { name: "Delete artifact" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
   expect((await deleteResponse).ok()).toBe(true);
   await expect(rows).toHaveCount(initialArtifactCount, { timeout: 15_000 });
 });

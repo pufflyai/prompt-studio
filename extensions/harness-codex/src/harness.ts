@@ -15,7 +15,7 @@ const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
 });
 
 type CodexDeps = {
-  detect: typeof detectCodex;
+  detect: NonNullable<HarnessProvider["detect"]>;
   listModels: (ctx: HarnessContext) => Promise<AgentModel[]>;
   now: () => number;
   runtime: ReturnType<typeof createCodexRuntime>;

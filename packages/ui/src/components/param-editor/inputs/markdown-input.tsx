@@ -1,6 +1,6 @@
 import { Box, Flex, Input, Stack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { LazyMarkdownEditor } from "@/components/rich-text";
+import { LazyMarkdownEditor } from "@/components/rich-text/lazy-markdown-editor";
 import { ParamEditorFieldLabel } from "../param-editor-field-label";
 import { ParamEditorReadOnlyValue } from "../param-editor-read-only-value";
 

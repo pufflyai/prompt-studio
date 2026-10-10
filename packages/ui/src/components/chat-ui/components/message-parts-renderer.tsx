@@ -3,7 +3,12 @@ import type { ReactNode } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { RichMessage } from "@/components/rich-text";
-import { ChatImageSourcesContext, indexChatImageSources, useChatImageHistory } from "../links/chat-image-sources";
+import {
+  ChatImageSourcesContext,
+  emptyChatImageSources,
+  indexChatImageSources,
+  useChatImageHistory,
+} from "../links/chat-image-sources";
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider, useChatLinkHandler } from "../links/chat-link-context";
 import { parseQuestionPrompt } from "../tool-rendering/question-prompt";
@@ -121,7 +126,10 @@ function MessagePartsContent(props: MessagePartsProps) {
     switch (part.type) {
       case "text":
         nodes.push(
-          <ChatImageSourcesContext key={key} value={imageHistory.get(part) ?? localImages.get(part)!}>
+          <ChatImageSourcesContext
+            key={key}
+            value={imageHistory.get(part) ?? localImages.get(part) ?? emptyChatImageSources}
+          >
             <div>
               <Response>{part.text}</Response>
             </div>

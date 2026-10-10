@@ -116,6 +116,7 @@ const registerRenderer = (
       selectionMode: record.selectionMode,
       selectionActions: record.selectionActions?.map((action) => ({
         id: action.id,
+        commandId: action.commandId,
         label: localize(action.label, action.id),
         icon: action.icon ? createElement(WorkbenchIcon, { name: action.icon, size: 16 }) : undefined,
         destructive: action.destructive,
@@ -139,6 +140,7 @@ const registerRenderer = (
       },
       rowActions: record.rowActions?.map((action) => ({
         id: action.id,
+        commandId: action.commandId,
         label: localize(action.label, action.id),
         icon: action.icon ? createElement(WorkbenchIcon, { name: action.icon, size: 16 }) : undefined,
         destructive: action.destructive,

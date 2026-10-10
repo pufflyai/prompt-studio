@@ -2,6 +2,7 @@ import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
 import { extensionResourceRefSchema } from "./extensions";
 import { harnessOperationResponseSchema, harnessOperationSchema } from "./harness-commands";
+import { pendingQueuedFollowUpsResponseSchema } from "./queued-follow-ups";
 import { sessionMessageSchema } from "./session-messages";
 
 export const sessionStatusSchema = z.enum([
@@ -14,8 +15,20 @@ export const sessionStatusSchema = z.enum([
   "disconnected",
 ]);
 
-export const harnessParamValueSchema = z.union([z.string(), z.boolean()]);
-export const harnessParamsInputSchema = z.record(z.string(), harnessParamValueSchema);
+export {
+  harnessParamsInputSchema,
+  harnessParamValueSchema,
+  sessionAttachmentRefSchema,
+} from "./session-request-values";
+
+import { harnessParamsInputSchema, sessionAttachmentRefSchema } from "./session-request-values";
+
+export const sessionUsageSchema = z.object({
+  input_tokens: z.number(),
+  output_tokens: z.number(),
+  cache_read_tokens: z.number(),
+  cache_write_tokens: z.number(),
+});
 
 export const sessionSchema = z.object({
   id: z.string(),
@@ -32,14 +45,13 @@ export const sessionSchema = z.object({
   original_session_id: z.string().nullable(),
   cwd: z.string().nullable(),
   params_json: harnessParamsInputSchema.nullable(),
+  usage_json: sessionUsageSchema.nullable().optional(),
+  workspace_id: z.string().nullable().optional(),
   anchors_json: z.array(extensionResourceRefSchema),
   created_at: z.string(),
   updated_at: z.string(),
 });
 
-export const sessionAttachmentRefSchema = z.object({
-  file_id: z.string().min(1),
-});
 export const createSessionResponseSchema = sessionSchema.extend({
   operation_result: harnessOperationResponseSchema.optional(),
 });
@@ -101,7 +113,10 @@ export const followUpResponseSchema = sessionSchema.extend({
   follow_up: followUpDecisionSchema,
 });
 
-export const sessionQueuedMessagesResponseSchema = z.object({ messages: z.array(sessionMessageSchema) });
+export const sessionQueuedMessagesResponseSchema = z.object({
+  messages: z.array(sessionMessageSchema),
+  queue: pendingQueuedFollowUpsResponseSchema.optional(),
+});
 export type SessionQueuedMessagesResponse = z.infer<typeof sessionQueuedMessagesResponseSchema>;
 
 export const sessionConversationSourcesSchema = z.object({

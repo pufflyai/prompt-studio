@@ -1,4 +1,5 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import { createResourcePreview } from "./resource-preview";
 
 export type { ResourceRef } from "@pstdio/sdk/extensions";
 
@@ -107,6 +108,7 @@ export interface ResourceRegistryStoreState {
   hierarchyProviders: Record<string, ResolvedResourceHierarchyProvider>;
 }
 export interface ResourceRegistry {
+  preview: ReturnType<typeof createResourcePreview>;
   removed(resource: ResourceRef): void;
   onWillRemove(listener: (resource: ResourceRef) => readonly PlacementIdentity[]): Disposable;
   store: WorkbenchStore<ResourceRegistryStoreState>;
@@ -141,6 +143,7 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
   });
   return {
     store,
+    preview: createResourcePreview(),
     removed(resource) {
       input.remove?.(
         resource,

@@ -1,5 +1,6 @@
 import type {
   ApprovalInput,
+  CombineQueuedFollowUpsInput,
   CreateSessionInput,
   CreateSessionResponse,
   DraftHarnessCommandInput,
@@ -9,12 +10,17 @@ import type {
   HarnessOperation,
   ListSessionActivityInput,
   ListSessionActivityResponse,
+  PendingQueuedFollowUpsResponse,
+  QueuedFollowUpUpdateResponse,
+  QueuedSteeringResult,
   ResolveSessionIdInput,
   ResolveSessionIdResponse,
   SessionAttachment,
   SessionConversationResponse,
   SessionConversationSources,
   SessionQueuedMessagesResponse,
+  SteerQueuedFollowUpInput,
+  UpdateQueuedFollowUpInput,
 } from "pstdio-api-contracts";
 import type { Session } from "../resources";
 import type { ClientOptions, RequestFn } from "./request";
@@ -26,6 +32,11 @@ export type ListSessionsInput = {
   agent?: string;
   workspaceId?: string;
   archived?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  updatedFrom?: string;
+  anchorType?: string;
+  anchorId?: string;
 };
 
 export type SessionClient = {
@@ -53,6 +64,22 @@ export type SessionClient = {
   getConversation(sessionId: string, signal?: AbortSignal): Promise<SessionConversationResponse>;
   getConversationSources(sessionId: string, signal?: AbortSignal): Promise<SessionConversationSources>;
   getQueuedMessages(sessionId: string, options?: { signal?: AbortSignal }): Promise<SessionQueuedMessagesResponse>;
+  steerQueuedFollowUp(
+    sessionId: string,
+    queuePosition: number,
+    input: SteerQueuedFollowUpInput,
+  ): Promise<QueuedSteeringResult>;
+  getQueuedFollowUps(sessionId: string): Promise<PendingQueuedFollowUpsResponse>;
+  updateQueuedFollowUp(
+    sessionId: string,
+    queuePosition: number,
+    input: UpdateQueuedFollowUpInput,
+  ): Promise<QueuedFollowUpUpdateResponse>;
+  combineQueuedFollowUps(
+    sessionId: string,
+    queuePosition: number,
+    input: CombineQueuedFollowUpsInput,
+  ): Promise<QueuedFollowUpUpdateResponse>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;
   updateStatus(sessionId: string, status: string): Promise<Session>;
   rename(sessionId: string, title: string): Promise<Session>;
@@ -80,6 +107,11 @@ const buildSessionsQuery = (projectId: string, input: ListSessionsInput = {}) =>
   if (input.agent) params.append("agent", input.agent);
   if (input.workspaceId) params.append("workspace_id", input.workspaceId);
   if (input.archived) params.append("archived", "true");
+  if (input.createdFrom) params.append("created_from", input.createdFrom);
+  if (input.createdTo) params.append("created_to", input.createdTo);
+  if (input.updatedFrom) params.append("updated_from", input.updatedFrom);
+  if (input.anchorType) params.append("anchor_type", input.anchorType);
+  if (input.anchorId) params.append("anchor_id", input.anchorId);
   return params.toString();
 };
 
@@ -153,6 +185,13 @@ export const createSessionClient = (
     getConversationSources: (sessionId, signal) =>
       request(`/v1/sessions/${sessionId}/conversation/sources`, { signal }),
     getQueuedMessages: (sessionId, options) => request(`/v1/sessions/${sessionId}/queued-messages`, options),
+    steerQueuedFollowUp: (sessionId, queuePosition, input) =>
+      request(`/v1/sessions/${sessionId}/queued-follow-ups/${queuePosition}/steer`, { method: "POST", body: input }),
+    getQueuedFollowUps: (sessionId) => request(`/v1/sessions/${sessionId}/queued-follow-ups`),
+    updateQueuedFollowUp: (sessionId, queuePosition, input) =>
+      request(`/v1/sessions/${sessionId}/queued-follow-ups/${queuePosition}`, { method: "PATCH", body: input }),
+    combineQueuedFollowUps: (sessionId, queuePosition, input) =>
+      request(`/v1/sessions/${sessionId}/queued-follow-ups/${queuePosition}/combine`, { method: "POST", body: input }),
     resolveSessionId: (input) => request("/v1/sessions/resolve-session-id", { method: "POST", body: input }),
     updateStatus: (sessionId, status) =>
       request(`/v1/sessions/${sessionId}/status`, { method: "PATCH", body: { status } }),

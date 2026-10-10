@@ -51,7 +51,7 @@ const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
           </Box>
         </Box>
       )}
-      <Box css={story.panels}>
+      <Box css={[story.panels, styles.shaderPanels]}>
         <Box css={story.panel}>
           <Box css={story.panelHeader}>icon-matrix.frag</Box>
           <Box css={story.panelBody}>

@@ -79,8 +79,18 @@ if (projectNavigation.resourceScope !== "project") throw new Error("Navigation l
         ? `
 import { createElement } from "react";
 import { BubblePanel } from "@pstdio/ui";
+import { CollectionViewBar, EMPTY_VIEW_FILTER, filterRowsByView, withTitleField } from "@pstdio/ui/collection-view";
 const panelOverlay = createElement(BubblePanel, { isOpen: true, overlay: createElement("div", { "data-drop-feedback": true }) });
 void panelOverlay;
+const fields = withTitleField([]);
+const rows = [{ id: "one", title: "A ticket", attributes: {} }];
+const filtered = filterRowsByView(rows, EMPTY_VIEW_FILTER, fields);
+const viewBar = createElement(CollectionViewBar, {
+  storageKey: "public-consumer", initialState: { settings: {} },
+  views: [{ id: "all", title: "All", settings: {}, filter: EMPTY_VIEW_FILTER, sorts: [], builtIn: true }],
+  fields, optionsFor: () => [], search: "", onSearchChange: () => {}, displayControl: null,
+});
+void [filtered, viewBar];
 `
         : "") +
       (react && imports.includes("@pstdio/workbench/react")

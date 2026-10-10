@@ -1,0 +1,192 @@
+[
+  {
+    "info": {
+      "id": "msg_121c37647001nFez4CiJSn7jAz",
+      "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+      "role": "user",
+      "time": {
+        "created": 1791567820359
+      },
+      "summary": {
+        "diffs": []
+      },
+      "agent": "build",
+      "model": {
+        "providerID": "opencode",
+        "modelID": "big-pickle"
+      }
+    },
+    "parts": [
+      {
+        "id": "prt_121c376490010SOarxJ6VUaUMq",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c37647001nFez4CiJSn7jAz",
+        "type": "text",
+        "text": "Run the shell command `echo hi` with your bash tool, then reply with only the word done."
+      }
+    ]
+  },
+  {
+    "info": {
+      "id": "msg_121c376c0001187e9tdi5Zuxps",
+      "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+      "role": "assistant",
+      "time": {
+        "created": 1791567820480,
+        "completed": 1791567826075
+      },
+      "parentID": "msg_121c37647001nFez4CiJSn7jAz",
+      "modelID": "big-pickle",
+      "providerID": "opencode",
+      "mode": "build",
+      "agent": "build",
+      "path": {
+        "cwd": "/workspace",
+        "root": "/"
+      },
+      "cost": 0,
+      "tokens": {
+        "total": 13655,
+        "input": 11805,
+        "output": 38,
+        "reasoning": 20,
+        "cache": {
+          "read": 1792,
+          "write": 0
+        }
+      },
+      "finish": "tool-calls"
+    },
+    "parts": [
+      {
+        "id": "prt_121c38b76001qJw5CDjlqZIFSr",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c376c0001187e9tdi5Zuxps",
+        "type": "step-start"
+      },
+      {
+        "id": "prt_121c38b8e001lImmQSwmWCtMT4",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c376c0001187e9tdi5Zuxps",
+        "type": "reasoning",
+        "text": "The user wants me to run `echo hi` with bash, then reply with only \"done\".",
+        "time": {
+          "start": 1791567825806,
+          "end": 1791567825914
+        }
+      },
+      {
+        "id": "prt_121c38bfc001wpjtThScwEv0e7",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c376c0001187e9tdi5Zuxps",
+        "type": "tool",
+        "callID": "call_00_502d1gzydvrw52c6z64abqa9",
+        "tool": "bash",
+        "state": {
+          "status": "completed",
+          "input": {
+            "command": "echo hi"
+          },
+          "output": "hi\n",
+          "title": "echo hi",
+          "metadata": {
+            "output": "hi\n",
+            "exit": 0,
+            "truncated": false
+          },
+          "time": {
+            "start": 1791567826060,
+            "end": 1791567826071
+          }
+        }
+      },
+      {
+        "id": "prt_121c38c98001Y4Prt84Jok1KAE",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c376c0001187e9tdi5Zuxps",
+        "type": "step-finish",
+        "reason": "tool-calls",
+        "cost": 0,
+        "tokens": {
+          "total": 13655,
+          "input": 11805,
+          "output": 38,
+          "reasoning": 20,
+          "cache": {
+            "read": 1792,
+            "write": 0
+          }
+        }
+      }
+    ]
+  },
+  {
+    "info": {
+      "id": "msg_121c38c9c0017sCGnV00XmBoSs",
+      "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+      "role": "assistant",
+      "time": {
+        "created": 1791567826076,
+        "completed": 1791567827191
+      },
+      "parentID": "msg_121c37647001nFez4CiJSn7jAz",
+      "modelID": "big-pickle",
+      "providerID": "opencode",
+      "mode": "build",
+      "agent": "build",
+      "path": {
+        "cwd": "/workspace",
+        "root": "/"
+      },
+      "cost": 0,
+      "tokens": {
+        "total": 13671,
+        "input": 101,
+        "output": 2,
+        "reasoning": 0,
+        "cache": {
+          "read": 13568,
+          "write": 0
+        }
+      },
+      "finish": "stop"
+    },
+    "parts": [
+      {
+        "id": "prt_121c390b6001Avd8Pf5ycpVkSO",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c38c9c0017sCGnV00XmBoSs",
+        "type": "step-start"
+      },
+      {
+        "id": "prt_121c390eb001ErWfg80eUNehxu",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c38c9c0017sCGnV00XmBoSs",
+        "type": "text",
+        "text": "done",
+        "time": {
+          "start": 1791567827179,
+          "end": 1791567827184
+        }
+      },
+      {
+        "id": "prt_121c390f4001VvONUWvWelURTh",
+        "sessionID": "ses_ede3c89c3ffecKlozeCm97ujoQ",
+        "messageID": "msg_121c38c9c0017sCGnV00XmBoSs",
+        "type": "step-finish",
+        "reason": "stop",
+        "cost": 0,
+        "tokens": {
+          "total": 13671,
+          "input": 101,
+          "output": 2,
+          "reasoning": 0,
+          "cache": {
+            "read": 13568,
+            "write": 0
+          }
+        }
+      }
+    ]
+  }
+]

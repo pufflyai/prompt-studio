@@ -48,3 +48,24 @@ describe("GET /v1/sessions", () => {
     expect(sessions.map((session) => session.id)).toEqual([firstSession.id]);
   });
 });
+
+test("HTTP time and anchor filters use the shared project query", async () => {
+  const session = await handle.deps.sessionService.create({
+    project_id: projectId,
+    title: "anchored",
+    agent: "codex",
+    anchors: [{ type: "session", id: "query-ticket" }],
+  });
+  const query = new URLSearchParams({
+    project_id: projectId,
+    agent: "codex",
+    anchor_type: "session",
+    anchor_id: "query-ticket",
+    created_from: session.created_at,
+    created_to: session.created_at,
+  });
+  const response = await app.request(`/v1/sessions?${query}`);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject([{ id: session.id, usage_json: null, workspace_id: null }]);
+  expect((await app.request(`/v1/sessions?project_id=${projectId}&anchor_type=ticket`)).status).toBe(400);
+});

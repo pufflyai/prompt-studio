@@ -6,6 +6,7 @@ export const createNoteCommand = defineCommand({
   id: "notes.create",
   title: l10n("commands.createNote", "New note"),
   cli: true,
+  palette: [{ group: "Notes", icon: "sticky-note" }],
   mutating: true,
   params: {
     title: params.text({ label: l10n("params.title", "Title"), required: true }),
