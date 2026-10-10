@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DashboardRows } from "@/shared/sync/dashboard-rows";
+import { buildDashboardWorkspacesFromRows } from "./dashboard-workspaces";
 import { buildDashboardWorkspaceOptionsFromRows, createDashboardWorkspaceOptionResource } from "./workspace-options";
 
 const rows: DashboardRows = {
@@ -66,4 +67,21 @@ describe("dashboard workspace options", () => {
     ]);
     expect(resources[1]?.metadata).not.toHaveProperty("workspacePath");
   });
+});
+
+test.each([
+  ["local", "none", false],
+  ["local", "read", true],
+  ["local", "write", true],
+  ["remote", "none", false],
+  ["remote", "read", false],
+  ["remote", "write", false],
+] as const)("%s workspace with %s file capability exposes files: %s", (kind, files, supported) => {
+  const workspaceRows = {
+    workspaces: [{ ...rows.workspaces[0]!, execution_kind: kind, provider_capabilities_json: { files } }],
+  };
+  const option = buildDashboardWorkspaceOptionsFromRows(workspaceRows)[0]!;
+  const workspace = buildDashboardWorkspacesFromRows(workspaceRows)[0]!;
+  expect(option.supportsFiles).toBe(supported);
+  expect(workspace.resource.metadata).toMatchObject({ workspaceSupportsFiles: supported });
 });

@@ -19,7 +19,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
 | `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                                   |
 | `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
-| `statuses`                                        | Workflow status providers shared by Kanban views and the host settings editor.                     |
+| `statuses`                                        | Deprecated workflow providers; use query-owned enums and an extension settings panel.                     |
 | `settings`, `settingsSections` | Extension setting definitions and grouped settings sections. |
 | `templateTypes` | Commands and metadata for extension-owned template editing. |
 | `commandPaletteResources` | Searchable resources with explicit activation targets. |

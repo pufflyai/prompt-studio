@@ -39,7 +39,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` declares caret ranges, such as `^0.1.0`. */
 // Stays on 0.x until the API is settled, so a breaking change moves the minor. The version moves at
 // most one step per release; the manifest reference has the change levels.
-export const EXTENSION_API_VERSION = "0.1.2";
+export const EXTENSION_API_VERSION = "0.1.3";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -248,6 +248,7 @@ export interface UiContributions {
   navigationItems?: readonly NavigationItemContribution[];
   navigationTrees?: readonly NavigationTreeContribution[];
   statusBarItems?: readonly StatusBarItemContribution[];
+  /** @deprecated Use extension-owned values and commands, a settings panel, and query-returned enum attributes. */
   statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];

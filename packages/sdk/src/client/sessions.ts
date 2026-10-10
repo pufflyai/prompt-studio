@@ -32,6 +32,11 @@ export type ListSessionsInput = {
   agent?: string;
   workspaceId?: string;
   archived?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  updatedFrom?: string;
+  anchorType?: string;
+  anchorId?: string;
 };
 
 export type SessionClient = {
@@ -102,6 +107,11 @@ const buildSessionsQuery = (projectId: string, input: ListSessionsInput = {}) =>
   if (input.agent) params.append("agent", input.agent);
   if (input.workspaceId) params.append("workspace_id", input.workspaceId);
   if (input.archived) params.append("archived", "true");
+  if (input.createdFrom) params.append("created_from", input.createdFrom);
+  if (input.createdTo) params.append("created_to", input.createdTo);
+  if (input.updatedFrom) params.append("updated_from", input.updatedFrom);
+  if (input.anchorType) params.append("anchor_type", input.anchorType);
+  if (input.anchorId) params.append("anchor_id", input.anchorId);
   return params.toString();
 };
 

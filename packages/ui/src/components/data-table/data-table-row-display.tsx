@@ -50,7 +50,7 @@ export const DataTableRowDisplayMenu = (props: DataTableRowDisplayMenuProps) => 
           <Icon as={Settings2} boxSize="14px" />
         </IconButton>
       </Popover.Trigger>
-      {compact ? content : <Portal>{content}</Portal>}
+      <Portal>{content}</Portal>
     </Popover.Root>
   );
 };

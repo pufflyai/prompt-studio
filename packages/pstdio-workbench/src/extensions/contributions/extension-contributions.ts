@@ -5,6 +5,7 @@ import type {
 } from "@pstdio/sdk/api";
 import { isLocalizedString, type Localizable } from "@pstdio/sdk/extensions";
 import type { Command, MenuItem, MenuPath } from "../../core";
+import { localizeParamSchema } from "./param-schema-localization";
 
 export type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 
@@ -163,7 +164,11 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
         category: contribution.group,
         description: command ? resolveString(command.description, command.extensionId) : undefined,
         icon: contribution.icon,
-        params: command?.params,
+        params: localizeParamSchema(
+          command?.params,
+          (value) => resolveString(value, command?.extensionId ?? contribution.extensionId),
+          command?.extensionId,
+        ),
       },
       contribution,
       menuItem: createMenuItem({
@@ -201,7 +206,11 @@ export const buildWorkbenchExtensionCommandPaletteRegistrations = (input: {
         category: contribution.group,
         description: command ? resolveString(command.description, command.extensionId) : undefined,
         icon: contribution.icon,
-        params: command?.params,
+        params: localizeParamSchema(
+          command?.params,
+          (value) => resolveString(value, command?.extensionId ?? contribution.extensionId),
+          command?.extensionId,
+        ),
       },
       contribution,
       menuItem: createPaletteItem({ commandId, contribution, index, resolveString }),

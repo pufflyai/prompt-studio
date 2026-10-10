@@ -23,6 +23,13 @@ export {
 
 import { harnessParamsInputSchema, sessionAttachmentRefSchema } from "./session-request-values";
 
+export const sessionUsageSchema = z.object({
+  input_tokens: z.number(),
+  output_tokens: z.number(),
+  cache_read_tokens: z.number(),
+  cache_write_tokens: z.number(),
+});
+
 export const sessionSchema = z.object({
   id: z.string(),
   project_id: z.string().nullable(),
@@ -38,6 +45,8 @@ export const sessionSchema = z.object({
   original_session_id: z.string().nullable(),
   cwd: z.string().nullable(),
   params_json: harnessParamsInputSchema.nullable(),
+  usage_json: sessionUsageSchema.nullable().optional(),
+  workspace_id: z.string().nullable().optional(),
   anchors_json: z.array(extensionResourceRefSchema),
   created_at: z.string(),
   updated_at: z.string(),
@@ -62,7 +71,7 @@ export const sessionAttachmentSchema = z.object({
 export const createSessionInputSchema = z.object({
   project_id: z.string().min(1),
   title: z.string().min(1),
-  prompt: z.string().min(1).optional(),
+  prompt: z.string().optional(),
   operation: harnessOperationSchema.optional(),
   agent: z.string().min(1).optional(),
   workspace_id: z.string().optional(),

@@ -117,4 +117,4 @@ Prompt Studio maintainers follow the release checks in [Extension API version ch
 
 ## Optional queued-input capability
 
-The optional `HarnessSession.steer` capability and host-provided `ctx.sessions` queue methods are additive. Existing adapters keep loading without steering. The current unreleased 0.1.2 API already contains additive changes since 0.1.1; these additions share that one release step. Publish the SDK contract before adopting it in harness extensions.
+The optional `HarnessSession.steer` capability and host-provided `ctx.sessions` queue methods are additive. Existing adapters keep loading without steering. These additions shipped in API 0.1.2. Publish the SDK contract before adopting it in harness extensions.

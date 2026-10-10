@@ -124,7 +124,15 @@ export interface ExtensionSkillsApi {
   list(): Promise<Skill[]>;
 }
 
-export type { ExtensionHarnessInput, ExtensionSessionResource, ExtensionSessionsApi } from "./sessions";
+export type {
+  ExtensionHarnessInput,
+  ExtensionSessionPage,
+  ExtensionSessionQuery,
+  ExtensionSessionResource,
+  ExtensionSessionSummary,
+  ExtensionSessionsApi,
+  ExtensionSessionUsage,
+} from "./sessions";
 
 export interface ExtensionEventsApi {
   emit<TPayload extends Struct>(event: EventRef<TPayload> | string, payload: TPayload): Promise<EventDeliveryResult>;

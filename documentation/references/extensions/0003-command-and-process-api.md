@@ -280,11 +280,26 @@ responses, and clears choices that are no longer available. Unknown sibling
 fields and dependency cycles produce extension diagnostics. Dependencies must
 refer to fields in the same input schema.
 
+A sibling with `resolvedFrom: "resource"` stays hidden in the dialog, but
+`params.valueOf` can still reference it. Choices and submission use the same
+value: an explicit action argument takes priority over the active resource.
+Opening the dialog for another resource loads choices for that resource.
+
+Workspace provider `params` support the same command-backed choices in Create
+workspace and in nested `workspace` command fields. Changing the provider cancels
+its pending option requests. Changing an instance refreshes its dependent
+templates, and submission waits for the current choices.
+
 The dialog accepts only current choices unless `allowCustomValues: true` is
 set. This validation belongs to the dialog. The command runtime does not call
 option commands again. Commands must enforce their own business rules. CLI and
 API callers pass explicit values as before; CLI help marks these parameters as
 `command-backed` and does not load choices or prompt interactively.
+
+Workspace providers must validate instance and template ownership in `create`.
+Choice lists help discovery; they do not authorize a resource. The host still
+checks required fields, value types, fixed choices, and provider availability.
+Harness params and Kanban create-row forms require fixed options.
 
 ## Migrating from older API versions
 
@@ -346,3 +361,49 @@ resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", lab
 ```
 
 The dashboard previews the change in navigation, tabs, and breadcrumbs while the command saves. Removal asks for confirmation first. Failure restores the affected resource. Writes for the same resource are ordered, and a failed earlier action cannot undo a newer preview. The preview stays until the mounted resource views refresh. The command still owns validation, persistence, and refresh events. API and CLI calls run the command directly, without a UI preview or confirmation. Commands without this declaration keep their existing behavior.
+
+## Sessions
+
+Use `ctx.sessions.query(input?)` to read sessions in the current project. It returns `{ items, nextCursor }`. Each item includes `agent` (harness ID), `last_selected_model`, `workspace_id`, status, archive state, anchors, creation and update times, latest-run start and end times, and `usage`.
+
+Filters can be combined:
+
+- `status`: an array of statuses; an empty array matches no sessions.
+- `agent`: a harness ID.
+- `workspaceId`: a workspace ID or shorthand in this project. A missing or foreign workspace rejects with `Workspace not found`.
+- `anchor`: `{ type, id }` for an attached resource.
+- `createdFrom`, `createdTo`, `updatedFrom`: inclusive ISO timestamp bounds.
+- `includeArchived`: defaults to false.
+
+Pages are ordered by `created_at` descending, then `id` descending. `limit` defaults to 50 and is clamped to 1 through 200. Pass the opaque `nextCursor` to read the next page. Invalid cursors and cursors from another project restart at the first page. New sessions added before the cursor do not shift later pages.
+
+```ts
+import type { ExtensionSessionSummary } from "@pstdio/sdk/extensions";
+
+const sessions: ExtensionSessionSummary[] = [];
+const createdFrom = new Date(Date.now() - 7 * 24 * 3600_000).toISOString();
+let cursor: string | undefined;
+do {
+  const page = await ctx.sessions.query({
+    createdFrom,
+    limit: 200,
+    cursor,
+  });
+  sessions.push(...page.items);
+  cursor = page.nextCursor ?? undefined;
+} while (cursor);
+
+const counts: Record<string, number> = {};
+for (const session of sessions) {
+  const harness = session.agent ?? "unknown";
+  counts[harness] = (counts[harness] ?? 0) + 1;
+}
+```
+
+`last_request_started` and `last_request_ended` describe the latest run only. `usage` sums the saved conversation's input, output, cache read and cache write tokens. It is null for sessions with no recorded usage, including old sessions until their next save. Show the number of sessions with unknown usage alongside any total. See [session token totals](../../adrs/0066-session-token-totals.md).
+
+Without a workspace filter, `workspace_id` is the earliest linked workspace, with link ID breaking timestamp ties. With a workspace filter it is the selected workspace. Multiple links do not duplicate session items.
+
+`get()`, `list()`, `listByWorkspace()` and `create()` also expose the typed harness ID as `agent`. `list()` and `listByWorkspace()` remain available but are deprecated; use `query()` and `query({ workspaceId })`. The old methods keep their existing ordering and archive behavior.
+
+Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`). Query with `updatedFrom` and merge by session ID. Webviews read sessions through an extension command using `commands.execute`.

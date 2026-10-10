@@ -3,6 +3,8 @@ import { type BrowserContext, test } from "@playwright/test";
 import { redactTraceArchive } from "../testing/trace-redaction";
 
 export const startElectronTrace = async (context: BrowserContext, name: string) => {
+  // Trace screenshots and DOM snapshots add renderer work, so benchmark runs turn them off.
+  if (test.info().project.metadata.electronTrace === false) return async () => {};
   await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
   let stopped = false;
   return async () => {

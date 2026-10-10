@@ -15,6 +15,7 @@ import { registerWorkspaceDataTableView } from "./collections/workspace-data-tab
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
+import { WorkspaceSummary } from "./components/workspace-summary";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { registerWorkspaceSidenavContributions } from "./workspace-navigation";
@@ -46,6 +47,11 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContext, options: CreateWorkspa
 };
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
   registerWorkspaceFileContributions(ctx);
+  ctx.views.registerView({
+    id: dashboardWidgetIds.workspaceSummary,
+    title: "Workspace",
+    body: { kind: "react", render: (input) => <WorkspaceSummary input={input} /> },
+  });
   ctx.views.registerView({
     id: dashboardWidgetIds.createWorkspace,
     title: "Create workspace",
@@ -147,7 +153,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
       kind: "panels",
       empty: {
         kind: "view",
-        id: dashboardWidgetIds.workspaceFiles,
+        id: dashboardWidgetIds.workspaceSummary,
       },
     },
     slots: [
@@ -168,6 +174,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
       },
       {
         id: "files",
+        isAvailable: (resource) => resource?.metadata?.workspaceSupportsFiles === true,
         region: "main",
         tab: { getSnapshot: () => ({ label: "Files" }) },
         order: 2,

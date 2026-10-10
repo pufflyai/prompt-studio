@@ -16,6 +16,7 @@ test("keeps Files and Changes fixed and bound to the current workspace", () => {
   for (const workspaceId of ["workspace-1", "workspace-2", "workspace-1"]) {
     const workspace = createDashboardResource("workspace", workspaceId, "Workspace", "GitBranch", "project-1", {
       workspaceSupportsDiff: true,
+      workspaceSupportsFiles: true,
     });
     openWorkspacesPage(workbench, workspace);
     const panels = workbench.layout.listPanelInstances("main");

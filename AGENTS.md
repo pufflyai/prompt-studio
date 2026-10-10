@@ -259,17 +259,23 @@ Run `bun run dev:playwright`. Open the dashboard URL printed by the command with
 - Local checks passing or opening a draft PR does not complete the task.
 - If CI is blocked, report the blocker and keep the PR open. Do not report the task as done.
 
-## CI timeouts
+## CI timeouts and performance budgets
 
-A CI timeout is a fixed performance limit. If a job reaches that limit, something became slower. Treat the slowdown as the bug.
+There are two kinds of time limit. [ADR 0067](documentation/adrs/0067-separate-performance-budgets-from-execution-allowances.md) explains why.
 
-**Never increase a timeout without clear approval for that exact value in the same conversation.** This rule still applies when a timeout increase is the only way to make the check pass. It covers:
+- A **performance budget** is a product contract for one named operation and fixed workload, such as cold startup. Benchmarks own budgets. If a budget fails, the product became slower. Treat the slowdown as the bug.
+- An **execution allowance** (timeout) bounds how long a test, fixture, or job may run, including setup and cleanup. Reaching it means work did not finish. Find the slow phase before changing anything.
 
+**Never increase a budget or timeout without clear approval for that exact value in the same conversation.** This rule still applies when an increase is the only way to make the check pass. It covers:
+
+- benchmark budgets, such as those in `clients/desktop/src/e2e/*.bench.ts`
 - `timeout-minutes` in any `.github/workflows/` job
-- the suite-wide defaults in `packages/e2e/playwright.config.ts` (`timeout`, `expect.timeout`, `webServer.timeout`)
-- limits for a whole test: `test.slow()` and `test.setTimeout()`
+- the suite-wide defaults in Playwright configs (`timeout`, `expect.timeout`, `webServer.timeout`)
+- limits for a whole test or fixture: `test.slow()`, `test.setTimeout()`, and fixture `timeout`
 
-If a job times out, report what became slower and by how much. Then fix the slowdown or ask the user what to do. Do not hide the problem by raising the limit.
+Never pass a budget by shrinking its workload, skipping a platform, retrying, or prewarming a cold-start scenario.
+
+If a check times out, report which phase was slow and by how much. To propose a new timeout, use timings from representative local runs and from the applicable CI platforms, as described in the [testing guide](documentation/guides/development/0002-testing.md#time-limits). A fast local run alone or a slow CI run alone is not enough. Then fix the slowdown or ask the user what to do. Do not hide the problem by raising the limit.
 
 ---
 

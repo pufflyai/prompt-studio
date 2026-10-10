@@ -21,6 +21,7 @@ interface EditModeDataTableBodyProps {
   pageIndex: number;
   pageRows: RowData[];
   pageSize: number;
+  rowNumbers: boolean;
   selectedRowIds: Set<string>;
   showNewRow: boolean;
   wrapRows: boolean;
@@ -45,6 +46,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
     pageIndex,
     pageRows,
     pageSize,
+    rowNumbers,
     selectedRowIds,
     showNewRow,
     wrapRows,
@@ -58,6 +60,9 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
     rowIdFor,
   } = props;
 
+  const rowHeight = wrapRows ? undefined : "10";
+  const verticalAlign = wrapRows ? "top" : "middle";
+
   return (
     <Table.Body>
       {pageRows.map((row, visibleIndex) => {
@@ -70,23 +75,25 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
             data-document-row="true"
             data-selected={selectedRowIds.has(rowId) ? "true" : undefined}
             aria-selected={selectedRowIds.has(rowId)}
-            height={wrapRows ? undefined : "10"}
+            height={rowHeight}
             background="bg"
           >
-            <Table.Cell
-              data-column-id="rowIndex"
-              height={wrapRows ? undefined : "10"}
-              padding="xs"
-              textAlign="center"
-              textStyle="paragraph/S/regular"
-              background="bg.subtle"
-              borderRightWidth="1px"
-              borderBottomWidth="1px"
-              borderColor="border.subtle"
-              verticalAlign={wrapRows ? "top" : "middle"}
-            >
-              {rowIndex + 1}
-            </Table.Cell>
+            {rowNumbers ? (
+              <Table.Cell
+                data-column-id="rowIndex"
+                height={rowHeight}
+                padding="xs"
+                textAlign="center"
+                textStyle="paragraph/S/regular"
+                background="bg.subtle"
+                borderRightWidth="1px"
+                borderBottomWidth="1px"
+                borderColor="border.subtle"
+                verticalAlign={verticalAlign}
+              >
+                {rowIndex + 1}
+              </Table.Cell>
+            ) : null}
             {enableSelection ? (
               <EditModeSelectionCell
                 checked={selectedRowIds.has(rowId)}
@@ -122,7 +129,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
               <Table.Cell
                 data-column-id="editControl"
                 width="min-content"
-                height={wrapRows ? undefined : "10"}
+                height={rowHeight}
                 position="sticky"
                 right="0"
                 zIndex="1"
@@ -130,7 +137,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
                 borderLeftWidth="1px"
                 borderBottomWidth="1px"
                 borderColor="border.subtle"
-                verticalAlign={wrapRows ? "top" : "middle"}
+                verticalAlign={verticalAlign}
               />
             ) : null}
           </Table.Row>
@@ -157,7 +164,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
       })}
       {!isReadOnly && showNewRow ? (
         <Table.Row>
-          <Table.Cell colSpan={columns.length + 2 + (enableSelection ? 1 : 0)} padding="0">
+          <Table.Cell colSpan={columns.length + 1 + (rowNumbers ? 1 : 0) + (enableSelection ? 1 : 0)} padding="0">
             <Button
               size="xs"
               variant="ghost-static"

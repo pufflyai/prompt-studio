@@ -12,6 +12,11 @@ export const builder = (yargs: Argv) =>
     .option("status", { type: "string", describe: "Filter by status" })
     .option("agent", { type: "string", describe: "Filter by agent" })
     .option("workspace-id", { type: "string", describe: "Filter by workspace ID" })
+    .option("created-from", { type: "string", describe: "Filter by created from" })
+    .option("created-to", { type: "string", describe: "Filter by created to" })
+    .option("updated-from", { type: "string", describe: "Filter by updated from" })
+    .option("anchor-type", { type: "string", describe: "Filter by anchor type" })
+    .option("anchor-id", { type: "string", describe: "Filter by anchor id" })
     .option("archived", { type: "boolean", describe: "Include archived sessions" });
 
 export type ListArgs = {
@@ -19,6 +24,11 @@ export type ListArgs = {
   status?: string;
   agent?: string;
   "workspace-id"?: string;
+  "created-from"?: string;
+  "created-to"?: string;
+  "updated-from"?: string;
+  "anchor-type"?: string;
+  "anchor-id"?: string;
   archived?: boolean;
 };
 
@@ -55,6 +65,11 @@ export const createHandler =
       status: argv.status,
       agent: argv.agent,
       workspaceId: argv["workspace-id"],
+      createdFrom: argv["created-from"],
+      createdTo: argv["created-to"],
+      updatedFrom: argv["updated-from"],
+      anchorType: argv["anchor-type"],
+      anchorId: argv["anchor-id"],
       archived: argv.archived,
     });
 
