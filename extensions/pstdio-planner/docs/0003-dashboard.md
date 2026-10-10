@@ -20,7 +20,7 @@ Each card shows the ticket's title and these properties:
 
 Select the create button at the top of a column. By default only the Backlog column has one. In the **New ticket** form, write a description in Markdown, attach files if needed, and set the properties, such as tags. The first line of the description becomes the ticket's title.
 
-The form starts with the column's status and editable properties that match the current view's filters. **Create ticket** opens the new ticket. Use its dropdown and choose **Create without opening** to stay on the board.
+The form starts with the column's status and editable properties that match the current view's filters. Choose **Create ticket** or **Create without opening** in the submit dropdown. The choice changes the primary button and is remembered when the form reopens, including after a reload. Press the primary button to create the ticket with that action. Choosing an option does not create a ticket.
 
 Clicking the background keeps the form open. **Cancel** and Escape close it and keep your draft, including attachments, while this dashboard stays open. Reopen the same view and filter to continue, even after visiting another page. Each view and filter keeps its own draft, so new filtered forms inherit matching properties without replacing earlier drafts. The **X** discards the current draft. Successful creation clears it.
 
