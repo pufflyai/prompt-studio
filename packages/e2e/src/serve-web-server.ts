@@ -5,7 +5,7 @@ import type { PlaywrightTestConfig } from "@playwright/test";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./default-extensions";
 import { uiOrigin } from "./ui-server";
 
-const repoRoot = join(import.meta.dirname, "../..");
+const repoRoot = join(import.meta.dirname, "../../..");
 const serverUrl = new URL(uiOrigin);
 
 // Playwright evaluates the config again in every worker. Keeping the run id and home in the
