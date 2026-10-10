@@ -113,6 +113,11 @@ const Harness = (props: {
 export const Empty: Story = {
   args: {} as never,
   render: () => <Harness config={config} />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(body.getByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
+    await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
+  },
 };
 
 /** Status is pre-selected from the column and locked; the other properties are free. */
@@ -126,7 +131,18 @@ export const PrefilledFromColumn: Story = {
 /** Submitting: every control is disabled while the create command runs. */
 export const Submitting: Story = {
   args: {} as never,
-  render: () => <Harness config={config} onSubmit={() => new Promise(() => undefined)} />,
+  render: () => (
+    <Harness
+      config={{ ...config, fields: [{ ...config.fields[0], defaultValue: "Ticket body" }, config.fields[1]] }}
+      onSubmit={() => new Promise(() => undefined)}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("button", { name: "Create ticket", exact: true }));
+    await expect(body.getByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
+    await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
+  },
 };
 
 /** A failing submit surfaces the caller-supplied error copy. */
@@ -167,6 +183,7 @@ export const RememberedCreateAction: Story = {
   render: () => <Harness config={config} />,
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
+    await userEvent.type(await body.findByRole("textbox"), "Choose a creation action");
     await userEvent.click(await body.findByRole("button", { name: "Create without opening", exact: true }));
     await userEvent.click(await body.findByRole("menuitemradio", { name: "Create without opening", exact: true }));
     await expect(body.getByRole("dialog")).toBeVisible();

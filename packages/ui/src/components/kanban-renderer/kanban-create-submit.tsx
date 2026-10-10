@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, Icon, IconButton, Menu } from "@chakra-ui/react";
+import { Button, ButtonGroup, Icon, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { ChevronDown } from "lucide-react";
 
 interface KanbanCreateSubmitProps {
@@ -15,17 +15,21 @@ export function KanbanCreateSubmit(props: KanbanCreateSubmitProps) {
   const { label, withoutOpeningLabel, openCreatedRow, onChoose, onSubmit, disabled, submitting } = props;
   const selectedLabel = !openCreatedRow && withoutOpeningLabel ? withoutOpeningLabel : label;
   return (
-    <ButtonGroup size="sm" variant="primary" attached>
-      <Button disabled={disabled} loading={submitting} onClick={onSubmit}>
-        {selectedLabel}
-      </Button>
-      {withoutOpeningLabel ? (
-        <Menu.Root positioning={{ placement: "top-end" }}>
+    <Menu.Root positioning={{ placement: "top-end" }}>
+      <ButtonGroup size="sm" variant="primary" attached>
+        <Button disabled={disabled || submitting} loading={submitting} onClick={onSubmit}>
+          {selectedLabel}
+        </Button>
+        {withoutOpeningLabel ? (
           <Menu.Trigger asChild>
-            <IconButton aria-label={withoutOpeningLabel} disabled={submitting}>
+            <IconButton aria-label={withoutOpeningLabel} disabled={disabled || submitting}>
               <Icon as={ChevronDown} />
             </IconButton>
           </Menu.Trigger>
+        ) : null}
+      </ButtonGroup>
+      {withoutOpeningLabel ? (
+        <Portal>
           <Menu.Positioner>
             <Menu.Content>
               <Menu.RadioItemGroup
@@ -43,8 +47,8 @@ export function KanbanCreateSubmit(props: KanbanCreateSubmitProps) {
               </Menu.RadioItemGroup>
             </Menu.Content>
           </Menu.Positioner>
-        </Menu.Root>
+        </Portal>
       ) : null}
-    </ButtonGroup>
+    </Menu.Root>
   );
 }

@@ -210,7 +210,9 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
         >
           <Dialog.Header>
             <Dialog.Title>{config.title}</Dialog.Title>
-            <CloseButton size="xs" disabled={submitting} onClick={discard} />
+            <Dialog.CloseTrigger asChild>
+              <CloseButton size="sm" disabled={submitting} onClick={discard} />
+            </Dialog.CloseTrigger>
           </Dialog.Header>
           <Dialog.Body>
             <Stack gap="md">

@@ -1,5 +1,5 @@
 import { Popover, Portal } from "@chakra-ui/react";
-import { createContext, type ReactNode, type RefObject, useContext, useEffect, useRef } from "react";
+import { createContext, type ReactNode, type RefObject, useContext } from "react";
 
 const ViewBarPopoverContext = createContext(false);
 
@@ -19,27 +19,13 @@ export interface ViewBarPopoverProps {
 /** The menu shell for Search, Filter, and Sort. Menus inside it render in place, so using them never closes it. */
 export const ViewBarPopover = (props: ViewBarPopoverProps) => {
   const { open, onOpenChange, anchorRef, width, placement = "bottom-start", padding = "2xs", testId, children } = props;
-  const contentRef = useRef<HTMLDivElement>(null);
   const nested = useContext(ViewBarPopoverContext);
-
-  useEffect(() => {
-    if (!open) return;
-    const closeOnOutsidePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (contentRef.current?.contains(target) || anchorRef.current?.contains(target)) return;
-      onOpenChange(false);
-    };
-    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
-    return () => document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
-  }, [open, anchorRef, onOpenChange]);
 
   return (
     <Popover.Root
       open={open}
       lazyMount
       unmountOnExit
-      closeOnInteractOutside={false}
       positioning={{
         placement,
         strategy: "fixed",
@@ -52,7 +38,6 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
       <Portal disabled={nested}>
         <Popover.Positioner>
           <Popover.Content
-            ref={contentRef}
             data-testid={testId}
             width={width}
             maxWidth="calc(100vw - 32px)"

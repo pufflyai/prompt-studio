@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Keep ticket drafts and attachments, inherit matching view properties, remember the selected create action, align the modal close button, and keep settings Save controls visible.
+Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
