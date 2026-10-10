@@ -20,7 +20,16 @@ export type EventStore = {
   snapshotAndSubscribe(): { history: JsonPatch[]; stream: AsyncIterable<JsonPatch> };
 };
 
-export type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
+/** Features a harness opts into. `Attachments` means the harness accepts `attachments` on start, resume and steering. */
+export const AGENT_CAPABILITIES = [
+  "SessionFork",
+  "ContextUsage",
+  "Approvals",
+  "SessionReattach",
+  "Attachments",
+] as const;
+
+export type AgentCapability = (typeof AGENT_CAPABILITIES)[number];
 
 export type QuestionResponse = {
   /**

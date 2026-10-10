@@ -8,7 +8,13 @@ import { installExtensionSource } from "../extensions/install-extension-source";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
 const fixtureAgents = [
-  { id: "pstdio.workbench-fixture.harness.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
+  {
+    id: "pstdio.workbench-fixture.harness.fake",
+    name: "Fake Agent",
+    availability: { type: "INSTALLED" },
+    capabilities: [],
+    supportsModels: true,
+  },
   ...[
     ["native-modes", "Native modes fixture"],
     ["native-action", "Native action fixture"],
@@ -17,6 +23,8 @@ const fixtureAgents = [
     name,
     availability: { type: "INSTALLED" },
     params: { planning: { type: "boolean", label: "Planning", defaultValue: false, control: "command" } },
+    capabilities: [],
+    supportsModels: true,
   })),
 ];
 
