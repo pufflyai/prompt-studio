@@ -18,6 +18,7 @@ interface EditModeDataTableHeaderProps {
   data: RowData[];
   editMode: DataTableEditModeConfig;
   isReadOnly: boolean;
+  rowNumbers: boolean;
   rowDisplayControl?: ReactNode;
   selectionHeader?: ReactNode;
   onAddColumn: () => void;
@@ -36,6 +37,7 @@ export const EditModeDataTableHeader = (props: EditModeDataTableHeaderProps) => 
     data,
     editMode,
     isReadOnly,
+    rowNumbers,
     rowDisplayControl,
     selectionHeader,
     onAddColumn,
@@ -49,17 +51,19 @@ export const EditModeDataTableHeader = (props: EditModeDataTableHeaderProps) => 
   return (
     <Table.Header>
       <Table.Row height="10" background="bg.subtle">
-        <Table.ColumnHeader
-          data-column-id="rowIndex"
-          width="fit-content"
-          padding={rowDisplayControl ? "2xs" : "xs"}
-          background="bg.subtle"
-          borderRightWidth="1px"
-          borderBottomWidth="1px"
-          borderColor="border.subtle"
-        >
-          {rowDisplayControl}
-        </Table.ColumnHeader>
+        {rowNumbers ? (
+          <Table.ColumnHeader
+            data-column-id="rowIndex"
+            width="fit-content"
+            padding={rowDisplayControl ? "2xs" : "xs"}
+            background="bg.subtle"
+            borderRightWidth="1px"
+            borderBottomWidth="1px"
+            borderColor="border.subtle"
+          >
+            {rowDisplayControl}
+          </Table.ColumnHeader>
+        ) : null}
         {selectionHeader ? (
           <Table.ColumnHeader
             data-column-id="rowSelection"
@@ -73,7 +77,7 @@ export const EditModeDataTableHeader = (props: EditModeDataTableHeaderProps) => 
             {selectionHeader}
           </Table.ColumnHeader>
         ) : null}
-        {columns.map((column) => {
+        {columns.map((column, index) => {
           const isEditing = activeHeader?.columnId === column.id;
           const headerIcon = columnIcons?.[column.id] ?? getIcon(data.map((row) => row[column.id]));
           const header = (
@@ -106,6 +110,7 @@ export const EditModeDataTableHeader = (props: EditModeDataTableHeaderProps) => 
                   <Text as="div" textStyle="label/S/medium" truncate>
                     {editMode.renderHeader?.(column) ?? column.label}
                   </Text>
+                  {!rowNumbers && index === 0 ? rowDisplayControl : null}
                 </Flex>
               )}
             </Table.ColumnHeader>

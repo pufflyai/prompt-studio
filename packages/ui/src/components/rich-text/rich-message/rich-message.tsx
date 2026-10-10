@@ -19,6 +19,7 @@ import { ChatLinkPlugin } from "@/components/chat-ui/links/chat-link-plugin";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
 import { createMarkdownSourceDocument } from "../shared/markdown-source-document";
+import { MarkdownTableSettingsContext } from "../shared/markdown-table-settings-context";
 import type { MarkdownUrlResolver } from "../shared/markdown-url";
 import { MarkdownUrlProvider } from "../shared/markdown-url-context";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
@@ -40,6 +41,7 @@ export interface RichMessageProps extends ChatLinkProps {
 }
 
 const SOURCE_IMPORT_TAG = "markdown-source-import";
+const CHAT_TABLE_SETTINGS = { rowNumbers: false, wrapRows: true };
 
 export function RichMessage(props: RichMessageProps) {
   const inherited = useChatLinkHandler();
@@ -89,47 +91,49 @@ function RichMessageContent(props: RichMessageProps) {
       overflow="hidden"
     >
       <MarkdownUrlProvider resolver={resolveMarkdownUrl}>
-        <LexicalComposer initialConfig={initialConfig}>
-          <StateUpdatePlugin
-            value={body}
-            onUpdate={(value: string) => {
-              const sourceDocument = createMarkdownSourceDocument(value, resolveMarkdownUrl);
-              sourceDocumentRef.current = sourceDocument;
-              $addUpdateTag(SOURCE_IMPORT_TAG);
-              sourceDocument.importToLexical();
-            }}
-          />
-          <LinkPlugin />
-          <ChatLinkPlugin />
-          <ClickableLinkPlugin newTab />
-          <ListPlugin />
-          <ListMarkerWidthPlugin />
-          {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
-          <HorizontalRulePlugin />
-          <CodeHighlightingPlugin />
-          <ImportCodeBlocksPlugin />
-          <EquationPlugin />
-          <RichTextPlugin
-            contentEditable={<ContentEditable fullWidth={fullWidth} isRichMessage />}
-            ErrorBoundary={LexicalErrorBoundary}
-          />
-          {shouldTrackChanges ? (
-            <OnChangePlugin
-              ignoreSelectionChange
-              ignoreHistoryMergeTagChange={false}
-              onChange={(editorState, _editor, tags) => {
-                if (tags.has(SOURCE_IMPORT_TAG)) return;
-                editorState.read(() => {
-                  const root = $getRoot();
-                  const markdownBody = sourceDocumentRef.current?.exportFromLexical(root) ?? "";
-                  onChange?.(frontmatter + markdownBody);
-                });
+        <MarkdownTableSettingsContext value={CHAT_TABLE_SETTINGS}>
+          <LexicalComposer initialConfig={initialConfig}>
+            <StateUpdatePlugin
+              value={body}
+              onUpdate={(value: string) => {
+                const sourceDocument = createMarkdownSourceDocument(value, resolveMarkdownUrl);
+                sourceDocumentRef.current = sourceDocument;
+                $addUpdateTag(SOURCE_IMPORT_TAG);
+                sourceDocument.importToLexical();
               }}
             />
-          ) : null}
-          <ToggleEditablePlugin isEditable={isEditable} />
-          {debug && <TreeViewPlugin />}
-        </LexicalComposer>
+            <LinkPlugin />
+            <ChatLinkPlugin />
+            <ClickableLinkPlugin newTab />
+            <ListPlugin />
+            <ListMarkerWidthPlugin />
+            {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
+            <HorizontalRulePlugin />
+            <CodeHighlightingPlugin />
+            <ImportCodeBlocksPlugin />
+            <EquationPlugin />
+            <RichTextPlugin
+              contentEditable={<ContentEditable fullWidth={fullWidth} isRichMessage />}
+              ErrorBoundary={LexicalErrorBoundary}
+            />
+            {shouldTrackChanges ? (
+              <OnChangePlugin
+                ignoreSelectionChange
+                ignoreHistoryMergeTagChange={false}
+                onChange={(editorState, _editor, tags) => {
+                  if (tags.has(SOURCE_IMPORT_TAG)) return;
+                  editorState.read(() => {
+                    const root = $getRoot();
+                    const markdownBody = sourceDocumentRef.current?.exportFromLexical(root) ?? "";
+                    onChange?.(frontmatter + markdownBody);
+                  });
+                }}
+              />
+            ) : null}
+            <ToggleEditablePlugin isEditable={isEditable} />
+            {debug && <TreeViewPlugin />}
+          </LexicalComposer>
+        </MarkdownTableSettingsContext>
       </MarkdownUrlProvider>
     </Flex>
   );
