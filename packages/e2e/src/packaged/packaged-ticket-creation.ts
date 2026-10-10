@@ -24,13 +24,23 @@ export const verifyTicketCreation = async (page: Page) => {
     (response) => response.request().method() === "POST" && /\/extensions\/[^/]+\/files\?/.test(response.url()),
   );
   await dialog.getByRole("button", { name: "Create without opening", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Create without opening", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Create without opening", exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Create without opening", exact: true })
+    .filter({ hasText: "Create without opening" })
+    .click();
   await expect(dialog).toBeHidden();
   expect((await upload).ok()).toBe(true);
   await expect(page.getByTestId("renderer-card").filter({ hasText: "Packaged creation draft" })).toBeVisible();
   expect(page.url()).toBe(boardUrl);
   await create.click();
   await expect(editor).toHaveText("");
+  await expect(
+    dialog
+      .getByRole("button", { name: "Create without opening", exact: true })
+      .filter({ hasText: "Create without opening" }),
+  ).toBeVisible();
   await editor.fill("Discard this draft");
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toBeHidden();
