@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import cmdShim from "cmd-shim";
@@ -11,7 +11,8 @@ afterEach(() => {
 });
 
 const fixture = (directory: string, name = "node", source = "console.log('fixture')") => {
-  const root = mkdtempSync(join(tmpdir(), "process-discovery-"));
+  // Child processes report resolved paths, and the macOS temp folder is a symlink.
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "process-discovery-")));
   roots.push(root);
   const prefix = join(root, directory);
   mkdirSync(prefix, { recursive: true });

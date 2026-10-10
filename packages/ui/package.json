@@ -84,6 +84,7 @@
     "lint": "bun run typecheck && biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts && rm -f chakra-config.json",
     "test": "bun test --conditions production --silent",
+    "test:coverage": "bun test --conditions production --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
     "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
