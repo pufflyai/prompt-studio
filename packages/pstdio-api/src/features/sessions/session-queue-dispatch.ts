@@ -119,6 +119,7 @@ export const dispatchQueuedEntry = async (
     deps,
   ).then(removeEntry, fail);
   owner = deps.sessionService.store.get(session.id);
-  deps.sessionService.emitResumedHook?.(dispatchSession);
+  if (session.last_request_started === null) deps.sessionService.emitStartedHook?.(dispatchSession);
+  else deps.sessionService.emitResumedHook?.(dispatchSession);
   return { settled };
 };

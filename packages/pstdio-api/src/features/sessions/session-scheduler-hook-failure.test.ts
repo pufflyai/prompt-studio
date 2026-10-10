@@ -46,12 +46,12 @@ describe("session scheduler pre-start hook failures", () => {
       const scheduler = createSessionScheduler(handle.deps);
 
       await expect(
-        scheduler.createAndStartSession({
+        scheduler.createSession({
           projectId: project.id,
           title: "Hook failure",
           agentId: FAKE_ID,
           prompt: "fail before start",
-          onBeforeStartedHook: async () => {
+          onCreated: async () => {
             throw new Error("link failed");
           },
         }),

@@ -145,7 +145,7 @@ export const createSessionsApi = (
       const prompt = resolveExtensionPrompt(sessionInput);
       const attachments = await resolveSessionAttachments(deps, input.projectId, sessionInput.attachments);
       const cwd = await resolveSessionCwd(deps, input.projectId, workspace?.id);
-      const session = await createSessionScheduler(deps).createAndStartSession({
+      const session = await createSessionScheduler(deps).createSession({
         projectId: input.projectId,
         title: sessionInput.title,
         agentId: resolvedAgent.agentId,
@@ -158,7 +158,7 @@ export const createSessionsApi = (
         cwd,
         anchors: sessionInput.anchors,
         signal: input.signal,
-        onBeforeStartedHook: async (createdSession) => {
+        onCreated: async (createdSession) => {
           if (!workspace) return;
 
           await deps.workspaceSessionService.link(workspace.id, createdSession.id);
