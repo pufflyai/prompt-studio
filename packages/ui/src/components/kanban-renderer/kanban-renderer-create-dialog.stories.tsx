@@ -1,5 +1,7 @@
+import { Button } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import type { AttributeDescriptor, KanbanRendererCreateRowConfig, KanbanRendererCreateSubmission } from "./types";
 
@@ -51,6 +53,7 @@ const labels = {
   properties: "Properties",
   submitError: "Could not create ticket",
   removeFile: "Remove file",
+  submitWithoutOpening: "Create without opening",
 };
 
 const config: KanbanRendererCreateRowConfig = {
@@ -80,15 +83,18 @@ const Harness = (props: {
   const [open, setOpen] = useState(true);
 
   return (
-    <KanbanRendererCreateDialog
-      open={open}
-      columnId="ready"
-      columnAttributeId="status"
-      attributes={attributes}
-      config={props.config}
-      onClose={() => setOpen(false)}
-      onSubmit={props.onSubmit ?? (() => undefined)}
-    />
+    <>
+      <Button onClick={() => setOpen(true)}>New ticket</Button>
+      <KanbanRendererCreateDialog
+        open={open}
+        columnId="ready"
+        columnAttributeId="status"
+        attributes={attributes}
+        config={props.config}
+        onClose={() => setOpen(false)}
+        onSubmit={props.onSubmit ?? (() => undefined)}
+      />
+    </>
   );
 };
 
@@ -129,4 +135,17 @@ export const SubmitError: Story = {
 export const AttributesOnly: Story = {
   args: {} as never,
   render: () => <Harness config={{ ...config, fields: [] }} />,
+};
+
+/** Cancel suspends the draft so reopening does not lose the user's work. */
+export const RetainedDraft: Story = {
+  args: {} as never,
+  render: () => <Harness config={config} />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.type(await body.findByRole("textbox"), "Keep this ticket draft");
+    await userEvent.click(body.getByRole("button", { name: "Cancel", exact: true }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "New ticket", exact: true }));
+    await expect(await body.findByRole("textbox")).toHaveTextContent("Keep this ticket draft");
+  },
 };

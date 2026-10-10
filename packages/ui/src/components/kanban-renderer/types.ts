@@ -153,6 +153,7 @@ export interface KanbanRendererCreateLabels {
   properties: string;
   submitError: string;
   removeFile: string;
+  submitWithoutOpening?: string;
 }
 
 export interface KanbanRendererCreateRowConfig {
@@ -170,6 +171,8 @@ export interface KanbanRendererCreateSubmission {
   /** Every editable attribute the user set, keyed by attribute id. */
   attributeValues: Record<string, unknown>;
   files: File[];
+  /** Defaults to opening the created row. False keeps the current board visible. */
+  openCreatedRow?: boolean;
 }
 
 export const DEFAULT_KANBAN_RENDERER_SETTINGS: KanbanRendererSettings = {

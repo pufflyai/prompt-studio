@@ -120,6 +120,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
   const deferredSearch = useDeferredValue(search);
   const settings = useKanbanRendererStore(storageKey, (state) => state.settings, initialState);
   const filter = useKanbanRendererStore(storageKey, (state) => state.filter, initialState);
+  const activeViewId = useKanbanRendererStore(storageKey, (state) => state.activeViewId, initialState);
   const sorts = useKanbanRendererStore(storageKey, (state) => state.sorts, initialState);
   const expandedGroups = useKanbanRendererStore(storageKey, (state) => state.expandedGroups, initialState);
   const setExpandedGroup = useKanbanRendererStore(storageKey, (state) => state.setExpandedGroup, initialState);
@@ -263,6 +264,8 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
           columnAttributeId={settings.columnGrouping === NO_GROUPING ? undefined : settings.columnGrouping}
           attributes={attributes}
           config={createRow}
+          draftKey={JSON.stringify([storageKey, activeViewId, filter])}
+          filter={filter}
           onClose={() => setCreateColumnId(null)}
           onSubmit={onCreateRow}
         />

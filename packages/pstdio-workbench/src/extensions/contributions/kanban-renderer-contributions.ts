@@ -50,6 +50,7 @@ const toCreateRowConfig = (record: WorkbenchExtensionKanbanRendererRecord, local
       properties: localize(record.createRow.labels?.properties, "Properties"),
       submitError: localize(record.createRow.labels?.submitError, "Could not create resource."),
       removeFile: localize(record.createRow.labels?.removeFile, "Remove file"),
+      submitWithoutOpening: localize(undefined, "Create without opening"),
     },
   };
 };
@@ -100,7 +101,8 @@ const toCreateRowHandler = (
     );
     const created = await runMutation(record, contribution.commandId, params);
     await adapter.onAfterCreate?.({ record, created, submission });
-    if (!activateCreatedRow || typeof created !== "object" || created === null) return;
+    if (submission.openCreatedRow === false || !activateCreatedRow || typeof created !== "object" || created === null)
+      return;
     const row = created as Partial<KanbanRendererRow>;
     if (typeof row.id !== "string" || typeof row.title !== "string") return;
     await activateCreatedRow({ ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} });

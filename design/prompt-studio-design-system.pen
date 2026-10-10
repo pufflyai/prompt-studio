@@ -36179,7 +36179,7 @@
                       "type": "frame",
                       "id": "vmzs5",
                       "name": "cmp/KanbanRendererCreateDialog",
-                      "context": "The shared create dialog. Every control in it is declared rather than hand-built, and the host renders the whole surface — there is no extension webview here.\n\nTwo zones, two sources.\n\nPROPERTIES are derived. They are the resource's own editable attributes, already declared once by the renderer's attribute schema and delivered live with every query. Nothing re-declares them: the form filters on editable and seeds whichever attribute the board groups by from the selected column. Add a tag to the project and the form grows a selector on its own.\n\nCONTENT is declared. The create contribution names its typed params — markdown, text, number, boolean, files — and each type maps to exactly one @pstdio/ui control. When an extension needs a control the vocabulary lacks, the answer is to add the type, here and in the component library, the same way a visual the recipes cannot express means a recipe is missing. The vocabulary is the design system's form surface enumerated; it is not a per-extension escape hatch.\n\nThis is a form, and forms are declarable. Rich per-resource editing is a different surface — the resource editor view — and that one stays a webview.\n\nThree things to hold: status appears once, as the first control under Properties, disabled because the column already chose it. The attach affordance sits under the field it applies to, so the footer stays a pure commit bar. And all copy, chrome included, arrives as Localizable — the dialog ships no English of its own.",
+                      "context": "The shared create dialog. Every control in it is declared rather than hand-built, and the host renders the whole surface — there is no extension webview here.\n\nTwo zones, two sources.\n\nPROPERTIES are derived. They are the resource's own editable attributes, already declared once by the renderer's attribute schema and delivered live with every query. Nothing re-declares them: the form filters on editable and seeds whichever attribute the board groups by from the selected column. Add a tag to the project and the form grows a selector on its own.\n\nCONTENT is declared. The create contribution names its typed params — markdown, text, number, boolean, files — and each type maps to exactly one @pstdio/ui control. When an extension needs a control the vocabulary lacks, the answer is to add the type, here and in the component library, the same way a visual the recipes cannot express means a recipe is missing. The vocabulary is the design system's form surface enumerated; it is not a per-extension escape hatch.\n\nThis is a form, and forms are declarable. Rich per-resource editing is a different surface — the resource editor view — and that one stays a webview.\n\nThree things to hold: status appears once, as the first control under Properties, disabled because the column already chose it. The attach affordance sits under the field it applies to, so the footer stays a pure commit bar. And all copy, chrome included, arrives as Localizable — the dialog ships no English of its own. Creation starts with matching editable view properties. Clicking the backdrop does not dismiss the form. Escape and Cancel keep the draft; only Close discards it, and a successful create clears it. The submit split button offers Create ticket and Create without opening.",
                       "reusable": true,
                       "clip": true,
                       "width": 600,
@@ -36508,29 +36508,17 @@
                                   }
                                 },
                                 {
-                                  "id": "KH7yo",
+                                  "id": "m1Spo",
                                   "type": "ref",
-                                  "ref": "c24zV7",
-                                  "name": "Create ticket",
+                                  "ref": "N5RM0N",
+                                  "name": "Create ticket options",
                                   "theme": {
                                     "btn": "primary",
                                     "size": "sm"
                                   },
-                                  "height": 32,
                                   "descendants": {
-                                    "DsEVd": {
-                                      "enabled": false,
-                                      "width": 16,
-                                      "height": 16
-                                    },
-                                    "Hf4GT": {
+                                    "RPXbv": {
                                       "content": "Create ticket"
-                                    },
-                                    "khvEs": {
-                                      "theme": {
-                                        "kbd": "raised",
-                                        "size": "md"
-                                      }
                                     }
                                   }
                                 }
@@ -184763,6 +184751,327 @@
                       ]
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ZIT8B",
+      "x": 45170,
+      "y": 0,
+      "name": "Markdown Editor · Document spacing",
+      "width": 820,
+      "height": 460,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "c7Jgow",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Markdown editor",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "eH2Cx",
+          "name": "cmp/MarkdownEditor",
+          "context": "Document markdown editors use 24 px (lg) padding on every side. The placeholder shares the content inset. Chat retains its own padding. Compact inline inputs keep their explicit inset.",
+          "reusable": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$ds-bg",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "JVI4w",
+              "name": "Document heading",
+              "fill": "$ds-fg",
+              "content": "A tool for your work",
+              "fontFamily": "$font-heading",
+              "fontSize": 24,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "X0nUI",
+              "name": "Document paragraph",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Describe the tool you need. Keep room around the document so text, lists, and images are easy to read and edit.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "MH6ER",
+      "x": 46062,
+      "y": 0,
+      "name": "Ticket Tags · Fixed settings header",
+      "context": "The settings header is outside the scrolling tag definitions. Its Save and Reset actions remain visible at every scroll position.",
+      "clip": true,
+      "width": 800,
+      "height": 560,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Jx4nt",
+          "name": "Settings header",
+          "width": "fill_container",
+          "stroke": "$ds-border-subtle",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "padding": 24,
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "HhDyK",
+              "name": "Heading",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "T2wem",
+                  "name": "Title",
+                  "fill": "$ds-fg",
+                  "content": "Ticket tags *",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "vVIJn",
+                  "name": "Description",
+                  "fill": "$ds-fg-muted",
+                  "content": "Configure tag definitions and options available on tickets.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "dS9yn",
+              "type": "ref",
+              "ref": "c24zV7",
+              "name": "Save",
+              "theme": {
+                "btn": "primary",
+                "size": "sm"
+              },
+              "descendants": {
+                "DsEVd": {
+                  "enabled": false
+                },
+                "Hf4GT": {
+                  "content": "Save"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CIuNv",
+          "name": "Scrolling tag definitions",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "cKnlv",
+              "name": "Priority",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "J8f7b4",
+                  "name": "Priority heading",
+                  "fill": "$ds-fg",
+                  "content": "Priority",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "xKFIO",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Priority Low",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "Low"
+                    }
+                  }
+                },
+                {
+                  "id": "x1m7J",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Priority Medium",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "Medium"
+                    }
+                  }
+                },
+                {
+                  "id": "UWdHd",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Priority High",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "High"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "cuC1z",
+              "name": "Type",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Kp6Of",
+                  "name": "Type heading",
+                  "fill": "$ds-fg",
+                  "content": "Type",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "V0Yf0",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Type Low",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "Low"
+                    }
+                  }
+                },
+                {
+                  "id": "A15oUS",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Type Medium",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "Medium"
+                    }
+                  }
+                },
+                {
+                  "id": "RfvMh",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Type High",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "High"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ckRi9",
+              "name": "Track",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SSfc9",
+                  "name": "Track heading",
+                  "fill": "$ds-fg",
+                  "content": "Track",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "id": "KYA47",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Track Low",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "Low"
+                    }
+                  }
+                },
+                {
+                  "id": "ZnC5U",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Track Medium",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "Medium"
+                    }
+                  }
+                },
+                {
+                  "id": "BBo5H",
+                  "type": "ref",
+                  "ref": "UWWIk",
+                  "name": "Track High",
+                  "width": "fill_container",
+                  "descendants": {
+                    "qhZNp": {
+                      "content": "High"
+                    }
+                  }
                 }
               ]
             }

@@ -8,6 +8,7 @@ interface ContentEditableProps {
   onRef?: (elem: HTMLDivElement) => void;
   fullWidth?: boolean;
   padding?: string;
+  layerStyle?: "markdownEditorInset";
   isRichMessage?: boolean;
   scrollable?: boolean;
 }
@@ -16,11 +17,12 @@ export function ContentEditable({
   onRef,
   fullWidth = false,
   padding,
+  layerStyle,
   isRichMessage = false,
   scrollable = true,
 }: ContentEditableProps) {
   const editor = (
-    <Box ref={onRef} width="100%" minH="100%" padding={padding}>
+    <Box ref={onRef} width="100%" minH="100%" layerStyle={layerStyle} padding={padding}>
       <StyledEditable
         data-testid="content-editable"
         height="fit-content"

@@ -1,12 +1,13 @@
-import { Box, Button, HStack, Stack } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Stack } from "@chakra-ui/react";
 import { CircleDashed, Diamond, Hexagon, Square, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { TagEditor } from "./tag-editor";
 import type { TagEditorValue } from "./tag-editor.types";
+import { TagEditorHeading } from "./tag-editor-heading";
 import { TagEditorSaveBar } from "./tag-editor-save-bar";
 
 type StoryFn = () => ReactNode;
@@ -47,6 +48,31 @@ export const WithIcons = {
       <Stack gap="md">
         <TagEditor title="Priority" values={values} onValuesChange={setValues} />
         <TagEditorSaveBar hasChanges onSave={() => undefined} onReset={() => setValues(initialItems)} />
+      </Stack>
+    );
+  },
+};
+
+/** The Save control stays outside the scrolling tag definitions. */
+export const FixedSettingsHeader = {
+  render: () => {
+    const [values, setValues] = useState<TagEditorValue[]>(
+      Array.from({ length: 20 }, (_, index) => ({
+        id: String(index),
+        name: `Option ${index + 1}`,
+        color: "blue",
+        sortOrder: index,
+      })),
+    );
+    return (
+      <Stack h="360px" minH="0" gap="0">
+        <Flex layerStyle="settingsHeader" flexShrink="0" justifyContent="space-between" alignItems="center">
+          <TagEditorHeading hasChanges>Ticket tags</TagEditorHeading>
+          <TagEditorSaveBar hasChanges onSave={() => undefined} onReset={() => undefined} />
+        </Flex>
+        <ScrollArea flex="1" minH="0" contentProps={{ p: "lg" }}>
+          <TagEditor title="Track" values={values} onValuesChange={setValues} />
+        </ScrollArea>
       </Stack>
     );
   },

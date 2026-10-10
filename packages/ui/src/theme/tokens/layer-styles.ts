@@ -1,6 +1,19 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  settingsHeader: {
+    value: {
+      padding: "lg",
+      bg: "bg",
+      borderBottomWidth: "1px",
+      borderColor: "border.subtle",
+    },
+  },
+  markdownEditorInset: {
+    value: {
+      padding: "lg",
+    },
+  },
   statusBarItem: {
     value: {
       position: "relative",
