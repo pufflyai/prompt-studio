@@ -169,7 +169,7 @@ step before the packaged suite ([ADR 0067](../../adrs/0067-separate-performance-
 Hosted Intel macOS runners are slow and costly. The Intel target runs only the
 benchmark and packaged tests tagged `@essential`. They prove the clean start, both
 transport paths, `pst close`, and a terminal and extension page in the x64 build.
-The Intel clean start may take up to 20 seconds. The other targets run the full
+The Intel clean start may take up to 28 seconds. The other targets run the full
 suites.
 
 The workflow uploads the Playwright JSON results as

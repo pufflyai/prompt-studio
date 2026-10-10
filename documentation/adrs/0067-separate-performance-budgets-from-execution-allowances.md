@@ -38,4 +38,4 @@ Changing either kind of limit needs approval for the exact value. An allowance p
 
 Benchmarks repeat some setup that functional tests also do, such as launching the app and creating a project. Their measured workloads stay fixed while functional tests grow. Benchmarks run without Electron traces, because trace screenshots and snapshots add renderer work; diagnose a failed budget with the traced functional suite or by profiling separately.
 
-Separating the limits does not remove hosted-runner variance or fix slow startup. The Intel cold-start budget from [ADR 0032](0032-temporary-macos-ci-indexing.md) is unchanged. No limit values change with this decision.
+Separating the limits does not remove hosted-runner variance or fix slow startup. The decision itself changes no limits. On 2026-10-10 the user separately approved a 60-second Intel test limit and budgets about 20% above the slowest measured values for Intel and Windows cold start, the streaming replay, and three browser interactions. The testing guide and [ADR 0032](0032-temporary-macos-ci-indexing.md) record the evidence.

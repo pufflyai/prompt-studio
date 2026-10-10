@@ -6,7 +6,8 @@ export default defineConfig({
   outputDir: "test-results/benchmark",
   testDir: "src/e2e",
   testMatch: "packaged-*.bench.ts",
-  timeout: process.platform === "win32" ? 60_000 : 30_000,
+  // Windows and hosted Intel macOS runners need longer for real launches and setup (approved 2026-10-10).
+  timeout: process.platform === "win32" || (process.platform === "darwin" && process.arch === "x64") ? 60_000 : 30_000,
   workers: 1,
   forbidOnly: !!process.env.CI,
   fullyParallel: false,

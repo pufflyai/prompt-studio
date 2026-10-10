@@ -18,7 +18,10 @@ import { waitForVisibleElement } from "./visible-element-timing";
 // Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon,
 // and the first launch of a freshly signed app waits for macOS launch checks.
 const isIntelMac = process.platform === "darwin" && process.arch === "x64";
-const coldStartBudgetMs = isIntelMac ? 20_000 : 8_000;
+// Budgets sit about 20% above the slowest 2026-10-10 release rehearsal (Intel 23.3 s,
+// Windows 8.2 s), as approved on 2026-10-10. See the testing guide.
+const platformColdStartBudgetMs = process.platform === "win32" ? 10_000 : 8_000;
+const coldStartBudgetMs = isIntelMac ? 28_000 : platformColdStartBudgetMs;
 const macStartupWindowBudgetMs = isIntelMac ? 10_000 : 1_500;
 const startupWindowBudgetMs = process.platform === "darwin" ? macStartupWindowBudgetMs : 1_000;
 const warmAttachBudgetMs = 3_000;

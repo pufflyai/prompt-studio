@@ -13,11 +13,11 @@ import {
   SETTLE_MS,
 } from "./performance-budget";
 
-// Apple Silicon baselines over five runs: idle work stays below 0.2% of wall time
-// and the streaming replay uses 28-38% script and 51-68% task time. Idle budgets
-// catch a constant render loop; streaming budgets leave room for slower runners.
+// Idle budgets catch a constant render loop. The 2026-10-10 release rehearsals measured the
+// streaming replay at up to 69% script and 99% task time; the approved budgets sit about 20%
+// above that. A task share above 1 no longer limits anything, so script time is the guard.
 const IDLE_BUDGET: RendererBudget = { scriptShare: 0.02, taskShare: 0.05 };
-const STREAMING_BUDGET: RendererBudget = { scriptShare: 0.6, taskShare: 0.9 };
+const STREAMING_BUDGET: RendererBudget = { scriptShare: 0.85, taskShare: 1.2 };
 // Monitoring runs in Electron main, which renderer CDP metrics cannot see.
 const MONITORING_MAIN_CPU_BUDGET = 10;
 

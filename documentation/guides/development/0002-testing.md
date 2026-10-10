@@ -165,7 +165,7 @@ Each benchmark attaches `benchmark-<name>.json` before checking its budgets. It 
 
 | Benchmark | Measured interval | Budget |
 | --- | --- | --- |
-| Cold start (empty home) | Process spawn to visible workbench root; process spawn to visible startup window | 8 s cold start (20 s on Intel macOS); startup window 1.5 s on macOS (10 s on Intel), 1 s on Linux and Windows |
+| Cold start (empty home) | Process spawn to visible workbench root; process spawn to visible startup window | 8 s cold start (10 s on Windows, 28 s on Intel macOS); startup window 1.5 s on macOS (10 s on Intel), 1 s on Linux and Windows |
 | Warm attach | Process spawn against a persistent runtime with one open project to visible workbench root; startup window as above | 3 s; startup window as above |
 | Sidecar crash recovery | Runtime kill to visible recovery heading | 500 ms |
 | Idle workbench, monitoring off or on | Renderer CPU share over 10 s after a 2 s settle | See the renderer table below; Electron main at most 10% of one core with monitoring on |
@@ -181,9 +181,9 @@ Renderer benchmarks read Chrome DevTools Protocol `Performance.getMetrics` delta
 | Idle workbench, monitoring off | 10 s after a 2 s settle | 2% / 5% | ≤ 0.04% / ≤ 0.11% |
 | Idle workbench, monitoring on | 10 s after a 2 s settle | 2% / 5% | ≤ 0.01% / ≤ 0.07% |
 | Idle extension preview (workbench and Lab frame) | 10 s after a 2 s settle | 2% / 5% each | ≤ 0.05% / ≤ 0.15% |
-| Long streaming replay | about 6 s, until the session completes | 60% / 90% | 28–38% / 51–68% |
+| Long streaming replay | about 6 s, until the session completes | 85% / 120% | 28–38% / 51–68% |
 
-The idle budgets catch a constant render or polling loop. The streaming budget leaves room for slower hosted runners; tighten it once release runs record Linux and Windows baselines.
+The idle budgets catch a constant render or polling loop. On 2026-10-10 the release rehearsals measured the streaming replay at up to 69% script and 99% task time on Apple Silicon, Linux, and Windows runners. The user approved budgets about 20% above those values. A task budget above 100% no longer limits anything, so script time is the remaining streaming guard.
 
 The idle benchmarks turn monitoring on and off through the Settings switch, so the dashboard's slow-frame observer and frame counter run during the monitoring-on measurements. Monitoring itself runs in Electron main, which renderer metrics cannot see, so the monitoring-on benchmark also records the main process share from the snapshot. On Apple Silicon it measured 0.1–0.8% while idle with monitoring on.
 

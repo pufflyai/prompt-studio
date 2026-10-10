@@ -69,7 +69,9 @@ The cold-start and startup-window budgets moved from the packaged transport test
 into the cold-start benchmark, which runs in its own step before the
 packaged suite ([ADR 0067](0067-separate-performance-budgets-from-execution-allowances.md)).
 Intel runs only that benchmark, so it is still the first launch of the freshly
-signed app. The budgets are unchanged.
+signed app. On 2026-10-10 the user approved a 28-second Intel cold-start budget,
+about 20% above the slowest release rehearsal that day (23.3 seconds), and a
+60-second Intel test limit.
 
 ## Removal
 
