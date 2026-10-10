@@ -69,3 +69,27 @@ describe("sessions list", () => {
     expect(listSessions).toHaveBeenCalledWith(expect.any(String), "other-id", expect.any(Object));
   });
 });
+
+test("session list forwards time and resource filters", async () => {
+  const deps = makeDeps();
+  await createHandler(deps)(
+    argv({
+      "created-from": "2026-10-01T00:00:00Z",
+      "created-to": "2026-10-02T00:00:00Z",
+      "updated-from": "2026-10-01T01:00:00Z",
+      "anchor-type": "ticket",
+      "anchor-id": "T",
+    }),
+  );
+  expect(deps.listSessions).toHaveBeenCalledWith(
+    expect.any(String),
+    "proj-1",
+    expect.objectContaining({
+      createdFrom: "2026-10-01T00:00:00Z",
+      createdTo: "2026-10-02T00:00:00Z",
+      updatedFrom: "2026-10-01T01:00:00Z",
+      anchorType: "ticket",
+      anchorId: "T",
+    }),
+  );
+});

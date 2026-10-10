@@ -54,6 +54,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
       getByShorthand: async () => null,
     },
     sessions: {
+      query: async () => ({ items: [], nextCursor: null }),
       list: async () => [],
       listByWorkspace: async () => [],
       addAnchors: async () => {},

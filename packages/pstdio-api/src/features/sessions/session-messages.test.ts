@@ -37,8 +37,28 @@ test("checkpoints save exact complete arrays, including empty slots and an inten
     ];
     await persistSessionMessages(session.id, complete, { sessionService, fileService });
     expect(await Bun.file(file!.storage_path).json()).toEqual(complete);
+    const usage: SessionMessage[] = [
+      {
+        id: "usage1",
+        role: "system",
+        parts: [{ type: "token_usage", inputTokens: 10, outputTokens: 3, cacheReadTokens: 2 }],
+      },
+      {
+        id: "usage2",
+        role: "system",
+        parts: [{ type: "token_usage", inputTokens: 20, outputTokens: 4, cacheWriteTokens: 5 }],
+      },
+    ];
+    await persistSessionMessages(session.id, usage, { sessionService, fileService });
+    expect((await sessionService.get(session.id))!.usage_json).toEqual({
+      input_tokens: 30,
+      output_tokens: 7,
+      cache_read_tokens: 2,
+      cache_write_tokens: 5,
+    });
     await persistSessionMessages(session.id, [], { sessionService, fileService });
     expect(await Bun.file(file!.storage_path).json()).toEqual([]);
+    expect((await sessionService.get(session.id))!.usage_json).toBeNull();
     expect((await sessionService.get(session.id))!.session_file_id).toBe(saved!.session_file_id);
   } finally {
     await conn.close();

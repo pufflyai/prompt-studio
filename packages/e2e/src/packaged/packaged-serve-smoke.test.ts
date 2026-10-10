@@ -46,6 +46,7 @@ import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-s
 // Resource links include owner batch-resolution commands and their public workbench metadata.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
@@ -464,3 +465,5 @@ registerResourceLinksSmokeTests();
 registerCommandStreamSmokeTests();
 // Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();
+
+registerSessionQuerySmokeTests();
