@@ -1,5 +1,4 @@
-import { availableParallelism, cpus } from "node:os";
-import { type CDPSession, expect, type Frame, type Page, test } from "@playwright/test";
+import { type CDPSession, type Frame, type Page, test } from "@playwright/test";
 
 // CDP script and task time are proxies for renderer CPU. They count main-thread
 // work in one renderer process, not OS CPU, GPU, or paint cost. Budgets are the
@@ -23,8 +22,7 @@ export const openRendererSession = async (page: Page, target: Page | Frame = pag
   return session;
 };
 
-// Measures each renderer while `during` runs and records the result with the
-// environment, so baselines can be compared across runners.
+// Measures each renderer while `during` runs and attaches the raw counter deltas.
 export const measureRenderers = async (
   label: string,
   renderers: Record<string, CDPSession>,
@@ -36,36 +34,29 @@ export const measureRenderers = async (
   await during();
   const elapsedSeconds = (performance.now() - startedAt) / 1000;
   const after = await Promise.all(entries.map(([, session]) => readMetrics(session)));
-  const measurements = Object.fromEntries(
-    entries.map(([name], index) => {
-      const scriptSeconds = (after[index]?.ScriptDuration ?? 0) - (before[index]?.ScriptDuration ?? 0);
-      const taskSeconds = (after[index]?.TaskDuration ?? 0) - (before[index]?.TaskDuration ?? 0);
-      return [name, { scriptShare: scriptSeconds / elapsedSeconds, taskShare: taskSeconds / elapsedSeconds }];
-    }),
-  );
-  await test.info().attach(`${label}.json`, {
-    contentType: "application/json",
-    body: JSON.stringify(
+  const counters = Object.fromEntries(
+    entries.map(([name], index) => [
+      name,
       {
-        label,
-        elapsedSeconds,
-        measurements,
-        environment: {
-          platform: process.platform,
-          arch: process.arch,
-          cpu: cpus()[0]?.model,
-          parallelism: availableParallelism(),
-          ci: Boolean(process.env.CI),
-        },
+        scriptSeconds: (after[index]?.ScriptDuration ?? Number.NaN) - (before[index]?.ScriptDuration ?? Number.NaN),
+        taskSeconds: (after[index]?.TaskDuration ?? Number.NaN) - (before[index]?.TaskDuration ?? Number.NaN),
       },
-      null,
-      2,
-    ),
+    ]),
+  );
+  await test.info().attach(`${label}-counters.json`, {
+    contentType: "application/json",
+    body: JSON.stringify({ label, elapsedSeconds, counters }, null, 2),
   });
-  return measurements;
+  return Object.fromEntries(
+    Object.entries(counters).map(([name, { scriptSeconds, taskSeconds }]) => [
+      name,
+      { scriptShare: scriptSeconds / elapsedSeconds, taskShare: taskSeconds / elapsedSeconds },
+    ]),
+  );
 };
 
-export const expectWithinBudget = (measured: RendererBudget, budget: RendererBudget) => {
-  expect(measured.scriptShare).toBeLessThanOrEqual(budget.scriptShare);
-  expect(measured.taskShare).toBeLessThanOrEqual(budget.taskShare);
-};
+export const rendererMetrics = (measured: Record<string, RendererBudget>, budget: RendererBudget) =>
+  Object.entries(measured).flatMap(([renderer, shares]) => [
+    { name: `${renderer}-script`, unit: "share" as const, value: shares.scriptShare, budget: budget.scriptShare },
+    { name: `${renderer}-task`, unit: "share" as const, value: shares.taskShare, budget: budget.taskShare },
+  ]);

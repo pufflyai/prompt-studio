@@ -11,8 +11,8 @@
     "test:packaged:browser": "playwright test --config playwright.packaged.config.ts",
     "test:ui": "bun run src/scripts/run-playwright.ts",
     "test:vite-terminal": "bun run src/scripts/run-vite-terminal-playwright.ts",
-    "perf:frontend": "bunx playwright test -c playwright.perf.config.ts",
-    "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.perf.config.ts",
+    "perf:frontend": "bun run --cwd ../.. build -- --scope e2e --scope pstdio-dashboard --include-dependencies && bun run src/scripts/run-playwright.ts -c playwright.perf.config.ts",
+    "perf:frontend:trace": "PLAYWRIGHT_TRACE=on bun run perf:frontend",
     "report": "playwright show-report"
   },
   "devDependencies": {

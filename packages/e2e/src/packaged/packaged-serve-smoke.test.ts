@@ -16,7 +16,7 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
-import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
+import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -64,6 +64,7 @@ beforeAll(() => {
 
 registerExtensionInstallSmokeTests();
 registerExtensionViewsSmokeTests();
+registerConnectionStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
 
@@ -118,7 +119,6 @@ test(
       });
       expect(renameRes.status).toBe(400);
       await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
-      await expectPackagedConnectionStatus(started.baseUrl, runtimeAuthorization(started.descriptor));
     } finally {
       if (child) {
         await stopProcess(child);
