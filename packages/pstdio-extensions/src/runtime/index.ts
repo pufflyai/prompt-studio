@@ -19,6 +19,7 @@ export {
 } from "./host-capabilities";
 export {
   type ExtensionPackageRef,
+  extensionLoadKey,
   type LoadExtensionSourcesOptions,
   type LoadedExtensionSource,
   loadExtensionPackage,

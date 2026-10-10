@@ -26,22 +26,21 @@ export const signatureFor = (
     )
     .digest("hex");
 
+// Holds the inputs of each failed attempt, so the same inputs are not tried again. Builds use a
+// webview's process key; source loads use the installed extension id.
 export const createWebviewBuildBackoff = () => {
-  const failedBuilds = new Map<string, string>();
+  const failures = new Map<string, string>();
 
   return {
     clear: () => {
-      failedBuilds.clear();
+      failures.clear();
     },
-    isBuildBlocked: (key: string, signature: string) => failedBuilds.get(key) === signature,
-    recordBuildFailure: (key: string, signature: string) => {
-      failedBuilds.set(key, signature);
+    forget: (key: string) => {
+      failures.delete(key);
     },
-    recordBuildStart: (key: string) => {
-      failedBuilds.delete(key);
-    },
-    recordBuildSuccess: (key: string) => {
-      failedBuilds.delete(key);
+    isBlocked: (key: string, signature: string) => failures.get(key) === signature,
+    recordFailure: (key: string, signature: string) => {
+      failures.set(key, signature);
     },
   };
 };
