@@ -21,7 +21,18 @@ const cloudProvider: WorkspaceTypeProvider = {
   id: "cloud",
   ref: { kind: "workspace-type", id: "cloud" },
   label: "Cloud environment",
-  params: { image: { type: "text", label: "Image", required: true } },
+  params: {
+    image: {
+      type: "select",
+      label: "Image",
+      required: true,
+      options: {
+        command: { kind: "command", id: "images", extensionId: "example.environments" },
+        valueField: "id",
+        labelField: "name",
+      },
+    },
+  },
   create: (_context, input) => {
     createdParams.push(input.params);
     return {

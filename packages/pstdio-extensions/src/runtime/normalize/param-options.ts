@@ -78,7 +78,8 @@ export const validateParamOptions = (runtime: ExtensionRuntime) => {
       }
     }
   };
-  for (const workspace of runtime.workspaceTypes) rejectUnsupported(workspace.provider.params, workspace);
+  for (const workspace of runtime.workspaceTypes)
+    workspace.provider.params = normalize(workspace.provider.params, workspace);
   for (const harness of runtime.harnesses) rejectUnsupported(harness.provider.params, harness);
   for (const command of runtime.commands) command.params = normalize(command.params, command) ?? {};
   for (const view of runtime.views) {

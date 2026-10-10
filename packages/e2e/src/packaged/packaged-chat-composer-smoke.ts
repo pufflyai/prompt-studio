@@ -97,6 +97,31 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(detail).toHaveCSS("white-space", "nowrap");
     await page.getByText("Wrap rows", { exact: true }).click();
     await page.keyboard.press("Escape");
+
+    const idleResponse = await fetch(`${baseUrl}/v1/sessions`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        title: "Idle connection",
+        agent: "pstdio.workbench-fixture.harness.fake",
+      }),
+    });
+    expect(idleResponse.status).toBe(201);
+    const idle = (await idleResponse.json()) as { id: string };
+    expect(idle).toMatchObject({
+      status: "completed",
+      agent_session_id: null,
+      last_request_started: null,
+      last_request_ended: null,
+    });
+    await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
+    await page.getByRole("option", { name: "Idle connection", exact: true }).click();
+    await expect(page.locator(".ai-message__root")).toHaveCount(0);
+    await editor.fill("First idle-session message");
+    await expect(send).toBeEnabled();
+    await editor.press("Enter");
+    await expect(page.getByText('Fake Agent: completed "First idle-session message"').first()).toBeVisible();
   } finally {
     await browser.close();
   }

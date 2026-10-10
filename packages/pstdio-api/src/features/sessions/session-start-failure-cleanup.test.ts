@@ -35,7 +35,7 @@ describe("session start failure cleanup", () => {
         throw new Error("database write failed");
       });
 
-      await createSessionScheduler(isolated.deps).createAndStartSession({
+      await createSessionScheduler(isolated.deps).createSession({
         projectId: project.id,
         title: "Start failure",
         agentId: FAKE_ID,

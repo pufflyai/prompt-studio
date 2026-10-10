@@ -11,6 +11,9 @@ export const workspaceIdOf = (resource: ResourceRef | undefined) =>
 export const workspaceFilesUnavailableState = (resource: ResourceRef | undefined) => {
   const error = workspaceMetadataString(resource, "workspaceError");
   if (error) throw new Error(error);
+  if (resource?.metadata?.workspaceSupportsFiles === false) {
+    return { title: "Files unavailable", description: "This workspace is not available for file access." };
+  }
   const state = workspaceMetadataString(resource, "workspaceProviderState");
   if (state === "ready") return undefined;
   if (!state || state === "provisioning") {

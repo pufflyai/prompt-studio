@@ -88,7 +88,7 @@ const buildRecord = (input: CreateInput) => {
     title: input.title,
     status: input.status ?? "in_progress",
     archived: false,
-    last_request_started: input.status === "queued" ? null : timestamp,
+    last_request_started: input.status === "completed" || input.status === "queued" ? null : timestamp,
     last_request_ended: null,
     agent: input.agent,
     last_selected_model: input.last_selected_model ?? null,

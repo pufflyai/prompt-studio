@@ -56,6 +56,7 @@ import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
+import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
 const BUILD_TIMEOUT = 180_000;
@@ -91,7 +92,7 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "serves the dashboard and API from the same origin and hands off composer drafts immediately",
+  "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
@@ -264,7 +265,7 @@ test(
 );
 
 test(
-  "loads a default extension that imports an on-disk node_modules dependency",
+  "loads default extension dependencies, native actions and command-backed workspace choices",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
@@ -478,3 +479,5 @@ registerResourceChoicesSmokeTests();
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+
+registerWorkspaceCapabilitiesSmokeTests();

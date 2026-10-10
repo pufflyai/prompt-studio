@@ -285,11 +285,21 @@ A sibling with `resolvedFrom: "resource"` stays hidden in the dialog, but
 value: an explicit action argument takes priority over the active resource.
 Opening the dialog for another resource loads choices for that resource.
 
+Workspace provider `params` support the same command-backed choices in Create
+workspace and in nested `workspace` command fields. Changing the provider cancels
+its pending option requests. Changing an instance refreshes its dependent
+templates, and submission waits for the current choices.
+
 The dialog accepts only current choices unless `allowCustomValues: true` is
 set. This validation belongs to the dialog. The command runtime does not call
 option commands again. Commands must enforce their own business rules. CLI and
 API callers pass explicit values as before; CLI help marks these parameters as
 `command-backed` and does not load choices or prompt interactively.
+
+Workspace providers must validate instance and template ownership in `create`.
+Choice lists help discovery; they do not authorize a resource. The host still
+checks required fields, value types, fixed choices, and provider availability.
+Harness params and Kanban create-row forms require fixed options.
 
 ## Migrating from older API versions
 
