@@ -1,5 +1,17 @@
 # pstdio-planner
 
+## 0.42.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- ad6d9bd: Open saved Planner documents through stable links.
+
+### Patch Changes
+
+- c7713f3: Show assigned shortcuts under extension names, add main navigation and creation defaults with matching command palette hints, let idle navigation labels use the space released by hidden actions, and avoid unused schema snapshot extraction at startup.
+
 ## 0.41.0
 
 _2026-10-08_

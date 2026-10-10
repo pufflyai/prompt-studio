@@ -1,5 +1,22 @@
 # @pstdio/sdk
 
+## 0.42.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- 72a70c7: Add typed command streams with shared transport and cancellation for webviews, SDK clients, and the CLI.
+- 184548f: Expose the shared collection view header and filters; let extensions manage project saved views.
+- d8d669f: Install and validate extensions on the API host through one shared CLI, SDK, and dashboard route.
+- 73ed54c: Add complete queued request editing with recovery after dispatch and notices that clear on draft edits, atomic combining, native steering contracts, and spaced delete icon buttons; hide unsupported send-now targets and isolate packaged migration extraction between hosts.
+- 59dbcbb: Expose owner-handled resource drops with immediate previews and placement feedback, preserve identities and scopes within sortable navigation, and show selected panel resources and their actions in breadcrumbs, and support confirmed resource removals and optimistic renames across host UI surfaces, and retain loaded tab titles and actions during refresh.
+
+### Patch Changes
+
+- f486e8e: Show why a harness is unavailable, such as a missing or too-old agent CLI, in the harness menu, `pst agents list` and the agents API.
+- 5d47dfb: Add shared resource linking controls with owner search, live updates, and unavailable destinations.
+
 ## 0.41.0
 
 _2026-10-08_
