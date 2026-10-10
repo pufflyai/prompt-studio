@@ -139,6 +139,7 @@ const createAttachmentHarness = (options: HarnessOptions = {}) => {
   const registry = createTestHarnessRegistry([
     createTestHarnessRecord("fake", {
       provider: {
+        capabilities: () => ["Attachments"],
         start,
         resume,
         getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],

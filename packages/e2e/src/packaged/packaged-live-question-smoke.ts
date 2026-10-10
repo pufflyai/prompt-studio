@@ -40,7 +40,7 @@ export const registerLiveQuestionSmokeTests = () => {
           `
         import { writeFileSync } from "node:fs";
         const harness = {
-          id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker", capabilities: () => [],
+          id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker", capabilities: () => ["Attachments"],
           start(_ctx, input) {
             let finish;
             const done = new Promise(resolve => { finish = resolve; });

@@ -4,6 +4,8 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
+import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
 
@@ -63,7 +65,6 @@ const ControlsStory = (props: { initialAttachments?: SessionAttachment[]; upload
         }
       />
       <SessionAttachmentControls
-        projectId="project"
         uploading={uploading}
         onAttachFiles={(files) => {
           const uploaded = files.map((file) => ({
@@ -132,4 +133,38 @@ export const SubmittedUserTurn: Story = {
       />
     </Box>
   ),
+};
+
+// The composer for a harness that takes no attachments and offers no models, such as a
+// PocketCoder machine: no attach button, no paste-as-file or drop, and no model menu.
+export const ComposerWithoutAttachmentsOrModels: Story = {
+  render: () => (
+    <Box h="320px">
+      <ChatPanel
+        conversationKey="composer-without-attachments-story"
+        messages={[]}
+        emptyStateTitle="Connected to the machine agent"
+        emptyStateDescription="Its template picks the model."
+        chatInputPlaceholder="Message the agent..."
+        actions={
+          <WorkspaceAgentMenu
+            agentOptions={[{ label: "PocketCoder machine", value: "remote-agent" }]}
+            selectedAgent="remote-agent"
+            onSelectAgent={() => undefined}
+            modelOptions={[]}
+            selectedModel=""
+            onSelectModel={() => undefined}
+            offersModels={false}
+            isAgentSwitchDisabled
+            size="xs"
+          />
+        }
+      />
+    </Box>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByRole("button", { name: "Attach files" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Select model" })).toBeNull();
+  },
 };

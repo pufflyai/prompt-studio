@@ -12,6 +12,7 @@ test("HTTP and extension sessions share the exact folder and pass attachments to
   const harnessRegistry = createTestHarnessRegistry([
     createTestHarnessRecord("folder-agent", {
       provider: {
+        capabilities: () => ["Attachments"],
         start: (_ctx, input) => {
           starts.push({ cwd: input.cwd, workspaceId: input.workspace?.workspaceId, attachments: input.attachments });
           return { done: Promise.resolve({ status: "completed" }), stop: () => {} };

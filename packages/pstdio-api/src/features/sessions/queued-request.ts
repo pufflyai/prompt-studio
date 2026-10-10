@@ -1,7 +1,7 @@
 import type { UpdateQueuedFollowUpInput } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { HarnessParamError, resolveHarnessRunParams } from "./harness-params";
-import { resolveSessionAttachments } from "./session-attachments";
+import { requireHarnessAttachmentSupport, resolveSessionAttachments } from "./session-attachments";
 import type { PendingQueueEntry } from "./session-scheduler-internals";
 
 export const queuedRequest = (entry: PendingQueueEntry) => ({
@@ -41,6 +41,7 @@ export const validateQueuedRequestEdit = async (
       })) ?? {};
   }
   const attachments = input.attachments ?? entry.attachments_json ?? [];
+  await requireHarnessAttachmentSupport(deps, { projectId: session.project_id, agentId: session.agent, attachments });
   await resolveSessionAttachments(deps, session.project_id, attachments);
   return { prompt: input.prompt, model, params_json: params, attachments_json: attachments };
 };

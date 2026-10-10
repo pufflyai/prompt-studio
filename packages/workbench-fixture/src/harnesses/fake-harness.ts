@@ -171,7 +171,7 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
     id: "fake",
     label: l10n("harness.fake", "Fake Agent"),
 
-    capabilities: () => [],
+    capabilities: () => ["Attachments"],
     listModels: () => [{ id: "fake" }],
 
     start: (_ctx, input) => {

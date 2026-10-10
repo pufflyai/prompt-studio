@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { FilePart, HarnessAttachment, SessionAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
 import { readableFilePath } from "pstdio-storage";
+import { resolveHarnessName } from "../harnesses/harness-registry-service";
 import type { SessionsRouteDeps } from "./deps";
 
 type FileRow = NonNullable<Awaited<ReturnType<SessionsRouteDeps["fileService"]["get"]>>>;
@@ -51,6 +52,17 @@ export const resolveSessionAttachments = async (
   }
 
   return attachments;
+};
+
+// Refuse before anything runs: a harness without the capability would drop or reject the files mid-turn.
+export const requireHarnessAttachmentSupport = async (
+  deps: Pick<SessionsRouteDeps, "harnessRegistry">,
+  input: { projectId: string; agentId: string; attachments?: SessionAttachmentRef[] },
+) => {
+  if (!input.attachments?.length) return;
+  const harness = await deps.harnessRegistry.get(input.agentId, { projectId: input.projectId });
+  if (!harness || (await harness.capabilities({ projectId: input.projectId })).includes("Attachments")) return;
+  throw new SessionAttachmentError(`${resolveHarnessName(harness)} does not accept attachments.`);
 };
 
 export const withResolvedSubmittingSessionAttachments = async <T>(

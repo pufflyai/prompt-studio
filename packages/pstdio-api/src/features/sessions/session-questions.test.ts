@@ -47,7 +47,7 @@ const createAskingProvider = () => {
     return { agentSessionId: "agent-asking", done: Promise.resolve({ status: "completed" }), stop: () => {} };
   };
 
-  return { state, provider: { start, resume, getMessages: () => [] } };
+  return { state, provider: { capabilities: () => ["Attachments" as const], start, resume, getMessages: () => [] } };
 };
 
 const openApp = async () => {

@@ -471,6 +471,9 @@ export default defineExtension({ harnesses: [myAgent] });
 - Set `timeoutStrategy: "provider"` only when the harness self-terminates; otherwise the host stops the session after
   a period without events.
 - Implement `reattach` (and advertise `SessionReattach`) to re-bind orphaned provider sessions after a host restart.
+- Advertise `Attachments` only when `start`/`resume` handle `input.attachments`. Without it the composer hides file
+  attachments and the host rejects them before `start`.
+- Omit `listModels` when the harness picks its own model. The composer then shows only the agent picker.
 - Consumers select a harness with `ctx.sessions.create({ harness: { harnessId, model } })` using the namespaced id.
 
 ### Board and table views

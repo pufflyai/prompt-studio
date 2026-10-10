@@ -7,6 +7,7 @@ import {
   QuestionReplyRejectedError,
   validateRecoveredQuestionReply,
 } from "./live-question-reply";
+import { requireHarnessAttachmentSupport } from "./session-attachments";
 import { prepareHostQuestionDelivery } from "./session-question-delivery";
 import { createSessionQueueDrain } from "./session-queue-drain";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
@@ -149,6 +150,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
 
   const createSession = async (input: CreateSessionInput) => {
     input.signal?.throwIfAborted();
+    await requireHarnessAttachmentSupport(deps, { ...input, attachments: input.attachmentRefs });
     const cleanup = { drainAfterLock: false };
     let scheduled!: { session: ExistingSession; shouldStart: boolean; submittedQueuePosition?: number };
 
@@ -274,6 +276,11 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const startOrQueueExisting = async (input: StartExistingInput): Promise<StartOrQueueResult> => {
+    await requireHarnessAttachmentSupport(deps, {
+      projectId: input.session.project_id!,
+      agentId: input.agentId ?? input.session.agent!,
+      attachments: input.attachmentRefs,
+    });
     if (input.questionResponse) {
       const owner = deps.sessionService.store.get(input.session.id);
       if (

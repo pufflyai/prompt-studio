@@ -130,7 +130,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       }),
     },
 
-    capabilities: () => ["SessionFork", "ContextUsage", "Approvals"],
+    capabilities: () => ["SessionFork", "ContextUsage", "Approvals", "Attachments"],
     detect: (ctx) => deps.detect(ctx),
     listModels,
     getCommandState: (_ctx, input) => claudeCommandState(input),

@@ -96,7 +96,7 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
     },
     prepareOperation: (ctx, input, operation) => prepareCodexOperation(input, operation, deps.runtime, ctx),
     // Host-managed worktrees run without provider approvals.
-    capabilities: () => ["ContextUsage"],
+    capabilities: () => ["ContextUsage", "Attachments"],
     detect: (ctx) => deps.detect(ctx),
     listModels,
 

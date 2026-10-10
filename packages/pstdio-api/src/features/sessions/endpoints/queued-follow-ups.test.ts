@@ -173,6 +173,7 @@ test("complete edits validate settings and attachment ownership without sending 
     harnessRegistry: createTestHarnessRegistry([
       createTestHarnessRecord("queue-editor", {
         provider: {
+          capabilities: () => ["Attachments"],
           params: {
             thinking: {
               type: "select",

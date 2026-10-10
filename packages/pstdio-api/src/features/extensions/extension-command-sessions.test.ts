@@ -83,7 +83,12 @@ const createSessionEnvironment = (harness: StartedHarness, dispatchEntries: unkn
         get: async () => sessionAttachmentFile("extension-create.txt"),
       },
       harnessRegistry: {
-        get: async () => ({ start: harness.start, listModels: () => [], params: harness.params }),
+        get: async () => ({
+          start: harness.start,
+          listModels: () => [],
+          params: harness.params,
+          capabilities: async () => ["Attachments"],
+        }),
         list: async () => [{ id: "fake-agent" }],
       },
       settingsService: {
@@ -267,6 +272,9 @@ describe("createCommandEnvironment sessions attachments", () => {
         extensionStorageService: makeStorageService(),
         fileService: {
           get: async () => sessionAttachmentFile("extension-follow-up.txt"),
+        },
+        harnessRegistry: {
+          get: async () => ({ capabilities: async () => ["Attachments"] }),
         },
         sessionService: {
           get: async () => session,

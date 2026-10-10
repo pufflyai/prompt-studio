@@ -20,7 +20,9 @@ Codex reports a status dot with native state: active is green, paused/blocked/us
 
 The session composer shows the model menu only for harnesses that implement `listModels()`. An empty list still shows the menu, because model discovery can fail for a while. A harness without `listModels()`, such as a remote machine whose template picks the model, shows only the agent picker and runs without a model. When the agent cannot change either, as in an existing session, the composer shows neither.
 
-`/v1/agents/info` returns each harness's `capabilities` and `supportsModels`. The `Attachments` capability marks a harness that accepts files. The host does not act on it yet; the composer and server will use it once the built-in harnesses declare it.
+A harness that accepts files lists `Attachments` in `capabilities()`. Codex, Claude Code and OpenCode do. Without it, the composer hides Attach files and turns off pasting text as a file and dropping files, and the host rejects attachments for that harness with a 400 error before anything starts. This covers new sessions, follow-ups, queued request edits and `ctx.sessions`.
+
+`/v1/agents/info` returns each harness's `capabilities` and `supportsModels` so the dashboard can apply these rules.
 
 ## Supported CLI versions
 

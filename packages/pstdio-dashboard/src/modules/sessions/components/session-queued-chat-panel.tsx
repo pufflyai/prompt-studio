@@ -1,6 +1,7 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import type { ComponentProps } from "react";
+import { useAgents } from "@/shared/agents/use-agents";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { useFollowUpSession } from "../hooks/use-follow-up-session";
 import { useQueuedSessionMessages } from "../hooks/use-queued-session-messages";
@@ -27,6 +28,10 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
     props;
   const selection = useQueuedRequestSelection(projectId, draftKey, drafts);
   const followUp = useFollowUpSession();
+  const { data: agents = [] } = useAgents(projectId);
+  const acceptsAttachments = Boolean(
+    projectId && agents.find((agent) => agent.id === modelControls.selectedAgent)?.capabilities.includes("Attachments"),
+  );
   const files = selection.selection ? selection.attachments : draftAttachments;
   const actions = useQueuedSessionMessages({
     sessionId,
@@ -109,19 +114,20 @@ export const SessionQueuedChatPanel = (props: SessionQueuedChatPanelProps) => {
         />
       }
       attachmentActions={
-        <SessionAttachmentControls
-          projectId={projectId}
-          uploading={files.uploading}
-          onAttachFiles={(values) => void files.uploadFiles(values)}
-        />
+        acceptsAttachments ? (
+          <SessionAttachmentControls
+            uploading={files.uploading}
+            onAttachFiles={(values) => void files.uploadFiles(values)}
+          />
+        ) : undefined
       }
       attachmentList={
         files.attachments.length ? (
           <SessionAttachmentList attachments={files.attachments} onRemove={files.removeAttachment} />
         ) : undefined
       }
-      onAttachFiles={projectId ? (values) => void files.uploadFiles(values) : undefined}
-      onAttachText={projectId ? (text) => void files.uploadText(text) : undefined}
+      onAttachFiles={acceptsAttachments ? (values) => void files.uploadFiles(values) : undefined}
+      onAttachText={acceptsAttachments ? (text) => void files.uploadText(text) : undefined}
       inputDisabled={files.uploading}
     />
   );

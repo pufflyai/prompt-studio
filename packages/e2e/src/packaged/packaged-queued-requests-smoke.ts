@@ -30,7 +30,7 @@ export const registerQueuedRequestSmokeTests = () => {
       writeFileSync(
         join(sourcePath, "extension.ts"),
         `
-        const harness={id:"worker",ref:{kind:"harness",id:"worker"},label:"Queue",capabilities:()=>[],
+        const harness={id:"worker",ref:{kind:"harness",id:"worker"},label:"Queue",capabilities:()=>["Attachments"],
           params:{thinking:{type:"select",defaultValue:"high",options:[{label:"High",value:"high"},{label:"Low",value:"low"}]}},listModels:()=>[{id:"one"},{id:"two"}],
           start(_ctx,input){let finish;let index=0;const done=new Promise(resolve=>{finish=resolve;});
             const add=message=>input.events.push({op:"add",path:"/messages/"+index++,value:message});

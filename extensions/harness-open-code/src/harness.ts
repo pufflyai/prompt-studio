@@ -176,7 +176,7 @@ export const createOpencodeHarness = (
     skills: { dir: ".agents/skills" },
     params: opencodeParams,
 
-    capabilities: () => ["SessionFork", "ContextUsage", "SessionReattach"],
+    capabilities: () => ["SessionFork", "ContextUsage", "SessionReattach", "Attachments"],
     detect: (ctx) => deps.detect(ctx),
 
     listModels,

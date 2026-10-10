@@ -27,7 +27,12 @@ const resumeSession = mock((_ctx: HarnessContext, _input: { prompt: string }) =>
 const createRegistry = () =>
   createTestHarnessRegistry([
     createTestHarnessRecord("fake", {
-      provider: { start: startSession, resume: resumeSession, getMessages: () => [] },
+      provider: {
+        capabilities: () => ["Attachments"],
+        start: startSession,
+        resume: resumeSession,
+        getMessages: () => [],
+      },
     }),
   ]);
 
@@ -63,7 +68,7 @@ describe("session scheduler startup recovery", () => {
     const firstApp = await createTestApp({
       databasePath,
       storageRoot,
-      harnessRegistry: createBlockedRegistry(3),
+      harnessRegistry: createBlockedRegistry(4),
     });
     let projectId = "";
     let attachmentId = "";

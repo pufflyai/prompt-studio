@@ -57,7 +57,7 @@ describe("createOpencodeHarness", () => {
   test("reports capabilities", () => {
     const h = harness();
 
-    expect(h.capabilities(ctx)).toEqual(["SessionFork", "ContextUsage", "SessionReattach"]);
+    expect(h.capabilities(ctx)).toEqual(["SessionFork", "ContextUsage", "SessionReattach", "Attachments"]);
   });
 });
 

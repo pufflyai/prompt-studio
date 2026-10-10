@@ -6,15 +6,13 @@ import type { ChangeEvent } from "react";
 import { useRef } from "react";
 
 interface SessionAttachmentControlsProps {
-  projectId?: string;
   uploading: boolean;
   onAttachFiles: (files: File[]) => void;
 }
 
 export const SessionAttachmentControls = (props: SessionAttachmentControlsProps) => {
-  const { projectId, uploading, onAttachFiles } = props;
+  const { uploading, onAttachFiles } = props;
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const isDisabled = !projectId || uploading;
 
   const handleFilesSelected = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.currentTarget.files ?? []);
@@ -38,7 +36,7 @@ export const SessionAttachmentControls = (props: SessionAttachmentControlsProps)
           aria-label="Attach files"
           size="xs"
           variant="ghost"
-          disabled={isDisabled}
+          disabled={uploading}
           onClick={() => inputRef.current?.click()}
         >
           <PaperclipIcon size={14} />
