@@ -30,7 +30,19 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 - Save unpublished posts in `drafts/<slug>.md` under this folder. The blog loader reads only top-level post files, so drafts have no website page, document JSON, index entry, sidebar entry, search result, or sitemap entry. Never put drafts in `public/` or add them to the page catalog.
 - Write the body for its publication after release. The draft folder controls publication status; readers do not need draft labels in the article. Link to relevant source at a fixed commit until the release tag exists.
 - Drafts may omit `published` and banner paths until publication. Do not invent a release date or reuse another post's banner.
-- To publish, verify the release and final scope, add the actual publication timestamp and distinct paired banners, update release sources, and move the file to this folder's top level.
+- A draft is not done until it is published. Before you finish a draft task, check the release with `gh release view pstdio@<version> --json isDraft,publishedAt`. If the release is published, publish the post in the same task. If it is not, create a planner ticket named "Publish the Prompt Studio <version> release post" so the publish step has an owner.
+
+## Publish a draft
+
+Publish a release post as soon as its GitHub release is published. Do these steps in one PR:
+
+1. Run `gh release view pstdio@<version> --json isDraft,publishedAt`. Continue only if `isDraft` is `false`. Use `publishedAt` as the publication timestamp.
+2. Compare the draft with the GitHub release notes and the changelogs at the release tag. Add shipped features the draft misses. Remove or correct claims about work that did not ship.
+3. Move the file with `git mv drafts/<slug>.md <slug>.md`.
+4. Fix relative paths for the new folder depth. Banners change from `../images/` to `./images/`. Links to `documentation/` lose one `../`.
+5. Add `published: <publishedAt>` as an unquoted UTC timestamp. Check that the paired banners exist under `images/`.
+6. Point the release sources at the release notes and the release tag.
+7. Follow [Verification](#verification). The production build must now include the article, document JSON, blog index entry, search entry, and sitemap entry for the slug.
 
 ## Banners and recordings
 
