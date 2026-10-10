@@ -184,6 +184,7 @@ export const buttonRecipe = defineRecipe({
       sm: {
         px: "0.5rem",
         h: "2rem",
+        minW: "2rem",
         textStyle: "label/S/medium",
       },
     },

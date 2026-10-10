@@ -157,6 +157,7 @@ const attachCreatedFiles = async (input: {
   files: File[];
   projectId: string;
   record: KanbanRecord;
+  extensionInstanceId: string | undefined;
 }) => {
   const attachment = input.record.createRow?.attachments;
   const resourceId = (
@@ -167,10 +168,10 @@ const attachCreatedFiles = async (input: {
       | undefined
   )?.id;
   if (!attachment || input.files.length === 0 || typeof resourceId !== "string") return;
-  if (!input.record.extensionInstanceId) throw new Error(`Extension instance missing: ${input.record.id}`);
+  if (!input.extensionInstanceId) throw new Error(`Extension instance missing: ${input.record.id}`);
   for (const file of input.files) {
     const ref = await uploadCreatedFile({
-      extensionInstanceId: input.record.extensionInstanceId,
+      extensionInstanceId: input.extensionInstanceId,
       file,
       projectId: input.projectId,
       resourceId,
@@ -208,7 +209,17 @@ export const createDashboardKanbanAdapter = (input: {
     },
     onAfterCreate: async ({ record, created, submission }) => {
       try {
-        await attachCreatedFiles({ created, executeCommand, files: submission.files, projectId, record });
+        const extensionInstanceId = metadata.extensions.find(
+          (extension) => extension.id === record.extensionId,
+        )?.extensionInstanceId;
+        await attachCreatedFiles({
+          created,
+          executeCommand,
+          files: submission.files,
+          projectId,
+          record,
+          extensionInstanceId,
+        });
       } catch (error) {
         ctx.notifications.show({
           level: "error",

@@ -11,15 +11,15 @@ import type { KanbanRendererCreateField } from "./types";
 const MarkdownControl = (props: {
   disabled: boolean;
   field: KanbanRendererCreateField;
+  value: unknown;
   onChange: (value: unknown) => void;
 }) => {
-  const { disabled, field, onChange } = props;
+  const { disabled, field, value, onChange } = props;
 
   return (
     <LazyMarkdownEditor
-      // Seed from the declared default so a pre-filled field is visible rather
-      // than blank-but-submittable. Lexical reads this once, on mount.
-      defaultState={typeof field.defaultValue === "string" ? field.defaultValue : ""}
+      // Lexical reads its seed once on mount. Use the retained draft when reopening.
+      defaultState={typeof value === "string" ? value : ""}
       isEditable={!disabled}
       placeholder={field.placeholder}
       autoFocus
@@ -156,7 +156,8 @@ export const CreateFieldControl = (props: CreateFieldControlProps) => {
       <FilesControl disabled={disabled} field={field} removeLabel={removeLabel} value={value} onChange={onChange} />
     );
 
-  if (field.type === "markdown") return <MarkdownControl disabled={disabled} field={field} onChange={onChange} />;
+  if (field.type === "markdown")
+    return <MarkdownControl disabled={disabled} field={field} value={value} onChange={onChange} />;
 
   return (
     <Stack gap="2xs">

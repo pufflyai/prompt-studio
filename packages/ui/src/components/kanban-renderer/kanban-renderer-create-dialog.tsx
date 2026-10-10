@@ -1,9 +1,13 @@
 import { Button, CloseButton, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
-import { useEffect, useRef, useState } from "react";
+import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { useEffect, useId, useState } from "react";
 import { handleDialogAcceptShortcut } from "@/components/overlays/dialog-accept-shortcut";
 import type { Param, ParamValueMap } from "@/components/param-editor/param-editor.types";
 import { ParamEditorHorizontal } from "@/components/param-editor/param-editor-horizontal";
+import { useKanbanCreatePreference } from "./kanban-create-preference.store";
+import { KanbanCreateSubmit } from "./kanban-create-submit";
 import { CreateFieldControl } from "./kanban-renderer-create-field";
+import { getCreateAttributeValues } from "./kanban-renderer-create-values";
 import { getEnumOptions } from "./kanban-renderer-helpers";
 import type {
   AttributeDescriptor,
@@ -11,6 +15,7 @@ import type {
   KanbanRendererCreateRowConfig,
   KanbanRendererCreateSubmission,
 } from "./types";
+import { useKanbanCreateDraft } from "./use-kanban-create-draft";
 
 interface KanbanRendererCreateDialogProps {
   open: boolean;
@@ -18,6 +23,8 @@ interface KanbanRendererCreateDialogProps {
   columnAttributeId?: string;
   attributes: AttributeDescriptor[];
   config: KanbanRendererCreateRowConfig;
+  draftKey?: string;
+  filter?: ViewFilterGroup;
   onClose: () => void;
   onSubmit: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
 }
@@ -42,18 +49,6 @@ const isFilled = (field: KanbanRendererCreateField, value: unknown) => {
 // silently drops editable user/date/number attributes from the create form.
 const editableCreateAttributes = (attributes: AttributeDescriptor[]) =>
   attributes.filter((attribute) => attribute.editable);
-
-const initialAttributeValues = (
-  attributes: AttributeDescriptor[],
-  columnAttributeId: string | undefined,
-  columnId: string,
-) =>
-  Object.fromEntries(
-    attributes.map((attribute) => {
-      const emptyValue = attribute.type.kind === "enum-multi" ? [] : "";
-      return [attribute.id, attribute.id === columnAttributeId ? columnId : emptyValue];
-    }),
-  );
 
 /**
  * Editable attributes render through the ParamEditor so a resource property and
@@ -89,33 +84,32 @@ const attributeToParam = (attribute: AttributeDescriptor, locked: boolean): Para
 };
 
 export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProps) => {
-  const { open, columnId, columnAttributeId, attributes, config, onClose, onSubmit } = props;
-  const [values, setValues] = useState<Record<string, unknown>>({});
-  const [attributeValues, setAttributeValues] = useState<Record<string, unknown>>({});
+  const { open, columnId, columnAttributeId, attributes, config, draftKey, filter, onClose, onSubmit } = props;
+  const localKey = useId();
+  const { draft, setDraft, clearDraft } = useKanbanCreateDraft(draftKey ?? localKey);
+  const { openCreatedRow, setOpenCreatedRow } = useKanbanCreatePreference();
+  const values = draft?.values ?? {};
+  const attributeValues = draft?.attributeValues ?? {};
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  // Uncontrolled editors (Lexical) read their seed once on mount, so a reset has
-  // to remount the fields or the old text stays on screen over fresh state.
-  const [resetToken, setResetToken] = useState(0);
-  const initializedRef = useRef(false);
   const editableAttributes = editableCreateAttributes(attributes);
 
-  // Opening is the only thing that clears the form. Attributes and fields can
-  // arrive or change while it is open (they come from live sources), so this
-  // runs once per open cycle — resetting on those would wipe what was typed.
+  // Reopening restores the board's draft, including markdown and attachments.
+  // Cancel and Escape must never reset it: only X and successful submission do.
   useEffect(() => {
-    if (!open) {
-      initializedRef.current = false;
-      return;
-    }
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    if (!open) return;
+    setDraft(
+      (current) =>
+        current ?? {
+          values: initialFieldValues(config.fields),
+          attributeValues: getCreateAttributeValues(attributes, columnAttributeId, columnId, filter),
+        },
+    );
+  }, [attributes, columnAttributeId, columnId, config.fields, filter, open, setDraft]);
 
-    setValues(initialFieldValues(config.fields));
-    setAttributeValues(initialAttributeValues(editableCreateAttributes(attributes), columnAttributeId, columnId));
-    setError("");
-    setResetToken((token) => token + 1);
-  }, [attributes, columnAttributeId, columnId, config.fields, open]);
+  useEffect(() => {
+    if (open) setError("");
+  }, [open]);
 
   // Fields can be added or withdrawn while the dialog is open. Seed the new
   // ones and drop the withdrawn, so what is submitted always matches what is
@@ -124,13 +118,14 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     if (!open) return;
     const seeded = initialFieldValues(config.fields);
     const declared = new Set(config.fields.map((field) => field.id));
-    setValues((current) => {
-      const kept = Object.entries(current).filter(([id]) => declared.has(id));
-      const added = Object.entries(seeded).filter(([id]) => !(id in current));
-      if (added.length === 0 && kept.length === Object.keys(current).length) return current;
-      return { ...Object.fromEntries(added), ...Object.fromEntries(kept) };
+    setDraft((current) => {
+      if (!current) return current;
+      const kept = Object.entries(current.values).filter(([id]) => declared.has(id));
+      const added = Object.entries(seeded).filter(([id]) => !(id in current.values));
+      if (added.length === 0 && kept.length === Object.keys(current.values).length) return current;
+      return { ...current, values: { ...Object.fromEntries(added), ...Object.fromEntries(kept) } };
     });
-  }, [config.fields, open]);
+  }, [config.fields, open, setDraft]);
 
   // Same contract for attributes: seed the ones that appear after opening, drop
   // the ones withdrawn. A withdrawn entry left behind would still be submitted
@@ -138,18 +133,34 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
   useEffect(() => {
     if (!open) return;
     const editable = editableCreateAttributes(attributes);
-    const seeded = initialAttributeValues(editable, columnAttributeId, columnId);
+    const seeded = getCreateAttributeValues(editable, columnAttributeId, columnId, filter);
     const declared = new Set(editable.map((attribute) => attribute.id));
-    setAttributeValues((current) => {
-      const kept = Object.entries(current).filter(([id]) => declared.has(id));
-      const added = Object.entries(seeded).filter(([id]) => !(id in current));
-      if (added.length === 0 && kept.length === Object.keys(current).length) return current;
-      return { ...Object.fromEntries(added), ...Object.fromEntries(kept) };
+    setDraft((current) => {
+      if (!current) return current;
+      const kept = Object.entries(current.attributeValues).filter(([id]) => declared.has(id));
+      const added = Object.entries(seeded).filter(([id]) => !(id in current.attributeValues));
+      const columnChanged = columnAttributeId && current.attributeValues[columnAttributeId] !== columnId;
+      if (added.length === 0 && kept.length === Object.keys(current.attributeValues).length && !columnChanged)
+        return current;
+      return {
+        ...current,
+        attributeValues: {
+          ...Object.fromEntries(added),
+          ...Object.fromEntries(kept),
+          ...(columnAttributeId ? { [columnAttributeId]: columnId } : {}),
+        },
+      };
     });
-  }, [attributes, open, columnId, columnAttributeId]);
+  }, [attributes, open, columnId, columnAttributeId, filter, setDraft]);
 
   const close = () => {
     if (!submitting) onClose();
+  };
+
+  const discard = () => {
+    if (submitting) return;
+    clearDraft();
+    onClose();
   };
 
   const valid = config.fields.every((field) => isFilled(field, values[field.id]));
@@ -163,7 +174,15 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
       const files = [...fileFieldIds].flatMap((id) => (Array.isArray(values[id]) ? (values[id] as File[]) : []));
       const declaredValues = Object.fromEntries(Object.entries(values).filter(([id]) => !fileFieldIds.has(id)));
 
-      await onSubmit({ columnId, columnAttributeId, values: declaredValues, attributeValues, files });
+      await onSubmit({
+        columnId,
+        columnAttributeId,
+        values: declaredValues,
+        attributeValues,
+        files,
+        openCreatedRow: config.labels.submitWithoutOpening ? openCreatedRow : true,
+      });
+      clearDraft();
       onClose();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : config.labels.submitError);
@@ -172,8 +191,17 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
     }
   };
 
+  if (!draft) return null;
+
   return (
-    <Dialog.Root open={open} size="lg" scrollBehavior="inside" onOpenChange={(details) => !details.open && close()}>
+    <Dialog.Root
+      open={open}
+      size="lg"
+      variant="create"
+      scrollBehavior="inside"
+      closeOnInteractOutside={false}
+      onOpenChange={(details) => !details.open && close()}
+    >
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content
@@ -183,19 +211,21 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
           <Dialog.Header>
             <Dialog.Title>{config.title}</Dialog.Title>
             <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" disabled={submitting} />
+              <CloseButton size="sm" disabled={submitting} onClick={discard} />
             </Dialog.CloseTrigger>
           </Dialog.Header>
           <Dialog.Body>
             <Stack gap="md">
               {config.fields.map((field) => (
                 <CreateFieldControl
-                  key={`${field.id}:${resetToken.toString()}`}
+                  key={field.id}
                   field={field}
                   removeLabel={config.labels.removeFile}
                   value={values[field.id]}
                   disabled={submitting}
-                  onChange={(value) => setValues((current) => ({ ...current, [field.id]: value }))}
+                  onChange={(value) =>
+                    setDraft((current) => current && { ...current, values: { ...current.values, [field.id]: value } })
+                  }
                 />
               ))}
               {editableAttributes.length > 0 ? (
@@ -209,7 +239,13 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
                     defaultValues={attributeValues as ParamValueMap}
                     readOnly={submitting}
                     onChange={(attributeId, value) =>
-                      setAttributeValues((current) => ({ ...current, [attributeId]: value }))
+                      setDraft(
+                        (current) =>
+                          current && {
+                            ...current,
+                            attributeValues: { ...current.attributeValues, [attributeId]: value },
+                          },
+                      )
                     }
                   />
                 </Stack>
@@ -226,9 +262,15 @@ export const KanbanRendererCreateDialog = (props: KanbanRendererCreateDialogProp
               <Button size="sm" variant="ghost" disabled={submitting} onClick={close}>
                 {config.labels.cancel}
               </Button>
-              <Button size="sm" variant="primary" disabled={!valid} loading={submitting} onClick={() => void submit()}>
-                {config.submitLabel}
-              </Button>
+              <KanbanCreateSubmit
+                label={config.submitLabel}
+                withoutOpeningLabel={config.labels.submitWithoutOpening}
+                openCreatedRow={openCreatedRow}
+                onChoose={setOpenCreatedRow}
+                onSubmit={() => void submit()}
+                disabled={!valid}
+                submitting={submitting}
+              />
             </HStack>
           </Dialog.Footer>
         </Dialog.Content>

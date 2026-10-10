@@ -1,5 +1,8 @@
+import { Button } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
+import { HostStorageProvider } from "../../utils/host-storage";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import type { AttributeDescriptor, KanbanRendererCreateRowConfig, KanbanRendererCreateSubmission } from "./types";
 
@@ -51,6 +54,7 @@ const labels = {
   properties: "Properties",
   submitError: "Could not create ticket",
   removeFile: "Remove file",
+  submitWithoutOpening: "Create without opening",
 };
 
 const config: KanbanRendererCreateRowConfig = {
@@ -77,18 +81,31 @@ const Harness = (props: {
   config: KanbanRendererCreateRowConfig;
   onSubmit?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
 }) => {
+  const { config, onSubmit } = props;
   const [open, setOpen] = useState(true);
+  const [storage] = useState(() => {
+    const values = new Map<string, string>();
+    return {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+    };
+  });
 
   return (
-    <KanbanRendererCreateDialog
-      open={open}
-      columnId="ready"
-      columnAttributeId="status"
-      attributes={attributes}
-      config={props.config}
-      onClose={() => setOpen(false)}
-      onSubmit={props.onSubmit ?? (() => undefined)}
-    />
+    <HostStorageProvider storage={storage}>
+      <Button onClick={() => setOpen(true)}>New ticket</Button>
+      <KanbanRendererCreateDialog
+        open={open}
+        columnId="ready"
+        columnAttributeId="status"
+        attributes={attributes}
+        config={config}
+        onClose={() => setOpen(false)}
+        onSubmit={onSubmit ?? (() => undefined)}
+      />
+    </HostStorageProvider>
   );
 };
 
@@ -96,6 +113,11 @@ const Harness = (props: {
 export const Empty: Story = {
   args: {} as never,
   render: () => <Harness config={config} />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(body.getByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
+    await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
+  },
 };
 
 /** Status is pre-selected from the column and locked; the other properties are free. */
@@ -109,7 +131,18 @@ export const PrefilledFromColumn: Story = {
 /** Submitting: every control is disabled while the create command runs. */
 export const Submitting: Story = {
   args: {} as never,
-  render: () => <Harness config={config} onSubmit={() => new Promise(() => undefined)} />,
+  render: () => (
+    <Harness
+      config={{ ...config, fields: [{ ...config.fields[0], defaultValue: "Ticket body" }, config.fields[1]] }}
+      onSubmit={() => new Promise(() => undefined)}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("button", { name: "Create ticket", exact: true }));
+    await expect(body.getByRole("button", { name: "Create ticket", exact: true })).toBeDisabled();
+    await expect(body.getByRole("button", { name: "Create without opening", exact: true })).toBeDisabled();
+  },
 };
 
 /** A failing submit surfaces the caller-supplied error copy. */
@@ -129,4 +162,35 @@ export const SubmitError: Story = {
 export const AttributesOnly: Story = {
   args: {} as never,
   render: () => <Harness config={{ ...config, fields: [] }} />,
+};
+
+/** Cancel suspends the draft so reopening does not lose the user's work. */
+export const RetainedDraft: Story = {
+  args: {} as never,
+  render: () => <Harness config={config} />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.type(await body.findByRole("textbox"), "Keep this ticket draft");
+    await userEvent.click(body.getByRole("button", { name: "Cancel", exact: true }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "New ticket", exact: true }));
+    await expect(await body.findByRole("textbox")).toHaveTextContent("Keep this ticket draft");
+  },
+};
+
+/** Choosing the split-button mode never submits and survives closing the dialog. */
+export const RememberedCreateAction: Story = {
+  args: {} as never,
+  render: () => <Harness config={config} />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.type(await body.findByRole("textbox"), "Choose a creation action");
+    await userEvent.click(await body.findByRole("button", { name: "Create without opening", exact: true }));
+    await userEvent.click(await body.findByRole("menuitemradio", { name: "Create without opening", exact: true }));
+    await expect(body.getByRole("dialog")).toBeVisible();
+    await userEvent.click(body.getByRole("button", { name: "Close", exact: true }));
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "New ticket", exact: true }));
+    const buttons = body.getAllByRole("button", { name: "Create without opening", exact: true });
+    await expect(buttons).toHaveLength(2);
+    await expect(buttons[0]).toHaveTextContent("Create without opening");
+  },
 };

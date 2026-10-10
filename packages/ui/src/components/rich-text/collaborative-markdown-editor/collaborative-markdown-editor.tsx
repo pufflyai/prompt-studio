@@ -108,12 +108,15 @@ export function CollaborativeMarkdownEditor(props: CollaborativeMarkdownEditorPr
           <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
           <EquationPlugin />
           <RichTextPlugin
-            contentEditable={<ContentEditable fullWidth={false} />}
+            contentEditable={<ContentEditable fullWidth={false} layerStyle="markdownEditorInset" />}
             placeholder={
               synced && placeholder ? (
                 <Box
                   position="absolute"
                   top="0"
+                  left="0"
+                  right="0"
+                  layerStyle="markdownEditorInset"
                   color="fg.muted"
                   pointerEvents="none"
                   userSelect="none"

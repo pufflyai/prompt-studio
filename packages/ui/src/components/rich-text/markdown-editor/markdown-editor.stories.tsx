@@ -325,3 +325,13 @@ export const SelectionToolbarAncestorScroll: Story = {
   args: { defaultState: scrollingMarkdown, scrollable: false },
   play: checkSelectionToolbarScrolling,
 };
+
+/** Empty documents and their placeholder share the larger document inset. */
+export const EmptyDocument: Story = {
+  args: { defaultState: "", isEditable: true, placeholder: "Describe the tool you need...", fullWidth: true },
+  render: (args) => (
+    <Box height="320px">
+      <MarkdownEditor {...args} />
+    </Box>
+  ),
+};

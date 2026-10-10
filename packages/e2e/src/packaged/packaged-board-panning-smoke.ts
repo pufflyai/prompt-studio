@@ -10,6 +10,7 @@ import { createPlannerTicket } from "../helpers/planner-api";
 import { verifyBoardEdgeScrolling } from "./packaged-board-edge-scrolling";
 import { verifyBoardPanning } from "./packaged-board-panning";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { verifyTicketCreation } from "./packaged-ticket-creation";
 
 export const registerBoardPanningSmokeTests = () => {
   test("packaged Planner board pans with a mouse and keeps ticket and column actions", async () => {
@@ -53,9 +54,7 @@ export const registerBoardPanningSmokeTests = () => {
       await page.getByRole("menuitem", { name: "Archive all", exact: true }).click();
       await expect(doneCard).toBeHidden();
       await page.getByTestId("board-column-backlog").scrollIntoViewIfNeeded();
-      await page.getByRole("button", { name: "Create row", exact: true }).first().click();
-      await expect(page.getByRole("dialog")).toBeVisible();
-      await page.keyboard.press("Escape");
+      await verifyTicketCreation(page);
       await page.getByTestId("renderer-card").filter({ hasText: "Pan board ticket" }).click();
       await expect(page.getByTestId("board-column-backlog")).toBeHidden();
     } finally {

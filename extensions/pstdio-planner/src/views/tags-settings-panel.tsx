@@ -91,8 +91,8 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
   const error = queryError ? String(queryError instanceof Error ? queryError.message : queryError) : null;
 
   return (
-    <ScrollArea h="full" minH="0" bg="bg" color="fg" contentProps={{ p: "lg", spaceY: "lg", minH: "100%" }}>
-      <Flex gap="sm" alignItems="flex-start" justifyContent="space-between">
+    <Stack h="full" minH="0" gap="0" bg="bg" color="fg">
+      <Flex layerStyle="settingsHeader" flexShrink="0" gap="sm" alignItems="flex-start" justifyContent="space-between">
         <Box minW="0">
           <TagEditorHeading hasChanges={hasChanges}>{t("settings.ticketTags.title", "Ticket tags")}</TagEditorHeading>
           <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -108,57 +108,59 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
           onReset={() => setDrafts(buildDrafts(tags))}
         />
       </Flex>
-      {error ? (
-        <AlertMessage
-          status="error"
-          colorPalette="red"
-          title={t("settings.ticketTags.errorTitle", "Unable to update ticket tags")}
-          size="sm"
-        >
-          {error}
-        </AlertMessage>
-      ) : null}
-      {tagsQuery.isPending ? (
-        <HStack gap="sm" color="fg.muted">
-          <Spinner size="sm" />
-          <Text textStyle="paragraph/S/regular">{t("settings.ticketTags.loading", "Loading...")}</Text>
-        </HStack>
-      ) : (
-        <Stack gap="md">
-          {/* Flat document flow: a hairline separates tag sections, no card per tag. */}
-          {tags.map((tag, index) =>
-            drafts[tag.id] ? (
-              <Stack
-                key={tag.id}
-                borderColor="border.subtle"
-                borderTopWidth={index > 0 ? "1px" : undefined}
-                pt={index > 0 ? "md" : undefined}
-              >
-                <TagSettingsSection
-                  tag={tag}
-                  draft={drafts[tag.id]}
-                  isSaving={saveTags.isPending}
-                  t={t}
-                  onDraftChange={(draft) => setDrafts({ ...drafts, [tag.id]: draft })}
-                  onDeleteTag={() => deleteTag.mutate(tag.id)}
-                />
-              </Stack>
-            ) : null,
-          )}
-          <HStack gap="sm">
-            <Input
-              size="sm"
-              value={newTagName}
-              placeholder={t("settings.ticketTags.newTagName", "New tag name")}
-              onChange={(event) => setNewTagName(event.target.value)}
-            />
-            <Button size="sm" onClick={addTag} disabled={!newTagName.trim()}>
-              {t("settings.ticketTags.addTag", "Add tag")}
-            </Button>
+      <ScrollArea flex="1" minH="0" contentProps={{ p: "lg", spaceY: "lg" }}>
+        {error ? (
+          <AlertMessage
+            status="error"
+            colorPalette="red"
+            title={t("settings.ticketTags.errorTitle", "Unable to update ticket tags")}
+            size="sm"
+          >
+            {error}
+          </AlertMessage>
+        ) : null}
+        {tagsQuery.isPending ? (
+          <HStack gap="sm" color="fg.muted">
+            <Spinner size="sm" />
+            <Text textStyle="paragraph/S/regular">{t("settings.ticketTags.loading", "Loading...")}</Text>
           </HStack>
-        </Stack>
-      )}
-    </ScrollArea>
+        ) : (
+          <Stack gap="md">
+            {/* Flat document flow: a hairline separates tag sections, no card per tag. */}
+            {tags.map((tag, index) =>
+              drafts[tag.id] ? (
+                <Stack
+                  key={tag.id}
+                  borderColor="border.subtle"
+                  borderTopWidth={index > 0 ? "1px" : undefined}
+                  pt={index > 0 ? "md" : undefined}
+                >
+                  <TagSettingsSection
+                    tag={tag}
+                    draft={drafts[tag.id]}
+                    isSaving={saveTags.isPending}
+                    t={t}
+                    onDraftChange={(draft) => setDrafts({ ...drafts, [tag.id]: draft })}
+                    onDeleteTag={() => deleteTag.mutate(tag.id)}
+                  />
+                </Stack>
+              ) : null,
+            )}
+            <HStack gap="sm">
+              <Input
+                size="sm"
+                value={newTagName}
+                placeholder={t("settings.ticketTags.newTagName", "New tag name")}
+                onChange={(event) => setNewTagName(event.target.value)}
+              />
+              <Button size="sm" onClick={addTag} disabled={!newTagName.trim()}>
+                {t("settings.ticketTags.addTag", "Add tag")}
+              </Button>
+            </HStack>
+          </Stack>
+        )}
+      </ScrollArea>
+    </Stack>
   );
 };
 

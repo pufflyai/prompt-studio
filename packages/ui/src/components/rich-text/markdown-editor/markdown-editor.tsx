@@ -57,7 +57,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
     defaultState = "",
     fullWidth = false,
     isEditable = false,
-    padding = "sm",
+    padding,
     placeholder,
     scrollable = true,
     sectionNavigation,
@@ -128,12 +128,20 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           <CodeBlockActionsPlugin anchorElem={floatingToolbarAnchorElem} />
           <EquationPlugin />
           <RichTextPlugin
-            contentEditable={<ContentEditable fullWidth={fullWidth} padding={padding} scrollable={scrollable} />}
+            contentEditable={
+              <ContentEditable
+                fullWidth={fullWidth}
+                padding={padding}
+                layerStyle="markdownEditorInset"
+                scrollable={scrollable}
+              />
+            }
             placeholder={
               placeholder ? (
                 <Flex
                   position="absolute"
-                  padding="sm"
+                  layerStyle="markdownEditorInset"
+                  padding={padding}
                   top="0"
                   left="0"
                   right="0"

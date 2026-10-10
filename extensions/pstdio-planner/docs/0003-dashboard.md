@@ -20,6 +20,10 @@ Each card shows the ticket's title and these properties:
 
 Select the create button at the top of a column. By default only the Backlog column has one. In the **New ticket** form, write a description in Markdown, attach files if needed, and set the properties, such as tags. The first line of the description becomes the ticket's title.
 
+The form starts with the column's status and editable properties that match the current view's filters. Once the required fields are complete, choose **Create ticket** or **Create without opening** in the submit dropdown. The choice changes the primary button and is remembered when the form reopens, including after a reload. Press the primary button to create the ticket with that action. Choosing an option does not create a ticket. Both submit controls stay disabled while the form is incomplete or saving.
+
+Clicking the background keeps the form open. **Cancel** and Escape close it and keep your draft, including attachments, while this dashboard stays open. Reopen the same view and filter to continue, even after visiting another page. Each view and filter keeps its own draft, so new filtered forms inherit matching properties without replacing earlier drafts. The **X** discards the current draft. Successful creation clears it.
+
 You can also create tickets from a terminal with [`pst tickets create`](0004-cli.md#tickets), or let an agent do it with Planner's `create-ticket` skill.
 
 ### Move and change tickets
@@ -98,6 +102,8 @@ Planner adds these settings for each project:
 - **Settings → Project → Ticket tags** edits the project's [tags](0001-tags-and-statuses.md#tags).
 - **Settings → Project → Statuses** edits the project's [statuses](0001-tags-and-statuses.md#statuses).
 - **Settings → Project → Templates** edits Planner's ticket, prompt, and document templates. The prompt templates hold the instructions Planner gives agents, for example when it runs an attempt or a review. Edit them to change how agents work on your tickets.
+
+The Ticket tags header keeps **Save** and **Reset** visible while you scroll through tag definitions.
 
 ## Ticket cleanup and merge settings
 
