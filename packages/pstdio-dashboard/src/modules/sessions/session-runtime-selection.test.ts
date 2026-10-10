@@ -149,19 +149,44 @@ describe("canSubmitSessionMessage", () => {
   ];
 
   test("allows a message once an enabled harness and a model are selected", () => {
-    expect(canSubmitSessionMessage({ agentOptions, selectedAgent: "opencode", selectedModel: "model-a" })).toBe(true);
+    expect(
+      canSubmitSessionMessage({
+        agentOptions,
+        selectedAgent: "opencode",
+        selectedModel: "model-a",
+        requiresModel: true,
+      }),
+    ).toBe(true);
   });
 
   test("blocks a message without a model", () => {
-    expect(canSubmitSessionMessage({ agentOptions, selectedAgent: "opencode", selectedModel: "" })).toBe(false);
+    expect(
+      canSubmitSessionMessage({ agentOptions, selectedAgent: "opencode", selectedModel: "", requiresModel: true }),
+    ).toBe(false);
+  });
+
+  test("allows a message without a model when the harness offers no models", () => {
+    expect(
+      canSubmitSessionMessage({ agentOptions, selectedAgent: "opencode", selectedModel: "", requiresModel: false }),
+    ).toBe(true);
   });
 
   test("blocks a message when the harness is not enabled for the project", () => {
-    expect(canSubmitSessionMessage({ agentOptions, selectedAgent: "claude-code", selectedModel: "model-a" })).toBe(
-      false,
-    );
-    expect(canSubmitSessionMessage({ agentOptions: [], selectedAgent: "opencode", selectedModel: "model-a" })).toBe(
-      false,
-    );
+    expect(
+      canSubmitSessionMessage({
+        agentOptions,
+        selectedAgent: "claude-code",
+        selectedModel: "model-a",
+        requiresModel: true,
+      }),
+    ).toBe(false);
+    expect(
+      canSubmitSessionMessage({
+        agentOptions: [],
+        selectedAgent: "opencode",
+        selectedModel: "model-a",
+        requiresModel: true,
+      }),
+    ).toBe(false);
   });
 });

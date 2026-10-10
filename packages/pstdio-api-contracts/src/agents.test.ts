@@ -17,6 +17,8 @@ describe("agentInfoSchema", () => {
       name: "External",
       availability: { type: "INSTALLED" },
       params: { mode: parameter },
+      capabilities: [],
+      supportsModels: true,
     });
     expect(parsed.params?.mode).toEqual(parameter);
   });
@@ -25,6 +27,8 @@ describe("agentInfoSchema", () => {
       id: "codex",
       name: "Codex",
       availability: { type: "INSTALLED" },
+      capabilities: ["Attachments"],
+      supportsModels: true,
       params: {
         model_reasoning_effort: {
           type: "select",

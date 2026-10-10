@@ -114,6 +114,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     agentOptions: agents.map((agent) => ({ value: agent.id, disabled: agent.availability.type === "NOT_FOUND" })),
     selectedAgent,
     selectedModel,
+    requiresModel: agents.find((agent) => agent.id === selectedAgent)?.supportsModels ?? true,
   });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
   const openCreatedSession = (createdSessionId: string, prompt: string) => {

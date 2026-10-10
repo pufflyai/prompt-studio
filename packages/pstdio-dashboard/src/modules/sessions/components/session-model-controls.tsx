@@ -52,6 +52,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
     description: agent.availability.reason,
   }));
   const selectedAgentInfo = agents.find((agent) => agent.id === selectedAgent);
+  const offersModels = selectedAgentInfo?.supportsModels ?? true;
   const defaultAgent = project?.default_agent_id;
   // A stored selection can point at a harness whose extension is disabled; treat it as
   // unselected so the menu shows its empty state instead of fetching 404ing models.
@@ -95,9 +96,10 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
   useEffect(() => {
     if (isModelsLoading || selectionScope === "request") return;
 
-    const nextModel = resolveRuntimeModelSelection({ models, selectedModel, preferredModel });
+    // A harness without models picks its own, so a saved or default model must not reach it.
+    const nextModel = offersModels ? resolveRuntimeModelSelection({ models, selectedModel, preferredModel }) : "";
     if (nextModel !== selectedModel) setSelectedModel(nextModel);
-  }, [isModelsLoading, models, preferredModel, selectedModel, setSelectedModel, selectionScope]);
+  }, [isModelsLoading, models, offersModels, preferredModel, selectedModel, setSelectedModel, selectionScope]);
 
   useEffect(() => {
     if (!baseParamSchema || isModelsLoading || (selectedModel && !selectedModelInfo)) return;
@@ -147,6 +149,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
         modelOptions={isResolvedAgent ? modelOptions : []}
         selectedModel={isResolvedAgent ? selectedModel : ""}
         onSelectModel={handleSelectModel}
+        offersModels={offersModels}
         isAgentSwitchDisabled={Boolean(view.sessionId && view.agent)}
         isAgentsLoading={isAgentsLoading}
         isModelsLoading={isModelsLoading}

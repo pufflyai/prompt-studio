@@ -32,6 +32,8 @@ interface WorkspaceAgentMenuProps {
   modelOptions: WorkspacePanelMenuOption[];
   selectedModel: string;
   onSelectModel: (model: string) => void;
+  /** False when the selected harness offers no model choice; the menu then picks the agent only. */
+  offersModels?: boolean;
   isDisabled?: boolean;
   isAgentSwitchDisabled?: boolean;
   shouldDisableSingleAgentSwitch?: boolean;
@@ -99,6 +101,28 @@ const buildModelMenuItems = (
   }));
 };
 
+interface MenuTriggerButtonProps {
+  label: string;
+  ariaLabel: string;
+  tooltip: string;
+  disabled: boolean;
+  size: NonNullable<WorkspaceAgentMenuProps["size"]>;
+}
+
+const MenuTriggerButton = (props: MenuTriggerButtonProps) => {
+  const { label, ariaLabel, tooltip, disabled, size } = props;
+  return (
+    <Tooltip content={tooltip}>
+      <Button variant="ghost" size={size} px="2" aria-label={ariaLabel} disabled={disabled}>
+        <Text textStyle="label/XS/medium" color="fg">
+          {label}
+        </Text>
+        <ChevronDown size={14} />
+      </Button>
+    </Tooltip>
+  );
+};
+
 export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
   const {
     agentOptions,
@@ -107,6 +131,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     modelOptions,
     selectedModel,
     onSelectModel,
+    offersModels = true,
     isDisabled = false,
     isAgentSwitchDisabled = false,
     shouldDisableSingleAgentSwitch = true,
@@ -147,25 +172,59 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
     onSelectModel,
     resolvedLabels,
   );
+  const agentEmptyState = (
+    <Menu.Item value="empty" asChild>
+      <ListRow
+        asChild
+        variant="compact"
+        id="empty"
+        label={resolvedLabels.agentUnknown}
+        icon={<Icon as={TerminalIcon} boxSize="16px" />}
+        disabled
+      />
+    </Menu.Item>
+  );
+  if (!offersModels) {
+    if (isAgentSwitchDisabled) return null;
+    return (
+      <SearchableMenu
+        trigger={
+          // Menu.Trigger passes its props to this direct child, so it must stay a DOM element.
+          <Box>
+            <MenuTriggerButton
+              label={selectedAgentLabel}
+              ariaLabel={resolvedLabels.agentSelect}
+              tooltip={resolvedLabels.agentSelect}
+              disabled={isSwitchDisabled}
+              size={size}
+            />
+          </Box>
+        }
+        items={agentMenuItems.map((item) => ({
+          ...item,
+          onSelect: item.isDisabled ? undefined : () => onSelectAgent(item.id),
+        }))}
+        showSearch={false}
+        width="260px"
+        portalled={portalled}
+        searchPlaceholder={resolvedLabels.modelSearchPlaceholder}
+        contentTestId="workspace-agent-options"
+        emptyState={agentEmptyState}
+      />
+    );
+  }
 
   return (
     <SearchableMenu
       trigger={
         <Box>
-          <Tooltip content={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}>
-            <Button
-              variant="ghost"
-              size={size}
-              px="2"
-              aria-label={resolvedLabels.modelSelect}
-              disabled={isMenuDisabled}
-            >
-              <Text textStyle="label/XS/medium" color="fg">
-                {selectedModelLabel}
-              </Text>
-              <ChevronDown size={14} />
-            </Button>
-          </Tooltip>
+          <MenuTriggerButton
+            label={selectedModelLabel}
+            ariaLabel={resolvedLabels.modelSelect}
+            tooltip={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}
+            disabled={isMenuDisabled}
+            size={size}
+          />
         </Box>
       }
       items={modelMenuItems}
@@ -194,18 +253,7 @@ export const WorkspaceAgentMenu = (props: WorkspaceAgentMenuProps) => {
         disabled: isSwitchDisabled,
         showSearch: false,
         contentTestId: "workspace-agent-options",
-        emptyState: (
-          <Menu.Item value="empty" asChild>
-            <ListRow
-              asChild
-              variant="compact"
-              id="empty"
-              label={resolvedLabels.agentUnknown}
-              icon={<Icon as={TerminalIcon} boxSize="16px" />}
-              disabled
-            />
-          </Menu.Item>
-        ),
+        emptyState: agentEmptyState,
         onSelect: (item) => {
           if (agentOptions.find((o) => o.value === item.id)?.disabled) return;
           onSelectAgent(item.id);

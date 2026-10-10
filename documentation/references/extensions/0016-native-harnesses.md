@@ -16,6 +16,12 @@ Submitting `/goal <objective>` during an owned Codex operation replaces the nati
 
 Codex reports a status dot with native state: active is green, paused/blocked/usage or budget limited is amber, and complete is blue. It supplies Pause/Resume, Edit, and Clear icons. Unavailable status is neutral. Claude and OpenCode retain their native capabilities; the host does not infer a Goal mode or live replacement from a command spelling.
 
+## Composer controls
+
+The session composer shows the model menu only for harnesses that implement `listModels()`. An empty list still shows the menu, because model discovery can fail for a while. A harness without `listModels()`, such as a remote machine whose template picks the model, shows only the agent picker and runs without a model. When the agent cannot change either, as in an existing session, the composer shows neither.
+
+`/v1/agents/info` returns each harness's `capabilities` and `supportsModels`. The `Attachments` capability marks a harness that accepts files. The host does not act on it yet; the composer and server will use it once the built-in harnesses declare it.
+
 ## Supported CLI versions
 
 | Harness | Minimum | Why |

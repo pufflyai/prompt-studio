@@ -42,10 +42,10 @@ declare const agentModelSchema: z.ZodObject<{
 type AgentModel = z.infer<typeof agentModelSchema>;
 declare const automationRunStatusSchema: z.ZodEnum<{
   failed: "failed";
+  cancelled: "cancelled";
   queued: "queued";
   running: "running";
   succeeded: "succeeded";
-  cancelled: "cancelled";
   rejected: "rejected";
 }>;
 declare const createAutomationRunInputSchema: z.ZodObject<{
@@ -72,10 +72,10 @@ declare const automationRunSchema: z.ZodObject<{
   commandId: z.ZodString;
   status: z.ZodEnum<{
     failed: "failed";
+    cancelled: "cancelled";
     queued: "queued";
     running: "running";
     succeeded: "succeeded";
-    cancelled: "cancelled";
     rejected: "rejected";
   }>;
   createdAt: z.ZodString;
@@ -97,8 +97,8 @@ declare const boardViewSchema: z.ZodObject<{
   title: z.ZodString;
   settings: z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodEnum<{
-      board: "board";
       list: "list";
+      board: "board";
     }>;
     columnGrouping: z.ZodString;
     rowGrouping: z.ZodString;
@@ -189,8 +189,8 @@ declare const boardViewsSchema: z.ZodObject<{
     title: z.ZodString;
     settings: z.ZodUnion<readonly [z.ZodObject<{
       viewMode: z.ZodEnum<{
-        board: "board";
         list: "list";
+        board: "board";
       }>;
       columnGrouping: z.ZodString;
       rowGrouping: z.ZodString;
@@ -280,8 +280,8 @@ declare const boardViewUpdateSchema: z.ZodObject<{
   title: z.ZodOptional<z.ZodString>;
   settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodOptional<z.ZodEnum<{
-      board: "board";
       list: "list";
+      board: "board";
     }>>;
     columnGrouping: z.ZodOptional<z.ZodString>;
     rowGrouping: z.ZodOptional<z.ZodString>;
@@ -367,8 +367,8 @@ declare const boardViewUpdateSchema: z.ZodObject<{
 declare const boardViewCreateSchema: z.ZodObject<{
   settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodOptional<z.ZodEnum<{
-      board: "board";
       list: "list";
+      board: "board";
     }>>;
     columnGrouping: z.ZodOptional<z.ZodString>;
     rowGrouping: z.ZodOptional<z.ZodString>;
@@ -942,11 +942,11 @@ declare const queuedSteeringResultSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>, z.ZodObject<{
   status: z.ZodLiteral<"rejected">;
   reason: z.ZodEnum<{
+    missing: "missing";
     unsupported: "unsupported";
     inactive: "inactive";
     stale_run: "stale_run";
     blocking_input: "blocking_input";
-    missing: "missing";
     stale_revision: "stale_revision";
     different_settings: "different_settings";
     delivery_failed: "delivery_failed";
@@ -965,12 +965,12 @@ declare const sessionAttachmentRefSchema: z.ZodObject<{
 }, z.core.$strip>;
 declare const sessionStatusSchema: z.ZodEnum<{
   failed: "failed";
-  queued: "queued";
   cancelled: "cancelled";
+  queued: "queued";
   completed: "completed";
-  disconnected: "disconnected";
   in_progress: "in_progress";
   awaiting_input: "awaiting_input";
+  disconnected: "disconnected";
 }>;
 type SessionStatus = z.infer<typeof sessionStatusSchema>;
 type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
@@ -1829,7 +1829,8 @@ type JsonPatch = {
   path: string;
   value?: unknown;
 };
-type AgentCapability = "SessionFork" | "ContextUsage" | "Approvals" | "SessionReattach";
+declare const AGENT_CAPABILITIES: readonly ["SessionFork", "ContextUsage", "Approvals", "SessionReattach", "Attachments"];
+type AgentCapability = (typeof AGENT_CAPABILITIES)[number];
 type QuestionResponse = {
   answers: string[][];
   callId?: string;
