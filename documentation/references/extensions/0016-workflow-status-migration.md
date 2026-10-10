@@ -1,6 +1,6 @@
 # Workflow status migration
 
-Extensions own workflow values and editing. Use query-owned enum attributes to display those values in shared collections.
+Extensions own workflow values and editing. Use query-owned enum attributes to display those values in shared collections. The deprecation release advances the extension API to 0.1.3 after the published 0.1.2 release.
 
 ## Deprecated APIs
 

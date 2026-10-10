@@ -1,8 +1,12 @@
 name: Release readiness
 
-# Rehearses the next release without publishing anything. Start it from main: Windows signing
-# trusts only main and release tags. `ref` names the branch to rehearse, usually the version PR.
+# Rehearses the version PR after its manually approved CI passes. Both entry points
+# run from main because Windows signing trusts only main and release tags.
 on:
+  workflow_run:
+    workflows: [Test and Build]
+    types: [completed]
+    branches: [changeset-release/main]
   workflow_dispatch:
     inputs:
       ref:
@@ -10,21 +14,114 @@ on:
         required: true
         default: changeset-release/main
         type: string
+      previous-tag:
+        description: Older Windows baseline tag (defaults to the latest published release)
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   npm:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (contains(fromJSON('["pull_request", "workflow_dispatch"]'), github.event.workflow_run.event) &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
     outputs:
       version: ${{ steps.check.outputs.version }}
       publish: ${{ steps.check.outputs.publish }}
+      ref: ${{ steps.candidate.outputs.ref }}
+      previous_tag: ${{ steps.candidate.outputs.previous_tag }}
     steps:
+      - name: Resolve the candidate and mark its PR check pending
+        id: candidate
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            let sha;
+            if (context.eventName === 'workflow_run') {
+              const run = context.payload.workflow_run;
+              const { data: pulls } = await github.rest.pulls.list({
+                ...context.repo, state: 'open', base: 'main',
+                head: `${context.repo.owner}:changeset-release/main`,
+              });
+              const pull = pulls.find(item => item.head.sha === run.head_sha);
+              if (!pull) throw new Error('The checked version PR is no longer current');
+              const { stripTypeScriptTypes } = await import('node:module');
+              const { writeFile } = await import('node:fs/promises');
+              const { pathToFileURL } = await import('node:url');
+              const loadPolicy = async name => {
+                const { data: file } = await github.rest.repos.getContent({
+                  ...context.repo, path: `scripts/ci/${name}.ts`, ref: context.sha,
+                });
+                const path = `${process.env.RUNNER_TEMP}/${name}.mjs`;
+                await writeFile(path, stripTypeScriptTypes(Buffer.from(file.content, 'base64').toString('utf8')));
+                return import(pathToFileURL(path).href);
+              };
+              const policy = await loadPolicy('pr-risk-labels');
+              const signing = await loadPolicy('release-signing-policy');
+              const api = policy.createApi({
+                apiUrl: process.env.GITHUB_API_URL,
+                repository: `${context.repo.owner}/${context.repo.repo}`,
+                token: process.env.GITHUB_TOKEN, pullNumber: pull.number, runUrl: '',
+              });
+              const current = await api.readPull();
+              if (current.state !== 'open' || current.head.sha !== run.head_sha ||
+                  !await policy.isReleaseMetadata(api, current)) {
+                throw new Error('Signed rehearsals require a generated release metadata PR');
+              }
+              const base = await api.readMergeBase(current.base.sha, current.head.sha);
+              const files = await api.readChangedFiles();
+              for (const file of files.filter(item => item.filename.endsWith('/package.json'))) {
+                const [before, after] = await Promise.all([
+                  api.readManifest(file.filename, base), api.readManifest(file.filename, current.head.sha),
+                ]);
+                if (!signing.isSigningManifest(before, after)) {
+                  throw new Error(`Release dependency inputs changed: ${file.filename}`);
+                }
+              }
+              const latest = await api.readPull();
+              if (latest.state !== 'open' || latest.head.sha !== current.head.sha ||
+                  latest.base.sha !== current.base.sha || latest.base.ref !== current.base.ref) {
+                throw new Error('The version PR changed during release classification');
+              }
+              core.setOutput('base', base);
+              sha = current.head.sha;
+            } else {
+              const { data } = await github.rest.repos.getCommit({
+                ...context.repo, ref: process.env.CANDIDATE_REF,
+              });
+              sha = data.sha;
+            }
+            core.setOutput('ref', sha);
+            await github.rest.repos.createCommitStatus({
+              ...context.repo, sha, context: 'release-readiness', state: 'pending',
+              description: 'Running the full release rehearsal',
+              target_url: `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+            const previous = process.env.PREVIOUS_TAG ||
+              (await github.rest.repos.getLatestRelease(context.repo)).data.tag_name;
+            if (!previous.startsWith('pstdio@')) throw new Error('The baseline must be a pstdio release tag');
+            core.setOutput('previous_tag', previous);
+        env:
+          CANDIDATE_REF: ${{ inputs.ref }}
+          PREVIOUS_TAG: ${{ inputs.previous-tag }}
+          GITHUB_TOKEN: ${{ github.token }}
+
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ steps.candidate.outputs.ref }}
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -35,17 +132,29 @@ jobs:
         id: check
         run: bun scripts/release/check-npm-publishing.ts
 
+      - name: Verify the candidate lockfile from trusted dependency inputs
+        if: github.event_name == 'workflow_run'
+        env:
+          RELEASE_BASE: ${{ steps.candidate.outputs.base }}
+        run: |
+          set -euo pipefail
+          cp bun.lock "$RUNNER_TEMP/release-candidate.lock"
+          git show "$RELEASE_BASE:bun.lock" > bun.lock
+          bun install --lockfile-only --ignore-scripts
+          bun scripts/release/sync-lockfile-workspace-dependencies.ts
+          cmp "$RUNNER_TEMP/release-candidate.lock" bun.lock
+
   packaged_toolchain:
     needs: npm
     uses: ./.github/workflows/verify-packaged-toolchain.yml
     with:
-      ref: ${{ inputs.ref }}
+      ref: ${{ needs.npm.outputs.ref }}
 
   harness_cli_support:
     needs: npm
     uses: ./.github/workflows/harness-cli-support.yml
     with:
-      ref: ${{ inputs.ref }}
+      ref: ${{ needs.npm.outputs.ref }}
       versions: '["minimum", "latest"]'
 
   release_build:
@@ -55,7 +164,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ needs.npm.outputs.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -90,8 +199,8 @@ jobs:
     with:
       version: ${{ needs.npm.outputs.version }}
       tag: pstdio@${{ needs.npm.outputs.version }}
-      source_ref: ${{ inputs.ref }}
-      validation_ref: ${{ inputs.ref }}
+      source_ref: ${{ needs.npm.outputs.ref }}
+      validation_ref: ${{ needs.npm.outputs.ref }}
     secrets:
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
       MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -99,3 +208,38 @@ jobs:
       APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
       APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+
+  windows_update:
+    needs: [npm, desktop]
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    uses: ./.github/workflows/verify-windows-update.yml
+    with:
+      previous-tag: ${{ needs.npm.outputs.previous_tag }}
+      candidate-ref: ${{ needs.npm.outputs.ref }}
+
+  result:
+    if: always() && needs.npm.outputs.ref != ''
+    needs: [npm, packaged_toolchain, harness_cli_support, release_build, desktop, windows_update]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+    steps:
+      - name: Report the complete rehearsal on the candidate commit
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          CANDIDATE_SHA: ${{ needs.npm.outputs.ref }}
+          JOBS: ${{ toJSON(needs) }}
+        with:
+          script: |
+            const passed = Object.values(JSON.parse(process.env.JOBS)).every(job => job.result === 'success');
+            await github.rest.repos.createCommitStatus({
+              ...context.repo, sha: process.env.CANDIDATE_SHA, context: 'release-readiness',
+              state: passed ? 'success' : 'failure',
+              description: passed ? 'The full release rehearsal passed' : 'The release rehearsal failed or was incomplete',
+              target_url: `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+            if (!passed) core.setFailed('Every release rehearsal job must pass');
