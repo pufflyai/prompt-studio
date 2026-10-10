@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.42.0
+
+_2026-10-10_
+
+### Patch Changes
+
+- 0c30940: Accept Codex 0.157.0, Claude Code 2.1.203 and OpenCode 1.0.175 and newer, and explain why an older or broken CLI is unavailable.
+
 ## 0.41.0
 
 _2026-10-08_

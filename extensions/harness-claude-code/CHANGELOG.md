@@ -1,5 +1,18 @@
 # harness-claude-code
 
+## 0.42.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- 924aba6: Support native commands, planning controls, and live Codex goal updates while retaining app-server sessions.
+
+### Patch Changes
+
+- 0c30940: Accept Codex 0.157.0, Claude Code 2.1.203 and OpenCode 1.0.175 and newer, and explain why an older or broken CLI is unavailable.
+- 355984a: Respect harness process environments and Windows wrappers, validate CLI versions, and bound availability and model-listing version probes.
+
 ## 0.41.0
 
 _2026-10-08_
