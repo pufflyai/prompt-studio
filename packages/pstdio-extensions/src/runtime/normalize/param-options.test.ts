@@ -80,20 +80,56 @@ test("validates toolbar inputs and warns about competing primary actions", () =>
   expect(runtime.diagnostics.find((d) => d.code === "multiple_primary_toolbar_actions")?.severity).toBe("warning");
 });
 
-test("diagnoses option commands on surfaces that do not use the command dialog", () => {
+test("qualifies workspace choice commands and validates their dependencies", () => {
+  const options = defineCommand({ id: "options", title: "Options", run: async () => [] });
+  const runtime = normalizeExtensionSources([
+    source(
+      defineExtension({
+        commands: [options],
+        workspaceTypes: [
+          {
+            id: "cloud",
+            ref: { kind: "workspace-type", id: "cloud" },
+            label: "Cloud",
+            params: { instance: choices("options"), template: choices("options", "instance") },
+            create: async () => ({}) as never,
+            resolve: async () => ({}) as never,
+          },
+        ],
+      }),
+    ),
+  ]);
+  expect(runtime.diagnostics).toEqual([]);
+  expect(runtime.workspaceTypes[0].provider.params?.template).toMatchObject({
+    options: { command: { id: "options", extensionId: "pstdio.lab" } },
+  });
+});
+
+test("diagnoses invalid workspace choice commands and field dependencies", () => {
   const runtime = normalizeExtensionSources([
     source(
       defineExtension({
         workspaceTypes: [
           {
-            id: "folder",
-            ref: { kind: "workspace-type", id: "folder" },
-            label: "Folder",
-            params: { choice: choices("unknown") },
+            id: "cloud",
+            ref: { kind: "workspace-type", id: "cloud" },
+            label: "Cloud",
+            params: { template: choices("missing", "instance") },
             create: async () => ({}) as never,
             resolve: async () => ({}) as never,
           },
         ],
+      }),
+    ),
+  ]);
+  expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("unknown_param_option_command");
+  expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("unknown_param_option_field");
+});
+
+test("diagnoses option commands on kanban create-row forms", () => {
+  const runtime = normalizeExtensionSources([
+    source(
+      defineExtension({
         views: [
           defineView({
             id: "board",
@@ -112,5 +148,5 @@ test("diagnoses option commands on surfaces that do not use the command dialog",
       }),
     ),
   ]);
-  expect(runtime.diagnostics.filter((d) => d.code === "unsupported_param_option_source")).toHaveLength(2);
+  expect(runtime.diagnostics.filter((d) => d.code === "unsupported_param_option_source")).toHaveLength(1);
 });

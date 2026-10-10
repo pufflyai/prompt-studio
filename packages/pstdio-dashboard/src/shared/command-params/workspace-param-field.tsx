@@ -2,61 +2,33 @@ import { Text } from "@chakra-ui/react";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import {
-  buildCommandParamInitialValues,
   type CommandParamFieldProps,
   type CommandParamValue,
   commandParamName,
   normalizeCommandParamValues,
+  useCommandOptions,
 } from "@pstdio/workbench/react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { WorkspaceProviderFields, workspaceProviderParamSchema } from "@/shared/workspaces/workspace-provider-fields";
+import { executeExtensionCommandValue } from "@/shared/extensions/api";
+import { WorkspaceProviderFields } from "@/shared/workspaces/workspace-provider-fields";
+import { workspaceProviderParamSchema } from "@/shared/workspaces/workspace-provider-param-schema";
 import { workspaceProvidersQueryOptions } from "@/shared/workspaces/workspace-providers";
-import { parseParamRecord, serializeParamRecord } from "./param-field-shared";
+import {
+  changeWorkspaceParamValue,
+  defaultWorkspaceValues,
+  readWorkspace,
+  serializeWorkspace,
+  storedWorkspaceValues,
+} from "./workspace-param-values";
 
 interface WorkspaceParamFieldProps extends CommandParamFieldProps {
   workbench: WorkbenchCore;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const readWorkspace = (value: CommandParamValue) => {
-  const record = parseParamRecord(value);
-  return {
-    providerId: typeof record.providerId === "string" ? record.providerId : "",
-    params: isRecord(record.params) ? record.params : {},
-  };
-};
-
-// Required provider params are checked when the workspace is created, so the
-// field keeps partial input instead of failing on every keystroke.
-const serializeWorkspace = (provider: WorkspaceProviderDescriptor, values: Record<string, CommandParamValue>) => {
-  const schema = Object.fromEntries(
-    Object.entries(workspaceProviderParamSchema(provider)).map(([key, param]) => [key, { ...param, required: false }]),
-  );
-  return serializeParamRecord({ providerId: provider.id, params: normalizeCommandParamValues(schema, values) });
-};
-
-const defaultValues = (provider: WorkspaceProviderDescriptor) =>
-  buildCommandParamInitialValues(workspaceProviderParamSchema(provider));
-
-// Defaults apply once, when a provider is chosen. Reading the stored choice
-// without them lets the user clear a field that has a default.
-const storedValues = (provider: WorkspaceProviderDescriptor, params: Record<string, unknown>) =>
-  buildCommandParamInitialValues(
-    Object.fromEntries(
-      Object.entries(workspaceProviderParamSchema(provider)).map(([key, { defaultValue: _, ...param }]) => [
-        key,
-        param,
-      ]),
-    ),
-    params,
-  );
-
 export const WorkspaceParamField = (props: WorkspaceParamFieldProps) => {
-  const { entry, value, disabled, onChange, workbench } = props;
+  const { entry, value, onChange, workbench } = props;
   const projectId = getDashboardSelectedProjectId(workbench);
   const query = useQuery(workspaceProvidersQueryOptions(projectId));
   const providers = (query.data ?? []).filter((provider) => !entry.providers || entry.providers.includes(provider.id));
@@ -68,7 +40,7 @@ export const WorkspaceParamField = (props: WorkspaceParamFieldProps) => {
     // The dialog starts without a choice; commit the first offered provider and
     // its defaults so the command receives what the form shows.
     if (provider || !fallback) return;
-    onChange(serializeWorkspace(fallback, defaultValues(fallback)));
+    onChange(serializeWorkspace(fallback, defaultWorkspaceValues(fallback)));
   }, [fallback, onChange, provider]);
 
   // A refetch failure keeps the last known providers on screen.
@@ -85,25 +57,80 @@ export const WorkspaceParamField = (props: WorkspaceParamFieldProps) => {
     return <Text color="fg.muted">This project has no workspace type that can run this command.</Text>;
   }
 
-  const values = provider ? storedValues(provider, stored.params) : defaultValues(selected);
+  const values = provider ? storedWorkspaceValues(provider, stored.params) : defaultWorkspaceValues(selected);
+  return (
+    <WorkspaceParameterFields
+      key={JSON.stringify([projectId, selected])}
+      {...props}
+      projectId={projectId}
+      providers={providers}
+      provider={selected}
+      values={values}
+      onProviderChange={(providerId) => {
+        const next = providers.find((candidate) => candidate.id === providerId);
+        if (next) onChange(serializeWorkspace(next, defaultWorkspaceValues(next)));
+      }}
+      onValueChange={(key, nextValue) => changeWorkspaceParamValue({ ...props, provider: selected }, key, nextValue)}
+    />
+  );
+};
+
+interface WorkspaceParameterFieldsProps extends WorkspaceParamFieldProps {
+  projectId: string | undefined;
+  providers: WorkspaceProviderDescriptor[];
+  provider: WorkspaceProviderDescriptor;
+  values: Record<string, CommandParamValue>;
+  onProviderChange: (id: string) => void;
+  onValueChange: (key: string, value: CommandParamValue) => void;
+}
+
+const WorkspaceParameterFields = (props: WorkspaceParameterFieldsProps) => {
+  const {
+    entry,
+    disabled,
+    onValidationChange,
+    projectId,
+    provider,
+    values,
+    providers,
+    onProviderChange,
+    onValueChange,
+  } = props;
+  const schema = workspaceProviderParamSchema(provider);
+  const validationCallback = useRef(onValidationChange);
+  validationCallback.current = onValidationChange;
+  const options = useCommandOptions(
+    schema,
+    values,
+    (commandId, params, signal) => {
+      if (!projectId) return Promise.reject(new Error("Workspace choices need a project."));
+      return executeExtensionCommandValue(projectId, commandId, params, signal);
+    },
+    onValueChange,
+  );
+  let validationError = Object.values(options.validate(values))[0];
+  if (!validationError) {
+    try {
+      normalizeCommandParamValues(schema, values);
+    } catch (error) {
+      validationError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  useEffect(() => {
+    validationCallback.current?.(validationError);
+  }, [validationError]);
+  useEffect(() => () => validationCallback.current?.(undefined), []);
   return (
     <WorkspaceProviderFields
       typeLabel={commandParamName(entry)}
       providers={providers}
-      provider={selected}
+      provider={provider}
       values={values}
       disabled={disabled}
-      onProviderChange={(providerId) => {
-        const next = providers.find((candidate) => candidate.id === providerId);
-        if (next) onChange(serializeWorkspace(next, defaultValues(next)));
-      }}
-      onValueChange={(key, nextValue) => {
-        try {
-          onChange(serializeWorkspace(selected, { ...values, [key]: nextValue }));
-        } catch {
-          // An unparsable value (e.g. a partial number) keeps the last valid choice.
-        }
-      }}
+      optionStates={options.states}
+      onRetryOptions={options.retry}
+      onProviderChange={onProviderChange}
+      onValueChange={onValueChange}
     />
   );
 };

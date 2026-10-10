@@ -1,4 +1,5 @@
 import { CloseButton, Dialog } from "@chakra-ui/react";
+import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
 
@@ -87,5 +88,90 @@ export const ProviderFailure: Story = {
     onSubmit: async () => {
       throw new Error("The environment could not be created. Try again.");
     },
+  },
+};
+
+const machine: WorkspaceProviderDescriptor = {
+  id: "example.cloud.workspace-type.machine",
+  label: "Agent machine",
+  params: {
+    instance: {
+      type: "select",
+      label: "Instance",
+      required: true,
+      options: {
+        command: { kind: "command", id: "instances", extensionId: "example.cloud" },
+        valueField: "id",
+        labelField: "name",
+      },
+    },
+    template: {
+      type: "select",
+      label: "Template",
+      required: true,
+      options: {
+        command: { kind: "command", id: "templates", extensionId: "example.cloud" },
+        valueField: "id",
+        labelField: "name",
+        params: { instance: { kind: "param-value", key: "instance" } },
+      },
+    },
+    tools: {
+      type: "multi-select",
+      label: "Tools",
+      options: {
+        command: { kind: "command", id: "tools", extensionId: "example.cloud" },
+        valueField: "id",
+        labelField: "name",
+      },
+    },
+  },
+};
+
+const machineChoices = async (commandId: string, args: Record<string, unknown>) => {
+  if (commandId.endsWith(".instances"))
+    return [
+      { id: "local", name: "Local controller" },
+      { id: "team", name: "Team controller" },
+    ];
+  if (commandId.endsWith(".tools"))
+    return [
+      { id: "git", name: "Git" },
+      { id: "bun", name: "Bun" },
+    ];
+  if (!args.instance) return [];
+  return [{ id: `${args.instance}-code`, name: `${args.instance} coding agent` }];
+};
+
+export const CommandBackedChoices: Story = {
+  args: { providers: [machine, git], executeOptionCommand: machineChoices },
+};
+export const LoadingChoices: Story = {
+  args: { providers: [machine], executeOptionCommand: () => new Promise(() => {}) },
+};
+export const EmptyChoices: Story = {
+  args: { providers: [machine], executeOptionCommand: async () => [] },
+};
+export const FailedChoices: Story = {
+  args: {
+    providers: [machine],
+    executeOptionCommand: async () => {
+      throw new Error("Controller unavailable. Try again.");
+    },
+  },
+};
+export const RetryChoices: Story = {
+  args: {
+    providers: [machine],
+    executeOptionCommand: (() => {
+      const failed = new Set<string>();
+      return async (id: string, args: Record<string, unknown>) => {
+        if (!failed.has(id)) {
+          failed.add(id);
+          throw new Error("Controller unavailable. Try again.");
+        }
+        return machineChoices(id, args);
+      };
+    })(),
   },
 };
