@@ -1,7 +1,15 @@
+import { expect as expectBun, test } from "bun:test";
+import type { ChildProcess } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
+import { e2eExtensions } from "../default-extensions";
+import { folderProjectInput } from "../helpers/folder-project";
+import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { expectPackagedStatusBarOrder } from "./packaged-status-bar-order";
 
-export const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<string, string>) => {
+const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<string, string>) => {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ extraHTTPHeaders: headers });
@@ -40,7 +48,8 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
     await expect(warning).not.toBeVisible();
     await toggle.press("Space");
     await expect(warning).toBeVisible();
-    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Close Connection", exact: true }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
     await warning.focus();
     await expect(
       page.getByRole("tooltip", { name: (await warning.getAttribute("aria-label")) ?? "", exact: true }),
@@ -62,4 +71,30 @@ export const expectPackagedConnectionStatus = async (baseUrl: string, headers: R
   } finally {
     await browser.close();
   }
+};
+
+export const registerConnectionStatusSmokeTests = () => {
+  test("persists connection status settings and reports backend disconnection", async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-connection-"));
+    let child: ChildProcess | null = null;
+
+    try {
+      const started = await startPackagedServe(tempRoot, {
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
+      });
+      child = started.child;
+      const folder = join(tempRoot, "connection-project");
+      mkdirSync(folder);
+      const project = await fetch(`${started.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "Content-Type": "application/json" },
+        body: JSON.stringify(folderProjectInput({ name: "Connection status" }, folder)),
+      });
+      expectBun(project.ok).toBe(true);
+      await expectPackagedConnectionStatus(started.baseUrl, runtimeAuthorization(started.descriptor));
+    } finally {
+      if (child) await stopProcess(child);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  }, 30_000);
 };
