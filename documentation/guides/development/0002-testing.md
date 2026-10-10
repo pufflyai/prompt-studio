@@ -40,7 +40,11 @@ For manual app validation, use `bun run dev:playwright`, open the printed dashbo
 
 ## Coverage
 
-`bun run test:coverage` runs every package's `test:coverage` script with an lcov reporter. Packages and first-party extensions with tests define a `test:coverage` script. Run one with `bun run --cwd <package-or-extension> test:coverage`.
+`bun run test:coverage` runs every package's `test:coverage` script with an lcov reporter. Packages and first-party extensions with tests define a `test:coverage` script. It uses the same conditions and runner as the package's `test` script. Run one with `bun run --cwd <package-or-extension> test:coverage`. Build the monorepo first, because this command does not build dependencies.
+
+The README coverage badge shows line coverage for the whole repository. The Coverage workflow runs on each push to `main`. It runs `bun run test:coverage`, then `bun run --cwd scripts coverage:badge -- <path>`. That script reads every `coverage/**/lcov.info` under `packages/*` and `extensions/*` and writes the shields.io badge data. A separate job, the only one with write access, replaces `coverage.json` on the `badges` branch. Pull requests that change the workflow, `scripts/badges/`, or the API test runner run the measurement without publishing it.
+
+A package's report also lists source files from the packages its tests import. The script merges line hits per file, so each source file counts once. It leaves out tests, stories, fixtures, mocks, test helpers, dependencies, build output, and files outside the repository. Bun reports only files that a test loads, so files that no test imports are missing from the total. Bun's lcov output has no function names, so function coverage cannot be merged and the badge shows lines only.
 
 ## Pull request and main runs
 

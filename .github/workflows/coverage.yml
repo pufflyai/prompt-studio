@@ -1,0 +1,85 @@
+name: Coverage
+
+# Measures unit-test line coverage for the README badge. Pull requests that change the
+# coverage tooling run the measurement without publishing it.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - .github/workflows/coverage.yml
+      - scripts/badges/**
+      - packages/pstdio-api/src/test-utils/run-api-tests.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Main runs queue instead of cancelling, so every main commit keeps its result and the
+  # badge is always written by the newest one.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build monorepo
+        run: bun run build
+
+      - name: Run tests with coverage
+        run: bun run test:coverage
+
+      - name: Summarize coverage
+        run: bun run --cwd scripts coverage:badge -- "$RUNNER_TEMP/badges/coverage.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-badge
+          path: ${{ runner.temp }}/badges/coverage.json
+
+  # Only this job can write to the repository, and it runs no project code.
+  publish:
+    needs: measure
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage-badge
+          path: badges
+
+      - name: Replace the badges branch
+        working-directory: badges
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The badges branch holds only the latest badge data, so each run replaces it.
+        run: |
+          git init --quiet --initial-branch badges
+          git add coverage.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet --message "chore: update coverage badge for ${GITHUB_SHA}"
+          git push --force --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges

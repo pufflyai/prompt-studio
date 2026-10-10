@@ -14,7 +14,7 @@
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
     "test": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts --coverage"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",
