@@ -22,6 +22,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
+// Includes legacy status provider loading and its migration warning.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";

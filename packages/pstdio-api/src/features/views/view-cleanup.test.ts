@@ -31,3 +31,40 @@ test("saved enum filters migrate to booleans before generic field cleanup", () =
     rules: [{ attributeId: "archived", condition: "is", value: false }],
   });
 });
+
+test("status views keep stable IDs when choices become query-owned enums", () => {
+  const settings = {
+    viewMode: "board" as const,
+    columnGrouping: "state",
+    rowGrouping: "none",
+    displayProperties: ["state"],
+  };
+  const view = {
+    settings,
+    sorts: [{ attributeId: "state", direction: "asc" as const }],
+    filter: {
+      conjunction: "and" as const,
+      rules: [{ attributeId: "state", condition: "is-any-of" as const, value: ["todo", "gone"] }],
+    },
+  };
+  const field: BoardField = {
+    id: "state",
+    label: "State",
+    kind: "enum",
+    conditions: [...VIEW_FILTER_CONDITIONS.enum],
+    filterable: true,
+    groupable: true,
+    sortable: true,
+    displayable: true,
+    options: [
+      { value: "todo", label: "Ready" },
+      { value: "gone", label: "Gone" },
+    ],
+  };
+  expect(cleanBoardView({ kind: "kanban", settings }, view, [field])).toEqual(view);
+  field.options = [{ value: "todo", label: "Renamed again" }];
+  expect(cleanBoardView({ kind: "kanban", settings }, view, [field])).toEqual({
+    ...view,
+    filter: { ...view.filter, rules: [{ ...view.filter.rules[0], value: ["todo"] }] },
+  });
+});

@@ -527,6 +527,7 @@ interface SettingsSlotRef {
 interface StatusBarSlotRef {
   readonly id: string;
 }
+/** @deprecated */
 type StatusRef = ContributionRef<"status">;
 type ViewRef = ContributionRef<"view">;
 type JsonPrimitive = string | number | boolean | null;
@@ -1372,7 +1373,9 @@ type KanbanRendererAttributeType = {
 } | {
   kind: "enum-multi";
   options: KanbanRendererEnumOption[];
-} | {
+} |
+/** @deprecated */
+{
   kind: "status";
   statuses: StatusRef;
 } |
@@ -2608,6 +2611,7 @@ interface PageLocation {
   readonly position?: FileSourcePosition;
   readonly parent?: PageLocation;
 }
+/** @deprecated */
 interface WorkflowStatus {
   readonly id: string;
   readonly label: string;
@@ -2617,11 +2621,13 @@ interface WorkflowStatus {
   readonly isDefault?: boolean;
   readonly actions?: readonly string[];
 }
+/** @deprecated */
 interface StatusActionDefinition {
   readonly id: string;
   readonly label: Localizable<string>;
   readonly icon?: string;
 }
+/** @deprecated */
 interface StatusContribution extends ContributionDefinition<"status"> {
   readonly title: Localizable<string>;
   readonly actions?: readonly StatusActionDefinition[];
@@ -2795,6 +2801,7 @@ interface UiContributions {
   navigationItems?: readonly NavigationItemContribution[];
   navigationTrees?: readonly NavigationTreeContribution[];
   statusBarItems?: readonly StatusBarItemContribution[];
+  /** @deprecated */
   statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];
@@ -3810,6 +3817,7 @@ export declare const definePage: <const Definition extends PageDefinition>(defin
   readonly panels: PagePanelRefs<Definition["slots"]>;
 };
 export declare const defineStatusBarItem: <Definition extends Omit<StatusBarItemContribution, "ref">>(definition: Definition) => Definition & ContributionDefinition<"status-bar-item">;
+/** @deprecated */
 export declare const defineStatuses: <Definition extends Omit<StatusContribution, "ref">>(definition: Definition) => Definition & ContributionDefinition<"status">;
 export declare const defineSettingsPanel: <Definition extends Omit<SettingsPanelContribution, "ref">>(definition: Definition) => Definition & ContributionDefinition<"settings-panel">;
 export declare const defineActivityItem: <Definition extends Omit<ActivityItemContribution, "ref">>(definition: Definition) => Definition & ContributionDefinition<"activity-item">;

@@ -56,5 +56,6 @@ export interface SettingsSlotRef {
 export interface StatusBarSlotRef {
   readonly id: string;
 }
+/** @deprecated Use enum attributes with options returned in `KanbanRendererQueryResult.attributes`. */
 export type StatusRef = ContributionRef<"status">;
 export type ViewRef = ContributionRef<"view">;
