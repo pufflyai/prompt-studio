@@ -123,11 +123,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       kind: "starting",
     });
     dashboardResponse.resolve();
-    const window = await test.step("accepts the workbench browser-login fragment", async () => {
-      const workbench = await waitForWorkbenchPage(lifecycle, descriptor.origin);
-      expect(new URL(workbench.url()).hash).toBe("#browser-login=fixture-code");
-      return workbench;
-    });
+    const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
     await expect(window.getByText("Existing Prompt Studio dashboard")).toBeVisible();
     expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
     await expect
@@ -173,7 +169,6 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "onStartupState",
       "openLogs",
       "quitApp",
-      "reportRendererState",
       "reportSlowFrames",
       "retryRuntime",
       "revealInFinder",

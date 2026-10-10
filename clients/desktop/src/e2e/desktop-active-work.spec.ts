@@ -110,14 +110,9 @@ test("shows each quit confirmation over the workbench and recovers from refused 
       },
       [descriptor.origin, script] as const,
     );
-  await electronApp.evaluate(async ({ webContents }, origin) => {
+  await electronApp.evaluate(({ webContents }, origin) => {
     for (const contents of webContents.getAllWebContents()) {
-      if (!contents.getURL().startsWith(origin)) continue;
-      // Crashing the process is asynchronous; quit must see the completed crash.
-      await new Promise<void>((resolve) => {
-        contents.once("render-process-gone", () => resolve());
-        contents.forcefullyCrashRenderer();
-      });
+      if (contents.getURL().startsWith(origin)) contents.forcefullyCrashRenderer();
     }
   }, descriptor.origin);
   await electronApp.evaluate(({ app }) => app.quit());

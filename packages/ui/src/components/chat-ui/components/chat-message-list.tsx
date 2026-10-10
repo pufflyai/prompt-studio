@@ -4,7 +4,7 @@ import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import { ChatMessage } from "./ai-message";
 import { messageFadeInProps, useMessageAnimationKeys } from "./chat-message-animation";
-import { ChatMessageListResponse, StickyMessageResponse, StickyMessageToggle } from "./chat-message-list-items";
+import { ChatMessageListResponse, StickyMessageToggle } from "./chat-message-list-items";
 import {
   isStickyUserMessageCollapsible,
   STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
@@ -240,13 +240,14 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
         </ChatMessage.Root>
       </Box>
       {group.responses.map((message) => (
-        <StickyMessageResponse
-          key={message.id}
-          message={message}
-          streaming={streaming}
-          hideQuestionForms={hideQuestionForms}
-          showAssistantActions={message.id === actionMessageId}
-        />
+        <Box key={message.id}>
+          <ChatMessageListResponse
+            message={message}
+            streaming={streaming}
+            hideQuestionForms={hideQuestionForms}
+            showAssistantActions={message.id === actionMessageId}
+          />
+        </Box>
       ))}
     </Box>
   );

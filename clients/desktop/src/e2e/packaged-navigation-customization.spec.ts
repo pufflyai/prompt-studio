@@ -29,21 +29,18 @@ const top = async (target: Locator) => (await target.boundingBox())!.y;
 const expectAbove = (page: Page, upper: string, lower: string) =>
   expect.poll(async () => (await top(row(page, upper))) < (await top(row(page, lower)))).toBe(true);
 
-// The Sidenav's hide/show submenu lists every hideable row.
+// The Sidenav's right-click menu lists every hideable row; choosing one flips its visibility.
 const toggleRow = async (page: Page, name: string) => {
   await row(page, "Sessions").click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).hover();
   await page
     .locator('[role="menuitem"][data-value^="node:"]')
     .filter({ has: page.getByText(name, { exact: true }) })
     .click();
   await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape");
 };
 
 const resetSidenav = async (page: Page) => {
   await row(page, "Sessions").click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();
 };
 
@@ -84,7 +81,7 @@ test("restores each project's navigation order, placement, and visibility after 
     await openPackagedProject(app.page, alpha);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
     await toggleRow(app.page, "Workspaces");
-    await expect(row(app.page, "Workspaces")).toHaveCount(0);
+    await expect(row(app.page, "Workspaces")).toBeVisible();
     await moveSearchBelowSessions(app.page);
 
     await openPackagedProject(app.page, beta);
@@ -97,11 +94,10 @@ test("restores each project's navigation order, placement, and visibility after 
     await openPackagedProject(app.page, beta);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
     await expect(row(app.page, "Search")).toHaveCount(0);
-    await expect(row(app.page, "Workspaces")).toBeVisible();
+    await expect(row(app.page, "Workspaces")).toHaveCount(0);
 
     await openPackagedProject(app.page, alpha);
-    await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
-    await expect(row(app.page, "Workspaces")).toHaveCount(0);
+    await expect(row(app.page, "Workspaces")).toBeVisible({ timeout: 15_000 });
     await expectAbove(app.page, "Sessions", "Search");
   } finally {
     await disposePackagedApp(app);
@@ -129,13 +125,13 @@ test("keeps a navigation reset after relaunch without changing another project",
     await toggleRow(app.page, "Workspaces");
     await moveSearchBelowSessions(app.page);
     await resetSidenav(app.page);
-    await expect(row(app.page, "Workspaces")).toBeVisible();
+    await expect(row(app.page, "Workspaces")).toHaveCount(0);
 
     app = await relaunch(app);
 
     await openPackagedProject(app.page, alpha);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
-    await expect(row(app.page, "Workspaces")).toBeVisible();
+    await expect(row(app.page, "Workspaces")).toHaveCount(0);
     await expectAbove(app.page, "Search", "Sessions");
 
     await openPackagedProject(app.page, beta);

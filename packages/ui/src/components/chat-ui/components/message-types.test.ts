@@ -28,17 +28,6 @@ const listUiSourceFiles = () => {
 };
 
 describe("chat message types", () => {
-  test("display normalization preserves messages that already contain visible parts", () => {
-    const completed: SessionMessage = { id: "completed", role: "assistant", parts: [{ type: "text", text: "Done" }] };
-    const streaming: SessionMessage = { id: "streaming", role: "assistant", parts: [{ type: "text", text: "First" }] };
-    const before = normalizeChatMessagesForDisplay([completed, streaming], { streaming: true });
-    const updated = { ...streaming, parts: [{ type: "text" as const, text: "Second" }] };
-    const after = normalizeChatMessagesForDisplay([completed, updated], { streaming: true });
-    expect(before[0]).toBe(completed);
-    expect(after[0]).toBe(before[0]);
-    expect(after[1]).toBe(updated);
-  });
-
   test("do not carry agent runtime contracts or node imports", async () => {
     const violations = await Promise.all(
       listUiSourceFiles().map(async (file) => {

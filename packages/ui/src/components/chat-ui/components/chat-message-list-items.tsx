@@ -1,4 +1,4 @@
-import { Box, Button, Flex } from "@chakra-ui/react";
+import { Button, Flex } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { ChatMessage } from "./ai-message";
 import { messageFadeInProps } from "./chat-message-animation";
@@ -28,21 +28,6 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
         ) : null}
       </ChatMessage.Content>
     </ChatMessage.Root>
-  );
-};
-
-export const StickyMessageResponse = (props: ChatMessageListResponseProps) => {
-  const { message, streaming, hideQuestionForms, animate, showAssistantActions } = props;
-  return (
-    <Box>
-      <ChatMessageListResponse
-        message={message}
-        streaming={streaming}
-        hideQuestionForms={hideQuestionForms}
-        animate={animate}
-        showAssistantActions={showAssistantActions}
-      />
-    </Box>
   );
 };
 

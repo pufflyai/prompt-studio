@@ -1,6 +1,5 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
 const items = Array.from({ length: 24 }, (_, index) => `Scrollable row ${index + 1}`);
@@ -96,38 +95,4 @@ export const LayeredRows: Story = {
       </Stack>
     </ScrollArea>
   ),
-};
-
-const GrowingNestedScrollAreas = () => {
-  const [rowCount, setRowCount] = useState(24);
-
-  return (
-    <Stack gap="sm">
-      <Button size="xs" onClick={() => setRowCount((count) => count + 24)}>
-        Add rows
-      </Button>
-      <ScrollArea h="14rem" contentProps={{ p: "sm" }}>
-        <Stack gap="sm">
-          <ScrollArea h="8rem" showHorizontalScrollbar>
-            <Stack minW="42rem" gap="0">
-              {Array.from({ length: rowCount }, (_, index) => (
-                <Text key={index} textStyle="paragraph/S/regular">
-                  Nested row {index + 1} with enough content to scroll in both directions.
-                </Text>
-              ))}
-            </Stack>
-          </ScrollArea>
-          {items.map((item) => (
-            <Text key={item} textStyle="paragraph/S/regular">
-              {item}
-            </Text>
-          ))}
-        </Stack>
-      </ScrollArea>
-    </Stack>
-  );
-};
-
-export const GrowingNested: Story = {
-  render: () => <GrowingNestedScrollAreas />,
 };

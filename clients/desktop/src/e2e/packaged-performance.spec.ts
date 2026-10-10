@@ -217,8 +217,6 @@ test("streams a long tool-heavy conversation within budget and shares the snapsh
     const launched = await launchProject("Streaming");
     app = launched.app;
     await setMonitoring(app.page, true);
-    // Save the setup trace before streaming: DOM snapshots add work to the renderer.
-    await app.finishTrace();
     const workbench = await openRendererSession(app.page);
     const session = await app.page.evaluate(async (projectId) => {
       const response = await fetch("/v1/sessions", {
@@ -239,13 +237,18 @@ test("streams a long tool-heavy conversation within budget and shares the snapsh
     await app.page.getByRole("button", { name: "Long replay", exact: true }).click();
     await expect(app.page.getByText(/^Step 1\./).first()).toBeVisible();
 
-    const status = async () => {
-      const response = await fetch(`${app!.runtime.origin}/v1/sessions/${session.id}`, {
-        headers: { authorization: `Bearer ${app!.runtime.token}` },
-      });
-      expect(response.ok).toBe(true);
-      return ((await response.json()) as { status: string }).status;
-    };
+    const status = () =>
+      app!.page.evaluate(
+        async (id) =>
+          (
+            (await (
+              await fetch(`/v1/sessions/${id}`, {
+                headers: { authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}` },
+              })
+            ).json()) as { status: string }
+          ).status,
+        session.id,
+      );
     const measured = await measureRenderers("streaming-replay", { workbench }, () =>
       expect.poll(status, { intervals: [250], timeout: 15_000 }).toBe("completed"),
     );

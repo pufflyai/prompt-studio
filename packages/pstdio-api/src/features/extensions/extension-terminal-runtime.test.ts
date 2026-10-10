@@ -51,26 +51,6 @@ const waitForInitialOutput = async (events: TerminalEvent[]) => {
   }
 };
 
-test("stops accepting terminal input and resize when shutdown begins", async () => {
-  const { logger } = createRecordingLogger();
-  const supervisor = createTerminalSupervisor({ logger });
-  const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
-  const drained = (async () => {
-    for await (const _event of handle.events()) void _event;
-  })();
-  try {
-    const stopped = handle.kill("SIGKILL");
-    expect(() => handle.write(line("echo late-input"))).not.toThrow();
-    expect(() => handle.resize(100, 30)).not.toThrow();
-    await stopped;
-    await drained;
-    expect(() => handle.write(line("echo late-input"))).not.toThrow();
-    expect(() => handle.resize(100, 30)).not.toThrow();
-  } finally {
-    await supervisor.dispose();
-  }
-});
-
 describe("terminal supervisor", () => {
   posixOnlyTest.each([
     ["/bin/sh", "-lc", "sleep 5"],

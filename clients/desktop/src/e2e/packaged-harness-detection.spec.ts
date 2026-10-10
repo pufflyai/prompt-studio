@@ -9,7 +9,6 @@ import {
   launchPackagedApp,
   type PackagedApp,
   runPackagedCli,
-  waitForExit,
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
@@ -100,10 +99,6 @@ for (const shell of environments) {
       await modelMenu.click();
       await app.page.getByRole("menuitem", { name: "Select harness", exact: true }).click();
       await test.info().attach("selectable-harnesses", { body: await app.page.screenshot(), contentType: "image/png" });
-      await app.finishTrace();
-      const closed = runPackagedCli(home, ["close"]);
-      await waitForExit(app.child);
-      expect((await closed).exitCode).toBe(0);
     } finally {
       await disposePackagedApp(app);
     }

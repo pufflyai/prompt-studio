@@ -213,7 +213,7 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
     const displayParts = (message.parts ?? []).filter(isDisplayRenderablePart);
     if (displayParts.length === 0) continue;
 
-    const displayMessage = displayParts.length === message.parts.length ? message : { ...message, parts: displayParts };
+    const displayMessage = { ...message, parts: displayParts };
 
     if (displayMessage.role === "user") {
       clearActivityBuffer();

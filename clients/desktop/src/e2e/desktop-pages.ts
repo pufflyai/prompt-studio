@@ -10,6 +10,6 @@ export const waitForLifecyclePage = async (context: BrowserContext) => {
 export const waitForWorkbenchPage = async (lifecyclePage: Page, origin: string) => {
   const context = lifecyclePage.context();
   const page = context.pages().find((candidate) => candidate !== lifecyclePage) ?? (await context.waitForEvent("page"));
-  await page.waitForURL((url) => url.origin === origin && url.pathname === "/", { waitUntil: "commit" });
+  await page.waitForURL(`${origin}/`, { waitUntil: "commit" });
   return page;
 };

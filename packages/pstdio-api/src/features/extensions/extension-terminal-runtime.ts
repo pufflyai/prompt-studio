@@ -155,18 +155,18 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       // the PTY foreground-group race at spawn — then track the live foreground.
       publishTitle(fallbackTitle);
       // Each probe is scheduled after the last one settles, so a slow probe never piles up.
-      let closed = false;
+      let exited = false;
       let titlePoll: ReturnType<typeof setTimeout> | undefined;
       const pollTitle = async () => {
         const title = (await readTerminalForeground(child.pid))?.name || fallbackTitle;
-        if (closed) return;
+        if (exited) return;
         publishTitle(title);
         titlePoll = setTimeout(pollTitle, TITLE_POLL_INTERVAL_MS);
       };
       titlePoll = setTimeout(pollTitle, TITLE_POLL_INTERVAL_MS);
 
       void child.exited.then((code) => {
-        closed = true;
+        exited = true;
         clearTimeout(titlePoll);
         sessions.delete(id);
         shell.dispose();
@@ -181,9 +181,6 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       // process can ignore the hangup and keep the group alive, so always sweep the group with
       // SIGKILL. Settling on exit or on the deadline keeps a closed tab from hanging its caller.
       const kill = async (signal: NodeJS.Signals = "SIGHUP") => {
-        // Stop input before signalling: Windows can close the PTY pipe before exit resolves.
-        closed = true;
-        clearTimeout(titlePoll);
         logger.info("terminal session kill", { id, signal });
         signalProcessTree(child, signal);
         const stopped = await exitedWithin(child.exited, KILL_ESCALATION_MS);
@@ -196,12 +193,10 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
       const handle: TerminalSessionHandle = {
         id,
         write: (data) => {
-          if (closed) return;
           shellState.onInput(data);
           terminal.write(data);
         },
         resize: (cols, rows) => {
-          if (closed) return;
           terminal.resize(cols, rows);
         },
         kill,
