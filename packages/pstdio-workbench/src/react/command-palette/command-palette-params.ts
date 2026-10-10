@@ -87,19 +87,30 @@ const dedupeOptions = (options: CommandParamDescriptor["options"]) => {
 };
 export const hasCommandParameters = (params: CommandParamSchema | undefined) =>
   listCommandParamEntries(params).length > 0;
-export const listCommandParamEntries = (params: CommandParamSchema | undefined): CommandParamEntry[] =>
-  Object.entries(params ?? {}).flatMap(([key, param]) =>
-    param.resolvedFrom === "resource"
-      ? []
-      : [
-          {
-            ...param,
-            options: dedupeOptions(param.options),
-            key,
-            label: param.label ?? humanize(key),
-          },
-        ],
+const commandParamEntries = (params: CommandParamSchema | undefined): CommandParamEntry[] =>
+  Object.entries(params ?? {}).map(([key, param]) => ({
+    ...param,
+    options: dedupeOptions(param.options),
+    key,
+    label: param.label ?? humanize(key),
+  }));
+export const listCommandParamEntries = (params: CommandParamSchema | undefined) =>
+  commandParamEntries(params).filter((entry) => entry.resolvedFrom !== "resource");
+export const resolveCommandResourceParams = (
+  params: CommandParamSchema | undefined,
+  baseArgs?: unknown,
+  context?: WorkbenchCommandExecutionContext,
+) => {
+  const base = isRecord(baseArgs) ? baseArgs : {};
+  return Object.fromEntries(
+    commandParamEntries(params)
+      .filter((entry) => entry.resolvedFrom === "resource")
+      .map((entry) => [
+        entry.key,
+        Object.hasOwn(base, entry.key) ? base[entry.key] : resourceContextValue(entry, context),
+      ]),
   );
+};
 export const buildCommandParamInitialValues = (
   params: CommandParamSchema | undefined,
   baseArgs?: unknown,

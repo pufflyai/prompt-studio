@@ -13,6 +13,7 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
+// Chat tables wrap by default, hide row numbers, and retain the wrapping control.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
@@ -45,6 +46,7 @@ import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
+import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -471,6 +473,7 @@ registerBoardPanningSmokeTests();
 registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
+registerResourceChoicesSmokeTests();
 // Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();
 

@@ -280,6 +280,11 @@ responses, and clears choices that are no longer available. Unknown sibling
 fields and dependency cycles produce extension diagnostics. Dependencies must
 refer to fields in the same input schema.
 
+A sibling with `resolvedFrom: "resource"` stays hidden in the dialog, but
+`params.valueOf` can still reference it. Choices and submission use the same
+value: an explicit action argument takes priority over the active resource.
+Opening the dialog for another resource loads choices for that resource.
+
 The dialog accepts only current choices unless `allowCustomValues: true` is
 set. This validation belongs to the dialog. The command runtime does not call
 option commands again. Commands must enforce their own business rules. CLI and

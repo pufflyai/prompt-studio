@@ -27,6 +27,34 @@ const metadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("buildWorkbenchExtensionMenuRegistrations", () => {
+  test("resolves option command references on menu action parameters", () => {
+    const result = buildWorkbenchExtensionMenuRegistrations({
+      metadata: {
+        ...metadata,
+        commands: [
+          {
+            ...metadata.commands[0],
+            params: {
+              instance: { type: "text", resolvedFrom: "resource" },
+              template: {
+                type: "select",
+                options: {
+                  command: { kind: "command", id: "templates" },
+                  valueField: "id",
+                  labelField: "name",
+                  params: { instance: { kind: "param-value", key: "instance" } },
+                },
+              },
+            },
+          },
+        ],
+      },
+      menuSlotsById: new Map([["note.headerPrimary", { menuPath: ["header"] }]]),
+    });
+    expect(result.registrations[0]?.command.params?.template.options).toMatchObject({
+      commandId: "lab.command.templates",
+    });
+  });
   test("returns registrations and unresolved contribution targets", () => {
     const result = buildWorkbenchExtensionMenuRegistrations({
       metadata,
