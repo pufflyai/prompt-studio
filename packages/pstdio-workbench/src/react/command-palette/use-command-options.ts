@@ -8,6 +8,7 @@ export const useCommandOptions = (
   values: Record<string, CommandParamValue>,
   execute: ExecuteOptionCommand | undefined,
   onChange: (key: string, value: CommandParamValue) => void,
+  resolved: Record<string, unknown> = {},
 ) => {
   const callbacks = useRef({ execute, onChange });
   callbacks.current = { execute, onChange };
@@ -19,6 +20,7 @@ export const useCommandOptions = (
         return callbacks.current.execute(id, args, signal);
       },
       (key, value) => callbacks.current.onChange(key, value),
+      resolved,
     ),
   );
   const states = useSyncExternalStore(resolver.subscribe, resolver.getSnapshot, resolver.getSnapshot);

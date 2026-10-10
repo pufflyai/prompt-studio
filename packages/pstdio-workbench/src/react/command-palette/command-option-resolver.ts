@@ -20,19 +20,24 @@ const valueRef = (value: unknown): value is { kind: "param-value"; key: string }
   value.kind === "param-value" &&
   "key" in value &&
   typeof value.key === "string";
-const argumentsFor = (source: CommandParamOptionSource, values: Values, schema?: CommandParamSchema) =>
+const argumentsFor = (
+  source: CommandParamOptionSource,
+  values: Values,
+  schema: CommandParamSchema,
+  resolved: Record<string, unknown>,
+) =>
   Object.fromEntries(
     Object.entries(source.params ?? {}).map(([key, value]) => {
       if (!valueRef(value)) return [key, value];
-      const descriptor = schema?.[value.key];
+      const descriptor = schema[value.key];
+      if (descriptor?.resolvedFrom === "resource") return [key, resolved[value.key]];
       const normalized = descriptor
         ? normalizeCommandParamValues({ [value.key]: { ...descriptor, required: false } }, values)[value.key]
         : values[value.key];
       return [key, normalized];
     }),
   );
-const queryKey = (source: CommandParamOptionSource, values: Values) =>
-  JSON.stringify([source, argumentsFor(source, values)]);
+
 const readOptions = (source: CommandParamOptionSource, result: unknown): CommandParamOption[] => {
   if (!Array.isArray(result)) throw new Error("The option command must return a list.");
   return result.map((row) => {
@@ -51,7 +56,18 @@ export function createCommandOptionResolver(
   schema: CommandParamSchema,
   execute: ExecuteOptionCommand,
   onChange: (key: string, value: CommandParamValue) => void,
+  resolved: Record<string, unknown> = {},
 ) {
+  const referencedValue = (key: string, values: Values) =>
+    schema[key]?.resolvedFrom === "resource" ? resolved[key] : values[key];
+  const queryKey = (source: CommandParamOptionSource, values: Values) =>
+    JSON.stringify([
+      source,
+      Object.entries(source.params ?? {}).map(([key, value]) => [
+        key,
+        valueRef(value) ? referencedValue(value.key, values) : value,
+      ]),
+    ]);
   let snapshot: Record<string, CommandOptionState> = {};
   let values: Values = {};
   let disposed = false;
@@ -85,7 +101,7 @@ export function createCommandOptionResolver(
     try {
       const options = readOptions(
         source,
-        await execute(source.commandId, argumentsFor(source, values, schema), controller.signal),
+        await execute(source.commandId, argumentsFor(source, values, schema, resolved), controller.signal),
       );
       if (disposed || requests.get(key) !== version) return;
       publish(key, { key: requestKey, status: "ready", options });

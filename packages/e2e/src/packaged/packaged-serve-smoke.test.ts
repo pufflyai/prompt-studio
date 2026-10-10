@@ -44,6 +44,7 @@ import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-n
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
+import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -464,6 +465,7 @@ registerBoardPanningSmokeTests();
 registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
+registerResourceChoicesSmokeTests();
 // Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();
 
