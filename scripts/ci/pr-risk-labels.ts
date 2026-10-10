@@ -64,7 +64,7 @@ const isVersionUpdate = (before: Record<string, unknown>, after: Record<string, 
 
 // The fixed release group versions SDK and extensions together. Only release
 // metadata is exempt; implementation and package entry/script changes stay blocked.
-const isReleaseMetadata = async (api: PolicyApi, pull: PullRequest) => {
+export const isReleaseMetadata = async (api: PolicyApi, pull: PullRequest) => {
   if (
     pull.user.login !== "github-actions[bot]" ||
     pull.base.ref !== "main" ||

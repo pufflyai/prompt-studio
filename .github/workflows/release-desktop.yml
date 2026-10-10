@@ -307,6 +307,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload signed Windows candidate for installation and update checks
+        if: matrix.platform == 'win32' && inputs.source_ref != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-signed-candidate
+          path: clients/desktop/out/make
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Remove macOS signing keychain
         if: always() && matrix.platform == 'darwin'
         shell: bash
@@ -314,46 +323,12 @@ jobs:
           KEYCHAIN_PATH: ${{ runner.temp }}/pstdio-desktop.keychain-db
         run: security delete-keychain "$KEYCHAIN_PATH" || true
 
-  publish:
+  release_set:
     needs: native
-    if: inputs.source_ref == ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.tag }}
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Download native artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: desktop-*
-          path: desktop-release
-
-      - name: Verify and flatten release set
-        shell: bash
-        run: |
-          set -euo pipefail
-          bun clients/desktop/scripts/verify-release-set.ts desktop-release
-          mkdir desktop-publish
-          find desktop-release -type f -exec cp '{}' desktop-publish/ \;
-          cd desktop-publish
-          for checksums in checksums-*.sha256; do sha256sum -c "$checksums"; done
-          cat checksums-*.sha256 | sort > "checksums-desktop-${{ inputs.version }}.sha256"
-
-      - name: Publish desktop release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(gh release view '${{ inputs.tag }}' --json isDraft -q .isDraft)" = "true"
-          gh release upload "${{ inputs.tag }}" desktop-publish/* --clobber
-          gh release edit "${{ inputs.tag }}" --draft=false
+    uses: ./.github/workflows/publish-desktop-release.yml
+    with:
+      version: ${{ inputs.version }}
+      tag: ${{ inputs.tag }}
+      source_ref: ${{ inputs.source_ref }}
