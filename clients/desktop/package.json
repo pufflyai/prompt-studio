@@ -1,7 +1,7 @@
 {
   "name": "@pstdio/desktop",
   "productName": "Prompt Studio",
-  "version": "0.41.0",
+  "version": "0.42.0",
   "private": true,
   "description": "The local-first Prompt Studio desktop application.",
   "author": "Prompt Studio <support@prompt.studio>",
@@ -25,6 +25,7 @@
     "build-storybook": "storybook build",
     "test": "bun test src --silent --path-ignore-patterns='**/e2e/**'",
     "test:electron": "bun run build && playwright test --config playwright.config.ts",
+    "test:benchmark": "playwright test --config playwright.benchmark.config.ts",
     "test:packaged": "playwright test --config playwright.packaged.config.ts",
     "verify:fuses": "bun scripts/verify-fuses.ts"
   },

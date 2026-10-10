@@ -60,7 +60,7 @@ const createOpencodeBinary = () => {
     [
       "#!/bin/sh",
       'if [ "$1" = "--version" ]; then',
-      '  echo "opencode 0.0.0"',
+      '  echo "opencode 1.0.175"',
       "  exit 0",
       "fi",
       'if [ "$1" = "models" ]; then',

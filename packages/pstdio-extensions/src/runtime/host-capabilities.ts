@@ -22,6 +22,7 @@ export const dashboardExtensionHostCapabilities = {
     "navigation-item.v1": { version: 1, since: "0.26.0" },
     "navigation-tree.v1": { version: 1, since: "0.28.0" },
     "status-bar-item.v1": { version: 1, since: "0.26.0" },
+    /** @deprecated Use view.kanban.v1 enum attributes, command.v1, and settings.panel.v1. */
     "status.v1": { version: 1, since: "0.26.0" },
     "settings.section.v1": { version: 1, since: "0.25.2" },
     "settings.panel.v1": { version: 1, since: "0.26.0" },

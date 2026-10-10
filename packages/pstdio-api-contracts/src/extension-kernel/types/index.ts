@@ -21,6 +21,7 @@ export type * from "./params";
 export type * from "./renderer-base";
 export type * from "./resource-binding";
 export type * from "./resources";
+export type * from "./saved-views";
 export type * from "./slots";
 export type * from "./statuses";
 export type * from "./tree-renderer";

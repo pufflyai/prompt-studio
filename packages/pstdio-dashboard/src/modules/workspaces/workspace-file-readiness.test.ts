@@ -79,6 +79,19 @@ const createFixture = () => {
 };
 
 describe("workspace file readiness", () => {
+  test("does not request files for a ready workspace without file support", async () => {
+    const { workbench, load, row, writer } = createFixture();
+    writer.upsert({ ...row, execution_kind: "remote", root_path: null, provider_capabilities_json: { files: "none" } });
+    expect(await load()).toMatchObject([{ nodes: [], emptyState: { title: "Files unavailable" } }]);
+    const resource = workbench.getPrimaryResource()!;
+    const file = await fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(
+      { ...resource, metadata: { ...resource.metadata, workspaceFilePath: "notes.md" } },
+      new AbortController().signal,
+    );
+    expect(file).toMatchObject({ editable: false, emptyState: { title: "Files unavailable" } });
+    expect(requests).toEqual([]);
+  });
+
   test.each([
     "unknown",
     "provisioning",

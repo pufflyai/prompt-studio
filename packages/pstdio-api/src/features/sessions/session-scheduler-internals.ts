@@ -97,7 +97,7 @@ export const insertFollowUpEntry = async (
     request_kind: "follow_up",
     question_response_json: input.questionResponse ?? null,
     attachments_json: input.attachmentRefs,
-    params_json: input.params ?? input.session.params_json ?? {},
+    params_json: input.params ?? {},
     model: input.model ?? null,
   };
 
@@ -154,6 +154,11 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
   const fail = (error: unknown, entry: ActiveSession | null) =>
     logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition, entry });
 
+  const emitDispatchHook = () => {
+    if (session.last_request_started === null) deps.sessionService.emitStartedHook?.(dispatchSession);
+    else deps.sessionService.emitResumedHook?.(dispatchSession);
+  };
+
   return async () => {
     const launch = async (starting: Promise<unknown>) => {
       const owner = deps.sessionService.store.get(session.id);
@@ -196,7 +201,7 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
           deps,
         ),
       );
-      deps.sessionService.emitResumedHook?.(dispatchSession);
+      emitDispatchHook();
       return;
     }
 
@@ -217,6 +222,6 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
         deps,
       ),
     );
-    deps.sessionService.emitResumedHook?.(dispatchSession);
+    emitDispatchHook();
   };
 };

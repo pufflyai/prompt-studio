@@ -49,6 +49,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
     label: agent.name,
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
+    description: agent.availability.reason,
   }));
   const selectedAgentInfo = agents.find((agent) => agent.id === selectedAgent);
   const defaultAgent = project?.default_agent_id;

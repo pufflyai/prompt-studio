@@ -1,11 +1,33 @@
 name: Verify Windows installation and update
 
 on:
+  workflow_call:
+    inputs:
+      candidate-run-id:
+        description: Run containing the candidate (defaults to this run)
+        required: false
+        type: string
+      candidate-ref:
+        description: Candidate commit with the installation checks and matching package versions
+        required: true
+        type: string
+      previous-tag:
+        description: Older pstdio release tag to build as the signed baseline
+        required: true
+        type: string
+      baseline-run-id:
+        description: Run containing an existing signed baseline
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       candidate-run-id:
-        description: Successful Verify Windows signing run containing the newer candidate
+        description: Successful signing or readiness run containing the newer candidate
         required: true
+        type: string
+      candidate-ref:
+        description: Candidate commit with matching package versions (defaults to the workflow revision)
+        required: false
         type: string
       previous-tag:
         description: Existing older pstdio release tag to build as the signed baseline
@@ -76,6 +98,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.candidate-ref || github.sha }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -94,7 +118,7 @@ jobs:
         with:
           name: windows-signed-candidate
           path: windows-candidate
-          run-id: ${{ inputs.candidate-run-id }}
+          run-id: ${{ inputs.candidate-run-id || github.run_id }}
           github-token: ${{ github.token }}
       - name: Verify installed application and signed Squirrel update
         run: bun clients/desktop/scripts/verify-windows-installation.ts windows-baseline windows-candidate

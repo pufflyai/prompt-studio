@@ -2,6 +2,7 @@ import { Button, Dialog, HStack, Text } from "@chakra-ui/react";
 import type { CreateWorkspaceCommandParams } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { executeExtensionCommandValue } from "@/shared/extensions/api";
 import { createDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 import { workspaceProvidersQueryOptions } from "@/shared/workspaces/workspace-providers";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
@@ -44,6 +45,10 @@ export const CreateWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput 
         <WorkspaceProviderForm
           providers={query.data ?? []}
           busy={mutation.isPending}
+          executeOptionCommand={(commandId, params, signal) => {
+            if (!projectId) return Promise.reject(new Error("Workspace choices need a project."));
+            return executeExtensionCommandValue(projectId, commandId, params, signal);
+          }}
           onCancel={close}
           onSubmit={async (providerId, params) => {
             if (!projectId) return;

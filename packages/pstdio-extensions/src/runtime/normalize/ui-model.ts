@@ -22,6 +22,7 @@ import type {
   RuntimeStatusRecord,
   RuntimeViewRecord,
 } from "../../types/runtime";
+import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator, RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
@@ -220,6 +221,16 @@ const registerStatuses = (
     } as RuntimeStatusRecord;
     index.statusIds.set(record.id, record);
     runtime.statuses.push(record);
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "deprecated_status_contribution",
+        severity: "warning",
+        message: `Contribution "${record.id}" uses deprecated status.v1. Use extension-owned records and commands, a settings.panel.v1 editor, and query-owned enum attributes with boardColumnConfigs. The legacy provider remains supported until the shared breaking release.`,
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+        metadata: { contributionId: record.id, capability: "status.v1" },
+      }),
+    );
   }
 };
 

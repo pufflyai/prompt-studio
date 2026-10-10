@@ -14,9 +14,12 @@ const loadRuntime = async (paths: string[]) => {
   return normalizeExtensionSources(loaded.sources, loaded.diagnostics);
 };
 describe("shipped extension composition", () => {
-  test("normalizes the Planner and Extension Lab with no diagnostics", async () => {
+  test("normalizes Planner and Extension Lab with only legacy status warnings", async () => {
     const runtime = await loadRuntime([plannerPath, labPath, fixturePath]);
-    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.diagnostics.map(({ code, severity, extensionId }) => ({ code, severity, extensionId }))).toEqual([
+      { code: "deprecated_status_contribution", severity: "warning", extensionId: "pstdio.pstdio-planner" },
+      { code: "deprecated_status_contribution", severity: "warning", extensionId: "pstdio.workbench-fixture" },
+    ]);
     expect(runtime.resourceKinds.map((kind) => [kind.localId, kind.extensionId])).toEqual([
       ["ticket", "pstdio.pstdio-planner"],
       ["scribble.document", "pstdio.extension-lab"],
@@ -57,7 +60,13 @@ describe("shipped extension composition", () => {
   });
   test("normalizes host fixtures without Planner or missing contribution diagnostics", async () => {
     const runtime = await loadRuntime([fixturePath]);
-    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "deprecated_status_contribution",
+        severity: "warning",
+        extensionId: "pstdio.workbench-fixture",
+      }),
+    ]);
     const artifactSlot = runtime.pages
       .find((page) => page.localId === "lab-mode")
       ?.contribution.slots.find((slot) => slot.id === "artifact");

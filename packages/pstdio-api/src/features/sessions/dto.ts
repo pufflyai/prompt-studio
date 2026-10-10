@@ -13,8 +13,8 @@ export { followUpResponseSchema, sessionConversationResponseSchema };
 
 export const createSessionBodySchema = createSessionInputSchema
   .strict()
-  .refine((data) => Boolean(data.prompt) !== Boolean(data.operation), {
-    message: "Provide either a prompt or a native operation.",
+  .refine((data) => !data.operation || !data.prompt, {
+    message: "A prompt and a native operation cannot be combined.",
   })
   .refine((data) => !data.operation || !data.attachments?.length, {
     message: "Native operations do not accept attachments.",

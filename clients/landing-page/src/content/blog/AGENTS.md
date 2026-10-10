@@ -19,8 +19,8 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 - Release titles contain only the product name and version: `Prompt Studio 0.41`. Do not add a subtitle, colon, tagline, or feature summary. Use the description and body for those details.
 - Check published GitHub releases, excluding drafts. Read the target release's core, SDK, UI, workbench, and relevant extension changelogs.
 - Use the release's actual publication timestamp, not the date its changelog was prepared. Preserve an existing publication date when correcting or illustrating a post.
-- If the release is pending, label the post as a preview. Use the preview's publication date and links to pending changesets at a fixed commit. Never invent a release date or claim pending work has shipped.
-- Once the release ships, replace preview wording and sources with the release notes and changelogs at its tag. If versioned changelogs have landed before the GitHub release, link their fixed commit and preserve the post's publication date; do not invent a GitHub publication timestamp.
+- Prepare release posts in their final release voice. Keep them unpublished until the release ships; do not add preview or awaiting-publication wording to the article.
+- Once the release ships, update sources to the release notes and changelogs at its tag. If versioned changelogs have landed before the GitHub release, link their fixed commit; do not invent a GitHub publication timestamp.
 - Include `title`, a short `description`, an unquoted `published` date or UTC timestamp, `author: aurelien-franky`, one supported `category`, and paired `image.light` and `image.dark` paths. Release posts use `category: release`.
 - Do not store reading time. Do not duplicate the shared alpha notice.
 - `AGENTS.md` is contributor guidance, not a post. Keep it excluded from the blog collection loader.
@@ -28,9 +28,9 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 ## Unpublished drafts
 
 - Save unpublished posts in `drafts/<slug>.md` under this folder. The blog loader reads only top-level post files, so drafts have no website page, document JSON, index entry, sidebar entry, search result, or sitemap entry. Never put drafts in `public/` or add them to the page catalog.
-- For a pending release, label the body as a draft and describe planned changes without claiming they have shipped. Link to pending changesets and relevant source at a fixed commit.
+- Write the body for its publication after release. The draft folder controls publication status; readers do not need draft labels in the article. Link to relevant source at a fixed commit until the release tag exists.
 - Drafts may omit `published` and banner paths until publication. Do not invent a release date or reuse another post's banner.
-- To publish, verify the release and final scope, add the actual publication timestamp and distinct paired banners, replace draft wording and pending sources, and move the file to this folder's top level.
+- To publish, verify the release and final scope, add the actual publication timestamp and distinct paired banners, update release sources, and move the file to this folder's top level.
 
 ## Banners and recordings
 
@@ -38,6 +38,9 @@ Read the repository `MISSION.md`, the landing-page `AGENTS.md`, and the blog and
 - Keep the PNGs and editable JSON recipes together under `blog/images/`. `design/art/` is an ignored draft folder; do not rely on untracked files in a production build.
 - Record real UI interactions using Playwright against `bun run dev:playwright` and its printed Docker dashboard URL. Use a disposable project and sample content. Stop it with `bun run dev:playwright:down` afterward.
 - Record one workflow per clip. Match sample data, actions, framing, and playback speed in light and dark variants. Trim setup, idle time, typing, and loading pauses while leaving time to read results.
+- Show a visible cursor in every recording. Move it to the target before clicking, pause briefly so readers can see the target, and show click feedback. Keep the cursor visible during drag-and-drop and leave time to read the result.
+- Use examples that match each tool's purpose. Project Search finds content within the project; do not present it as online research.
+- Keep unrelated floating panels and chat bubble buttons out of recordings. Use normal workbench controls to close or reposition them before recording.
 - Keep shareable source recordings beside the GIFs in `documentation/images/`, with descriptive names prefixed by the post slug. Keep temporary browser state, tokens, logs, and capture scripts outside published assets.
 - Do not add "Light video" or "Dark video" links, or other links to the source recordings, to blog posts. Keep recordings as source assets; readers use the embedded GIF for their active theme.
 - Export matching `-light.gif` and `-dark.gif` files. Show only the active theme's version using the site's themed-media support. Give each workflow useful alt text and a short caption.

@@ -244,3 +244,27 @@ it("keeps the server's command rejection code", async () => {
   server.send("connected", { connection_id: "c1" });
   await expect(pending).rejects.toMatchObject({ code: "command_not_streamable" });
 });
+
+it("session list sends time and anchor filters through the public client", async () => {
+  let requestUrl = "";
+  const client = createClient({
+    baseUrl: "http://localhost",
+    fetch: (async (url) => {
+      requestUrl = String(url);
+      return Response.json([]);
+    }) as typeof fetch,
+  });
+  await client.sessions.list("project", {
+    createdFrom: "2026-10-01T00:00:00Z",
+    createdTo: "2026-10-02T00:00:00Z",
+    updatedFrom: "2026-10-01T01:00:00Z",
+    anchorType: "ticket",
+    anchorId: "T",
+  });
+  const query = new URL(requestUrl).searchParams;
+  expect(query.get("created_from")).toBe("2026-10-01T00:00:00Z");
+  expect(query.get("created_to")).toBe("2026-10-02T00:00:00Z");
+  expect(query.get("updated_from")).toBe("2026-10-01T01:00:00Z");
+  expect(query.get("anchor_type")).toBe("ticket");
+  expect(query.get("anchor_id")).toBe("T");
+});

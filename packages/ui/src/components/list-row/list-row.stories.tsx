@@ -152,7 +152,7 @@ export const Decorations: Story = {
             ...baseItem,
             label: "With Kbd tooltip",
             tooltip: (
-              <HStack gap="2xs">
+              <HStack gap="shortcut-key-gap">
                 <Text textStyle="label/XS">Press</Text>
                 <Kbd size="sm">⌘</Kbd>
                 <Kbd size="sm">O</Kbd>
@@ -168,7 +168,7 @@ export const Decorations: Story = {
             ...baseItem,
             label: "Open palette",
             endContent: (
-              <HStack gap="2xs">
+              <HStack gap="shortcut-key-gap">
                 <Kbd size="sm">⌘</Kbd>
                 <Kbd size="sm">K</Kbd>
               </HStack>
@@ -273,7 +273,7 @@ export const Decorations: Story = {
               "An extremely long ticket title that competes with end content for horizontal space and must truncate gracefully",
             description: "Plus a description that is also quite long and needs to share the row with a Kbd shortcut.",
             endContent: (
-              <HStack gap="2xs">
+              <HStack gap="shortcut-key-gap">
                 <Kbd size="sm">⌘</Kbd>
                 <Kbd size="sm">↵</Kbd>
               </HStack>
@@ -447,7 +447,7 @@ const dropdownItems: (ListRowItem & { id: string })[] = [
     label: "Open",
     icon: <FileText size={14} />,
     endContent: (
-      <HStack gap="2xs">
+      <HStack gap="shortcut-key-gap">
         <Kbd size="sm">⌘</Kbd>
         <Kbd size="sm">O</Kbd>
       </HStack>
@@ -458,7 +458,7 @@ const dropdownItems: (ListRowItem & { id: string })[] = [
     label: "Duplicate",
     icon: <Copy size={14} />,
     endContent: (
-      <HStack gap="2xs">
+      <HStack gap="shortcut-key-gap">
         <Kbd size="sm">⌘</Kbd>
         <Kbd size="sm">D</Kbd>
       </HStack>

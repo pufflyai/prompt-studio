@@ -12,6 +12,7 @@ import {
   listCommandParamEntries,
   mergeCommandParamArgs,
   normalizeCommandParamValues,
+  resolveCommandResourceParams,
 } from "./command-palette-params";
 import { CommandParamField, type CommandParamFieldRenderer } from "./command-param-field";
 import { useCommandOptions } from "./use-command-options";
@@ -68,8 +69,12 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
   const [values, setValues] = useState<Record<string, CommandParamValue>>(() =>
     buildCommandParamInitialValues(request.record.command.params, request.args, request.context),
   );
+  const [resolved] = useState(() =>
+    resolveCommandResourceParams(request.record.command.params, request.args, request.context),
+  );
   const [error, setError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
+  const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string | undefined>>({});
   const entries = listCommandParamEntries(request?.record.command.params);
 
   const close = () => {
@@ -81,19 +86,28 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
     setValues((current) => ({ ...current, [key]: value }));
   };
 
-  const options = useCommandOptions(request.record.command.params ?? {}, values, executeOptionCommand, setValue);
+  const options = useCommandOptions(
+    request.record.command.params ?? {},
+    values,
+    executeOptionCommand,
+    setValue,
+    resolved,
+  );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const run = async () => {
     if (!request || submitting) return;
     const invalid = options.validate(values);
+    for (const [key, error] of Object.entries(customFieldErrors)) {
+      if (error) invalid[key] = error;
+    }
     setFieldErrors(invalid);
     if (Object.keys(invalid).length > 0) return;
     setSubmitting(true);
     setError(undefined);
     try {
       const params = normalizeCommandParamValues(request.record.command.params, values);
-      const args = mergeCommandParamArgs(request.args, params, request.record.command.params);
+      const args = mergeCommandParamArgs(request.args, { ...resolved, ...params }, request.record.command.params);
       const preparedArgs = prepareArgs
         ? await prepareArgs({
             commandId: request.record.command.id,
@@ -125,6 +139,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
 
   const isValid =
     Object.keys(options.validate(values)).length === 0 &&
+    !Object.values(customFieldErrors).some(Boolean) &&
     entries.every((entry) => !entry.required || isFilled(entry, values[entry.key]));
 
   return (
@@ -168,6 +183,12 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
                     value: values[entry.key],
                     disabled: submitting || Boolean(dynamic && state?.status !== "ready"),
                     onChange: (value: CommandParamValue) => setValue(entry.key, value),
+                    onUpdateValue: (update: (current: CommandParamValue) => CommandParamValue) =>
+                      setValues((current) => ({ ...current, [entry.key]: update(current[entry.key]) })),
+                    onValidationChange: (error: string | undefined) =>
+                      setCustomFieldErrors((current) =>
+                        current[entry.key] === error ? current : { ...current, [entry.key]: error },
+                      ),
                   };
                   const custom = renderParamField?.({ ...fieldProps, context: request?.context });
                   return (

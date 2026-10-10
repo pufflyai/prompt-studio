@@ -101,3 +101,57 @@ test("keeps rows and query metadata from the latest overlapping request", async 
   expect(renderer.getBoardColumnConfig?.("review-only").canCreate).toBe(true);
   expect(renderer.getBoardColumnConfig?.("workflow-only").canCreate).toBeUndefined();
 });
+
+test("refreshes query-owned enum choices and column rules without a status provider", async () => {
+  const workbench = createWorkbench();
+  let options = [{ value: "todo", label: "Todo", color: "blue", icon: "Circle" }];
+  const record = {
+    id: "categories",
+    extensionId: "example.categories",
+    title: "Categories",
+    queryHandlerId: "categories.query",
+    attributes: [],
+  } satisfies WorkbenchExtensionKanbanRendererRecord;
+  registerWorkbenchExtensionKanbanRenderers(
+    {
+      projectId: "project-1",
+      workbench,
+      executeCommand: async () => ({
+        rows: [{ id: "task", title: "Task", attributes: { workflow: "todo" } }],
+        attributes: [
+          { id: "workflow", label: "Workflow", type: { kind: "enum", options }, filterable: true, groupable: true },
+        ],
+        boardColumnConfigs: {
+          todo: {
+            color: options[0]!.color,
+            canDragIn: false,
+            canDragOut: true,
+            canCreate: true,
+            actions: [{ id: "archive", label: "Archive" }],
+          },
+        },
+      }),
+    },
+    [record],
+  );
+  const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("categories")!;
+  if (!("getSnapshot" in renderer.attributes)) throw new Error("Expected live attributes");
+  let notifications = 0;
+  const dispose = renderer.attributes.subscribe(() => {
+    notifications += 1;
+  });
+  await renderer.executeQuery(queryState, new AbortController().signal);
+  expect(renderer.attributes.getSnapshot()).toMatchObject([{ type: { kind: "enum", options } }]);
+  options = [{ value: "todo", label: "Ready", color: "purple", icon: "Check" }];
+  await renderer.executeQuery(queryState, new AbortController().signal);
+  expect(renderer.attributes.getSnapshot()).toMatchObject([{ type: { kind: "enum", options } }]);
+  expect(notifications).toBe(2);
+  expect(renderer.getBoardColumnConfig?.("todo")).toMatchObject({
+    color: "purple",
+    canDragIn: false,
+    canDragOut: true,
+    canCreate: true,
+    actions: [{ id: "archive", label: "Archive" }],
+  });
+  dispose();
+});

@@ -15,7 +15,7 @@ import { resolveCreateWorkspace } from "./resolve-create-workspace";
 export const createSessionRoute = createRoute({
   method: "post",
   path: "/sessions",
-  description: "Create a new session and start the agent.",
+  description: "Create a session. Start the agent when a prompt or attachments are provided.",
   tags: ["Sessions"],
   request: {
     query: z.object({}).strict(),
@@ -137,7 +137,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
         input.project_id,
         input.attachments,
         async (attachments: HarnessAttachment[]) =>
-          scheduler.createAndStartSession({
+          scheduler.createSession({
             projectId: input.project_id,
             title: input.title,
             agentId,
@@ -149,7 +149,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
             originalSessionId: input.original_session_id,
             cwd: cwd ?? undefined,
             anchors: input.anchors,
-            onBeforeStartedHook: onCreated,
+            onCreated: onCreated,
           }),
       );
       return c.json(session, 201);

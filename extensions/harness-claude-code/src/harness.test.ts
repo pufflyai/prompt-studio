@@ -39,7 +39,7 @@ const ctx: HarnessContext = {
     },
   },
   process: {
-    run: async () => ({ exitCode: 0, stdout: "1.0.0", stderr: "" }),
+    run: async () => ({ exitCode: 0, stdout: "2.1.295 (Claude Code)", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     spawnDetached: async () => ({}),
   },
@@ -148,7 +148,7 @@ describe("claude-code harness detection", () => {
 
   test("reports availability with the CLI version", async () => {
     const harness = createClaudeCodeHarness();
-    expect(await harness.detect!(ctx)).toEqual({ available: true, version: "1.0.0" });
+    expect(await harness.detect!(ctx)).toEqual({ available: true, version: "2.1.295 (Claude Code)" });
   });
 
   test("lists no models when the CLI is missing", async () => {

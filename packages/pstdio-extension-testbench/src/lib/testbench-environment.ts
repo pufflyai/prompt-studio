@@ -157,6 +157,7 @@ export const createBenchEnvironment = (
       writeText: async () => {},
     },
     sessions: {
+      query: async () => ({ items: [], nextCursor: null }),
       addAnchors: async () => {},
       removeAnchors: async () => {},
       get: async () => null,

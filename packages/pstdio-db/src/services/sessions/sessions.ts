@@ -3,6 +3,7 @@ import type { ResourceAnchor } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { createLegacyAnchorMutations, sessionColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
+import { createSessionQuery } from "./session-query";
 import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
 import {
   cancelQueued,
@@ -71,6 +72,7 @@ type UpdateInput = Partial<
     | "last_request_ended"
     | "session_file_id"
     | "cwd"
+    | "usage_json"
     | "params_json"
   >
 >;
@@ -86,12 +88,13 @@ const buildRecord = (input: CreateInput) => {
     title: input.title,
     status: input.status ?? "in_progress",
     archived: false,
-    last_request_started: input.status === "queued" ? null : timestamp,
+    last_request_started: input.status === "completed" || input.status === "queued" ? null : timestamp,
     last_request_ended: null,
     agent: input.agent,
     last_selected_model: input.last_selected_model ?? null,
     agent_session_id: null,
     session_file_id: null,
+    usage_json: null,
     original_session_id: input.original_session_id ?? null,
     cwd: input.cwd ?? null,
     params_json: input.params_json ?? null,
@@ -305,6 +308,7 @@ export const createSessionsDBService = (db: DbClient) => {
     requeueAfterTerminal: (id: string) => requeueAfterTerminal(db, id),
     cancelQueued: (id: string) => cancelQueued(db, id),
     get,
+    query: createSessionQuery(db),
     list,
     update,
     updateStatus,

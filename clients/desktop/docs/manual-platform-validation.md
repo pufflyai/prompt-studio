@@ -85,7 +85,7 @@ For the background-runtime check, use the CLI bundled with this exact desktop bu
 
 Run that executable with `--version`, then with `serve` while the desktop is open. Quit the desktop, run it with `projects list`, and confirm the same project is still available. Reopen the desktop, then run it with `close` to stop the runtime. Startup diagnostics include `desktop-runtime.log` beside `runtime.json` in the Prompt Studio home; each new runtime launch replaces that file.
 
-Remote desktop video latency is not a startup measurement. Use the native Playwright `packaged-release-readiness.json` annotations for cold workbench, startup-window, warm attachment, and recovery timing.
+Remote desktop video latency is not a startup measurement. Use the `benchmark-*.json` records in the native Playwright `packaged-benchmarks.json` report for cold workbench, startup-window, warm attachment, and recovery timing.
 
 ## Test the updater
 

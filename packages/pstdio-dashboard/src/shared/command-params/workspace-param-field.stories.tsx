@@ -77,6 +77,7 @@ const WorkspaceParamPreview = (props: WorkspaceParamPreviewProps) => {
                   value={value}
                   disabled={false}
                   onChange={setValue}
+                  onUpdateValue={setValue}
                 />
                 <Text data-testid="workspace-param-value" textStyle="paragraph/XS/regular" color="fg.muted">
                   {String(value)}

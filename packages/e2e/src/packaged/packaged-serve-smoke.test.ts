@@ -13,17 +13,20 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
+// Chat tables wrap by default, hide row numbers, and retain the wrapping control.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
-import { expectPackagedConnectionStatus } from "./packaged-connection-status-smoke";
+import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
+// Includes legacy status provider loading and its migration warning.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -42,14 +45,17 @@ import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-n
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
+import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
+import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
 const BUILD_TIMEOUT = 180_000;
@@ -62,6 +68,10 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerExtensionInstallSmokeTests();
+registerExtensionViewsSmokeTests();
+registerConnectionStatusSmokeTests();
+
+// extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
 
 test("includes extension development, smoke test, browser setup and update commands", () => {
   const installBrowser = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser", "--help"], {
@@ -81,7 +91,7 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "serves the dashboard and API from the same origin and hands off composer drafts immediately",
+  "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
@@ -114,7 +124,6 @@ test(
       });
       expect(renameRes.status).toBe(400);
       await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
-      await expectPackagedConnectionStatus(started.baseUrl, runtimeAuthorization(started.descriptor));
     } finally {
       if (child) {
         await stopProcess(child);
@@ -255,7 +264,7 @@ test(
 );
 
 test(
-  "loads a default extension that imports an on-disk node_modules dependency",
+  "loads default extension dependencies, native actions and command-backed workspace choices",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
@@ -458,5 +467,10 @@ registerBoardPanningSmokeTests();
 registerResourceLinksSmokeTests();
 
 registerCommandStreamSmokeTests();
+registerResourceChoicesSmokeTests();
 // Includes edit recovery after dispatch with draft, model, parameter, and file ownership checks.
 registerQueuedRequestSmokeTests();
+
+registerSessionQuerySmokeTests();
+
+registerWorkspaceCapabilitiesSmokeTests();

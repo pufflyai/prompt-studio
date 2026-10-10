@@ -4,7 +4,6 @@ import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
 import { allowPageClose } from "./lifecycle-actions";
 import {
-  attachStartupTimings,
   createPackagedHome,
   desktopVersion,
   disposePackagedApp,
@@ -17,74 +16,60 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
-import { waitForVisibleElement } from "./visible-element-timing";
 
-// Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon,
-// and the first launch of a freshly signed app waits for macOS launch checks.
-const isIntelMac = process.platform === "darwin" && process.arch === "x64";
-const coldStartBudgetMs = isIntelMac ? 20_000 : 8_000;
-const macStartupWindowBudgetMs = isIntelMac ? 10_000 : 1_500;
-const startupWindowBudgetMs = process.platform === "darwin" ? macStartupWindowBudgetMs : 1_000;
+// Startup, warm attach, and recovery timings are benchmarks in packaged-launch.bench.ts.
+test("starts without editors and serves both authenticated transport paths", { tag: "@essential" }, async ({
+  browserName: _browserName,
+}) => {
+  const home = createPackagedHome();
+  let app: PackagedApp | null = null;
+  try {
+    app = await launchPackagedApp(home);
+    const startupEditors = await app.page.evaluate(() =>
+      performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
+    );
+    expect(startupEditors).toEqual([]);
+    expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
+    expect(app.runtime.ownerType).toBe("desktop");
 
-test(
-  "proves cold packaged startup and both authenticated transport paths",
-  { tag: "@essential" },
-  async ({ browserName: _browserName }, testInfo) => {
-    const home = createPackagedHome();
-    let app: PackagedApp | null = null;
-    try {
-      app = await launchPackagedApp(home);
-      testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
-      const startupWindowInMs = await attachStartupTimings(app);
-      testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
-      expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
-      expect(app.readyInMs).toBeLessThan(coldStartBudgetMs);
-      const startupEditors = await app.page.evaluate(() =>
-        performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
-      );
-      expect(startupEditors).toEqual([]);
-      expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
-      expect(app.runtime.ownerType).toBe("desktop");
+    expect((await fetch(`${app.runtime.origin}/runtime/ready`)).status).toBe(401);
+    expect(
+      (
+        await fetch(`${app.runtime.origin}/v1/projects`, {
+          headers: { authorization: `Bearer ${app.runtime.token}`, origin: "https://example.invalid" },
+        })
+      ).status,
+    ).toBe(403);
 
-      expect((await fetch(`${app.runtime.origin}/runtime/ready`)).status).toBe(401);
-      expect(
-        (
-          await fetch(`${app.runtime.origin}/v1/projects`, {
-            headers: { authorization: `Bearer ${app.runtime.token}`, origin: "https://example.invalid" },
-          })
-        ).status,
-      ).toBe(403);
+    await createPackagedProject(app, "Packaged transport project");
+    expect(await app.page.evaluate(() => document.cookie)).toBe("");
+    expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
+    expect(app.page.url().includes(app.runtime.token)).toBe(false);
+    expect(
+      await app.page.evaluate(() => {
+        const encodedConfig = document.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
+        return encodedConfig ? (JSON.parse(decodeURIComponent(encodedConfig)) as { version?: string }).version : null;
+      }),
+    ).toBe(desktopVersion);
 
-      await createPackagedProject(app, "Packaged transport project");
-      expect(await app.page.evaluate(() => document.cookie)).toBe("");
-      expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
-      expect(app.page.url().includes(app.runtime.token)).toBe(false);
-      expect(
-        await app.page.evaluate(() => {
-          const encodedConfig = document.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
-          return encodedConfig ? (JSON.parse(decodeURIComponent(encodedConfig)) as { version?: string }).version : null;
-        }),
-      ).toBe(desktopVersion);
+    const list = await runPackagedCli(home, ["projects", "list"]);
+    expect(list.exitCode).toBe(0);
+    expect(list.stdout).toContain("Packaged transport project");
 
-      const list = await runPackagedCli(home, ["projects", "list"]);
-      expect(list.exitCode).toBe(0);
-      expect(list.stdout).toContain("Packaged transport project");
-
-      await app.finishTrace();
-      const close = runPackagedCli(home, ["close"]);
-      await waitForExit(app.child);
-      expect(await close).toMatchObject({ exitCode: 0, stdout: expect.stringContaining("Runtime stopped.") });
-      expect(existsSync(join(home, "runtime.json"))).toBe(false);
-    } finally {
-      await disposePackagedApp(app);
-      await removePackagedHome(home);
-    }
-  },
-);
+    await app.finishTrace();
+    const close = runPackagedCli(home, ["close"]);
+    await waitForExit(app.child);
+    expect(await close).toMatchObject({ exitCode: 0, stdout: expect.stringContaining("Runtime stopped.") });
+    expect(existsSync(join(home, "runtime.json"))).toBe(false);
+  } finally {
+    await disposePackagedApp(app);
+    await removePackagedHome(home);
+  }
+});
 
 test("promotes ownership, detaches, and preserves data through a warm relaunch", async ({
   browserName: _browserName,
-}, testInfo) => {
+}) => {
   const home = createPackagedHome();
   let first: PackagedApp | null = null;
   let second: PackagedApp | null = null;
@@ -164,11 +149,6 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     first = null;
 
     second = await test.step("Relaunch the desktop against the persistent runtime", () => launchPackagedApp(home));
-    testInfo.annotations.push({ type: "warm-attach-ms", description: String(second.readyInMs) });
-    const startupWindowInMs = await attachStartupTimings(second);
-    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
-    expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
-    expect(second.readyInMs).toBeLessThan(3_000);
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");
     expect(await second.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).toMatchObject({
@@ -206,25 +186,19 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
   }
 });
 
-test("shows recovery promptly after a sidecar crash and retries without relaunching Electron", async ({
+test("shows recovery after a sidecar crash and retries without relaunching Electron", async ({
   browserName: _browserName,
-}, testInfo) => {
+}) => {
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home);
     const originalInstanceId = app.runtime.instanceId;
     const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
-    const crashedAt = Date.now();
     process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
-    const visibleAt = await waitForVisibleElement(
-      app.lifecyclePage,
-      '[role="alert"] :is(h1, h2, h3)',
-      "Prompt Studio needs attention",
-    );
-    const recoveryInMs = visibleAt - crashedAt;
-    testInfo.annotations.push({ type: "recovery-ui-ms", description: String(recoveryInMs) });
-    expect(recoveryInMs).toBeLessThan(500);
+    await expect(
+      app.lifecyclePage.getByRole("alert").getByRole("heading", { name: "Prompt Studio needs attention", exact: true }),
+    ).toBeVisible();
     expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
 
     await app.lifecyclePage.getByRole("button", { name: "Retry" }).click();

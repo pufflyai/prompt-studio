@@ -100,6 +100,7 @@ export const projectEvents = {
 
 /** View dependencies delivered by the host when synced project data changes. */
 export const viewDataEvents = {
+  boardViewsChanged: hostEventRef<{ projectId: string }>("view.board-views.changed"),
   resourceAnchorsChanged: hostEventRef<{ projectId: string }>("view.resource-anchors.changed"),
   sessionsChanged: hostEventRef<{ projectId: string }>("view.sessions.changed"),
   workspacesChanged: hostEventRef<{ projectId: string }>("view.workspaces.changed"),

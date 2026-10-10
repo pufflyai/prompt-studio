@@ -6,6 +6,7 @@ import {
   listCommandParamEntries,
   mergeCommandParamArgs,
   normalizeCommandParamValues,
+  resolveCommandResourceParams,
 } from "./command-palette-params";
 
 describe("command palette params", () => {
@@ -132,6 +133,31 @@ describe("command palette params", () => {
       ),
     ).toThrow("Missing required parameter: Data files");
   });
+});
+
+test("preserves raw hidden action args and resolves missing values from resource metadata and identity", () => {
+  const schema = {
+    instance: { type: "text", resolvedFrom: "resource" as const },
+    ids: { type: "list", resolvedFrom: "resource" as const },
+    instanceId: { type: "text", resolvedFrom: "resource" as const },
+    title: { type: "text" },
+  };
+  const args = { instance: "explicit", ids: ["one", "two"], title: "Original" };
+  const resolved = resolveCommandResourceParams(schema, args, {
+    resource: { type: "instance", id: "first", metadata: { instance: "metadata" } },
+  });
+  expect(resolved).toEqual({ instance: "explicit", ids: ["one", "two"], instanceId: "first" });
+  expect(mergeCommandParamArgs(args, { ...resolved, title: "Edited" }, schema)).toEqual({
+    instance: "explicit",
+    ids: ["one", "two"],
+    instanceId: "first",
+    title: "Edited",
+  });
+  expect(
+    resolveCommandResourceParams(schema, undefined, {
+      resource: { type: "instance", id: "second", metadata: { instance: "metadata" } },
+    }).instance,
+  ).toBe("metadata");
 });
 
 test("cleared optional input values replace static action defaults", () => {

@@ -13,6 +13,7 @@ export const checkAgentAvailabilityQuerySchema = z
 
 export const availabilitySchema = z.object({
   type: z.enum(agentAvailabilityTypeSchema.options).openapi({ description: "Whether the agent is installed" }),
+  reason: z.string().optional().openapi({ description: "Why the agent cannot run, such as a missing or too-old CLI" }),
 });
 
 export const agentInfoResponseSchema = agentInfoSchema;

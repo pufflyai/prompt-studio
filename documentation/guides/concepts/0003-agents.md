@@ -8,7 +8,7 @@ A harness is a contribution from an extension. It knows how to start an agent, s
 
 Each harness has a full ID made of the extension ID and its own ID, such as `pstdio.harness-claude-code.harness.claude-code`. The `pst` command also accepts short names such as `claude-code`.
 
-A harness does not install the agent. Prompt Studio checks whether the agent's command is installed each time it lists harnesses. `pst agents list` shows the result. You sign in to the agent with the agent's own tools.
+A harness does not install the agent. Prompt Studio checks whether the agent's command is installed each time it lists harnesses. `pst agents list` shows the result. When a harness cannot use the agent, it says why, for example a missing command or a version that is too old. The harness menu and the **Problem** column of `pst agents list` show that reason. You sign in to the agent with the agent's own tools.
 
 Anyone can write a harness for another agent with the same extension API. Start with [Write an extension](../extensions/0001-authoring.md). The [Codex harness source](../../../extensions/harness-codex/src/harness.ts) is a complete example.
 

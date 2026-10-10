@@ -7,6 +7,7 @@ export type ExtensionsRouteDeps = Pick<
   | "artifactMountWrites"
   | "harnessRegistry"
   | "eventBus"
+  | "boardViewsService"
   | "resourceLinksService"
   | "extensionService"
   | "extensionRuntimeCatalog"

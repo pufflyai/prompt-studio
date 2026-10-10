@@ -89,6 +89,7 @@ Harnesses that opt into the host activity watchdog, or omit a timeout strategy, 
 | Trigger                | New status             | Code location                             |
 | ---------------------- | ---------------------- | ----------------------------------------- |
 | Session accepted at capacity | `queued`          | `createSessionScheduler`                  |
+| Session created without a prompt or attachments | `completed` (no run timestamps) | `createSessionScheduler` |
 | Session created with capacity | `in_progress`    | `createSessionScheduler`                  |
 | Follow-up sent with capacity | `in_progress`     | `createSessionScheduler`                  |
 | Follow-up accepted at capacity | `queued`        | `createSessionScheduler`                  |

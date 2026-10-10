@@ -1,0 +1,36 @@
+name: Build release artifacts
+description: Build, compile, verify and checksum everything a release publishes
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      run: node scripts/ci/install-native-dependencies.ts
+
+    - name: Validate changesets
+      shell: bash
+      run: bun run validate:changesets
+
+    - name: Build monorepo
+      shell: bash
+      run: bun run build
+
+    - name: Compile platform binaries
+      shell: bash
+      run: bun run --cwd scripts build:all
+
+    - name: Scaffold platform packages
+      shell: bash
+      run: bun run --cwd scripts release:platforms:scaffold
+
+    - name: Install Chromium for packaged extension smoke tests
+      shell: bash
+      run: bunx playwright@1.60.0 install chromium --with-deps
+
+    - name: Verify binaries
+      shell: bash
+      run: bun run --cwd scripts verify:packages
+
+    - name: Generate checksums
+      shell: bash
+      run: bun run --cwd scripts release:checksums

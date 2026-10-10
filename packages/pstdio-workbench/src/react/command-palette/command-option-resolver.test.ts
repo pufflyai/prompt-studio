@@ -1,5 +1,12 @@
 import { expect, test } from "bun:test";
 import { createCommandOptionResolver } from "./command-option-resolver";
+import {
+  buildCommandParamInitialValues,
+  listCommandParamEntries,
+  mergeCommandParamArgs,
+  normalizeCommandParamValues,
+  resolveCommandResourceParams,
+} from "./command-palette-params";
 
 const source = {
   commandId: "locales",
@@ -9,6 +16,59 @@ const source = {
 };
 const schema = { region: { type: "text" }, locale: { type: "select", options: source } };
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test("shows invalid editable JSON dependencies as option errors", async () => {
+  const resolver = createCommandOptionResolver(
+    {
+      region: { type: "json" },
+      locale: { type: "select", options: source },
+    },
+    async () => [],
+    () => {},
+  );
+  expect(() => resolver.update({ region: "{" })).not.toThrow();
+  await tick();
+  expect(resolver.getSnapshot().locale).toMatchObject({ status: "error", error: "Invalid JSON for Region" });
+  expect(resolver.validate({ region: "{" })).toHaveProperty("locale");
+  resolver.dispose();
+});
+
+test("shares hidden resource values with dependent choices and submission across resources", async () => {
+  const schema = {
+    instance: { type: "resource", resourceType: "instance", required: true, resolvedFrom: "resource" as const },
+    template: {
+      type: "select",
+      options: { ...source, params: { instance: { kind: "param-value", key: "instance" } } },
+    },
+  };
+  const requests: unknown[] = [];
+  expect(listCommandParamEntries(schema).map((entry) => entry.key)).toEqual(["template"]);
+  const keys: string[] = [];
+  for (const id of ["first", "second"]) {
+    const context = { resource: { type: "instance", id } };
+    const resolved = resolveCommandResourceParams(schema, undefined, context);
+    const values = buildCommandParamInitialValues(schema, undefined, context);
+    const resolver = createCommandOptionResolver(
+      schema,
+      async (_id, args) => {
+        requests.push(args);
+        return [];
+      },
+      () => {},
+      resolved,
+    );
+    resolver.update(values);
+    await tick();
+    expect(requests.at(-1)).toEqual({ instance: { type: "instance", id } });
+    expect(
+      mergeCommandParamArgs(undefined, { ...resolved, ...normalizeCommandParamValues(schema, values) }, schema),
+    ).toEqual({ instance: { type: "instance", id } });
+    keys.push(resolver.getSnapshot().template!.key);
+    resolver.dispose();
+  }
+  expect(requests).toHaveLength(2);
+  expect(keys[0]).not.toBe(keys[1]);
+});
 
 test("refreshes dependent options, clears missing selections and ignores late results", async () => {
   const requests: Array<{ args: unknown; resolve: (value: unknown) => void }> = [];

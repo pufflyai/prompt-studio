@@ -1,8 +1,4 @@
-import type {
-  ExtensionProjectContext,
-  ExtensionSessionsApi,
-  ResourceAnchor,
-} from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionProjectContext } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { emitActivityEvent } from "../../activity/activity-events";
@@ -19,7 +15,24 @@ import { resolveExtensionPrompt, resolveHarnessInput } from "./prompt";
 import { validateLegacyAnchors } from "./resource-link-policy";
 import { createResourceLinksApi } from "./resource-links";
 
-const toExtensionSession = (session: unknown) => session as Awaited<ReturnType<ExtensionSessionsApi["get"]>>;
+type SessionRow = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["sessionService"]["get"]>>>;
+const toExtensionSession = (session: SessionRow, workspaceId: string | null = null) => ({
+  id: session.id,
+  title: session.title,
+  status: session.status,
+  archived: session.archived,
+  agent: session.agent,
+  last_selected_model: session.last_selected_model,
+  workspace_id: workspaceId,
+  original_session_id: session.original_session_id,
+  cwd: session.cwd,
+  created_at: session.created_at,
+  updated_at: session.updated_at,
+  last_request_started: session.last_request_started,
+  last_request_ended: session.last_request_ended,
+  anchors_json: session.anchors_json ?? [],
+  usage: session.usage_json,
+});
 
 export const createSessionsApi = (
   deps: ExtensionsRouteDeps,
@@ -66,30 +79,31 @@ export const createSessionsApi = (
       await requireProjectSession(id);
       return steerQueuedFollowUp(deps, id, position, request);
     },
-    get: async (id) => toExtensionSession(await read(() => getProjectSession(id))),
+    get: async (id) =>
+      read(async () => {
+        const session = await getProjectSession(id);
+        if (!session) return null;
+        const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+        return toExtensionSession(session, workspace?.project_id === input.projectId ? workspace.id : null);
+      }),
+    query: async (query = {}) => {
+      const workspace = query.workspaceId ? await requireProjectWorkspace(query.workspaceId) : null;
+      const page = await read(() =>
+        deps.sessionService.query(input.projectId, {
+          ...query,
+          workspaceId: workspace?.id,
+        }),
+      );
+      return { items: page.rows.map((row) => toExtensionSession(row, row.workspace_id)), nextCursor: page.nextCursor };
+    },
     list: async () => {
       const sessions = await read(() => deps.sessionService.list(input.projectId));
-      return sessions.map((session) => ({
-        id: session.id,
-        title: session.title,
-        status: session.status,
-        last_request_started: session.last_request_started,
-        last_request_ended: session.last_request_ended,
-        updated_at: session.updated_at,
-        anchors_json: (session.anchors_json ?? []) as ResourceAnchor[],
-      }));
+      return sessions.map((session) => toExtensionSession(session));
     },
     listByWorkspace: async (workspaceId) => {
       const workspace = await requireProjectWorkspace(workspaceId);
       const sessions = await read(() => deps.workspaceSessionService.listByWorkspace(workspace.id));
-      return sessions.map((session) => ({
-        id: session.id,
-        title: session.title,
-        status: session.status,
-        created_at: session.created_at,
-        updated_at: session.updated_at,
-        anchors_json: (session.anchors_json ?? []) as ResourceAnchor[],
-      }));
+      return sessions.map((session) => toExtensionSession(session, workspace.id));
     },
     create: async (sessionInput) => {
       input.signal?.throwIfAborted();
@@ -131,7 +145,7 @@ export const createSessionsApi = (
       const prompt = resolveExtensionPrompt(sessionInput);
       const attachments = await resolveSessionAttachments(deps, input.projectId, sessionInput.attachments);
       const cwd = await resolveSessionCwd(deps, input.projectId, workspace?.id);
-      const session = await createSessionScheduler(deps).createAndStartSession({
+      const session = await createSessionScheduler(deps).createSession({
         projectId: input.projectId,
         title: sessionInput.title,
         agentId: resolvedAgent.agentId,
@@ -144,7 +158,7 @@ export const createSessionsApi = (
         cwd,
         anchors: sessionInput.anchors,
         signal: input.signal,
-        onBeforeStartedHook: async (createdSession) => {
+        onCreated: async (createdSession) => {
           if (!workspace) return;
 
           await deps.workspaceSessionService.link(workspace.id, createdSession.id);
@@ -161,7 +175,7 @@ export const createSessionsApi = (
           workspace_id: workspace?.id ?? null,
         },
       });
-      return { type: "session", id: session.id, title: session.title, status: session.status };
+      return { type: "session", ...toExtensionSession(session, workspace.id) };
     },
     followup: async (followupInput) => {
       input.signal?.throwIfAborted();

@@ -36,10 +36,26 @@ test("accepts the CLI version on stdout or stderr", async () => {
 
 for (const output of ["", "login required", "command not found"]) {
   test(`rejects a successful exit without a valid version: ${JSON.stringify(output)}`, async () => {
-    expect((await probe(output)).available).toBe(false);
+    expect(await probe(output)).toEqual({ available: false, reason: expect.stringMatching(/\S/) });
   });
 }
 
 test("rejects a failed command even when it prints a version", async () => {
-  expect((await probe("1.18.34", "", 1)).available).toBe(false);
+  expect(await probe("1.18.34", "", 1)).toEqual({ available: false, reason: expect.stringMatching(/\S/) });
+});
+
+test("accepts OpenCode 1.0.175 and every newer release", async () => {
+  for (const version of ["1.0.175", "1.18.35", "1.20.0", "2.0.0"]) {
+    expect(await probe(version)).toEqual({ available: true, version });
+  }
+});
+
+test("rejects OpenCode releases older than 1.0.175 and names both versions", async () => {
+  const result = await probe("1.0.174");
+  // The reason names the version found and the version required.
+  expect(result).toMatchObject({
+    available: false,
+    version: "1.0.174",
+    reason: expect.stringMatching(/^(?=.*1\.0\.174)(?=.*1\.0\.175)/),
+  });
 });

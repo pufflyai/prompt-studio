@@ -51,6 +51,7 @@ export {
   discoverExtensionPackagesInUserRoot,
   type ExtensionLoadScope,
   type ExtensionPackageRef,
+  extensionLoadKey,
   findFirstReservedKeybindingConflict,
   findReservedKeybindingConflict,
   findReservedKeybindingConflicts,

@@ -33,6 +33,10 @@ export const subscribeCoreViewDataEvents = (
       for (const row of [previousValue, value]) {
         if (!row) continue;
         switch (change.table) {
+          case "board_views":
+          case "board_default_views":
+            enqueue(viewDataEvents.boardViewsChanged.id, projectOf(row));
+            break;
           case "sessions":
             enqueue(viewDataEvents.sessionsChanged.id, projectOf(row));
             break;

@@ -9752,6 +9752,7 @@
           "type": "frame",
           "id": "XpOTN",
           "name": "cmp/Kbd",
+          "context": "Keys and shortcut key groups use a maximum 1px gap. Tooltip keys use inverted foreground, transparent fill, and inverted border.",
           "theme": {
             "kbd": "raised",
             "size": "md"
@@ -9768,7 +9769,7 @@
             "left": 1
           },
           "strokeAlignment": "inner",
-          "gap": 2,
+          "gap": 1,
           "padding": [
             0,
             "$kbd-px"
@@ -54457,6 +54458,47 @@
       "type": "color",
       "value": "#22252C"
     },
+    "ds-error-subtle": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFE0E3",
+          "theme": {
+            "mode": "light"
+          }
+        },
+        {
+          "value": "#580707",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#F9267226",
+          "theme": {
+            "mode": "monokai"
+          }
+        },
+        {
+          "value": "#FF555526",
+          "theme": {
+            "mode": "dracula"
+          }
+        },
+        {
+          "value": "#DC322F33",
+          "theme": {
+            "mode": "solarized-dark"
+          }
+        },
+        {
+          "value": "#DC322F26",
+          "theme": {
+            "mode": "solarized-light"
+          }
+        }
+      ]
+    },
     "btn-fg": {
       "type": "color",
       "value": [
@@ -56688,47 +56730,6 @@
         },
         {
           "value": "#85990026",
-          "theme": {
-            "mode": "solarized-light"
-          }
-        }
-      ]
-    },
-    "ds-error-subtle": {
-      "type": "color",
-      "value": [
-        {
-          "value": "#FFE0E3",
-          "theme": {
-            "mode": "light"
-          }
-        },
-        {
-          "value": "#580707",
-          "theme": {
-            "mode": "dark"
-          }
-        },
-        {
-          "value": "#F9267226",
-          "theme": {
-            "mode": "monokai"
-          }
-        },
-        {
-          "value": "#FF555526",
-          "theme": {
-            "mode": "dracula"
-          }
-        },
-        {
-          "value": "#DC322F33",
-          "theme": {
-            "mode": "solarized-dark"
-          }
-        },
-        {
-          "value": "#DC322F26",
           "theme": {
             "mode": "solarized-light"
           }

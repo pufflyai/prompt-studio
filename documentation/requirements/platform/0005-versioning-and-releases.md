@@ -20,7 +20,7 @@ Do not edit versions by hand. Add new released workspace packages to the fixed g
 
 `.github/workflows/release-packages.yml` runs on `main` with Bun from the root `packageManager` field and Node 24. It validates and builds the monorepo, compiles platform binaries, verifies packaged output and generates checksums.
 
-Before publishing a host version that is not yet on npm, the workflow verifies the compiled CLI on native Linux, Intel macOS and Windows runners. Other commits skip these native release checks.
+Before publishing a host version that is not yet on npm, the workflow verifies the compiled CLI on native Linux, Intel macOS and Windows runners with `verify-packaged-toolchain.yml`. Other commits skip these native release checks. The build, compile, verify and checksum steps live in the `build-release` action so a rehearsal runs the same steps.
 
 The workflow publishes generated `@pstdio/cli-*` platform packages at the host version. `changesets/action` then either opens the version PR or runs `changeset publish`. npm receives pstdio, SDK, UI and workbench at the shared version, including packages with no code changes.
 
@@ -33,6 +33,32 @@ Publishing creates local npm package tags, but CI pushes only `pstdio@<version>`
 - CLI binaries, checksums and `install.sh`.
 
 The desktop workflow builds, signs and verifies native artifacts, attaches them to that draft and publishes it only after its checks pass. Desktop assets and updater URLs retain the `pstdio@` prefix. Core extension catalog entries use `{hostRelease}` to install from that same tag. No separate extension tags, tarballs or GitHub releases are produced.
+
+## Release readiness
+
+Rehearse a release before merging the version PR. Approve or rerun its `Test and Build` CI, or start that workflow manually on `changeset-release/main`. After CI passes, `Release readiness` runs from `main`. It accepts only the current, same-repository Version Packages PR created by GitHub Actions, with changes limited to generated release metadata. Windows signing trusts only runs started from `main` or a release tag.
+
+You can also start `Release readiness` from `main` and keep its `ref` input at `changeset-release/main`. Both entry points resolve the candidate once and use that exact commit throughout the rehearsal. The `release-readiness` commit status reports success only when every rehearsal job passes. A version PR update needs its own CI and rehearsal; results for an older commit do not approve the new one.
+
+The main ruleset must require both `ci_passed` and `release-readiness`, with GitHub Actions as their source. `Release readiness gate` runs trusted policy from main when a PR opens, updates, or reopens. Ordinary PRs receive an immediate passing `release-readiness` status and run no rehearsal. The generated `changeset-release/main` PR stays blocked while its status is missing or pending, and passes only after its full rehearsal succeeds. Failed, cancelled, incomplete, or missing rehearsals cannot approve that commit. The rehearsal is the only status writer for release candidates, so late PR events cannot overwrite its result.
+
+Changesets creates a new candidate commit on `changeset-release/main` before opening or updating its PR. The gate reserves that branch's current commit even when triggered by another PR: statuses belong to commits, so a PR sharing the candidate cannot approve it. Do not repoint the release branch to an unrelated commit with an existing ordinary-PR approval; let Changesets generate the candidate.
+
+When deploying this gate, merge its workflow into main first. For every existing open PR, dispatch `release-readiness-gate.yml` from main with its `pr-number` input. Confirm ordinary PRs have passing statuses and the version PR's status is missing, pending, or has its own rehearsal result. Then add `release-readiness` to the main ruleset's required checks, selecting GitHub Actions as the source and preserving `ci_passed`. A missing status must block the version PR after the rule is enabled. Requiring it before deployment would block ordinary PRs whose status does not exist yet. The gate's manual dispatch initializes ordinary statuses only; it cannot approve a release without a rehearsal.
+
+Before the PR-triggered run can sign anything, it verifies that dependency inputs remain unchanged except the host's compiled CLI versions. It regenerates the lockfile from the trusted merge-base lockfile without running install scripts and compares it with the candidate lockfile. A changed PR snapshot or an unexpected dependency change stops the rehearsal.
+
+The rehearsal publishes nothing. It runs:
+
+- `scripts/release/check-npm-publishing.ts`. It fails when the pstdio version is already on npm or a public workspace package does not exist on npm. Trusted publishing cannot create a package, so publish its first version by hand or make it private.
+- The native packaged CLI checks on Linux, Intel macOS and Windows.
+- The native harness checks against both minimum and latest supported CLI versions.
+- The release job's build steps, `npm publish --dry-run` for each package that would publish, and the release notes.
+- The desktop workflow with `source_ref`. It builds, signs, notarizes and tests every desktop target from the branch and skips publishing. Packaged apps install default extensions from the branch because the release tag does not exist yet.
+- Complete desktop release-set and checksum verification through `publish-desktop-release.yml`. Only the publication step is skipped during a rehearsal.
+- The Windows installation and update workflow. It reuses the signed candidate from the desktop build, builds a signed older baseline, installs that baseline, applies the Squirrel update, and checks installed signatures, launch behavior and project-data preservation. The baseline defaults to the latest published pstdio release; manual dispatch can set `previous-tag` to another older release.
+
+The Windows check uploads `windows-installation-readiness` evidence and `windows-prepared-candidate` artifacts. It verifies a local update feed for the unpublished candidate. Checking the public update feed still requires a published release.
 
 ## Validation
 
@@ -50,6 +76,6 @@ After PS-410 merges, inventory the obsolete extension and private-package tags a
 | --- | --- |
 | No version PR | Confirm pending changesets reached main. |
 | Version validation fails | Add the named released package to the fixed group or ignore a private helper. |
-| Publish fails | Check registry trust, package metadata and build output. |
+| Publish fails | Check registry trust, package metadata and build output. Run the release readiness workflow first. |
 | Notes generation fails | Check that every existing changelog includes the release version. |
 | Desktop release stays draft | Check native credentials, signatures, launch validation, checksums and version agreement. |

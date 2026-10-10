@@ -48,6 +48,7 @@
         "playwright.config.ts",
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
+        "src/**/*.perf.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
         // Specs install fixture extensions by path.
@@ -161,7 +162,7 @@
         // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
         "src/theme/index.ts",
-        "src/components/{rich-text,chat-ui,diff-viewer,kanban-renderer,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/{rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.stories.tsx",
         "src/**/*.test.ts",
@@ -195,7 +196,6 @@
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/views/document-link.tsx",
         "src/views/tags-settings-panel.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

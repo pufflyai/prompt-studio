@@ -22,6 +22,7 @@ export interface KanbanRendererEnumOption {
 export type KanbanRendererAttributeType =
   | { kind: "enum"; options: KanbanRendererEnumOption[] }
   | { kind: "enum-multi"; options: KanbanRendererEnumOption[] }
+  /** @deprecated Use `kind: "enum"` with options returned in query `attributes`. */
   | { kind: "status"; statuses: StatusRef }
   /** Maps old enum IDs when saved views are read. Row values must still be booleans. */
   | { kind: "boolean"; legacyValues?: Record<string, boolean> }
