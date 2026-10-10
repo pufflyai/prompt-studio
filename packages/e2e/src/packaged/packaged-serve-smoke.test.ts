@@ -41,6 +41,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
@@ -51,6 +52,7 @@ import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes the declared clipboard permission on the packaged webview fixture.
+// The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
@@ -379,6 +381,12 @@ test(
       });
       await expectPackagedWebviewRuntime(started.baseUrl, metadata);
       await expectPackagedArtifacts({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+        metadata,
+      });
+      await expectPackagedPlannerTimeline({
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),

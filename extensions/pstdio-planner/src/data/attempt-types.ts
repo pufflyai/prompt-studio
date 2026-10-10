@@ -117,33 +117,6 @@ export interface ReviewLaunchClaim {
   createdAt: string;
 }
 
-export type HumanRequestReason =
-  | "approved-revision"
-  | "ambiguous-dependency-attempt"
-  | "divergent-dependency-attempts"
-  | "dependency-cycle"
-  | "dependency-missing"
-  | "implementation-disconnected"
-  | "review-disconnected"
-  | "workspace-adoption-required";
-
-export interface HumanRequestRecord {
-  id: string;
-  ticketId: string;
-  workspaceId: string | null;
-  revision: number | null;
-  sessionId: string;
-  relatedSessionId: string | null;
-  reason: HumanRequestReason;
-  question: string;
-  expectedAction: string;
-  state: "open" | "resolved";
-  requestedAt: string;
-  resolvedAt: string | null;
-  resolvedBy: ActorRef | null;
-  resolution: string | null;
-}
-
 export type AttemptEventType =
   | "attempt_started"
   | "revision_submitted"

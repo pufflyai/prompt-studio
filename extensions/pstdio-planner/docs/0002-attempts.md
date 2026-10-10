@@ -73,7 +73,7 @@ Planner sets the ticket status from its attempts:
 2. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
 3. Otherwise, if every attempt is blocked, the ticket is Blocked.
 
-Planner leaves tickets in Done alone. While the Review Needed flag is set, Planner does not change the ticket status, and automation extensions are expected to skip the ticket. The flag clears when a person or an agent resolves the last open request with `resolve-human-request`. Automations cannot resolve requests.
+Planner leaves tickets in Done alone. While the Review Needed flag is set, Planner does not change the ticket status, and automation extensions are expected to skip the ticket. Planner also pauses status changes while any review request is open, even if the flag was cleared by hand. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
 
 ## When a session disconnects
 
@@ -95,8 +95,8 @@ Extensions and agents drive attempts through Planner's commands. Each ID below i
 | `list-attempts`         | Lists the project's attempts.                                                    |
 | `reconcile-attempt`     | Recovers an attempt whose session disconnected.                                  |
 | `select-attempt`        | Chooses which attempt of a ticket later tickets build on. Not for automations.   |
-| `request-human`         | Sets the Review Needed flag with a question for a person.                        |
-| `resolve-human-request` | Answers that question. Only a person or an agent can do this, not an automation. |
+| `request-human`         | Asks a person for a task confirmation or a decision and sets Review Needed.      |
+| `review`                | Answers a review request. Only a person or an agent can do this.                 |
 | `workspace-activity`    | Returns a workspace's sessions and whether any of them is still running.         |
 
 In `workspace-activity`, each session carries a phase: `implementation`, `review`, or `other`. The statuses `queued`, `in_progress`, and `awaiting_input` count as running.

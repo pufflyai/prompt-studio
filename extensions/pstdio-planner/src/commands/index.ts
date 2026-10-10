@@ -18,7 +18,6 @@ import { deleteTicketCommand } from "./delete-ticket";
 import { documentLinkCommand } from "./document-link";
 import { getTicketCommand } from "./get-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
-import { requestHumanCommand, resolveHumanRequestCommand } from "./human-requests";
 import { implementTicketCommand } from "./implement-ticket";
 import { implementationPolicyCommand } from "./implementation-policy";
 import { implementationTargetsCommand, setImplementationTargetCommand } from "./implementation-targets";
@@ -36,6 +35,14 @@ import { readTicketsCommand } from "./read-tickets";
 import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
+import {
+  cancelReviewRequestCommand,
+  listReviewRequestsCommand,
+  openReviewRequestCommand,
+  readReviewRequestCommand,
+  requestHumanCommand,
+  reviewCommand,
+} from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 import { runReviewCommand } from "./run-review";
 import { saveTicketCommand } from "./save-ticket";
@@ -121,7 +128,11 @@ export const plannerCommands = [
   readAttemptHistoryCommand,
   selectAttemptCommand,
   requestHumanCommand,
-  resolveHumanRequestCommand,
+  reviewCommand,
+  readReviewRequestCommand,
+  listReviewRequestsCommand,
+  cancelReviewRequestCommand,
+  openReviewRequestCommand,
   listAttemptsCommand,
   reconcileAttemptCommand,
   runAttemptCommand,

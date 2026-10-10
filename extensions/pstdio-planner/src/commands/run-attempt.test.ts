@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { humanRequestsCollection, putAttempt } from "../data/attempt-storage";
+import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
+import { listTicketReviewRequests } from "../data/review-request-storage";
 import { seedDefaultTags } from "../data/seed";
 import { createSessionResource, makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -357,8 +358,8 @@ describe("runAttemptCommand human requests", () => {
         }),
       ),
     ).rejects.toThrow(ticket.shorthand);
-    expect(await humanRequestsCollection(storage).list()).toEqual([
-      expect.objectContaining({ ticketId: ticket.id, reason: "dependency-missing", state: "open" }),
+    expect((await listTicketReviewRequests(storage, ticket.id)).requests).toEqual([
+      expect.objectContaining({ context: expect.objectContaining({ reason: "dependency-missing" }), state: "open" }),
     ]);
   });
 

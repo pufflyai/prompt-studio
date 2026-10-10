@@ -76,16 +76,17 @@ describe("pstdio planner extension contributions", () => {
     });
   });
   test("declares each native ticket view's data dependencies", () => {
-    const event = { extensionId: "pstdio.pstdio-planner", id: "tickets.changed", kind: "event" };
-    for (const id of ["ticket-editor", "ticket-properties"]) {
-      expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual([event]);
-    }
-    for (const id of ["ticket-files", "tickets"]) {
-      expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual([
-        event,
-        viewDataEvents.sessionsChanged,
-        viewDataEvents.workspacesChanged,
-      ]);
+    const tickets = { extensionId: "pstdio.pstdio-planner", id: "tickets.changed", kind: "event" };
+    const plan = { extensionId: "pstdio.pstdio-planner", id: "timeline.plan.changed", kind: "event" };
+    const linkedResources = [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged];
+    const dependencies = {
+      "ticket-editor": [tickets],
+      "ticket-properties": [tickets, plan],
+      "ticket-files": [tickets, ...linkedResources],
+      tickets: [tickets, plan, ...linkedResources],
+    };
+    for (const [id, events] of Object.entries(dependencies)) {
+      expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual(events);
     }
   });
   test("contributes shared document templates and planner skills", () => {
@@ -244,7 +245,9 @@ describe("pstdio planner workspace contributions", () => {
   test("contributes ticket workspace and merge hooks", () => {
     expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
       "git-merged-mark-done",
+      "review-request-cleanup",
       "session-awaiting-input",
+      "timeline.gate-cleanup",
       "worktree-created",
     ]);
   });

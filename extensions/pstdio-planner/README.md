@@ -18,9 +18,11 @@ pst extensions add pstdio-reports
 
 ## What Planner adds
 
+- A **Ticket timeline** for milestones, tracks, dependencies, and review gates. See [Timeline](docs/0005-timeline.md).
 - A **Tickets** board in the project sidebar, and a page for each ticket. See [Dashboard](docs/0003-dashboard.md).
 - Statuses and tags for each project. See [Tags and statuses](docs/0001-tags-and-statuses.md).
 - Managed attempts: an agent works on a ticket in its own Git worktree, and a second agent reviews the result. See [Attempts](docs/0002-attempts.md).
+- Review requests: tasks and decisions that ask a person for input and set Review Needed until they are answered. See [Review requests](docs/0006-review-requests.md).
 - The `pst tickets`, `pst statuses`, and `pst tags` commands. See [CLI](docs/0004-cli.md).
 - Skills that teach agents to work with tickets: `create-ticket`, `create-proposal`, `create-sub-tickets`, `refine-ticket`, and `implement-ticket`.
 - Ticket, prompt, and document templates. Edit them in **Settings → Project → Templates**.
