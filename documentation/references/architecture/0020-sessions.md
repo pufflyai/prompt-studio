@@ -61,7 +61,7 @@ The [session response schema](../../../packages/pstdio-api-contracts/src/session
 | `queued`         | Accepted work waiting for runtime capacity  |
 | `in_progress`    | Agent is actively executing                 |
 | `awaiting_input` | Agent asked the person a question and waits |
-| `completed`      | Agent finished successfully                 |
+| `completed`      | No turn is pending, or the agent finished successfully |
 | `failed`         | Agent crashed or returned non-zero exit     |
 | `cancelled`      | Session was stopped by user                 |
 | `disconnected`   | Server lost the process handle              |
@@ -79,15 +79,21 @@ create / follow-up ──► queued ──► in_progress
                            └──── in_progress (on answer)
 ```
 
-- Create session → `in_progress` or `queued`, depending on runtime capacity
+- Create session without a prompt or attachments → inactive `completed`
+- Create session with a prompt or attachments → `in_progress` or `queued`, depending on runtime capacity
 - Follow-up → `in_progress` or `queued`, depending on runtime capacity
 - Queued session drain → `in_progress`
 - Harness completes successfully → `completed`
+
 - Harness fails → `failed`
 - Harness asks the person a question → `awaiting_input`; the answer returns it to `in_progress`
 - User stop → `cancelled`; the harness owns cancellation and process cleanup
 - Archive of a queued session → `cancelled`, then archived; workspace archive or delete → `cancelled` for each active session (see [session status lifecycle](0019-session-status-lifecycle.md))
 - Transport/fetch error during follow-up → `failed` + error in cached messages
+
+Creating a session without a prompt, or with a blank prompt and no attachments, leaves it idle. This applies to `POST /v1/sessions` and `ctx.sessions.create`. The scheduler creates the row and workspace link without reserving runtime capacity, creating queued work, or calling the harness. The row uses `completed`, as other sessions with no pending turn do. Both request timestamps and `agent_session_id` stay null because no turn has started.
+
+The first message uses the normal follow-up API. With no `agent_session_id`, the scheduler calls `harness.start`. Runtime capacity still controls whether that message starts immediately or waits in the queue. A create call with attachments starts a turn even without prompt text. Native operations keep their own execution path.
 
 ## Entry points
 

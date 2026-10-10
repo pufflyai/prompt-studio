@@ -90,7 +90,7 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "serves the dashboard and API from the same origin and hands off composer drafts immediately",
+  "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;

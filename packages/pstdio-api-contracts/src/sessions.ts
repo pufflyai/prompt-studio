@@ -71,7 +71,7 @@ export const sessionAttachmentSchema = z.object({
 export const createSessionInputSchema = z.object({
   project_id: z.string().min(1),
   title: z.string().min(1),
-  prompt: z.string().min(1).optional(),
+  prompt: z.string().optional(),
   operation: harnessOperationSchema.optional(),
   agent: z.string().min(1).optional(),
   workspace_id: z.string().optional(),

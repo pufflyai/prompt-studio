@@ -24,7 +24,7 @@ import {
 import { logStartupFailure } from "./session-startup-failure";
 import { spawnAgentSession } from "./spawn-agent";
 
-type CreateAndStartInput = {
+type CreateSessionInput = {
   projectId: string;
   title: string;
   agentId: string;
@@ -36,7 +36,7 @@ type CreateAndStartInput = {
   originalSessionId?: string;
   cwd?: string;
   anchors?: ResourceRef[];
-  onBeforeStartedHook?: (session: ExistingSession) => Promise<void>;
+  onCreated?: (session: ExistingSession) => Promise<void>;
   signal?: AbortSignal;
 };
 
@@ -59,10 +59,10 @@ const insertAbortAwareFollowUp = async (
   return queuedResult(queuePosition);
 };
 
-const runBeforeStartedHook = async (
+const runOnCreated = async (
   deps: SessionsRouteDeps,
   session: ExistingSession,
-  hook: CreateAndStartInput["onBeforeStartedHook"],
+  hook: CreateSessionInput["onCreated"],
   cleanup: { drainAfterLock: boolean },
 ) => {
   try {
@@ -82,12 +82,13 @@ const resolveDispatchContext = (input: StartExistingInput, fresh: ExistingSessio
   const agentId = input.agentId ?? fresh.agent!;
   const switchingAgent = input.agentId != null && input.agentId !== fresh.agent;
   const model = input.model ?? (switchingAgent ? undefined : (fresh.last_selected_model ?? undefined));
-  return { ...input, session: fresh, agentId, switchingAgent, model };
+  const params = input.params ?? (switchingAgent ? undefined : (fresh.params_json ?? undefined));
+  return { ...input, session: fresh, agentId, switchingAgent, model, params };
 };
 
 const startScheduledSession = async (
   deps: SessionsRouteDeps,
-  input: CreateAndStartInput,
+  input: CreateSessionInput,
   session: ExistingSession,
   submittedQueuePosition?: number,
 ) => {
@@ -146,7 +147,7 @@ const startScheduledSession = async (
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   const drainQueue = createSessionQueueDrain(deps);
 
-  const createAndStartSession = async (input: CreateAndStartInput) => {
+  const createSession = async (input: CreateSessionInput) => {
     input.signal?.throwIfAborted();
     const cleanup = { drainAfterLock: false };
     let scheduled!: { session: ExistingSession; shouldStart: boolean; submittedQueuePosition?: number };
@@ -154,7 +155,8 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     try {
       scheduled = await withSchedulingLock(async () => {
         input.signal?.throwIfAborted();
-        const hasCapacity = await hasCreateCapacity(deps);
+        const hasFirstMessage = Boolean(input.prompt.trim() || input.attachments?.length);
+        const hasCapacity = !hasFirstMessage || (await hasCreateCapacity(deps));
 
         if (!hasCapacity) {
           const queued = await deps.sessionService.createQueuedWithEntry(
@@ -173,7 +175,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
             },
             { emitStartedHook: false },
           );
-          await runBeforeStartedHook(deps, queued, input.onBeforeStartedHook, cleanup);
+          await runOnCreated(deps, queued, input.onCreated, cleanup);
           if (input.signal?.aborted) {
             await deps.sessionService.cancel(queued.id);
             input.signal.throwIfAborted();
@@ -192,14 +194,16 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
             cwd: input.cwd,
             anchors: input.anchors,
             params_json: input.params,
+            status: hasFirstMessage ? undefined : "completed",
           },
           { emitStartedHook: false },
         );
-        await runBeforeStartedHook(deps, started, input.onBeforeStartedHook, cleanup);
+        await runOnCreated(deps, started, input.onCreated, cleanup);
         if (input.signal?.aborted) {
           await deps.sessionService.cancel(started.id);
           input.signal.throwIfAborted();
         }
+        if (!hasFirstMessage) return { session: started, shouldStart: false };
         const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {
           sessionId: started.id,
           prompt: input.prompt,
@@ -308,7 +312,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   return {
-    createAndStartSession,
+    createSession,
     startOrQueueExisting,
     drainQueue,
     recoverQueuedSessions,
