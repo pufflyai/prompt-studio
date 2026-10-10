@@ -1,0 +1,25 @@
+{
+  "seed": "shelf-1",
+  "width": 1600,
+  "height": 400,
+  "layout": "shelf",
+  "kinds": [
+    "page",
+    "command",
+    "editor",
+    "skill",
+    "hook",
+    "automation"
+  ],
+  "count": 12,
+  "scale": 0.75,
+  "offsetX": 0.36,
+  "offsetY": -0.06,
+  "backgroundTop": "#0A0C10",
+  "backgroundBottom": "#141A28",
+  "bleed": 0.4,
+  "layers": 36,
+  "texture": 0.6,
+  "gradient": 0.5,
+  "grain": 0.4
+}

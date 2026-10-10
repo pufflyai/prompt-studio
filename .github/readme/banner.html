@@ -1,0 +1,73 @@
+<!doctype html>
+<!--
+  Layout for the README banner. Paint the art first: copy readme-banner.json and
+  readme-banner-light.json into design/art and run `pst shape-art piece render --id <id>`.
+  Open this file with ?theme=dark or ?theme=light at 1600x400 and save a screenshot as
+  banner-dark.jpg or banner-light.jpg.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=Onest:wght@600&display=block" />
+    <style>
+      :root {
+        --fg: #f9f9f9;
+        --muted: #c5c5c7;
+        --art: url("../../design/art/readme-banner.png");
+      }
+      :root[data-theme="light"] {
+        --fg: #0a0d15;
+        --muted: #5a5f67;
+        --art: url("../../design/art/readme-banner-light.png");
+      }
+      body {
+        margin: 0;
+      }
+      .banner {
+        width: 1600px;
+        height: 400px;
+        box-sizing: border-box;
+        padding: 0 96px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 20px;
+        background: var(--art) center / cover;
+        color: var(--fg);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        font: 600 76px/1 Onest, sans-serif;
+        letter-spacing: -0.02em;
+      }
+      .brand svg {
+        width: 68px;
+        height: 68px;
+      }
+      .tagline {
+        font: 400 34px/1.3 Inter, sans-serif;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="banner">
+      <div class="brand">
+        <svg viewBox="0 0 26 26" aria-hidden="true">
+          <path
+            fill="currentColor"
+            fill-rule="evenodd"
+            d="M8 0C3.58172 0 0 3.58172 0 8V18C0 22.4183 3.58172 26 8 26H18C22.4183 26 26 22.4183 26 18V8C26 3.58172 22.4183 0 18 0H8ZM13 11C13 12.6569 11.6569 14 10 14C8.34315 14 7 12.6569 7 11C7 9.34315 8.34315 8 10 8C11.6569 8 13 9.34315 13 11ZM15 11C15 13.7614 12.7614 16 10 16C7.23858 16 5 13.7614 5 11C5 8.23858 7.23858 6 10 6C12.7614 6 15 8.23858 15 11Z"
+          />
+        </svg>
+        Prompt Studio
+      </div>
+      <div class="tagline">A workbench for your tools.</div>
+    </div>
+    <script>
+      document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") ?? "dark";
+    </script>
+  </body>
+</html>
