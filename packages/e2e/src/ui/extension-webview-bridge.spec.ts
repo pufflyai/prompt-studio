@@ -26,6 +26,45 @@ const forgedHostScript = `
   parent.postMessage({ forgedHostMessagesSent: true }, "*");
 `;
 
+test("host messages to a webview leave no listeners on the host window", async ({ page, request }) => {
+  const response = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Webview bridge listeners" }),
+  });
+  expect(response.ok()).toBe(true);
+  const project = (await response.json()) as { id: string };
+  try {
+    await page.addInitScript((projectId: string) => {
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+    }, project.id);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
+    const lab = page.frameLocator('iframe[title="Lab"]');
+    const increment = lab.getByRole("button", { name: "Increment" });
+    await expect(lab.getByText("0", { exact: true })).toBeVisible();
+
+    const cdp = await page.context().newCDPSession(page);
+    const hostMessageListeners = async () => {
+      const { result } = await cdp.send("Runtime.evaluate", { expression: "window" });
+      const objectId = result.objectId as string;
+      const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId });
+      await cdp.send("Runtime.releaseObject", { objectId });
+      return listeners.filter((listener) => listener.type === "message").length;
+    };
+    await increment.click();
+    await expect(lab.getByText("1", { exact: true })).toBeVisible();
+    const baseline = await hostMessageListeners();
+
+    // Each command sends the webview a props update and command events over the bridge.
+    for (let counter = 2; counter <= 6; counter += 1) {
+      await increment.click();
+      await expect(lab.getByText(String(counter), { exact: true })).toBeVisible();
+    }
+
+    await expect.poll(hostMessageListeners).toBeLessThanOrEqual(baseline);
+  } finally {
+    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
+  }
+});
+
 test("a webview ignores bridge messages from frames other than its host", async ({ page, request }) => {
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Webview bridge origin" }),
