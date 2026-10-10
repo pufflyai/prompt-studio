@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 export interface CoverageReport {
   packageDir: string;
@@ -32,7 +32,7 @@ export const summarizeCoverage = (root: string, reports: CoverageReport[]) => {
     for (const entry of report.content.split("\n")) {
       if (entry.startsWith("SF:")) {
         const path = resolve(report.packageDir, entry.slice(3));
-        const repoPath = relative(root, path);
+        const repoPath = relative(root, path).split(sep).join("/");
         lines = undefined;
         if (!repoPath.startsWith("..") && !excludedSource.test(repoPath)) {
           lines = files.get(path) ?? new Map();
