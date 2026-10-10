@@ -1,5 +1,25 @@
 # @pstdio/ui
 
+## 0.42.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- 184548f: Expose the shared collection view header and filters; let extensions manage project saved views.
+- c42bf30: Add persisted Sidenav groups with inline names, drag-and-drop membership, rename/remove group actions, and anchored Help and nested Hide/show items menus.
+- 73ed54c: Add complete queued request editing with recovery after dispatch and notices that clear on draft edits, atomic combining, native steering contracts, and spaced delete icon buttons; hide unsupported send-now targets and isolate packaged migration extraction between hosts.
+- 59dbcbb: Expose owner-handled resource drops with immediate previews and placement feedback, preserve identities and scopes within sortable navigation, and show selected panel resources and their actions in breadcrumbs, and support confirmed resource removals and optimistic renames across host UI surfaces, and retain loaded tab titles and actions during refresh.
+
+### Patch Changes
+
+- 510c87b: Keep optional markdown editors behind their lazy imports in kanban and parameter controls.
+- c7713f3: Show assigned shortcuts under extension names, add main navigation and creation defaults with matching command palette hints, let idle navigation labels use the space released by hidden actions, and avoid unused schema snapshot extraction at startup.
+- cdf7e0a: Let React batch virtualized row measurements to prevent flushSync console errors when sending messages.
+- 510c87b: Support full-screen palettes with optional search autofocus for mobile navigation.
+- c2f0c1a: Fix shortcut key spacing and invert keys inside tooltips.
+- ad6d9bd: Give floating panel webviews a usable viewport.
+
 ## 0.41.0
 
 _2026-10-08_
