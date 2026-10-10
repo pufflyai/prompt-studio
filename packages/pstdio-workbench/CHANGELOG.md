@@ -1,5 +1,23 @@
 # @pstdio/workbench
 
+## 0.42.0
+
+_2026-10-10_
+
+### Minor Changes
+
+- c42bf30: Add persisted Sidenav groups with inline names, drag-and-drop membership, rename/remove group actions, and anchored Help and nested Hide/show items menus.
+- 59dbcbb: Expose owner-handled resource drops with immediate previews and placement feedback, preserve identities and scopes within sortable navigation, and show selected panel resources and their actions in breadcrumbs, and support confirmed resource removals and optimistic renames across host UI surfaces, and retain loaded tab titles and actions during refresh.
+
+### Patch Changes
+
+- fc7db3a: Remove the automatic Related resources action from the shared header.
+- c7713f3: Show assigned shortcuts under extension names, add main navigation and creation defaults with matching command palette hints, let idle navigation labels use the space released by hidden actions, and avoid unused schema snapshot extraction at startup.
+- 73ed54c: Add complete queued request editing with recovery after dispatch and notices that clear on draft edits, atomic combining, native steering contracts, and spaced delete icon buttons; hide unsupported send-now targets and isolate packaged migration extraction between hosts.
+- 5d47dfb: Add shared resource linking controls with owner search, live updates, and unavailable destinations.
+- c7713f3: Show assigned extension shortcuts in the live keyboard shortcut reference.
+- bf2bf8d: Keep the workbench fast while extension webviews stay open. Messages to a webview no longer leave a listener behind on the host window.
+
 ## 0.41.0
 
 _2026-10-08_
