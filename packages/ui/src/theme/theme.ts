@@ -25,6 +25,7 @@ import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
+import { scrollAreaSlotRecipe } from "./recipes/scroll-area";
 import { skeletonRecipe } from "./recipes/skeleton";
 import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
@@ -80,6 +81,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      scrollArea: scrollAreaSlotRecipe,
       queuedFollowUp: queuedFollowUpRecipe,
       tag: tagSlotRecipe,
       checkbox: checkboxSlotRecipe,

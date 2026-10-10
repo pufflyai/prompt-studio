@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Preserve unchanged chat messages and image context during streaming.
+Reduce repeated chat rendering and scrollbar style work during streaming.
