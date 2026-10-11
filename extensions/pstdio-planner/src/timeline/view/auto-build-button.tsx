@@ -1,16 +1,15 @@
-import { Button, Popover, Portal, Spinner, Stack, Text } from "@chakra-ui/react";
-import { Play } from "lucide-react";
+import { Box, Button, Popover, Portal, Stack, Text } from "@chakra-ui/react";
+import { Pause, Play } from "lucide-react";
 import { useState } from "react";
+import { type AutoBuildSession, AutoBuildSessionRow } from "./auto-build-session-row";
 
-interface AutoBuildSession {
-  id: string;
-  title: string;
-  status?: string;
-}
 interface AutoBuildButtonProps {
   enabled: boolean;
   supervisor?: AutoBuildSession | null;
   sessions: AutoBuildSession[];
+  running: number;
+  capacity: number;
+  error?: string;
   disabled?: boolean;
   onConfigure: () => void;
   onTurnOff: () => Promise<boolean>;
@@ -19,8 +18,30 @@ interface AutoBuildButtonProps {
 }
 
 export function AutoBuildButton(props: AutoBuildButtonProps) {
-  const { enabled, supervisor, sessions, disabled, onConfigure, onTurnOff, onOpenSession, t } = props;
+  const {
+    enabled,
+    supervisor,
+    sessions,
+    running,
+    capacity,
+    error,
+    disabled,
+    onConfigure,
+    onTurnOff,
+    onOpenSession,
+    t,
+  } = props;
   const [open, setOpen] = useState(false);
+  const failed = supervisor?.status === "failed" || Boolean(error);
+  let activity = "waiting";
+  let color = "fg.warning";
+  if (failed) {
+    activity = "error";
+    color = "fg.error";
+  } else if (running > 0) {
+    activity = "running";
+    color = "fg.success";
+  }
   const stop = async () => {
     if (await onTurnOff()) setOpen(false);
   };
@@ -32,6 +53,8 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
     >
       <Popover.Trigger asChild>
         <Button
+          aria-label={t("timeline.autoBuild.start", "Auto Build")}
+          aria-description={enabled || failed ? `Auto Build ${activity}` : undefined}
           size="2xs"
           variant="outline"
           disabled={disabled}
@@ -39,62 +62,61 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
             if (!enabled) onConfigure();
           }}
         >
-          {enabled ? <Spinner size="xs" /> : <Play />}
+          {enabled || failed ? (
+            <Box
+              role="img"
+              aria-label={`Auto Build ${activity}`}
+              data-activity={activity}
+              boxSize="status-dot"
+              rounded="full"
+              bg={color}
+              flexShrink="0"
+            />
+          ) : (
+            <Play />
+          )}
           {t("timeline.autoBuild.start", "Auto Build")}
         </Button>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
-          <Popover.Content>
-            <Popover.Header>
-              <Popover.Title>{t("timeline.autoBuild.active", "Auto Build is on")}</Popover.Title>
+          <Popover.Content
+            aria-label="Auto Build sessions"
+            width="sm"
+            maxW="calc(100vw - 2 * var(--chakra-spacing-xs))"
+          >
+            <Popover.Header display="flex" alignItems="center" justifyContent="space-between" gap="xs">
+              <Popover.Title textStyle="label/S/medium" whiteSpace="nowrap">
+                {t("timeline.autoBuild.sessions", "Running ticket sessions")} ({running}/{capacity})
+              </Popover.Title>
+              <Button size="2xs" variant="outline" disabled={disabled} onClick={() => void stop()}>
+                <Pause />
+                {t("timeline.autoBuild.stop", "Stop Auto Build")}
+              </Button>
             </Popover.Header>
             <Popover.Body>
-              <Stack gap="sm">
+              <Stack gap="2xs">
                 {supervisor ? (
-                  <Stack gap="2xs">
-                    <Text textStyle="label/S/medium">{t("timeline.autoBuild.supervisor", "Supervisor")}</Text>
-                    <Button size="xs" variant="ghost" justifyContent="start" onClick={() => onOpenSession(supervisor)}>
-                      {supervisor.title}
-                    </Button>
-                    <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                      {supervisor.status === "completed"
-                        ? "Sleeping until more work can run"
-                        : supervisor.status?.replaceAll("_", " ")}
-                    </Text>
-                  </Stack>
+                  <AutoBuildSessionRow
+                    session={supervisor}
+                    label={t("timeline.autoBuild.supervisor", "Supervisor")}
+                    onOpen={onOpenSession}
+                  />
                 ) : (
                   <Text textStyle="paragraph/S/regular">
                     {t("timeline.autoBuild.waiting", "Waiting for valid tickets and capacity")}
                   </Text>
                 )}
-                <Text textStyle="label/S/medium">
-                  {t("timeline.autoBuild.sessions", "Running ticket sessions")} ({sessions.length})
-                </Text>
                 {sessions.map((session) => (
-                  <Button
+                  <AutoBuildSessionRow
                     key={session.id}
-                    size="xs"
-                    variant="ghost"
-                    justifyContent="start"
-                    onClick={() => onOpenSession(session)}
-                  >
-                    {session.title}
-                  </Button>
+                    session={session}
+                    label={t("timeline.autoBuild.ticketSession", "Ticket session")}
+                    onOpen={onOpenSession}
+                  />
                 ))}
-                <Text textStyle="paragraph/XS/regular" color="fg.muted">
-                  {t(
-                    "timeline.autoBuild.stopDescription",
-                    "Stopping prevents future supervisor prompts. Running sessions continue.",
-                  )}
-                </Text>
               </Stack>
             </Popover.Body>
-            <Popover.Footer>
-              <Button size="sm" variant="outline" disabled={disabled} onClick={() => void stop()}>
-                {t("timeline.autoBuild.stop", "Stop Auto Build")}
-              </Button>
-            </Popover.Footer>
           </Popover.Content>
         </Popover.Positioner>
       </Portal>

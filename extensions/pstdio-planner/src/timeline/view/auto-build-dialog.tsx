@@ -1,11 +1,11 @@
 import { Button, CloseButton, Dialog, Icon, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { CollectionViewBar, useCollectionViewStore } from "@pstdio/ui/collection-view";
 import { buildFilterCategories } from "@pstdio/ui/kanban-renderer";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { psTheme } from "@pstdio/ui/theme";
 import { ArrowUpRight } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
+import { CollectionFilter } from "../../../vendor/collection-filter.js";
 import type { timelineQueryData } from "./timeline-query";
 
 interface AutoBuildDialogProps {
@@ -22,20 +22,7 @@ interface AutoBuildDialogProps {
 export function AutoBuildDialog(props: AutoBuildDialogProps) {
   const { prompt: initialPrompt, ignore: initialIgnore, data, saving, error, onEnable, onClose, t } = props;
   const [prompt, setPrompt] = useState(initialPrompt);
-  const storageKey = `auto-build-ignore:${useId()}`;
-  const initialState = { settings: {}, filter: initialIgnore };
-  const ignore = useCollectionViewStore(storageKey, initialState, (state) => state.filter);
-  const setIgnore = useCollectionViewStore(storageKey, initialState, (state) => state.setFilter);
-  const titleRule = ignore.rules.find((rule) => rule.attributeId === "title" && rule.condition === "contains");
-  const search = typeof titleRule?.value === "string" ? titleRule.value : "";
-  const setSearch = (value: string) =>
-    setIgnore({
-      ...ignore,
-      rules: [
-        ...ignore.rules.filter((rule) => rule !== titleRule),
-        ...(value ? [{ attributeId: "title", condition: "contains" as const, value }] : []),
-      ],
-    });
+  const [ignore, setIgnore] = useState(initialIgnore);
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const categories = buildFilterCategories(data.attributes, data.rows);
   const save = async () => {
@@ -93,17 +80,12 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                   <Text textStyle="label/S/medium">
                     {t("timeline.autoBuild.ignore", "Ignore tickets matching these filters")}
                   </Text>
-                  <CollectionViewBar
-                    storageKey={storageKey}
-                    initialState={initialState}
+                  <CollectionFilter
+                    filter={ignore}
+                    onFilterChange={setIgnore}
                     itemLabel="Ticket"
-                    views={[]}
                     fields={data.attributes}
                     optionsFor={(field) => categories.find(({ id }) => id === field.id)?.options ?? []}
-                    search={search}
-                    onSearchChange={setSearch}
-                    displayControl={null}
-                    align="end"
                   />
                 </Stack>
                 {error ? (

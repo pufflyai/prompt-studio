@@ -87,6 +87,9 @@ function PlanContent(props: PlanContentProps) {
             enabled={autoBuild.mode?.enabled ?? false}
             supervisor={autoBuild.mode?.supervisor}
             sessions={autoBuild.mode?.sessions ?? []}
+            running={autoBuild.mode?.capacity.running ?? 0}
+            capacity={autoBuild.mode?.capacity.limit ?? 0}
+            error={autoBuild.mode?.error}
             onOpenSession={(session) =>
               void host.call("navigation.open", {
                 target: {

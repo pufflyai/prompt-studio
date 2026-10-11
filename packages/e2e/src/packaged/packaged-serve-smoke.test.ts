@@ -401,6 +401,7 @@ test(
         headers: runtimeAuthorization(started.descriptor),
         metadata,
       });
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

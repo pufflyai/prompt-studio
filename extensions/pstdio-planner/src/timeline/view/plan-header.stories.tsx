@@ -68,6 +68,8 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
         <AutoBuildButton
           enabled={running ?? false}
           sessions={[]}
+          running={0}
+          capacity={2}
           onOpenSession={() => {}}
           onConfigure={() => {}}
           onTurnOff={async () => true}

@@ -7,6 +7,8 @@ const meta: Meta<typeof AutoBuildButton> = {
   args: {
     enabled: false,
     sessions: [],
+    running: 0,
+    capacity: 2,
     onConfigure: () => {},
     onTurnOff: async () => true,
     onOpenSession: () => {},
@@ -20,6 +22,7 @@ export const Waiting: Story = { args: { enabled: true } };
 export const Running: Story = {
   args: {
     enabled: true,
+    running: 1,
     supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "in_progress" },
     sessions: [{ id: "ticket", title: "Implement example ticket", status: "in_progress" }],
   },
@@ -27,3 +30,10 @@ export const Running: Story = {
 export const Sleeping: Story = {
   args: { enabled: true, supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "completed" } },
 };
+export const Failed: Story = {
+  args: {
+    enabled: true,
+    supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "failed" },
+  },
+};
+export const WakeFailed: Story = { args: { error: "Agent unavailable" } };

@@ -28,9 +28,9 @@ Implementation follows the project's Planner settings, including adversarial rev
 
 ## Inspect or stop Auto Build
 
-The header button always says **Auto Build**. A spinner shows that the mode is on, including while the supervisor sleeps. Click it to open a popover with the supervisor and running ticket sessions. Click a session to inspect it.
+The header button always says **Auto Build**. Its dot is green while implementation capacity is in use, yellow while Auto Build is on with no capacity in use, and red if the supervisor fails. Click it to open a popover with the supervisor and running ticket sessions, including their statuses. The header shows used capacity and its limit, such as **Running ticket sessions (0/2)**. Click a session to inspect it.
 
-Click **Stop Auto Build** in the popover to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes.
+Click the small **Stop Auto Build** button with the pause icon in the popover header to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes.
 
 Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt and ignore filters.
 
