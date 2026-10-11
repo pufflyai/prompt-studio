@@ -1,4 +1,5 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, params, workbenchPanels } from "@pstdio/sdk/extensions";
+import { pausedChannelIds } from "../channel-state";
 import { completeRun, requireRun, startRun } from "../run-lifecycle";
 import { finishRun, isNewPost, type Thread } from "../schemas";
 import { readSettings } from "../settings";
@@ -19,6 +20,22 @@ const answeredSummary = (thread: Thread) => ({
 
 export const runDaily = defineCommand({ id: "run-daily", title: "Run Social radar", cli: true, run: startRun });
 
+export const startResearch = defineCommand({
+  id: "start-research",
+  title: "Start research session",
+  cli: true,
+  async run(ctx) {
+    const run = await startRun(ctx);
+    ctx.navigation.open({
+      kind: "panel",
+      panel: workbenchPanels.projectSession,
+      resource: { type: "session", id: run.sessionId, label: "Social radar research" },
+      open: "pin",
+    });
+    return run;
+  },
+});
+
 export const getContext = defineCommand({
   id: "get-context",
   title: "Read research context",
@@ -27,6 +44,7 @@ export const getContext = defineCommand({
   async run(ctx, { runId }) {
     const run = await requireRun(ctx, runId);
     const settings = await readSettings(ctx.settings);
+    const paused = await pausedChannelIds(ctx);
     const finished = newest(
       (await runsOf(ctx).list()).filter((item) => item.status === "done"),
       (item) => item.startedAt,
@@ -42,6 +60,7 @@ export const getContext = defineCommand({
       .filter(
         (thread) =>
           thread.status === "answered" &&
+          !paused.has(thread.site) &&
           Date.parse(thread.answeredAt ?? "") >= Date.now() - followUpDays * day &&
           (!thread.outcomeCheckedAt || localDay(thread.outcomeCheckedAt) !== today),
       )
@@ -50,11 +69,13 @@ export const getContext = defineCommand({
       .filter((thread) => isNewPost(thread) && Date.parse(thread.foundAt) >= Date.now() - 14 * day)
       .map((thread) => thread.title);
     const { agent, ...research } = settings;
-    const channels = settings.channels.map((channel) => ({
-      ...channel,
-      mediaRule: mediaRuleOf(channel.id),
-      since: sinceFor(channel.id),
-    }));
+    const channels = settings.channels
+      .filter((channel) => !paused.has(channel.id))
+      .map((channel) => ({
+        ...channel,
+        mediaRule: mediaRuleOf(channel.id),
+        since: sinceFor(channel.id),
+      }));
     return { ...research, channels, followUps, recentPosts };
   },
 });

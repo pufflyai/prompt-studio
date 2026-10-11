@@ -1,10 +1,43 @@
 import { describe, expect, test } from "bun:test";
+import { workbenchPanels } from "@pstdio/sdk/extensions";
 import type { Run, Thread } from "../schemas";
 import { defaults } from "../settings";
 import { commands } from ".";
 import { finish, foundThread, newPost, setup } from "./test-context";
 
 describe("social radar runs", () => {
+  test("manual research opens its session and reuses an active run", async () => {
+    const { ctx, sessions } = setup();
+    const targets: unknown[] = [];
+    ctx.navigation.open = (target) => {
+      targets.push(target);
+    };
+    const first = await commands["start-research"].run(ctx, {});
+    const second = await commands["start-research"].run(ctx, {});
+    expect(sessions).toHaveLength(1);
+    expect(second).toMatchObject({ runId: first.runId, sessionId: first.sessionId, alreadyRunning: true });
+    expect(targets).toHaveLength(2);
+    expect(targets[0]).toMatchObject({
+      kind: "panel",
+      panel: workbenchPanels.projectSession,
+      resource: { type: "session", id: sessions[0].id },
+    });
+  });
+
+  test("paused channels are excluded from searches and answered-thread follow-ups", async () => {
+    const { ctx } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const saved = await commands["save-thread"].run(ctx, { input: foundThread(run.runId) });
+    await commands["set-thread-status"].run(ctx, { id: saved.id, status: "answered" });
+    await commands["set-channel-paused"].run(ctx, { id: "hn", paused: true });
+    const paused = await commands["get-context"].run(ctx, { runId: run.runId });
+    expect(paused.channels.map((channel) => channel.id)).not.toContain("hn");
+    expect(paused.followUps).toEqual([]);
+    await commands["set-channel-paused"].run(ctx, { id: "hn", paused: false });
+    const resumed = await commands["get-context"].run(ctx, { runId: run.runId });
+    expect(resumed.channels.find((channel) => channel.id === "hn")).toMatchObject({ budget: 4 });
+    expect(resumed.followUps.map((thread) => thread.id)).toEqual([saved.id]);
+  });
   test("starts one session for overlapping runs and fails runs whose session ended", async () => {
     const { ctx, sessions, storage } = setup();
     const [first, second] = await Promise.all([commands["run-daily"].run(ctx, {}), commands["run-daily"].run(ctx, {})]);

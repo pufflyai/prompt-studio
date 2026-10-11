@@ -1,7 +1,8 @@
 import { listAnalysis } from "./analysis";
+import { getChannelState, setChannelPaused } from "./channel-state";
 import { saveIdeaCommand, setIdeaStatus, updateIdeaCommand } from "./ideas";
 import { addMedia } from "./media";
-import { finishRunCommand, getContext, listAnswered, listDigest, runDaily } from "./runs";
+import { finishRunCommand, getContext, listAnswered, listDigest, runDaily, startResearch } from "./runs";
 import {
   addChannel,
   getSettings,
@@ -17,6 +18,9 @@ import { getThread, recordOutcome, saveThreadCommand, setThreadStatus, updateThr
 // Keys match command ids, so webviews can call them through the typed client.
 export const commands = {
   "run-daily": runDaily,
+  "start-research": startResearch,
+  "get-channel-state": getChannelState,
+  "set-channel-paused": setChannelPaused,
   "get-context": getContext,
   "save-thread": saveThreadCommand,
   "save-idea": saveIdeaCommand,

@@ -1,4 +1,5 @@
 import { defineView, type NavigationTarget, type ResourceRef, type TreeNode } from "@pstdio/sdk/extensions";
+import { pausedChannelIds } from "../channel-state";
 import { commands } from "../commands";
 import { readSettings } from "../settings";
 import { builtInChannels } from "../sites";
@@ -7,7 +8,7 @@ import { channelResource, pageRef, radarChanged, settingsSection } from "../stor
 export const sections = [
   { id: "research", label: "Research", icon: "Telescope" },
   { id: "voice", label: "Voice", icon: "PenLine" },
-  { id: "agent", label: "Agent", icon: "Bot" },
+  { id: "agent", label: "Research agent", icon: "Bot" },
 ] as const;
 type Section = (typeof sections)[number];
 export type SettingsPart = { kind: "section"; id: Section["id"] } | { kind: "channel"; id: string };
@@ -33,6 +34,10 @@ const row = (
   target,
   selected: open?.type === target.resource.type && open.id === target.resource.id,
 });
+const channelIcon = (paused: boolean, url?: string) => {
+  if (paused) return "Pause";
+  return url ? "Globe" : "RadioTower";
+};
 
 /** Lists the settings sections and channels beside the settings view; each row opens the page on it. */
 export const settingsMenu = defineView({
@@ -43,22 +48,12 @@ export const settingsMenu = defineView({
     refreshEvents: [radarChanged],
     defaultExpandedSectionIds: ["channels"],
     async body(ctx, { renderer }) {
-      const { channels, agent } = await readSettings(ctx.settings);
+      const { channels } = await readSettings(ctx.settings);
+      const paused = await pausedChannelIds(ctx);
       const open = renderer.resource ?? sectionTarget().resource;
       const sectionNodes: TreeNode[] = sections.map((section) =>
         row(section.id, section.label, section.icon, sectionTarget(section), open),
       );
-      // The host's model picker lists harnesses, models, and each model's options.
-      sectionNodes[2].actions = [
-        {
-          id: "choose-model",
-          label: "Choose model",
-          icon: "SlidersHorizontal",
-          command: commands["set-agent"].ref,
-          input: { agent: { type: "harness", label: "Model", required: true, defaultValue: agent } },
-          submitLabel: "Save",
-        },
-      ];
       const missing = builtInChannels.filter((builtIn) => !channels.some((channel) => channel.id === builtIn.id));
       return [
         { id: "sections", collapsible: false, nodes: sectionNodes },
@@ -89,11 +84,18 @@ export const settingsMenu = defineView({
             ...row(
               channel.id,
               channel.name,
-              channel.url ? "Globe" : "RadioTower",
+              channelIcon(paused.has(channel.id), channel.url),
               settingsTarget({ type: channelResource.id, id: channel.id, label: channel.name }),
               open,
             ),
             actions: [
+              {
+                id: "set-channel-paused",
+                label: paused.has(channel.id) ? "Resume channel" : "Pause channel",
+                icon: paused.has(channel.id) ? "Play" : "Pause",
+                command: commands["set-channel-paused"].ref,
+                params: { id: channel.id, paused: !paused.has(channel.id) },
+              },
               {
                 id: "remove-channel",
                 label: "Remove channel",

@@ -81,7 +81,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   useEffect(() => {
     // Wait for the agent list so the first-available fallback resolves to a real harness
     // instead of committing an empty value before the options arrive.
-    if (isAgentsLoading) return;
+    if (disabled || isAgentsLoading) return;
     const next = resolveInitialHarnessSelection({
       current: { harnessId, model },
       recent: readRecentHarnessSelection(projectId),
@@ -90,9 +90,11 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     });
     if (next.harnessId === harnessId && next.model === model) return;
     onChange(serializeParamRecord({ harnessId: next.harnessId, ...(next.model ? { model: next.model } : {}) }));
-  }, [agents, defaultAgent, harnessId, isAgentsLoading, model, onChange, projectId]);
+  }, [agents, defaultAgent, disabled, harnessId, isAgentsLoading, model, onChange, projectId]);
 
   useEffect(() => {
+    // Saved overrides must survive until both harness and model schemas are known.
+    if (disabled || !isResolvedAgent || !harnessParamDefaults.isSuccess || !modelsQuery.isSuccess) return;
     // A remembered model can be stale for the selected harness; swap it for an
     // offered one (or clear it) once the model list is known.
     const next = resolveSynchronizedModel({
@@ -113,7 +115,18 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
         ...(Object.keys(synchronizedParams).length ? { params: synchronizedParams } : {}),
       }),
     );
-  }, [baseParamSchema, harnessId, model, models, modelsQuery, onChange, params]);
+  }, [
+    baseParamSchema,
+    disabled,
+    harnessId,
+    harnessParamDefaults.isSuccess,
+    isResolvedAgent,
+    model,
+    models,
+    modelsQuery,
+    onChange,
+    params,
+  ]);
 
   const handleSelectAgent = (agent: string) => {
     const next = { harnessId: agent };
