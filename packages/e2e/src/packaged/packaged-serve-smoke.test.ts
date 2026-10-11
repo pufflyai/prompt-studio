@@ -46,6 +46,7 @@ import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-n
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
+// Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";

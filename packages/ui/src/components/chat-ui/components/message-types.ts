@@ -102,6 +102,8 @@ export type SessionMessage = {
 };
 
 export type QueuedFollowUp = {
+  /** The request is being saved. Queue actions become available after it is accepted. */
+  sending?: boolean;
   revision?: string;
   model?: string | null;
   params?: Record<string, string | boolean>;

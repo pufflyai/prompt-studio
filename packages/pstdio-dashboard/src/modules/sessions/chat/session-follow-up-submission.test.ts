@@ -1,4 +1,5 @@
 import { beforeEach, expect, test } from "bun:test";
+import { splitQueuedFollowUps } from "./queued-follow-ups";
 import { type FollowUpMutation, submitSessionMessage } from "./session-chat-actions";
 import { getPendingFollowUp, mergeMessagesWithPendingFollowUp, updatePendingFollowUp } from "./session-chat-state";
 
@@ -15,10 +16,16 @@ const deferred = () => {
 };
 
 const current = () => getPendingFollowUp("session-1");
-const submission = (followUp: FollowUpMutation, onSubmitted: () => void, answers?: string[][]) =>
+const submission = (
+  followUp: FollowUpMutation,
+  onSubmitted: () => void,
+  answers?: string[][],
+  sessionStatus = "completed",
+) =>
   submitSessionMessage({
     conversationKey: "session-1",
     sessionId: "session-1",
+    sessionStatus,
     projectId: "project-1",
     agent: "codex",
     model: "model-1",
@@ -32,6 +39,74 @@ const submission = (followUp: FollowUpMutation, onSubmitted: () => void, answers
   });
 
 beforeEach(() => updatePendingFollowUp("session-1", null));
+
+test.each([
+  "in_progress",
+  "awaiting_input",
+  "queued",
+])("a follow-up submitted to an %s session appears only in the queue while sending", (status) => {
+  void submission({ mutateAsync: () => deferred().promise }, () => undefined, undefined, status);
+  const display = splitQueuedFollowUps(
+    mergeMessagesWithPendingFollowUp([], current()),
+    "session-1",
+    undefined,
+    current(),
+  );
+  expect(display.messages).toEqual([]);
+  expect(display.queuedFollowUps).toEqual([
+    expect.objectContaining({ id: current()?.userMessageId, prompt: "Next turn", sending: true }),
+  ]);
+});
+
+test("a failed queued submission remains recoverable in the conversation", async () => {
+  await submission(
+    { mutateAsync: () => Promise.reject(new TypeError("Failed to fetch")) },
+    () => undefined,
+    undefined,
+    "in_progress",
+  );
+  const display = splitQueuedFollowUps(
+    mergeMessagesWithPendingFollowUp([], current()),
+    "session-1",
+    undefined,
+    current(),
+  );
+  expect(display.queuedFollowUps).toEqual([]);
+  expect(display.messages).toEqual([expect.objectContaining({ role: "user", delivery: "unsent" })]);
+});
+
+test("a follow-up goes to the conversation when the server dispatches it after active work finishes", async () => {
+  const response = deferred();
+  const sent = submission({ mutateAsync: () => response.promise }, () => undefined, undefined, "in_progress");
+  response.resolve({ status: "in_progress", followUp: { status: "dispatched" } });
+  await sent;
+  const display = splitQueuedFollowUps(
+    mergeMessagesWithPendingFollowUp([], current()),
+    "session-1",
+    undefined,
+    current(),
+  );
+  expect(display.queuedFollowUps).toEqual([]);
+  expect(display.messages.map((message) => message.parts[0])).toEqual([
+    { type: "text", text: "Next turn" },
+    { type: "loading" },
+  ]);
+});
+
+test("a saved queue snapshot replaces a sending follow-up before its response arrives", () => {
+  void submission({ mutateAsync: () => deferred().promise }, () => undefined, undefined, "in_progress");
+  const saved = [
+    { id: "queued-prompt-session-1-2", role: "user" as const, parts: [{ type: "text" as const, text: "Next turn" }] },
+  ];
+  const display = splitQueuedFollowUps(
+    mergeMessagesWithPendingFollowUp(saved, current()),
+    "session-1",
+    undefined,
+    current(),
+  );
+  expect(display.messages).toEqual([]);
+  expect(display.queuedFollowUps).toEqual([expect.objectContaining({ id: saved[0].id, position: 2 })]);
+});
 
 test("hands off the draft immediately but waits for server acceptance before completing", async () => {
   const response = deferred();
