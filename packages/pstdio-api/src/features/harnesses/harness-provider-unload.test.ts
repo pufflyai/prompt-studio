@@ -144,3 +144,33 @@ test("concurrent host reads cannot publish a handle retired by an older source l
     await lifecycle.dispose();
   }
 });
+
+test("a project workspace change keeps workers of unchanged providers running", async () => {
+  const released: Array<string | undefined> = [];
+  const worker = createTestHarnessRecord("worker", {
+    provider: { dispose: (ctx) => void released.push(ctx.projectId) },
+  });
+  let notify: (input: RuntimeInvalidationInput) => void = () => {};
+  const registry = createHarnessRegistryService({
+    installedExtensionSourcesService: { list: async () => [] } as never,
+    installDefaultExtensions: async () => [],
+    extensionRuntimeCatalog: {
+      get: async (projectId) =>
+        ({ generation: 1, project: { id: projectId }, runtime: { harnesses: [worker] } }) as never,
+      subscribeInvalidation: (listener) => {
+        notify = listener;
+        return () => {};
+      },
+    },
+  });
+  try {
+    const running = (await registry.get(worker.id, { projectId: "p1" }))!;
+    await running.capabilities({ projectId: "p1" });
+    notify({ projectId: "p1", reason: "project_workspace_changed" });
+    await registry.get(worker.id, { projectId: "p1" });
+    await running.capabilities({ projectId: "p1" });
+    expect(released).toEqual([]);
+  } finally {
+    await registry.dispose();
+  }
+});
