@@ -68,6 +68,12 @@ export function TicketForm(props: TicketFormProps) {
         defaultValue: context.deadlineId ?? "none",
         options: milestoneOptions,
       },
+      {
+        id: "dependsOn",
+        label: "Prerequisites",
+        type: "text" as const,
+        placeholder: "Ticket IDs, separated by commas",
+      },
     ],
   };
   if (created) {
@@ -107,6 +113,9 @@ export function TicketForm(props: TicketFormProps) {
       },
       attachments,
       deadline,
+      dependsOn: String(submission.values.dependsOn ?? "")
+        .split(/[\s,]+/)
+        .filter(Boolean),
     };
     const result =
       kind === "gate"

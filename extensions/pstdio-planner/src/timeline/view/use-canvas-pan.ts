@@ -54,8 +54,7 @@ export function useCanvasPan(ref: RefObject<HTMLDivElement | null>) {
           left: event.currentTarget.scrollLeft,
           top: event.currentTarget.scrollTop,
         };
-        // Focus keeps arrow-key panning. It comes from the pointer, so it must not draw a keyboard focus ring.
-        event.currentTarget.focus({ preventScroll: true, focusVisible: false });
+        event.currentTarget.focus({ preventScroll: true });
         event.currentTarget.setPointerCapture(event.pointerId);
         event.preventDefault();
       },

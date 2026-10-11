@@ -75,7 +75,7 @@ function DateCell(
         onDrop();
       }}
     >
-      {targeted ? <Box position="absolute" inset="0" bg="bg.accent-subtle" zIndex="-1" pointerEvents="none" /> : null}
+      {targeted ? <Box position="absolute" inset="0" bg="border.accent/6" pointerEvents="none" /> : null}
       <Tooltip content={`${deadline.date} · ${countdown(deadline.daysLeft, complete)}`}>
         <Box w={`${lineX - 10}px`} textAlign="right" pr="2xs">
           <InlineDate

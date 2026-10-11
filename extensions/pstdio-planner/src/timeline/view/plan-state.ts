@@ -1,7 +1,7 @@
 // Keep transient selection, collapsing, and drag operations outside the composed page.
 import { useEffect, useState } from "react";
 import type { Plan, PlanRow } from "../contracts";
-import { type DropTarget, sameTarget } from "./drag";
+import type { DropTarget } from "./drag";
 import type { Relation } from "./plan-view";
 import type { PlanClient } from "./use-plan";
 
@@ -65,11 +65,7 @@ export function useDragAndDrop(client: PlanClient, onError: (error: string) => v
     }
   };
 
-  // Dropping a ticket before itself changes nothing, so that target shows no preview.
-  const preview = dragId && dropTarget?.beforeId !== dragId ? dropTarget : undefined;
-  // Drag-over repeats the same target while the pointer rests, so keep the state when nothing changed.
-  const target = (next: DropTarget) => setDropTarget((current) => (sameTarget(current, next) ? current : next));
-  return { dragId, dropTarget: preview, setDragId, setDropTarget: target, drop };
+  return { dragId, dropTarget: dragId ? dropTarget : undefined, setDragId, setDropTarget, drop };
 }
 
 export function useViewSections(plan: Plan | undefined, visibleTicketIds: ReadonlySet<string>) {

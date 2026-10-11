@@ -1,6 +1,6 @@
 // Draw one ticket card in the graph: gate marker, shorthand, status, and title.
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
-import { DropIndicator, Tooltip } from "@pstdio/ui";
+import { Tooltip } from "@pstdio/ui";
 import { KanbanRendererCard } from "@pstdio/ui/kanban-renderer";
 import { ShieldCheck } from "lucide-react";
 import type { PlanRow } from "../contracts";
@@ -44,6 +44,9 @@ export function GraphCard(props: GraphCardProps) {
       top={`${y}px`}
       w={`${card.width}px`}
       zIndex={relation ? graphLayers.hierarchyNode : graphLayers.node}
+      outline={dropBefore ? "1px solid" : "none"}
+      outlineColor="bg.accent-primary.default"
+      outlineOffset="3px"
       opacity={opacity}
       title={`${row.shorthand} ${row.title}`}
       onDragOver={(event) => {
@@ -57,8 +60,6 @@ export function GraphCard(props: GraphCardProps) {
         actions.onDrop();
       }}
     >
-      {/* The shared placement indicator marks the insertion point in the gap above the card. */}
-      {dropBefore ? <DropIndicator top="-12px" /> : null}
       <KanbanRendererCard
         eyebrow={[...row.ancestors, row].map(({ shorthand }) => shorthand).join("/")}
         title={row.title}
