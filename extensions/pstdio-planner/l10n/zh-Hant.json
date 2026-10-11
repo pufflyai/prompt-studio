@@ -1,4 +1,6 @@
 {
+  "timeline.page.title": "專案時間軸",
+  "timeline.view.title": "專案時間軸",
   "commands.openTickets": "開啟工單",
   "archiveState.active": "使用中",
   "archiveState.archived": "已封存",

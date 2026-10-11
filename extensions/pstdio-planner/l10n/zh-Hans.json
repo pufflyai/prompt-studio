@@ -1,4 +1,6 @@
 {
+  "timeline.page.title": "项目时间线",
+  "timeline.view.title": "项目时间线",
   "commands.openTickets": "打开工单",
   "archiveState.active": "活跃",
   "archiveState.archived": "已归档",
