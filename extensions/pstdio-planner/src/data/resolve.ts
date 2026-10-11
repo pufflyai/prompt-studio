@@ -1,6 +1,6 @@
 import { resolveByIdOrName, sameName } from "@pstdio/sdk/data";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { statusesCollection, tagsCollection, ticketsCollection } from "./collections";
+import { readTicketsWithReviewState, statusesCollection, tagsCollection } from "./collections";
 
 export const resolveStatusId = async (storage: ExtensionStorageApi, value: string) =>
   resolveByIdOrName(await statusesCollection(storage).list(), value, (status) => status.name, "status");
@@ -17,7 +17,7 @@ export const resolveTagOptionIds = async (storage: ExtensionStorageApi, values: 
 // miss (returns undefined), while callers that need a hard reference (e.g. a
 // parent link) use resolveTicketId, which fails loudly on an unknown shorthand.
 export const findTicket = async (storage: ExtensionStorageApi, value: string) => {
-  const tickets = await ticketsCollection(storage).list();
+  const tickets = await readTicketsWithReviewState(storage);
   const byId = tickets.find((ticket) => ticket.id === value);
   if (byId) return byId;
 

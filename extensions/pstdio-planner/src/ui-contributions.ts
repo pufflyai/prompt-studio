@@ -24,6 +24,7 @@ import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
+import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { ticketBoard } from "./data/ticket-board";
 import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
@@ -81,6 +82,25 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
+  const requests = defineView({
+    id: "ticket-requests",
+    title: l10n("requests.view.title", "Review requests"),
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/ticket-review-requests.tsx", baseUrl),
+      capabilities: ["commands.execute", "navigation.open"],
+    },
+  });
+  const requestsPage = definePage({
+    id: "ticket-requests",
+    title: l10n("requests.page.title", "Review requests"),
+    parent: { kind: "page", id: "tickets" },
+    path: "ticket-requests",
+    mode: workbenchModes.project,
+    resource: { kinds: [ticketResourceKind.ref] },
+    main: { kind: "view", view: requests.ref, cardinality: "one" },
+    slots: [],
+  });
   const tickets = defineView({
     id: ticketBoard.id,
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -95,8 +115,14 @@ export const createPlannerUi = (baseUrl: string) => {
         viewDataEvents.sessionsChanged,
         viewDataEvents.workspacesChanged,
       ],
-      onRowActivate: (ctx, { row }) => {
-        if (row.resource) ctx.navigation.open(ticketPageTarget(row.resource));
+      onRowActivate: async (ctx, { row }) => {
+        if (!row.resource) return;
+        const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
+        ctx.navigation.open(
+          pending
+            ? { kind: "page", page: requestsPage.ref, resource: row.resource, parent: ticketPageTarget(row.resource) }
+            : ticketPageTarget(row.resource),
+        );
       },
       onAttributeChange: setTicketAttribute,
       onReorder: reorderTicket,
@@ -161,8 +187,8 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings],
-    pages: [ticketsPage, ticketDetailPage],
+    views: [tickets, editor, files, properties, tagSettings, requests],
+    pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({
         id: "ticket.properties",

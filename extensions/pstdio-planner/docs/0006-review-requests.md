@@ -1,6 +1,6 @@
 # Review requests
 
-A review request asks a person for input on a ticket. Planner owns every request: attempt handoffs, timeline tasks, and decisions all use the same commands and storage. The **Review Needed** flag stays on while any request on the ticket is open.
+A review request asks a person for input on a ticket. Planner owns every request: attempt handoffs, timeline tasks, and decisions all use the same commands and storage. The **Review Needed** flag is derived from open or unreadable requests.
 
 "Review" here means a person's answer. Code reviews of an attempt use `run-review` and `submit-review` instead. See [Attempts](0002-attempts.md).
 
@@ -26,7 +26,7 @@ Saving a response records what the person decided. It does not merge, select an 
 
 New requests need a ticket that is not done. Answers and cancellations still work after the ticket is done, because a merge can finish the ticket before its approval request is answered. Deleting a ticket deletes its requests.
 
-Answering or cancelling the last open request clears Review Needed, including a flag a person set by hand.
+Answering or cancelling the last open request clears Review Needed when no unreadable record remains. Board cards with pending input open the request forms directly. Use **Open ticket** to read the ticket body. Generic UI and CLI tag edits cannot create a false blocker or hide a real request.
 
 ## CLI
 
@@ -57,4 +57,8 @@ Each read returns the request with its derived `state` (`open`, `answered`, or `
 
 Requests live in the `planner-review-requests` collection. Outcomes live in `planner-review-request-outcomes`, one per request, under the request ID. A request without an outcome is open. The design is recorded in [ADR 0068](../../../documentation/adrs/0068-planner-owns-review-requests.md).
 
-Requests saved by Planner 0.42 and earlier stay in `planner-human-requests` and are not read or migrated. If such a request was still open, clear its Review Needed flag on the ticket by hand.
+Legacy free-text requests in `planner-human-requests` are not inferred as actionable requests. Inspect the ticket for an actual outstanding task or decision. If one exists, create a structured request with concrete instructions and questions. Otherwise no human input is needed.
+
+Board, CLI, and timeline reads derive the indicator from current requests, including on archived and completed tickets. This reconciles legacy display tags without rewriting ticket content, other tags, statuses, dependencies, requests, or answers. Generic ticket edits save the derived tag as part of their existing write. Request changes only refresh readers; they do not rewrite a ticket to synchronize its flag.
+
+Unreadable request or outcome records remain visible and keep work paused. Ask your project maintainer to restore the named record and its outcome from a known-good backup through the public extension storage API, then reopen the ticket. Reconciliation does not delete or mark a broken record as answered.

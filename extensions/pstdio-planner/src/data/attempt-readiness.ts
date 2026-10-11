@@ -1,4 +1,6 @@
 import type { AttemptRecord, TicketAttemptSelection } from "./attempt-types";
+import { hasPendingInput } from "./review-request-storage";
+import type { TicketReviewRequests } from "./review-request-types";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 
 export interface AttemptReadinessTicket {
@@ -24,11 +26,13 @@ export type AttemptReadinessResult =
         | "dependency-missing"
         | "ambiguous-dependency-attempt"
         | "divergent-dependency-attempts"
-        | "capacity-full";
+        | "capacity-full"
+        | "human-input-needed";
       dependencyIds: string[];
     };
 
 interface ResolveAttemptReadinessInput {
+  requests: Map<string, TicketReviewRequests>;
   target: string;
   tickets: AttemptReadinessTicket[];
   attempts: AttemptRecord[];
@@ -47,6 +51,28 @@ const isSelectedAttemptViable = (attempt: AttemptRecord) => {
 };
 
 const isApprovedAttempt = (attempt: AttemptRecord) => attempt.state === "approved" && latestHead(attempt) !== null;
+
+const findPendingPrerequisites = (
+  target: AttemptReadinessTicket,
+  byRef: Map<string, AttemptReadinessTicket>,
+  requests: ResolveAttemptReadinessInput["requests"],
+) => {
+  // Completion chooses the attempt base; it cannot answer requests on any prerequisite.
+  const prerequisites = new Map<string, AttemptReadinessTicket>();
+  const remaining = [target];
+  while (remaining.length) {
+    const ticket = remaining.pop()!;
+    if (prerequisites.has(ticket.id)) continue;
+    prerequisites.set(ticket.id, ticket);
+    for (const ref of normalizeTicketDependencies(ticket.dependsOn)) {
+      const dependency = byRef.get(ref);
+      if (dependency) remaining.push(dependency);
+    }
+  }
+  return [...prerequisites.values()].filter((ticket) =>
+    hasPendingInput(requests.get(ticket.id) ?? { requests: [], errors: [] }),
+  );
+};
 
 export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInput): Promise<AttemptReadinessResult> => {
   const byRef = new Map(
@@ -98,6 +124,9 @@ export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInpu
   if (missing) return { decision: "wait", reason: "dependency-missing", dependencyIds: [missing] };
   if (cycle) return { decision: "wait", reason: "dependency-cycle", dependencyIds: [cycle] };
   const unresolvedTickets = [...unresolved.values()];
+  const pending = findPendingPrerequisites(target, byRef, input.requests);
+  if (pending.length)
+    return { decision: "wait", reason: "human-input-needed", dependencyIds: pending.map((ticket) => ticket.shorthand) };
   if (unresolvedTickets.length === 0) {
     return {
       decision: "ready",

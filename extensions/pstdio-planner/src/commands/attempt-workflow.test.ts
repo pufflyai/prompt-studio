@@ -3,6 +3,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt, reviewCommentsCollection, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { putTicket, ticketsCollection } from "../data/collections";
+import { findTicket } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import {
   addReviewCommentCommand,
@@ -259,7 +260,7 @@ describe("attempt workflow commands", () => {
     );
 
     expect((await readAttempt(fixture.storage, "workspace-1"))?.state).toBe("approved");
-    const ticket = await ticketsCollection(fixture.storage).get("ticket-1");
+    const ticket = await findTicket(fixture.storage, "ticket-1");
     expect(ticket?.statusId).toBe("in-review");
     expect(ticket?.tagIds).toContain("default-human-requested-true");
     expect(fixture.addedAnchors).toEqual([

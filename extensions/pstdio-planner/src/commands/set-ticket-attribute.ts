@@ -1,5 +1,5 @@
 import { defineCommand, type ExtensionContextBase, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { tagsCollection, ticketsCollection } from "../data/collections";
+import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { plannerTicketsChanged } from "../events";
@@ -29,8 +29,7 @@ export const applyTicketAttribute = async (input: {
   if (attributeId === "status") {
     const statusId = typeof value === "string" ? value : "";
     const next = { ...existing, statusId: statusId || null, updatedAt: new Date().toISOString() };
-    await collection.put(rowId, next);
-    return next;
+    return putTicket(storage, next);
   }
 
   const tag = (await tagsCollection(storage).list()).find(
@@ -47,8 +46,7 @@ export const applyTicketAttribute = async (input: {
     tagIds: [...others, ...selected],
     updatedAt: new Date().toISOString(),
   };
-  await collection.put(rowId, next);
-  return next;
+  return putTicket(storage, next);
 };
 
 export const setTicketAttribute = async (

@@ -2,7 +2,7 @@
 import { hasPendingInput } from "../../data/review-request-storage";
 import type { TicketReviewRequests } from "../../data/review-request-types";
 import type { Deadline, PlanFlag, PlanLink, PlanRow, PlanTag, StoredPlan } from "../contracts";
-import { dependencyIds, humanRequestedTagId, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
+import { dependencyIds, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
 import { daysBetween } from "./days";
 import { ticketState } from "./state";
 import { workflowName } from "./workflow";
@@ -78,9 +78,8 @@ function indexInput(input: PlanInput, groups: ReturnType<typeof executionOrder>)
 const requestsFor = (ticket: PlannerTicket, index: PlanIndex) =>
   index.requests.get(ticket.id) ?? { requests: [], errors: [] };
 
-// Any open request or an explicit Review Needed flag asks for input. Answers to other requests never hide them.
-const needsHuman = (ticket: PlannerTicket, index: PlanIndex) =>
-  hasPendingInput(requestsFor(ticket, index)) || ticket.tagIds?.includes(humanRequestedTagId) === true;
+// Only open or unreadable requests ask for input.
+const needsHuman = (ticket: PlannerTicket, index: PlanIndex) => hasPendingInput(requestsFor(ticket, index));
 
 // Walk up the parent chain once; a cycle stops at the first repeated ticket.
 function ancestors(ticket: PlannerTicket, index: PlanIndex) {
