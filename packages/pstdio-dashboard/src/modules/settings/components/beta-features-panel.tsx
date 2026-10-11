@@ -35,6 +35,8 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
           <Switch
             key={feature.key}
             checked={checked}
+            // A failed save leaves `checked` unchanged, so the hidden input needs it too to flip back.
+            inputProps={{ checked }}
             disabled={!settings || saving}
             onCheckedChange={(details) => onChange({ [feature.key]: details.checked })}
           >

@@ -25,7 +25,8 @@ const DeveloperToolsSwitchRow = (props: DeveloperToolsSwitchRowProps) => {
       </Stack>
       <Switch
         checked={checked}
-        inputProps={{ "aria-label": label }}
+        // A rejected change leaves `checked` unchanged, so the hidden input needs it too to flip back.
+        inputProps={{ checked, "aria-label": label }}
         disabled={disabled}
         onCheckedChange={(details) => onChange(details.checked)}
       />
