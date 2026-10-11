@@ -25,14 +25,17 @@
     "title": "测试版功能",
     "description": "试用测试版功能。此设置适用于连接到此安装实例的所有项目和仪表板。",
     "notifications": "通知",
+    "machineTokens": "机器令牌",
     "loading": "正在加载设置…"
+  },
+  "developerTools": {
+    "title": "开发者工具",
+    "description": "用于检查此应用运行情况的工具。这些设置仅保存在此设备上。"
   },
   "performance": {
     "settings": {
-      "title": "性能监控",
       "description": "测量此应用的帧率、CPU 和慢帧。关闭时不会测量任何内容。测量数据仅保存在此设备上，绝不会上传。",
       "enable": "启用性能监控",
-      "helperOff": "仅保存在此设备上。其他设备和远程运行时保留各自的设置。",
       "helperDesktopOn": "已在此设备上开启。在状态栏中显示帧率。每 2 秒采样一次，保留最近 30 秒的数据。",
       "helperBrowserOn": "已在此浏览器中开启。在状态栏中显示帧率，并在此标签页打开期间记录慢帧。",
       "saveError": "无法更改性能监控。"
@@ -87,7 +90,6 @@
     "themeHelper": "适用于所有项目。"
   },
   "connectionStatus": {
-    "title": "连接状态",
     "description": "在状态栏中显示后端连接状态。",
     "enable": "显示连接状态",
     "saveError": "无法更改连接状态显示。"

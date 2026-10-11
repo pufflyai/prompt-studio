@@ -25,14 +25,17 @@
     "title": "Fonctionnalités bêta",
     "description": "Essayez les fonctionnalités bêta. Ce réglage s’applique à tous les projets et tableaux de bord connectés à cette installation.",
     "notifications": "Notifications",
+    "machineTokens": "Jetons machine",
     "loading": "Chargement des paramètres…"
+  },
+  "developerTools": {
+    "title": "Outils de développement",
+    "description": "Outils pour vérifier le fonctionnement de cette app. Ces réglages sont enregistrés sur cet appareil uniquement."
   },
   "performance": {
     "settings": {
-      "title": "Surveillance des performances",
       "description": "Mesure la fréquence d'images, le CPU et les images lentes dans cette application. Rien n'est mesuré quand cette option est désactivée. Les mesures restent sur cet appareil et ne sont jamais envoyées.",
       "enable": "Activer la surveillance des performances",
-      "helperOff": "Enregistré sur cet appareil uniquement. Les autres appareils et les environnements d'exécution distants gardent leur propre réglage.",
       "helperDesktopOn": "Activée sur cet appareil. Affiche la fréquence d'images dans la barre d'état. Mesure toutes les 2 secondes et garde les 30 dernières secondes.",
       "helperBrowserOn": "Activée dans ce navigateur. Affiche la fréquence d'images dans la barre d'état et enregistre les images lentes tant que cet onglet est ouvert.",
       "saveError": "Impossible de modifier la surveillance des performances."
@@ -87,7 +90,6 @@
     "themeHelper": "S'applique à tous les projets."
   },
   "connectionStatus": {
-    "title": "État de la connexion",
     "description": "Afficher l’état de connexion au serveur dans la barre d’état.",
     "enable": "Afficher l’état de la connexion",
     "saveError": "Impossible de modifier l’affichage de l’état de la connexion."

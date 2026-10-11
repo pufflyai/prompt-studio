@@ -38,7 +38,11 @@ test("publishes confirmed settings and restores them in a new sync snapshot", as
     ]);
     await settings.update({ max_concurrent_sessions: 2 });
     expect(capacityChecks).toBe(1);
-    expect(await settings.get()).toEqual({ notifications_enabled: true, max_concurrent_sessions: 2 });
+    expect(await settings.get()).toEqual({
+      notifications_enabled: true,
+      machine_tokens_enabled: false,
+      max_concurrent_sessions: 2,
+    });
     unsubscribe();
   } finally {
     await connection.close();

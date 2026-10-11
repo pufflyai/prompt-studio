@@ -20,7 +20,7 @@ PGlite assets. Run `bun run reset` to clean, install dependencies, and rebuild.
 
 ## Daily-drive the nightly build
 
-Maintainers run the nightly desktop build for their own daily work. A source checkout skips the compiled CLI, the bundled runtime, the updater, and migrations on existing data, so bugs in those parts only show up in packaged builds. Install the desktop app once, then run `pst update-channel nightly` or choose **Settings → Developer tools → Update channel → Nightly**. The app updates to the newest nightly through the normal updater. See [Install](../getting-started/0001-install.md#choose-an-update-channel).
+Maintainers run the nightly desktop build for their own daily work. A source checkout skips the compiled CLI, the bundled runtime, the updater, and migrations on existing data, so bugs in those parts only show up in packaged builds. Install the desktop app once, then run `pst update-channel nightly` or choose **Settings → Workbench → Update channel → Nightly**. The app updates to the newest nightly through the normal updater. See [Install](../getting-started/0001-install.md#choose-an-update-channel).
 
 ## Run Locally
 

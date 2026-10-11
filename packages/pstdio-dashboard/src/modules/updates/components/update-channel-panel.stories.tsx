@@ -46,7 +46,7 @@ const UpdateChannelNavigation = () => {
   const [client] = useState(() => {
     const next = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
     next.setQueryData(["settings"], null);
-    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: false });
+    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: false, machine_tokens_enabled: false });
     return next;
   });
   const [workbench] = useState(() => {

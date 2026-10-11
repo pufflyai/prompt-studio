@@ -15,6 +15,7 @@ export const createSettingsService = (deps: SettingsServiceDeps) => {
     return {
       max_concurrent_sessions: settings.max_concurrent_sessions,
       notifications_enabled: settings.notifications_enabled,
+      machine_tokens_enabled: settings.machine_tokens_enabled,
     };
   };
 
@@ -25,6 +26,7 @@ export const createSettingsService = (deps: SettingsServiceDeps) => {
     return {
       max_concurrent_sessions: settings.max_concurrent_sessions,
       notifications_enabled: settings.notifications_enabled,
+      machine_tokens_enabled: settings.machine_tokens_enabled,
     };
   };
 

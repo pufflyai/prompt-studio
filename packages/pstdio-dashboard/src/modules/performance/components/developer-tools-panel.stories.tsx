@@ -14,32 +14,35 @@ const meta = {
   component: DeveloperToolsContent,
   args: {
     host: "desktop",
-    onChange: () => undefined,
+    performanceEnabled: false,
+    connectionStatusEnabled: false,
+    onPerformanceChange: () => undefined,
+    onConnectionStatusChange: () => undefined,
     onDismissError: () => undefined,
   },
 } satisfies Meta<typeof DeveloperToolsContent>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Off: Story = { args: { enabled: false } };
-export const OnDesktop: Story = { args: { enabled: true } };
-export const OnBrowser: Story = { args: { enabled: true, host: "browser" } };
-export const Loading: Story = { args: { enabled: undefined } };
-export const SaveFailure: Story = { args: { enabled: false, error: "Could not change performance monitoring." } };
+export const Off: Story = {};
+export const OnDesktop: Story = { args: { performanceEnabled: true, connectionStatusEnabled: true } };
+export const OnBrowser: Story = { args: { performanceEnabled: true, host: "browser" } };
+export const Loading: Story = { args: { performanceEnabled: undefined } };
+export const SaveFailure: Story = { args: { error: "Could not change performance monitoring." } };
 
-// The real modules with a browser host: toggle the switch, then open the view.
+// The real modules with a browser host: the panel opens under Workbench in the settings navigation.
 const DeveloperToolsNavigation = () => {
   const [client] = useState(() => {
     const next = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
     next.setQueryData(["settings"], null);
-    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: false });
+    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: false, machine_tokens_enabled: false });
     return next;
   });
   const [workbench] = useState(() => {
     const next = createWorkbench();
     next.registerModule(createSettingsModule());
     next.registerModule(createPerformanceModule());
-    void next.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "performance" });
+    void next.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "developer-tools" });
     return next;
   });
 

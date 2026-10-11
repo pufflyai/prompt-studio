@@ -15,8 +15,10 @@ Settings open in the workbench overlay. Dashboard contributions register section
 
 | Scope | Panels |
 | --- | --- |
-| Global | Runtime; Experimental → Beta features |
-| Project | Extensions, Project folder, Skills, Templates, Machine tokens, Danger zone |
+| Global | Workbench → Runtime, Appearance, Update channel (desktop only), Developer tools; Experimental → Beta features |
+| Project | Extensions, Project folder, Skills, Templates, Machine tokens (beta), Danger zone |
+
+Developer tools holds the device-local switches for performance monitoring and the connection status indicator. Machine tokens shows only while its Beta features switch is on.
 
 Extensions can contribute settings through public APIs. Template editors call commands declared by the owning extension. Ticket statuses and tags belong to Planner; core does not own a generic ticket-settings page.
 

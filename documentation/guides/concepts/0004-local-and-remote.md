@@ -36,7 +36,7 @@ The connection API does not return the secret to the extension. It sends request
 
 ## Start work from other systems
 
-Another system, such as a webhook or a scheduler, can start work in a project. Issue it a machine token in **Settings → Machine tokens**, or with `pst auth tokens`. A token works for one project, only for the commands you list, and only until it expires. A command must be marked for automation before a token can run it.
+Another system, such as a webhook or a scheduler, can start work in a project. Issue it a machine token with `pst auth tokens`, or in **Settings → Project → Machine tokens** after you turn on **Settings → Experimental → Beta features → Machine tokens**. A token works for one project, only for the commands you list, and only until it expires. A command must be marked for automation before a token can run it.
 
 Each request carries an idempotency key, a unique name for that request. Sending the same key and input again as the same caller returns the existing run instead of starting a second one. Reusing the key with different input fails. Accepted runs are saved, so queued work starts again after a restart. Work interrupted during execution fails with a retryable `host_restarted` error; it does not resume halfway through the command.
 

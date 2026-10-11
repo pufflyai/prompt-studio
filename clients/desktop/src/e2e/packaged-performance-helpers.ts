@@ -42,7 +42,7 @@ export const setMonitoring = async (page: Page, enabled: boolean) => {
   await page
     .getByRole("dialog")
     .filter({ hasText: "Developer tools" })
-    .getByText("Performance", { exact: true })
+    .getByRole("option", { name: "Developer tools", exact: true })
     .click();
   const toggle = page.getByRole("checkbox", { name: "Enable performance monitoring", exact: true });
   await page.locator("label").filter({ has: toggle }).click();
