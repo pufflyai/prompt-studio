@@ -1,0 +1,28 @@
+name: Windows Codex repetition check
+
+on:
+  push:
+    branches: [test/ps-595-windows-validation]
+
+permissions:
+  contents: read
+
+jobs:
+  codex_repetitions:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build the SDK
+        run: bun run build -- --scope @pstdio/sdk --include-dependencies
+      - name: Repeat each Codex harness test 50 times
+        working-directory: extensions/harness-codex
+        run: bun test --timeout 15000 --rerun-each=50
