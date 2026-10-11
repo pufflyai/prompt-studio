@@ -156,6 +156,7 @@ export const registerQueuedRequestSmokeTests = () => {
         await Bun.sleep(20);
       }
       await request(`/sessions/${queuedSession.id}/follow-up`, "POST", { prompt: "First" });
+      await request(`/sessions/${queuedSession.id}/follow-up`, "POST", { prompt: "Second" });
       const unavailable = await request(`/sessions/${queuedSession.id}/queued-follow-ups`);
       expect(unavailable.activeRunStartedAt).toBeString();
       expect(unavailable.steeringAvailable).toBe(false);

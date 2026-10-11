@@ -87,6 +87,7 @@ test("queues two follow-ups without stopping the active session and keeps a fail
     try {
       await expect(editor).toBeEmpty();
       await expect(page.getByText(prompt, { exact: true })).toHaveCount(1);
+      await expect(page.locator("[data-queued-follow-up-id]").filter({ hasText: prompt })).toBeVisible();
       await expect(editor).toHaveAttribute("contenteditable", "false");
       await expect(send).toBeDisabled();
     } finally {
