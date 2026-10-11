@@ -10,6 +10,7 @@ import { DataTableNode } from "./nodes/DataTableNode";
 import { MarkdownImageNode } from "./nodes/MarkdownImageNode";
 import { MarkdownLinkNode } from "./nodes/MarkdownLinkNode";
 import { RawHtmlNode } from "./nodes/RawHtmlNode";
+import { StreamingTextNode } from "./nodes/streaming-text-node";
 import { EquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE } from "./plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "./plugins/HorizontalRulePlugin/HorizontalRuleNode";
@@ -17,6 +18,7 @@ import { MermaidNode } from "./plugins/MermaidPlugin/MermaidNode";
 import { TRANSFORMERS_EXTENDED } from "./transformers/markdown-transformers";
 
 export const editorNodes: Array<Klass<LexicalNode>> = [
+  StreamingTextNode,
   QuoteNode,
   LinkNode,
   AutoLinkNode,

@@ -1,4 +1,14 @@
-import { Box, chakra, Flex, HStack, type HTMLChakraProps, IconButton, Portal, Spacer } from "@chakra-ui/react";
+import {
+  Box,
+  chakra,
+  Flex,
+  HStack,
+  type HTMLChakraProps,
+  IconButton,
+  Portal,
+  Spacer,
+  useRecipe,
+} from "@chakra-ui/react";
 import { Minus, SquareArrowOutUpRight } from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
@@ -44,7 +54,7 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
     overlay,
   } = props;
 
-  if (!isOpen) return null;
+  const motion = useRecipe({ key: "bubblePanel" });
 
   return (
     <Portal>
@@ -67,6 +77,10 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
         overflow="hidden"
         zIndex="dropdown"
         {...containerProps}
+        css={motion()}
+        data-open={isOpen}
+        inert={!isOpen}
+        aria-hidden={!isOpen}
       >
         <Flex direction="column" h="full">
           <Header variant="main" gap="sm" flexShrink={0}>

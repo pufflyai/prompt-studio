@@ -4,7 +4,8 @@ import type { ITheme } from "@xterm/xterm";
 import { Terminal as Xterm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import "./terminal.css";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { SplitPanelMotionContext } from "../layout/split-panel-motion-context";
 import { bindSessionToSink, type TerminalSink } from "./bind-session";
 import { resolveTerminalTheme, type TerminalThemeName } from "./terminal-theme";
 import type { TerminalBridge, TerminalSessionAdapter, TerminalSessionRequest } from "./types";
@@ -55,7 +56,14 @@ export const createTerminalSink = (xterm: Pick<Xterm, "write" | "onData" | "onRe
   } satisfies TerminalSink & { dispose(): void };
 };
 
-const fitTerminal = (fit: FitAddon | null) => {
+const fitTerminal = (fit: FitAddon | null, motionRoot?: HTMLDivElement | null) => {
+  // Fit at the final size, while divider dragging and reduced motion stay direct.
+  if (
+    motionRoot
+      ?.getAnimations()
+      .some((animation) => animation instanceof CSSTransition && animation.transitionProperty === "--split-size")
+  )
+    return;
   try {
     fit?.fit();
   } catch {
@@ -164,6 +172,7 @@ export const Terminal = (props: TerminalProps) => {
   }
 
   const resolvedTheme = resolveTerminalTheme(theme);
+  const motionRootRef = useContext(SplitPanelMotionContext);
 
   // Mount xterm once on the container. Theme, font, and size updates flow
   // through the dedicated options-sync effect below to avoid a full remount on
@@ -177,6 +186,13 @@ export const Terminal = (props: TerminalProps) => {
     let measureAnimationFrame: number | undefined;
     let measureTimeout: number | undefined;
     let observer: ResizeObserver | undefined;
+    const motionRoot = motionRootRef?.current;
+    const measure = () => fitTerminal(fitRef.current, motionRoot);
+    const handleMotionEnd = (event: TransitionEvent) => {
+      if (event.target === motionRoot && event.propertyName === "--split-size") measure();
+    };
+    motionRoot?.addEventListener("transitionend", handleMotionEnd);
+    motionRoot?.addEventListener("transitioncancel", handleMotionEnd);
 
     // Deferring construction skips React Strict Mode's disposable probe mount.
     // xterm schedules internal viewport work during construction that otherwise
@@ -203,7 +219,6 @@ export const Terminal = (props: TerminalProps) => {
       fitRef.current = fit;
       sinkRef.current = sink;
 
-      const measure = () => fitTerminal(fit);
       measure();
       measureAnimationFrame = window.requestAnimationFrame(measure);
       measureTimeout = window.setTimeout(measure, 50);
@@ -217,13 +232,15 @@ export const Terminal = (props: TerminalProps) => {
       if (measureAnimationFrame !== undefined) window.cancelAnimationFrame(measureAnimationFrame);
       if (measureTimeout !== undefined) window.clearTimeout(measureTimeout);
       observer?.disconnect();
+      motionRoot?.removeEventListener("transitionend", handleMotionEnd);
+      motionRoot?.removeEventListener("transitioncancel", handleMotionEnd);
       sink?.dispose();
       xterm?.dispose();
       xtermRef.current = null;
       fitRef.current = null;
       sinkRef.current = null;
     };
-  }, []);
+  }, [motionRootRef]);
 
   useEffect(() => {
     if (!terminalReady) return;
@@ -232,8 +249,8 @@ export const Terminal = (props: TerminalProps) => {
     xterm.options.theme = resolvedTheme;
     xterm.options.fontFamily = fontFamily;
     xterm.options.fontSize = fontSize;
-    fitTerminal(fitRef.current);
-  }, [terminalReady, resolvedTheme, fontFamily, fontSize]);
+    fitTerminal(fitRef.current, motionRootRef?.current);
+  }, [terminalReady, resolvedTheme, fontFamily, fontSize, motionRootRef]);
 
   const { session } = useTerminalSession({ bridge, request: initialSessionRequestRef.current, killOnUnmount });
 
@@ -242,8 +259,8 @@ export const Terminal = (props: TerminalProps) => {
     const xterm = xtermRef.current;
     const sink = sinkRef.current;
     if (!xterm || !sink || !session) return;
-    fitTerminal(fitRef.current);
-    const animationFrame = window.requestAnimationFrame(() => fitTerminal(fitRef.current));
+    fitTerminal(fitRef.current, motionRootRef?.current);
+    const animationFrame = window.requestAnimationFrame(() => fitTerminal(fitRef.current, motionRootRef?.current));
     const unbind = bindTerminalSessionWithCallbackRefs(xterm, sink, session, {
       onSessionOpen: onSessionOpenRef,
       onSessionExit: onSessionExitRef,
@@ -252,7 +269,7 @@ export const Terminal = (props: TerminalProps) => {
       window.cancelAnimationFrame(animationFrame);
       unbind();
     };
-  }, [session, terminalReady]);
+  }, [session, terminalReady, motionRootRef]);
 
   useEffect(() => {
     if (terminalReady && autoFocus) xtermRef.current?.focus();

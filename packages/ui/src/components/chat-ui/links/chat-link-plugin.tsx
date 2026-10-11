@@ -2,7 +2,8 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { TextNode } from "lexical";
 import { useEffect } from "react";
 import { MarkdownLinkNode } from "@/components/rich-text/shared/nodes/MarkdownLinkNode";
-import { ChatCodeLinkNode } from "./chat-code-link-node";
+import { StreamingTextNode } from "@/components/rich-text/shared/nodes/streaming-text-node";
+import { resolveChatCodeLink } from "./chat-code-link-transform";
 import { type ChatLinkCandidate, type ChatLinkHandler, parseChatLink } from "./chat-link";
 import { useChatLinkHandler } from "./chat-link-context";
 
@@ -55,21 +56,9 @@ export const ChatLinkPlugin = () => {
           anchor.title = handler.describe?.(candidate) ?? `Open file or document: ${source}`;
       }
     });
-    const removeCode = editor.registerNodeTransform(TextNode, (node) => {
-      if (node instanceof ChatCodeLinkNode || !node.hasFormat("code")) return;
-      const parent = node.getParent();
-      if (!parent || parent.getType() === "code" || parent.getType().includes("link")) return;
-      const candidate: ChatLinkCandidate = { source: node.getTextContent(), origin: "inline-code" };
-      const parsed = parseChatLink(candidate, window.location.origin);
-      if (!parsed || parsed.kind === "external") return;
-      const replacement = new ChatCodeLinkNode(
-        candidate.source,
-        handler.resolveHref(candidate),
-        handler.describe?.(candidate),
-      );
-      replacement.setFormat(node.getFormat());
-      node.replace(replacement);
-    });
+    const transformCode = (node: TextNode) => resolveChatCodeLink(node, handler, window.location.origin);
+    const removeCode = editor.registerNodeTransform(TextNode, transformCode);
+    const removeStreamingCode = editor.registerNodeTransform(StreamingTextNode, transformCode);
     const activate = (event: MouseEvent | KeyboardEvent) => activateChatLink(handler, event);
     const removeRoot = editor.registerRootListener((root, previous) => {
       // Root listeners are replaced with the editor's root, including streamed content.
@@ -82,6 +71,7 @@ export const ChatLinkPlugin = () => {
     return () => {
       removeLink();
       removeCode();
+      removeStreamingCode();
       removeLinkPresentation();
       removeRoot();
     };

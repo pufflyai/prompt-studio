@@ -1,4 +1,6 @@
 export const globalCss = {
+  "@property --split-size": { syntax: '"<length>"', inherits: "true", initialValue: "0px" },
+  "@keyframes text-chunk": { from: { opacity: 0 }, to: { opacity: 1 } },
   "*::selection": {
     bg: {
       base: "bg.accent-secondary.blue-medium",

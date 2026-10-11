@@ -50,6 +50,7 @@ const dragPanelToRawSize = async (
   separator: import("@playwright/test").Locator,
   rawSize: number,
 ) => {
+  await expect.poll(() => separator.evaluate((element) => element.parentElement!.getAnimations().length)).toBe(0);
   const box = await separator.boundingBox();
   expect(box).not.toBeNull();
   const startSize = await panelSize(separator);

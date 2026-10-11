@@ -1,5 +1,7 @@
 export type ResizableSplitSide = "left" | "right" | "top" | "bottom";
 
+export const FALLBACK_ROOT_SIZE = { width: 1200, height: 720 };
+
 const MIN_HORIZONTAL_COLLAPSE_THRESHOLD_PX = 72;
 const MAX_HORIZONTAL_COLLAPSE_THRESHOLD_PX = 160;
 const VERTICAL_COLLAPSE_THRESHOLD_PX = 72;

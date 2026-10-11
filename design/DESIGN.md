@@ -103,5 +103,27 @@ A page can have its own navigation tree. Opening that page replaces the project 
 
 ## Activity
 
-- Show work in progress with a spinner or the elapsed time. Never animate text: no shimmer, gradient sweeps, or pulsing labels. Moving text is harder to read and looks like an effect rather than status.
+- Show work in progress with a spinner or the elapsed time. Never animate status text: no shimmer, gradient sweeps, or pulsing labels. Moving text is harder to read and looks like an effect rather than status. Newly streamed response text may fade once, as described below.
 - When the work finishes, keep its duration visible, for example "Worked for 7s".
+
+## Motion
+
+Use the shared `@pstdio/ui` motion tokens and recipes. These values adopt the Navigation tree, Panels, Floating panel, and Streaming Motion Lab studies at their Subtle setting. Do not add a JavaScript animation library.
+
+| Motion | Enter | Exit |
+| --- | --- | --- |
+| Tree children and chevrons | 160 ms | 120 ms |
+| Sidenav, attached Side Panel, and bottom panel | 180 ms | 140 ms |
+| Floating Side Panel | 180 ms | 140 ms |
+| Floating panel launcher | 100 ms | 75 ms |
+| Newly streamed text chunks | 240 ms once | None |
+
+- Enter with `cubic-bezier(0.33, 1, 0.68, 1)`. Exit with `cubic-bezier(0.32, 0, 0.67, 0)`. Reversing continues from the current value.
+- Reveal tree children from the top. Clip panels while their contents keep their saved size. Divider dragging follows the pointer directly. Virtualized trees change instantly.
+- Anchor the floating panel at its bottom right. Start at 96% scale and 8 px below its final position. The launcher leaves at 90% scale.
+- Hover actions appear immediately and hide after 150 ms. Reserve their space so the label stays still.
+- Fade only new response chunks. Earlier text keeps its DOM. Loaded history appears immediately. Incomplete Markdown may reinterpret the affected structure as syntax finishes.
+- Follow the operating system's reduced motion setting. Tree reveals, chevrons, panel sizes, and streamed text become instant. The floating panel and launcher keep opacity fades with no position or scale change.
+- Motion ends without background work. Hidden panels remain mounted to preserve their state and live connections. Exiting content becomes inert immediately.
+
+See [the production motion decision](../documentation/adrs/0070-production-motion-on-theme-tokens.md). After the UI release, Motion Lab should read adopted timings from the released theme instead of retaining its proposed copies.

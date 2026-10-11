@@ -227,7 +227,7 @@ const appendBlock = (parent: ElementNode, node: RootContent, context: ImportCont
   }
 };
 
-export const importMarkdownToLexical = (markdown: string, resolver?: MarkdownUrlResolver) => {
+export const createMarkdownLexicalNodes = (markdown: string, resolver?: MarkdownUrlResolver) => {
   const tree = parseMarkdown(markdown);
   const definitions = new Map(
     tree.children
@@ -235,10 +235,15 @@ export const importMarkdownToLexical = (markdown: string, resolver?: MarkdownUrl
       .map((node) => [node.identifier.toLowerCase(), node]),
   );
   const context: ImportContext = { definitions, resolver, tableIndex: 0 };
-  const root = $getRoot();
-  root.clear();
+  const root = $createParagraphNode();
 
   for (const node of tree.children) appendBlock(root, node, context);
   // Lexical treats a root-only state as uninitialized and skips its first change notification.
-  if (root.isEmpty()) root.append($createParagraphNode());
+  return root.isEmpty() ? [$createParagraphNode()] : root.getChildren();
+};
+
+export const importMarkdownToLexical = (markdown: string, resolver?: MarkdownUrlResolver) => {
+  $getRoot()
+    .clear()
+    .append(...createMarkdownLexicalNodes(markdown, resolver));
 };

@@ -1,6 +1,6 @@
 import "../theme/rich-text-theme.css";
 
-import { Flex } from "@chakra-ui/react";
+import { Flex, useRecipe } from "@chakra-ui/react";
 import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
@@ -18,6 +18,7 @@ import { ChatLinkProvider, useChatLinkHandler } from "@/components/chat-ui/links
 import { ChatLinkPlugin } from "@/components/chat-ui/links/chat-link-plugin";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
+import { importMarkdownToLexical } from "../shared/markdown-import";
 import { createMarkdownSourceDocument } from "../shared/markdown-source-document";
 import { MarkdownTableSettingsContext } from "../shared/markdown-table-settings-context";
 import type { MarkdownUrlResolver } from "../shared/markdown-url";
@@ -29,6 +30,7 @@ import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugi
 import StateUpdatePlugin from "../shared/plugins/StateUpdatePlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
+import { importStreamingMarkdownToLexical } from "../shared/streaming-markdown";
 import { splitFrontmatter } from "../utils/markdown";
 
 export interface RichMessageProps extends ChatLinkProps {
@@ -36,6 +38,7 @@ export interface RichMessageProps extends ChatLinkProps {
   defaultState: string;
   fullWidth?: boolean;
   isEditable?: boolean;
+  streaming?: boolean;
   resolveMarkdownUrl?: MarkdownUrlResolver;
   onChange?: (value: string) => void;
 }
@@ -58,11 +61,14 @@ function RichMessageContent(props: RichMessageProps) {
     defaultState = "",
     fullWidth = false,
     isEditable = false,
+    streaming = false,
     resolveMarkdownUrl,
     onChange,
   } = props;
   const { frontmatter, body } = splitFrontmatter(defaultState);
   const shouldTrackChanges = isEditable && Boolean(onChange);
+  const motion = useRecipe({ key: "streamingText" });
+  const loadedRef = useRef({ body, resolver: resolveMarkdownUrl });
   const sourceDocumentRef = useRef<ReturnType<typeof createMarkdownSourceDocument> | null>(null);
   sourceDocumentRef.current ??= createMarkdownSourceDocument(body, resolveMarkdownUrl);
 
@@ -71,7 +77,8 @@ function RichMessageContent(props: RichMessageProps) {
     nodes: [...editorNodes, ChatCodeLinkNode],
     editorState: () => {
       $addUpdateTag(SOURCE_IMPORT_TAG);
-      sourceDocumentRef.current?.importToLexical();
+      if (isEditable) sourceDocumentRef.current?.importToLexical();
+      else importMarkdownToLexical(body, resolveMarkdownUrl);
     },
     onError: (error: Error) => console.error(error),
     editable: isEditable,
@@ -82,6 +89,7 @@ function RichMessageContent(props: RichMessageProps) {
     <Flex
       className="rich-text"
       data-rich-message="true"
+      css={motion()}
       justifyContent="space-between"
       width="100%"
       maxWidth="100%"
@@ -96,10 +104,21 @@ function RichMessageContent(props: RichMessageProps) {
             <StateUpdatePlugin
               value={body}
               onUpdate={(value: string) => {
-                const sourceDocument = createMarkdownSourceDocument(value, resolveMarkdownUrl);
-                sourceDocumentRef.current = sourceDocument;
+                const previous = loadedRef.current;
+                if (previous.body === value && previous.resolver === resolveMarkdownUrl) return;
                 $addUpdateTag(SOURCE_IMPORT_TAG);
-                sourceDocument.importToLexical();
+                if (isEditable) {
+                  const sourceDocument = createMarkdownSourceDocument(value, resolveMarkdownUrl);
+                  sourceDocumentRef.current = sourceDocument;
+                  sourceDocument.importToLexical();
+                } else {
+                  importStreamingMarkdownToLexical(
+                    value,
+                    resolveMarkdownUrl,
+                    streaming && value.startsWith(previous.body),
+                  );
+                }
+                loadedRef.current = { body: value, resolver: resolveMarkdownUrl };
               }}
             />
             <LinkPlugin />
@@ -109,7 +128,7 @@ function RichMessageContent(props: RichMessageProps) {
             <ListMarkerWidthPlugin />
             {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
             <HorizontalRulePlugin />
-            <CodeHighlightingPlugin />
+            {!streaming ? <CodeHighlightingPlugin /> : null}
             <ImportCodeBlocksPlugin />
             <EquationPlugin />
             <RichTextPlugin

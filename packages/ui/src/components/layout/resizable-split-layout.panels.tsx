@@ -7,9 +7,10 @@ import type {
 } from "react";
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 import { type ResizableSplitSeparator, ResizeHandle } from "@/components/layout/resizable-split-layout.handle";
+import { SplitPanelMotionContext } from "./split-panel-motion-context";
 
 interface ResizableSplitPanelsProps {
-  styles: Record<"resizablePanel" | "contentPanel" | "separator", SystemStyleObject>;
+  styles: Record<"resizablePanel" | "panelContent" | "contentPanel" | "separator", SystemStyleObject>;
   axis: ReturnType<typeof getResizableSplitAxis>;
   bounds: { minSize: number; maxSize: number };
   collapsed: boolean;
@@ -20,6 +21,7 @@ interface ResizableSplitPanelsProps {
   resizablePanel: ReactNode;
   resizablePanelId: string;
   resizablePanelRef: RefObject<HTMLDivElement | null>;
+  rootRef: RefObject<HTMLDivElement | null>;
   dragging: boolean;
   resizeLabel: string;
   resolvedPanelSize: number;
@@ -43,6 +45,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     resizablePanel,
     resizablePanelId,
     resizablePanelRef,
+    rootRef,
     dragging,
     resizeLabel,
     resolvedPanelSize,
@@ -60,8 +63,11 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       css={styles.resizablePanel}
       data-collapsed={collapsed}
       aria-hidden={collapsed ? true : undefined}
+      inert={collapsed}
     >
-      {resizablePanel}
+      <Box css={styles.panelContent} data-split-panel-content="">
+        <SplitPanelMotionContext value={rootRef}>{resizablePanel}</SplitPanelMotionContext>
+      </Box>
     </Box>
   );
   const contentPanelNode = (
