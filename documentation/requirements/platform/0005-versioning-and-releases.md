@@ -44,7 +44,7 @@ The `nightly_plan` and `nightly` jobs in `release-packages.yml` run every day at
 2. The job commits the version change on top of `main` and tags that commit `pstdio@<version>`. The commit is never pushed to `main`.
 3. It runs the `build-release` action, publishes platform packages and runs `changeset publish` with `--tag nightly`. The npm `latest` tag never moves. The `nightly` tag always points at the newest nightly.
 4. It pushes the tag and creates a draft GitHub prerelease with CLI binaries, checksums and an `install.sh` that installs that nightly.
-5. `release-desktop.yml` builds signed and notarized macOS and Linux desktop assets with `targets` set to those three targets and `prerelease: true`. Nightlies build no Windows assets. The release is published as a prerelease and never marked Latest.
+5. `release-desktop.yml` builds signed and notarized macOS and Linux desktop assets with `targets` set to those three targets and `prerelease: true`. Nightlies build no Windows assets. The release is published as a prerelease and never marked Latest. The `.deb` package version uses `~nightly` instead of `-nightly`, so dpkg sorts a nightly before the stable release it previews.
 6. After that release is published, `release:nightlies:prune` deletes every other nightly release and its tag, including drafts from failed runs, and nightly tags that a failed run left without a release. It never deletes a stable release or another prerelease.
 
 Only one nightly release exists at a time. npm versions cannot be deleted, so old nightly versions stay on npm. Because older nightly tags disappear, a nightly build installs core extensions from its `main` commit SHA, not from its tag. When `PSTDIO_EXTENSION_RELEASE_REF` is set during `build:all`, the compiled CLI and desktop sidecar use it as their default extension ref; otherwise they use `pstdio@<version>`. The nightly job sets it to the `main` SHA, and `release-desktop.yml` sets it from `extension_ref`. `main` is never force-pushed, so that SHA stays fetchable.
@@ -99,4 +99,5 @@ After PS-410 merges, inventory the obsolete extension and private-package tags a
 | Notes generation fails | Check that every existing changelog includes the release version. |
 | Desktop release stays draft | Check native credentials, signatures, launch validation, checksums and version agreement. |
 | No nightly today | Check whether `main` changed since the newest published nightly, then check the `nightly` job. |
+| Nightly desktop job failed | Rerun the failed jobs of that run. To dispatch `Release Desktop` by hand instead, pass the nightly `version` and `tag`, `targets: ["darwin-arm64","darwin-x64","linux-x64"]`, `prerelease: true` and `extension_ref: <main SHA>`. The defaults build Windows and bake the tag, which pruning later deletes. |
 | Two nightlies are listed | The newest desktop run failed before pruning. Older nightlies are pruned after the next complete nightly. |

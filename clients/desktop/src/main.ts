@@ -268,7 +268,8 @@ const bootstrap = async () => {
   void performanceMonitor.start();
   await startRuntime();
   void cliSetup?.onFirstLaunch();
-  void updateManager.checkInBackground();
+  // Squirrel.Windows still holds its update lock on first run, so wait for the interval.
+  if (!process.argv.includes("--squirrel-firstrun")) void updateManager.checkInBackground();
   setInterval(() => void updateManager.checkInBackground(), UPDATE_CHECK_INTERVAL_MS);
 };
 

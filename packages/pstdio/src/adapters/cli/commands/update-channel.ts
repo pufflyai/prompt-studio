@@ -42,8 +42,8 @@ export const createHandler =
       resolvedDeps.log(available ? readUpdateChannel(path) : "stable");
       return;
     }
-    if (!available) throw new Error("Nightly builds are only published for macOS and Linux.");
     const channel = args.channel as UpdateChannel;
+    if (!available && channel === "nightly") throw new Error("Nightly builds are only published for macOS and Linux.");
     writeUpdateChannel(path, channel);
     resolvedDeps.log(`Update channel set to ${channel}. Use Check for Updates in Prompt Studio desktop to update now.`);
   };

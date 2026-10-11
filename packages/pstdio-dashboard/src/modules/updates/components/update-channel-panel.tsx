@@ -56,18 +56,18 @@ export const UpdateChannelContent = (props: UpdateChannelContentProps) => {
             if (value === "stable" || value === "nightly") onChange(value);
           }}
         />
-        {channel ? (
+        {channel && (
           <Stack gap="2xs" px="sm" pb="xs">
             <Text textStyle="label/S/regular" color="fg.muted">
               {channel === "nightly" ? t("updates.nightlyHelper") : t("updates.stableHelper")}
             </Text>
-            {channel === "nightly" ? (
+            {channel === "nightly" && (
               <Text textStyle="label/S/regular" color="fg.muted">
                 {t("updates.switchBackNote")}
               </Text>
-            ) : null}
+            )}
           </Stack>
-        ) : null}
+        )}
         {version ? <ParamEditorRow param={versionParam} /> : null}
       </Stack>
     </Stack>

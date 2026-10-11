@@ -21,6 +21,9 @@ const openUpdateChannel = async (page: Page) => {
 const readChannelFile = (home: string) =>
   JSON.parse(readFileSync(join(home, "desktop", "update-channel.json"), "utf8")) as { channel: string };
 
+// A switch in Settings starts an update check against the public feed. Switching to
+// nightly there could download a real nightly over the app under test, so the agent
+// moves to nightly and the person moves back to stable.
 test("a person and an agent switch the same update channel", async () => {
   test.skip(process.platform === "win32", "Windows follows the stable channel only");
   let app: PackagedApp | null = null;
@@ -31,17 +34,17 @@ test("a person and an agent switch the same update channel", async () => {
     await openPackagedProject(app.page, project);
 
     const settings = await openUpdateChannel(app.page);
-    await settings.getByRole("button", { name: /Stable/ }).click();
-    await app.page.getByRole("menuitemradio", { name: "Nightly" }).click();
-    await expect(settings.getByText("Switching back to Stable keeps this version")).toBeVisible();
-    await expect.poll(() => readChannelFile(home).channel).toBe("nightly");
-    expect((await runPackagedCli(home, ["update-channel"])).stdout.trim()).toBe("nightly");
-
-    const switched = await runPackagedCli(home, ["update-channel", "stable"]);
-    expect(switched.exitCode).toBe(0);
-    await app.page.keyboard.press("Escape");
-    await openUpdateChannel(app.page);
     await expect(settings.getByRole("button", { name: /Stable/ })).toBeVisible();
+    await app.page.keyboard.press("Escape");
+
+    expect((await runPackagedCli(home, ["update-channel", "nightly"])).exitCode).toBe(0);
+    await openUpdateChannel(app.page);
+    await expect(settings.getByText("Switching back to Stable keeps this version")).toBeVisible();
+
+    await settings.getByRole("button", { name: /Nightly/ }).click();
+    await app.page.getByRole("menuitemradio", { name: "Stable" }).click();
+    await expect.poll(() => readChannelFile(home).channel).toBe("stable");
+    expect((await runPackagedCli(home, ["update-channel"])).stdout.trim()).toBe("stable");
   } finally {
     await disposePackagedApp(app);
   }

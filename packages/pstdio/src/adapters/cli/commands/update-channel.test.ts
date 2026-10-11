@@ -41,5 +41,8 @@ describe("update-channel command", () => {
       "Nightly builds are only published for macOS and Linux.",
     );
     expect(await run(path, "win32")).toEqual(["stable"]);
+    expect(await run(path, "win32", "stable")).toEqual([
+      "Update channel set to stable. Use Check for Updates in Prompt Studio desktop to update now.",
+    ]);
   });
 });
