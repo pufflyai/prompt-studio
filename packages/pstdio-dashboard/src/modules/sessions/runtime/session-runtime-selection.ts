@@ -30,12 +30,14 @@ export const resolveRuntimeAgentSelection = (input: {
   return input.agentOptions.find((option) => !option.disabled)?.value ?? input.agentOptions[0]?.value ?? "";
 };
 
-// A run needs a harness that is enabled for the project and a model to run it with.
+// A run needs a harness that is enabled for the project, and a model when the harness offers models.
 export const canSubmitSessionMessage = (input: {
   agentOptions: RuntimeAgentOption[];
   selectedAgent: string;
   selectedModel: string;
-}) => hasEnabledAgent(input.agentOptions, input.selectedAgent) && Boolean(input.selectedModel);
+  requiresModel: boolean;
+}) =>
+  hasEnabledAgent(input.agentOptions, input.selectedAgent) && (!input.requiresModel || Boolean(input.selectedModel));
 
 export const resolveRuntimeModelSelection = (input: {
   models: RuntimeModelOption[];

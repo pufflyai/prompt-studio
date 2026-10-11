@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AGENT_CAPABILITIES } from "./harness";
 
 export const agentAvailabilityTypeSchema = z.enum(["INSTALLED", "NOT_FOUND"]);
 
@@ -47,6 +48,9 @@ export const agentInfoSchema = z.object({
   skills: agentSkillsLayoutSchema.optional(),
   /** Present when the harness declares discrete run params. */
   params: harnessParamsSchema.optional(),
+  capabilities: z.array(z.enum(AGENT_CAPABILITIES)),
+  /** The harness offers a model choice. A harness without one, such as a remote machine, picks its own model. */
+  supportsModels: z.boolean(),
 });
 
 export const agentModelSchema = z.object({
