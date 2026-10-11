@@ -1,6 +1,9 @@
 {
   "timeline.page.title": "Cronología del proyecto",
   "timeline.view.title": "Cronología del proyecto",
+  "commands.autoBuild.title": "Construir automáticamente",
+  "timeline.autoBuild.started": "Se inició {tickets}.",
+  "timeline.autoBuild.idle": "No se iniciaron tareas. Comprueba las tareas pendientes, las dependencias y la capacidad disponible.",
   "commands.openTickets": "Abrir tickets",
   "archiveState.active": "Activo",
   "archiveState.archived": "Archivado",

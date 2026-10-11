@@ -10,6 +10,7 @@ import {
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 import { stepReview } from "../model/review";
+import { AutoBuildButton } from "./auto-build-button";
 import { BackgroundMenu } from "./background-menu";
 import { Details } from "./details";
 import { PlanEditor } from "./plan-editor";
@@ -18,6 +19,7 @@ import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
 import { PlanUnavailable } from "./plan-unavailable";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
+import { useAutoBuild } from "./use-auto-build";
 import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
 import { useTimelineViews } from "./use-timeline-views";
@@ -50,6 +52,7 @@ interface PlanContentProps extends PlanRootProps {
 function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource, error } = props;
   const [search, setSearch] = useState("");
+  const autoBuild = useAutoBuild(client, t);
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
@@ -77,12 +80,18 @@ function PlanContent(props: PlanContentProps) {
         search={search}
         onSearchChange={setSearch}
         resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${filtered.length}`}
+        actions={<AutoBuildButton running={autoBuild.running} onRun={autoBuild.run} t={t} />}
       />
-      {[error, actionError].filter(Boolean).map((message) => (
+      {[error, actionError, autoBuild.error].filter(Boolean).map((message) => (
         <Text key={message} role="alert" color="fg.error" px="md" pt="sm" flexShrink="0">
           {message}
         </Text>
       ))}
+      {autoBuild.message ? (
+        <Text role="status" color="fg.muted" px="md" pt="sm" flexShrink="0">
+          {autoBuild.message}
+        </Text>
+      ) : null}
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
           <PlanGraph {...viewProps} today={plan.today} />

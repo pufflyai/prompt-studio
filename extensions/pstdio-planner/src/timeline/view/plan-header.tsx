@@ -4,6 +4,7 @@ import {
   getAttributeStringValues,
   type KanbanRendererSettings,
 } from "@pstdio/ui/kanban-renderer";
+import type { ReactNode } from "react";
 import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 
 interface PlanHeaderProps {
@@ -12,10 +13,11 @@ interface PlanHeaderProps {
   search: string;
   onSearchChange: (value: string) => void;
   resultLabel: string;
+  actions?: ReactNode;
 }
 
 export function PlanHeader(props: PlanHeaderProps) {
-  const { data, viewsSource, search, onSearchChange, resultLabel } = props;
+  const { data, viewsSource, search, onSearchChange, resultLabel, actions } = props;
   const { views } = useCollectionViews({
     storageKey: data.storageKey,
     fields: data.attributes,
@@ -41,6 +43,7 @@ export function PlanHeader(props: PlanHeaderProps) {
       onSearchChange={onSearchChange}
       searchResultLabel={resultLabel}
       displayControl={null}
+      actions={actions}
     />
   );
 }

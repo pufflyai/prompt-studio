@@ -52,6 +52,22 @@ If two implementation sessions are already running in the project, Run attempt d
 
 `pst tickets implement` is a lighter option. It moves the ticket to In Progress and starts one agent session with the implement-ticket prompt. It does not create a worktree, a managed attempt, or a review.
 
+## Auto build
+
+Open **Ticket timeline** and select **Auto build**, or run:
+
+```sh
+pst pstdio-planner auto-build
+```
+
+Planner starts Todo tickets in timeline order until **Maximum in-progress tickets** is reached. Existing running implementations count toward this limit. Auto build uses the project's default agent and target branch and fills slots once per invocation. Run it again after work finishes or prerequisites become available.
+
+Dependencies decide which tickets can run together. Independent tickets in the same track can start in parallel, and dependencies in other tracks still apply. Approved or explicitly selected dependency revisions can provide a stacked base, as with Run attempt.
+
+The action uses all eligible project tickets, regardless of search or view filters. It skips gates, blocked work, tickets that need human input, and tickets with an existing attempt other than an abandoned attempt. If a launch fails, it stops and reports the error while keeping earlier successful launches.
+
+When an agent cannot continue without a person, the implementation skill tells it to use `pst pstdio-planner request-human` with a concrete task or decision. This creates a review request and sets Review Needed. The agent reads the saved response before resuming.
+
 ## Dependencies
 
 A ticket can depend on other tickets. Set dependencies with `--depends-on` on [`pst tickets create` and `pst tickets update`](0004-cli.md#dependencies).

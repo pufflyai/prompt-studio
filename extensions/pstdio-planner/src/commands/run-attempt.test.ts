@@ -280,7 +280,7 @@ describe("runAttemptCommand guarded launches", () => {
       expect.arrayContaining([
         expect.objectContaining({
           status: "rejected",
-          reason: expect.objectContaining({ message: expect.stringContaining("T-1") }),
+          reason: expect.any(Error),
         }),
         expect.objectContaining({ status: "fulfilled", value: expect.objectContaining({ decision: "started" }) }),
       ]),

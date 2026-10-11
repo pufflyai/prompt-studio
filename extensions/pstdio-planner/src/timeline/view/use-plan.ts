@@ -1,6 +1,7 @@
 // Read the plan and reload it whenever Planner tickets or the stored plan change.
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { useState } from "react";
+import type { autoBuildCommand } from "../../commands/auto-build";
 import type { openReviewRequestCommand, reviewCommand } from "../../commands/review-requests";
 import type { commands } from "../commands/index";
 import { planChanged } from "../contracts";
@@ -9,6 +10,7 @@ import { useLiveValue } from "./use-live-value";
 
 // The timeline answers Planner review requests through the same commands as the CLI.
 type PlanCommands = typeof commands & {
+  "auto-build": typeof autoBuildCommand;
   review: typeof reviewCommand;
   "review-requests.open": typeof openReviewRequestCommand;
 };

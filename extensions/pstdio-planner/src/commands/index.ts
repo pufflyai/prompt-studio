@@ -10,6 +10,7 @@ import {
   selectAttemptCommand,
 } from "./attempt-history";
 import { attemptReadinessCommand } from "./attempt-readiness";
+import { autoBuildCommand } from "./auto-build";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -102,6 +103,7 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  autoBuildCommand,
   documentLinkCommand,
   checkMergedPullRequestsCommand,
   openTicketsCommand,

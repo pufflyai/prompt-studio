@@ -1,6 +1,9 @@
 {
   "timeline.page.title": "プロジェクトタイムライン",
   "timeline.view.title": "プロジェクトタイムライン",
+  "commands.autoBuild.title": "自動ビルド",
+  "timeline.autoBuild.started": "{tickets} を開始しました。",
+  "timeline.autoBuild.idle": "チケットは開始されませんでした。Todo のチケット、依存関係、空き容量を確認してください。",
   "commands.openTickets": "チケットを開く",
   "archiveState.active": "アクティブ",
   "archiveState.archived": "アーカイブ済み",

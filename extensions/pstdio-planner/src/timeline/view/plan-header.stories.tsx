@@ -2,11 +2,12 @@ import type { CollectionViewsSource } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { AutoBuildButton } from "./auto-build-button";
 import { PlanHeader } from "./plan-header";
 import { timelineInitialState } from "./timeline-query";
 
-function HeaderStory(props: { filtered?: boolean }) {
-  const { filtered } = props;
+function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
+  const { filtered, running } = props;
   const [search, setSearch] = useState("");
   const [views, setViews] = useState<CollectionViewsSource<KanbanRendererSettings>["views"]>([
     { id: "all", title: "All", ...timelineInitialState, builtIn: true },
@@ -63,6 +64,7 @@ function HeaderStory(props: { filtered?: boolean }) {
       search={search}
       onSearchChange={setSearch}
       resultLabel="2 of 2"
+      actions={<AutoBuildButton running={running ?? false} onRun={() => {}} t={(_key, fallback) => fallback ?? _key} />}
     />
   );
 }
@@ -75,3 +77,4 @@ export default meta;
 type Story = StoryObj<typeof HeaderStory>;
 export const SavedViews: Story = {};
 export const FilteredView: Story = { args: { filtered: true } };
+export const AutoBuildRunning: Story = { args: { running: true } };

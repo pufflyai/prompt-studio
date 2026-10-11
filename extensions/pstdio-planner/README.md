@@ -46,6 +46,10 @@ Open Settings → Project → Extensions → Prompt Studio Planner, then the Set
 - **Default target branch** selects a remote branch from the project's Git folder. Clear the selection to use the repository's default branch.
 - **Maximum in-progress tickets** limits how many tickets run an implementation at once. Run attempt does not start another ticket at this limit, whether automation or a person runs it.
 
+Choose **Auto build** in Ticket timeline to fill available implementation slots with Todo tickets in timeline order. It uses the default agent and target branch. Independent tickets on one track can run together; prerequisites across tracks still control readiness. Each click fills slots once, across the project, regardless of the current view filters.
+
+Auto build leaves gates, blocked work, open human requests, and existing attempts for review. Agents that get stuck use Planner's **Request human input** action so the timeline shows Review Needed.
+
 The options apply only to the current project. Adversarial review and Open PR are on by default. Projects without a local Git folder can still set the review and pull request options. Turning off Adversarial review does not change the managed reviews described in [Attempts](docs/0002-attempts.md).
 
 The skill reads these options with `pst pstdio-planner implementation-policy` and follows them without asking. Instructions you give for a specific task take precedence.

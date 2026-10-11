@@ -1,9 +1,9 @@
 // Move a ticket in the execution order, into another deadline, or both.
 
 import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
+import { withWriteGuard } from "../../data/write-guard";
 import { moveTicket } from "../model/edit-plan";
 import { deadlineOrNone, findTicket, loadPlan, savePlan } from "./plan-store";
-import { withWriteGuard } from "./write-guard";
 export const moveTicketInPlan = async (
   ctx: Pick<ExtensionContextBase, "storage" | "events">,
   input: { ticket: string; deadline?: string; before?: string },
