@@ -1,5 +1,43 @@
 import { expect, type Page } from "@playwright/test";
 
+const expectResizedPanelReopen = async (page: Page, label: string, openName: string, direction: number) => {
+  const open = page.getByRole("button", { name: openName, exact: true });
+  if (await open.isVisible()) await open.click();
+  const handle = page.getByRole("separator", { name: label, exact: true, includeHidden: true });
+  const dimensions = () =>
+    handle.evaluate((element) => {
+      const frame = document.getElementById(element.getAttribute("aria-controls")!.split(" ")[0])!;
+      return {
+        outer: frame.getBoundingClientRect().width,
+        inner: frame.querySelector("[data-split-panel-content]")!.getBoundingClientRect().width,
+      };
+    });
+  const settle = () =>
+    expect.poll(() => handle.evaluate((element) => element.parentElement!.getAnimations().length)).toBe(0);
+  const dragBy = async (delta: number) => {
+    const box = (await handle.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + delta, y, { steps: 8 });
+    await page.mouse.up();
+  };
+  await expect(handle).toBeVisible();
+  await settle();
+  await dragBy(48 * direction);
+  await settle();
+  const resized = await dimensions();
+  await dragBy((20 - resized.outer) * direction);
+  await expect(handle).toBeHidden();
+  await open.click();
+  await expect(handle).toBeVisible();
+  await settle();
+  const reopened = await dimensions();
+  expect(Math.abs(reopened.outer - resized.outer)).toBeLessThan(1);
+  expect(Math.abs(reopened.inner - reopened.outer)).toBeLessThan(1);
+};
+
 export const expectPackagedPanelMotion = async (page: Page) => {
   const hide = page.getByRole("button", { name: "Hide Side Panel", exact: true });
   if (await hide.isVisible()) await hide.click();
@@ -27,6 +65,8 @@ export const expectPackagedPanelMotion = async (page: Page) => {
   expect(await panel.evaluate((element) => element.closest("[data-collapsed]")!.getBoundingClientRect().width)).toBe(0);
   const separator = page.getByRole("separator", { name: "Resize Side Panel", includeHidden: true });
   expect(await separator.evaluate((element) => element.getBoundingClientRect().width)).toBe(0);
+  await expectResizedPanelReopen(page, "Resize sidenav", "Show Sidenav", 1);
+  await expectResizedPanelReopen(page, "Resize Side Panel", "Show Side Panel", -1);
 };
 
 // Packaged chat must retain earlier DOM as live chunks arrive, then become quiet.

@@ -26,6 +26,7 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
           "--split-height": "100%",
           "--split-content-width": "var(--split-stored-size)",
           "--split-content-height": "100%",
+          "&[data-dragging=true]": { "--split-content-width": "var(--split-size)" },
         },
         separator: {
           width: "var(--split-separator-thickness)",
@@ -40,6 +41,7 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
           "--split-height": "var(--split-size)",
           "--split-content-width": "100%",
           "--split-content-height": "var(--split-stored-size)",
+          "&[data-dragging=true]": { "--split-content-height": "var(--split-size)" },
         },
         separator: {
           width: "full",

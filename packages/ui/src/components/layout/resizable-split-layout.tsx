@@ -92,8 +92,8 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   useEffect(() => () => cleanupDragRef.current(), []);
 
   const applyPanelSize = (size: number) => {
+    // Keep the retained size owned by React so dragging closed cannot overwrite it.
     rootRef.current?.style.setProperty("--split-size", `${size}px`);
-    if (size > 0) rootRef.current?.style.setProperty("--split-stored-size", `${size}px`);
   };
 
   const commitPanelSize = (size: number) => {

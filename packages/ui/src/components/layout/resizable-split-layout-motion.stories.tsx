@@ -36,6 +36,13 @@ const meta = {
   tags: ["motion"],
   title: "Components/Layout/Resizable Split Layout/Motion",
   component: MotionPanel,
+  parameters: {
+    docs: {
+      description: {
+        component: "Resize a divider, drag it closed, then reopen. The content should fill the restored panel.",
+      },
+    },
+  },
 } satisfies Meta<typeof MotionPanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -50,16 +57,31 @@ export const Right: Story = {
     await userEvent.click(toggle);
     await waitFor(() => expect(content).toBeVisible());
     await waitFor(() => expect(root.getAnimations()).toHaveLength(0));
+    const dimension = args.side === "top" || args.side === "bottom" ? "height" : "width";
+    const separator = canvas.getByRole("separator", { hidden: true });
+    const inner = panel.querySelector<HTMLElement>("[data-split-panel-content]")!;
+    separator.focus();
+    await userEvent.keyboard("{End}");
+    await waitFor(() => expect(root.getAnimations()).toHaveLength(0));
+    const initialSize = panel.getBoundingClientRect()[dimension];
+    const positiveKey = dimension === "width" ? "ArrowRight" : "ArrowDown";
+    const negativeKey = dimension === "width" ? "ArrowLeft" : "ArrowUp";
+    const panelFirst = args.side === "left" || args.side === "top";
+    await userEvent.keyboard(`{${panelFirst ? negativeKey : positiveKey}}`);
+    await waitFor(() => expect(root.getAnimations()).toHaveLength(0));
+    const resizedSize = panel.getBoundingClientRect()[dimension];
+    await expect(resizedSize).toBeLessThan(initialSize);
     await userEvent.click(toggle);
     await expect(panel).toHaveAttribute("inert");
     await expect(panel).toBeVisible();
-    const dimension = args.side === "top" || args.side === "bottom" ? "height" : "width";
     await expect(panel.getBoundingClientRect()[dimension]).toBeGreaterThan(0);
     await waitFor(() => expect(content).not.toBeVisible());
-    const separator = canvas.getByRole("separator", { hidden: true });
     await expect(separator.getBoundingClientRect()[dimension]).toBe(0);
     await userEvent.click(toggle);
     await waitFor(() => expect(content).toBeVisible());
+    await waitFor(() => expect(root.getAnimations()).toHaveLength(0));
+    await expect(panel.getBoundingClientRect()[dimension]).toBe(resizedSize);
+    await expect(inner.getBoundingClientRect()[dimension]).toBe(resizedSize);
   },
 };
 export const Left: Story = { ...Right, args: { side: "left" } };
