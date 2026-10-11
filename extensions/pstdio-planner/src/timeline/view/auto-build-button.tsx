@@ -10,7 +10,7 @@ interface AutoBuildButtonProps {
 export function AutoBuildButton(props: AutoBuildButtonProps) {
   const { running, onRun, t } = props;
   return (
-    <Button size="sm" variant="primary" disabled={running} loading={running} onClick={onRun}>
+    <Button size="sm" variant="outline" disabled={running} loading={running} onClick={onRun}>
       <Play />
       {t("commands.autoBuild.title", "Auto build")}
     </Button>
