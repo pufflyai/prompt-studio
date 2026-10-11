@@ -9,9 +9,13 @@ export function usableAutoBuildIgnore(filter: ViewFilterGroup, fields: Attribute
     const conditions = VIEW_FILTER_CONDITIONS[field.type.kind];
     if (!conditions.includes(rule.condition)) return false;
     if (rule.condition === "is-empty" || rule.condition === "is-not-empty") return true;
-    if (rule.value === undefined || rule.value === null) return false;
-    if (field.type.kind === "number") return rule.value !== "" && Number.isFinite(Number(rule.value));
-    return true;
+    if (["is-any-of", "is-none-of", "has-any-of", "has-none-of", "has-all-of"].includes(rule.condition))
+      return Array.isArray(rule.value) && rule.value.length > 0;
+    if (field.type.kind === "number") return typeof rule.value === "number" && Number.isFinite(rule.value);
+    if (field.type.kind === "boolean") return typeof rule.value === "boolean";
+    if (field.type.kind === "date")
+      return typeof rule.value === "string" && /^(today([+-]\d+)?|\d{4}-\d{2}-\d{2})$/.test(rule.value);
+    return field.type.kind === "string" && typeof rule.value === "string" && rule.value !== "";
   });
   const groups: ViewFilterGroup[] = (filter.groups ?? []).flatMap((group) => {
     const usable: ViewFilterGroup | undefined = usableAutoBuildIgnore(group, fields);

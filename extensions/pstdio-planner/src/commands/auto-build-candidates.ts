@@ -7,6 +7,7 @@ import { ticketsCollection } from "../data/collections";
 import { resolveImplementationBase } from "../data/implementation-targets";
 import { readPlanCommand } from "../timeline/commands/read-plan";
 import { timelineQueryData } from "../timeline/model/query-data";
+import { workflowName } from "../timeline/model/workflow";
 import { loadAttemptReadiness, readImplementationCapacity } from "./attempt-readiness";
 import { readAutoBuildResumptions } from "./auto-build-resume";
 import { readAutoBuildAssignments } from "./auto-build-sessions";
@@ -33,6 +34,7 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
         !ignored.has(row.id) &&
         !row.gate &&
         !row.blockedReason &&
+        workflowName(row.status?.name) !== "blocked" &&
         !row.flags.includes("human-needed") &&
         !tickets.find(({ id }) => id === row.id)?.draft &&
         !assignments.assigned.has(row.id) &&

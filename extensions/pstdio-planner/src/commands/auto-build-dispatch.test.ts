@@ -116,3 +116,28 @@ test("empty advanced ignore groups leave valid tickets eligible", async () => {
   });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
 });
+
+test("a Blocked status prevents assignment without a written blocker", async () => {
+  const { ctx, ticket } = await fixture();
+  const blocked = await createTicketCommand.run(ctx, { title: "Blocked by status", statusId: "blocked" });
+  const ready = await ticket("Ready");
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
+  expect(await dispatch(ctx, blocked.id)).toMatchObject({ decision: "wait", reason: "ticket-not-ready" });
+});
+
+test("unfinished or incompatible ignore rules leave valid tickets eligible", async () => {
+  const { ctx, ticket } = await fixture();
+  const ready = await ticket("Ready");
+  for (const rule of [
+    { attributeId: "title", condition: "contains" as const, value: "" },
+    { attributeId: "status", condition: "is-any-of" as const, value: [] },
+    { attributeId: "title", condition: "contains" as const, value: 1 },
+    { attributeId: "status", condition: "is-any-of" as const, value: "ready" },
+  ]) {
+    await configureAutoBuildCommand.run(ctx, {
+      enabled: true,
+      ignore: { conjunction: "and", rules: [rule] },
+    });
+    expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
+  }
+});
