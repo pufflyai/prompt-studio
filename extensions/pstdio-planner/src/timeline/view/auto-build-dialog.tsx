@@ -1,7 +1,7 @@
 import { Button, CloseButton, Dialog, Icon, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
 import { NumberInput } from "@pstdio/ui/param-editor";
 import { psTheme } from "@pstdio/ui/theme";
-import { Link as LinkIcon } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 
 interface AutoBuildDialogProps {
@@ -48,8 +48,8 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Icon as={LinkIcon} boxSize="icon-sm" />
                     {t("timeline.autoBuild.documentation", "Auto Build documentation")}
+                    <Icon as={ArrowUpRight} boxSize="icon-xs" />
                   </Link>
                 </Stack>
                 <NumberInput
