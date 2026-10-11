@@ -1,13 +1,18 @@
-import { renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type LoadedExtension, loadExtensionSource } from "./extension-runtime";
 import { createWebviewBuildBackoff, processKey, signatureFor } from "./extension-webview-build-backoff";
 import {
   prepareWebviewBuildCache,
+  publishedWebviewModule,
   readWebviewBuildSignature,
   removeUnownedWebviewBuilds,
 } from "./extension-webview-build-cache";
 import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
+import {
+  type CreateExtensionWebviewBuildManagerInput,
+  createBuildReporters,
+} from "./extension-webview-build-reporters";
 import {
   expectedWebviewBuildSource,
   type InstalledSourceWithManifest,
@@ -15,7 +20,7 @@ import {
   webviewBuildFailure,
 } from "./extension-webview-build-runner";
 import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
-import { buildExtensionWebview, type ExtensionWebviewBuilder } from "./extension-webview-builder";
+import { buildExtensionWebview } from "./extension-webview-builder";
 import { loadWebviewSource } from "./extension-webview-source-load";
 import {
   classifyWebviewEntry,
@@ -23,30 +28,6 @@ import {
   resolveManagedWebviewPaths,
   resolvePackageAssetFile,
 } from "./extension-webviews";
-
-type ExpectedWebviewBuildSource = {
-  sourceHash?: string | null;
-  sourcePath: string;
-};
-
-export type CreateExtensionWebviewBuildManagerInput = {
-  buildWebview?: ExtensionWebviewBuilder;
-  listInstalledSources: () => Promise<InstalledSourceWithManifest[]>;
-  loadSource?: (sourcePath: string) => Promise<LoadedExtension>;
-  onError?: (error: unknown) => void;
-  reportBuildFailure: (
-    installedExtensionId: string,
-    webviewId: string,
-    error: unknown,
-    expectedSource: ExpectedWebviewBuildSource,
-  ) => Promise<unknown>;
-  reportBuildSuccess: (
-    installedExtensionId: string,
-    webviewId: string,
-    expectedSource: ExpectedWebviewBuildSource,
-  ) => Promise<unknown>;
-  webviewCacheRoot?: string;
-};
 
 type ManagedWebview = ReturnType<typeof collectExtensionWebviews>[number];
 
@@ -66,37 +47,6 @@ type WebviewBuildResult =
       webviewId: string;
     };
 
-const createBuildReporters = (input: CreateExtensionWebviewBuildManagerInput) => {
-  const reportFailure = async (
-    installedExtensionId: string,
-    webviewId: string,
-    error: unknown,
-    expectedSource: ExpectedWebviewBuildSource,
-  ) => {
-    try {
-      await input.reportBuildFailure(installedExtensionId, webviewId, error, expectedSource);
-    } catch (reportError) {
-      input.onError?.(reportError);
-    }
-  };
-
-  const reportSuccess = async (
-    installedExtensionId: string,
-    webviewId: string,
-    expectedSource: ExpectedWebviewBuildSource,
-  ) => {
-    try {
-      await input.reportBuildSuccess(installedExtensionId, webviewId, expectedSource);
-      return true;
-    } catch (reportError) {
-      input.onError?.(reportError);
-      return false;
-    }
-  };
-
-  return { reportFailure, reportSuccess };
-};
-
 const inspectWebviewBuild = (row: InstalledSourceWithManifest, packageName: string, webview: ManagedWebview) => {
   const sourceEntryPath = resolvePackageAssetFile(webview.entry);
   const buildInputs = inspectManagedWebviewBuildInputs({
@@ -109,9 +59,30 @@ const inspectWebviewBuild = (row: InstalledSourceWithManifest, packageName: stri
   return { buildInputs, signature, sourceEntryPath };
 };
 
+// A finished build publishes only while its installed source still has the same build inputs.
+const findCurrentBuildSource = async (
+  listInstalledSources: () => Promise<InstalledSourceWithManifest[]>,
+  row: InstalledSourceWithManifest,
+  result: Extract<WebviewBuildResult, { builtNow: true }>,
+  packageName: string,
+  webview: ManagedWebview,
+) => {
+  const currentRow = (await listInstalledSources()).find((current) => current.id === row.id);
+  if (!currentRow || currentRow.source_path !== row.source_path) return null;
+
+  const current = inspectWebviewBuild(currentRow, packageName, webview);
+  return current.signature === result.signature ? currentRow : null;
+};
+
+const isPublished = (webviewCacheRoot: string, installedExtensionId: string, webviewId: string) => {
+  const { distDir } = resolveManagedWebviewPaths({ installedExtensionId, webviewCacheRoot, webviewId });
+  return existsSync(publishedWebviewModule(distDir));
+};
+
 export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
   const building = new Map<string, string>();
-  const checked = new Set<string>();
+  // The managed webviews that the last complete check of each installed extension found.
+  const checked = new Map<string, Set<string>>();
   const pending = new Map<string, Promise<void>>();
   const activeStages = new Set<string>();
   const backoff = createWebviewBuildBackoff();
@@ -231,25 +202,11 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     }
   };
 
-  const findCurrentBuildSource = async (
-    row: InstalledSourceWithManifest,
-    result: Extract<WebviewBuildResult, { builtNow: true }>,
-    packageName: string,
-    webview: ManagedWebview,
-  ) => {
-    const currentRows = await input.listInstalledSources();
-    const currentRow = currentRows.find((current) => current.id === row.id);
-    if (!currentRow || currentRow.source_path !== row.source_path) return null;
-
-    const current = inspectWebviewBuild(currentRow, packageName, webview);
-    return current.signature === result.signature ? currentRow : null;
-  };
-
-  // Resolves true once the source loaded and every managed webview build was attempted.
+  // Resolves with the managed webview ids once the source loaded and every build was attempted.
   const refreshRow = async (row: InstalledSourceWithManifest, validatedSource?: LoadedExtension) => {
-    if (disposed) return false;
+    if (disposed) return null;
     const loaded = validatedSource ?? (await loadWebviewSource({ backoff, loadSource, onError: input.onError, row }));
-    if (!loaded || disposed) return false;
+    if (!loaded || disposed) return null;
 
     const managedWebviews = collectExtensionWebviews(loaded).filter(
       (webview) => classifyWebviewEntry(webview.entry).kind === "managed",
@@ -261,7 +218,13 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         if (!result?.builtNow) return;
         try {
           if (disposed || building.get(key) !== result.signature) return;
-          const currentRow = await findCurrentBuildSource(row, result, loaded.metadata.name, webview);
+          const currentRow = await findCurrentBuildSource(
+            input.listInstalledSources,
+            row,
+            result,
+            loaded.metadata.name,
+            webview,
+          );
           if (!currentRow || disposed || building.get(key) !== result.signature) return;
 
           await publishCompletedBuild(currentRow, result);
@@ -272,36 +235,43 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         }
       }),
     );
-    return true;
+    return managedWebviews.map((webview) => webview.id);
   };
 
   const check = (installedExtensionId: string, validatedSource?: LoadedExtension) => {
     const previous = pending.get(installedExtensionId);
     const work = (async () => {
-      if (disposed) return false;
+      if (disposed) return null;
       const row = (await input.listInstalledSources()).find((row) => row.id === installedExtensionId);
-      return row ? refreshRow(row, validatedSource) : true;
+      return row ? refreshRow(row, validatedSource) : [];
     })().catch((error) => {
       // Repeating an unexpected failure on every asset request would not fix it.
       input.onError?.(error);
-      return true;
+      return [];
     });
     // Asset requests wait for all builds, while watcher refreshes can finish independently.
-    const completion = Promise.all([previous, work]).then(([, complete]) => {
+    const completion = Promise.all([previous, work]).then(([, webviewIds]) => {
       if (pending.get(installedExtensionId) !== completion) return;
       pending.delete(installedExtensionId);
       // A source that failed to load stays unchecked, so a later asset request can load it again.
-      if (!disposed && complete) checked.add(installedExtensionId);
+      if (!disposed && webviewIds) checked.set(installedExtensionId, new Set(webviewIds));
     });
     pending.set(installedExtensionId, completion);
     return work;
   };
 
-  const ensure = (installedExtensionId: string) => {
+  // A checked webview whose bundle is gone, for example after its cache folder was removed, needs
+  // another check. A recorded build failure keeps its error until the build inputs change.
+  const ensure = (installedExtensionId: string, webviewId?: string) => {
     if (disposed) return Promise.resolve();
     const running = pending.get(installedExtensionId);
     if (running) return running;
-    if (checked.has(installedExtensionId)) return Promise.resolve();
+    const repair =
+      webviewId !== undefined &&
+      checked.get(installedExtensionId)?.has(webviewId) === true &&
+      !backoff.hasFailure(processKey(installedExtensionId, webviewId)) &&
+      !isPublished(webviewCacheRoot, installedExtensionId, webviewId);
+    if (checked.has(installedExtensionId) && !repair) return Promise.resolve();
     check(installedExtensionId);
     return pending.get(installedExtensionId)!;
   };
@@ -319,10 +289,12 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         rows
           .filter((row) => !sourcePath || row.source_path === sourcePath)
           .map((row) => {
-            // A refresh asks for the source to be read again, and some changes, such as a rebuilt
-            // linked dependency, leave the load key unchanged. So a refresh always loads.
+            // Refreshing one source, after an install, a Reload, or a change in its folder, asks for it
+            // to be read and built again. Some causes, such as a rebuilt linked dependency or a build
+            // process that was stopped, leave the load key and build signatures unchanged.
             checked.delete(row.id);
-            backoff.forget(row.id);
+            if (sourcePath) backoff.forgetExtension(row.id);
+            else backoff.forget(row.id);
             return check(row.id, validatedSource);
           }),
       );

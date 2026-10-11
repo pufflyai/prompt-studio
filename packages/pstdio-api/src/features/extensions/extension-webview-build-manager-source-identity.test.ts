@@ -90,6 +90,7 @@ describe("createExtensionWebviewBuildManager source identity", () => {
       reportBuildSuccess: async () => {},
       buildWebview: async (input) => {
         mkdirSync(input.outdir, { recursive: true });
+        writeFileSync(join(input.outdir, "module.js"), "");
         return { success: true, details: "" };
       },
       webviewCacheRoot: cacheRoot,

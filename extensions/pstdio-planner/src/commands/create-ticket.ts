@@ -3,6 +3,7 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { StoredTicketAttachment } from "../data/types";
@@ -55,22 +56,23 @@ export const createTicketCommand = defineCommand({
     const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx.storage, commandParams.dependsOn) : [];
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
+    const attributes = commandParams.attributes ?? {};
+    const tagIds =
+      commandParams.tags !== undefined
+        ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
+        : (commandParams.tagIds ?? attributeTagIds(attributes));
+    await assertSingleSelectTagIds(ctx.storage, tagIds);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
     const { id, shorthand } = await allocateTicketIdentity(ctx);
     const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
 
-    const attributes = commandParams.attributes ?? {};
     const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
 
     const statusId =
       commandParams.status !== undefined
         ? await resolveStatusId(ctx.storage, commandParams.status)
         : (commandParams.statusId ?? attributeStatusId ?? defaultStatus?.id ?? null);
-    const tagIds =
-      commandParams.tags !== undefined
-        ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
-        : (commandParams.tagIds ?? attributeTagIds(attributes));
     const parentId =
       commandParams.parent !== undefined
         ? await resolveTicketId(ctx.storage, commandParams.parent)

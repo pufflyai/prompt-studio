@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { buildPlan } from "../model/build-plan";
+import { buildTracks } from "../model/tracks";
 import { PlanGraph } from "./plan-graph";
 import { useViewSections } from "./plan-state";
 
@@ -30,14 +31,17 @@ const plan = buildPlan({
 
 function TimelineGraphStory(props: { filtered?: boolean }) {
   const { filtered } = props;
-  const { sections, tracks, toggle } = useViewSections(plan, new Set(filtered ? ["preview"] : ["preview", "launch"]));
+  const { sections, toggle } = useViewSections(plan, new Set(filtered ? ["preview"] : ["preview", "launch"]));
+  const tracks = buildTracks(
+    plan.trackProperty,
+    plan.sections.flatMap(({ rows }) => rows),
+  );
   return (
     <Box h="600px">
       <PlanGraph
         sections={sections}
         tracks={tracks}
         today={plan.today}
-        squareArrows
         relations={new Map()}
         onToggle={toggle}
         onContext={() => {}}

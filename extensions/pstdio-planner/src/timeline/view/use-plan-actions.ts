@@ -20,7 +20,8 @@ export function usePlanActions({
   host: GuestHost;
   client: PlanClient;
   plan: Plan | undefined;
-} & Pick<ReturnType<typeof useViewSections>, "sections" | "tracks" | "toggle">) {
+} & Pick<ReturnType<typeof useViewSections>, "sections" | "toggle"> &
+  Pick<PlanViewProps, "tracks">) {
   const [selectedId, setSelectedId] = useState<string>();
   const [editor, setEditor] = useState<Editor>();
   const [context, setContext] = useState<BackgroundContext>();

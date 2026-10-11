@@ -61,7 +61,7 @@ function useGraphBox(
   return { box, trackAt, rows };
 }
 
-export function PlanGraph(props: PlanViewProps & { squareArrows: boolean }) {
+export function PlanGraph(props: PlanViewProps) {
   const { sections, tracks, selectedId, ...actions } = props;
   const { ref, width, height } = useSize();
   const { panning, handlers } = useCanvasPan(ref);
@@ -115,7 +115,6 @@ export function PlanGraph(props: PlanViewProps & { squareArrows: boolean }) {
           />
           <GraphContent
             props={props}
-            squareArrows={props.squareArrows}
             region={region}
             graph={{ box, trackAt, rows }}
             collapsed={collapsed}

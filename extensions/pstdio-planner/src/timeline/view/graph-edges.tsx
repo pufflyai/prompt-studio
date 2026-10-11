@@ -12,11 +12,10 @@ interface GraphEdgesProps {
   height: number;
   selectedId?: string;
   relatedIds: Set<string>;
-  squareArrows: boolean;
 }
 
 export function GraphEdges(props: GraphEdgesProps) {
-  const { rows, positions, width, height, selectedId, relatedIds, squareArrows } = props;
+  const { rows, positions, width, height, selectedId, relatedIds } = props;
   const edges = rows.flatMap((row) =>
     row.dependsOn.flatMap((dependency) => {
       const from = positions.get(dependency.id);
@@ -27,7 +26,7 @@ export function GraphEdges(props: GraphEdgesProps) {
               key: `${dependency.id}-${row.id}`,
               done: dependency.done,
               related: relatedIds.has(row.id) && relatedIds.has(dependency.id),
-              ...edgePath(from, to, squareArrows),
+              ...edgePath(from, to),
             },
           ]
         : [];

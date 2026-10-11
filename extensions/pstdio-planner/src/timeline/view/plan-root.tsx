@@ -16,10 +16,12 @@ import { PlanEditor } from "./plan-editor";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
+import { PlanUnavailable } from "./plan-unavailable";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
 import { useTimelineViews } from "./use-timeline-views";
+import { visibleTracks } from "./visible-tracks";
 
 interface PlanRootProps {
   host: GuestHost;
@@ -30,12 +32,9 @@ export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
   const { client, plan, error } = usePlan(host);
   const { source: viewsSource, error: viewsError } = useTimelineViews(client);
-  if (!plan || !viewsSource)
-    return (
-      <Text p="md" role={error || viewsError ? "alert" : undefined}>
-        {error ?? viewsError ?? "Loading tickets…"}
-      </Text>
-    );
+  const loadError = error ?? viewsError;
+  if (!plan && loadError) return <PlanUnavailable message={loadError} t={t} />;
+  if (!plan || !viewsSource) return <Text p="md">{t("timeline.loading", "Loading tickets…")}</Text>;
   return (
     <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} error={error ?? viewsError} />
   );
@@ -55,7 +54,8 @@ function PlanContent(props: PlanContentProps) {
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
   const matching = searchRows(filtered, search, (row) => [row.title, String(row.attributes.id)]);
-  const { sections, tracks, toggle } = useViewSections(plan, new Set(matching.map(({ id }) => id)));
+  const tracks = visibleTracks(plan, filter, queryData.attributes);
+  const { sections, toggle } = useViewSections(plan, new Set(matching.map(({ id }) => id)));
   const {
     viewProps,
     selected,
@@ -85,7 +85,7 @@ function PlanContent(props: PlanContentProps) {
       ))}
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
-          <PlanGraph {...viewProps} today={plan.today} squareArrows />
+          <PlanGraph {...viewProps} today={plan.today} />
         </Box>
         {selected ? (
           <Details
