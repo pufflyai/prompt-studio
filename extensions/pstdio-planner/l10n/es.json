@@ -44,5 +44,6 @@
   "requests.page.title": "Solicitudes de revisión",
   "timeline.autoBuild.start": "Construir automáticamente",
   "timeline.autoBuild.stop": "Detener la construcción automática",
-  "timeline.autoBuild.cancel": "Cancelar"
+  "timeline.autoBuild.cancel": "Cancelar",
+  "timeline.autoBuild.description": "Implementar todos los tickets que coincidan con estos filtros."
 }

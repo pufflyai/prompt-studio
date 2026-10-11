@@ -44,5 +44,6 @@
   "requests.page.title": "审核请求",
   "timeline.autoBuild.start": "自动构建",
   "timeline.autoBuild.stop": "停止自动构建",
-  "timeline.autoBuild.cancel": "取消"
+  "timeline.autoBuild.cancel": "取消",
+  "timeline.autoBuild.description": "实现所有符合这些筛选条件的工单。"
 }

@@ -44,5 +44,6 @@
   "requests.page.title": "審核請求",
   "timeline.autoBuild.start": "自動建置",
   "timeline.autoBuild.stop": "停止自動建置",
-  "timeline.autoBuild.cancel": "取消"
+  "timeline.autoBuild.cancel": "取消",
+  "timeline.autoBuild.description": "實作所有符合這些篩選條件的工單。"
 }

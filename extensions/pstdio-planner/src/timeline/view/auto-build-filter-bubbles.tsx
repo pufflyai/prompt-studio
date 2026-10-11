@@ -41,7 +41,7 @@ export function AutoBuildFilterBubbles(props: AutoBuildFilterBubblesProps) {
   if (filter.conjunction === "or")
     return <FilterBubble label="Applied filters" parts={[groupLabel(filter, fields, itemLabel)]} />;
   return (
-    <Flex aria-label="Applied filters" wrap="wrap" gap="2xs">
+    <Flex aria-label="Applied filters" direction="column" align="flex-start" gap="2xs">
       {filter.rules.map((rule, index) => (
         <FilterBubble
           key={`${index}:${rule.attributeId}`}

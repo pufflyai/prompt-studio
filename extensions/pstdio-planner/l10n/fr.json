@@ -48,5 +48,6 @@
   "commands.autoBuild.configure": "Configurer la construction automatique",
   "timeline.autoBuild.start": "Construire automatiquement",
   "timeline.autoBuild.stop": "Arrêter la construction automatique",
-  "timeline.autoBuild.cancel": "Annuler"
+  "timeline.autoBuild.cancel": "Annuler",
+  "timeline.autoBuild.description": "Implémenter tous les tickets correspondant à ces filtres."
 }

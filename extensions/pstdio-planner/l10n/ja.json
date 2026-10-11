@@ -44,5 +44,6 @@
   "requests.page.title": "レビュー依頼",
   "timeline.autoBuild.start": "自動ビルド",
   "timeline.autoBuild.stop": "自動ビルドを停止",
-  "timeline.autoBuild.cancel": "キャンセル"
+  "timeline.autoBuild.cancel": "キャンセル",
+  "timeline.autoBuild.description": "これらのフィルターに一致するすべてのチケットを実装します。"
 }

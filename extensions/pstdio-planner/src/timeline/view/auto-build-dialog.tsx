@@ -32,6 +32,9 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
             </Dialog.Header>
             <Dialog.Body>
               <Stack gap="md">
+                <Dialog.Description>
+                  {t("timeline.autoBuild.description", "Implement all tickets matching these filters.")}
+                </Dialog.Description>
                 <AutoBuildFilterBubbles itemLabel="Ticket" filter={filter} fields={fields} />
                 {error ? (
                   <Text role="alert" color="fg.error">

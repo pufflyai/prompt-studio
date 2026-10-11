@@ -44,5 +44,6 @@
   "requests.page.title": "검토 요청",
   "timeline.autoBuild.start": "자동 빌드",
   "timeline.autoBuild.stop": "자동 빌드 중지",
-  "timeline.autoBuild.cancel": "취소"
+  "timeline.autoBuild.cancel": "취소",
+  "timeline.autoBuild.description": "이 필터와 일치하는 모든 티켓을 구현합니다."
 }
