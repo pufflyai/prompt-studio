@@ -1,4 +1,4 @@
-// Mark both destination axes lightly and outline the cell where the ticket will land.
+// Tint the destination row and column and fill the cell where the ticket will land. Surfaces mark the target; no outlines.
 import { Box } from "@chakra-ui/react";
 import type { dropRegion } from "./drop-region";
 import { gutterWidth } from "./graph-geometry";
@@ -19,9 +19,7 @@ export function DropHighlight(props: { region: ReturnType<typeof dropRegion>; wi
         top={`${band.top}px`}
         w={`${width - gutterWidth}px`}
         h={`${band.height}px`}
-        bg="bg.accent-primary.default/3"
-        borderBlockWidth="1px"
-        borderColor="bg.accent-primary.default/20"
+        bg="bg.accent-subtle/50"
       />
       {track ? (
         <>
@@ -32,20 +30,16 @@ export function DropHighlight(props: { region: ReturnType<typeof dropRegion>; wi
             top="0"
             w={`${track.width}px`}
             h={`${height}px`}
-            bg="bg.accent-primary.default/3"
-            borderInlineWidth="1px"
-            borderColor="bg.accent-primary.default/20"
+            bg="bg.accent-subtle/50"
           />
           <Box
             data-drop-cell
             position="absolute"
             left={`${track.x}px`}
-            top={`${band.top}px`}
+            top={`${band.bodyTop}px`}
             w={`${track.width}px`}
-            h={`${band.height}px`}
-            bg="bg.accent-primary.default/4"
-            borderWidth="1px"
-            borderColor="bg.accent-primary.default"
+            h={`${band.top + band.height - band.bodyTop}px`}
+            bg="bg.accent-subtle"
           />
         </>
       ) : null}

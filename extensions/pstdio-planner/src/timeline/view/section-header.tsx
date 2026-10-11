@@ -10,7 +10,6 @@ import type { PlanViewProps, ViewSection } from "./plan-view";
 
 type Props = Pick<PlanViewProps, "onToggle" | "onDelete" | "onRenameDeadline" | "onReview"> & {
   entry: ViewSection;
-  targeted?: boolean;
 };
 
 function Progress(props: { entry: ViewSection }) {
@@ -61,15 +60,12 @@ function DeleteButton(props: { deadlineId: string; label: string } & Pick<Props,
 }
 
 export function SectionHeader(props: Props) {
-  const { entry, targeted, onToggle, onDelete, onRenameDeadline, onReview } = props;
+  const { entry, onToggle, onDelete, onRenameDeadline, onReview } = props;
   const { deadline, counts } = entry.section;
   const complete = isComplete(entry.section);
   const label = deadline ? (deadline.name ?? formatDay(deadline.date)) : "Unscheduled";
   return (
-    <Flex align="center" gap="xs" h="full" minW="0" pr="sm" bg="bg" position="relative" isolation="isolate">
-      {targeted ? (
-        <Box position="absolute" inset="0" bg="bg.accent-primary.default/6" zIndex="-1" pointerEvents="none" />
-      ) : null}
+    <Flex align="center" gap="xs" h="full" minW="0" pr="sm" bg="bg">
       <Tooltip content={`${entry.collapsed ? "Expand" : "Collapse"} ${label}`}>
         <IconButton
           size="2xs"
@@ -115,7 +111,7 @@ export function SectionHeader(props: Props) {
           </Box>
         </Tooltip>
       ) : null}
-      <Box flex="1" minW="16px" h="1px" bg={targeted ? "bg.accent-primary.default" : "border"} mx="xs" />
+      <Box flex="1" minW="16px" h="1px" bg="border" mx="xs" />
       <Progress entry={entry} />
       {deadline ? <DeleteButton deadlineId={deadline.id} label={label} onDelete={onDelete} /> : null}
     </Flex>
