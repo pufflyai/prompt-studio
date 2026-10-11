@@ -54,7 +54,14 @@ export const Default: Story = {
   ),
 };
 
-const webLinks = ["https://example.com/terminal?from=preview", "http://localhost:5173/"];
+// Agent CLIs print OSC 8 hyperlinks, where the visible label differs from the target URL.
+const osc8Link = (label: string, url: string) => `\x1b]8;;${url}\x07${label}\x1b]8;;\x07`;
+
+const webLinks = [
+  { label: "https://example.com/terminal?from=preview", url: "https://example.com/terminal?from=preview" },
+  { label: "http://localhost:5173/", url: "http://localhost:5173/" },
+  { label: "Open the terminal guide", url: "https://example.com/guide", data: osc8Link },
+];
 
 export const WebLinks: Story = {
   render: () => (
@@ -62,8 +69,8 @@ export const WebLinks: Story = {
       bridgeFactory={() =>
         createScriptedTerminalBridge({
           initial: [
-            { data: "Ctrl-click or Cmd-click a URL to open it.\r\n" },
-            ...webLinks.map((url) => ({ data: `${url}\r\n` })),
+            { data: "Ctrl-click or Cmd-click a link to open it.\r\n" },
+            ...webLinks.map((link) => ({ data: `${link.data?.(link.label, link.url) ?? link.url}\r\n` })),
           ],
         })
       }
@@ -73,10 +80,10 @@ export const WebLinks: Story = {
     // Keep the browser API boundary local so the story never opens external pages.
     const open = spyOn(window, "open").mockReturnValue(null);
     try {
-      for (const url of webLinks) {
+      for (const link of webLinks) {
         const row = await waitFor(() => {
           const element = Array.from(canvasElement.querySelectorAll<HTMLElement>(".xterm-rows > div")).find(
-            (candidate) => candidate.textContent?.trim() === url,
+            (candidate) => candidate.textContent?.trim() === link.label,
           );
           expect(element).toBeVisible();
           return element!;
@@ -93,7 +100,7 @@ export const WebLinks: Story = {
         for (const modifier of [{ ctrlKey: true }, { metaKey: true }]) {
           await fireEvent.mouseDown(screen, { ...position, ...modifier, button: 0 });
           await fireEvent.mouseUp(screen, { ...position, ...modifier, button: 0 });
-          expect(open).toHaveBeenLastCalledWith(url, "_blank", "noopener,noreferrer");
+          expect(open).toHaveBeenLastCalledWith(link.url, "_blank", "noopener,noreferrer");
         }
         expect(open).toHaveBeenCalledTimes(2);
       }
