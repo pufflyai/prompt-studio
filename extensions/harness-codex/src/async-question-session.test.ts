@@ -121,7 +121,8 @@ test("leaves an async question pending when the provider rejects steering", asyn
   const session = await startCodexSession({ prompt: "Ask", env: { PSTDIO_TEST_MODE: "async-reject" }, events }, deps);
   try {
     await waitForQuestion(events);
-    await expect(session.replyQuestion!({ callId: "async-1", answers: [] })).rejects.toThrow("Steer rejected");
+    const error = await session.replyQuestion!({ callId: "async-1", answers: [] }).catch((error: unknown) => error);
+    expect(error).toMatchObject({ message: expect.stringContaining("Steer rejected") });
     expect(findQuestion(events.getMessages())?.status).toBe("pending");
   } finally {
     session.stop();

@@ -75,6 +75,8 @@ Package verification provisions Chromium through the compiled CLI before startin
 
 ## Isolation
 
+When an assertion waits for child-process or socket output, await the operation before asserting on its result or captured error. Bun's `expect(promise).rejects` and `.resolves` can synchronously drive a nested event loop and block Windows I/O callbacks. See [the pipe-read lesson](../../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md) for the safe rejection pattern.
+
 Bun tests preload `scripts/test-setup.ts`. It removes inherited `PSTDIO_*` runtime settings, creates a temporary home, and restores the environment around each test. Tests that need runtime settings must supply them inside their setup or to the process they start. Do not run tests that mutate `process.env` concurrently in one process.
 
 Windows CI passes `--timeout=15000` to its Bun test commands, including package scripts run through Lerna. Tests and lifecycle hooks get a 15 s default. Explicit test limits and custom runners retain their own limits. Other CI platforms retain their existing defaults. This temporary allowance accounts for hosted Windows runner variance; ADR 0044 records the evidence and removal criteria.

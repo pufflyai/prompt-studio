@@ -121,14 +121,16 @@ test("approval exits planning and starts implementation in the same native threa
 test("approval rejects a stale native revision without recording approval", async () => {
   const state = memoryState();
   const prepared = prepareCodexPlanApproval(input, "old/proposal", fixtureRuntime(), { state });
-  await expect(prepared.invoke({ events })).rejects.toThrow("The plan changed");
+  const error = await prepared.invoke({ events }).catch((error: unknown) => error);
+  expect(error).toMatchObject({ message: expect.stringContaining("The plan changed") });
   expect(await state.get(approvedPlanKey("thread-fixture"))).toBeUndefined();
 });
 test("a definite native startup rejection keeps the proposal awaiting approval", async () => {
   const state = memoryState();
   const runtime = fixtureRuntime("plan-approval-rejected");
   const approval = prepareCodexPlanApproval(input, "plan-turn/proposal", runtime, { state });
-  await expect(approval.invoke({ events })).rejects.toThrow("Implementation was rejected");
+  const error = await approval.invoke({ events }).catch((error: unknown) => error);
+  expect(error).toMatchObject({ message: expect.stringContaining("Implementation was rejected") });
   expect(await state.get<string>(approvedPlanKey("thread-fixture"))).toBeUndefined();
   expect(
     await readCodexProposedPlan(runtime.worker(codexCommandInput(input, events)).request, "thread-fixture"),
