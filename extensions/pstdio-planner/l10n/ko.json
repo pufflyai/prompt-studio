@@ -45,5 +45,6 @@
   "timeline.autoBuild.start": "자동 빌드",
   "timeline.autoBuild.stop": "자동 빌드 중지",
   "timeline.autoBuild.cancel": "취소",
-  "timeline.autoBuild.description": "이 필터와 일치하는 모든 티켓을 구현합니다."
+  "timeline.autoBuild.description": "이 필터와 일치하는 모든 할 일 티켓을 기본 에이전트로 구현합니다. Auto Build가 켜져 있는 동안에는 여유가 생길 때마다 준비된 작업이 자동으로 할당됩니다.",
+  "timeline.autoBuild.documentation": "Auto Build 문서"
 }

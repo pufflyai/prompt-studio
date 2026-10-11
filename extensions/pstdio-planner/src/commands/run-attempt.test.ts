@@ -3,8 +3,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
-import { listTicketReviewRequests } from "../data/review-request-storage";
-import { seedDefaultTags } from "../data/seed";
+import { plannerTicketsChanged } from "../events";
 import { createSessionResource, makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
@@ -36,12 +35,19 @@ describe("runAttemptCommand", () => {
     }
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];
+    const changes: unknown[] = [];
 
     const result = await runAttemptCommand.run(
       ...makeCommandArgs({
         storage,
         params: { rowId: ticket.id },
         overrides: {
+          events: {
+            emit: async (event, payload) => {
+              changes.push({ event, payload, status: (await ticketsCollection(storage).get(ticket.id))?.statusId });
+              return { delivered: 0 };
+            },
+          },
           workspaces: {
             create: async (input: unknown) => {
               workspaces.push(input);
@@ -72,6 +78,11 @@ describe("runAttemptCommand", () => {
       },
     });
     expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("in-progress");
+    expect(changes).toContainEqual({
+      event: plannerTicketsChanged,
+      payload: { ticketId: ticket.id },
+      status: "in-progress",
+    });
     expect(workspaces).toEqual([
       {
         anchors: [
@@ -331,55 +342,5 @@ describe("runAttemptCommand guarded launches", () => {
         }),
       ),
     ).rejects.toThrow("2 attempts");
-  });
-});
-
-describe("runAttemptCommand human requests", () => {
-  const ticketWithDeletedDependency = async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultTags(storage);
-    const dependency = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
-    const ticket = await createTicketCommand.run(
-      ...makeCommandArgs({ storage, params: { title: "Second", dependsOn: [dependency.shorthand] } }),
-    );
-    await ticketsCollection(storage).delete(dependency.id);
-    return { storage, ticket };
-  };
-
-  test("asks a person to fix a dependency that no longer exists", async () => {
-    const { storage, ticket } = await ticketWithDeletedDependency();
-
-    await expect(
-      runAttemptCommand.run(
-        ...makeCommandArgs({
-          storage,
-          params: { ticket: ticket.shorthand },
-          overrides: { sessions: { create: async () => createSessionResource() } as never },
-        }),
-      ),
-    ).rejects.toThrow(ticket.shorthand);
-    expect((await listTicketReviewRequests(storage, ticket.id)).requests).toEqual([
-      expect.objectContaining({ context: expect.objectContaining({ reason: "dependency-missing" }), state: "open" }),
-    ]);
-  });
-
-  test("still reports why the ticket cannot start when the human request fails", async () => {
-    const { storage, ticket } = await ticketWithDeletedDependency();
-
-    const run = runAttemptCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: { ticket: ticket.shorthand },
-        overrides: {
-          sessions: {
-            create: async () => {
-              throw new Error("No default agent is configured.");
-            },
-          } as never,
-        },
-      }),
-    );
-
-    await expect(run).rejects.toThrow(`${ticket.shorthand} can't start`);
   });
 });

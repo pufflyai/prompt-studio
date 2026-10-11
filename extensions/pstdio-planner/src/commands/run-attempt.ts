@@ -133,7 +133,7 @@ export async function startAttempt(
     commitSha: readiness.baseHeadSha,
     metadata: { mode: readiness.mode, dependencyAttemptIds: readiness.dependencyAttemptIds },
   });
-  await moveTicketToInProgress(ctx.storage, ticket.id);
+  await moveTicketToInProgress(ctx, ticket.id);
   return {
     decision: "started" as const,
     mode,

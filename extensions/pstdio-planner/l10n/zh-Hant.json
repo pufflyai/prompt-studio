@@ -45,5 +45,6 @@
   "timeline.autoBuild.start": "自動建置",
   "timeline.autoBuild.stop": "停止自動建置",
   "timeline.autoBuild.cancel": "取消",
-  "timeline.autoBuild.description": "實作所有符合這些篩選條件的工單。"
+  "timeline.autoBuild.description": "使用預設代理實作所有符合這些篩選條件的待辦工單。Auto Build 開啟期間，一旦有可用容量，就會自動指派已準備就緒的工作。",
+  "timeline.autoBuild.documentation": "Auto Build 文件"
 }

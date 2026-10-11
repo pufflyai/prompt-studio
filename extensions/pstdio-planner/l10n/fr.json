@@ -49,5 +49,6 @@
   "timeline.autoBuild.start": "Construire automatiquement",
   "timeline.autoBuild.stop": "Arrêter la construction automatique",
   "timeline.autoBuild.cancel": "Annuler",
-  "timeline.autoBuild.description": "Implémenter tous les tickets correspondant à ces filtres."
+  "timeline.autoBuild.description": "Implémentez tous les tickets à faire correspondant à ces filtres avec votre agent par défaut. Tant qu’Auto Build est actif, le travail prêt est automatiquement attribué dès que la capacité le permet.",
+  "timeline.autoBuild.documentation": "Documentation Auto Build"
 }

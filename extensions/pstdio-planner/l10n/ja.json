@@ -45,5 +45,6 @@
   "timeline.autoBuild.start": "自動ビルド",
   "timeline.autoBuild.stop": "自動ビルドを停止",
   "timeline.autoBuild.cancel": "キャンセル",
-  "timeline.autoBuild.description": "これらのフィルターに一致するすべてのチケットを実装します。"
+  "timeline.autoBuild.description": "これらのフィルターに一致するすべての未着手チケットを、デフォルトのエージェントで実装します。Auto Build が有効な間は、空きができるたびに準備が整った作業が自動的に割り当てられます。",
+  "timeline.autoBuild.documentation": "Auto Build のドキュメント"
 }

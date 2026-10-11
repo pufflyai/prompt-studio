@@ -54,6 +54,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
+  await expectImplementationStatus(execute);
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ started: [], skipped: [], errors: [] });
   expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false });
@@ -135,6 +136,22 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 
 type Execute = ReturnType<typeof commandRunner>;
 const reviewNeeded = "default-human-requested-true";
+
+async function expectImplementationStatus(execute: Execute) {
+  const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });
+  await execute("implement-ticket", {
+    id: ticket.id,
+    agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
+  });
+  const plan = await execute("timeline.plan.read", {});
+  expect(plan.sections.flatMap((section: { rows: unknown[] }) => section.rows)).toContainEqual(
+    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "In Progress" }) }),
+  );
+  const query = await execute("query-tickets", {});
+  expect(query.rows).toContainEqual(
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: "in-progress" }) }),
+  );
+}
 
 // Review requests start from empty storage; answering one request must not hide another.
 async function expectReviewRequests(execute: Execute, deadlineId: string) {

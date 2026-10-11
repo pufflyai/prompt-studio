@@ -1,4 +1,4 @@
-import { Button, CloseButton, Dialog, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
 import { psTheme } from "@pstdio/ui/theme";
@@ -35,9 +35,20 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
             <Dialog.Body>
               <Stack gap="md">
                 <Dialog.Description>
-                  {t("timeline.autoBuild.description", "Implement all tickets matching these filters.")}
+                  {t(
+                    "timeline.autoBuild.description",
+                    "Implement all Todo tickets matching these filters with your default agent. While Auto Build is on, ready work is automatically assigned as capacity becomes available.",
+                  )}
                 </Dialog.Description>
                 <AutoBuildFilterBubbles itemLabel="Ticket" filter={filter} fields={fields} />
+                <Link
+                  variant="underline"
+                  href="https://prompt.studio/docs/extensions/planner/auto-build/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t("timeline.autoBuild.documentation", "Auto Build documentation")}
+                </Link>
                 {error ? (
                   <Text role="alert" color="fg.error">
                     {error}
