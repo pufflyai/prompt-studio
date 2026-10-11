@@ -13,7 +13,7 @@ import { fontCommands } from "./src/commands/font-commands";
 
 const fontEditor = defineView({
   id: "font-editor",
-  title: l10n("panels.fontEditor.title", "Font editor"),
+  title: l10n("panels.fontEditor.title", "Icon Set editor"),
   body: {
     kind: "webview",
     entry: packageAsset("./src/views/main.tsx", import.meta.url),
@@ -22,7 +22,7 @@ const fontEditor = defineView({
 });
 const fontEditorPage = definePage({
   id: "font-editor",
-  title: l10n("panels.fontEditor.title", "Font editor"),
+  title: l10n("panels.fontEditor.title", "Icon Set editor"),
   path: "font-editor",
   mode: workbenchModes.project,
   main: {
@@ -41,7 +41,7 @@ const extension = defineExtension({
       id: "font-editor",
       owner: workbenchModes.project,
       slot: "content",
-      label: l10n("treeItems.fontEditor.label", "Font editor"),
+      label: l10n("treeItems.fontEditor.label", "Icon Set editor"),
       icon: "case-upper",
       when: { mode: workbenchModes.project },
       action: { kind: "page", page: fontEditorPage.ref },
@@ -51,13 +51,13 @@ const extension = defineExtension({
     defineArtifactMount({
       id: "font-editor",
       path: "data",
-      label: l10n("artifactMounts.fontEditor.label", "Font editor files"),
+      label: l10n("artifactMounts.fontEditor.label", "Icon Set editor files"),
     }),
   ],
   skills: [
     defineSkill({
       id: "font-editor",
-      title: l10n("skills.fontEditor.title", "Font editor"),
+      title: l10n("skills.fontEditor.title", "Icon Set editor"),
       source: packageAsset("./skills/font-editor", import.meta.url),
     }),
   ],
