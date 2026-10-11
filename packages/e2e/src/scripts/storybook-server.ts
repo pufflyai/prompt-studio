@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { dirname, resolve } from "node:path";
-import { chromium } from "@playwright/test";
+import { chromium, type Request } from "@playwright/test";
 import { stopChildProcess } from "./child-process";
 
 export const STORYBOOK_BOOT_TIMEOUT_MS = 60_000;
@@ -88,11 +88,44 @@ const warmStorybook = async (baseUrl: string, probeStoryId: string) => {
   const browser = await chromium.launch({ timeout: remainingTime() });
   try {
     const page = await browser.newPage();
-    await page.goto(`${baseUrl}/iframe.html?id=${probeStoryId}`, {
-      timeout: remainingTime(),
-      waitUntil: "domcontentloaded",
+    let previewOutput = "";
+    const pendingRequests = new Map<Request, number>();
+    const capturePreviewOutput = (message: string) => {
+      previewOutput = `${previewOutput}${message}\n`.slice(-16_384);
+    };
+    page.on("pageerror", (error) => capturePreviewOutput(error.stack ?? error.message));
+    page.on("console", (message) => capturePreviewOutput(`${message.type()}: ${message.text()}`));
+    page.on("request", (request) => pendingRequests.set(request, Date.now()));
+    page.on("requestfinished", (request) => pendingRequests.delete(request));
+    page.on("requestfailed", (request) => {
+      capturePreviewOutput(`${request.failure()?.errorText}: ${request.url()}`);
+      pendingRequests.delete(request);
     });
-    await page.locator("#storybook-root > *").first().waitFor({ state: "attached", timeout: remainingTime() });
+    page.on("response", (response) => {
+      if (response.status() >= 400) capturePreviewOutput(`HTTP ${response.status()}: ${response.url()}`);
+    });
+
+    try {
+      await page.goto(`${baseUrl}/iframe.html?id=${probeStoryId}`, {
+        timeout: remainingTime(),
+        waitUntil: "domcontentloaded",
+      });
+      await page.locator("#storybook-root > *").first().waitFor({ state: "attached", timeout: remainingTime() });
+    } catch (error) {
+      console.error("Storybook preview startup failed", {
+        probeStoryId,
+        elapsedMs: Date.now() - startedAt,
+        previewOutput,
+        pendingRequests: [...pendingRequests]
+          .sort(([, left], [, right]) => left - right)
+          .slice(0, 20)
+          .map(([request, requestStartedAt]) => ({
+            url: request.url(),
+            elapsedMs: Date.now() - requestStartedAt,
+          })),
+      });
+      throw error;
+    }
   } finally {
     await browser.close();
   }
