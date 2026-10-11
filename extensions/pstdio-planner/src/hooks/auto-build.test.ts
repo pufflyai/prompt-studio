@@ -37,7 +37,7 @@ function fixture() {
 
 test("enabling the project mode queues a background check", async () => {
   const { ctx, runs } = fixture();
-  await configureAutoBuildCommand.run(ctx, { enabled: true });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Choose relevant work." });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
     enabled: true,
     running: true,
@@ -47,7 +47,7 @@ test("enabling the project mode queues a background check", async () => {
 
 test("concurrent events share the active check and later changes can enqueue again", async () => {
   const { ctx, runs } = fixture();
-  await configureAutoBuildCommand.run(ctx, { enabled: true });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Choose relevant work." });
   runs[0]!.status = "succeeded";
   await Promise.all([enqueueAutoBuild(ctx), enqueueAutoBuild(ctx), enqueueAutoBuild(ctx)]);
   expect(runs).toHaveLength(2);
@@ -60,7 +60,7 @@ test("concurrent events share the active check and later changes can enqueue aga
 
 test("turning off saves the project mode and events no longer queue checks", async () => {
   const { ctx, runs } = fixture();
-  await configureAutoBuildCommand.run(ctx, { enabled: true });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Choose relevant work." });
   await configureAutoBuildCommand.run(ctx, { enabled: false });
   runs[0]!.status = "succeeded";
   await enqueueAutoBuild(ctx);
@@ -70,8 +70,8 @@ test("turning off saves the project mode and events no longer queue checks", asy
 
 test("shows background launch errors from the host run", async () => {
   const { ctx, runs } = fixture();
-  await configureAutoBuildCommand.run(ctx, { enabled: true });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Choose relevant work." });
   runs[0]!.status = "succeeded";
-  runs[0]!.result = { errors: [{ ticket: "T-1", message: "Agent unavailable" }] };
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ error: "T-1: Agent unavailable", running: false });
+  runs[0]!.error = { code: "supervisor-failed", message: "Agent unavailable", retryable: false };
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ error: "Agent unavailable", running: false });
 });

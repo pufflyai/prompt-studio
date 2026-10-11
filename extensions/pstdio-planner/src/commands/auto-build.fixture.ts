@@ -26,6 +26,7 @@ export async function fixture(limit = 2) {
       } as never,
       sessions: {
         list: async () => [],
+        listByWorkspace: async () => [],
         create: async () => ({ ...createSessionResource(), id: `session-${sequence}` }),
         get: async () => createSessionResource(),
       } as never,
@@ -34,6 +35,11 @@ export async function fixture(limit = 2) {
   await storage.set("auto-build", {
     revision: "test",
     enabled: true,
+    prompt: "Implement relevant tickets.",
+    ignore: {
+      conjunction: "and",
+      rules: [{ attributeId: "status", condition: "is-any-of", value: ["backlog", "done"] }],
+    },
   });
   const ticket = (title: string, dependsOn: string[] = []) =>
     createTicketCommand.run(ctx, { title, statusId: "ready", dependsOn });

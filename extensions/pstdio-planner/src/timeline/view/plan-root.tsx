@@ -1,6 +1,6 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
 import { Box, Flex, Text } from "@chakra-ui/react";
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
 import {
   type CollectionViewsSource,
   filterRowsByView,
@@ -85,14 +85,25 @@ function PlanContent(props: PlanContentProps) {
         actions={
           <AutoBuildButton
             enabled={autoBuild.mode?.enabled ?? false}
-            running={autoBuild.mode?.running ?? false}
+            supervisor={autoBuild.mode?.supervisor}
+            sessions={autoBuild.mode?.sessions ?? []}
+            onOpenSession={(session) =>
+              void host.call("navigation.open", {
+                target: {
+                  kind: "panel",
+                  panel: workbenchPanels.projectSession,
+                  open: "preview",
+                  resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
+                },
+              })
+            }
             disabled={!autoBuild.mode || autoBuild.saving}
             onConfigure={() => {
               void autoBuild.refresh().then((success) => {
                 if (success) setAutoBuildOpen(true);
               });
             }}
-            onTurnOff={() => void autoBuild.configure(false)}
+            onTurnOff={() => autoBuild.configure(false)}
             t={t}
           />
         }
@@ -140,10 +151,12 @@ function PlanContent(props: PlanContentProps) {
       ) : null}
       {autoBuildOpen ? (
         <AutoBuildDialog
-          maxInProgress={autoBuild.mode!.maxInProgress}
+          prompt={autoBuild.mode!.prompt}
+          ignore={autoBuild.mode!.ignore}
+          data={queryData}
           saving={autoBuild.saving}
           error={autoBuild.error}
-          onEnable={(maxInProgress) => autoBuild.configure(true, maxInProgress)}
+          onEnable={(prompt, ignore) => autoBuild.configure(true, prompt, ignore)}
           onClose={() => setAutoBuildOpen(false)}
           t={t}
         />

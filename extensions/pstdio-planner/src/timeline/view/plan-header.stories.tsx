@@ -67,9 +67,10 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
       actions={
         <AutoBuildButton
           enabled={running ?? false}
-          running={running ?? false}
+          sessions={[]}
+          onOpenSession={() => {}}
           onConfigure={() => {}}
-          onTurnOff={() => {}}
+          onTurnOff={async () => true}
           t={(_key, fallback) => fallback ?? _key}
         />
       }

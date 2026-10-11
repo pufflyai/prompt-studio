@@ -1,45 +1,54 @@
 # Auto Build
 
-Auto Build automatically assigns ready tickets to your default agent while the mode is on. It applies to all eligible tickets in the project.
-
-## Before you start
-
-Install [Planner](../README.md#install) and [Reports](../../pstdio-reports/README.md), and open a local Git project with a usable base commit. Choose and sign in to your [default agent](../../../documentation/guides/getting-started/0004-run-agents.md).
-
-Open **Settings → Project → Extensions → Prompt Studio Planner → Settings** to check **Maximum in-progress tickets**. The default is two, so up to two ticket implementations can run at once. Manual attempts use the same limit. A limit of zero prevents new starts.
-
-Planner uses **Default target branch** when set, or the repository's default branch otherwise. For a local demo without a Git remote, turn off **Open PR** in these settings.
+Auto Build uses a supervisor to assign valid, unassigned tickets using your prompt. It sleeps between checks and resumes when more work can run.
 
 ## Start Auto Build
 
-1. Open **Project Timeline** under **Project Planning**.
-2. Click **Auto Build** in the header and set **Maximum parallel tasks** in the modal. This edits the same project limit as **Maximum in-progress tickets** in Settings.
-3. Confirm with the primary **Auto Build** button.
+Open **Project Timeline** and click **Auto Build**. Describe how the supervisor should choose work, then adjust the ignore filters below the prompt and click the primary **Auto Build** button.
 
-![Auto Build confirmation with its short explanation, documentation link, and primary Auto Build button.](../../../documentation/images/auto-build-confirmation.png)
+For example: “Prioritize small independent tickets for the next release. Leave design decisions for me.”
 
-Planner starts eligible **Todo** tickets across the project in timeline order. Each ticket gets its own managed Git workspace and a session with the default agent. The ticket moves to **In Progress** in both Tickets and Project Timeline.
+![Auto Build form with a supervisor prompt and ignore filters.](../../../documentation/images/auto-build-confirmation.png)
 
-Independent tickets can run together. A ticket waits until its prerequisites are complete and its dependency revisions are available. Blocked tickets, review gates, open requests for human input, and tickets with a current attempt do not start automatically.
+The ignore list uses the same filter button, picker, and bubbles as Tickets. Tickets matching the filter are excluded. **Backlog** and **Done** are ignored by default. Remove Backlog from the filter if you want those tickets to be considered. An empty ignore list excludes nothing.
 
-## While the mode is on
+The selected timeline view, search, and display filters only affect what you see. The supervisor considers valid tickets across the project, using its own ignore list.
 
-Planner keeps checking for ready work. When capacity becomes available, it automatically assigns the next ready Todo ticket. Newly created tickets and tickets moved to Todo can also start when they are ready.
+## How the supervisor works
 
-Auto Build keeps running when you close the timeline and resumes after restarting Prompt Studio. The selected view, filters, and search only change what you see. Auto Build always checks all eligible tickets in the project.
+Planner checks every three minutes and also checks when tickets change or a session finishes. When the board has changed or capacity has become available, and valid unassigned work exists, Planner starts or resumes the supervisor session with your prompt and Auto Build instructions.
 
-Implementation follows the project's Planner settings, including adversarial review and pull request creation. Auto Build starts work; it does not approve or merge it. Review the results through the normal [attempt workflow](0002-attempts.md).
+The supervisor reads the current candidates and capacity, chooses relevant tickets using your prompt, and launches or resumes their managed attempts. It then ends its turn and sleeps. Planner reuses that session for later prompts and does not repeatedly prompt it for an unchanged board. Board changes during a running supervisor turn are checked after it finishes.
 
-## Stop Auto Build
+Each new implementation uses its own managed Git workspace and the default agent. Its ticket moves to **In Progress** in both Tickets and Project Timeline. The supervisor does not consume an implementation slot. Set **Maximum in-progress tickets** in Planner Settings to control how many implementation sessions can run together.
 
-Click **Stop Auto Build** in the timeline header to prevent further starts. Work already assigned continues and can finish. Stopping the mode does not cancel sessions or discard their changes.
+Tickets must have ready prerequisites and available dependency revisions. Drafts, archived tickets, blocked tickets, review gates, and open human-review requests are not candidates. A ticket already assigned to a running session is excluded. An unattended In Progress ticket without a current attempt can be considered. Completed implementations already in review stay in the normal [attempt workflow](0002-attempts.md).
 
-The button returns to **Auto Build**. Start it again when you want to resume assigning ready work.
+Implementation follows the project's Planner settings, including adversarial review and pull request creation. Auto Build does not approve or merge work.
+
+## Inspect or stop Auto Build
+
+The header button always says **Auto Build**. A spinner shows that the mode is on, including while the supervisor sleeps. Click it to open a popover with the supervisor and running ticket sessions. Click a session to inspect it.
+
+Click **Stop Auto Build** in the popover to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes.
+
+Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt and ignore filters.
 
 ## When work needs attention
 
-A launch failure turns Auto Build off and shows the error in the timeline. Resolve the problem, then start the mode again. Existing attempts stay available for inspection.
+If the supervisor cannot start or resume, Auto Build turns off and shows the error. Resolve the problem and start it again. Existing attempts remain available.
 
-If an agent needs your help, Planner records a [review request](0006-review-requests.md) and marks the ticket **Review Needed**. Resolve the issue and answer every open request. While Auto Build is on, a paused implementation resumes in its existing session and workspace when a slot is available, with your saved answer included. Other independent work can still start when capacity allows.
+If an implementation needs help, answer every open [review request](0006-review-requests.md). The supervisor can then resume that attempt in the same workspace and session when capacity is available, with your answers included.
 
-If nothing starts, check that tickets are in Todo, their prerequisites are complete, the default agent is configured, and the in-progress limit has space.
+If nothing starts, check the ignore filters, prerequisites, default agent, and in-progress limit. The supervisor can also leave valid tickets unassigned when they do not match your prompt.
+
+## Agent commands
+
+The supervisor uses public Planner commands:
+
+```sh
+pst pstdio-planner auto-build candidates
+pst pstdio-planner auto-build dispatch --ticket PS-123 --revision <mode-revision>
+```
+
+The candidate command reports the current mode revision, valid tickets, and capacity. Dispatch rechecks the mode, ignore filters, assignments, prerequisites, and capacity before launching or resuming work. A prompt from an earlier mode cannot dispatch work after Auto Build is stopped or restarted.

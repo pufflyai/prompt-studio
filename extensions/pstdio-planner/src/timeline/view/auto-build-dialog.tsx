@@ -1,27 +1,54 @@
 import { Button, CloseButton, Dialog, Icon, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
-import { NumberInput } from "@pstdio/ui/param-editor";
+import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { CollectionViewBar, useCollectionViewStore } from "@pstdio/ui/collection-view";
+import { buildFilterCategories } from "@pstdio/ui/kanban-renderer";
+import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { psTheme } from "@pstdio/ui/theme";
 import { ArrowUpRight } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
+import type { timelineQueryData } from "./timeline-query";
 
 interface AutoBuildDialogProps {
-  maxInProgress: number;
+  prompt: string;
+  ignore: ViewFilterGroup;
+  data: ReturnType<typeof timelineQueryData>;
   saving: boolean;
   error?: string;
-  onEnable: (maxInProgress: number) => Promise<boolean>;
+  onEnable: (prompt: string, ignore: ViewFilterGroup) => Promise<boolean>;
   onClose: () => void;
   t: (key: string, fallback?: string) => string;
 }
 
 export function AutoBuildDialog(props: AutoBuildDialogProps) {
-  const { maxInProgress, saving, error, onEnable, onClose, t } = props;
-  const [limit, setLimit] = useState(maxInProgress);
+  const { prompt: initialPrompt, ignore: initialIgnore, data, saving, error, onEnable, onClose, t } = props;
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const storageKey = `auto-build-ignore:${useId()}`;
+  const initialState = { settings: {}, filter: initialIgnore };
+  const ignore = useCollectionViewStore(storageKey, initialState, (state) => state.filter);
+  const setIgnore = useCollectionViewStore(storageKey, initialState, (state) => state.setFilter);
+  const titleRule = ignore.rules.find((rule) => rule.attributeId === "title" && rule.condition === "contains");
+  const search = typeof titleRule?.value === "string" ? titleRule.value : "";
+  const setSearch = (value: string) =>
+    setIgnore({
+      ...ignore,
+      rules: [
+        ...ignore.rules.filter((rule) => rule !== titleRule),
+        ...(value ? [{ attributeId: "title", condition: "contains" as const, value }] : []),
+      ],
+    });
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
+  const categories = buildFilterCategories(data.attributes, data.rows);
   const save = async () => {
-    if (await onEnable(limit)) onClose();
+    if (await onEnable(prompt, ignore)) onClose();
   };
   return (
-    <Dialog.Root open size="md" onOpenChange={({ open }) => !open && !saving && onClose()}>
+    <Dialog.Root
+      open
+      size="lg"
+      scrollBehavior="inside"
+      closeOnInteractOutside={false}
+      onOpenChange={({ open }) => !open && !saving && onClose()}
+    >
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
@@ -38,7 +65,7 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                   <Dialog.Description>
                     {t(
                       "timeline.autoBuild.description",
-                      "While Auto Build is on, valid tasks are automatically assigned to your default agent as capacity becomes available.",
+                      "A supervisor uses your prompt to assign valid, unassigned tickets as capacity becomes available. It sleeps between checks and resumes when more work can run.",
                     )}
                   </Dialog.Description>
                   <Link
@@ -52,17 +79,33 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                     <Icon as={ArrowUpRight} boxSize="icon-xs" />
                   </Link>
                 </Stack>
-                <NumberInput
-                  id="auto-build-max-parallel"
-                  name={t("timeline.autoBuild.maxParallel", "Maximum parallel tasks")}
-                  defaultValue={limit}
-                  min={0}
-                  step={1}
-                  description=""
-                  hideSlider
-                  readOnly={saving}
-                  onChange={(_id, value) => setLimit(value)}
+                <LazyMarkdownEditor
+                  autoFocus
+                  defaultState={prompt}
+                  isEditable={!saving}
+                  placeholder={t(
+                    "timeline.autoBuild.prompt",
+                    "Describe how the supervisor should choose and assign work…",
+                  )}
+                  onChange={setPrompt}
                 />
+                <Stack gap="xs">
+                  <Text textStyle="label/S/medium">
+                    {t("timeline.autoBuild.ignore", "Ignore tickets matching these filters")}
+                  </Text>
+                  <CollectionViewBar
+                    storageKey={storageKey}
+                    initialState={initialState}
+                    itemLabel="Ticket"
+                    views={[]}
+                    fields={data.attributes}
+                    optionsFor={(field) => categories.find(({ id }) => id === field.id)?.options ?? []}
+                    search={search}
+                    onSearchChange={setSearch}
+                    displayControl={null}
+                    align="end"
+                  />
+                </Stack>
                 {error ? (
                   <Text role="alert" color="fg.error">
                     {error}
@@ -79,7 +122,7 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                 css={button({ variant: "primary", size: "sm" })}
                 onClick={() => void save()}
                 loading={saving}
-                disabled={saving}
+                disabled={saving || !prompt.trim()}
               >
                 {t("timeline.autoBuild.start", "Auto Build")}
               </Button>

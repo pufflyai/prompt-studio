@@ -42,7 +42,7 @@ export const checkAutoBuildCommand = defineCommand({
 export const autoBuildSchedule = defineSchedule({
   id: "auto-build",
   title: "Check Auto build",
-  schedule: "* * * * *",
+  schedule: "*/3 * * * *",
   command: checkAutoBuildCommand.ref,
 });
 

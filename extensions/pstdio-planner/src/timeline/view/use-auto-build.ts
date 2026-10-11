@@ -1,11 +1,16 @@
-import { eventRef } from "@pstdio/sdk/extensions";
+import { eventRef, sessionEvents, type ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { autoBuildChanged } from "../../data/auto-build-mode";
 import { useLiveValue } from "./use-live-value";
 import type { PlanClient } from "./use-plan";
 
 const readMode = (client: PlanClient) => client.commands["auto-build.read"]();
-const modeEvents = [autoBuildChanged, eventRef({ extensionId: "pstdio.pstdio-planner", id: "automation-run-changed" })];
+const modeEvents = [
+  autoBuildChanged,
+  sessionEvents.started,
+  sessionEvents.completed,
+  eventRef({ extensionId: "pstdio.pstdio-planner", id: "automation-run-changed" }),
+];
 
 export function useAutoBuild(client: PlanClient) {
   const { value: mode, setValue: setMode, error: readError } = useLiveValue(client, readMode, modeEvents);
@@ -24,11 +29,11 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  const configure = async (enabled: boolean, maxInProgress?: number) => {
+  const configure = async (enabled: boolean, prompt?: string, ignore?: ViewFilterGroup) => {
     setSaving(true);
     setError(undefined);
     try {
-      await client.commands["auto-build.configure"]({ enabled, maxInProgress });
+      await client.commands["auto-build.configure"]({ enabled, prompt, ignore });
       setMode(await readMode(client));
       return true;
     } catch (reason) {

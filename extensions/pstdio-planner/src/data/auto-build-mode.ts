@@ -1,24 +1,49 @@
-import { type ExtensionContextBase, eventRef } from "@pstdio/sdk/extensions";
+import { type ExtensionContextBase, eventRef, type ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { seedDefaultStatuses } from "./seed";
+import { withWriteGuard } from "./write-guard";
 
 export interface AutoBuildMode {
   revision: string;
   enabled: boolean;
+  prompt: string;
+  ignore: ViewFilterGroup;
 }
 
 export const autoBuildChanged = eventRef({ extensionId: "pstdio.pstdio-planner", id: "auto-build.changed" });
+
+export const defaultAutoBuildIgnore = async (ctx: Pick<ExtensionContextBase, "storage">) => ({
+  conjunction: "and" as const,
+  rules: [
+    {
+      attributeId: "status",
+      condition: "is-any-of" as const,
+      value: (await seedDefaultStatuses(ctx.storage))
+        .filter(({ name }) => ["backlog", "done"].includes(name.trim().toLowerCase()))
+        .map(({ id }) => id),
+    },
+  ],
+});
+
 export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage">) => {
-  const mode = (await ctx.storage.get<AutoBuildMode>("auto-build")) ?? {
-    revision: "",
-    enabled: false,
+  const mode = await ctx.storage.get<AutoBuildMode>("auto-build");
+  return {
+    revision: mode?.revision ?? "",
+    enabled: Boolean(mode?.enabled && mode.prompt),
+    prompt: mode?.prompt ?? "",
+    ignore: mode?.ignore ?? (await defaultAutoBuildIgnore(ctx)),
   };
-  const failure = await ctx.storage.get<{ revision: string }>("auto-build-failure");
-  return { revision: mode.revision, enabled: mode.enabled && failure?.revision !== mode.revision };
 };
 
 export const pauseAutoBuildMode = async (ctx: ExtensionContextBase, mode: AutoBuildMode) => {
-  // Failure belongs to the batch's configuration. A later configuration stays enabled.
-  await ctx.storage.set("auto-build-failure", { revision: mode.revision });
-  await ctx.events.emit(autoBuildChanged, {});
+  await withWriteGuard(
+    ctx,
+    "auto-build-mode",
+    async () => {
+      const current = await readAutoBuildMode(ctx);
+      if (current.revision === mode.revision) await saveAutoBuildMode(ctx, { ...current, enabled: false });
+    },
+    () => undefined,
+  );
 };
 
 export const saveAutoBuildMode = async (ctx: ExtensionContextBase, mode: AutoBuildMode) => {

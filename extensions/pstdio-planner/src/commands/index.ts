@@ -12,6 +12,8 @@ import {
 } from "./attempt-history";
 import { attemptReadinessCommand } from "./attempt-readiness";
 import { autoBuildCommand } from "./auto-build";
+import { autoBuildCandidatesCommand } from "./auto-build-candidates";
+import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
@@ -106,6 +108,8 @@ import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
   autoBuildCommand,
+  autoBuildCandidatesCommand,
+  autoBuildDispatchCommand,
   configureAutoBuildCommand,
   readAutoBuildCommand,
   checkAutoBuildCommand,

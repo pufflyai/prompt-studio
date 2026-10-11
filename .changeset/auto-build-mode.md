@@ -2,4 +2,4 @@
 "pstdio-planner": minor
 ---
 
-Run Auto Build across all eligible project tickets with a shared parallel task limit, automatic resumption after human input, and live timeline status updates.
+Coordinate Auto Build through a prompted supervisor with ignore filters, session wakeups, and an active sessions popover.

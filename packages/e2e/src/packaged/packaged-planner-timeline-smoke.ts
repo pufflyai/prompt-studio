@@ -54,19 +54,19 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
-  await expectImplementationStatus(execute);
   // Empty ready work exercises the shipped action without starting real agents.
-  expect(await execute("auto-build", {})).toEqual({ started: [], skipped: [], errors: [] });
+  expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false });
-  expect(await execute("auto-build.configure", { enabled: true, maxInProgress: 0 })).toMatchObject({
+  expect(await execute("auto-build.configure", { enabled: true, prompt: "Choose valid tasks." })).toMatchObject({
     enabled: true,
   });
-  expect(await execute("automation-policy", {})).toEqual({ maxInProgress: 0 });
-  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: true, maxInProgress: 0 });
-  expect(await execute("auto-build.configure", { enabled: false, maxInProgress: 2 })).toMatchObject({
+  expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
+  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: true, prompt: "Choose valid tasks." });
+  expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
   });
-  expect(await execute("auto-build", {})).toEqual({ started: [], skipped: [], errors: [] });
+  expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  await expectImplementationStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
     content: "# Timeline smoke ticket\n\nShared Planner body",

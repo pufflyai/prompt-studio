@@ -1,49 +1,9 @@
 import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
-import { listAttempts } from "../data/attempt-storage";
-import { type AutoBuildMode, pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
-import { resolveImplementationBase } from "../data/implementation-targets";
+import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
+import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
-import { readPlanCommand } from "../timeline/commands/read-plan";
-import type { PlanRow } from "../timeline/contracts";
-import { workflowName } from "../timeline/model/workflow";
-import { loadAttemptReadiness } from "./attempt-readiness";
-import { readAutoBuildResumptions, resumeAutoBuildAttempt } from "./auto-build-resume";
-import { startAttempt } from "./run-attempt";
-
-class AutoBuildSelectionChanged extends Error {}
-
-const isReady = (row: PlanRow) => {
-  const status = workflowName(row.status?.name);
-  return (
-    (status === "todo" || status === "in-progress") &&
-    !row.gate &&
-    !row.blockedReason &&
-    !row.flags.includes("human-needed")
-  );
-};
-
-async function selectedTicket(ctx: CommandContext, mode: AutoBuildMode, candidate: PlanRow) {
-  const currentMode = await readAutoBuildMode(ctx);
-  if (!currentMode.enabled || currentMode.revision !== mode.revision) return undefined;
-  const plan = await readPlanCommand.run(ctx, {});
-  const row = plan.sections.flatMap(({ rows }) => rows).find((row) => row.id === candidate.id);
-  if (!row || !isReady(row)) return undefined;
-  if (workflowName(row.status?.name) !== workflowName(candidate.status?.name)) return undefined;
-  return row;
-}
-
-async function runAutoBuild(ctx: CommandContext) {
-  const mode = await readAutoBuildMode(ctx);
-  try {
-    const result = await autoBuild(ctx, mode);
-    // Leave failed work for inspection instead of retrying it on the next check.
-    if (result.errors.length) await pauseAutoBuildMode(ctx, mode);
-    return result;
-  } catch (error) {
-    await pauseAutoBuildMode(ctx, mode);
-    throw error;
-  }
-}
+import { readAutoBuildCandidates } from "./auto-build-candidates";
+import { isLiveSession } from "./auto-build-sessions";
 
 export const autoBuildCommand = defineCommand({
   id: "auto-build",
@@ -53,77 +13,49 @@ export const autoBuildCommand = defineCommand({
   async run(ctx) {
     return withWriteGuard(
       ctx,
-      "attempt-launch",
-      () => runAutoBuild(ctx),
-      () => ({ started: [], skipped: [], errors: [] }),
+      "auto-build-supervisor",
+      () => wakeSupervisor(ctx),
+      () => ({ prompted: false }),
     );
   },
 });
 
-async function autoBuild(ctx: CommandContext, mode: AutoBuildMode) {
-  const started: { ticket: string; workspaceId: string; sessionId: string }[] = [];
-  const skipped: { ticket: string; reason: string }[] = [];
-  const errors: { ticket: string; message: string }[] = [];
-  if (!mode.enabled) return { started, skipped, errors };
-  const [plan, attempts, settings, resumptions] = await Promise.all([
-    readPlanCommand.run(ctx, {}),
-    listAttempts(ctx.storage),
-    ctx.settings.all(),
-    readAutoBuildResumptions(ctx),
-  ]);
-  const attempted = new Set(
-    attempts.filter((attempt) => attempt.state !== "abandoned").map((attempt) => attempt.ticketId),
-  );
-  const candidates = plan.sections
-    .flatMap(({ rows }) => rows)
-    .filter(
-      (row) =>
-        isReady(row) &&
-        (resumptions.has(row.id) || (workflowName(row.status?.name) === "todo" && !attempted.has(row.id))),
-    );
-  if (!candidates.length) return { started, skipped, errors };
-  for (const row of candidates) {
-    try {
-      const result = await dispatchTicket(ctx, mode, row, settings, resumptions.has(row.id));
-      if (result.decision === "wait") {
-        skipped.push({ ticket: row.shorthand, reason: result.reason });
-        if (result.reason === "capacity-full") break;
-      } else {
-        started.push({ ticket: row.shorthand, workspaceId: result.workspaceId, sessionId: result.sessionId });
-      }
-    } catch (error) {
-      if (error instanceof AutoBuildSelectionChanged) continue;
-      errors.push({ ticket: row.shorthand, message: error instanceof Error ? error.message : String(error) });
-      break;
+async function wakeSupervisor(ctx: CommandContext) {
+  const mode = await readAutoBuildMode(ctx);
+  if (!mode.enabled) return { prompted: false };
+  try {
+    const supervisor = await readAutoBuildSupervisor(ctx);
+    const session = supervisor.sessionId ? await ctx.sessions.get(supervisor.sessionId) : null;
+    if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
+    const { candidates, capacity, snapshot } = await readAutoBuildCandidates(ctx, mode);
+    if (!candidates.length || capacity.running >= capacity.limit || snapshot === supervisor.lastWake)
+      return { prompted: false };
+    const prompt = [
+      mode.prompt,
+      "## Auto Build supervisor instructions",
+      "You coordinate ticket attempts. Do not implement tickets yourself or change the board to bypass its rules.",
+      "Read current valid, unassigned tickets and available capacity with:",
+      "pst pstdio-planner auto-build candidates",
+      `For each relevant candidate, launch or resume its managed attempt with:\npst pstdio-planner auto-build dispatch --ticket <ticket> --revision ${mode.revision}`,
+      "Re-read candidates after dispatching. Respect the user's prompt and the returned capacity. The dispatch command enforces current ignore filters, assignments, dependencies, and capacity.",
+      "Do not call run-attempt directly, create implementation sessions yourself, or change Auto Build settings.",
+      "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build will re-prompt this same session when the board changes or capacity frees up. If Auto Build is stopped, finish your turn without dispatching more work.",
+      `Current capacity: ${capacity.running}/${capacity.limit}. Candidates: ${JSON.stringify(candidates)}.`,
+    ].join("\n\n");
+    const current = await readAutoBuildMode(ctx);
+    if (!current.enabled || current.revision !== mode.revision) return { prompted: false };
+    let supervisorId = session?.id;
+    if (supervisorId) {
+      await ctx.sessions.followup({ sessionId: supervisorId, prompt });
+    } else {
+      const home = await ctx.workspaces.getDefault();
+      const created = await ctx.sessions.create({ title: "Auto Build supervisor", workspaceId: home?.id, prompt });
+      supervisorId = created.id;
     }
+    await saveAutoBuildSupervisor(ctx, { sessionId: supervisorId, lastWake: snapshot });
+    return { prompted: true, sessionId: supervisorId };
+  } catch (error) {
+    await pauseAutoBuildMode(ctx, mode);
+    throw error;
   }
-  return { started, skipped, errors };
-}
-
-async function dispatchTicket(
-  ctx: CommandContext,
-  mode: AutoBuildMode,
-  row: PlanRow,
-  settings: Record<string, unknown>,
-  resume: boolean,
-) {
-  if (!(await selectedTicket(ctx, mode, row))) return { decision: "wait" as const, reason: "ticket-not-ready" };
-  const beforeDispatch = async () => {
-    if (!(await selectedTicket(ctx, mode, row))) throw new AutoBuildSelectionChanged();
-    const latest = await readAutoBuildMode(ctx);
-    if (!latest.enabled || latest.revision !== mode.revision) throw new AutoBuildSelectionChanged();
-  };
-  if (resume) return resumeAutoBuildAttempt(ctx, row.id, beforeDispatch);
-  const base = await resolveImplementationBase(ctx, settings);
-  const { readiness } = await loadAttemptReadiness(ctx, row.id, { base });
-  if (readiness.decision === "wait") return readiness;
-  const result = await startAttempt(
-    ctx,
-    {
-      ticket: row.id,
-      ...(base ? { workspace: { providerId: "pstdio.worktree", params: { base } } } : {}),
-    },
-    beforeDispatch,
-  );
-  return { decision: "started" as const, workspaceId: result.workspace.id, sessionId: result.session.id };
 }

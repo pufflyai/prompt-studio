@@ -1,272 +1,142 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { listAttempts } from "../data/attempt-storage";
-import { putTicket } from "../data/collections";
-import { registerGate } from "../timeline/commands/gate-store";
-import { savePlan } from "../timeline/commands/plan-store";
-import { assignTrackCommand, createTrackCommand } from "../timeline/commands/track-commands";
 import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
-import { createSessionResource } from "./command-context.fixture";
-import { createTicketCommand } from "./create-ticket";
-import { requestHumanCommand } from "./review-requests";
-import { runAttemptCommand } from "./run-attempt";
 
-test("fills slots in timeline order with independent tickets", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  const first = await ticket("First");
-  const second = await ticket("Second");
-  const third = await ticket("Third");
-  const track = await createTrackCommand.run(ctx, { name: "Product" });
-  for (const row of [first, second, third]) await assignTrackCommand.run(ctx, { ticket: row.id, track: track.id });
-  await storage.set("auto-build", {
-    revision: "test",
-    enabled: true,
-  });
-  await savePlan(
-    ctx,
-    {
-      deadlines: [],
-      order: [second, first, third].map((row) => ({ ticketId: row.id, deadlineId: null })),
-    },
-    "test",
-  );
-
-  const result = await autoBuildCommand.run(ctx, {});
-
-  expect(result.started.map((row) => row.ticket)).toEqual([second.shorthand, first.shorthand]);
-  expect(await listAttempts(storage)).toHaveLength(2);
-  expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-});
-
-test("skips unresolved cross-track dependencies and fills remaining slots", async () => {
-  const { ctx, ticket } = await fixture();
-  const first = await ticket("Prerequisite");
-  const dependent = await ticket("Selected dependent", [first.shorthand]);
-  const independent = await ticket("Selected independent");
-  const track = await createTrackCommand.run(ctx, { name: "Other" });
-  await assignTrackCommand.run(ctx, { ticket: first.id, track: track.id });
-  const result = await autoBuildCommand.run(ctx, {});
-  expect(result.started.map((row) => row.ticket)).toEqual([first.shorthand, independent.shorthand]);
-  expect(result.skipped).toEqual([{ ticket: dependent.shorthand, reason: "dependency-not-ready" }]);
-});
-
-test("leaves backlog, blocked tickets, gates, and human requests for review", async () => {
-  const { ctx, storage, ticket } = await fixture(10);
-  await createTicketCommand.run(ctx, { title: "Backlog" });
-  const blocked = await ticket("Blocked");
-  await putTicket(storage, { ...blocked, blockedReason: "Needs credentials" });
-  const gate = await ticket("Gate");
-  await registerGate(ctx, gate.id);
-  const human = await ticket("Question");
-  await requestHumanCommand.run(ctx, {
-    ticket: human.id,
-    title: "Choose",
-    instructions: "Confirm the scope",
-    request: { kind: "task" },
-  });
-  const ready = await ticket("Ready");
-  expect((await autoBuildCommand.run(ctx, {})).started.map((row) => row.ticket)).toEqual([ready.shorthand]);
-});
-
-test("starts nothing when the configured limit is zero", async () => {
-  const { ctx, storage, ticket } = await fixture(0);
-  await ticket("Ready");
-  expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-  expect(await listAttempts(storage)).toEqual([]);
-});
-
-test("concurrent starts for different tickets never exceed project capacity", async () => {
-  const { ctx, storage, ticket } = await fixture(1);
-  const first = await ticket("First");
-  const second = await ticket("Second");
-  let release!: () => void;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const create = ctx.workspaces.create;
-  ctx.workspaces.create = async (input) => {
-    await gate;
-    return create(input);
-  };
-  const pending = Promise.allSettled([
-    runAttemptCommand.run(ctx, { ticket: first.id }),
-    runAttemptCommand.run(ctx, { ticket: second.id }),
-  ]);
-  await Promise.resolve();
-  release();
-  const outcomes = await pending;
-  expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
-  expect(await listAttempts(storage)).toHaveLength(1);
-});
-
-test("preserves successful launches and reports a later launch failure", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  const first = await ticket("First");
-  const second = await ticket("Second");
-  let calls = 0;
-  ctx.sessions.create = async () => {
-    calls += 1;
-    if (calls === 2) throw new Error("Agent unavailable");
-    return createSessionResource();
-  };
-  const result = await autoBuildCommand.run(ctx, {});
-  expect(result.started.map((row) => row.ticket)).toEqual([first.shorthand]);
-  expect(result.errors).toEqual([{ ticket: second.shorthand, message: "Agent unavailable" }]);
-  expect(await listAttempts(storage)).toHaveLength(1);
-});
-
-test("rechecks a later ticket when its status changes during the batch", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  const first = await ticket("First");
-  const second = await ticket("Second");
-  ctx.sessions.create = async () => {
-    await putTicket(storage, { ...second, statusId: "done" });
-    return createSessionResource();
-  };
-  expect((await autoBuildCommand.run(ctx, {})).started.map((row) => row.ticket)).toEqual([first.shorthand]);
-});
-
-test("uses the repository default branch when the project is on unrelated feature work", async () => {
-  const { ctx, ticket } = await fixture();
-  const folder = await mkdtemp(join(tmpdir(), "auto-build-base-"));
-  const git = async (...args: string[]) => {
-    const result = await Bun.$`git -C ${folder} ${args}`.quiet();
-    return result.text().trim();
-  };
-  try {
-    await git("init", "-b", "trunk");
-    await git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "--allow-empty", "-m", "Initial");
-    const base = await git("rev-parse", "HEAD");
-    await git("update-ref", "refs/remotes/origin/trunk", "HEAD");
-    await git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk");
-    await git("checkout", "-b", "feature/unrelated");
-    await git(
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@example.com",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "Unrelated",
-    );
-    ctx.workspaces.getDefault = async () => ({ id: "home", root_path: folder, execution_kind: "local" }) as never;
-    ctx.process.run = async ({ command, cwd }) => {
-      const child = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe" });
-      return {
-        exitCode: await child.exited,
-        stdout: await new Response(child.stdout).text(),
-        stderr: await new Response(child.stderr).text(),
-      };
+async function supervisorFixture(limit = 2) {
+  const result = await fixture(limit);
+  const sessions = new Map<string, { id: string; title: string; status: string }>();
+  const prompts: { sessionId: string; prompt?: string }[] = [];
+  result.ctx.sessions.create = async (input) => {
+    const session = {
+      type: "session" as const,
+      id: `supervisor-${sessions.size}`,
+      title: input.title,
+      status: "in_progress" as const,
     };
-    const bases: unknown[] = [];
-    const create = ctx.workspaces.create;
-    ctx.workspaces.create = async (input) => {
-      bases.push(input.params?.base);
-      return create(input);
-    };
-    await ticket("Ready");
-    expect((await autoBuildCommand.run(ctx, {})).errors).toEqual([]);
-    expect(bases).toEqual([base]);
-  } finally {
-    await rm(folder, { recursive: true, force: true });
-  }
+    sessions.set(session.id, session);
+    prompts.push({ sessionId: session.id, prompt: input.prompt });
+    return session;
+  };
+  result.ctx.sessions.get = async (id) => sessions.get(id) ?? null;
+  result.ctx.sessions.followup = async (input) => {
+    prompts.push(input);
+    sessions.get(input.sessionId)!.status = "in_progress";
+  };
+  return { ...result, sessions, prompts };
+}
+
+test("starts one supervisor with the user prompt instead of dispatching implementation itself", async () => {
+  const { ctx, ticket, storage, prompts } = await supervisorFixture();
+  await ticket("First");
+  await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Choose small tasks first." });
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+  expect(prompts[0]!.prompt).toContain("Choose small tasks first.");
+  expect(await listAttempts(storage)).toHaveLength(0);
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
+    supervisor: { id: prompts[0]!.sessionId, status: "in_progress" },
+  });
 });
 
-test("starts new ready tickets on later checks across the project", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  await createTicketCommand.run(ctx, { title: "Backlog work" });
-  expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-  const ready = await ticket("New ready work");
-  expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([ready.shorthand]);
-  expect(await listAttempts(storage)).toHaveLength(1);
+test("sleeps on unchanged boards and resumes the same supervisor when new work becomes valid", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture();
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+  await ticket("Second");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(2);
+  expect(prompts[1]!.sessionId).toBe(prompts[0]!.sessionId);
+  expect(sessions.size).toBe(1);
 });
 
-test("turning off prevents future launches while preserving the dispatched implementation", async () => {
-  const { ctx, storage, ticket } = await fixture();
+test("defers board changes until the running supervisor ends its turn", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture();
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  await ticket("Second");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(2);
+});
+
+test("waits with no eligible work or no implementation capacity", async () => {
+  const { ctx, ticket, prompts } = await supervisorFixture(0);
+  await autoBuildCommand.run(ctx, {});
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(0);
+  await ctx.settings.set("automation.maxInProgress", 1);
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+});
+
+test("concurrent checks create only one supervisor", async () => {
+  const { ctx, ticket, prompts } = await supervisorFixture();
+  await ticket("First");
+  await Promise.all([autoBuildCommand.run(ctx, {}), autoBuildCommand.run(ctx, {}), autoBuildCommand.run(ctx, {})]);
+  expect(prompts).toHaveLength(1);
+});
+
+test("stop leaves running sessions intact and suppresses future wakeups", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture();
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  await configureAutoBuildCommand.run(ctx, { enabled: false });
+  expect(sessions.get(prompts[0]!.sessionId)!.status).toBe("in_progress");
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  await ticket("Second");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+});
+
+test("a failed supervisor wake pauses the mode for inspection", async () => {
+  const { ctx, ticket } = await supervisorFixture();
+  await ticket("First");
+  ctx.sessions.create = async () => {
+    throw new Error("Agent unavailable");
+  };
+  await expect(autoBuildCommand.run(ctx, {})).rejects.toThrow("Agent unavailable");
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
+});
+
+test("reuses the supervisor when an implementation frees capacity without a ticket edit", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture(1);
   const first = await ticket("First");
   await ticket("Second");
-  ctx.sessions.create = async () => {
+  await autoBuildCommand.run(ctx, {});
+  const supervisorId = prompts[0]!.sessionId;
+  const { autoBuildDispatchCommand } = await import("./auto-build-dispatch");
+  const attempt = await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+  expect(attempt.decision).toBe("started");
+  if (attempt.decision !== "started") throw new Error("Implementation did not start");
+  sessions.get(supervisorId)!.status = "completed";
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+  sessions.get(attempt.sessionId)!.status = "completed";
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true, sessionId: supervisorId });
+});
+
+test("stopping during an in-flight wake preserves the session without re-enabling the mode", async () => {
+  const { ctx, ticket, prompts } = await supervisorFixture();
+  await ticket("First");
+  const create = ctx.sessions.create;
+  ctx.sessions.create = async (input) => {
     await configureAutoBuildCommand.run(ctx, { enabled: false });
-    return createSessionResource();
+    return create(input);
   };
-  expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([first.shorthand]);
-  expect(await listAttempts(storage)).toHaveLength(1);
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
-  expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-});
-
-test("Auto build is off in a project with no saved mode", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  await storage.delete("auto-build");
-  await ticket("Ready");
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
-  expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-  expect(await listAttempts(storage)).toEqual([]);
-});
-
-test("pauses Auto build after a launch failure so later checks do not retry it", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  await ticket("Ready");
-  ctx.workspaces.create = async () => {
-    throw new Error("Workspace unavailable");
-  };
-  expect((await autoBuildCommand.run(ctx, {})).errors).toHaveLength(1);
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
-  expect((await autoBuildCommand.run(ctx, {})).errors).toEqual([]);
-  expect(await listAttempts(storage)).toEqual([]);
-});
-
-test("fills a freed slot on a later check without restarting existing attempts", async () => {
-  const { ctx, storage, ticket } = await fixture(1);
-  const first = await ticket("First");
-  const second = await ticket("Second");
-  expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([first.shorthand]);
-  ctx.sessions.get = async () => ({ ...createSessionResource(), status: "completed" });
-  expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([second.shorthand]);
-  expect(await listAttempts(storage)).toHaveLength(2);
-});
-
-test("turning off during readiness prevents an undispatched launch", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  await ticket("Ready");
-  let checks = 0;
-  ctx.process.run = async ({ command }) => {
-    if (command.includes("--verify")) {
-      checks += 1;
-      if (checks === 2) await configureAutoBuildCommand.run(ctx, { enabled: false });
-    }
-    return { exitCode: 0, stdout: "main-sha\n", stderr: "" };
-  };
-  expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-  expect(await listAttempts(storage)).toEqual([]);
-});
-
-test("a failed batch preserves a newer enabled configuration", async () => {
-  const { ctx, ticket } = await fixture();
-  await ticket("Ready");
-  ctx.workspaces.create = async () => {
-    await configureAutoBuildCommand.run(ctx, { enabled: true });
-    throw new Error("Old launch failed");
-  };
-  expect((await autoBuildCommand.run(ctx, {})).errors).toHaveLength(1);
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: true });
-});
-
-test("launch failures pause even while a configuration write holds its claim", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  await ticket("Ready");
-  const claims = storage.collection("timeline.write-claims");
-  await claims.createIfAbsent("auto-build-mode", { key: "auto-build-mode", token: "configuration" });
-  ctx.workspaces.create = async () => {
-    throw new Error("Workspace unavailable");
-  };
-  expect((await autoBuildCommand.run(ctx, {})).errors).toHaveLength(1);
-  await claims.delete("auto-build-mode");
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
-  expect((await autoBuildCommand.run(ctx, {})).errors).toEqual([]);
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
+    enabled: false,
+    supervisor: { id: prompts[0]!.sessionId },
+  });
+  await ticket("Second");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
 });
