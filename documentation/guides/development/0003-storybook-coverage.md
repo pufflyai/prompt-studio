@@ -34,4 +34,20 @@ Build the static Storybook with `bun run --cwd packages/ui build-storybook`. Use
 
 For changes visible in the application, also use [manual Playwright validation](0001-setup.md#playwright-validation). Check actual sizing, focus, navigation, themes, and resource switching. Passing a component story does not replace the affected installed-product walkthrough.
 
+## Workbench windowing fixture
+
+The [windowing fixture](../../../packages/pstdio-workbench/src/examples/windowing/fixture.ts) supplies two workspaces with Files, Changes, and terminal-like views; Note A and Note B; and sessions bound to each workspace. It also reuses the Boombox and Kiln host examples. Create a new fixture inside each story's component. Do not keep a workbench, resource data, or probe at module scope.
+
+The in-memory adapters clone layout and page-location data. Reload disposes the old workbench and creates a new one from those saved values. View drafts and mount counters expose remounts. The sandboxed iframe has its own draft and mount identity. The terminal-like view attaches to a separate fixture resource runtime with start/stop counters. These counters prove fixture adapter behavior only; they do not prove backend session or PTY continuity.
+
+`packages/e2e/src/ui/workbench-windowing.spec.ts` runs the windowing stories in the existing UI e2e job. Add each later windowing story ID to its list. The spec waits for playback, rejects render and play error events, and checks the `storyFinished` success result. A finished render alone can include a render or play failure. It also edits the sandboxed iframe through Playwright's frame locator.
+
+```sh
+bun run --cwd packages/pstdio-workbench lint
+bun run --cwd packages/pstdio-workbench build-storybook
+bun run --cwd packages/e2e test:ui -- src/ui/workbench-windowing.spec.ts
+```
+
+The fixture uses today's workbench APIs. New ownership, policy, and layout behavior belongs to the later panel tickets. The Storybook itself has no database; the UI runner uses its existing isolated test runtime and shared Storybooks. A fresh checkout needs built SDK, UI, and workbench dependencies before running it.
+
 See [design rules](../../../design/DESIGN.md), [UI package guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).

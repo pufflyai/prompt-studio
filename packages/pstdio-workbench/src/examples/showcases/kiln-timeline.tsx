@@ -4,14 +4,16 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { kilnFrameCount, kilnFrameRate, kilnTracks } from "./kiln-animation";
 import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
-import { kilnStore } from "./kiln-state";
+import { getKilnStore } from "./kiln-state";
 import { usePrimaryResource, useShowcaseStore } from "./showcase-store";
 
 const ticks = [1, 24, 48, 72, 96, 120];
 const framePosition = (frame: number) => `${((frame - 1) / (kilnFrameCount - 1)) * 100}%`;
-const seek = (frame: number) => kilnStore.setState({ frame, playing: false });
+const seek = (workbench: WorkbenchCore, frame: number) => getKilnStore(workbench).setState({ frame, playing: false });
 
-const KilnPlayback = () => {
+const KilnPlayback = (props: { workbench: WorkbenchCore }) => {
+  const { workbench } = props;
+  const kilnStore = getKilnStore(workbench);
   const state = useShowcaseStore(kilnStore);
   useEffect(() => {
     if (!state.playing) return;
@@ -22,18 +24,18 @@ const KilnPlayback = () => {
       kilnStore.setState({ frame: ((startFrame - 1 + elapsedFrames) % kilnFrameCount) + 1 });
     }, 1000 / kilnFrameRate);
     return () => window.clearInterval(timer);
-  }, [state.playing]);
+  }, [kilnStore, state.playing]);
 
   return (
     <HStack gap="2xs">
-      <IconButton aria-label="First frame" size="2xs" variant="ghost" onClick={() => seek(1)}>
+      <IconButton aria-label="First frame" size="2xs" variant="ghost" onClick={() => seek(workbench, 1)}>
         <WorkbenchIcon name="SkipBack" />
       </IconButton>
       <IconButton
         aria-label="Previous frame"
         size="2xs"
         variant="ghost"
-        onClick={() => seek(Math.max(1, state.frame - 1))}
+        onClick={() => seek(workbench, Math.max(1, state.frame - 1))}
       >
         <WorkbenchIcon name="StepBack" />
       </IconButton>
@@ -50,11 +52,11 @@ const KilnPlayback = () => {
         aria-label="Next frame"
         size="2xs"
         variant="ghost"
-        onClick={() => seek(Math.min(kilnFrameCount, state.frame + 1))}
+        onClick={() => seek(workbench, Math.min(kilnFrameCount, state.frame + 1))}
       >
         <WorkbenchIcon name="StepForward" />
       </IconButton>
-      <IconButton aria-label="Last frame" size="2xs" variant="ghost" onClick={() => seek(kilnFrameCount)}>
+      <IconButton aria-label="Last frame" size="2xs" variant="ghost" onClick={() => seek(workbench, kilnFrameCount)}>
         <WorkbenchIcon name="SkipForward" />
       </IconButton>
     </HStack>
@@ -63,6 +65,7 @@ const KilnPlayback = () => {
 
 export const KilnTimeline = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
+  const kilnStore = getKilnStore(workbench);
   const state = useShowcaseStore(kilnStore);
   const selectedId = usePrimaryResource(workbench)?.id;
   const timecode = `${String(Math.floor((state.frame - 1) / kilnFrameRate)).padStart(2, "0")}:${String((state.frame - 1) % kilnFrameRate).padStart(2, "0")}`;
@@ -77,7 +80,7 @@ export const KilnTimeline = (props: { workbench: WorkbenchCore }) => {
             5s loop
           </Text>
         </HStack>
-        <KilnPlayback />
+        <KilnPlayback workbench={workbench} />
         <HStack gap="sm" textStyle="paragraph/XS/regular">
           <Text color="fg.muted">{kilnFrameRate} fps</Text>
           <Text fontVariantNumeric="tabular-nums" minW="10">
@@ -153,7 +156,7 @@ export const KilnTimeline = (props: { workbench: WorkbenchCore }) => {
                 min={1}
                 max={kilnFrameCount}
                 value={state.frame}
-                onChange={(event) => seek(Number(event.target.value))}
+                onChange={(event) => seek(workbench, Number(event.target.value))}
                 position="absolute"
                 inset="0"
                 w="full"
@@ -201,7 +204,7 @@ export const KilnTimeline = (props: { workbench: WorkbenchCore }) => {
                       _hover={{ bg: "fg" }}
                       _focusVisible={{ outline: "2px solid", outlineColor: "border.accent", outlineOffset: "2px" }}
                       onClick={() => {
-                        seek(key.frame);
+                        seek(workbench, key.frame);
                         workbench.pageLocations.navigate({
                           kind: "page",
                           page: kilnPage,

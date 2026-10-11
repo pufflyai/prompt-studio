@@ -4,10 +4,11 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import type { WorkbenchCore } from "../../core";
 import { kilnTracks, sampleKilnTrack } from "./kiln-animation";
 import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
-import { kilnStore } from "./kiln-state";
+import { getKilnStore } from "./kiln-state";
 import { kilnTheme } from "./themes";
 
 export const createKilnScene = (canvas: HTMLCanvasElement, workbench: WorkbenchCore) => {
+  const kilnStore = getKilnStore(workbench);
   const styles = getComputedStyle(canvas);
   // The story applies its theme after mounting children. Read its overrides directly for the first canvas frame.
   const color = (token: string) =>

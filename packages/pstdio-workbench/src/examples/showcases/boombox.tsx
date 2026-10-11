@@ -2,31 +2,19 @@ import { Box, Grid, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
+import { Artwork } from "./boombox-artwork";
 import { type BoomboxTrack, boomboxTracks } from "./boombox-data";
 import { BoomboxNav, BoomboxRail } from "./boombox-navigation";
-import { createShowcaseStore, usePrimaryResource, useShowcaseStore } from "./showcase-store";
+import { getBoomboxStore } from "./boombox-state";
+import { usePrimaryResource, useShowcaseStore } from "./showcase-store";
 import { boomboxTheme } from "./themes";
 
 const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "boombox-resource" };
 const homePage: PageRef = { ...page, id: "boombox" };
 const resource = (track: BoomboxTrack): ResourceRef => ({ type: "boombox.track", id: track.id, label: track.title });
-const store = createShowcaseStore({ playing: true, likedIds: ["paper-moon"], queueIds: ["afterimage", "still-life"] });
-const Artwork = (props: { size?: string; track: BoomboxTrack }) => (
-  <Box
-    flexShrink={0}
-    boxSize={props.size ?? "12"}
-    borderRadius="md"
-    bgGradient="to-br"
-    gradientFrom={`${props.track.tint}.500`}
-    gradientTo="bg.panel"
-    display="grid"
-    placeItems="center"
-  >
-    <WorkbenchIcon name="AudioWaveform" color="white" size={20} />
-  </Box>
-);
 const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
+  const store = getBoomboxStore(input.workbench);
   const state = useShowcaseStore(store);
   const activeId = input.instance.resource?.id ?? boomboxTracks[0].id;
   const play = (track: BoomboxTrack) => {
@@ -140,6 +128,7 @@ const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
   );
 };
 const Queue = (props: { workbench: WorkbenchCore }) => {
+  const store = getBoomboxStore(props.workbench);
   const state = useShowcaseStore(store);
   const activeId = usePrimaryResource(props.workbench)?.id;
   const queued = boomboxTracks.filter((track) => state.queueIds.includes(track.id));
@@ -192,6 +181,7 @@ const Queue = (props: { workbench: WorkbenchCore }) => {
   );
 };
 const Player = (props: { workbench: WorkbenchCore }) => {
+  const store = getBoomboxStore(props.workbench);
   const state = useShowcaseStore(store);
   const activeResource = usePrimaryResource(props.workbench);
   const track = boomboxTracks.find((item) => item.id === activeResource?.id) ?? boomboxTracks[0];

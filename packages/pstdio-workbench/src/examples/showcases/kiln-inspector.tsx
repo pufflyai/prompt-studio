@@ -1,19 +1,20 @@
 import { Badge, Box, Button, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
-import type { WorkbenchPanelRenderInput } from "../../core";
+import type { WorkbenchCore, WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { type KilnObject, type KilnVector, kilnObjects, kilnPage, kilnResource } from "./kiln-data";
-import { kilnStore, toggleKilnVisibility, updateKilnVector } from "./kiln-state";
+import { getKilnStore, toggleKilnVisibility, updateKilnVector } from "./kiln-state";
 import { usePrimaryResource, useShowcaseStore } from "./showcase-store";
 
 const axisColors = { X: "red.fg", Y: "green.fg", Z: "blue.fg" } as const;
 
 const VectorEditor = (props: {
+  workbench: WorkbenchCore;
   label: string;
   object: KilnObject;
   property: "position" | "rotation" | "scale";
   value: KilnVector;
 }) => {
-  const { label, object, property, value } = props;
+  const { workbench, label, object, property, value } = props;
   return (
     <Stack gap="xs">
       <Text textStyle="paragraph/XS/semibold">{label}</Text>
@@ -30,7 +31,7 @@ const VectorEditor = (props: {
               minW="0"
               value={value[index]}
               step={property === "rotation" ? 1 : 0.1}
-              onChange={(event) => updateKilnVector(object.id, property, index, Number(event.target.value))}
+              onChange={(event) => updateKilnVector(workbench, object.id, property, index, Number(event.target.value))}
             />
           </HStack>
         ))}
@@ -41,7 +42,7 @@ const VectorEditor = (props: {
 
 const SceneOutliner = (props: { input: WorkbenchPanelRenderInput; selectedId: string }) => {
   const { input, selectedId } = props;
-  const state = useShowcaseStore(kilnStore);
+  const state = useShowcaseStore(getKilnStore(input.workbench));
   return (
     <Stack minH="0" gap="0">
       <HStack px="sm" py="xs" justify="space-between" borderBottomWidth="1px" borderColor="border.subtle">
@@ -84,7 +85,7 @@ const SceneOutliner = (props: { input: WorkbenchPanelRenderInput; selectedId: st
                 aria-pressed={!visible}
                 size="2xs"
                 variant="ghost"
-                onClick={() => toggleKilnVisibility(object.id)}
+                onClick={() => toggleKilnVisibility(input.workbench, object.id)}
               >
                 <WorkbenchIcon name={visible ? "Eye" : "EyeOff"} />
               </IconButton>
@@ -98,7 +99,7 @@ const SceneOutliner = (props: { input: WorkbenchPanelRenderInput; selectedId: st
 
 export const KilnInspector = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const state = useShowcaseStore(kilnStore);
+  const state = useShowcaseStore(getKilnStore(input.workbench));
   const selectedId = usePrimaryResource(input.workbench)?.id ?? kilnObjects[0].id;
   const object = kilnObjects.find((item) => item.id === selectedId) ?? kilnObjects[0];
   const objectState = state.objectStates[object.id];
@@ -145,23 +146,41 @@ export const KilnInspector = (props: { input: WorkbenchPanelRenderInput }) => {
               size="2xs"
               variant="ghost"
               onClick={() => {
-                updateKilnVector(object.id, "position", 0, object.position[0]);
-                updateKilnVector(object.id, "position", 1, object.position[1]);
-                updateKilnVector(object.id, "position", 2, object.position[2]);
-                updateKilnVector(object.id, "rotation", 0, object.rotation[0]);
-                updateKilnVector(object.id, "rotation", 1, object.rotation[1]);
-                updateKilnVector(object.id, "rotation", 2, object.rotation[2]);
-                updateKilnVector(object.id, "scale", 0, object.scale[0]);
-                updateKilnVector(object.id, "scale", 1, object.scale[1]);
-                updateKilnVector(object.id, "scale", 2, object.scale[2]);
+                updateKilnVector(input.workbench, object.id, "position", 0, object.position[0]);
+                updateKilnVector(input.workbench, object.id, "position", 1, object.position[1]);
+                updateKilnVector(input.workbench, object.id, "position", 2, object.position[2]);
+                updateKilnVector(input.workbench, object.id, "rotation", 0, object.rotation[0]);
+                updateKilnVector(input.workbench, object.id, "rotation", 1, object.rotation[1]);
+                updateKilnVector(input.workbench, object.id, "rotation", 2, object.rotation[2]);
+                updateKilnVector(input.workbench, object.id, "scale", 0, object.scale[0]);
+                updateKilnVector(input.workbench, object.id, "scale", 1, object.scale[1]);
+                updateKilnVector(input.workbench, object.id, "scale", 2, object.scale[2]);
               }}
             >
               <WorkbenchIcon name="RotateCcw" />
             </IconButton>
           </HStack>
-          <VectorEditor label="Position" object={object} property="position" value={objectState.position} />
-          <VectorEditor label="Rotation" object={object} property="rotation" value={objectState.rotation} />
-          <VectorEditor label="Scale" object={object} property="scale" value={objectState.scale} />
+          <VectorEditor
+            workbench={input.workbench}
+            label="Position"
+            object={object}
+            property="position"
+            value={objectState.position}
+          />
+          <VectorEditor
+            workbench={input.workbench}
+            label="Rotation"
+            object={object}
+            property="rotation"
+            value={objectState.rotation}
+          />
+          <VectorEditor
+            workbench={input.workbench}
+            label="Scale"
+            object={object}
+            property="scale"
+            value={objectState.scale}
+          />
         </Stack>
         <Stack gap="sm" pt="md" borderTopWidth="1px" borderColor="border.subtle">
           <HStack gap="xs">
