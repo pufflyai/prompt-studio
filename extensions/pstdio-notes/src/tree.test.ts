@@ -7,6 +7,8 @@ test("lists notes from a local project workspace without repository context", as
   const mount = createNotesMount();
   const note = await createNote(mount, "Folder notes");
   const groups = await notesTree.body.body({
+    extensionId: "pstdio.pstdio-notes",
+    projectId: "notes-project",
     artifacts: { mount: () => mount },
     workspaces: {
       getDefault: async () => ({
@@ -17,8 +19,14 @@ test("lists notes from a local project workspace without repository context", as
       }),
     },
   } as never);
-  expect(groups[0].nodes).toMatchObject([{ id: note.id, label: "Folder notes" }]);
-  expect(groups[0].actions[0].disabled).toBe(false);
+  expect(groups[0].nodes[0].children).toMatchObject([
+    {
+      id: note.id,
+      label: "Folder notes",
+      resource: { type: "note", id: note.id, extensionId: "pstdio.pstdio-notes", projectId: "notes-project" },
+    },
+  ]);
+  expect(groups[0].nodes[0].actions[0].disabled).toBe(false);
 });
 
 test("unavailable files do not load a note mount", async () => {
@@ -37,8 +45,8 @@ test("unavailable files do not load a note mount", async () => {
       }),
     },
   } as never);
-  expect(groups[0].nodes).toEqual([]);
-  expect(groups[0].actions[0].disabled).toBe(true);
+  expect(groups[0].nodes[0].children).toEqual([]);
+  expect(groups[0].nodes[0].actions[0].disabled).toBe(true);
 });
 
 test("read-only files remain readable without offering note mutations", async () => {
@@ -55,10 +63,10 @@ test("read-only files remain readable without offering note mutations", async ()
       }),
     },
   } as never);
-  const tree = groups[0];
-  expect(tree.nodes).toMatchObject([{ id: note.id }]);
+  const tree = groups[0].nodes[0];
+  expect(tree.children).toMatchObject([{ id: note.id }]);
   expect(tree.actions[0].disabled).toBe(true);
-  expect(tree.nodes[0].contextMenuActions.every((action) => action.disabled)).toBe(true);
+  expect(tree.children[0].contextMenuActions.every((action) => action.disabled)).toBe(true);
 });
 
 test("remote-only projects do not read local note files", async () => {
@@ -70,8 +78,8 @@ test("remote-only projects do not read local note files", async () => {
     },
     workspaces: { getDefault: async () => ({ execution_kind: "remote", root_path: null }) },
   } as never);
-  expect(groups[0].nodes).toEqual([]);
-  expect(groups[0].actions[0].disabled).toBe(true);
+  expect(groups[0].nodes[0].children).toEqual([]);
+  expect(groups[0].nodes[0].actions[0].disabled).toBe(true);
 });
 
 test.each([
@@ -95,6 +103,6 @@ test.each([
       }),
     },
   } as never);
-  expect(groups[0].nodes).toEqual([]);
-  expect(groups[0].actions[0].disabled).toBe(true);
+  expect(groups[0].nodes[0].children).toEqual([]);
+  expect(groups[0].nodes[0].actions[0].disabled).toBe(true);
 });

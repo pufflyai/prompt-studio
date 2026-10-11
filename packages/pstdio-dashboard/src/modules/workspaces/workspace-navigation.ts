@@ -20,6 +20,7 @@ export const workspaceNavigationNode = (providers: readonly WorkspaceProviderDes
     label: "Workspaces",
     icon: dashboardViews.workspaces.icon,
     canHide: true,
+    hiddenByDefault: true,
     commandId: dashboardCommandIds.openWorkspaces,
     target: { kind: "page", page: workbenchPages.workspaces },
     actions: providers.length

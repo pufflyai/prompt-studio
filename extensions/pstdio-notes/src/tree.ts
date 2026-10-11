@@ -1,25 +1,10 @@
-import {
-  defineNavigationItem,
-  defineNavigationTree,
-  defineView,
-  l10n,
-  params,
-  viewDataEvents,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
-import { createNoteCommand, deleteNoteCommand, renameNoteCommand } from "./commands";
+import { defineNavigationTree, defineView, l10n, viewDataEvents, workbenchModes } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
+import { listFolders } from "./folders";
+import { moveTreeNote } from "./note-movement";
 import { listNotes } from "./notes";
-import { notesChanged, notesMount, notesPage, noteTarget } from "./pages";
-
-const newNoteAction = {
-  id: "create",
-  label: l10n("tree.actions.createNote", "New note"),
-  icon: "plus",
-  command: createNoteCommand.ref,
-  input: { title: params.text({ label: l10n("params.title", "Title"), required: true }) },
-  submitLabel: "Create",
-};
+import { noteResource, notesChanged, notesMount, noteTarget } from "./pages";
+import { folderActions, newFolderAction, newNoteAction, noteActions } from "./tree-actions";
 
 export const notesTree = defineView({
   id: "note-list",
@@ -27,48 +12,56 @@ export const notesTree = defineView({
   body: {
     kind: "tree",
     refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
+    onMove: async (ctx, { source, target, position }) => {
+      if (!(await notesFileAccess(ctx)).writable) throw new Error("Notes are read-only.");
+      if (!target) return;
+      await moveTreeNote(notesMount(ctx), source.id, target.id, position);
+      await ctx.events.emit(notesChanged, { noteId: source.id });
+    },
     body: async (ctx) => {
       const { readable, writable } = await notesFileAccess(ctx);
-      const notes = readable ? await listNotes(notesMount(ctx)) : [];
-
+      const [notes, folders] = readable
+        ? await Promise.all([listNotes(notesMount(ctx)), listFolders(notesMount(ctx))])
+        : [[], []];
+      const noteNode = (note: (typeof notes)[number]) => ({
+        id: note.id,
+        label: note.title,
+        icon: "file-text",
+        canDrag: writable,
+        canDrop: writable,
+        resource: noteResource(note.id, note.title, ctx),
+        target: noteTarget(note.id, note.title, ctx),
+        contextMenuActions: noteActions(note, writable),
+      });
+      const folderIds = new Set(folders.map((folder) => folder.id));
       return [
         {
           id: "notes",
           collapsible: false,
-          label: l10n("navigation.notes", "Notes"),
-          actions: [{ ...newNoteAction, disabled: !writable }],
-          nodes: notes.map((note) => ({
-            id: note.id,
-            label: note.title,
-            icon: "file-text",
-            target: noteTarget(note.id, note.title),
-            contextMenuActions: [
-              {
-                id: "rename",
-                label: l10n("tree.actions.renameNote", "Rename note"),
-                icon: "pencil",
-                command: renameNoteCommand.ref,
-                disabled: !writable,
-                params: { noteId: note.id },
-                input: {
-                  title: params.text({
-                    label: l10n("params.title", "Title"),
-                    required: true,
-                    defaultValue: note.title,
-                  }),
-                },
-                submitLabel: "Rename",
-              },
-              {
-                id: "delete",
-                label: l10n("tree.actions.deleteNote", "Delete"),
-                icon: "trash",
-                command: deleteNoteCommand.ref,
-                disabled: !writable,
-                params: { noteId: note.id },
-              },
-            ],
-          })),
+          nodes: [
+            {
+              id: "notes",
+              label: l10n("navigation.notes", "Notes"),
+              icon: "notebook-pen",
+              canDrop: writable,
+              collapsible: true,
+              canHide: true,
+              actions: [newNoteAction(writable), newFolderAction(writable)],
+              children: [
+                ...folders.map((folder) => ({
+                  id: `folder:${folder.id}`,
+                  label: folder.title,
+                  icon: "folder",
+                  canDrop: writable,
+                  collapsible: true,
+                  actions: [newNoteAction(writable, folder.id)],
+                  contextMenuActions: folderActions(folder, writable),
+                  children: notes.filter((note) => note.folderId === folder.id).map(noteNode),
+                })),
+                ...notes.filter((note) => !note.folderId || !folderIds.has(note.folderId)).map(noteNode),
+              ],
+            },
+          ],
         },
       ];
     },
@@ -77,17 +70,7 @@ export const notesTree = defineView({
 
 export const notesTreeNavigation = defineNavigationTree({
   id: "note-list",
-  owner: notesPage.ref,
-  slot: "content",
-  view: notesTree.ref,
-});
-
-export const notesNavigationItem = defineNavigationItem({
-  id: "notes",
   owner: workbenchModes.project,
   slot: "content",
-  label: l10n("navigation.notes", "Notes"),
-  icon: "notebook-pen",
-  group: "",
-  action: { kind: "page", page: notesPage.ref },
+  view: notesTree.ref,
 });

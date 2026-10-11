@@ -11,6 +11,7 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { notesFileAccess } from "./file-access";
+import { noteTabActions } from "./note-tab-actions";
 import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 
 export const notesChanged = eventRef<{ noteId?: string }>({
@@ -57,10 +58,17 @@ export const editor = defineView({
         };
       }
 
+      let content: string;
+      try {
+        content = await readNote(mount, id);
+      } catch (error) {
+        if (await noteExists(mount, id)) throw error;
+        return { emptyState: { title: "Note not found", description: "This note was deleted." } };
+      }
       return {
         fileName: `${id}.md`,
         mimeType: "text/markdown",
-        content: await readNote(mount, id),
+        content,
         editable: writable,
         placeholder: "Write your notes here...",
       };
@@ -94,10 +102,17 @@ export const notesPage = definePage({
         refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
         query: async (ctx, { renderer }) => {
           const id = renderer.resource?.id;
-          if (!(await notesFileAccess(ctx)).readable) return {};
+          const { readable, writable } = await notesFileAccess(ctx);
+          if (!readable) return {};
           const mount = notesMount(ctx);
           if (!id || !(await noteExists(mount, id))) return {};
-          return { label: await readNoteTitle(mount, id) };
+          try {
+            const label = await readNoteTitle(mount, id);
+            return { label, menu: noteTabActions(id, writable, label) };
+          } catch (error) {
+            if (await noteExists(mount, id)) throw error;
+            return {};
+          }
         },
       },
       item: {
@@ -108,16 +123,31 @@ export const notesPage = definePage({
   ],
 });
 
-export const noteResource = (id: string, label: string) => ({ type: note.id, id, label }) satisfies ResourceRef;
+export const noteResource = (
+  id: string,
+  label: string,
+  context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
+) =>
+  ({
+    type: note.id,
+    id,
+    label,
+    extensionId: context?.extensionId,
+    projectId: context?.projectId,
+  }) satisfies ResourceRef;
 
-export const noteTarget = (id: string, label: string) => ({
+export const noteTarget = (
+  id: string,
+  label: string,
+  context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
+) => ({
   kind: "compound" as const,
   targets: [
     { kind: "page" as const, page: notesPage.ref },
     {
       kind: "panel" as const,
       panel: notesPage.panels.note,
-      resource: noteResource(id, label),
+      resource: noteResource(id, label, context),
       open: "pin" as const,
     },
   ],

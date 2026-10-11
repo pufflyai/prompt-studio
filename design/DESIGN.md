@@ -66,6 +66,13 @@ Use these general UX and UI patterns across the app and its extensions.
 - Pinning changes preview retention and never changes horizontal order. Pinned and preview tabs may be interleaved.
 - Use the shared Sidenav placement indicator, rotated vertically, between tabs. Headerless panels show a temporary top drop band during a valid drag without moving their content. After a drop, show the tray for the existing content and the moved tab.
 
+## Direct UI actions
+
+- Prefer optimistic updates for direct UI actions. Show the intended change immediately while saving it.
+- Keep navigation, tabs, breadcrumbs, and content consistent during the save. Do not flash an older snapshot while refreshing.
+- If saving fails, restore the affected state and report the failure where the action started. Preserve newer user actions.
+- Confirm destructive actions before applying the optimistic change.
+
 ## Command failures
 
 - Report a command failure once, where the user started it. Dialogs and renderer reads show failures inline. Actions without an inline display use the shared action reporter.
