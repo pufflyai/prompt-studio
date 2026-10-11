@@ -38,5 +38,7 @@
   "settings.tickets.deleteLinkedWorkspaces.title": "删除关联工作区",
   "settings.tickets.deleteLinkedWorkspaces.description": "归档或删除工单时，删除没有活动工单使用的关联工作区。这会删除工作树、分支和未提交的更改。",
   "settings.tickets.markDoneOnMerge.title": "合并时标记为完成",
-  "settings.tickets.markDoneOnMerge.description": "工作区分支或关联的拉取请求合并后，将工单移至完成。"
+  "settings.tickets.markDoneOnMerge.description": "工作区分支或关联的拉取请求合并后，将工单移至完成。",
+  "requests.view.title": "审核请求",
+  "requests.page.title": "审核请求"
 }

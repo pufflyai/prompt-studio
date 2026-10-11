@@ -48,7 +48,7 @@ Open **Settings → Project → Ticket tags** to add, rename, reorder, or delete
 
 A single-select tag holds at most one option on every ticket. Planner rejects a ticket change that would give it a second option. To change a multi-select tag to single-select, every ticket must hold at most one of its options first, including archived tickets and drafts. If some tickets hold several, the change fails, changes nothing, and lists those tickets. Choose one option on each of them, for example in the ticket's Properties panel or with `pst pstdio-planner set-ticket-attribute`, then change the type again. Planner never picks an option for you.
 
-The Review Needed flag tells people that a ticket waits for a human decision. Planner sets it, for example, when a reviewer approves an attempt. While it is set, Planner does not change the ticket's status. Planner always keeps the Flags tag and its Review Needed option. If you delete them, Planner adds them back. You can rename them.
+The Review Needed flag is derived from open or unreadable review requests. Open a flagged board card to answer its requests. Generic tag edits cannot request input or hide an open request. Planner keeps the Flags tag and its Review Needed option; you can rename them. See [Review requests](0006-review-requests.md) for legacy reconciliation.
 
 ## Colors
 

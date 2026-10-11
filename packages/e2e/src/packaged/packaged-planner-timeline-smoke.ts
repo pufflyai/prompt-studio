@@ -30,6 +30,13 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({
       extensionId: "pstdio.pstdio-planner",
+      localId: "ticket-requests",
+      path: "ticket-requests",
+    }),
+  );
+  expect(metadata.pages).toContainEqual(
+    expect.objectContaining({
+      extensionId: "pstdio.pstdio-planner",
       localId: "timeline",
       path: "ticket-timeline",
     }),
@@ -122,6 +129,8 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     content: "# Review request smoke",
     deadline: deadlineId,
   });
+  await execute("update-ticket", { id: ticket.id, tagIds: [reviewNeeded] });
+  expect((await execute("get-ticket", { id: ticket.id })).tagIds ?? []).not.toContain(reviewNeeded);
   const handoff = await execute("request-human", {
     ticket: ticket.id,
     reason: "approved-revision",
@@ -160,6 +169,8 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
       ],
     },
   });
+  await execute("set-ticket-tags", { rowId: ticket.id, tagIds: [] });
+  expect((await execute("get-ticket", { id: ticket.id })).tagIds).toContain(reviewNeeded);
   expect(handoff).toMatchObject({ state: "open", context: { sessionId: expect.any(String) } });
 
   await execute("review", { requestId: task.id, response: { confirmed: true } });

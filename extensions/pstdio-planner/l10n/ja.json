@@ -38,5 +38,7 @@
   "settings.tickets.deleteLinkedWorkspaces.title": "リンクされたワークスペースを削除",
   "settings.tickets.deleteLinkedWorkspaces.description": "チケットをアーカイブまたは削除したとき、アクティブなチケットが使用していないワークスペースを削除します。作業ツリー、ブランチ、未コミットの変更が削除されます。",
   "settings.tickets.markDoneOnMerge.title": "マージ時に完了にする",
-  "settings.tickets.markDoneOnMerge.description": "ワークスペースのブランチまたはリンクされたプルリクエストがマージされると、チケットを完了に移動します。"
+  "settings.tickets.markDoneOnMerge.description": "ワークスペースのブランチまたはリンクされたプルリクエストがマージされると、チケットを完了に移動します。",
+  "requests.view.title": "レビュー依頼",
+  "requests.page.title": "レビュー依頼"
 }

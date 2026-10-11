@@ -1,5 +1,5 @@
 import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
+import { putTicket } from "../data/collections";
 import {
   fileNameFromPath,
   readTicketMarkdown,
@@ -103,7 +103,7 @@ export const saveTicketCommand = defineCommand({
       draft: false,
       updatedAt: new Date().toISOString(),
     };
-    await ticketsCollection(ctx.storage).put(ticket.id, next);
+    await putTicket(ctx.storage, next);
 
     return { shorthand: ticket.shorthand, files: files.length };
   },

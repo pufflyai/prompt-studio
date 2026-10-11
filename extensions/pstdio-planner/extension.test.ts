@@ -305,6 +305,7 @@ describe("pstdio planner workspace contributions", () => {
     let detailTarget: unknown;
     await tickets.body.onRowActivate?.(
       {
+        storage: createMemoryStorage(),
         navigation: {
           open: (target: unknown) => {
             detailTarget = target;

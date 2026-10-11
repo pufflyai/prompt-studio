@@ -73,7 +73,7 @@ Planner sets the ticket status from its attempts:
 2. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
 3. Otherwise, if every attempt is blocked, the ticket is Blocked.
 
-Planner leaves tickets in Done alone. While the Review Needed flag is set, Planner does not change the ticket status, and automation extensions are expected to skip the ticket. Planner also pauses status changes while any review request is open, even if the flag was cleared by hand. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
+Planner leaves tickets in Done alone. Planner pauses status changes while any review request is open or unreadable. Attempt readiness uses the same rule for the target and all its prerequisites, including completed ones. Automation extensions, including Auto build, must use `attempt-readiness` before `run-attempt`. A manual or stale tag alone does not pause status changes or prevent launch. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
 
 ## When a session disconnects
 

@@ -7,10 +7,11 @@ import type { PlanClient } from "./use-plan";
 const retryDelayMs = 5000;
 
 // Callers pass a module-level read and event list, so the subscription restarts only for a new client.
-export function useLiveValue<T>(
-  client: PlanClient,
-  read: (client: PlanClient) => Promise<T>,
+export function useLiveValue<T, Client extends Pick<PlanClient, "events">>(
+  client: Client,
+  read: (client: Client, resourceId?: string) => Promise<T>,
   events: readonly EventRef[],
+  resourceId?: string,
 ) {
   const [value, setValue] = useState<T>();
   const [error, setError] = useState<string>();
@@ -22,7 +23,7 @@ export function useLiveValue<T>(
       const serial = ++request;
       clearTimeout(retry);
       try {
-        const next = await read(client);
+        const next = await read(client, resourceId);
         if (active && serial === request) {
           setValue(next);
           setError(undefined);
@@ -45,7 +46,7 @@ export function useLiveValue<T>(
         stop();
       }
     };
-  }, [client, read, events]);
+  }, [client, read, events, resourceId]);
 
   return { value, setValue, error };
 }

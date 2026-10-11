@@ -3,6 +3,7 @@ import { type AttemptReadinessTicket, resolveAttemptReadiness } from "../data/at
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
+import { readTicketReviewRequests } from "../data/review-request-storage";
 
 type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage">;
 
@@ -21,13 +22,14 @@ export const loadAttemptReadiness = async (
   ticketRef: string,
   commandParams: ReadinessParams,
 ) => {
-  const [storedTickets, attempts, selections, statuses, home, providers] = await Promise.all([
+  const [storedTickets, attempts, selections, statuses, home, providers, requests] = await Promise.all([
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
     statusesCollection(ctx.storage).list(),
     ctx.workspaces.getDefault(),
     ctx.workspaces.listProviders(),
+    readTicketReviewRequests(ctx.storage),
   ]);
   const storedTarget = await findTicket(ctx.storage, ticketRef);
   const target: AttemptReadinessTicket = storedTarget ?? {
@@ -68,6 +70,7 @@ export const loadAttemptReadiness = async (
   );
 
   const readiness = await resolveAttemptReadiness({
+    requests,
     target: target.id,
     tickets,
     attempts,

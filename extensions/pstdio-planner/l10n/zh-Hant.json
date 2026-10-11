@@ -38,5 +38,7 @@
   "settings.tickets.deleteLinkedWorkspaces.title": "刪除關聯工作區",
   "settings.tickets.deleteLinkedWorkspaces.description": "封存或刪除工單時，刪除沒有使用中工單的關聯工作區。這會刪除工作樹、分支和未提交的變更。",
   "settings.tickets.markDoneOnMerge.title": "合併時標記為完成",
-  "settings.tickets.markDoneOnMerge.description": "工作區分支或關聯的提取要求合併後，將工單移至完成。"
+  "settings.tickets.markDoneOnMerge.description": "工作區分支或關聯的提取要求合併後，將工單移至完成。",
+  "requests.view.title": "審核請求",
+  "requests.page.title": "審核請求"
 }

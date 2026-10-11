@@ -1,5 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { statusesCollection, tagsCollection, ticketsCollection } from "../data/collections";
+import { readTicketsWithReviewState, statusesCollection, tagsCollection } from "../data/collections";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { sortedBySortOrder } from "../utils/sort";
 
@@ -22,7 +22,7 @@ export const listTicketsCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const [tickets, statuses, tags] = await Promise.all([
-      ticketsCollection(ctx.storage).list(),
+      readTicketsWithReviewState(ctx.storage),
       statusesCollection(ctx.storage).list(),
       tagsCollection(ctx.storage).list(),
     ]);

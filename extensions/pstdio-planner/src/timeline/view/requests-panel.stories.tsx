@@ -123,13 +123,13 @@ const meta: Meta<typeof RequestsPanel> = {
 export default meta;
 type Story = StoryObj<typeof RequestsPanel>;
 
-export const NoRequests: Story = { args: { row: { ...row, state: "not-started", flags: [] } } };
+export const NoRequests: Story = { args: { row } };
 export const Task: Story = { args: { row: { ...row, requests: [task] } } };
 export const Decision: Story = { args: { row: { ...row, requests: [decision] } } };
 export const AttemptHandoff: Story = { args: { row: { ...row, requests: [handoff] } } };
 export const OpenSiblingAfterAnswer: Story = { args: { row: { ...row, requests: [answered, handoff] } } };
 export const Cancelled: Story = {
-  args: { row: { ...row, state: "not-started", flags: [], requests: [cancelled] } },
+  args: { row: { ...row, requests: [cancelled] } },
 };
 // Drafts stay in the form when the server refuses the answer.
 export const SaveError: Story = {
@@ -142,8 +142,15 @@ export const SaveError: Story = {
 };
 // A merge can finish the ticket before its approval request is answered.
 export const CompleteTicket: Story = {
-  args: { row: { ...row, state: "done", done: true, flags: [], requests: [decision] } },
+  args: { row: { ...row, requests: [decision] } },
 };
 export const UnreadableRequest: Story = {
   args: { row: { ...row, requestErrors: ["Request broken: Request title is required."] } },
 };
+
+const staleRow: PlanRow = {
+  ...row,
+  tagIds: ["default-human-requested-true"],
+  instructions: "# Ticket body\n\nThis is not a review request.",
+};
+export const StaleDisplayTag: Story = { args: { row: staleRow } };

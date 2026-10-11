@@ -1,4 +1,5 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { deriveReviewNeededFlag, readTicketReviewRequests, withReviewNeededFlag } from "./review-request-storage";
 import type { StoredStatus, StoredTag, StoredTicket } from "./types";
 
 export const TICKETS_COLLECTION = "tickets";
@@ -15,13 +16,15 @@ export const tagsCollection = (storage: ExtensionStorageApi) => storage.collecti
 // The runtime's collection.create() stores the value *without* the generated id,
 // so list()/get() would lose it. We own the id and persist it inside the value.
 export const putTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
-  await ticketsCollection(storage).put(ticket.id, ticket);
-  return ticket;
+  const next = await deriveReviewNeededFlag(storage, ticket);
+  await ticketsCollection(storage).put(ticket.id, next);
+  return next;
 };
 
 export const updateTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
-  await ticketsCollection(storage).update(ticket.id, ticket);
-  return ticket;
+  const next = await deriveReviewNeededFlag(storage, ticket);
+  await ticketsCollection(storage).update(ticket.id, next);
+  return next;
 };
 
 export const putStatus = async (storage: ExtensionStorageApi, status: StoredStatus) => {
@@ -32,4 +35,9 @@ export const putStatus = async (storage: ExtensionStorageApi, status: StoredStat
 export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
   await tagsCollection(storage).put(tag.id, tag);
   return tag;
+};
+
+export const readTicketsWithReviewState = async (storage: ExtensionStorageApi) => {
+  const [tickets, requests] = await Promise.all([ticketsCollection(storage).list(), readTicketReviewRequests(storage)]);
+  return tickets.map((ticket) => withReviewNeededFlag(ticket, requests.get(ticket.id) ?? { requests: [], errors: [] }));
 };
