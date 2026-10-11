@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./src/packaged",
-  testMatch: "packaged-webview-browsers.spec.ts",
+  testMatch: ["packaged-webview-browsers.spec.ts", "packaged-planner-upgrade.spec.ts"],
   timeout: 120_000,
   workers: 1,
   retries: 0,

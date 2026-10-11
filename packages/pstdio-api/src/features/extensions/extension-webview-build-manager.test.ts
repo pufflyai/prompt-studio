@@ -54,6 +54,7 @@ const writeDependency = (root: string, name: string, version: string) => {
 
 const writeManagedBuildOutput = (input: { outdir: string }) => {
   mkdirSync(input.outdir, { recursive: true });
+  writeFileSync(join(input.outdir, "module.js"), "");
 };
 
 describe("createExtensionWebviewBuildManager", () => {

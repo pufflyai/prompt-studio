@@ -1,6 +1,6 @@
 // Share the graph's props and the selected ticket's relations.
 import type { PlanRow, PlanSection } from "../contracts";
-import type { buildTracks } from "../model/tracks";
+import type { trackLayout } from "../model/tracks";
 import type { BackgroundContext } from "./background-menu";
 import type { DropTarget } from "./drag";
 
@@ -16,7 +16,7 @@ export interface ViewSection {
 
 export interface PlanViewProps {
   sections: ViewSection[];
-  tracks: ReturnType<typeof buildTracks>;
+  tracks: ReturnType<typeof trackLayout>;
   relations: Map<string, Relation>;
   selectedId?: string;
   dragId?: string;

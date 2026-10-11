@@ -8,6 +8,7 @@ import {
 } from "../data/draft-storage";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 
 // `pst tickets write`: create a draft ticket in extension storage and lay down its
@@ -44,6 +45,7 @@ export const writeTicketCommand = defineCommand({
         ? await resolveStatusId(ctx.storage, commandParams.status)
         : (defaultStatus?.id ?? null);
     const tagIds = commandParams.tags !== undefined ? await resolveTagOptionIds(ctx.storage, commandParams.tags) : [];
+    await assertSingleSelectTagIds(ctx.storage, tagIds);
     const parentId =
       commandParams.parent !== undefined ? await resolveTicketId(ctx.storage, commandParams.parent) : null;
 

@@ -2,6 +2,7 @@ import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
 import { putTag, putTicket, tagsCollection, ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
+import { assertSingleSelectConversion, assertSingleSelectTagIds } from "./tag-cardinality";
 import type { StoredTag, StoredTagOption } from "./types";
 
 const sortTag = (tag: StoredTag): StoredTag => ({ ...tag, options: [...tag.options].sort(bySortOrder) });
@@ -40,6 +41,7 @@ export const updateTicketTag = async (input: {
   sortOrder?: number;
 }) => {
   const tag = await requireTag(input.storage, input.tagId);
+  await assertSingleSelectConversion(input.storage, tag, input.type);
   return putTag(input.storage, {
     ...tag,
     name: input.name ?? tag.name,
@@ -135,6 +137,7 @@ export const deleteTagOption = async (input: { storage: ExtensionStorageApi; tag
 export const setTicketTags = async (input: { storage: ExtensionStorageApi; ticketId: string; tagIds: string[] }) => {
   const ticket = await ticketsCollection(input.storage).get(input.ticketId);
   if (!ticket) return null;
+  await assertSingleSelectTagIds(input.storage, input.tagIds, ticket.tagIds);
   const next = { ...ticket, tagIds: input.tagIds, updatedAt: new Date().toISOString() };
   await putTicket(input.storage, next);
   return next;
@@ -182,6 +185,8 @@ export const applyTagDraft = async (input: {
       };
     });
 
+  // Values of deleted options go away with them, so they cannot conflict.
+  await assertSingleSelectConversion(input.storage, { ...tag, options: kept }, input.type);
   const startingSortOrder = Math.max(-1, ...tag.options.map((option) => option.sortOrder)) + 1;
   const created: StoredTagOption[] = input.optionsToCreate.map((option, index) => ({
     id: crypto.randomUUID(),

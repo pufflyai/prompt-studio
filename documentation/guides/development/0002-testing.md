@@ -86,6 +86,8 @@ The UI and Vite launchers also remove inherited runtime settings. Each run alloc
 - `E2E_BUN_CACHE_DIR` chooses the runtime install cache. Without it, UI runs use a cache per run.
 - `E2E_RUN_ID` selects the UI and Vite report directory.
 
+The packaged Planner upgrade spec (`packages/e2e/src/packaged/packaged-planner-upgrade.spec.ts`) installs the Planner from the `pstdio@0.42.0` release tag, the last release before the timeline, and then upgrades it to the current source in the same running host. It reads that release with `git archive`, so run it from a clone that has release tags. The packaged CI job checks out full history. Each install downloads the Planner's locked dependencies into the test home.
+
 Nx test inputs include the shared preload, root Bun configuration, lockfile, and Bun version. Changing these invalidates cached test results.
 
 Global preferences survive project deletion. Browser specs that read or change notifications use the test fixture in `src/ui/helpers/notification-settings.ts` and opt in with `test.use({ notificationsEnabled: true })` when needed. The fixture restores the previous preference during teardown.

@@ -1,7 +1,11 @@
-import { readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+export const publishedWebviewModule = (distDir: string) => join(distDir, "module.js");
+
+// A signature describes a reusable bundle only while the bundle's module is still published.
 export const readWebviewBuildSignature = (distDir: string) => {
+  if (!existsSync(publishedWebviewModule(distDir))) return null;
   try {
     return readFileSync(join(distDir, "build-signature.txt"), "utf8");
   } catch {

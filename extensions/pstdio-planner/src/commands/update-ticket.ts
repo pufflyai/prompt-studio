@@ -7,6 +7,7 @@ import {
   resolveTagOptionIds,
   resolveTicketId,
 } from "../data/resolve";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { validateTicketDependencies } from "../data/ticket-dependencies";
 import type { StoredTicket } from "../data/types";
 import { plannerTicketsChanged } from "../events";
@@ -52,6 +53,7 @@ export const updateTicketCommand = defineCommand({
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : commandParams.tagIds;
+    if (tagIds !== undefined) await assertSingleSelectTagIds(ctx.storage, tagIds, existing.tagIds);
     const parentId = await resolveParentUpdate(ctx.storage, commandParams.parent, commandParams.unlinkParent);
     const dependsOn = await resolveDependencyUpdate(ctx.storage, commandParams.dependsOn, commandParams.clearDependsOn);
     if (dependsOn !== undefined) await validateTicketDependencies(ctx.storage, existing, dependsOn);

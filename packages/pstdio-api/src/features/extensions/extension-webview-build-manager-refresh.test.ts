@@ -67,6 +67,7 @@ const writeTwoWebviewExtension = (root: string) => {
 
 const writeManagedBuildOutput = (input: { outdir: string }) => {
   mkdirSync(input.outdir, { recursive: true });
+  writeFileSync(join(input.outdir, "module.js"), "");
 };
 
 describe("createExtensionWebviewBuildManager refresh scheduling", () => {

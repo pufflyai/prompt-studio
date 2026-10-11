@@ -5,7 +5,6 @@ import type { Deadline, PlanFlag, PlanLink, PlanRow, PlanTag, StoredPlan } from 
 import { dependencyIds, humanRequestedTagId, type PlannerStatus, type PlannerTicket, ticketTarget } from "../planner";
 import { daysBetween } from "./days";
 import { ticketState } from "./state";
-import { trackProperty } from "./tracks";
 import { workflowName } from "./workflow";
 
 // Deadlines inside this many days are shown as due soon.
@@ -14,6 +13,7 @@ const dueSoonDays = 7;
 export interface PlanInput {
   requests?: Map<string, TicketReviewRequests>;
   gates?: Set<string>;
+  // The Track property that readTrack resolved. Without it, rows have no track.
   track?: PlanTag;
   tickets: PlannerTicket[];
   statuses: PlannerStatus[];
@@ -71,7 +71,7 @@ function indexInput(input: PlanInput, groups: ReturnType<typeof executionOrder>)
     today: input.today,
     requests: input.requests ?? new Map(),
     gates: input.gates ?? new Set(),
-    trackOptionIds: new Set((input.track ?? trackProperty(input.tags))?.options.map(({ id }) => id)),
+    trackOptionIds: new Set(input.track?.options.map(({ id }) => id)),
   };
 }
 
@@ -216,6 +216,6 @@ export function buildPlan(input: PlanInput) {
     today: input.today,
     sections,
     tags: input.tags,
-    trackProperty: input.track ?? trackProperty(input.tags),
+    trackProperty: input.track,
   };
 }

@@ -21,7 +21,6 @@ interface GraphData {
 interface Props {
   props: PlanViewProps;
   graph: GraphData;
-  squareArrows: boolean;
 }
 
 function overTarget(props: PlanViewProps, target: DropTarget) {
@@ -65,7 +64,7 @@ function GraphMilestones(input: Pick<Props, "props" | "graph"> & { width: number
 }
 
 function GraphTickets(input: Props) {
-  const { props, graph, squareArrows } = input;
+  const { props, graph } = input;
   const { relations, selectedId, dropTarget, ...actions } = props;
   const { box, rows } = graph;
   const over = (target: DropTarget) => overTarget(props, target);
@@ -78,7 +77,6 @@ function GraphTickets(input: Props) {
         height={box.height}
         selectedId={selectedId}
         relatedIds={new Set(relations.keys())}
-        squareArrows={squareArrows}
       />
       {rows.map((row) => {
         const position = box.positions.get(row.id);
@@ -109,7 +107,7 @@ export function GraphContent(
     viewport: { width: number; canvasWidth: number; canvasHeight: number; zoom: number; headerLeft: number };
   },
 ) {
-  const { props, graph, squareArrows, collapsed, region, viewport } = input;
+  const { props, graph, collapsed, region, viewport } = input;
   const { sections, tracks, today, dropTarget, ...actions } = props;
   const { box, trackAt } = graph;
   const { width, canvasWidth, canvasHeight, zoom, headerLeft } = viewport;
@@ -161,7 +159,7 @@ export function GraphContent(
       <TrackLines boxes={box.tracks} height={canvasHeight} contentLeft={box.contentLeft} />
       <DropHighlight region={region} width={canvasWidth} height={canvasHeight} />
       <GraphMilestones props={props} graph={graph} width={width} zoom={zoom} headerLeft={headerLeft} />
-      <GraphTickets props={props} graph={graph} squareArrows={squareArrows} />
+      <GraphTickets props={props} graph={graph} />
     </Box>
   );
 }

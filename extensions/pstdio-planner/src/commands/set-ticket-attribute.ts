@@ -1,6 +1,7 @@
 import { defineCommand, type ExtensionContextBase, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { plannerTicketsChanged } from "../events";
 import { moveTicketInPlan } from "../timeline/commands/move-ticket";
 
@@ -40,6 +41,7 @@ export const applyTicketAttribute = async (input: {
   const tagOptionIds = new Set(tag.options.map((option) => option.id));
   const others = (existing.tagIds ?? []).filter((id) => !tagOptionIds.has(id));
   const selected = selectedTagOptionIds(value, tagOptionIds);
+  await assertSingleSelectTagIds(storage, [...others, ...selected], existing.tagIds);
   const next = {
     ...existing,
     tagIds: [...others, ...selected],

@@ -16,7 +16,9 @@ export async function readTrack(ctx: CommandContext) {
   }
   const property = tags.find(({ id }) => id === binding);
   if (property?.type !== "single_select") {
-    throw new Error("The bound Track property is missing or no longer single-select. Restore it in Planner settings.");
+    throw new Error(
+      "The timeline's Track property is missing or no longer single-select. In Settings > Project > Ticket tags, restore it as a single-select property.",
+    );
   }
   return property;
 }

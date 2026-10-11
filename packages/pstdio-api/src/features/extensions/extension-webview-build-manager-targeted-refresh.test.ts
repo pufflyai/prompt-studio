@@ -84,6 +84,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
       buildWebview: async (input) => {
         buildCount++;
         mkdirSync(input.outdir, { recursive: true });
+        writeFileSync(join(input.outdir, "module.js"), "");
         return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -133,6 +134,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
           await secondReleased;
         }
         mkdirSync(input.outdir, { recursive: true });
+        writeFileSync(join(input.outdir, "module.js"), "");
         return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -190,6 +192,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
         runCount++;
         if (runCount === 1) await buildReleased;
         mkdirSync(input.outdir, { recursive: true });
+        writeFileSync(join(input.outdir, "module.js"), "");
         return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),

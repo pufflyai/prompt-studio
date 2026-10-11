@@ -1,3 +1,8 @@
+import { availableParallelism } from "node:os";
+import { dirname } from "node:path";
+import { isPackagedRuntime } from "pstdio-paths";
+import { runCommand } from "./install-extension-dependencies";
+
 export const extensionWebviewBuildOptions = {
   target: "browser",
   format: "esm",
@@ -19,42 +24,61 @@ export type ExtensionWebviewBuildResult = {
 
 export type ExtensionWebviewBuilder = (input: ExtensionWebviewBuildInput) => Promise<ExtensionWebviewBuildResult>;
 
-const buildErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const buildArguments = (input: ExtensionWebviewBuildInput) => {
+  const options = extensionWebviewBuildOptions;
+  return [
+    "build",
+    input.entryPath,
+    `--outdir=${input.outdir}`,
+    `--target=${options.target}`,
+    `--format=${options.format}`,
+    ...(options.minify ? ["--minify"] : []),
+    `--entry-naming=${options.naming.entry}`,
+    `--asset-naming=${options.naming.asset}`,
+    ...Object.entries(options.define).map(([name, value]) => `--define=${name}=${value}`),
+  ];
+};
 
-const buildErrorDiagnostics = (error: unknown) => {
-  const pending: unknown[] = [error];
-  const diagnostics: unknown[] = [];
+// Each build process needs several hundred megabytes, and a host upgrade rebuilds every webview at
+// startup, so only a few builds run at once.
+const buildSlots = Math.max(1, Math.min(4, availableParallelism()));
+let runningBuilds = 0;
+const waitingBuilds: (() => void)[] = [];
 
-  while (pending.length > 0) {
-    const diagnostic = pending.pop();
-    diagnostics.push(diagnostic);
-    if (diagnostic instanceof AggregateError) pending.push(...[...diagnostic.errors].reverse());
+const acquireBuildSlot = async () => {
+  if (runningBuilds < buildSlots) {
+    runningBuilds++;
+    return;
   }
-
-  return diagnostics;
+  // A finished build hands its slot to the next waiting build.
+  await new Promise<void>((resolve) => waitingBuilds.push(resolve));
 };
 
-export const formatExtensionWebviewBuildError = (error: unknown) => {
-  const messages = buildErrorDiagnostics(error).map(buildErrorMessage).filter(Boolean);
-  return [...new Set(messages)].join("\n") || "Webview build failed.";
+const releaseBuildSlot = () => {
+  const next = waitingBuilds.shift();
+  if (next) next();
+  else runningBuilds--;
 };
 
+// A long-running Bun process keeps package resolutions it has already read, so an in-process
+// build cannot see a replaced extension folder. Each build runs in a new Bun process (ADR 0070).
 export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
 
+  await acquireBuildSlot();
+  let result: Awaited<ReturnType<typeof runCommand>>;
   try {
-    const result = await Bun.build({
-      entrypoints: [input.entryPath],
-      outdir: input.outdir,
-      ...extensionWebviewBuildOptions,
-    });
-
     if (input.signal.aborted) return { success: false, details: "Build aborted." };
-    return {
-      success: result.success,
-      details: result.success ? "" : result.logs.map(String).join("\n") || "Webview build failed.",
-    };
-  } catch (error) {
-    return { success: false, details: formatExtensionWebviewBuildError(error) };
+    result = await runCommand(process.execPath, buildArguments(input), {
+      cwd: dirname(input.entryPath),
+      env: { ...process.env, NO_COLOR: "1", ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}) },
+      signal: input.signal,
+    });
+  } finally {
+    releaseBuildSlot();
   }
+
+  if (input.signal.aborted) return { success: false, details: "Build aborted." };
+  if (result.exitCode === 0) return { success: true, details: "" };
+  return { success: false, details: result.stderr.trim() || result.stdout.trim() || "Webview build failed." };
 };
