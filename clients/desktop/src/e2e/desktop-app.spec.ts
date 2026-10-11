@@ -167,6 +167,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "getProjectTabs",
       "getStartupAppearance",
       "getStartupState",
+      "getUpdateChannel",
       "getWorkbenchState",
       "onCommand",
       "onStartupAppearance",
@@ -180,6 +181,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "setPerformanceMonitoring",
       "setProjectTabs",
       "setStartupAppearance",
+      "setUpdateChannel",
       "setWorkbenchItem",
     ]);
     expect(
