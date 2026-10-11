@@ -12,8 +12,6 @@ import {
 import type { ReviewOutcome, ReviewRequestView } from "./review-request-types";
 import { validateResponse } from "./review-request-validation";
 
-export { HUMAN_REQUESTED_OPTION_ID } from "./review-request-storage";
-
 type StorageContext = Pick<CommandContext, "storage">;
 
 // A write that raced with ticket deletion removes its own records so no orphan request remains.
