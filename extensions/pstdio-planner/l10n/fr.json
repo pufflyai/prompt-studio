@@ -1,4 +1,6 @@
 {
+  "timeline.page.title": "Chronologie du projet",
+  "timeline.view.title": "Chronologie du projet",
   "commands.openTickets": "Ouvrir les tâches",
   "commands.migrateTicketIdentities": "Migrer les identifiants des tickets",
   "archiveState.active": "Actif",

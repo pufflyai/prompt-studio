@@ -1,4 +1,6 @@
 {
+  "timeline.page.title": "프로젝트 타임라인",
+  "timeline.view.title": "프로젝트 타임라인",
   "commands.openTickets": "티켓 열기",
   "archiveState.active": "활성",
   "archiveState.archived": "보관됨",

@@ -12,6 +12,8 @@ Use `Foundations/Component Gallery / Composites` as the quickest visual referenc
 
 Use `ChatPanel` for full conversation surfaces. It owns the message list, empty/loading states, sticky user-message behavior, workspace hub slot, approval prompt slot, attachment rendering, and input area. Use lower-level chat components only when a host already owns the conversation shell.
 
+Show follow-ups submitted during active work in `queuedFollowUps` immediately. Set `sending: true` until the server accepts the request. Sending rows show their prompt and attachments, and disable editing, removal, and drag actions. Saved rows remain usable while another row is sending. Replace the sending row with the saved request after acceptance; keep failed-send recovery in the conversation.
+
 ## Kanban Renderer
 
 Use `KanbanRenderer` when users need list and board views over the same rows. Provide stable row ids, an explicit `storageKey`, typed attributes, and host callbacks for row updates, reordering, creation, and context actions.

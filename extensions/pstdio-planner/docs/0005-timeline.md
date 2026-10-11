@@ -1,6 +1,6 @@
-# Ticket timeline
+# Project Timeline
 
-Open **Tickets** or **Ticket timeline** under **Project Planning** in the project sidebar. The timeline entry uses the timeline icon. Both views are part of Planner and use the same tickets, statuses, tags, and ticket form.
+Open **Tickets** or **Project Timeline** under **Project Planning** in the project sidebar. The timeline entry uses the timeline icon. Both views are part of Planner and use the same tickets, statuses, tags, and ticket form.
 
 Both boards use the shared Kanban card. Timeline cards keep their full titles. Tickets waiting for unfinished prerequisites appear slightly dimmed. The timeline shows **Blocked** only when prerequisites are complete and the ticket has a blocked status or another recorded blocker.
 
@@ -12,7 +12,7 @@ The header uses the same saved views, search, filter menus, and filter rules as 
 
 A Track rule in the filter also chooses the track columns. For example, Track is any of Product and Platform shows only those two columns, in the order of the Track options. Unassigned appears when the rule accepts tickets without a track, such as Track is empty. A track stays visible when another part of an "any of these rules" group could still match its tickets. Without a Track rule, every track is shown. Search and other filters only hide tickets. Filtering never changes a ticket's track.
 
-Use ticket filters for Status, Milestone, Milestone date, Milestone progress, and Needs attention. For example, exclude Done tickets, exclude Completed past milestone, or show Needs attention → Yes. These properties are available in both Tickets and Ticket timeline and can be saved in shared views. Change a ticket's milestone in its Properties panel or by dragging it in the timeline. The board create form creates unscheduled tickets; the timeline form also chooses placement and preserves the saved ticket when placement needs a retry. The timeline has no separate Display menu. Dependency arrows are smooth curves from the prerequisite to the ticket that waits on it. The graph keeps its dependency execution order. Milestone progress uses active tickets, matching the graph; archived tickets remain available in Tickets without active timeline properties. Hover and drop indicators use the shared navigation indicator color. The add-milestone preview appears above ticket cards.
+Use ticket filters for Status, Milestone, Milestone date, Milestone progress, and Needs attention. For example, exclude Done tickets, exclude Completed past milestone, or show Needs attention → Yes. These properties are available in both Tickets and Project Timeline and can be saved in shared views. Change a ticket's milestone in its Properties panel or by dragging it in the timeline. The board create form creates unscheduled tickets; the timeline form also chooses placement and preserves the saved ticket when placement needs a retry. The timeline has no separate Display menu. Dependency arrows are smooth curves from the prerequisite to the ticket that waits on it. The graph keeps its dependency execution order. Milestone progress uses active tickets, matching the graph; archived tickets remain available in Tickets without active timeline properties. Hover and drop indicators use the shared navigation indicator color. The add-milestone preview appears above ticket cards.
 
 ## CLI
 

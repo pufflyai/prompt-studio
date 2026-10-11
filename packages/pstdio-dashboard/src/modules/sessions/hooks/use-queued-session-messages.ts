@@ -60,7 +60,7 @@ export const useQueuedSessionMessages = (input: QueuedSessionInput) => {
       steps,
       expectedRevision: item.revision,
       expectedOrder: (selection?.items ?? queuedFollowUps)
-        .filter((item) => !item.steeringDelivery)
+        .filter((item) => !item.sending && !item.steeringDelivery)
         .map((request) => ({
           queuePosition: request.position!,
           revision: request.revision!,

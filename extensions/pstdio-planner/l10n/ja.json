@@ -1,4 +1,6 @@
 {
+  "timeline.page.title": "プロジェクトタイムライン",
+  "timeline.view.title": "プロジェクトタイムライン",
   "commands.openTickets": "チケットを開く",
   "archiveState.active": "アクティブ",
   "archiveState.archived": "アーカイブ済み",
