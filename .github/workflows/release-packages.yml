@@ -76,6 +76,9 @@ jobs:
       NPM_CONFIG_PROVENANCE: true
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Packaged checks in build-release read older release tags, such as the Planner upgrade check.
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -206,6 +209,9 @@ jobs:
       PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Packaged checks in build-release read older release tags, such as the Planner upgrade check.
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
