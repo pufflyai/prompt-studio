@@ -56,12 +56,20 @@ export async function expectPackagedPlannerTimeline(input: {
   const execute = commandRunner(input);
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false });
-  expect(await execute("auto-build.configure", { enabled: true, prompt: "Choose valid tasks." })).toMatchObject({
+  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
+  expect(
+    await execute("auto-build.configure", { enabled: true, prompt: "Choose valid tasks.", blockOnReview: false }),
+  ).toMatchObject({
     enabled: true,
+    blockOnReview: false,
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
-  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: true, prompt: "Choose valid tasks." });
+  expect(await execute("auto-build.read", {})).toMatchObject({
+    enabled: true,
+    prompt: "Choose valid tasks.",
+    blockOnReview: false,
+    stuck: false,
+  });
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
   });

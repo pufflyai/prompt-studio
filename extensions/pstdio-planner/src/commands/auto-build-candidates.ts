@@ -25,30 +25,44 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
   const ignore = usableAutoBuildIgnore(mode.ignore, query.attributes);
   const ignored = new Set(ignore ? filterRowsByView(query.rows, ignore, query.attributes).map(({ id }) => id) : []);
   const attempted = new Set(attempts.filter(({ state }) => state !== "abandoned").map(({ ticketId }) => ticketId));
-  const candidates: { id: string; ticket: string; title: string; action: "start" | "resume" }[] = [];
+  const candidates: { id: string; ticket: string; title: string; action: "start" | "resume"; baseHeadSha?: string }[] =
+    [];
+  const blockedTickets: string[] = [];
   const settings = await ctx.settings.all();
-  const rows = plan.sections
+  const pending = plan.sections
     .flatMap(({ rows }) => rows)
     .filter(
       (row) =>
-        !ignored.has(row.id) &&
-        !row.gate &&
-        !row.blockedReason &&
-        workflowName(row.status?.name) !== "blocked" &&
-        !row.flags.includes("human-needed") &&
-        !tickets.find(({ id }) => id === row.id)?.draft &&
-        !assignments.assigned.has(row.id) &&
-        (!attempted.has(row.id) || resumptions.has(row.id)),
+        !ignored.has(row.id) && !tickets.find(({ id }) => id === row.id)?.draft && !assignments.assigned.has(row.id),
     );
+  const rows = pending.filter((row) => {
+    const blocked =
+      row.gate ||
+      row.blockedReason ||
+      workflowName(row.status?.name) === "blocked" ||
+      row.flags.includes("human-needed");
+    if (blocked) blockedTickets.push(row.shorthand);
+    return !blocked && (!attempted.has(row.id) || resumptions.has(row.id));
+  });
   if (capacity.running < capacity.limit && rows.length) {
     const base = await resolveImplementationBase(ctx, settings);
     for (const row of rows) {
       if (resumptions.has(row.id)) {
         candidates.push({ id: row.id, ticket: row.shorthand, title: row.title, action: "resume" });
       } else {
-        const { readiness } = await loadAttemptReadiness(ctx, row.id, { base });
+        const { readiness } = await loadAttemptReadiness(ctx, row.id, {
+          base,
+          dependencyReview: mode.blockOnReview ? "approved" : "submitted",
+        });
         if (readiness.decision === "ready")
-          candidates.push({ id: row.id, ticket: row.shorthand, title: row.title, action: "start" });
+          candidates.push({
+            id: row.id,
+            ticket: row.shorthand,
+            title: row.title,
+            action: "start",
+            baseHeadSha: readiness.baseHeadSha,
+          });
+        else blockedTickets.push(row.shorthand);
       }
     }
   }
@@ -62,7 +76,7 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(fingerprint));
   const snapshot = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return { candidates, capacity, snapshot };
+  return { candidates, capacity, snapshot, blockedTickets };
 }
 
 export const autoBuildCandidatesCommand = defineCommand({

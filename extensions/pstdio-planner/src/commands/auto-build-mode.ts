@@ -4,7 +4,8 @@ import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
 import { readImplementationCapacity } from "./attempt-readiness";
-import { readAutoBuildAssignments } from "./auto-build-sessions";
+import { readAutoBuildCandidates } from "./auto-build-candidates";
+import { isLiveSession, readAutoBuildAssignments } from "./auto-build-sessions";
 
 export const readAutoBuildCommand = defineCommand({
   id: "auto-build.read",
@@ -22,11 +23,19 @@ export const readAutoBuildCommand = defineCommand({
     const latest = runs
       .filter(({ commandId }) => commandId === `${ctx.extensionId}.command.auto-build`)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    const ticketSessions = sessions.filter(({ id }) => id !== state.sessionId);
+    let stuck =
+      mode.enabled && ticketSessions.length > 0 && ticketSessions.every(({ status }) => status === "awaiting_input");
+    if (mode.enabled && capacity.running === 0 && !isLiveSession(supervisor)) {
+      const { candidates, blockedTickets } = await readAutoBuildCandidates(ctx, mode);
+      stuck ||= candidates.length === 0 && blockedTickets.length > 0;
+    }
     return {
       ...mode,
       supervisor,
-      sessions: sessions.filter(({ id }) => id !== state.sessionId),
+      sessions: ticketSessions,
       capacity,
+      stuck,
       running: latest?.status === "queued" || latest?.status === "running",
       error: latest?.error?.message,
     };
@@ -42,8 +51,9 @@ export const configureAutoBuildCommand = defineCommand({
     enabled: params.boolean({ required: true }),
     prompt: params.longText(),
     ignore: params.json<ViewFilterGroup>(),
+    blockOnReview: params.boolean({ label: "Block on review" }),
   },
-  async run(ctx, { enabled, prompt, ignore }) {
+  async run(ctx, { enabled, prompt, ignore, blockOnReview }) {
     const mode = await withWriteGuard(ctx, "auto-build-mode", async () => {
       const current = await readAutoBuildMode(ctx);
       const nextPrompt = prompt?.trim() ?? current.prompt;
@@ -54,6 +64,7 @@ export const configureAutoBuildCommand = defineCommand({
         enabled,
         prompt: nextPrompt,
         ignore: ignore ?? current.ignore,
+        blockOnReview: blockOnReview ?? current.blockOnReview,
       });
     });
     if (mode.enabled) await enqueueAutoBuild(ctx);

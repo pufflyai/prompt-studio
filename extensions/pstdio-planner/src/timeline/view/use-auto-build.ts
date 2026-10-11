@@ -29,11 +29,11 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  const configure = async (enabled: boolean, prompt?: string, ignore?: ViewFilterGroup) => {
+  const configure = async (enabled: boolean, prompt?: string, ignore?: ViewFilterGroup, blockOnReview?: boolean) => {
     setSaving(true);
     setError(undefined);
     try {
-      await client.commands["auto-build.configure"]({ enabled, prompt, ignore });
+      await client.commands["auto-build.configure"]({ enabled, prompt, ignore, blockOnReview });
       setMode(await readMode(client));
       return true;
     } catch (reason) {

@@ -3,8 +3,32 @@ import { listAttempts } from "../data/attempt-storage";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
+import { readAutoBuildCommand } from "./auto-build-mode";
 import { requestHumanCommand, reviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
+
+test.each([
+  "completed",
+  "awaiting_input",
+])("a paused implementation with open human input is reported as stuck (%s)", async (status) => {
+  const { ctx, ticket } = await fixture();
+  const task = await ticket("Waiting for a human");
+  const attempt = await runAttemptCommand.run(ctx, { ticket: task.id });
+  ctx.sessions.get = async (id) => ({ type: "session", id, title: "Implementation", status }) as never;
+  ctx.sessions.list = async () =>
+    status === "awaiting_input"
+      ? [{ id: attempt.session.id, title: "Implementation", status, anchors_json: [{ type: "ticket", id: task.id }] }]
+      : [];
+  await requestHumanCommand.run(ctx, {
+    ticket: task.id,
+    workspaceId: attempt.workspace.id,
+    sessionId: attempt.session.id,
+    title: "Confirm",
+    instructions: "Choose scope",
+    request: { kind: "task" },
+  });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ stuck: true });
+});
 
 async function dispatchCandidates(ctx: Awaited<ReturnType<typeof fixture>>["ctx"]) {
   const result = await autoBuildCandidatesCommand.run(ctx, {});

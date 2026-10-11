@@ -9,6 +9,7 @@ type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "session
 
 interface ReadinessParams {
   base?: string;
+  dependencyReview?: "approved" | "submitted";
 }
 
 export async function readImplementationCapacity(ctx: Pick<ReadinessContext, "storage" | "sessions" | "settings">) {
@@ -80,6 +81,7 @@ export const loadAttemptReadiness = async (
     tickets,
     attempts,
     selections,
+    dependencyReview: commandParams.dependencyReview,
     doneStatusIds,
     mainHeadSha,
     activeImplementationCount: capacity.running,

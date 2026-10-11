@@ -42,7 +42,10 @@ const runAttemptParams = {
 export async function startAttempt(
   ctx: CommandContext,
   commandParams: ParamsOf<typeof runAttemptParams>,
-  beforeDispatch?: () => Promise<void>,
+  options: {
+    beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
+    dependencyReview?: "approved" | "submitted";
+  } = {},
 ) {
   const { agent } = commandParams;
   const chosenBase = commandParams.workspace?.params?.base;
@@ -51,6 +54,7 @@ export async function startAttempt(
   const ownerRunId = ctx.invocationId ?? crypto.randomUUID();
   const { readiness, capacity } = await loadAttemptReadiness(ctx, ticketRef, {
     base: typeof chosenBase === "string" ? chosenBase : undefined,
+    dependencyReview: options.dependencyReview,
   });
   if (readiness.decision === "wait") {
     const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
@@ -79,7 +83,9 @@ export async function startAttempt(
     ctx,
     commandParams,
     readiness.baseHeadSha,
-    beforeDispatch,
+    async () => {
+      await options.beforeDispatch?.(readiness.baseHeadSha);
+    },
   );
   const attemptAnchor: ResourceAnchor = {
     type: "planner-attempt",
@@ -98,10 +104,17 @@ export async function startAttempt(
     workspaceId: workspace.id,
     anchors: [anchor, attemptAnchor],
     ...harnessInput(agent),
-    prompt: await renderOwnedTemplate(ctx, "implement-ticket", {
-      ticket: anchor.label ?? ticketIdentity.shorthand,
-      workspaceId: workspace.id,
-    }),
+    prompt: [
+      await renderOwnedTemplate(ctx, "implement-ticket", {
+        ticket: anchor.label ?? ticketIdentity.shorthand,
+        workspaceId: workspace.id,
+      }),
+      ...(readiness.mode === "stacked"
+        ? [
+            `This workspace starts at dependency commit ${readiness.baseHeadSha}. Stack your changes on this work; do not reset to the project base or discard dependency changes. Dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}.`,
+          ]
+        : []),
+    ].join("\n\n"),
   });
   const timestamp = new Date().toISOString();
   const attempt: AttemptRecord = {

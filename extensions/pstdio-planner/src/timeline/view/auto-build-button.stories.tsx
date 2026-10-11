@@ -37,3 +37,10 @@ export const Failed: Story = {
   },
 };
 export const WakeFailed: Story = { args: { error: "Agent unavailable" } };
+export const Stuck: Story = {
+  args: {
+    enabled: true,
+    stuck: true,
+    supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "completed" },
+  },
+};

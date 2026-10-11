@@ -1,5 +1,6 @@
 import { Button, CloseButton, Dialog, Icon, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { Checkbox } from "@pstdio/ui";
 import { buildFilterCategories } from "@pstdio/ui/kanban-renderer";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { psTheme } from "@pstdio/ui/theme";
@@ -11,22 +12,34 @@ import type { timelineQueryData } from "./timeline-query";
 interface AutoBuildDialogProps {
   prompt: string;
   ignore: ViewFilterGroup;
+  blockOnReview: boolean;
   data: ReturnType<typeof timelineQueryData>;
   saving: boolean;
   error?: string;
-  onEnable: (prompt: string, ignore: ViewFilterGroup) => Promise<boolean>;
+  onEnable: (prompt: string, ignore: ViewFilterGroup, blockOnReview: boolean) => Promise<boolean>;
   onClose: () => void;
   t: (key: string, fallback?: string) => string;
 }
 
 export function AutoBuildDialog(props: AutoBuildDialogProps) {
-  const { prompt: initialPrompt, ignore: initialIgnore, data, saving, error, onEnable, onClose, t } = props;
+  const {
+    prompt: initialPrompt,
+    ignore: initialIgnore,
+    blockOnReview: initialBlockOnReview,
+    data,
+    saving,
+    error,
+    onEnable,
+    onClose,
+    t,
+  } = props;
   const [prompt, setPrompt] = useState(initialPrompt);
   const [ignore, setIgnore] = useState(initialIgnore);
+  const [blockOnReview, setBlockOnReview] = useState(initialBlockOnReview);
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const categories = buildFilterCategories(data.attributes, data.rows);
   const save = async () => {
-    if (await onEnable(prompt, ignore)) onClose();
+    if (await onEnable(prompt, ignore, blockOnReview)) onClose();
   };
   return (
     <Dialog.Root
@@ -88,6 +101,14 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                     optionsFor={(field) => categories.find(({ id }) => id === field.id)?.options ?? []}
                   />
                 </Stack>
+                <Checkbox
+                  size="sm"
+                  checked={blockOnReview}
+                  disabled={saving}
+                  onCheckedChange={({ checked }) => setBlockOnReview(checked === true)}
+                >
+                  {t("timeline.autoBuild.blockOnReview", "Block on review")}
+                </Checkbox>
                 {error ? (
                   <Text role="alert" color="fg.error">
                     {error}

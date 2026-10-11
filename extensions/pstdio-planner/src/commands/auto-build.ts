@@ -39,6 +39,9 @@ async function wakeSupervisor(ctx: CommandContext) {
       `For each relevant candidate, launch or resume its managed attempt with:\npst pstdio-planner auto-build dispatch --ticket <ticket> --revision ${mode.revision}`,
       "Re-read candidates after dispatching. Respect the user's prompt and the returned capacity. The dispatch command enforces current ignore filters, assignments, dependencies, and capacity.",
       "Do not call run-attempt directly, create implementation sessions yourself, or change Auto Build settings.",
+      mode.blockOnReview
+        ? "Children wait for dependency review approval."
+        : "Children may start while dependency revisions are in review. Dispatch creates their workspaces on the submitted dependency commit so their work stacks on top.",
       "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build will re-prompt this same session when the board changes or capacity frees up. If Auto Build is stopped, finish your turn without dispatching more work.",
       `Current capacity: ${capacity.running}/${capacity.limit}. Candidates: ${JSON.stringify(candidates)}.`,
     ].join("\n\n");

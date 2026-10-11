@@ -10,11 +10,12 @@ export interface AutoBuildSession {
 interface AutoBuildSessionRowProps {
   session: AutoBuildSession;
   label: string;
+  statusLabel?: string;
   onOpen: (session: AutoBuildSession) => void;
 }
 
 export function AutoBuildSessionRow(props: AutoBuildSessionRowProps) {
-  const { session, label, onOpen } = props;
+  const { session, label, statusLabel, onOpen } = props;
   const status = sessionCompletionStatuses.find((status) => status === session.status);
   return (
     <ListRow
@@ -26,7 +27,7 @@ export function AutoBuildSessionRow(props: AutoBuildSessionRowProps) {
       icon={<SessionIndicator status={status} boxSize="icon-xs" />}
       endContent={
         <Text textStyle="label/XS" color="fg.muted">
-          {status?.replaceAll("_", " ") ?? "Unknown"}
+          {statusLabel ?? status?.replaceAll("_", " ") ?? "Unknown"}
         </Text>
       }
       onActivate={() => onOpen(session)}

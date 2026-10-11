@@ -7,6 +7,7 @@ const meta: Meta<typeof AutoBuildDialog> = {
   component: AutoBuildDialog,
   args: {
     saving: false,
+    blockOnReview: true,
     prompt: "Choose small independent tickets first.",
     ignore: {
       conjunction: "and",
@@ -41,5 +42,6 @@ export default meta;
 type Story = StoryObj<typeof AutoBuildDialog>;
 export const PromptAndIgnoreFilters: Story = {};
 export const EmptyPrompt: Story = { args: { prompt: "" } };
+export const StackDuringReview: Story = { args: { blockOnReview: false } };
 export const Saving: Story = { args: { saving: true } };
 export const Failure: Story = { args: { error: "Agent unavailable" } };

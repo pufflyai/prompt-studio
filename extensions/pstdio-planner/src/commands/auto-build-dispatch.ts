@@ -24,22 +24,22 @@ export const autoBuildDispatchCommand = defineCommand({
           decision: "wait" as const,
           reason: capacity.running >= capacity.limit ? "capacity-full" : "ticket-not-ready",
         };
-      const beforeDispatch = async () => {
+      const beforeDispatch = async (baseHeadSha?: string) => {
         const current = await readAutoBuildMode(ctx);
-        if (
-          !current.enabled ||
-          current.revision !== revision ||
-          !(await readAutoBuildCandidates(ctx, current)).candidates.some(({ id }) => id === candidate.id)
-        ) {
+        if (!current.enabled || current.revision !== revision) {
           throw new Error("Auto Build stopped or the ticket is no longer ready.");
         }
+        const latest = (await readAutoBuildCandidates(ctx, current)).candidates.find(({ id }) => id === candidate.id);
+        if (!latest) throw new Error("Auto Build stopped or the ticket is no longer ready.");
+        if (baseHeadSha && latest.baseHeadSha !== baseHeadSha)
+          throw new Error("The dependency revision changed. Read candidates again before dispatching.");
       };
       if (candidate.action === "resume") return resumeAutoBuildAttempt(ctx, candidate.id, beforeDispatch);
       const base = await resolveImplementationBase(ctx, await ctx.settings.all());
       const result = await startAttempt(
         ctx,
         { ticket: candidate.id, ...(base ? { workspace: { providerId: "pstdio.worktree", params: { base } } } : {}) },
-        beforeDispatch,
+        { beforeDispatch, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
       );
       return {
         decision: "started" as const,

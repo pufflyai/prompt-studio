@@ -7,6 +7,7 @@ export interface AutoBuildMode {
   enabled: boolean;
   prompt: string;
   ignore: ViewFilterGroup;
+  blockOnReview: boolean;
 }
 
 export const autoBuildChanged = eventRef({ extensionId: "pstdio.pstdio-planner", id: "auto-build.changed" });
@@ -31,6 +32,7 @@ export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage
     enabled: Boolean(mode?.enabled && mode.prompt),
     prompt: mode?.prompt ?? "",
     ignore: mode?.ignore ?? (await defaultAutoBuildIgnore(ctx)),
+    blockOnReview: mode?.blockOnReview ?? true,
   };
 };
 

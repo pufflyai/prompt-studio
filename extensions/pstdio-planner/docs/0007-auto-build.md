@@ -14,6 +14,8 @@ The ignore list uses the same filter button, picker, and bubbles as Tickets. Tic
 
 The selected timeline view, search, and display filters only affect what you see. The supervisor considers valid tickets across the project, using its own ignore list.
 
+**Block on review** is on by default. Turn it off to let dependent tickets start while their prerequisites are in review. Their workspaces start at the submitted dependency commit, and the implementing agent stacks its changes on top. Missing revisions, requested changes, ambiguous attempts, and incompatible dependency branches still prevent a launch.
+
 ## How the supervisor works
 
 Planner checks every three minutes and also checks when tickets change or a session finishes. When the board has changed or capacity has become available, and valid unassigned work exists, Planner starts or resumes the supervisor session with your prompt and Auto Build instructions.
@@ -28,15 +30,17 @@ Implementation follows the project's Planner settings, including adversarial rev
 
 ## Inspect or stop Auto Build
 
-The header button always says **Auto Build**. Its dot is green while implementation capacity is in use, yellow while Auto Build is on with no capacity in use, and red if the supervisor fails. Click it to open a popover with the supervisor and running ticket sessions, including their statuses. The header shows used capacity and its limit, such as **Running ticket sessions (0/2)**. Click a session to inspect it.
+The header button always says **Auto Build**. Its dot is green while implementation capacity is in use, yellow while Auto Build is on with no capacity in use, and red if the supervisor fails. Click it to open a compact popover with a separate supervisor row and running ticket sessions, including their statuses. The supervisor says **sleeping** between turns while Auto Build is on. The header shows used capacity and its limit, such as **Running ticket sessions (0/2)**. Click a session to inspect it.
 
 Click the small **Stop Auto Build** button with the pause icon in the popover header to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes.
 
-Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt and ignore filters.
+Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt, ignore filters, and review-blocking choice.
 
 ## When work needs attention
 
 If the supervisor cannot start or resume, Auto Build turns off and shows the error. Resolve the problem and start it again. Existing attempts remain available.
+
+The popover shows a small banner when the supervisor fails or needs input, all running ticket sessions need input, or no work can run because of dependencies, blockers, or review requests. A finished board does not show a blocker banner.
 
 If an implementation needs help, answer every open [review request](0006-review-requests.md). The supervisor can then resume that attempt in the same workspace and session when capacity is available, with your answers included.
 

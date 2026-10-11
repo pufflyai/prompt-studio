@@ -89,6 +89,7 @@ function PlanContent(props: PlanContentProps) {
             sessions={autoBuild.mode?.sessions ?? []}
             running={autoBuild.mode?.capacity.running ?? 0}
             capacity={autoBuild.mode?.capacity.limit ?? 0}
+            stuck={autoBuild.mode?.stuck}
             error={autoBuild.mode?.error}
             onOpenSession={(session) =>
               void host.call("navigation.open", {
@@ -156,10 +157,11 @@ function PlanContent(props: PlanContentProps) {
         <AutoBuildDialog
           prompt={autoBuild.mode!.prompt}
           ignore={autoBuild.mode!.ignore}
+          blockOnReview={autoBuild.mode!.blockOnReview}
           data={queryData}
           saving={autoBuild.saving}
           error={autoBuild.error}
-          onEnable={(prompt, ignore) => autoBuild.configure(true, prompt, ignore)}
+          onEnable={(prompt, ignore, blockOnReview) => autoBuild.configure(true, prompt, ignore, blockOnReview)}
           onClose={() => setAutoBuildOpen(false)}
           t={t}
         />
