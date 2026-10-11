@@ -9,6 +9,7 @@ import type { RuntimeHost, RuntimeOwnerType } from "pstdio-api/runtime";
 import { disableExtensionMutationTimeout } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
+import { DEFAULT_EXTENSION_RELEASE_REF } from "@/features/extension-release-ref";
 import { injectConfig } from "../../dashboard/serve-dashboard";
 import { isCompiledBinary, loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
 import { loadFilesystemAssets } from "./filesystem-assets";
@@ -80,7 +81,7 @@ const reportStartupError = (error: Error) => {
 const defaultDeps: ServeAppDeps = {
   createApp: async (runtimeHost, onDatabaseLockAcquired) =>
     createApp({
-      config: resolveAppConfig({ env: process.env, defaultExtensionReleaseRef: `pstdio@${CLI_VERSION}` }),
+      config: resolveAppConfig({ env: process.env, defaultExtensionReleaseRef: DEFAULT_EXTENSION_RELEASE_REF }),
       host: runtimeHost
         ? { kind: "runtime", runtime: runtimeHost }
         : { kind: "standalone", token: process.env.PSTDIO_API_TOKEN },

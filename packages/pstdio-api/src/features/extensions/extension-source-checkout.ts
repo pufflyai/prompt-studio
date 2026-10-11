@@ -1,6 +1,6 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { findExtensionCatalogEntry, type GitExtensionOrigin, packagedExtensionCatalog } from "./extension-catalog";
 import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
 
@@ -17,6 +17,7 @@ export const extensionSourceGitConfig = [
 
 export const isExtensionSourceUrl = (url: string) => url.startsWith("https://") || url.startsWith("file://");
 
+// Fetching a ref instead of `clone --branch` lets the ref be a branch, a tag, or a full commit SHA.
 const cloneRepoSparse = async (
   checkoutPath: string,
   paths: string[],
@@ -25,40 +26,27 @@ const cloneRepoSparse = async (
   ref?: string,
   signal?: AbortSignal,
 ) => {
-  const tempParent = dirname(checkoutPath);
-  const cloneArgs = [...extensionSourceGitConfig, "clone", "--depth", "1", "--filter=blob:none", "--sparse"];
-  if (ref) cloneArgs.push("--branch", ref);
-  signal?.throwIfAborted();
-  // `--` keeps a stored URL that starts with `-` from being read as an option.
-  const clone = await run("git", [...cloneArgs, "--", repositoryUrl, checkoutPath], {
-    cwd: tempParent,
-    ...(signal ? { signal } : {}),
-  });
-  if (clone.exitCode !== 0) {
-    const detail = clone.stderr.trim() || clone.stdout.trim();
-    throw new Error(`Failed to clone ${repositoryUrl}${ref ? ` at ${ref}` : ""}: ${detail}`);
-  }
+  const target = `${repositoryUrl}${ref ? ` at ${ref}` : ""}`;
+  const git = async (args: string[], failure: string) => {
+    signal?.throwIfAborted();
+    const result = await run("git", args, { cwd: checkoutPath, ...(signal ? { signal } : {}) });
+    signal?.throwIfAborted();
+    if (result.exitCode !== 0) throw new Error(`${failure}: ${result.stderr.trim() || result.stdout.trim()}`);
+    return result.stdout.trim();
+  };
 
-  signal?.throwIfAborted();
-  const sparse = await run("git", ["sparse-checkout", "set", ...paths], {
-    cwd: checkoutPath,
-    ...(signal ? { signal } : {}),
-  });
-  if (sparse.exitCode !== 0) {
-    throw new Error(`Failed to fetch ${paths.join(", ")}: ${sparse.stderr.trim() || sparse.stdout.trim()}`);
-  }
-
-  signal?.throwIfAborted();
-  const head = await run("git", ["rev-parse", "HEAD"], {
-    cwd: checkoutPath,
-    ...(signal ? { signal } : {}),
-  });
-  signal?.throwIfAborted();
-  if (head.exitCode !== 0) {
-    throw new Error(`Failed to resolve the installed commit: ${head.stderr.trim() || head.stdout.trim()}`);
-  }
-
-  return head.stdout.trim();
+  mkdirSync(checkoutPath, { recursive: true });
+  await git(["init"], `Failed to create a checkout for ${target}`);
+  // `--` keeps a stored URL or ref that starts with `-` from being read as an option.
+  await git(["remote", "add", "--", "origin", repositoryUrl], `Failed to add remote ${repositoryUrl}`);
+  await git(["sparse-checkout", "set", ...paths], `Failed to fetch ${paths.join(", ")}`);
+  await git(
+    [...extensionSourceGitConfig, "fetch", "--depth", "1", "--filter=blob:none", "--", "origin", ref ?? "HEAD"],
+    `Failed to fetch ${target}`,
+  );
+  // A partial clone downloads file contents during checkout, so checkout also needs the transport limits.
+  await git([...extensionSourceGitConfig, "checkout", "FETCH_HEAD"], `Failed to check out ${target}`);
+  return git(["rev-parse", "HEAD"], "Failed to resolve the installed commit");
 };
 
 const packagedEntry = (installName: string) =>

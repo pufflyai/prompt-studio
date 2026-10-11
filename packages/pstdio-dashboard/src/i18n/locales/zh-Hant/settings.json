@@ -91,5 +91,18 @@
     "description": "在狀態列中顯示後端連線狀態。",
     "enable": "顯示連線狀態",
     "saveError": "無法變更連線狀態顯示。"
+  },
+  "updates": {
+    "title": "更新通道",
+    "description": "選擇此應用程式要更新到哪種組建。此設定僅適用於此裝置。",
+    "channel": "通道",
+    "loading": "正在載入…",
+    "stable": "穩定版",
+    "stableHelper": "已發布的版本。建議使用。",
+    "nightly": "每日組建版",
+    "nightlyHelper": "根據最新 main 分支建立的已簽署組建，每天發布一次。可能有錯誤，並會對你的資料執行新的資料庫遷移。",
+    "switchBackNote": "切換回穩定版後，會保留目前版本，直到有更新的穩定版發布。",
+    "currentVersion": "目前版本",
+    "saveError": "無法變更更新通道。"
   }
 }

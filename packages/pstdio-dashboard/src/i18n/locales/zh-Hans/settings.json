@@ -91,5 +91,18 @@
     "description": "在状态栏中显示后端连接状态。",
     "enable": "显示连接状态",
     "saveError": "无法更改连接状态显示。"
+  },
+  "updates": {
+    "title": "更新渠道",
+    "description": "选择此应用要更新到哪种构建。此设置仅适用于此设备。",
+    "channel": "渠道",
+    "loading": "正在加载…",
+    "stable": "稳定版",
+    "stableHelper": "已发布的版本。推荐。",
+    "nightly": "每日构建版",
+    "nightlyHelper": "基于最新 main 分支的已签名构建，每天发布一次。可能存在问题，并会对你的数据运行新的数据库迁移。",
+    "switchBackNote": "切换回稳定版后，会保留当前版本，直到有更新的稳定版发布。",
+    "currentVersion": "当前版本",
+    "saveError": "无法更改更新渠道。"
   }
 }

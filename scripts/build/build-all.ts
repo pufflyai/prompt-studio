@@ -40,7 +40,12 @@ writeFileSync(
 );
 console.log(`  Generated embed manifest: ${EMBED_MANIFEST}`);
 
-// 4. Compile for each target
+// 4. Compile for each target. The release workflows set PSTDIO_EXTENSION_RELEASE_REF to the
+// ref the binaries install core extensions from; other builds use their version tag.
+const extensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
+const defines = extensionReleaseRef
+  ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEASE_REF=${JSON.stringify(extensionReleaseRef)}`]
+  : [];
 const buildTargets = resolveBuildTargets(config.buildTargets);
 for (const { target, pkg, bin } of buildTargets) {
   const outDir = `./packages/pstdio/dist/platforms/${pkg}/bin`;
@@ -48,7 +53,7 @@ for (const { target, pkg, bin } of buildTargets) {
 
   const outfile = join(outDir, bin);
   console.log(`\nCompiling for ${target}...`);
-  await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] --outfile ${outfile}`;
+  await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
   console.log(`  → ${relative(".", outfile)}`);
 }
 

@@ -104,5 +104,18 @@
     "description": "Show the backend connection status in the status bar.",
     "enable": "Show connection status",
     "saveError": "Could not change connection status display."
+  },
+  "updates": {
+    "title": "Update channel",
+    "description": "Choose which builds this app updates to. The setting applies to this device only.",
+    "channel": "Channel",
+    "loading": "Loading…",
+    "stable": "Stable",
+    "stableHelper": "Released versions. Recommended.",
+    "nightly": "Nightly",
+    "nightlyHelper": "A signed build of the latest main branch, published once a day. It may have bugs and runs new database migrations on your data.",
+    "switchBackNote": "Switching back to Stable keeps this version until a newer stable release is out.",
+    "currentVersion": "Current version",
+    "saveError": "Could not change the update channel."
   }
 }

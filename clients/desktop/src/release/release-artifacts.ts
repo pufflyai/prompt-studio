@@ -215,7 +215,7 @@ export const prepareDesktopReleaseArtifacts = (input: PrepareReleaseInput) => {
   return { outputPath, manifestPath, checksumsPath, manifest };
 };
 
-export const verifyDesktopReleaseSet = (root: string) => {
+export const verifyDesktopReleaseSet = (root: string, targets = activeReleaseTargets) => {
   const manifests = new Map(
     walkFiles(root)
       .filter((path) => basename(path).startsWith("desktop-release-") && path.endsWith(".json"))
@@ -224,7 +224,7 @@ export const verifyDesktopReleaseSet = (root: string) => {
         return [manifest.target, manifest] as const;
       }),
   );
-  for (const target of activeReleaseTargets) {
+  for (const target of targets) {
     if (!manifests.has(target)) throw new Error(`Missing desktop release target ${target}`);
   }
   const [first] = manifests.values();

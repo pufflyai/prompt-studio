@@ -104,6 +104,9 @@ const config: ForgeConfig = {
           maintainer: "Prompt Studio <support@prompt.studio>",
           name: "prompt-studio",
           productName: "Prompt Studio",
+          // dpkg reads `-` as a revision and ranks `0.43.0-nightly.1` above `0.43.0`.
+          // `~` sorts first, so the stable release replaces its nightlies.
+          version: version.replace("-", "~"),
           scripts: {
             postinst: join(installScripts, "postinst"),
             postrm: join(installScripts, "postrm"),

@@ -91,5 +91,18 @@
     "description": "Afficher l’état de connexion au serveur dans la barre d’état.",
     "enable": "Afficher l’état de la connexion",
     "saveError": "Impossible de modifier l’affichage de l’état de la connexion."
+  },
+  "updates": {
+    "title": "Canal de mise à jour",
+    "description": "Choisissez les versions vers lesquelles cette application se met à jour. Ce réglage s’applique à cet appareil uniquement.",
+    "channel": "Canal",
+    "loading": "Chargement…",
+    "stable": "Stable",
+    "stableHelper": "Versions publiées. Recommandé.",
+    "nightly": "Nightly",
+    "nightlyHelper": "Une version signée de la dernière branche main, publiée une fois par jour. Elle peut contenir des bugs et applique de nouvelles migrations de base de données à vos données.",
+    "switchBackNote": "Si vous revenez à Stable, cette version reste installée jusqu’à la publication d’une version stable plus récente.",
+    "currentVersion": "Version actuelle",
+    "saveError": "Impossible de modifier le canal de mise à jour."
   }
 }

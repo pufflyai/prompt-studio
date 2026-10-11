@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webFrame } from "electron";
+import type { UpdateChannel } from "pstdio-paths";
 import {
   DESKTOP_CHANNELS,
   type DesktopProjectTabsState,
@@ -72,6 +73,8 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   revealInFinder: (path: string) => ipcRenderer.invoke(DESKTOP_CHANNELS.revealInFinder, path),
   copyDiagnostics: () => ipcRenderer.invoke(DESKTOP_CHANNELS.copyDiagnostics),
   checkForUpdates: () => ipcRenderer.invoke(DESKTOP_CHANNELS.checkForUpdates),
+  getUpdateChannel: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getUpdateChannel),
+  setUpdateChannel: (channel: UpdateChannel) => ipcRenderer.invoke(DESKTOP_CHANNELS.setUpdateChannel, channel),
   quitApp: () => ipcRenderer.invoke(DESKTOP_CHANNELS.quitApp),
   getWorkbenchState: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getWorkbenchState),
   getProjectTabs: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getProjectTabs),

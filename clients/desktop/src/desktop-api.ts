@@ -1,4 +1,5 @@
 import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
+import type { UpdateChannel } from "pstdio-paths";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
 
 export interface DesktopAppInfo {
@@ -42,6 +43,9 @@ export interface PromptStudioDesktopApi {
   revealInFinder: (path: string) => Promise<void>;
   copyDiagnostics: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
+  /** The chosen update channel, or `null` when this app cannot change it (Windows and source builds). */
+  getUpdateChannel: () => Promise<UpdateChannel | null>;
+  setUpdateChannel: (channel: UpdateChannel) => Promise<void>;
   quitApp: () => Promise<void>;
   getWorkbenchState: () => Promise<DesktopWorkbenchState>;
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
@@ -72,6 +76,8 @@ export const DESKTOP_CHANNELS = {
   revealInFinder: "pstdio:desktop:reveal-in-finder",
   copyDiagnostics: "pstdio:desktop:copy-diagnostics",
   checkForUpdates: "pstdio:desktop:check-for-updates",
+  getUpdateChannel: "pstdio:desktop:get-update-channel",
+  setUpdateChannel: "pstdio:desktop:set-update-channel",
   quitApp: "pstdio:desktop:quit-app",
   getWorkbenchState: "pstdio:desktop:get-workbench-state",
   getProjectTabs: "pstdio:desktop:get-project-tabs",

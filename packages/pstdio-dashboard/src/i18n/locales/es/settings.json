@@ -91,5 +91,18 @@
     "description": "Mostrar el estado de conexión al servidor en la barra de estado.",
     "enable": "Mostrar estado de conexión",
     "saveError": "No se pudo cambiar la visualización del estado de conexión."
+  },
+  "updates": {
+    "title": "Canal de actualización",
+    "description": "Elige a qué versiones se actualiza esta aplicación. La configuración se aplica solo a este dispositivo.",
+    "channel": "Canal",
+    "loading": "Cargando…",
+    "stable": "Estable",
+    "stableHelper": "Versiones publicadas. Recomendado.",
+    "nightly": "Nightly",
+    "nightlyHelper": "Una compilación firmada de la última rama main, publicada una vez al día. Puede tener errores y aplica nuevas migraciones de base de datos a tus datos.",
+    "switchBackNote": "Si vuelves a Estable, se mantiene esta versión hasta que salga una versión estable más reciente.",
+    "currentVersion": "Versión actual",
+    "saveError": "No se pudo cambiar el canal de actualización."
   }
 }
