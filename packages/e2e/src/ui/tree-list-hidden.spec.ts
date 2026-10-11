@@ -11,10 +11,11 @@ const rowTops = (page: Page) =>
         document.querySelector(`[data-tree-list-focus-id="row-${index}"]`)?.getBoundingClientRect().top ?? null,
     ),
   );
-const renderedRows = (page: Page) => page.locator("[data-tree-list-row]").count();
+// Resize observers report the hidden size before the second frame paints.
+const nextFrames = (page: Page) =>
+  page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 test.describe("virtual tree list", () => {
-  test.slow();
   let baseUrl = "";
   let storybook: ChildProcessWithoutNullStreams | undefined;
 
@@ -34,8 +35,8 @@ test.describe("virtual tree list", () => {
     expect(shown.every((top) => top !== null)).toBe(true);
 
     await page.getByRole("button", { name: "Hide list" }).click();
-    // A hidden list has no viewport, so it drops its rows until it is shown again.
-    await expect.poll(() => renderedRows(page)).toBe(0);
+    await expect(page.getByRole("listbox")).toBeHidden();
+    await nextFrames(page);
     await page.getByRole("button", { name: "Show list" }).click();
 
     await expect.poll(() => rowTops(page)).toEqual(shown);

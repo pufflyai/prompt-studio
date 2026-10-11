@@ -2,7 +2,7 @@ import {
   measureElement as measureRenderedElement,
   useVirtualizer as useTanStackVirtualizer,
 } from "@tanstack/react-virtual";
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 
 type VirtualizerOptions<TScrollElement extends Element, TItemElement extends Element> = Omit<
   Parameters<typeof useTanStackVirtualizer<TScrollElement, TItemElement>>[0],
@@ -12,15 +12,16 @@ type VirtualizerOptions<TScrollElement extends Element, TItemElement extends Ele
 export const useVirtualizer = <TScrollElement extends Element, TItemElement extends Element>(
   options: VirtualizerOptions<TScrollElement, TItemElement>,
 ) => {
-  // A scroll element owned by a parent gets its ref after this hook's layout effects run, so the
-  // virtualizer finds it only on a later render. Render once after mount so rows do not wait for one.
+  // Callers pass a scroll element that a parent owns, and the parent gets its ref after this hook's
+  // layout effects run. Render once more before paint so the first frame already has rows.
   const [, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useLayoutEffect(() => setMounted(true), []);
   const measure = options.measureElement ?? measureRenderedElement;
   return useTanStackVirtualizer<TScrollElement, TItemElement>({
     ...options,
     // A row under a hidden ancestor, such as a retained workbench panel, has no layout and measures 0.
-    // Keep its known size, or the list draws the wrong rows when it is shown again.
+    // Keep its known size, or the list draws the wrong rows when it is shown again. A row hidden on
+    // purpose therefore keeps its height; no caller hides single rows.
     measureElement: (element, entry, instance) => {
       if (element.getClientRects().length > 0) return measure(element, entry, instance);
       const index = instance.indexFromElement(element);
