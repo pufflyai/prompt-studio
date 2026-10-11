@@ -2,6 +2,7 @@ import type { ControlParam } from "../extension-kernel";
 
 /** Every supported wire control participates in runtime and compiler validation. */
 export const supportedControls = {
+  harness: { id: "agent", name: "Model", type: "harness", defaultValue: { harnessId: "acme.agent.harness.agent" } },
   number: { id: "count", name: "Count", type: "number", defaultValue: 2 },
   boolean: { id: "enabled", name: "Enabled", type: "boolean", defaultValue: true },
   text: { id: "title", name: "Title", type: "text", defaultValue: "Notes" },

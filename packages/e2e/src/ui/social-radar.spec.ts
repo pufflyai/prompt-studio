@@ -9,7 +9,7 @@ const onePixelPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mN
 // A fixture command seeds one finished run in the extension's own storage. No agent or social account is used.
 const seedCommand = `defineCommand({ id: "seed", title: "Seed radar", async run(ctx) {
   const now = new Date().toISOString();
-  await ctx.storage.collection("runs").put("run-1", { id: "run-1", status: "done", sessionId: "session-1", startedAt: now, finishedAt: now, summary: "One review names Prompt Studio.", searches: { hn: 1 }, skippedSites: [{ site: "x", reason: "Browser unavailable" }] });
+  await ctx.storage.collection("runs").put("run-1", { id: "run-1", status: "done", sessionId: "session-1", startedAt: now, finishedAt: now, summary: "One review names Prompt Studio.", searches: { hn: 1 }, skippedSites: [{ site: "x", reason: "Login wall", needsLogin: true }] });
   await ctx.storage.collection("threads").put("thread-1", { id: "thread-1", runId: "run-1", site: "hn", url: "https://news.ycombinator.com/item?id=42", title: "Tried Prompt Studio for reviews", excerpt: "A review page in an evening.", topic: "Prompt Studio", mention: true, intent: "mention", relevance: 3, reason: "A first-hand review", status: "new", foundAt: now,
     snapshot: { takenAt: now, post: { author: "dana", body: "I built a review page in an evening.", images: [{ file: "review.png", alt: "The review page" }] }, comments: [{ id: "c1", author: "sam", body: "How does it compare to Cursor?" }, { id: "c2", author: "lee", body: "Setup notes: https://prompt.studio/docs/setup." }] },
     analysis: { summary: "People like the review page.", sentiment: "positive", replySentiment: { negative: 0, neutral: 1, positive: 2 }, topics: [{ label: "review flow", count: 2 }], questions: ["How does it compare to Cursor?"] } });
@@ -28,6 +28,15 @@ const execute = async (request: APIRequestContext, projectId: string, command: s
   expect(body.outcome.ok, JSON.stringify(body)).toBe(true);
   return body.outcome.value;
 };
+
+const researchHarness = `[{
+  id: "research", ref: { kind: "harness", id: "research" }, label: "Research fixture",
+  capabilities: () => [], detect: () => ({ available: true }),
+  listModels: () => [{ id: "research-model", label: "Research model" }],
+  params: { effort: { type: "select", label: "Effort", defaultValue: "medium", options: [{ value: "medium", label: "Medium" }, { value: "high", label: "High" }] } },
+  start: () => { let finish; return { done: new Promise(resolve => { finish = resolve; }), stop: () => finish({ status: "completed" }) }; },
+  resume: () => ({ done: Promise.resolve({ status: "completed" }), stop() {} }),
+}]`;
 
 const webviewsBuilt = async (request: APIRequestContext, projectId: string) => {
   const metadata = await (await request.get(`/v1/projects/${projectId}/extensions/ui`)).json();
@@ -59,6 +68,10 @@ test("researches, answers and posts through the radar screens", async ({ page, r
       entry,
       readFileSync(entry, "utf8")
         .replace("commands: Object.values(commands)", `commands: [...Object.values(commands), ${seedCommand}]`)
+        .replace(
+          "settings: { properties: settingProperties }",
+          `harnesses: ${researchHarness}, settings: { properties: settingProperties }`,
+        )
         .replace("defineExtension,", "defineCommand, defineExtension,"),
     );
     const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Social radar" }, root) });
@@ -79,6 +92,13 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     });
     expect(enabled.ok()).toBe(true);
     await execute(request, projectId, "seed");
+    await execute(request, projectId, "set-agent", {
+      agent: {
+        harnessId: "pstdio.social-radar.harness.research",
+        model: "research-model",
+        params: { effort: "high" },
+      },
+    });
     await expect.poll(() => webviewsBuilt(request, projectId!)).toBe(true);
     await page.addInitScript((id) => {
       if (window !== window.parent) return;
@@ -154,7 +174,7 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await page.getByRole("option", { name: /^Today · / }).click();
     await page.getByRole("option", { name: "Digest", exact: true }).click();
     await expect(page.getByText("Coverage", { exact: true })).toBeVisible();
-    await expect(page.getByText("Skipped: Browser unavailable")).toBeVisible();
+    await expect(page.getByText("Skipped: Login wall")).toBeVisible();
     await shot(page, "05-digest");
 
     // 06: settings are a page of their own; a section menu opens one section at a time.
@@ -164,13 +184,55 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await expect(page.getByText("Writing voice", { exact: true })).toBeVisible();
     await expect(page.getByText("Brand terms", { exact: true })).toBeHidden();
     await shot(page, "06-settings");
-    // The Agent section shows the research agent; each channel row can be removed.
-    await page.getByRole("option", { name: "Agent", exact: true }).click();
-    await expect(page.getByText("pstdio.harness-codex.harness.codex")).toBeVisible();
+    // Agent fields are on the page; edits use the same model options as a session.
+    const agent = page.getByRole("option", { name: "Research agent", exact: true });
+    await agent.click();
+    await expect(agent.getByRole("button", { name: "Choose model" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Research model/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "High", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect
+      .poll(async () => (await execute(request, projectId!, "get-settings")).agent.params?.effort)
+      .toBe("high");
+    await page.getByRole("button", { name: "High", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: "Medium", exact: true }).click();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect
+      .poll(async () => (await execute(request, projectId!, "get-settings")).agent.params?.effort)
+      .toBeUndefined();
+    await shot(page, "07-research-agent");
+
+    const before = (await execute(request, projectId, "get-settings")).channels;
     const x = page.getByRole("option", { name: "X", exact: true });
+    // The seeded run hit a login wall on X, so its row asks the person to log in.
+    await x.locator("svg").first().hover();
+    await expect(page.getByRole("tooltip")).toBeVisible();
+    await shot(page, "08-channel-needs-login");
     await x.hover();
+    await x.getByRole("button", { name: "Pause channel" }).click();
+    await expect(x.getByRole("button", { name: "Resume channel" })).toBeVisible();
+    expect((await execute(request, projectId, "get-settings")).channels).toEqual(before);
+    expect(
+      (await execute(request, projectId, "get-context", { runId: "run-1" })).channels.map(
+        (channel: { id: string }) => channel.id,
+      ),
+    ).not.toContain("x");
+    await shot(page, "08-paused-channel");
+    await page.reload();
+    await expect(x).toBeVisible();
+    await x.hover();
+    await x.getByRole("button", { name: "Resume channel" }).click();
+    await expect(x.getByRole("button", { name: "Pause channel" })).toBeVisible();
+    expect((await execute(request, projectId, "get-settings")).channels).toEqual(before);
     await x.getByRole("button", { name: "Remove channel" }).click();
     await expect(x).toHaveCount(0);
+
+    await page.getByText("Runs", { exact: true }).hover();
+    await page.getByRole("button", { name: "Start research session", exact: true }).click();
+    await expect(page.getByTestId("content-editable").last()).toBeVisible();
+    const started = await execute(request, projectId, "list-digest");
+    expect(started.run.sessionId).toBeTruthy();
+    await shot(page, "09-research-session");
   } finally {
     if (projectId) await request.delete(`/v1/projects/${projectId}`);
     rmSync(root, { recursive: true, force: true });

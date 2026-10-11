@@ -40,6 +40,7 @@ import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
+// Also checks native harness controls and their structured values in packaged command handlers.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";

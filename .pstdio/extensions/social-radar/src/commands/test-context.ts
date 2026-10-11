@@ -95,5 +95,5 @@ export const finish = (runId: string) => ({
   runId,
   summary: "Found one useful discussion.",
   searches: { hn: 1 },
-  skippedSites: [{ site: "x", reason: "No browser tool" }],
+  skippedSites: [{ site: "x", reason: "No browser tool", needsLogin: false }],
 });

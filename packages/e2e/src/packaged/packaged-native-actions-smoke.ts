@@ -38,7 +38,9 @@ export default {
     resolve:(_ctx,input)=>({state:"ready",executionKind:"remote",providerRef:input.providerRef,
       capabilities:{files:"none",diff:false,merge:false,rebase:false,archive:false,delete:false}}),
   }],
-  views:["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
+  views:[...["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
+    {id:"agent",ref:{kind:"view",id:"agent"},title:"Research agent",body:{kind:"controls",query:()=>({params:[{id:"agent",name:"Model",type:"harness",defaultValue:{harnessId:"test.native-actions.harness.worker",model:"research",params:{effort:"high"}}}]}),onApply:(_ctx,input)=>input.values}}
+  ],
 };
 `,
   );
@@ -80,6 +82,26 @@ export const expectPackagedNativeActions = async (input: {
       headers: { ...input.headers, "content-type": "application/json" },
       body: JSON.stringify({ source: "cli", params }),
     });
+  const agentView = body.views.find(
+    (entry: { extensionId: string; localId: string }) =>
+      entry.extensionId === "test.native-actions" && entry.localId === "agent",
+  );
+  const agent = { harnessId: "test.native-actions.harness.worker", model: "research", params: { effort: "high" } };
+  const renderer = { rendererId: agentView.id, projectId: input.projectId };
+  const query = await fetch(`${root}/commands/${agentView.body.queryHandlerId}/execute`, {
+    method: "POST",
+    headers: { ...input.headers, "content-type": "application/json" },
+    body: JSON.stringify({ params: { renderer }, source: "cli" }),
+  });
+  expect(await query.json()).toMatchObject({
+    outcome: { ok: true, value: { params: [{ type: "harness", defaultValue: agent }] } },
+  });
+  const applied = await fetch(`${root}/commands/${agentView.body.applyHandlerId}/execute`, {
+    method: "POST",
+    headers: { ...input.headers, "content-type": "application/json" },
+    body: JSON.stringify({ params: { renderer, values: { agent } }, source: "cli" }),
+  });
+  expect(await applied.json()).toMatchObject({ outcome: { ok: true, value: { agent } } });
   expect(await (await execute("fail", {})).json()).toMatchObject({
     outcome: { ok: false, status: "error", error: { message: "Native action failed" } },
   });

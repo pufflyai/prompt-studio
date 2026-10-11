@@ -3,6 +3,19 @@ import type { ControlsQueryResult } from "../extension-kernel";
 import { supportedControls } from "./control-declaration-fixtures";
 import { controlsQueryResultSchema } from "./control-declarations";
 
+test("round-trips a native harness control and its model options", () => {
+  const agent = {
+    harnessId: "pstdio.harness-codex.harness.codex",
+    model: "gpt-6-astra",
+    params: { effort: "high", fast: false },
+  };
+  const result = {
+    params: [{ id: "agent", name: "Model", type: "harness" as const, defaultValue: agent }],
+    values: { agent },
+  };
+  expect(controlsQueryResultSchema.parse(result)).toEqual(result);
+});
+
 test.each(Object.values(supportedControls))("round-trips supported controls: $type", (control) => {
   expect(controlsQueryResultSchema.parse(JSON.parse(JSON.stringify({ params: [control] })))).toEqual({
     params: [control],
