@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } from "electron";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
-import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
+import { resolvePstdioRuntimeDescriptorPath, resolvePstdioUpdateChannelPath } from "pstdio-paths";
 import { createMacOSCliSetup } from "./cli/macos-cli-setup";
 import { runWindowsInstallerEvent, windowsInstallerEvent } from "./cli/windows-installer";
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
@@ -17,6 +17,7 @@ import { recoveryError } from "./lifecycle/recovery-error";
 import { startWorkbench } from "./lifecycle/start-workbench";
 import { createDesktopPerformanceMonitor } from "./performance/create-desktop-performance-monitor";
 import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
+import { createDesktopUpdateChannel } from "./release/desktop-update-channel";
 import { DesktopUpdateManager } from "./release/desktop-update-manager";
 import { createDesktopUpdateNotifications } from "./release/desktop-update-notifications";
 import { DesktopUpdateReceipt } from "./release/desktop-update-receipt";
@@ -60,17 +61,31 @@ const updateNotifications = createDesktopUpdateNotifications({
     logger.error({ event: "desktop.update.failed", message: error.message }, "Desktop update check failed");
   },
 });
+// The file lives in the Prompt Studio home so `pst update-channel` can change it too.
+const updateChannel = createDesktopUpdateChannel({
+  path: resolvePstdioUpdateChannelPath(),
+  platform: process.platform,
+  packaged: app.isPackaged,
+});
 const updateManager = new DesktopUpdateManager({
   platform: process.platform,
   arch: process.arch,
   packaged: app.isPackaged,
   currentVersion: app.getVersion(),
+  channel: updateChannel.current,
   updater: autoUpdater,
   openExternal: (url) => shell.openExternal(url),
   onUpdateNotAvailable: updateNotifications.notAvailable,
   onUpdateDownloaded: updateNotifications.downloaded,
   onUpdateError: updateNotifications.failed,
+  logError: (error) => {
+    logger.warn(
+      { event: "desktop.update.background.failed", message: error.message },
+      "Background update check failed",
+    );
+  },
 });
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
 const setState = (next: DesktopState) => {
   state = next;
@@ -235,6 +250,14 @@ const bootstrap = async () => {
       );
     },
     checkForUpdates: () => updateManager.checkForUpdates(),
+    updateChannel: {
+      choice: updateChannel.choice,
+      set: (channel) => {
+        updateChannel.set(channel);
+        // Start downloading right away so a switch to nightly does not wait hours.
+        void updateManager.checkInBackground();
+      },
+    },
     quitApp: quitFlow.requestQuit,
     getWorkbenchState: () => workbenchState.getState(),
     getProjectTabs: () => projectTabs.getProjectTabs(),
@@ -245,6 +268,8 @@ const bootstrap = async () => {
   void performanceMonitor.start();
   await startRuntime();
   void cliSetup?.onFirstLaunch();
+  void updateManager.checkInBackground();
+  setInterval(() => void updateManager.checkInBackground(), UPDATE_CHECK_INTERVAL_MS);
 };
 
 const installerEvent = app.isPackaged ? windowsInstallerEvent(process.platform, process.argv) : null;

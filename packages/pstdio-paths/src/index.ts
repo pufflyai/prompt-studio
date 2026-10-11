@@ -50,6 +50,18 @@ export { readPerformanceEndpointDescriptor } from "./performance-endpoint";
 export const resolvePstdioPerformanceEndpoint = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "performance", "endpoint.json");
 
+export {
+  isUpdateChannel,
+  readUpdateChannel,
+  UPDATE_CHANNELS,
+  type UpdateChannel,
+  updateChannelAvailable,
+  writeUpdateChannel,
+} from "./update-channel";
+
+export const resolvePstdioUpdateChannelPath = (input: ResolvePstdioHomeInput = {}) =>
+  join(resolvePstdioHome(input), "desktop", "update-channel.json");
+
 export const resolvePstdioStatePath = (input: ResolvePstdioHomeInput = {}) => join(resolvePstdioHome(input), "state");
 
 export const resolvePstdioStoragePath = (input: ResolvePstdioHomeInput = {}) =>

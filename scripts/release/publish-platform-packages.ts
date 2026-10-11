@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { $ } from "bun";
 
 const PLATFORMS_DIR = "./packages/pstdio/dist/platforms";
+// Nightlies publish under `--tag nightly` so `latest` never moves to a prerelease.
+const DIST_TAG = process.argv[2] ?? "latest";
 
 const entries = readdirSync(PLATFORMS_DIR).filter((e) => e.startsWith("cli-"));
 
@@ -23,7 +25,7 @@ for (const entry of entries) {
   }
 
   console.log(`Publishing ${name}@${version}...`);
-  await $`npm publish ${pkgDir} --access public`;
+  await $`npm publish ${pkgDir} --access public --tag ${DIST_TAG}`;
   published++;
 }
 

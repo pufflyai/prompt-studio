@@ -1,5 +1,6 @@
 import { isAbsolute } from "node:path";
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
+import { isUpdateChannel, type UpdateChannel } from "pstdio-paths";
 import type { DesktopProjectTabsState, DesktopStartupAppearance, DesktopWorkbenchState } from "../desktop-api";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
@@ -12,6 +13,10 @@ type DesktopIpcOptions = {
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
+  updateChannel: {
+    choice: () => UpdateChannel | null;
+    set: (channel: UpdateChannel) => void;
+  };
   confirmQuit: () => Promise<void>;
   copyDiagnostics: () => void;
   getState: () => DesktopState;
@@ -83,6 +88,11 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   });
   handle(DESKTOP_CHANNELS.copyDiagnostics, options.copyDiagnostics);
   handle(DESKTOP_CHANNELS.checkForUpdates, options.checkForUpdates);
+  handle(DESKTOP_CHANNELS.getUpdateChannel, options.updateChannel.choice);
+  handle(DESKTOP_CHANNELS.setUpdateChannel, (channel) => {
+    if (!isUpdateChannel(channel)) throw new Error("Invalid update channel");
+    options.updateChannel.set(channel);
+  });
   handle(DESKTOP_CHANNELS.quitApp, options.quitApp);
   handle(DESKTOP_CHANNELS.getWorkbenchState, options.getWorkbenchState);
   handle(DESKTOP_CHANNELS.getProjectTabs, options.getProjectTabs);

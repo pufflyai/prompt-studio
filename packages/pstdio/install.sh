@@ -3,6 +3,8 @@ set -e
 
 REPO="pufflyai/prompt-studio"
 BIN_NAME="pstdio"
+# Installs the newest stable release. A nightly release rewrites this to its own tag.
+RELEASE_URL="https://github.com/${REPO}/releases/latest/download"
 
 is_musl() {
   if command -v ldd >/dev/null 2>&1; then
@@ -58,7 +60,7 @@ download() {
 verify_checksum() {
   ASSET="$1"
   DEST="$2"
-  CHECKSUMS_URL="https://github.com/${REPO}/releases/latest/download/checksums.sha256"
+  CHECKSUMS_URL="${RELEASE_URL}/checksums.sha256"
   CHECKSUMS_FILE=$(mktemp)
 
   download "$CHECKSUMS_URL" "$CHECKSUMS_FILE" 2>/dev/null || {
@@ -97,7 +99,7 @@ verify_checksum() {
 
 PLATFORM=$(detect_platform)
 ASSET="${BIN_NAME}-${PLATFORM}"
-URL="https://github.com/${REPO}/releases/latest/download/${ASSET}"
+URL="${RELEASE_URL}/${ASSET}"
 
 # Prefer /usr/local/bin if writable, otherwise ~/.local/bin
 if [ -w /usr/local/bin ]; then
