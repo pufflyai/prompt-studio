@@ -1,6 +1,7 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { expect } from "storybook/test";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
 const items = Array.from({ length: 24 }, (_, index) => `Scrollable row ${index + 1}`);
@@ -42,6 +43,17 @@ export const Vertical: Story = {
       ))}
     </ScrollArea>
   ),
+};
+
+export const Focused: Story = {
+  ...Vertical,
+  play: async ({ canvasElement }) => {
+    const viewport = canvasElement.querySelector<HTMLElement>('[data-part="viewport"]');
+    await expect(viewport).not.toBeNull();
+    viewport!.focus();
+    await expect(viewport).toHaveFocus();
+    await expect(getComputedStyle(viewport!).outlineStyle).toBe("none");
+  },
 };
 
 export const BothDirections: Story = {
