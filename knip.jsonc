@@ -1,9 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["wait", "version"],
+  "ignoreBinaries": ["gh", "wait", "version"],
   "ignoreIssues": {
-    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs,performance}.ts": ["exports"],
+    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs,performance,update-channel}.ts": ["exports"],
     "packages/pstdio/src/adapters/cli/commands/notifications/list.ts": ["exports"],
     "packages/pstdio-api/src/features/extensions/extension-webviews.ts": ["types"],
     "packages/pstdio-api/src/features/extensions/repo-extensions.ts": ["types"],
