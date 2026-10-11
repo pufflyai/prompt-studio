@@ -43,10 +43,10 @@ type AgentModel = z.infer<typeof agentModelSchema>;
 declare const automationRunStatusSchema: z.ZodEnum<{
   failed: "failed";
   cancelled: "cancelled";
-  queued: "queued";
-  running: "running";
-  succeeded: "succeeded";
   rejected: "rejected";
+  running: "running";
+  queued: "queued";
+  succeeded: "succeeded";
 }>;
 declare const createAutomationRunInputSchema: z.ZodObject<{
   commandId: z.ZodString;
@@ -73,10 +73,10 @@ declare const automationRunSchema: z.ZodObject<{
   status: z.ZodEnum<{
     failed: "failed";
     cancelled: "cancelled";
-    queued: "queued";
-    running: "running";
-    succeeded: "succeeded";
     rejected: "rejected";
+    running: "running";
+    queued: "queued";
+    succeeded: "succeeded";
   }>;
   createdAt: z.ZodString;
   startedAt: z.ZodNullable<z.ZodString>;
@@ -947,11 +947,11 @@ declare const queuedSteeringResultSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>, z.ZodObject<{
   status: z.ZodLiteral<"rejected">;
   reason: z.ZodEnum<{
-    missing: "missing";
     unsupported: "unsupported";
     inactive: "inactive";
     stale_run: "stale_run";
     blocking_input: "blocking_input";
+    missing: "missing";
     stale_revision: "stale_revision";
     different_settings: "different_settings";
     delivery_failed: "delivery_failed";
@@ -971,10 +971,10 @@ declare const sessionAttachmentRefSchema: z.ZodObject<{
 declare const sessionStatusSchema: z.ZodEnum<{
   failed: "failed";
   cancelled: "cancelled";
-  queued: "queued";
   completed: "completed";
   in_progress: "in_progress";
   awaiting_input: "awaiting_input";
+  queued: "queued";
   disconnected: "disconnected";
 }>;
 type SessionStatus = z.infer<typeof sessionStatusSchema>;
