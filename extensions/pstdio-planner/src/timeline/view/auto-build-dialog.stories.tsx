@@ -6,6 +6,7 @@ const meta: Meta<typeof AutoBuildDialog> = {
   component: AutoBuildDialog,
   args: {
     saving: false,
+    maxInProgress: 2,
     fields: [
       { id: "title", label: "Title", type: { kind: "string" }, filterable: true },
       {
@@ -32,4 +33,5 @@ type Story = StoryObj<typeof AutoBuildDialog>;
 export const CurrentFilters: Story = {};
 export const AllTickets: Story = { args: { filter: { conjunction: "and", rules: [] } } };
 export const Saving: Story = { args: { saving: true } };
+export const NoCapacity: Story = { args: { maxInProgress: 0 } };
 export const Failure: Story = { args: { error: "Agent unavailable" } };

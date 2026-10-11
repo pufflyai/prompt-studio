@@ -59,11 +59,13 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(await execute("auto-build", {})).toEqual({ started: [], skipped: [], errors: [] });
   expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false });
   const filter = { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Mode smoke" }] };
-  expect(await execute("auto-build.configure", { enabled: true, filter })).toMatchObject({
+  expect(await execute("auto-build.configure", { enabled: true, filter, maxInProgress: 0 })).toMatchObject({
     enabled: true,
     filter,
   });
-  expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
+  expect(await execute("automation-policy", {})).toEqual({ maxInProgress: 0 });
+  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: true, maxInProgress: 0 });
+  expect(await execute("auto-build.configure", { enabled: false, maxInProgress: 2 })).toMatchObject({
     enabled: false,
     filter,
   });

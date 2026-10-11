@@ -87,7 +87,11 @@ function PlanContent(props: PlanContentProps) {
             enabled={autoBuild.mode?.enabled ?? false}
             running={autoBuild.mode?.running ?? false}
             disabled={!autoBuild.mode || autoBuild.saving}
-            onConfigure={() => setAutoBuildOpen(true)}
+            onConfigure={() => {
+              void autoBuild.refresh().then((success) => {
+                if (success) setAutoBuildOpen(true);
+              });
+            }}
             onTurnOff={() => void autoBuild.configure(false)}
             t={t}
           />
@@ -138,9 +142,10 @@ function PlanContent(props: PlanContentProps) {
         <AutoBuildDialog
           filter={filter}
           fields={queryData.attributes}
+          maxInProgress={autoBuild.mode!.maxInProgress}
           saving={autoBuild.saving}
           error={autoBuild.error}
-          onEnable={() => autoBuild.configure(true, filter)}
+          onEnable={(maxInProgress) => autoBuild.configure(true, filter, maxInProgress)}
           onClose={() => setAutoBuildOpen(false)}
           t={t}
         />

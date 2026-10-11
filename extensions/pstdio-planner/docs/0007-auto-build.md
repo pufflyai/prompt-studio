@@ -14,7 +14,7 @@ Planner uses **Default target branch** when set, or the repository's default bra
 
 1. Open **Project Timeline** under **Project Planning**.
 2. Set the view's filters to select the tickets you want implemented.
-3. Click **Auto Build** in the header. Review the filter bubbles in the modal.
+3. Click **Auto Build** in the header. Review the filter bubbles and set **Maximum parallel tasks** in the modal. This edits the same project limit as **Maximum in-progress tickets** in Settings.
 4. Confirm with the primary **Auto Build** button.
 
 ![Auto Build confirmation with its short explanation, saved filter bubbles, documentation link, and primary Auto Build button.](../../../documentation/images/auto-build-confirmation.png)
@@ -43,6 +43,6 @@ The button returns to **Auto Build**. Start it again when you want to resume ass
 
 A launch failure turns Auto Build off and shows the error in the timeline. Resolve the problem, then start the mode again. Existing attempts stay available for inspection.
 
-If an agent needs your help, Planner records a [review request](0006-review-requests.md) and marks the ticket **Review Needed**. Answer that request before the ticket's work can continue. Other independent work can still start when capacity allows.
+If an agent needs your help, Planner records a [review request](0006-review-requests.md) and marks the ticket **Review Needed**. Resolve the issue and answer every open request. While Auto Build is on, a paused implementation resumes in its existing session and workspace when a slot is available, with your saved answer included. The ticket must still match the saved filters. Other independent work can still start when capacity allows.
 
 If nothing starts, check that matching tickets are in Todo, their prerequisites are complete, the default agent is configured, and the in-progress limit has space.

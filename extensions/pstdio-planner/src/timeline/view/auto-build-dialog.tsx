@@ -1,24 +1,29 @@
-import { Button, CloseButton, Dialog, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Icon, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
+import { NumberInput } from "@pstdio/ui/param-editor";
 import { psTheme } from "@pstdio/ui/theme";
+import { Link as LinkIcon } from "lucide-react";
+import { useState } from "react";
 import { AutoBuildFilterBubbles } from "./auto-build-filter-bubbles";
 
 interface AutoBuildDialogProps {
   filter: ViewFilterGroup;
   fields: AttributeDescriptor[];
+  maxInProgress: number;
   saving: boolean;
   error?: string;
-  onEnable: () => Promise<boolean>;
+  onEnable: (maxInProgress: number) => Promise<boolean>;
   onClose: () => void;
   t: (key: string, fallback?: string) => string;
 }
 
 export function AutoBuildDialog(props: AutoBuildDialogProps) {
-  const { filter, fields, saving, error, onEnable, onClose, t } = props;
+  const { filter, fields, maxInProgress, saving, error, onEnable, onClose, t } = props;
+  const [limit, setLimit] = useState(maxInProgress);
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const save = async () => {
-    if (await onEnable()) onClose();
+    if (await onEnable(limit)) onClose();
   };
   return (
     <Dialog.Root open size="md" onOpenChange={({ open }) => !open && !saving && onClose()}>
@@ -34,21 +39,38 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
             </Dialog.Header>
             <Dialog.Body>
               <Stack gap="md">
-                <Dialog.Description>
-                  {t(
-                    "timeline.autoBuild.description",
-                    "Implement all Todo tickets matching these filters with your default agent. While Auto Build is on, ready work is automatically assigned as capacity becomes available.",
-                  )}
-                </Dialog.Description>
+                <Stack gap="xs">
+                  <Dialog.Description>
+                    {t(
+                      "timeline.autoBuild.description",
+                      "While Auto Build is on, valid tasks are automatically assigned to your default agent as capacity becomes available.",
+                    )}
+                  </Dialog.Description>
+                  <Link
+                    variant="underline"
+                    alignSelf="start"
+                    href="https://prompt.studio/docs/extensions/planner/auto-build/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Icon asChild>
+                      <LinkIcon />
+                    </Icon>
+                    {t("timeline.autoBuild.documentation", "Auto Build documentation")}
+                  </Link>
+                </Stack>
+                <NumberInput
+                  id="auto-build-max-parallel"
+                  name={t("timeline.autoBuild.maxParallel", "Maximum parallel tasks")}
+                  defaultValue={limit}
+                  min={0}
+                  step={1}
+                  description=""
+                  hideSlider
+                  readOnly={saving}
+                  onChange={(_id, value) => setLimit(value)}
+                />
                 <AutoBuildFilterBubbles itemLabel="Ticket" filter={filter} fields={fields} />
-                <Link
-                  variant="underline"
-                  href="https://prompt.studio/docs/extensions/planner/auto-build/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t("timeline.autoBuild.documentation", "Auto Build documentation")}
-                </Link>
                 {error ? (
                   <Text role="alert" color="fg.error">
                     {error}

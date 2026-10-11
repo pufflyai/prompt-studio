@@ -11,11 +11,10 @@ export function useAutoBuild(client: PlanClient) {
   const { value: mode, setValue: setMode, error: readError } = useLiveValue(client, readMode, modeEvents);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
-  const configure = async (enabled: boolean, filter?: ViewFilterGroup) => {
+  const refresh = async () => {
     setSaving(true);
     setError(undefined);
     try {
-      await client.commands["auto-build.configure"]({ enabled, filter });
       setMode(await readMode(client));
       return true;
     } catch (reason) {
@@ -25,5 +24,19 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  return { mode, saving, error: error ?? readError ?? mode?.error, configure };
+  const configure = async (enabled: boolean, filter?: ViewFilterGroup, maxInProgress?: number) => {
+    setSaving(true);
+    setError(undefined);
+    try {
+      await client.commands["auto-build.configure"]({ enabled, filter, maxInProgress });
+      setMode(await readMode(client));
+      return true;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+  return { mode, saving, error: error ?? readError ?? mode?.error, configure, refresh };
 }

@@ -3,6 +3,7 @@ import { createSessionResource, makeCommandContext } from "./command-context.fix
 import { createTicketCommand } from "./create-ticket";
 export async function fixture(limit = 2) {
   const storage = createMemoryStorage();
+  const settings: Record<string, unknown> = { "automation.maxInProgress": limit };
   let sequence = 0;
   const ctx = makeCommandContext({
     storage,
@@ -10,8 +11,11 @@ export async function fixture(limit = 2) {
     overrides: {
       automation: { list: async () => [], enqueue: async () => ({}) } as never,
       settings: {
-        get: async () => "",
-        all: async () => ({ "automation.maxInProgress": limit }),
+        get: async (key) => settings[key] ?? "",
+        all: async () => ({ ...settings }),
+        set: async (key, value) => {
+          settings[key] = value;
+        },
       },
       workspaces: {
         list: async () => [],
