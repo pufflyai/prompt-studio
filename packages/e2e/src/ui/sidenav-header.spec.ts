@@ -244,6 +244,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   const option = (name: string) => sidenav.getByRole("option", { name, exact: true });
   const zone = sidenav.locator("[data-tree-list-empty-drop-zone]");
   await expect(option("Tickets")).toBeVisible({ timeout: 30_000 });
+  await showSidenavEntry(page, "Workspaces");
   const lowerHalfOf = (target: Locator) => async () => {
     const box = (await target.boundingBox())!;
     return box.y + box.height * 0.75;
