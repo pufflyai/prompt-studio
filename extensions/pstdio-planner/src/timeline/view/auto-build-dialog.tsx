@@ -1,6 +1,7 @@
-import { Button, CloseButton, Dialog, Portal, Stack, Text } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
+import { psTheme } from "@pstdio/ui/theme";
 import { AutoBuildFilterBubbles } from "./auto-build-filter-bubbles";
 
 interface AutoBuildDialogProps {
@@ -15,6 +16,7 @@ interface AutoBuildDialogProps {
 
 export function AutoBuildDialog(props: AutoBuildDialogProps) {
   const { filter, fields, saving, error, onEnable, onClose, t } = props;
+  const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const save = async () => {
     if (await onEnable()) onClose();
   };
@@ -47,7 +49,13 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
               <Button size="sm" variant="outline" onClick={onClose} disabled={saving}>
                 {t("timeline.autoBuild.cancel", "Cancel")}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => void save()} loading={saving} disabled={saving}>
+              <Button
+                size="sm"
+                css={button({ variant: "primary", size: "sm" })}
+                onClick={() => void save()}
+                loading={saving}
+                disabled={saving}
+              >
                 {t("timeline.autoBuild.start", "Auto Build")}
               </Button>
             </Dialog.Footer>
