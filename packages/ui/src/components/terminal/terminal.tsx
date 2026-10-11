@@ -56,6 +56,12 @@ export const createTerminalSink = (xterm: Pick<Xterm, "write" | "onData" | "onRe
   } satisfies TerminalSink & { dispose(): void };
 };
 
+// Plain URLs and OSC 8 hyperlinks share this handler. xterm's default OSC 8 handler
+// asks with confirm() and opens a blank window first, which the desktop app blocks.
+const openTerminalLink = (event: MouseEvent, uri: string) => {
+  if (event.ctrlKey || event.metaKey) window.open(uri, "_blank", "noopener,noreferrer");
+};
+
 const fitTerminal = (fit: FitAddon | null, motionRoot?: HTMLDivElement | null) => {
   // Fit at the final size, while divider dragging and reduced motion stay direct.
   if (
@@ -204,14 +210,11 @@ export const Terminal = (props: TerminalProps) => {
         cursorBlink: true,
         convertEol: true,
         allowProposedApi: true,
+        linkHandler: { activate: openTerminalLink },
       });
       const fit = new FitAddon();
       xterm.loadAddon(fit);
-      xterm.loadAddon(
-        new WebLinksAddon((event, uri) => {
-          if (event.ctrlKey || event.metaKey) window.open(uri, "_blank", "noopener,noreferrer");
-        }),
-      );
+      xterm.loadAddon(new WebLinksAddon(openTerminalLink));
       xterm.open(container);
       sink = createTerminalSink(xterm);
 
