@@ -281,6 +281,13 @@
       "when": 1791591069372,
       "tag": "0039_ordinary_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791755392762,
+      "tag": "0040_neat_deathbird",
+      "breakpoints": true
     }
   ]
 }

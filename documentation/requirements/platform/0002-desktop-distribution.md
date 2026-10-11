@@ -138,7 +138,7 @@ app on a database that newer migrations already changed.
 
 The channel is a device setting in `PSTDIO_HOME/desktop/update-channel.json`, not
 runtime data, so a remote runtime cannot move this app to nightly. The desktop app
-reads it before every check. People change it in **Settings → Developer tools →
+reads it before every check. People change it in **Settings → Workbench →
 Update channel**, which calls the `getUpdateChannel` and `setUpdateChannel`
 desktop bridge calls. Agents use `pst update-channel [stable|nightly]`, which
 writes the same file. Changing the channel in the app starts a background check

@@ -97,7 +97,7 @@ The lifecycle and workbench renderers use the same hardened web preferences and 
 
 ## Performance monitoring
 
-Developer tools adds one device-local switch, **Enable performance monitoring**. It is off by default. Electron main saves it as `{ "enabled": boolean }` in `performance-monitoring.json` under its user data, next to the other host-state files. The runtime database never stores it, so a remote runtime cannot turn it on for this device. Browser dashboards save their own switch in `localStorage`. See the [Developer tools guide](../../guides/0003-developer-tools.md) for the person-facing behavior.
+The Developer tools settings panel has one desktop-backed switch, **Enable performance monitoring**. It is off by default. Electron main saves it as `{ "enabled": boolean }` in `performance-monitoring.json` under its user data, next to the other host-state files. The runtime database never stores it, so a remote runtime cannot turn it on for this device. Browser dashboards save their own switch in `localStorage`. See the [Developer tools guide](../../guides/0003-developer-tools.md) for the person-facing behavior.
 
 Measurement has one owner per process:
 

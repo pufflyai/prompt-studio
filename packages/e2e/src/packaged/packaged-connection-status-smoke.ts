@@ -21,7 +21,7 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(baseUrl);
     await page.getByRole("option", { name: "Settings", exact: true }).click();
-    await page.getByText("Connection", { exact: true }).click();
+    await page.getByRole("option", { name: "Developer tools", exact: true }).click();
     const toggle = page.getByRole("checkbox", { name: "Show connection status" });
     await expect(toggle).not.toBeChecked();
     await toggle.focus();
@@ -53,7 +53,7 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
     await expect(warning).not.toBeVisible();
     await toggle.press("Space");
     await expect(warning).toBeVisible();
-    await page.getByRole("button", { name: "Close Connection", exact: true }).click();
+    await page.getByRole("button", { name: "Close Developer tools", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
     await warning.focus();
     await expect(
@@ -67,7 +67,7 @@ const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<s
       page.getByRole("tooltip", { name: (await connected.getAttribute("aria-label")) ?? "", exact: true }),
     ).toBeVisible();
     await page.getByRole("option", { name: "Settings", exact: true }).click();
-    await page.getByText("Connection", { exact: true }).click();
+    await page.getByRole("option", { name: "Developer tools", exact: true }).click();
     await toggle.focus();
     await toggle.press("Space");
     await expect(connected).not.toBeVisible();

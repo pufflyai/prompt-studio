@@ -1,19 +1,26 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
+import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
 import { Switch } from "@pstdio/ui";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
 
+type BetaFeatureSettings = Pick<Settings, "notifications_enabled" | "machine_tokens_enabled">;
+
 interface BetaFeaturesContentProps {
-  enabled?: boolean;
+  settings?: BetaFeatureSettings;
   saving?: boolean;
   error?: string;
-  onChange: (enabled: boolean) => void;
+  onChange: (update: UpdateSettingsInput) => void;
   onRetry: () => void;
 }
 
 export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
-  const { enabled, saving, error, onChange, onRetry } = props;
+  const { settings, saving, error, onChange, onRetry } = props;
   const { t } = useTranslation("settings");
+  const features = [
+    { key: "notifications_enabled", label: t("betaFeatures.notifications") },
+    { key: "machine_tokens_enabled", label: t("betaFeatures.machineTokens") },
+  ] as const;
   return (
     <Stack gap="md" padding="lg">
       <Stack gap="2xs">
@@ -22,15 +29,20 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
           {t("betaFeatures.description")}
         </Text>
       </Stack>
-      <Switch
-        checked={enabled === true}
-        inputProps={{ checked: enabled === true }}
-        disabled={enabled === undefined || saving}
-        onCheckedChange={({ checked }) => onChange(checked)}
-      >
-        {t("betaFeatures.notifications")}
-      </Switch>
-      {enabled === undefined && !error ? <Text color="fg.muted">{t("betaFeatures.loading")}</Text> : null}
+      {features.map((feature) => {
+        const checked = settings?.[feature.key] === true;
+        return (
+          <Switch
+            key={feature.key}
+            checked={checked}
+            disabled={!settings || saving}
+            onCheckedChange={(details) => onChange({ [feature.key]: details.checked })}
+          >
+            {feature.label}
+          </Switch>
+        );
+      })}
+      {!settings && !error ? <Text color="fg.muted">{t("betaFeatures.loading")}</Text> : null}
       {error ? (
         <Stack gap="sm" role="alert">
           <Text color="fg.error">{error}</Text>
@@ -48,10 +60,10 @@ export const BetaFeaturesPanel = () => {
   const update = useUpdateSettings();
   return (
     <BetaFeaturesContent
-      enabled={data?.notifications_enabled}
+      settings={data}
       saving={update.isPending}
       error={(update.error ?? error)?.message}
-      onChange={(notifications_enabled) => update.mutate({ notifications_enabled })}
+      onChange={(input) => update.mutate(input)}
       onRetry={() => {
         update.reset();
         void refetch();

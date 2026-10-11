@@ -42,7 +42,7 @@ On macOS and Linux, the desktop app can follow one of two update channels:
 - **Stable** installs released versions. This is the default.
 - **Nightly** installs a signed build of the latest `main` branch. A new nightly is published once a day when `main` changed. Nightlies can have bugs, and they run new database migrations on your data.
 
-Choose the channel in **Settings → Developer tools → Update channel**, or run:
+Choose the channel in **Settings → Workbench → Update channel**, or run:
 
 ```sh
 pst update-channel nightly

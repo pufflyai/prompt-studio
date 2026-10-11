@@ -18,7 +18,7 @@ describe("createUpdatesModule", () => {
     await channel;
 
     expect(workbench.settings.getPanel("update-channel")).toMatchObject({
-      section: "developer-tools",
+      section: "workbench",
       scope: "global",
     });
   });

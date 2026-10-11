@@ -61,7 +61,7 @@ test("Windows offers no update channel", async () => {
 
     await app.page.getByRole("option", { name: "Settings", exact: true }).click();
     const settings = app.page.getByRole("dialog").filter({ hasText: "Developer tools" });
-    await expect(settings.getByText("Performance", { exact: true })).toBeVisible();
+    await expect(settings.getByRole("option", { name: "Developer tools", exact: true })).toBeVisible();
     await expect(settings.getByText("Update channel", { exact: true })).toHaveCount(0);
     const nightly = await runPackagedCli(home, ["update-channel", "nightly"]);
     expect(nightly.stderr).toContain("Nightly builds are only published for macOS and Linux.");

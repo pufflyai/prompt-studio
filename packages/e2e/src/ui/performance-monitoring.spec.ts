@@ -5,7 +5,7 @@ import { uiOrigin as apiBase } from "../ui-server";
 const openDeveloperTools = async (page: Page) => {
   await page.getByRole("option", { name: "Settings", exact: true }).click();
   const settings = page.getByRole("dialog").filter({ hasText: "Developer tools" });
-  await settings.getByText("Performance", { exact: true }).click();
+  await settings.getByRole("option", { name: "Developer tools", exact: true }).click();
   return page.getByRole("checkbox", { name: "Enable performance monitoring", exact: true });
 };
 

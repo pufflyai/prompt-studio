@@ -4,7 +4,7 @@ Developer tools helps you find out which part of Prompt Studio is using your com
 
 ## Show connection status
 
-Open **Settings → Developer tools → Connection** and turn on **Show connection status**. A badge with a green dot appears at the trailing end of the status bar while connected. When the app loses contact with the backend, the badge shows a red dot and **Backend unavailable**. Hover or focus the indicator for an explanation, including automatic reconnection. Loaded navigation stays visible, and the indicator returns to a green dot when the connection recovers.
+Open **Settings → Workbench → Developer tools** and turn on **Show connection status**. A badge with a green dot appears at the trailing end of the status bar while connected. When the app loses contact with the backend, the badge shows a red dot and **Backend unavailable**. Hover or focus the indicator for an explanation, including automatic reconnection. Loaded navigation stays visible, and the indicator returns to a green dot when the connection recovers.
 
 The switch is off by default and is saved on this device. Turning it off hides the indicator. Live sync, retained navigation, and automatic recovery stay active.
 
@@ -16,7 +16,7 @@ The order is saved on this device. It survives reloads, connection recovery, and
 
 ## Turn on performance monitoring
 
-1. Open **Settings** and select **Developer tools → Performance**.
+1. Open **Settings** and select **Workbench → Developer tools**.
 2. Turn on **Enable performance monitoring**.
 
 A frame-rate meter appears at the trailing end of the status bar. The status bar shows in modes that use it, such as the project view. A mode that draws its own status bar, or hides it, does not show the meter.

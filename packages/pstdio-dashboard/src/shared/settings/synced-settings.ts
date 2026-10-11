@@ -7,3 +7,5 @@ export const readSettings = () =>
 export const receiveSettings = (settings: Settings) => getWriter("settings")!.upsert({ id: "global", ...settings });
 
 export const notificationsEnabled = () => readSettings()?.notifications_enabled === true;
+
+export const machineTokensEnabled = () => readSettings()?.machine_tokens_enabled === true;
