@@ -33,18 +33,18 @@ export const treeChevronRecipe = defineRecipe({
 
 export const bubblePanelRecipe = defineRecipe({
   base: {
-    display: "none",
+    visibility: "hidden",
     opacity: "0",
     transform: "translateY({spacing.2}) scale(0.96)",
     transformOrigin: "bottom right",
     transition:
-      "opacity {durations.panel-close} {easings.exit}, transform {durations.panel-close} {easings.exit}, display {durations.panel-close} allow-discrete",
+      "opacity {durations.panel-close} {easings.exit}, transform {durations.panel-close} {easings.exit}, visibility 0s {durations.panel-close}",
     "&[data-open=true]": {
-      display: "block",
+      visibility: "visible",
       opacity: "1",
       transform: "none",
       transition:
-        "opacity {durations.panel-open} {easings.enter}, transform {durations.panel-open} {easings.enter}, display {durations.panel-open} allow-discrete",
+        "opacity {durations.panel-open} {easings.enter}, transform {durations.panel-open} {easings.enter}, visibility 0s",
       _startingStyle: { opacity: "0", transform: "translateY({spacing.2}) scale(0.96)" },
     },
     _motionReduce: {

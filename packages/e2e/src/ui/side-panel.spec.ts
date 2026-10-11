@@ -39,6 +39,9 @@ const expectNear = (actual: number, expected: number) => {
 const expectDashboardAttachedBounds = async (page: import("@playwright/test").Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const side = page.getByTestId("workbench-side-panel-attached");
+  await expect
+    .poll(() => side.evaluate((element) => element.closest("[data-dragging]")!.getAnimations().length))
+    .toBe(0);
   const [mainBox, sideBox] = await Promise.all([main.boundingBox(), side.boundingBox()]);
   expect(mainBox).not.toBeNull();
   expect(sideBox).not.toBeNull();

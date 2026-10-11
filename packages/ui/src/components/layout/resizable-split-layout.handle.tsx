@@ -20,11 +20,9 @@ export type ResizableSplitSeparator = "gap" | "line";
 const HOVER_DELAY_MS = 250;
 const GRIP_DOTS = [0, 1, 2];
 
-const resolveHandleLayout = (vertical: boolean, thickness: string) => {
+const resolveHandleLayout = (vertical: boolean) => {
   if (vertical) {
     return {
-      w: thickness,
-      h: "full",
       hitArea: { top: 0, bottom: 0, insetInlineStart: "-1", insetInlineEnd: "-1" },
       gripDirection: "column" as const,
       bar: { top: "0", bottom: "0", insetInlineStart: "50%", w: "0.5", transform: "translateX(-50%)" },
@@ -32,8 +30,6 @@ const resolveHandleLayout = (vertical: boolean, thickness: string) => {
   }
 
   return {
-    w: "full",
-    h: thickness,
     hitArea: { insetInline: 0, top: "-1", bottom: "-1" },
     gripDirection: "row" as const,
     bar: { top: "50%", insetInline: "0", h: "0.5", transform: "translateY(-50%)" },
@@ -119,7 +115,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     onResizeStart,
   } = props;
   const line = separator === "line";
-  const layout = resolveHandleLayout(axis.separatorOrientation === "vertical", line ? "1px" : "panel-gap");
+  const layout = resolveHandleLayout(axis.separatorOrientation === "vertical");
   const [hovered, setHovered] = useState(false);
   const hoverTimerRef = useRef(0);
   const active = hovered || dragging;
@@ -142,6 +138,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       css={css}
       ref={separatorRef}
       data-collapsed={collapsed}
+      inert={collapsed}
       role="separator"
       aria-label={resizeLabel}
       aria-orientation={axis.separatorOrientation}
@@ -155,8 +152,6 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       alignItems="center"
       justifyContent="center"
       flexShrink={0}
-      w={layout.w}
-      h={layout.h}
       bg={line ? "border.subtle" : undefined}
       cursor={axis.cursor}
       touchAction="none"

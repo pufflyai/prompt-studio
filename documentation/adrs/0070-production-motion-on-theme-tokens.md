@@ -23,7 +23,7 @@ Each motion in PS-620 needs four things:
 - No JavaScript animation library is added.
 - The theme owns the adopted values. Motion Lab proposes values. After a review decision, they move into the theme, and the kit reads the released theme values instead of keeping a copy.
 - Each animated recipe declares its reduced motion form with `_motionReduce`. Spatial motion becomes instant. Opacity stays only where a study says so.
-- Components that must stay mounted while hidden (panels, the floating Side Panel) run their exit transition before `display: none`. CSS discrete transitions own display timing. Closed content becomes inert immediately so keyboard focus cannot enter an exiting panel. Tree children remain mounted in clipped reveal containers.
+- Components that must stay mounted while hidden (panels, the floating Side Panel) finish their exit before CSS visibility becomes hidden. Split panels clip their fixed-size contents as their footprint shrinks to zero; their separator loses its footprint at the end. This uses the same CSS in Chromium, Firefox, and WebKit. It does not depend on discrete `display` transitions, which Firefox does not animate. Closed content becomes inert immediately so keyboard focus cannot enter an exiting panel. Tree children remain mounted in clipped reveal containers.
 
 ## Consequences
 

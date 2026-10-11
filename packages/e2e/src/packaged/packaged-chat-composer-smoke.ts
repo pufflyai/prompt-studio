@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
-import { expectPackagedStreamingMotion } from "./packaged-motion-smoke";
+import { expectPackagedPanelMotion, expectPackagedStreamingMotion } from "./packaged-motion-smoke";
 
 export const expectPackagedChatComposer = async (baseUrl: string, headers: Record<string, string>, root: string) => {
   const folder = join(root, "chat-project");
@@ -124,6 +124,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await editor.press("Enter");
     await expect(page.getByText('Fake Agent: completed "First idle-session message"').first()).toBeVisible();
     await expectPackagedStreamingMotion(page, baseUrl, project.id, headers);
+    await expectPackagedPanelMotion(page);
   } finally {
     await browser.close();
   }

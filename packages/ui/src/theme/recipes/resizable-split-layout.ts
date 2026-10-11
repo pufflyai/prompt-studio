@@ -27,6 +27,11 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
           "--split-content-width": "var(--split-stored-size)",
           "--split-content-height": "100%",
         },
+        separator: {
+          width: "var(--split-separator-thickness)",
+          height: "full",
+          "&[data-collapsed=true]": { width: "0" },
+        },
       },
       vertical: {
         root: {
@@ -36,7 +41,16 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
           "--split-content-width": "100%",
           "--split-content-height": "var(--split-stored-size)",
         },
+        separator: {
+          width: "full",
+          height: "var(--split-separator-thickness)",
+          "&[data-collapsed=true]": { height: "0" },
+        },
       },
+    },
+    separator: {
+      gap: { separator: { "--split-separator-thickness": "{spacing.panel-gap}" } },
+      line: { separator: { "--split-separator-thickness": "1px" } },
     },
     layout: {
       split: {
@@ -59,7 +73,14 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
           height: "var(--split-height)",
           flex: "0 0 var(--split-size)",
           overflow: "hidden",
-          transition: "display {durations.panel-close} allow-discrete",
+          visibility: "visible",
+          transition: "visibility 0s",
+          "&[data-collapsed=true]": {
+            display: "flex",
+            visibility: "hidden",
+            transition: "visibility 0s {durations.panel-close}",
+            _motionReduce: { transition: "none" },
+          },
           "[data-dragging=true] &": { transition: "none" },
           _motionReduce: { transition: "none" },
         },
@@ -67,7 +88,15 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
         contentPanel: { height: "full", flex: "1", overflow: "hidden" },
         separator: {
           display: "flex",
-          transition: "display {durations.panel-close} allow-discrete",
+          visibility: "visible",
+          transition: "visibility 0s, width 0s, height 0s",
+          "&[data-collapsed=true]": {
+            display: "flex",
+            visibility: "hidden",
+            transition:
+              "visibility 0s {durations.panel-close}, width 0s {durations.panel-close}, height 0s {durations.panel-close}",
+            _motionReduce: { transition: "none" },
+          },
           "[data-dragging=true] &": { transition: "none" },
           _motionReduce: { transition: "none" },
         },
@@ -85,5 +114,5 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
       },
     },
   },
-  defaultVariants: { orientation: "horizontal", layout: "split" },
+  defaultVariants: { orientation: "horizontal", layout: "split", separator: "gap" },
 });

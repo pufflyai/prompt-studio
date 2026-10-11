@@ -35,9 +35,12 @@ export const LauncherAndPanel: Story = {
     const canvas = within(document.body);
     await userEvent.click(canvas.getByRole("button", { name: "Open Side Panel" }));
     await waitFor(() => expect(canvas.getByRole("dialog", { name: "Side Panel" })).toBeVisible());
+    const panel = canvas.getByRole("dialog", { name: "Side Panel" });
     const draft = canvas.getByRole("textbox", { name: "Draft" });
     await userEvent.type(draft, "Keep this draft");
     await userEvent.click(canvas.getByRole("button", { name: "Minimize" }));
+    await expect(panel).toHaveAttribute("inert");
+    await expect(draft).toBeVisible();
     await waitFor(() => expect(draft).not.toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "Open Side Panel" }));
     await expect(draft).toHaveValue("Keep this draft");
