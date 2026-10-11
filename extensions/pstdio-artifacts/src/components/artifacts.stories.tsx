@@ -18,6 +18,7 @@ const meta = {
   args: {
     items: [item],
     onOpen: () => {},
+    onCreate: () => {},
     loadPreview: async (item) =>
       `<html><body><h1>${item.title}</h1><p>A saved interactive page.</p><h2>Overview</h2><p>Project notes and the next steps.</p></body></html>`,
   },
@@ -26,6 +27,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Published: Story = {};
 export const Empty: Story = { args: { items: [] } };
+export const StartingSession: Story = { args: { creating: "brief" } };
 export const ManyArtifacts: Story = {
   args: {
     items: [
@@ -79,6 +81,7 @@ const HostUpdatesLibrary = () => {
       <ArtifactLibrary
         items={[item]}
         onOpen={() => {}}
+        onCreate={() => {}}
         loadPreview={async () => {
           setUpdates(updates + 1);
           // Command completion updates host props before its result reaches the webview.

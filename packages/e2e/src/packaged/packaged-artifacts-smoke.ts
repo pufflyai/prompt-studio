@@ -24,10 +24,45 @@ export const expectPackagedArtifacts = async (input: {
       extensionId: "pstdio.pstdio-artifacts",
       localId: "artifacts",
       main: { kind: "panels", empty: expect.any(Object) },
+      slots: expect.arrayContaining([
+        expect.objectContaining({
+          id: "library",
+          region: "main",
+          item: expect.objectContaining({ kind: "view", presence: "fixed" }),
+        }),
+        expect.objectContaining({
+          id: "artifact",
+          tab: expect.objectContaining({
+            queryHandlerId: expect.any(String),
+            refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
+          }),
+        }),
+      ]),
     }),
   );
   expect(metadata.views).toContainEqual(
     expect.objectContaining({ extensionId: "pstdio.pstdio-artifacts", localId: "open-artifact" }),
+  );
+  expect(metadata.commands).toContainEqual(
+    expect.objectContaining({ id: "pstdio.pstdio-artifacts.command.start-creation" }),
+  );
+  for (const action of ["rename-resource", "delete-resource"]) {
+    expect(metadata.commands).toContainEqual(
+      expect.objectContaining({ id: `pstdio.pstdio-artifacts.command.${action}` }),
+    );
+  }
+  expect(metadata.resourceKinds).toContainEqual(
+    expect.objectContaining({
+      extensionId: "pstdio.pstdio-artifacts",
+      id: "artifact",
+    }),
+  );
+  expect(metadata.commandPaletteResources).toContainEqual(
+    expect.objectContaining({
+      extensionId: "pstdio.pstdio-artifacts",
+      resourceKind: "artifact",
+      refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
+    }),
   );
   const skillsRes = await fetch(`${baseUrl}/v1/projects/${projectId}/skills`, {
     headers,

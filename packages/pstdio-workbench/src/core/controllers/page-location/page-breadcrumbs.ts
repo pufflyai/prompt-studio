@@ -33,6 +33,7 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
   modes: NavigationLevelModes;
   resources: WorkbenchPageResourceCodec;
   navigate(target: NavigationTargetPage): void;
+  openPanel?(pageId: string, slotId: string): void;
 }): WorkbenchBreadcrumbItem[] => {
   const pagesByRef = new Map(input.pages.map((page) => [pageRefKey(page.ref), page]));
   const locations = locationsFromRoot(input.location);
@@ -44,8 +45,18 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
       ...(leavesProjectNavigation(location, input) ? { startsLevel: true } : {}),
       ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };
-    if (index < locations.length - 1) {
-      item.onClick = () => input.navigate(targetFromLocation(location));
+    // Collection pages return to their landing panel; resource crumbs keep their resource link.
+    const landingPanel =
+      page?.main.kind === "panels" && !location.resource
+        ? page.slots.find(
+            (slot) => slot.region === "main" && slot.item.kind === "view" && slot.item.presence === "fixed",
+          )
+        : undefined;
+    if (index < locations.length - 1 || (landingPanel && input.openPanel)) {
+      item.onClick = () => {
+        input.navigate(targetFromLocation(location));
+        if (page && landingPanel) input.openPanel?.(page.id, landingPanel.id);
+      };
     }
     return item;
   });
@@ -58,6 +69,7 @@ export const setWorkbenchPageBreadcrumbs = (input: {
   modes: NavigationLevelModes;
   resources: WorkbenchPageResourceCodec;
   navigate(target: NavigationTargetPage): void;
+  openPanel?(pageId: string, slotId: string): void;
 }) => input.breadcrumbs.setItems(createWorkbenchPageBreadcrumbItems(input));
 export const connectWorkbenchPageBreadcrumbs = (input: {
   breadcrumbs: WorkbenchBreadcrumbController;
@@ -90,6 +102,7 @@ export const connectWorkbenchPageBreadcrumbs = (input: {
       navigate: (target) => {
         input.locations.navigate(target);
       },
+      openPanel: (pageId, slotId) => input.pages.openSlot({ pageId, slotId }),
     });
   };
   const subscription = getWorkbenchPageRegistryInternals(input.pages).onDidCommit(sync);

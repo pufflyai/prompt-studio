@@ -1,40 +1,40 @@
-import { Box, Button, HStack, Menu, Stack, Text } from "@chakra-ui/react";
-import { createGlyphIcon } from "@pstdio/ui";
-import { useState } from "react";
+import { Box, Button, Menu, Stack, Text } from "@chakra-ui/react";
+import { createGlyphIcon, Header } from "@pstdio/ui";
 import type { ArtifactContent, ArtifactSummary } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
-import { DeleteArtifactDialog } from "./delete-artifact-dialog";
 import { HtmlPreview } from "./html-preview";
-import { RenameArtifactDialog } from "./rename-artifact-dialog";
 
 const ChevronDown = createGlyphIcon("arrow-down-1");
+const History = createGlyphIcon("history");
 interface ArtifactReaderProps {
   content: ArtifactContent;
   revisions: ArtifactSummary[];
   onSelect: (revisionId: string) => void;
-  onBack: () => void;
-  onRename: (name: string) => Promise<void>;
-  onDelete: () => Promise<void>;
 }
 
 export const ArtifactReader = (props: ArtifactReaderProps) => {
-  const { content, revisions, onSelect, onBack, onRename, onDelete } = props;
+  const { content, revisions, onSelect } = props;
   const { t } = useArtifactTranslations();
-  const [dialog, setDialog] = useState<"rename" | "delete">();
   const latest = revisions[0];
   const title = latest?.title ?? content.title;
+  const selectedIndex = revisions.findIndex((revision) => revision.id === content.id);
+  const selectedLabel =
+    content.label || t("reader.version", "Version {{number}}", { number: revisions.length - selectedIndex });
   return (
     <Stack height="full" gap="0" minHeight="0">
-      <HStack p="sm" borderBottomWidth="1px" borderColor="border.subtle">
+      <Header flexShrink="0" justifyContent="space-between">
         <Menu.Root positioning={{ placement: "bottom-start" }}>
           <Menu.Trigger asChild>
             <Button
               variant="ghost"
-              aria-label={t("reader.actions", "{{title}} — versions and actions", { title })}
+              aria-label={t("reader.versions", "Versions")}
+              minWidth="0"
+              flexShrink="1"
               maxWidth="full"
             >
+              <History />
               <Text truncate textStyle="paragraph/S/medium">
-                {title}
+                {selectedLabel}
               </Text>
               <ChevronDown />
             </Button>
@@ -46,6 +46,7 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
                 <Menu.RadioItemGroup value={content.id} onValueChange={(event) => onSelect(event.value)}>
                   {revisions.map((revision, index) => (
                     <Menu.RadioItem key={revision.id} value={revision.id}>
+                      <History />
                       <Menu.ItemText>
                         {revision.label ||
                           t("reader.version", "Version {{number}}", { number: revisions.length - index })}
@@ -56,21 +57,10 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
                   ))}
                 </Menu.RadioItemGroup>
               </Menu.ItemGroup>
-              <Menu.Separator />
-              <Menu.Item value="rename" onClick={() => setDialog("rename")}>
-                {t("reader.rename", "Rename artifact…")}
-              </Menu.Item>
-              <Menu.Separator />
-              <Menu.Item value="library" onClick={onBack}>
-                {t("reader.all", "All artifacts")}
-              </Menu.Item>
-              <Menu.Item value="delete" onClick={() => setDialog("delete")}>
-                {t("reader.delete", "Delete artifact…")}
-              </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
         </Menu.Root>
-      </HStack>
+      </Header>
       <Box flex="1" minHeight="0" width="full" bg="bg.muted" overflow="hidden">
         <HtmlPreview
           key={content.id}
@@ -78,12 +68,6 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
           html={content.html}
         />
       </Box>
-      {dialog === "rename" ? (
-        <RenameArtifactDialog name={title} onRename={onRename} onClose={() => setDialog(undefined)} />
-      ) : null}
-      {dialog === "delete" ? (
-        <DeleteArtifactDialog title={title} onDelete={onDelete} onClose={() => setDialog(undefined)} />
-      ) : null}
     </Stack>
   );
 };
