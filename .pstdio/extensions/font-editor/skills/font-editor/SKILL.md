@@ -3,7 +3,7 @@ name: font-editor
 description: Inspect and safely extend the repository's icon font, including adding SVG glyphs, renaming glyphs, moving codepoints, removing glyphs, rebuilding formats, and verifying CSS mappings.
 ---
 
-# Font Editor
+# Icon Set editor
 
 Use the repository-local `font-editor` extension through `pst`. Run commands from the repository whose font should change.
 

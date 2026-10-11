@@ -36,7 +36,7 @@ export const parseFontEditorConfig = (value: string) => {
   const parsed = JSON.parse(value) as Partial<FontEditorConfig>;
   const config = { ...defaultFontEditorConfig, ...parsed };
 
-  if (config.version !== 1) throw new Error(`Unsupported font editor config version: ${config.version}`);
+  if (config.version !== 1) throw new Error(`Unsupported Icon Set editor config version: ${config.version}`);
   if (!config.formats.every((format) => fontFormats.includes(format))) {
     throw new Error("Font formats must be eot, svg, ttf, woff, or woff2.");
   }
