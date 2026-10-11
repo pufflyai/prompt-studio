@@ -251,13 +251,5 @@ export interface ControlGroup {
   defaultCollapsed?: boolean;
 }
 
-export type ControlValue =
-  | number
-  | string
-  | boolean
-  | null
-  | string[]
-  | RangeValue
-  | VectorValue
-  | HarnessControlValue;
+export type ControlValue = number | string | boolean | null | string[] | RangeValue | VectorValue | HarnessControlValue;
 export type ControlValueMap = Record<string, ControlValue>;
