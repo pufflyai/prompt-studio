@@ -1,12 +1,13 @@
-import { defineCommand } from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { sortedBySortOrder } from "../utils/sort";
+export const readTickets = async (storage: ExtensionStorageApi) =>
+  sortedBySortOrder((await ticketsCollection(storage).list()).filter((ticket) => !ticket.archived));
 
 export const readTicketsCommand = defineCommand({
   id: "read-tickets",
   title: "Read tickets",
   async run(ctx, _commandParams) {
-    const tickets = await ticketsCollection(ctx.storage).list();
-    return sortedBySortOrder(tickets.filter((ticket) => !ticket.archived));
+    return readTickets(ctx.storage);
   },
 });

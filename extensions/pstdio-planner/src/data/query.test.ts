@@ -119,6 +119,10 @@ describe("runTicketsQuery", () => {
       "type",
       "complexity",
       "default-human-requested",
+      "milestone",
+      "milestoneDate",
+      "milestoneState",
+      "needsAttention",
     ]);
     expect(result.rows[0]?.attributes).toMatchObject({
       archived: "active",

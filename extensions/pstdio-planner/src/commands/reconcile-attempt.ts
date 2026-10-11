@@ -10,8 +10,8 @@ import {
 } from "../data/attempt-storage";
 import type { AttemptBlocker, AttemptRecord, AttemptReview } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
+import { createReviewRequest, handoffRequest } from "../data/review-request-create";
 import { renderOwnedTemplate } from "../data/template-store";
-import { requestHuman } from "./human-requests";
 
 const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
 
@@ -50,14 +50,15 @@ const blockAttempt = async (
   await rollUpAttemptTicket(ctx.storage, attempt.ticketId);
   const ticket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
-  await requestHuman(ctx, {
+  await createReviewRequest(ctx, {
     ticket: attempt.ticketId,
     workspaceId: attempt.workspaceId,
     revision: attempt.revisions.at(-1)?.revision,
     sessionId: input.sessionId,
     reason: input.phase === "review" ? "review-disconnected" : "implementation-disconnected",
-    question: `${input.phase} session ${input.sessionId} disconnected again for ${attempt.workspaceShorthand}.`,
-    expectedAction: `Inspect the blocker and decide how to recover workspace ${attempt.workspaceShorthand}.`,
+    title: `${input.phase} session ${input.sessionId} disconnected again for ${attempt.workspaceShorthand}.`,
+    request: handoffRequest,
+    instructions: `Inspect the blocker and decide how to recover workspace ${attempt.workspaceShorthand}.`,
     expectedTicketStatusId: ticket.statusId ?? "",
     expectedAttemptState: "blocked",
   });

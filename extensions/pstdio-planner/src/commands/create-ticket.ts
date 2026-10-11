@@ -9,6 +9,16 @@ import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
+const ticketTitle = (input: { content?: string; title?: string }) =>
+  input.content ? deriveTitle(input.content) : (input.title ?? "Untitled");
+
+const attributeTagIds = (attributes: Record<string, unknown>) =>
+  Object.entries(attributes).flatMap(([id, value]) => {
+    if (id === "status" || id === "milestone") return [];
+    if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+    return typeof value === "string" && value ? [value] : [];
+  });
+
 // Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
 // board passes ids; the CLI passes human names/shorthands, so status, tags,
 // parent, and dependencies are resolved server-side (Decision 3).
@@ -52,13 +62,6 @@ export const createTicketCommand = defineCommand({
 
     const attributes = commandParams.attributes ?? {};
     const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
-    // Every attribute other than `status` is a tag attribute; its value is one
-    // option id or a list of them.
-    const attributeTagIds = Object.entries(attributes).flatMap(([attributeId, value]) => {
-      if (attributeId === "status") return [];
-      if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
-      return typeof value === "string" && value ? [value] : [];
-    });
 
     const statusId =
       commandParams.status !== undefined
@@ -67,7 +70,7 @@ export const createTicketCommand = defineCommand({
     const tagIds =
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
-        : (commandParams.tagIds ?? attributeTagIds);
+        : (commandParams.tagIds ?? attributeTagIds(attributes));
     const parentId =
       commandParams.parent !== undefined
         ? await resolveTicketId(ctx.storage, commandParams.parent)
@@ -76,7 +79,7 @@ export const createTicketCommand = defineCommand({
     const ticket = await putTicket(ctx.storage, {
       id,
       shorthand,
-      title: commandParams.content ? deriveTitle(commandParams.content) : (commandParams.title ?? "Untitled"),
+      title: ticketTitle(commandParams),
       content: commandParams.content ?? "",
       statusId,
       tagIds,

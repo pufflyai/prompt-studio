@@ -6,7 +6,6 @@ import {
   appendAttemptEvent,
   attemptEventsCollection,
   attemptSelectionsCollection,
-  humanRequestsCollection,
   putAttempt,
   readAttempt,
   reviewCommentsCollection,
@@ -15,6 +14,7 @@ import {
 } from "../data/attempt-storage";
 import type { ReviewComment } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
+import { readReviewRequest } from "../data/review-request-storage";
 
 export const readAttemptHistoryCommand = defineCommand({
   id: "read-attempt-history",
@@ -212,7 +212,7 @@ export const selectAttemptCommand = defineCommand({
     if (!ticket || !attempt || attempt.ticketId !== ticket.id)
       throw new Error("Workspace is not an attempt for this ticket.");
     if (commandParams.humanRequestId) {
-      const request = await humanRequestsCollection(ctx.storage).get(commandParams.humanRequestId);
+      const request = await readReviewRequest(ctx.storage, commandParams.humanRequestId);
       if (!request || request.ticketId !== ticket.id || request.state !== "open") {
         throw new Error("The human request does not match this ticket.");
       }

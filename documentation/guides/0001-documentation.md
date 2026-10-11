@@ -332,3 +332,4 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0012 — Recursive `fs.watch` on Linux crawls node_modules symlinks and hangs CI](../lessons-learned/0012-linux-recursive-fs-watch-crawls-node-modules.md)
 - [0013 — Manually check installed user flows with an agent](../lessons-learned/0013-manually-check-installed-user-flows.md)
 - [0014 — Fatal exit skips async cleanup](../lessons-learned/0014-fatal-exit-skips-async-cleanup.md)
+- [0015 — Anchor context menus in their viewport](../lessons-learned/0015-anchor-context-menus-in-their-viewport.md)

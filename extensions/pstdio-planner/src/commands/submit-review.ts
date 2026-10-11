@@ -11,8 +11,8 @@ import {
 } from "../data/attempt-storage";
 import type { AttemptReview, ReviewComment, ReviewThread } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
+import { createReviewRequest, handoffRequest } from "../data/review-request-create";
 import { readReport, workspaceHead } from "./change-requests";
-import { requestHuman } from "./human-requests";
 
 export interface ReviewFinding {
   path?: string;
@@ -231,14 +231,15 @@ export const submitReviewCommand = defineCommand({
     } else if (result === "passed") {
       const currentTicket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
       if (!currentTicket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
-      await requestHuman(ctx, {
+      await createReviewRequest(ctx, {
         ticket: attempt.ticketId,
         workspaceId: attempt.workspaceId,
         revision: revision.revision,
         sessionId: attempt.implementationSessionId,
         reason: "approved-revision",
-        question: `${attempt.workspaceShorthand} revision ${revision.revision} is approved at ${revision.headSha}.`,
-        expectedAction: `Select, merge, or otherwise handle approved workspace ${attempt.workspaceShorthand}. Review report: ${submitted.reportId}.`,
+        title: `${attempt.workspaceShorthand} revision ${revision.revision} is approved at ${revision.headSha}.`,
+        request: handoffRequest,
+        instructions: `Select, merge, or otherwise handle approved workspace ${attempt.workspaceShorthand}. Review report: ${submitted.reportId}.`,
         expectedTicketStatusId: currentTicket.statusId ?? "",
         expectedAttemptState: "approved",
       });
