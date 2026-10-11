@@ -3,6 +3,9 @@ import { defineSlotRecipe } from "@chakra-ui/react";
 export const scrollAreaSlotRecipe = defineSlotRecipe({
   slots: ["root", "viewport", "content", "scrollbar", "thumb", "corner"],
   base: {
+    viewport: {
+      outline: "none",
+    },
     content: {
       // Keep changing scrollbar geometry out of transcript styles. See ADR 0066.
       "--thumb-width": "initial",
