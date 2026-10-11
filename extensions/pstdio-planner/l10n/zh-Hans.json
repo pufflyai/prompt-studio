@@ -45,7 +45,6 @@
   "timeline.autoBuild.start": "自动构建",
   "timeline.autoBuild.stop": "停止自动构建",
   "timeline.autoBuild.cancel": "取消",
-  "timeline.autoBuild.description": "Auto Build 开启期间，一旦有可用容量，有效任务就会自动分配给默认代理。",
-  "timeline.autoBuild.documentation": "Auto Build 文档",
-  "timeline.autoBuild.maxParallel": "最大并行任务数"
+  "timeline.autoBuild.description": "监督代理会按照你的提示，在有可用容量时分配有效且未分配的工单。它会在检查之间等待，并在可以开始更多工作时恢复。",
+  "timeline.autoBuild.documentation": "Auto Build 文档"
 }

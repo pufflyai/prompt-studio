@@ -45,7 +45,6 @@
   "timeline.autoBuild.start": "自動建置",
   "timeline.autoBuild.stop": "停止自動建置",
   "timeline.autoBuild.cancel": "取消",
-  "timeline.autoBuild.description": "Auto Build 開啟期間，一旦有可用容量，有效任務就會自動指派給預設代理。",
-  "timeline.autoBuild.documentation": "Auto Build 文件",
-  "timeline.autoBuild.maxParallel": "最大並行任務數"
+  "timeline.autoBuild.description": "監督代理會依照你的提示，在有可用容量時指派有效且未指派的工單。它會在檢查之間等待，並在可以開始更多工作時恢復。",
+  "timeline.autoBuild.documentation": "Auto Build 文件"
 }

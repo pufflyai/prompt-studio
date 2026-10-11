@@ -45,7 +45,6 @@
   "timeline.autoBuild.start": "Construir automáticamente",
   "timeline.autoBuild.stop": "Detener la construcción automática",
   "timeline.autoBuild.cancel": "Cancelar",
-  "timeline.autoBuild.description": "Mientras Auto Build esté activo, las tareas válidas se asignarán automáticamente a tu agente predeterminado cuando haya capacidad disponible.",
-  "timeline.autoBuild.documentation": "Documentación de Auto Build",
-  "timeline.autoBuild.maxParallel": "Máximo de tareas en paralelo"
+  "timeline.autoBuild.description": "Un supervisor usa tu indicación para asignar tickets válidos sin asignar cuando hay capacidad disponible. Espera entre comprobaciones y continúa cuando puede iniciar más trabajo.",
+  "timeline.autoBuild.documentation": "Documentación de Auto Build"
 }

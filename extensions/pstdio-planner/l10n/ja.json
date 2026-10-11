@@ -45,7 +45,6 @@
   "timeline.autoBuild.start": "自動ビルド",
   "timeline.autoBuild.stop": "自動ビルドを停止",
   "timeline.autoBuild.cancel": "キャンセル",
-  "timeline.autoBuild.description": "Auto Build が有効な間は、空きができるたびに有効なタスクがデフォルトのエージェントへ自動的に割り当てられます。",
-  "timeline.autoBuild.documentation": "Auto Build のドキュメント",
-  "timeline.autoBuild.maxParallel": "並列タスクの最大数"
+  "timeline.autoBuild.description": "スーパーバイザーはあなたの指示に従い、空きができると有効な未割り当てチケットを割り当てます。確認の間は待機し、作業を開始できるようになると再開します。",
+  "timeline.autoBuild.documentation": "Auto Build のドキュメント"
 }
