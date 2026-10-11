@@ -1,4 +1,4 @@
-import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Text, useRecipe } from "@chakra-ui/react";
 import { ChevronRight } from "lucide-react";
 import type { FocusEventHandler, MouseEvent as ReactMouseEvent } from "react";
 import { createResourceContextActions } from "../list-row/list-row-chrome";
@@ -14,18 +14,11 @@ interface TreeListSectionActionsProps {
 
 const TreeListSectionActions = (props: TreeListSectionActionsProps) => {
   const { sectionId, actions } = props;
+  const accessory = useRecipe({ key: "listRowAccessory" });
   if (actions.length === 0) return null;
 
   return (
-    <HStack
-      gap="0"
-      opacity="0"
-      pointerEvents="none"
-      _groupHover={{ opacity: "1", pointerEvents: "auto" }}
-      _groupFocusWithin={{ opacity: "1", pointerEvents: "auto" }}
-      transition="opacity 120ms ease"
-      onClick={(event) => event.stopPropagation()}
-    >
+    <HStack gap="0" css={accessory({ visibility: "hover" })} onClick={(event) => event.stopPropagation()}>
       {actions.map((action) => {
         if (action.menuItems && action.menuItems.length >= 8) {
           return <SearchableActionMenu key={action.id} action={action} />;
@@ -71,6 +64,7 @@ interface TreeListSectionHeaderProps {
 
 export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
   const { section, collapsible, expanded, focusId, tabIndex, onFocus, onToggle, onContextMenu } = props;
+  const chevron = useRecipe({ key: "treeChevron" });
 
   if (section.inlineInput) {
     return <TreeListInlineInputRow input={section.inlineInput} level={0} />;
@@ -113,7 +107,7 @@ export const TreeListSectionHeader = (props: TreeListSectionHeaderProps) => {
           </Text>
           {collapsible ? (
             <Box color="fg.muted" flexShrink={0}>
-              <Box asChild transform={expanded ? "rotate(90deg)" : "rotate(0deg)"} transition="120ms">
+              <Box asChild css={chevron()} data-open={expanded}>
                 <ChevronRight size={14} />
               </Box>
             </Box>

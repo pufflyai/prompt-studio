@@ -3,39 +3,74 @@ import { defineSlotRecipe } from "@chakra-ui/react";
 const stackedPanels = {
   root: { flexDirection: "column", height: "auto", overflow: "visible", gap: "panel-gap" },
   resizablePanel: { display: "flex", width: "full", height: "auto", flex: "initial", overflow: "visible" },
+  panelContent: { width: "full", height: "auto", flex: "1" },
   contentPanel: { height: "auto", flex: "initial", overflow: "visible" },
   separator: { display: "none" },
 } as const;
 
 export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
-  slots: ["root", "resizablePanel", "contentPanel", "separator"],
+  slots: ["root", "resizablePanel", "panelContent", "contentPanel", "separator"],
   base: {
     root: { display: "flex", width: "full", minWidth: 0, minHeight: 0 },
     resizablePanel: { minWidth: 0, minHeight: 0, "&[data-collapsed=true]": { display: "none" } },
+    panelContent: { display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, flexShrink: 0 },
     contentPanel: { display: "flex", minWidth: 0, minHeight: 0 },
     separator: { "&[data-collapsed=true]": { display: "none" } },
   },
   variants: {
     orientation: {
       horizontal: {
-        root: { "--split-direction": "row", "--split-width": "var(--split-size)", "--split-height": "100%" },
+        root: {
+          "--split-direction": "row",
+          "--split-width": "var(--split-size)",
+          "--split-height": "100%",
+          "--split-content-width": "var(--split-stored-size)",
+          "--split-content-height": "100%",
+        },
       },
       vertical: {
-        root: { "--split-direction": "column", "--split-width": "100%", "--split-height": "var(--split-size)" },
+        root: {
+          "--split-direction": "column",
+          "--split-width": "100%",
+          "--split-height": "var(--split-size)",
+          "--split-content-width": "100%",
+          "--split-content-height": "var(--split-stored-size)",
+        },
       },
     },
     layout: {
       split: {
-        root: { flexDirection: "var(--split-direction)", height: "full", overflow: "hidden", gap: "0" },
+        root: {
+          flexDirection: "var(--split-direction)",
+          height: "full",
+          overflow: "hidden",
+          gap: "0",
+          transition: "--split-size {durations.panel-open} {easings.enter}",
+          "&[data-collapsed=true]": {
+            transition: "--split-size {durations.panel-close} {easings.exit}",
+            _motionReduce: { transition: "none" },
+          },
+          "&[data-dragging=true]": { transition: "none" },
+          _motionReduce: { transition: "none" },
+        },
         resizablePanel: {
           display: "flex",
           width: "var(--split-width)",
           height: "var(--split-height)",
           flex: "0 0 var(--split-size)",
           overflow: "hidden",
+          transition: "display {durations.panel-close} allow-discrete",
+          "[data-dragging=true] &": { transition: "none" },
+          _motionReduce: { transition: "none" },
         },
+        panelContent: { width: "var(--split-content-width)", height: "var(--split-content-height)" },
         contentPanel: { height: "full", flex: "1", overflow: "hidden" },
-        separator: { display: "flex" },
+        separator: {
+          display: "flex",
+          transition: "display {durations.panel-close} allow-discrete",
+          "[data-dragging=true] &": { transition: "none" },
+          _motionReduce: { transition: "none" },
+        },
       },
       stacked: stackedPanels,
       "stacked-reverse": {

@@ -10,13 +10,12 @@ export const listRowAccessoryRecipe = defineRecipe({
     visibility: {
       always: {},
       hover: {
-        position: "absolute",
-        insetInlineEnd: "sm",
+        visibility: "hidden",
         opacity: 0,
-        pointerEvents: "none",
-        transition: "opacity 120ms ease",
-        _groupHover: { position: "static", opacity: 1, pointerEvents: "auto" },
-        _groupFocusWithin: { position: "static", opacity: 1, pointerEvents: "auto" },
+        transition: "opacity 0s {durations.hover-exit-delay}, visibility 0s {durations.hover-exit-delay}",
+        _groupHover: { visibility: "visible", opacity: 1, transitionDelay: "0s" },
+        _groupFocusWithin: { visibility: "visible", opacity: 1, transitionDelay: "0s" },
+        "@media (hover: none)": { visibility: "visible", opacity: 1 },
       },
     },
   },

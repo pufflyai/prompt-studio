@@ -7,7 +7,9 @@ import { TreeListBackground } from "./tree-list-background";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListMoveSurface } from "./tree-list-move-surface";
 import { TreeListNodeRow } from "./tree-list-node-row";
+import { TreeListNodes } from "./tree-list-nodes";
 import type { TreeListMovePolicy } from "./tree-list-reorder";
+import { TreeListReveal } from "./tree-list-reveal";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 import { TreeListSortable } from "./tree-list-sortable";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
@@ -40,9 +42,7 @@ interface TreeListProps {
   /** Render large trees with virtual rows. Disable when using drag ordering. */
   virtualize?: boolean;
   scrollRef?: RefObject<HTMLDivElement | null>;
-  // When true, sections and items render with drag handles. Virtualization is
-  // bypassed (per the ADR) — customizable trees are typically small. Hosts
-  // must supply onReorderSections / onReorderNodes to persist the new order.
+  // Customizable trees bypass virtualization. Hosts persist their new order.
   draggable?: boolean;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
@@ -50,9 +50,7 @@ interface TreeListProps {
   canMove?: TreeListMovePolicy;
   /** Move a node before/after a leaf, into a container, or into the background when the target is omitted. */
   onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
-  // When set, right-clicking the empty back area of the tree (everything not
-  // covered by an item row) opens this menu. Item rows keep their own
-  // right-click behaviour — the menu lives on a layer behind them.
+  // Background actions sit behind item rows, which keep their own context menu.
   backgroundContextActions?: ResourceContextAction[];
 }
 
@@ -168,6 +166,7 @@ const VirtualTreeList = (props: VirtualTreeListProps) => {
   return (
     <Box
       ref={keyboard.rootRef}
+      data-tree-list-virtual=""
       role="listbox"
       w="full"
       minW="0"
@@ -269,25 +268,48 @@ const StackTreeList = (props: TreeListProps) => {
             maxW="full"
             data-testid={`tree-list-section-${section.id}`}
           >
-            {sectionRows.map((row) => (
-              <Box key={row.key} w="full" minW="0">
-                <TreeListRow
-                  row={row}
-                  expandedNodeIds={expandedNodeIds}
-                  activeNodeId={activeNodeId}
-                  focusRowId={keyboard.focusRowId}
-                  rowVariant={rowVariant}
-                  nodeGap={nodeGap}
-                  linkComponent={linkComponent}
-                  onRowFocus={keyboard.onRowFocus}
-                  onNavigate={onNavigate}
-                  onToggleSection={onToggleSection}
-                  onToggleNode={onToggleNode}
-                  onSectionContextMenu={onSectionContextMenu}
-                  onMoveNode={onMoveNode}
-                />
-              </Box>
-            ))}
+            {sectionRows
+              .filter((row) => row.kind === "section-header")
+              .map((row) => (
+                <Box key={row.key} w="full" minW="0">
+                  <TreeListRow
+                    row={row}
+                    expandedNodeIds={expandedNodeIds}
+                    activeNodeId={activeNodeId}
+                    focusRowId={keyboard.focusRowId}
+                    rowVariant={rowVariant}
+                    nodeGap={nodeGap}
+                    linkComponent={linkComponent}
+                    onRowFocus={keyboard.onRowFocus}
+                    onNavigate={onNavigate}
+                    onToggleSection={onToggleSection}
+                    onToggleNode={onToggleNode}
+                    onSectionContextMenu={onSectionContextMenu}
+                    onMoveNode={onMoveNode}
+                  />
+                </Box>
+              ))}
+            <TreeListReveal
+              open={
+                section.collapsible === false || section.label === undefined || expandedSectionIds.includes(section.id)
+              }
+            >
+              <TreeListNodes
+                sectionId={section.id}
+                nodes={section.nodes}
+                expandedNodeIds={expandedNodeIds}
+                activeNodeId={activeNodeId}
+                focusRowId={keyboard.focusRowId}
+                onRowFocus={keyboard.onRowFocus}
+                rowVariant={rowVariant}
+                nodeGap={nodeGap}
+                linkComponent={linkComponent}
+                onNavigate={onNavigate}
+                onToggleNode={onToggleNode}
+                onMoveNode={onMoveNode}
+              />
+              {section.nodes.length === 0 ? section.emptyState : null}
+            </TreeListReveal>
           </Stack>
         );
       })}

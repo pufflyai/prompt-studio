@@ -1,4 +1,4 @@
-import { chakra, type HTMLChakraProps, IconButton, type IconButtonProps } from "@chakra-ui/react";
+import { chakra, type HTMLChakraProps, IconButton, type IconButtonProps, useRecipe } from "@chakra-ui/react";
 import { forwardRef, type ReactNode } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 
@@ -12,14 +12,14 @@ export interface BubbleButtonProps extends Omit<IconButtonProps, BubbleButtonSty
 
 export const BubbleButton = forwardRef<HTMLButtonElement, BubbleButtonProps>(function BubbleButton(props, ref) {
   const { children, containerProps, isOpen = false, tooltip, ...rest } = props;
+  const motion = useRecipe({ key: "bubbleLauncher" });
   const button = (
     <IconButton
       ref={ref}
       rounded="full"
       size="lg"
       borderWidth="1px"
-      borderColor={isOpen ? "border.accent" : "border"}
-      transition="border-color 0.2s ease-in-out"
+      borderColor="border"
       _hover={{
         borderColor: "border.accent",
       }}
@@ -31,7 +31,17 @@ export const BubbleButton = forwardRef<HTMLButtonElement, BubbleButtonProps>(fun
   );
 
   return (
-    <chakra.div position="fixed" bottom="6" right="6" zIndex="docked" {...containerProps}>
+    <chakra.div
+      position="fixed"
+      bottom="6"
+      right="6"
+      zIndex="docked"
+      {...containerProps}
+      css={motion()}
+      data-open={isOpen}
+      inert={isOpen}
+      aria-hidden={isOpen}
+    >
       {tooltip ? <Tooltip content={tooltip}>{button}</Tooltip> : button}
     </chakra.div>
   );

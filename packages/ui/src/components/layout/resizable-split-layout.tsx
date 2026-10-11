@@ -1,13 +1,6 @@
 import { type ConditionalValue, Flex, type FlexProps, useSlotRecipe } from "@chakra-ui/react";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type PointerEvent as ReactPointerEvent,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, type PointerEvent as ReactPointerEvent, useEffect, useId, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   getResizableSplitAxis,
   type ResizableSplitSide,
@@ -17,6 +10,7 @@ import {
 import type { ResizableSplitSeparator } from "@/components/layout/resizable-split-layout.handle";
 import { ResizableSplitPanels } from "@/components/layout/resizable-split-layout.panels";
 import { type PanelDimension, useResizableSplitRootSize } from "@/components/layout/resizable-split-layout.root-size";
+import { createResizeKeyDownHandler } from "./resizable-split-layout.keyboard";
 
 interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResize"> {
   resizablePanel: ReactNode;
@@ -36,7 +30,6 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
 }
 
 const FALLBACK_ROOT_SIZE = { width: 1200, height: 720 };
-const KEYBOARD_RESIZE_STEP = 24;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -89,7 +82,11 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const resolvedPanelSize = collapsed ? 0 : clamp(panelSize, bounds.minSize, bounds.maxSize);
   const contentPanelId = `${id}-content`;
   const resizablePanelId = `${id}-resizable`;
-  const sizeStyle = { ...rest.style, "--split-size": `${resolvedPanelSize}px` };
+  const sizeStyle = {
+    ...rest.style,
+    "--split-size": `${resolvedPanelSize}px`,
+    "--split-stored-size": `${clamp(panelSize, bounds.minSize, bounds.maxSize)}px`,
+  };
 
   useEffect(() => {
     lastSizeRef.current = defaultSizePx;
@@ -100,6 +97,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
 
   const applyPanelSize = (size: number) => {
     rootRef.current?.style.setProperty("--split-size", `${size}px`);
+    if (size > 0) rootRef.current?.style.setProperty("--split-stored-size", `${size}px`);
   };
 
   const commitPanelSize = (size: number) => {
@@ -187,19 +185,21 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       document.body.style.userSelect = previousUserSelect;
       if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
       setDraggingPanelState("");
-      setDragging(false);
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
         animationFrame = 0;
       }
       cleanupDragRef.current = () => undefined;
       if (nextCollapsed) {
+        // Settle the final drag geometry before restoring programmatic transitions.
         applyPanelSize(0);
-        setCollapsed(true);
+        flushSync(() => setCollapsed(true));
+        resizablePanelRef.current?.getBoundingClientRect();
       } else {
         setCollapsed(false);
         commitPanelSize(nextSize);
       }
+      setDragging(false);
     };
 
     cleanupDragRef.current = cleanup;
@@ -218,36 +218,27 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     if (collapsible) setCollapsed(true);
   };
 
-  const handleResizeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    const negativeDirectionKey = axis.dimension === "width" ? "ArrowLeft" : "ArrowUp";
-    const positiveDirectionKey = axis.dimension === "width" ? "ArrowRight" : "ArrowDown";
-    const size = lastSizeRef.current;
-
-    if (
-      collapsed &&
-      (event.key === negativeDirectionKey || event.key === positiveDirectionKey || event.key === "End")
-    ) {
-      event.preventDefault();
-      setCollapsed(false);
-      commitPanelSize(size);
-    } else if (event.key === negativeDirectionKey) {
-      event.preventDefault();
-      commitPanelSize(size - KEYBOARD_RESIZE_STEP * axis.deltaDirection);
-    } else if (event.key === positiveDirectionKey) {
-      event.preventDefault();
-      commitPanelSize(size + KEYBOARD_RESIZE_STEP * axis.deltaDirection);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      if (collapsible) setCollapsed(true);
-      else commitPanelSize(bounds.minSize);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      commitPanelSize(bounds.maxSize);
-    }
-  };
+  const handleResizeKeyDown = createResizeKeyDownHandler({
+    dimension: axis.dimension,
+    deltaDirection: axis.deltaDirection,
+    collapsed,
+    collapsible,
+    minSize: bounds.minSize,
+    maxSize: bounds.maxSize,
+    getSize: () => lastSizeRef.current,
+    setCollapsed,
+    commitSize: commitPanelSize,
+  });
 
   return (
-    <Flex ref={rootRef} css={styles.root} {...rest} style={sizeStyle}>
+    <Flex
+      ref={rootRef}
+      css={styles.root}
+      {...rest}
+      style={sizeStyle}
+      data-collapsed={collapsed}
+      data-dragging={dragging}
+    >
       <ResizableSplitPanels
         styles={styles}
         axis={axis}
@@ -260,6 +251,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
         resizablePanel={resizablePanel}
         resizablePanelId={resizablePanelId}
         resizablePanelRef={resizablePanelRef}
+        rootRef={rootRef}
         dragging={dragging}
         resizeLabel={resizeLabel}
         resolvedPanelSize={resolvedPanelSize}
