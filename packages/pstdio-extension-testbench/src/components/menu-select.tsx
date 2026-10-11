@@ -42,7 +42,7 @@ export const MenuSelect = <T extends string>(props: MenuSelectProps<T>) => {
   const triggerLabel = selectedOption?.label ?? placeholder ?? label;
 
   return (
-    <Menu.Root>
+    <Menu.Root ids={{ trigger: id }}>
       <Menu.Trigger asChild>
         <Button
           aria-label={label}

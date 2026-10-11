@@ -1,6 +1,6 @@
 import { Box, Button } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import { ChatPanel } from "./chat-panel";
 
@@ -111,5 +111,25 @@ export const KeyboardRadioChoiceAdvances: Story = {
       "aria-selected",
       "true",
     );
+  },
+};
+
+export const StepTooltipFollowsStep: Story = {
+  ...FirstRadioChoiceAdvances,
+  play: async ({ canvasElement }) => {
+    const tab = within(canvasElement).getByRole("tab", { name: "Choose delivery (not answered)" });
+    await userEvent.hover(tab);
+    const tooltip = await within(canvasElement.ownerDocument.body).findByRole("tooltip");
+    await expect(tooltip).toHaveTextContent("Choose delivery");
+    // The step tab sets its own DOM id, so the tooltip must still find it as its anchor.
+    await waitFor(() => {
+      const tabRect = tab.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const tabCenter = tabRect.left + tabRect.width / 2;
+      expect(tooltipRect.left).toBeLessThanOrEqual(tabCenter);
+      expect(tooltipRect.right).toBeGreaterThanOrEqual(tabCenter);
+      const gap = Math.min(Math.abs(tooltipRect.top - tabRect.bottom), Math.abs(tabRect.top - tooltipRect.bottom));
+      expect(gap).toBeLessThan(tabRect.height);
+    });
   },
 };
