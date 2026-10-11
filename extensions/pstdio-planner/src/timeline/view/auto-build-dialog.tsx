@@ -48,9 +48,7 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Icon asChild>
-                      <LinkIcon />
-                    </Icon>
+                    <Icon as={LinkIcon} boxSize="icon-sm" />
                     {t("timeline.autoBuild.documentation", "Auto Build documentation")}
                   </Link>
                 </Stack>
