@@ -1,4 +1,6 @@
 {
+  "timeline.page.title": "Cronología del proyecto",
+  "timeline.view.title": "Cronología del proyecto",
   "commands.openTickets": "Abrir tickets",
   "archiveState.active": "Activo",
   "archiveState.archived": "Archivado",

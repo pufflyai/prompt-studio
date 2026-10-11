@@ -96,7 +96,7 @@ export function PlanGraph(props: PlanViewProps) {
         userSelect={panning ? "none" : undefined}
         touchAction="none"
         role="region"
-        aria-label="Ticket timeline canvas"
+        aria-label="Project Timeline canvas"
         tabIndex={0}
         {...handlers}
         onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
