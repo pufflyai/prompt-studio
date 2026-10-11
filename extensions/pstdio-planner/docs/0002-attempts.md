@@ -54,7 +54,7 @@ If two implementation sessions are already running in the project, Run attempt d
 
 ## Auto build
 
-Open **Project Timeline**, set your view filters, and select **Auto Build**. The modal shows the filters as bubbles. Confirm with **Auto Build**. From the CLI, configure the mode with an optional JSON view filter:
+Open **Project Timeline** and select **Auto Build**. Set **Maximum parallel tasks** and confirm with **Auto Build**. This edits the same limit as **Maximum in-progress tickets** in Settings. From the CLI, configure the mode:
 
 ```sh
 pst pstdio-planner auto-build configure --enabled true
@@ -62,13 +62,13 @@ pst pstdio-planner auto-build read
 pst pstdio-planner auto-build configure --enabled false
 ```
 
-Planner starts matching Todo tickets in timeline order until **Maximum in-progress tickets** is reached. Existing running implementations count toward this limit. Auto build uses the project's default agent and target branch. It reacts to ticket, timeline, and session changes and rechecks once per minute to recover after restarts or settings changes. The mode works while the timeline is closed.
+Planner starts eligible Todo tickets across the project in timeline order until **Maximum in-progress tickets** is reached. Existing running implementations count toward this limit. Auto build uses the project's default agent and target branch. It reacts to ticket, timeline, and session changes and rechecks once per minute to recover after restarts or settings changes. The mode works while the timeline is closed.
 
-The modal saves the current view's filters. View changes do not change the running selection. Use **Stop Auto Build** to stop future launches; already dispatched work continues. Start again to use the current filters. A launch failure turns the mode off and shows the error. Resolve it before turning the mode on again.
+The selected view, filters, and search only affect the display. Use **Stop Auto Build** to stop future launches; already dispatched work continues. A launch failure turns the mode off and shows the error. Resolve it before turning the mode on again.
 
 Dependencies decide which tickets can run together. Independent tickets in the same track can start in parallel, and dependencies in other tracks still apply. Approved or explicitly selected dependency revisions can provide a stacked base, as with Run attempt.
 
-The mode skips gates, blocked work, tickets that need human input, and tickets with an existing attempt other than an abandoned attempt. If a saved filter becomes invalid after a property or option is removed, the mode pauses. Review the current view filters before turning it on again.
+The mode skips gates, blocked work, tickets that need human input, and tickets with an existing attempt other than an abandoned attempt.
 
 When an agent cannot continue without a person, the implementation skill tells it to use `pst pstdio-planner request-human` with a concrete task or decision. This creates a review request and sets Review Needed. The agent reads the saved response before resuming.
 

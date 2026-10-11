@@ -32,9 +32,9 @@ Timeline writes use temporary owner claims because the extension storage API doe
 
 ## Auto build
 
-Choose **Auto Build** in the header, review the filters shown as bubbles, and confirm with **Auto Build**. Planner saves the current view's filters and automatically starts matching Todo tickets in timeline order as dependencies and capacity allow. It uses the default agent and target branch. Independent matching tickets can run together; dependencies in other tracks still apply.
+Choose **Auto Build** in the header, set **Maximum parallel tasks**, and confirm with **Auto Build**. Planner automatically starts eligible Todo tickets across the project in timeline order as dependencies and capacity allow. It uses the default agent and target branch. Independent tickets can run together; dependencies in other tracks still apply.
 
-**Stop Auto Build** stops future launches without interrupting work already dispatched. The mode remains active when the timeline is closed and resumes after a restart. Later view changes do not change the saved filters. Stop and start Auto Build to use the current view's filters. Launch failures turn the mode off and show an error.
+**Stop Auto Build** stops future launches without interrupting work already dispatched. The mode remains active when the timeline is closed and resumes after a restart. The selected view, filters, and search only affect the display. Launch failures turn the mode off and show an error.
 
 Existing attempts, gates, blocked tickets, and work needing human input stay available for review. If an implementation agent gets stuck, it creates a Planner review request. See [Attempts](0002-attempts.md#auto-build) for the full workflow.
 

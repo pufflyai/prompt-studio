@@ -1,4 +1,4 @@
-import { eventRef, type ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { eventRef } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { autoBuildChanged } from "../../data/auto-build-mode";
 import { useLiveValue } from "./use-live-value";
@@ -24,11 +24,11 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  const configure = async (enabled: boolean, filter?: ViewFilterGroup, maxInProgress?: number) => {
+  const configure = async (enabled: boolean, maxInProgress?: number) => {
     setSaving(true);
     setError(undefined);
     try {
-      await client.commands["auto-build.configure"]({ enabled, filter, maxInProgress });
+      await client.commands["auto-build.configure"]({ enabled, maxInProgress });
       setMode(await readMode(client));
       return true;
     } catch (reason) {

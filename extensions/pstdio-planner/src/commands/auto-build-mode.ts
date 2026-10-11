@@ -1,4 +1,4 @@
-import { defineCommand, l10n, params, type ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
@@ -30,14 +30,13 @@ export const readAutoBuildCommand = defineCommand({
 export const configureAutoBuildCommand = defineCommand({
   id: "auto-build.configure",
   title: l10n("commands.autoBuild.configure", "Configure Auto build"),
-  cli: { description: "Start or stop Auto Build using the current timeline filters." },
+  cli: { description: "Start or stop Auto Build for all eligible tickets in the project." },
   mutating: true,
   params: {
     enabled: params.boolean({ required: true }),
-    filter: params.json<ViewFilterGroup>(),
     maxInProgress: params.number({ label: "Maximum parallel tasks" }),
   },
-  async run(ctx, { enabled, filter, maxInProgress }) {
+  async run(ctx, { enabled, maxInProgress }) {
     if (maxInProgress !== undefined) {
       if (!Number.isInteger(maxInProgress) || maxInProgress < 0) {
         throw new Error("Maximum parallel tasks must be a non-negative integer.");
@@ -45,11 +44,9 @@ export const configureAutoBuildCommand = defineCommand({
       await ctx.settings.set("automation.maxInProgress", maxInProgress);
     }
     const mode = await withWriteGuard(ctx, "auto-build-mode", async () => {
-      const current = await readAutoBuildMode(ctx);
       return saveAutoBuildMode(ctx, {
         revision: crypto.randomUUID(),
         enabled,
-        filter: filter ?? current.filter,
       });
     });
     if (mode.enabled) await enqueueAutoBuild(ctx);

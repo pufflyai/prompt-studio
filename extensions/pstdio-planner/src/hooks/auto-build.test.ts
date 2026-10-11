@@ -35,16 +35,11 @@ function fixture() {
   return { ctx, runs };
 }
 
-test("enabling saves the current view filters and queues a background check", async () => {
+test("enabling the project mode queues a background check", async () => {
   const { ctx, runs } = fixture();
-  const filter = {
-    conjunction: "and" as const,
-    rules: [{ attributeId: "title", condition: "contains" as const, value: "Ship" }],
-  };
-  await configureAutoBuildCommand.run(ctx, { enabled: true, filter });
+  await configureAutoBuildCommand.run(ctx, { enabled: true });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
     enabled: true,
-    filter,
     running: true,
   });
   expect(runs).toHaveLength(1);
@@ -63,7 +58,7 @@ test("concurrent events share the active check and later changes can enqueue aga
   expect(runs).toHaveLength(3);
 });
 
-test("turning off saves the selection and events no longer queue checks", async () => {
+test("turning off saves the project mode and events no longer queue checks", async () => {
   const { ctx, runs } = fixture();
   await configureAutoBuildCommand.run(ctx, { enabled: true });
   await configureAutoBuildCommand.run(ctx, { enabled: false });
@@ -79,11 +74,4 @@ test("shows background launch errors from the host run", async () => {
   runs[0]!.status = "succeeded";
   runs[0]!.result = { errors: [{ ticket: "T-1", message: "Agent unavailable" }] };
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ error: "T-1: Agent unavailable", running: false });
-});
-
-test("enables from the current view filters without a separate track selection", async () => {
-  const { ctx, runs } = fixture();
-  await configureAutoBuildCommand.run(ctx, { enabled: true });
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: true });
-  expect(runs).toHaveLength(1);
 });

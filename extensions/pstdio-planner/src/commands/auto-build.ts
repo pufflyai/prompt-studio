@@ -1,11 +1,6 @@
 import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { listAttempts } from "../data/attempt-storage";
-import {
-  type AutoBuildMode,
-  matchingAutoBuildIds,
-  pauseAutoBuildMode,
-  readAutoBuildMode,
-} from "../data/auto-build-mode";
+import { type AutoBuildMode, pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { resolveImplementationBase } from "../data/implementation-targets";
 import { withWriteGuard } from "../data/write-guard";
 import { readPlanCommand } from "../timeline/commands/read-plan";
@@ -32,7 +27,7 @@ async function selectedTicket(ctx: CommandContext, mode: AutoBuildMode, candidat
   if (!currentMode.enabled || currentMode.revision !== mode.revision) return undefined;
   const plan = await readPlanCommand.run(ctx, {});
   const row = plan.sections.flatMap(({ rows }) => rows).find((row) => row.id === candidate.id);
-  if (!row || !isReady(row) || !matchingAutoBuildIds(currentMode, plan).has(row.id)) return undefined;
+  if (!row || !isReady(row)) return undefined;
   if (workflowName(row.status?.name) !== workflowName(candidate.status?.name)) return undefined;
   return row;
 }
@@ -79,12 +74,10 @@ async function autoBuild(ctx: CommandContext, mode: AutoBuildMode) {
   const attempted = new Set(
     attempts.filter((attempt) => attempt.state !== "abandoned").map((attempt) => attempt.ticketId),
   );
-  const matching = matchingAutoBuildIds(mode, plan);
   const candidates = plan.sections
     .flatMap(({ rows }) => rows)
     .filter(
       (row) =>
-        matching.has(row.id) &&
         isReady(row) &&
         (resumptions.has(row.id) || (workflowName(row.status?.name) === "todo" && !attempted.has(row.id))),
     );

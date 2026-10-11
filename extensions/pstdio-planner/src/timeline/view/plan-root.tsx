@@ -140,12 +140,10 @@ function PlanContent(props: PlanContentProps) {
       ) : null}
       {autoBuildOpen ? (
         <AutoBuildDialog
-          filter={filter}
-          fields={queryData.attributes}
           maxInProgress={autoBuild.mode!.maxInProgress}
           saving={autoBuild.saving}
           error={autoBuild.error}
-          onEnable={(maxInProgress) => autoBuild.configure(true, filter, maxInProgress)}
+          onEnable={(maxInProgress) => autoBuild.configure(true, maxInProgress)}
           onClose={() => setAutoBuildOpen(false)}
           t={t}
         />

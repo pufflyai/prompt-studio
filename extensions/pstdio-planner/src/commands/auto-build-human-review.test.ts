@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import { listAttempts } from "../data/attempt-storage";
 import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";
-import { configureAutoBuildCommand } from "./auto-build-mode";
 import { requestHumanCommand, reviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 
@@ -79,7 +78,7 @@ test("a resolved implementation waits until another running ticket frees a slot"
   expect(await listAttempts(ctx.storage)).toHaveLength(2);
 });
 
-test("resolved input waits for all requests and still respects the saved filters", async () => {
+test("resolved input waits until every open request is answered", async () => {
   const { ctx, ticket } = await fixture(1);
   const task = await ticket("Paused task");
   const first = (await autoBuildCommand.run(ctx, {})).started[0]!;
@@ -106,13 +105,6 @@ test("resolved input waits for all requests and still respects the saved filters
   await reviewCommand.run(ctx, { requestId: requests[0]!.id, response: { confirmed: true } });
   expect((await autoBuildCommand.run(ctx, {})).started).toHaveLength(0);
   await reviewCommand.run(ctx, { requestId: requests[1]!.id, response: { confirmed: true } });
-  await configureAutoBuildCommand.run(ctx, {
-    enabled: true,
-    filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Other" }] },
-  });
-  expect((await autoBuildCommand.run(ctx, {})).started).toHaveLength(0);
-  expect(followups).toHaveLength(0);
-  await configureAutoBuildCommand.run(ctx, { enabled: true, filter: { conjunction: "and", rules: [] } });
   expect((await autoBuildCommand.run(ctx, {})).started).toEqual([first]);
   expect(followups).toEqual([first.sessionId]);
 });

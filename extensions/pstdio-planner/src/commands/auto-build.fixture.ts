@@ -34,7 +34,6 @@ export async function fixture(limit = 2) {
   await storage.set("auto-build", {
     revision: "test",
     enabled: true,
-    filter: { conjunction: "and", rules: [] },
   });
   const ticket = (title: string, dependsOn: string[] = []) =>
     createTicketCommand.run(ctx, { title, statusId: "ready", dependsOn });

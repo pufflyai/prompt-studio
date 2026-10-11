@@ -358,7 +358,7 @@ describe("attempt handoffs", () => {
     const attempt = (await readAttempt(storage, "workspace-1"))!;
     await putAttempt(storage, { ...attempt, state: "implementing" });
 
-    await rollUpAttemptTicket(storage, "ps-1");
+    await rollUpAttemptTicket(context(), "ps-1");
 
     expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("in-review");
   });

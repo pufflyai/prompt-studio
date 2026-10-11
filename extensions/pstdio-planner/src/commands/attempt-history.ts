@@ -189,7 +189,7 @@ export const dismissReviewCommand = defineCommand({
       metadata: { reason: commandParams.reason },
     });
     await reviewLaunchClaimsCollection(ctx.storage).delete(`${attempt.workspaceId}:${revision.revision}`);
-    await rollUpAttemptTicket(ctx.storage, attempt.ticketId);
+    await rollUpAttemptTicket(ctx, attempt.ticketId);
     return next;
   },
 });

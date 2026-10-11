@@ -7,22 +7,6 @@ const meta: Meta<typeof AutoBuildDialog> = {
   args: {
     saving: false,
     maxInProgress: 2,
-    fields: [
-      { id: "title", label: "Title", type: { kind: "string" }, filterable: true },
-      {
-        id: "status",
-        label: "Status",
-        filterable: true,
-        type: { kind: "enum", options: [{ value: "todo", label: "Todo" }] },
-      },
-    ],
-    filter: {
-      conjunction: "and",
-      rules: [
-        { attributeId: "status", condition: "is-any-of", value: ["todo"] },
-        { attributeId: "title", condition: "contains", value: "Release" },
-      ],
-    },
     onEnable: async () => true,
     onClose: () => {},
     t: (_key, fallback) => fallback ?? _key,
@@ -30,8 +14,7 @@ const meta: Meta<typeof AutoBuildDialog> = {
 };
 export default meta;
 type Story = StoryObj<typeof AutoBuildDialog>;
-export const CurrentFilters: Story = {};
-export const AllTickets: Story = { args: { filter: { conjunction: "and", rules: [] } } };
+export const ProjectWide: Story = {};
 export const Saving: Story = { args: { saving: true } };
 export const NoCapacity: Story = { args: { maxInProgress: 0 } };
 export const Failure: Story = { args: { error: "Agent unavailable" } };

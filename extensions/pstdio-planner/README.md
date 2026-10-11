@@ -19,7 +19,7 @@ pst extensions add pstdio-reports
 ## What Planner adds
 
 - A **Project Timeline** for milestones, tracks, dependencies, and review gates. See [Timeline](docs/0005-timeline.md).
-- **Auto Build** to keep assigning matching ready tickets to your default agent. See [Auto Build](docs/0007-auto-build.md).
+- **Auto Build** to keep assigning ready project tickets to your default agent. See [Auto Build](docs/0007-auto-build.md).
 - A **Tickets** board in the project sidebar, and a page for each ticket. See [Dashboard](docs/0003-dashboard.md).
 - Statuses and tags for each project. See [Tags and statuses](docs/0001-tags-and-statuses.md).
 - Managed attempts: an agent works on a ticket in its own Git worktree, and a second agent reviews the result. See [Attempts](docs/0002-attempts.md).
@@ -47,9 +47,9 @@ Open Settings → Project → Extensions → Prompt Studio Planner, then the Set
 - **Default target branch** selects a remote branch from the project's Git folder. Clear the selection to use the repository's default branch.
 - **Maximum in-progress tickets** limits how many tickets run an implementation at once. Run attempt does not start another ticket at this limit, whether automation or a person runs it.
 
-Choose **Auto Build** in Project Timeline, review the current filters shown as bubbles, and confirm with **Auto Build**. Planner saves the current timeline view's filters and automatically starts matching Todo tickets in timeline order as dependencies and capacity allow. It uses the default agent and target branch. Independent matching tickets can run together; prerequisites across tracks still control readiness.
+Choose **Auto Build** in Project Timeline, set **Maximum parallel tasks**, and confirm with **Auto Build**. Planner automatically starts eligible Todo tickets across the project in timeline order as dependencies and capacity allow. It uses the default agent and target branch. Independent tickets can run together; prerequisites across tracks still control readiness.
 
-The mode keeps running when the timeline is closed and resumes after restarting Prompt Studio. Use **Stop Auto Build** in the header to stop future launches. Work already dispatched continues. Later view changes do not change the saved filters; stop and start Auto Build to apply the current view's filters. A launch failure turns the mode off and shows the error so you can resolve it before re-enabling.
+The mode keeps running when the timeline is closed and resumes after restarting Prompt Studio. Use **Stop Auto Build** in the header to stop future launches. Work already dispatched continues. The selected view, filters, and search only affect the display. A launch failure turns the mode off and shows the error so you can resolve it before re-enabling.
 
 Auto build leaves gates, blocked work, open human requests, and existing attempts for review. Agents that get stuck use Planner's **Request human input** action so the timeline shows Review Needed.
 

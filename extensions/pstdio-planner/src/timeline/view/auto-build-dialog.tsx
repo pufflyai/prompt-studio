@@ -1,15 +1,10 @@
 import { Button, CloseButton, Dialog, Icon, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
-import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
-import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
 import { NumberInput } from "@pstdio/ui/param-editor";
 import { psTheme } from "@pstdio/ui/theme";
 import { Link as LinkIcon } from "lucide-react";
 import { useState } from "react";
-import { AutoBuildFilterBubbles } from "./auto-build-filter-bubbles";
 
 interface AutoBuildDialogProps {
-  filter: ViewFilterGroup;
-  fields: AttributeDescriptor[];
   maxInProgress: number;
   saving: boolean;
   error?: string;
@@ -19,7 +14,7 @@ interface AutoBuildDialogProps {
 }
 
 export function AutoBuildDialog(props: AutoBuildDialogProps) {
-  const { filter, fields, maxInProgress, saving, error, onEnable, onClose, t } = props;
+  const { maxInProgress, saving, error, onEnable, onClose, t } = props;
   const [limit, setLimit] = useState(maxInProgress);
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const save = async () => {
@@ -70,7 +65,6 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                   readOnly={saving}
                   onChange={(_id, value) => setLimit(value)}
                 />
-                <AutoBuildFilterBubbles itemLabel="Ticket" filter={filter} fields={fields} />
                 {error ? (
                   <Text role="alert" color="fg.error">
                     {error}

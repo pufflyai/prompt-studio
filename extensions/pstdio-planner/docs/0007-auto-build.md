@@ -1,6 +1,6 @@
 # Auto Build
 
-Auto Build automatically assigns ready tickets to your default agent while the mode is on. Filters let you choose which work it can start.
+Auto Build automatically assigns ready tickets to your default agent while the mode is on. It applies to all eligible tickets in the project.
 
 ## Before you start
 
@@ -13,23 +13,20 @@ Planner uses **Default target branch** when set, or the repository's default bra
 ## Start Auto Build
 
 1. Open **Project Timeline** under **Project Planning**.
-2. Set the view's filters to select the tickets you want implemented.
-3. Click **Auto Build** in the header. Review the filter bubbles and set **Maximum parallel tasks** in the modal. This edits the same project limit as **Maximum in-progress tickets** in Settings.
-4. Confirm with the primary **Auto Build** button.
+2. Click **Auto Build** in the header and set **Maximum parallel tasks** in the modal. This edits the same project limit as **Maximum in-progress tickets** in Settings.
+3. Confirm with the primary **Auto Build** button.
 
-![Auto Build confirmation with its short explanation, saved filter bubbles, documentation link, and primary Auto Build button.](../../../documentation/images/auto-build-confirmation.png)
+![Auto Build confirmation with its short explanation, documentation link, and primary Auto Build button.](../../../documentation/images/auto-build-confirmation.png)
 
-The filter bubbles show the selection that Auto Build saves when you confirm.
-
-Planner saves these filters and starts matching **Todo** tickets in timeline order. Each ticket gets its own managed Git workspace and a session with the default agent. The ticket moves to **In Progress** in both Tickets and Project Timeline.
+Planner starts eligible **Todo** tickets across the project in timeline order. Each ticket gets its own managed Git workspace and a session with the default agent. The ticket moves to **In Progress** in both Tickets and Project Timeline.
 
 Independent tickets can run together. A ticket waits until its prerequisites are complete and its dependency revisions are available. Blocked tickets, review gates, open requests for human input, and tickets with a current attempt do not start automatically.
 
 ## While the mode is on
 
-Planner keeps checking for ready work. When capacity becomes available, it automatically assigns the next matching Todo ticket. Newly created tickets and tickets moved to Todo can also start if they match the saved filters and are ready.
+Planner keeps checking for ready work. When capacity becomes available, it automatically assigns the next ready Todo ticket. Newly created tickets and tickets moved to Todo can also start when they are ready.
 
-Auto Build keeps running when you close the timeline and resumes after restarting Prompt Studio. Changing the displayed view or its filters does not change the mode's saved filters. Stop Auto Build, set the new filters, and start it again to apply a different selection. Search text is local to the screen and is not part of the saved selection.
+Auto Build keeps running when you close the timeline and resumes after restarting Prompt Studio. The selected view, filters, and search only change what you see. Auto Build always checks all eligible tickets in the project.
 
 Implementation follows the project's Planner settings, including adversarial review and pull request creation. Auto Build starts work; it does not approve or merge it. Review the results through the normal [attempt workflow](0002-attempts.md).
 
@@ -43,6 +40,6 @@ The button returns to **Auto Build**. Start it again when you want to resume ass
 
 A launch failure turns Auto Build off and shows the error in the timeline. Resolve the problem, then start the mode again. Existing attempts stay available for inspection.
 
-If an agent needs your help, Planner records a [review request](0006-review-requests.md) and marks the ticket **Review Needed**. Resolve the issue and answer every open request. While Auto Build is on, a paused implementation resumes in its existing session and workspace when a slot is available, with your saved answer included. The ticket must still match the saved filters. Other independent work can still start when capacity allows.
+If an agent needs your help, Planner records a [review request](0006-review-requests.md) and marks the ticket **Review Needed**. Resolve the issue and answer every open request. While Auto Build is on, a paused implementation resumes in its existing session and workspace when a slot is available, with your saved answer included. Other independent work can still start when capacity allows.
 
-If nothing starts, check that matching tickets are in Todo, their prerequisites are complete, the default agent is configured, and the in-progress limit has space.
+If nothing starts, check that tickets are in Todo, their prerequisites are complete, the default agent is configured, and the in-progress limit has space.

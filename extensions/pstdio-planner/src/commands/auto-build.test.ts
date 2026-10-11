@@ -6,7 +6,7 @@ import { listAttempts } from "../data/attempt-storage";
 import { putTicket } from "../data/collections";
 import { registerGate } from "../timeline/commands/gate-store";
 import { savePlan } from "../timeline/commands/plan-store";
-import { assignTrackCommand, createTrackCommand, readTrack } from "../timeline/commands/track-commands";
+import { assignTrackCommand, createTrackCommand } from "../timeline/commands/track-commands";
 import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
@@ -14,7 +14,6 @@ import { createSessionResource } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { requestHumanCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
-import { deleteTicketTagCommand } from "./ticket-tags";
 
 test("fills slots in timeline order with independent tickets", async () => {
   const { ctx, storage, ticket } = await fixture();
@@ -26,7 +25,6 @@ test("fills slots in timeline order with independent tickets", async () => {
   await storage.set("auto-build", {
     revision: "test",
     enabled: true,
-    filter: { conjunction: "and", rules: [] },
   });
   await savePlan(
     ctx,
@@ -45,19 +43,14 @@ test("fills slots in timeline order with independent tickets", async () => {
 });
 
 test("skips unresolved cross-track dependencies and fills remaining slots", async () => {
-  const { ctx, storage, ticket } = await fixture();
+  const { ctx, ticket } = await fixture();
   const first = await ticket("Prerequisite");
   const dependent = await ticket("Selected dependent", [first.shorthand]);
   const independent = await ticket("Selected independent");
   const track = await createTrackCommand.run(ctx, { name: "Other" });
   await assignTrackCommand.run(ctx, { ticket: first.id, track: track.id });
-  await storage.set("auto-build", {
-    revision: "test",
-    enabled: true,
-    filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Selected" }] },
-  });
   const result = await autoBuildCommand.run(ctx, {});
-  expect(result.started.map((row) => row.ticket)).toEqual([independent.shorthand]);
+  expect(result.started.map((row) => row.ticket)).toEqual([first.shorthand, independent.shorthand]);
   expect(result.skipped).toEqual([{ ticket: dependent.shorthand, reason: "dependency-not-ready" }]);
 });
 
@@ -184,23 +177,13 @@ test("uses the repository default branch when the project is on unrelated featur
   }
 });
 
-test("starts matching tickets on later checks when they become available", async () => {
+test("starts new ready tickets on later checks across the project", async () => {
   const { ctx, storage, ticket } = await fixture();
-  const other = await ticket("Other track");
-  const track = await createTrackCommand.run(ctx, { name: "Product" });
-  await storage.set("auto-build", {
-    revision: "test",
-    enabled: true,
-    filter: {
-      conjunction: "and",
-      rules: [{ attributeId: (await readTrack(ctx))!.id, condition: "is-any-of", value: [track.id] }],
-    },
-  });
+  await createTicketCommand.run(ctx, { title: "Backlog work" });
   expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-  const ready = await ticket("New matching work");
-  await assignTrackCommand.run(ctx, { ticket: ready.id, track: track.id });
+  const ready = await ticket("New ready work");
   expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([ready.shorthand]);
-  expect((await listAttempts(storage)).some(({ ticketId }) => ticketId === other.id)).toBe(false);
+  expect(await listAttempts(storage)).toHaveLength(1);
 });
 
 test("turning off prevents future launches while preserving the dispatched implementation", async () => {
@@ -217,23 +200,6 @@ test("turning off prevents future launches while preserving the dispatched imple
   expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
 });
 
-test("a later ticket moved outside the saved filters during a batch is not launched", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  const first = await ticket("First");
-  const second = await ticket("Second");
-  const track = await createTrackCommand.run(ctx, { name: "Other" });
-  await storage.set("auto-build", {
-    revision: "test",
-    enabled: true,
-    filter: { conjunction: "and", rules: [{ attributeId: (await readTrack(ctx))!.id, condition: "is-empty" }] },
-  });
-  ctx.sessions.create = async () => {
-    await assignTrackCommand.run(ctx, { ticket: second.id, track: track.id });
-    return createSessionResource();
-  };
-  expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([first.shorthand]);
-});
-
 test("Auto build is off in a project with no saved mode", async () => {
   const { ctx, storage, ticket } = await fixture();
   await storage.delete("auto-build");
@@ -241,20 +207,6 @@ test("Auto build is off in a project with no saved mode", async () => {
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
   expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
   expect(await listAttempts(storage)).toEqual([]);
-});
-
-test("saved timeline filters exclude other ready tickets", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  await ticket("Other work");
-  const selected = await ticket("Ship the feature");
-  await storage.set("auto-build", {
-    revision: "test",
-    enabled: true,
-    filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Ship" }] },
-  });
-  expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([selected.shorthand]);
-  const later = await ticket("Ship another feature");
-  expect((await autoBuildCommand.run(ctx, {})).started.map(({ ticket }) => ticket)).toEqual([later.shorthand]);
 });
 
 test("pauses Auto build after a launch failure so later checks do not retry it", async () => {
@@ -297,34 +249,12 @@ test("turning off during readiness prevents an undispatched launch", async () =>
 test("a failed batch preserves a newer enabled configuration", async () => {
   const { ctx, ticket } = await fixture();
   await ticket("Ready");
-  const filter = {
-    conjunction: "and" as const,
-    rules: [{ attributeId: "title", condition: "contains" as const, value: "New" }],
-  };
   ctx.workspaces.create = async () => {
-    await configureAutoBuildCommand.run(ctx, { enabled: true, filter });
+    await configureAutoBuildCommand.run(ctx, { enabled: true });
     throw new Error("Old launch failed");
   };
   expect((await autoBuildCommand.run(ctx, {})).errors).toHaveLength(1);
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: true, filter });
-});
-
-test("a removed filter property pauses Auto build without broadening its scope", async () => {
-  const { ctx, storage, ticket } = await fixture();
-  await ticket("Ready");
-  await storage.set("auto-build", {
-    revision: "test",
-    enabled: true,
-    filter: {
-      conjunction: "and",
-      rules: [{ attributeId: "priority", condition: "is-any-of", value: ["default-priority-high"] }],
-    },
-  });
-  expect((await autoBuildCommand.run(ctx, {})).started).toEqual([]);
-  await deleteTicketTagCommand.run(ctx, { tagId: "default-priority" });
-  await expect(autoBuildCommand.run(ctx, {})).rejects.toThrow("filters");
-  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
-  expect(await listAttempts(storage)).toEqual([]);
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: true });
 });
 
 test("launch failures pause even while a configuration write holds its claim", async () => {
