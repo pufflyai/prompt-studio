@@ -56,8 +56,8 @@ export function TrackHeader(props: TrackHeaderProps) {
             left={`${boxes[index].x}px`}
             w={`${boxes[index].width}px`}
             top="4px"
-            bg={targetTrackId === track.id ? "border.accent/6" : undefined}
-            boxShadow={targetTrackId === track.id ? "inset 0 -1px var(--chakra-colors-border-accent)" : undefined}
+            bg={targetTrackId === track.id ? "bg.accent-subtle" : undefined}
+            borderRadius="sm"
             justify="center"
           >
             <Tooltip content={`Expand ${track.label}`}>
@@ -86,8 +86,8 @@ export function TrackHeader(props: TrackHeaderProps) {
             left={`${boxes[index].x}px`}
             w={`${boxes[index].width}px`}
             top="4px"
-            bg={targetTrackId === track.id ? "border.accent/6" : undefined}
-            boxShadow={targetTrackId === track.id ? "inset 0 -1px var(--chakra-colors-border-accent)" : undefined}
+            bg={targetTrackId === track.id ? "bg.accent-subtle" : undefined}
+            borderRadius="sm"
             role="group"
             aria-label={`${track.label} track header`}
           >
