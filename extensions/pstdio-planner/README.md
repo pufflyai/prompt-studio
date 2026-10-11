@@ -46,7 +46,9 @@ Open Settings → Project → Extensions → Prompt Studio Planner, then the Set
 - **Default target branch** selects a remote branch from the project's Git folder. Clear the selection to use the repository's default branch.
 - **Maximum in-progress tickets** limits how many tickets run an implementation at once. Run attempt does not start another ticket at this limit, whether automation or a person runs it.
 
-Choose **Auto build** in Ticket timeline to fill available implementation slots with Todo tickets in timeline order. It uses the default agent and target branch. Independent tickets on one track can run together; prerequisites across tracks still control readiness. Each click fills slots once, across the project, regardless of the current view filters.
+Choose **Auto Build** in Project Timeline, review the current filters shown as bubbles, and confirm with **Auto Build**. Planner saves the current timeline view's filters and automatically starts matching Todo tickets in timeline order as dependencies and capacity allow. It uses the default agent and target branch. Independent matching tickets can run together; prerequisites across tracks still control readiness.
+
+The mode keeps running when the timeline is closed and resumes after restarting Prompt Studio. Use **Stop Auto Build** in the header to stop future launches. Work already dispatched continues. Later view changes do not change the saved filters; stop and start Auto Build to apply the current view's filters. A launch failure turns the mode off and shows the error so you can resolve it before re-enabling.
 
 Auto build leaves gates, blocked work, open human requests, and existing attempts for review. Agents that get stuck use Planner's **Request human input** action so the timeline shows Review Needed.
 

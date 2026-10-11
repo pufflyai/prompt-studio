@@ -2,8 +2,6 @@
   "timeline.page.title": "프로젝트 타임라인",
   "timeline.view.title": "프로젝트 타임라인",
   "commands.autoBuild.title": "자동 빌드",
-  "timeline.autoBuild.started": "{tickets} 작업을 시작했습니다.",
-  "timeline.autoBuild.idle": "시작된 티켓이 없습니다. 할 일 티켓, 의존 관계 및 남은 용량을 확인하세요.",
   "commands.openTickets": "티켓 열기",
   "archiveState.active": "활성",
   "archiveState.archived": "보관됨",
@@ -43,5 +41,8 @@
   "settings.tickets.markDoneOnMerge.title": "병합 시 완료로 표시",
   "settings.tickets.markDoneOnMerge.description": "작업 공간 브랜치 또는 연결된 풀 리퀘스트가 병합되면 티켓을 완료로 이동합니다.",
   "requests.view.title": "검토 요청",
-  "requests.page.title": "검토 요청"
+  "requests.page.title": "검토 요청",
+  "timeline.autoBuild.start": "자동 빌드",
+  "timeline.autoBuild.stop": "자동 빌드 중지",
+  "timeline.autoBuild.cancel": "취소"
 }

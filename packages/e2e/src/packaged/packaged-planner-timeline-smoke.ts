@@ -56,6 +56,17 @@ export async function expectPackagedPlannerTimeline(input: {
   const execute = commandRunner(input);
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ started: [], skipped: [], errors: [] });
+  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false });
+  const filter = { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Mode smoke" }] };
+  expect(await execute("auto-build.configure", { enabled: true, filter })).toMatchObject({
+    enabled: true,
+    filter,
+  });
+  expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
+    enabled: false,
+    filter,
+  });
+  expect(await execute("auto-build", {})).toEqual({ started: [], skipped: [], errors: [] });
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
     content: "# Timeline smoke ticket\n\nShared Planner body",

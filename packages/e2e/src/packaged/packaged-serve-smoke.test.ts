@@ -46,7 +46,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
-// Timeline coverage also executes Auto build through the packaged command transport.
+// Timeline coverage also configures Auto build mode through the packaged command transport.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.

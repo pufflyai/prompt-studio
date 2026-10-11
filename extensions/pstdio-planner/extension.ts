@@ -19,6 +19,7 @@ import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
+import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { gitMergedHook } from "./src/hooks/git-merged";
 import { reviewRequestCleanupHook } from "./src/hooks/review-request-cleanup";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
@@ -146,8 +147,9 @@ export default defineExtension({
   settingsPanels: plannerUi.settingsPanels,
   statuses: [ticketStatuses],
 
-  schedules: [mergedPullRequestsSchedule],
+  schedules: [mergedPullRequestsSchedule, autoBuildSchedule],
   hooks: [
+    ...autoBuildHooks,
     gitMergedHook,
     worktreeCreatedHook,
     reviewRequestCleanupHook,

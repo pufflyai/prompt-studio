@@ -1,36 +1,29 @@
+import { eventRef, type ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { useState } from "react";
+import { autoBuildChanged } from "../../data/auto-build-mode";
+import { useLiveValue } from "./use-live-value";
 import type { PlanClient } from "./use-plan";
 
-export function useAutoBuild(client: PlanClient, t: (key: string, fallback?: string) => string) {
-  const [running, setRunning] = useState(false);
-  const [message, setMessage] = useState<string>();
+const readMode = (client: PlanClient) => client.commands["auto-build.read"]();
+const modeEvents = [autoBuildChanged, eventRef({ extensionId: "pstdio.pstdio-planner", id: "automation-run-changed" })];
+
+export function useAutoBuild(client: PlanClient) {
+  const { value: mode, setValue: setMode, error: readError } = useLiveValue(client, readMode, modeEvents);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
-  const run = async () => {
-    setRunning(true);
-    setMessage(undefined);
+  const configure = async (enabled: boolean, filter?: ViewFilterGroup) => {
+    setSaving(true);
     setError(undefined);
     try {
-      const result = await client.commands["auto-build"]();
-      if (result.started.length) {
-        setMessage(
-          t("timeline.autoBuild.started", "Started {tickets}.").replace(
-            "{tickets}",
-            result.started.map(({ ticket }) => ticket).join(", "),
-          ),
-        );
-      } else if (!result.errors.length) {
-        setMessage(
-          t("timeline.autoBuild.idle", "No tickets started. Check Todo tickets, dependencies, and available capacity."),
-        );
-      }
-      if (result.errors.length) {
-        setError(result.errors.map(({ ticket, message }) => `${ticket}: ${message}`).join("\n"));
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : String(error));
+      await client.commands["auto-build.configure"]({ enabled, filter });
+      setMode(await readMode(client));
+      return true;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      return false;
     } finally {
-      setRunning(false);
+      setSaving(false);
     }
   };
-  return { running, message, error, run };
+  return { mode, saving, error: error ?? readError ?? mode?.error, configure };
 }

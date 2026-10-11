@@ -2,8 +2,6 @@
   "timeline.page.title": "專案時間軸",
   "timeline.view.title": "專案時間軸",
   "commands.autoBuild.title": "自動建置",
-  "timeline.autoBuild.started": "已啟動 {tickets}。",
-  "timeline.autoBuild.idle": "未啟動任何工單。請檢查待辦工單、相依關係及可用容量。",
   "commands.openTickets": "開啟工單",
   "archiveState.active": "使用中",
   "archiveState.archived": "已封存",
@@ -43,5 +41,8 @@
   "settings.tickets.markDoneOnMerge.title": "合併時標記為完成",
   "settings.tickets.markDoneOnMerge.description": "工作區分支或關聯的提取要求合併後，將工單移至完成。",
   "requests.view.title": "審核請求",
-  "requests.page.title": "審核請求"
+  "requests.page.title": "審核請求",
+  "timeline.autoBuild.start": "自動建置",
+  "timeline.autoBuild.stop": "停止自動建置",
+  "timeline.autoBuild.cancel": "取消"
 }

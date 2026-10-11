@@ -2,6 +2,7 @@
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import type { autoBuildCommand } from "../../commands/auto-build";
+import type { configureAutoBuildCommand, readAutoBuildCommand } from "../../commands/auto-build-mode";
 import type { openReviewRequestCommand, reviewCommand } from "../../commands/review-requests";
 import type { commands } from "../commands/index";
 import { planChanged } from "../contracts";
@@ -11,6 +12,8 @@ import { useLiveValue } from "./use-live-value";
 // The timeline answers Planner review requests through the same commands as the CLI.
 type PlanCommands = typeof commands & {
   "auto-build": typeof autoBuildCommand;
+  "auto-build.configure": typeof configureAutoBuildCommand;
+  "auto-build.read": typeof readAutoBuildCommand;
   review: typeof reviewCommand;
   "review-requests.open": typeof openReviewRequestCommand;
 };

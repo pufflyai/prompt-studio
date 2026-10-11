@@ -14,9 +14,27 @@ A Track rule in the filter also chooses the track columns. For example, Track is
 
 Use ticket filters for Status, Milestone, Milestone date, Milestone progress, and Needs attention. For example, exclude Done tickets, exclude Completed past milestone, or show Needs attention → Yes. These properties are available in both Tickets and Project Timeline and can be saved in shared views. Change a ticket's milestone in its Properties panel or by dragging it in the timeline. The board create form creates unscheduled tickets; the timeline form also chooses placement and preserves the saved ticket when placement needs a retry. The timeline has no separate Display menu. Dependency arrows are smooth curves from the prerequisite to the ticket that waits on it. The graph keeps its dependency execution order. Milestone progress uses active tickets, matching the graph; archived tickets remain available in Tickets without active timeline properties. Hover and drop indicators use the shared navigation indicator color. The add-milestone preview appears above ticket cards.
 
+## CLI
+
+Run `pst pstdio-planner timeline --help` to see the commands. For example:
+
+```sh
+pst pstdio-planner timeline plan read
+pst pstdio-planner timeline track create --name Product
+pst pstdio-planner timeline deadline create --date 2026-10-15 --name Preview
+pst pstdio-planner timeline ticket create --content '# Build the preview' --deadline 2026-10-15
+pst pstdio-planner timeline plan move --ticket PS-32 --deadline none
+```
+
+## Recover an interrupted write
+
+Timeline writes use temporary owner claims because the extension storage API does not provide transactions. Stop the old writer before recovery. Run `pst pstdio-planner timeline write-claim read`, then release only the abandoned claim with `pst pstdio-planner timeline write-claim release --key <key> --expected-token <token>`. A different owner token refuses the release. Never release a running writer. See [the temporary write-claim decision](../../../documentation/adrs/0062-temporary-timeline-write-claims.md).
+
 ## Auto build
 
-Choose **Auto build** in the header to fill available implementation slots with Todo tickets in timeline order. It uses the default agent and target branch across the project, regardless of view filters. Independent tickets within one track can run together; dependencies in other tracks still apply. Each click fills slots once.
+Choose **Auto Build** in the header, review the filters shown as bubbles, and confirm with **Auto Build**. Planner saves the current view's filters and automatically starts matching Todo tickets in timeline order as dependencies and capacity allow. It uses the default agent and target branch. Independent matching tickets can run together; dependencies in other tracks still apply.
+
+**Stop Auto Build** stops future launches without interrupting work already dispatched. The mode remains active when the timeline is closed and resumes after a restart. Later view changes do not change the saved filters. Stop and start Auto Build to use the current view's filters. Launch failures turn the mode off and show an error.
 
 Existing attempts, gates, blocked tickets, and work needing human input stay available for review. If an implementation agent gets stuck, it creates a Planner review request. See [Attempts](0002-attempts.md#auto-build) for the full workflow.
 
@@ -26,7 +44,8 @@ Run `pst pstdio-planner timeline --help` to see the commands. For example:
 
 ```sh
 pst pstdio-planner timeline plan read
-pst pstdio-planner auto-build
+pst pstdio-planner auto-build configure --enabled true
+pst pstdio-planner auto-build configure --enabled false
 pst pstdio-planner timeline track create --name Product
 pst pstdio-planner timeline deadline create --date 2026-10-15 --name Preview
 pst pstdio-planner timeline ticket create --content '# Build the preview' --deadline 2026-10-15

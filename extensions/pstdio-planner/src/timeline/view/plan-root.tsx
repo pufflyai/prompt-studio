@@ -11,6 +11,7 @@ import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 import { stepReview } from "../model/review";
 import { AutoBuildButton } from "./auto-build-button";
+import { AutoBuildDialog } from "./auto-build-dialog";
 import { BackgroundMenu } from "./background-menu";
 import { Details } from "./details";
 import { PlanEditor } from "./plan-editor";
@@ -52,7 +53,8 @@ interface PlanContentProps extends PlanRootProps {
 function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource, error } = props;
   const [search, setSearch] = useState("");
-  const autoBuild = useAutoBuild(client, t);
+  const autoBuild = useAutoBuild(client);
+  const [autoBuildOpen, setAutoBuildOpen] = useState(false);
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
@@ -80,18 +82,22 @@ function PlanContent(props: PlanContentProps) {
         search={search}
         onSearchChange={setSearch}
         resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${filtered.length}`}
-        actions={<AutoBuildButton running={autoBuild.running} onRun={autoBuild.run} t={t} />}
+        actions={
+          <AutoBuildButton
+            enabled={autoBuild.mode?.enabled ?? false}
+            running={autoBuild.mode?.running ?? false}
+            disabled={!autoBuild.mode || autoBuild.saving}
+            onConfigure={() => setAutoBuildOpen(true)}
+            onTurnOff={() => void autoBuild.configure(false)}
+            t={t}
+          />
+        }
       />
-      {[error, actionError, autoBuild.error].filter(Boolean).map((message) => (
+      {[error, actionError, autoBuildOpen ? undefined : autoBuild.error].filter(Boolean).map((message) => (
         <Text key={message} role="alert" color="fg.error" px="md" pt="sm" flexShrink="0">
           {message}
         </Text>
       ))}
-      {autoBuild.message ? (
-        <Text role="status" color="fg.muted" px="md" pt="sm" flexShrink="0">
-          {autoBuild.message}
-        </Text>
-      ) : null}
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
           <PlanGraph {...viewProps} today={plan.today} />
@@ -126,6 +132,17 @@ function PlanContent(props: PlanContentProps) {
           client={client}
           plan={plan}
           onDone={done}
+        />
+      ) : null}
+      {autoBuildOpen ? (
+        <AutoBuildDialog
+          filter={filter}
+          fields={queryData.attributes}
+          saving={autoBuild.saving}
+          error={autoBuild.error}
+          onEnable={() => autoBuild.configure(true, filter)}
+          onClose={() => setAutoBuildOpen(false)}
+          t={t}
         />
       ) : null}
       {context ? (

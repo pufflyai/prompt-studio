@@ -2,8 +2,6 @@
   "timeline.page.title": "项目时间线",
   "timeline.view.title": "项目时间线",
   "commands.autoBuild.title": "自动构建",
-  "timeline.autoBuild.started": "已启动 {tickets}。",
-  "timeline.autoBuild.idle": "未启动任何工单。请检查待办工单、依赖关系和可用容量。",
   "commands.openTickets": "打开工单",
   "archiveState.active": "活跃",
   "archiveState.archived": "已归档",
@@ -43,5 +41,8 @@
   "settings.tickets.markDoneOnMerge.title": "合并时标记为完成",
   "settings.tickets.markDoneOnMerge.description": "工作区分支或关联的拉取请求合并后，将工单移至完成。",
   "requests.view.title": "审核请求",
-  "requests.page.title": "审核请求"
+  "requests.page.title": "审核请求",
+  "timeline.autoBuild.start": "自动构建",
+  "timeline.autoBuild.stop": "停止自动构建",
+  "timeline.autoBuild.cancel": "取消"
 }

@@ -2,8 +2,6 @@
   "timeline.page.title": "Chronologie du projet",
   "timeline.view.title": "Chronologie du projet",
   "commands.autoBuild.title": "Construire automatiquement",
-  "timeline.autoBuild.started": "Démarrage de {tickets}.",
-  "timeline.autoBuild.idle": "Aucune tâche démarrée. Vérifiez les tâches à faire, les dépendances et la capacité disponible.",
   "commands.openTickets": "Ouvrir les tâches",
   "commands.migrateTicketIdentities": "Migrer les identifiants des tickets",
   "archiveState.active": "Actif",
@@ -46,5 +44,9 @@
   "settings.tickets.markDoneOnMerge.title": "Marquer comme terminé après fusion",
   "settings.tickets.markDoneOnMerge.description": "Déplace un ticket vers Terminé lorsque la branche de son espace de travail ou une demande de fusion liée est fusionnée.",
   "requests.view.title": "Demandes de révision",
-  "requests.page.title": "Demandes de révision"
+  "requests.page.title": "Demandes de révision",
+  "commands.autoBuild.configure": "Configurer la construction automatique",
+  "timeline.autoBuild.start": "Construire automatiquement",
+  "timeline.autoBuild.stop": "Arrêter la construction automatique",
+  "timeline.autoBuild.cancel": "Annuler"
 }

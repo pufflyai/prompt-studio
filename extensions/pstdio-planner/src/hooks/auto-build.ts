@@ -1,0 +1,63 @@
+import {
+  type CommandContext,
+  defineCommand,
+  defineHook,
+  defineSchedule,
+  type EventRef,
+  type ExtensionContextBase,
+  projectEvents,
+  sessionEvents,
+} from "@pstdio/sdk/extensions";
+import { autoBuildCommand } from "../commands/auto-build";
+import { readAutoBuildMode } from "../data/auto-build-mode";
+import { withWriteGuard } from "../data/write-guard";
+import { plannerTicketsChanged } from "../events";
+import { planChanged } from "../timeline/contracts";
+
+export const enqueueAutoBuild = (ctx: ExtensionContextBase) =>
+  withWriteGuard(
+    ctx,
+    "auto-build-enqueue",
+    async () => {
+      if (!(await readAutoBuildMode(ctx)).enabled) return;
+      const active = await ctx.automation.list({ status: ["queued", "running"] });
+      if (active.some(({ commandId }) => commandId === `${ctx.extensionId}.command.${autoBuildCommand.id}`)) return;
+      await ctx.automation.enqueue({
+        command: autoBuildCommand.ref,
+        input: {},
+        key: `auto-build:${crypto.randomUUID()}`,
+      });
+    },
+    () => undefined,
+  );
+
+export const checkAutoBuildCommand = defineCommand({
+  id: "auto-build.check",
+  title: "Check Auto build",
+  async run(ctx: CommandContext) {
+    await enqueueAutoBuild(ctx);
+  },
+});
+
+export const autoBuildSchedule = defineSchedule({
+  id: "auto-build",
+  title: "Check Auto build",
+  schedule: "* * * * *",
+  command: checkAutoBuildCommand.ref,
+});
+
+const checkAfter = <T extends object>(id: string, event: EventRef<T>) =>
+  defineHook({
+    id: `auto-build.${id}`,
+    event,
+    async run(ctx) {
+      await enqueueAutoBuild(ctx);
+    },
+  });
+
+export const autoBuildHooks = [
+  checkAfter("tickets-changed", plannerTicketsChanged),
+  checkAfter("plan-changed", planChanged),
+  checkAfter("session-completed", sessionEvents.completed),
+  checkAfter("project-opened", projectEvents.opened),
+];

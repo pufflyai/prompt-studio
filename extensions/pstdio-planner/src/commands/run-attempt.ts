@@ -39,7 +39,11 @@ const runAttemptParams = {
   workspace: params.workspace({ label: "Workspace", providers: ["pstdio.worktree"] }),
 };
 
-export async function startAttempt(ctx: CommandContext, commandParams: ParamsOf<typeof runAttemptParams>) {
+export async function startAttempt(
+  ctx: CommandContext,
+  commandParams: ParamsOf<typeof runAttemptParams>,
+  beforeDispatch?: () => Promise<void>,
+) {
   const { agent } = commandParams;
   const chosenBase = commandParams.workspace?.params?.base;
   const ticketRef = resolveTicket(ctx, commandParams);
@@ -71,7 +75,12 @@ export async function startAttempt(ctx: CommandContext, commandParams: ParamsOf<
     }
     throw new Error(message);
   }
-  const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(ctx, commandParams, readiness.baseHeadSha);
+  const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
+    ctx,
+    commandParams,
+    readiness.baseHeadSha,
+    beforeDispatch,
+  );
   const attemptAnchor: ResourceAnchor = {
     type: "planner-attempt",
     id: workspace.id,

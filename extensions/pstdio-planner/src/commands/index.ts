@@ -1,3 +1,4 @@
+import { checkAutoBuildCommand } from "../hooks/auto-build";
 import { applyTicketTemplateCommand } from "./apply-ticket-template";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
@@ -11,6 +12,7 @@ import {
 } from "./attempt-history";
 import { attemptReadinessCommand } from "./attempt-readiness";
 import { autoBuildCommand } from "./auto-build";
+import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -104,6 +106,9 @@ import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
   autoBuildCommand,
+  configureAutoBuildCommand,
+  readAutoBuildCommand,
+  checkAutoBuildCommand,
   documentLinkCommand,
   checkMergedPullRequestsCommand,
   openTicketsCommand,

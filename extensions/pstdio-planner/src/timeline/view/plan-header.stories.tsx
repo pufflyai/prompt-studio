@@ -64,7 +64,15 @@ function HeaderStory(props: { filtered?: boolean; running?: boolean }) {
       search={search}
       onSearchChange={setSearch}
       resultLabel="2 of 2"
-      actions={<AutoBuildButton running={running ?? false} onRun={() => {}} t={(_key, fallback) => fallback ?? _key} />}
+      actions={
+        <AutoBuildButton
+          enabled={running ?? false}
+          running={running ?? false}
+          onConfigure={() => {}}
+          onTurnOff={() => {}}
+          t={(_key, fallback) => fallback ?? _key}
+        />
+      }
     />
   );
 }
