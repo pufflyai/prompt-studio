@@ -108,7 +108,6 @@ export function PlanGraph(props: PlanViewProps) {
             width={canvasWidth}
             contentLeft={box.contentLeft}
             collapsed={collapsed}
-            targetTrackId={region?.trackId}
             onToggle={toggle}
             onRename={actions.onRenameTrack}
             onNewTrack={actions.onNewTrack}

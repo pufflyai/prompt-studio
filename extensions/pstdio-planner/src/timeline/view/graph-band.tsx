@@ -47,11 +47,10 @@ function DateCell(
   props: {
     deadline: PlanDeadline;
     complete: boolean;
-    targeted: boolean;
     over: (target: DropTarget) => void;
   } & Pick<BandActions, "onDrop" | "onRedate">,
 ) {
-  const { deadline, complete, targeted, over, onDrop, onRedate } = props;
+  const { deadline, complete, over, onDrop, onRedate } = props;
   const color = dueColor(deadline, complete);
   return (
     <Flex
@@ -75,7 +74,6 @@ function DateCell(
         onDrop();
       }}
     >
-      {targeted ? <Box position="absolute" inset="0" bg="bg.accent-subtle" zIndex="-1" pointerEvents="none" /> : null}
       <Tooltip content={`${deadline.date} · ${countdown(deadline.daysLeft, complete)}`}>
         <Box w={`${lineX - 10}px`} textAlign="right" pr="2xs">
           <InlineDate
@@ -106,8 +104,6 @@ function DateCell(
 export function Band(props: BandProps) {
   const { band, entry, viewWidth, contentLeft, headerLeft, zoom, dropTarget, over, trackAt, ...actions } = props;
   const deadline = entry.section.deadline;
-  // Keep the destination date and milestone name visible above the canvas preview.
-  const targeted = dropTarget?.deadlineId === band.deadlineId;
   return (
     <Box
       position="absolute"
@@ -132,7 +128,6 @@ export function Band(props: BandProps) {
         <DateCell
           deadline={deadline}
           complete={isComplete(entry.section)}
-          targeted={targeted}
           over={over}
           onDrop={actions.onDrop}
           onRedate={actions.onRedate}
@@ -156,7 +151,6 @@ export function Band(props: BandProps) {
         >
           <SectionHeader
             entry={entry}
-            targeted={targeted}
             onToggle={actions.onToggle}
             onDelete={actions.onDelete}
             onRenameDeadline={actions.onRenameDeadline}

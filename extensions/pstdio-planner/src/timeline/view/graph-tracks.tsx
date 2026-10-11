@@ -14,7 +14,6 @@ interface TrackHeaderProps {
   width: number;
   contentLeft: number;
   collapsed: ReadonlySet<string>;
-  targetTrackId?: string;
   onToggle: (trackId: string) => void;
   onRename: (trackId: string, name: string) => Promise<unknown>;
   onNewTrack: () => void;
@@ -43,7 +42,7 @@ function TrackName(props: { track: Track } & Pick<TrackHeaderProps, "onRename">)
 
 // Each name stays at the visible edge of its track until the next track reaches it.
 export function TrackHeader(props: TrackHeaderProps) {
-  const { tracks, boxes, width, contentLeft, collapsed, targetTrackId, onToggle, onRename, onNewTrack } = props;
+  const { tracks, boxes, width, contentLeft, collapsed, onToggle, onRename, onNewTrack } = props;
   const right = Math.max(contentLeft, ...boxes.map((box) => box.x + box.width));
   return (
     <Box position="sticky" top="0" zIndex={graphLayers.tracks} w={`${width}px`} h={`${trackHeaderHeight}px`} bg="bg">
@@ -56,8 +55,6 @@ export function TrackHeader(props: TrackHeaderProps) {
             left={`${boxes[index].x}px`}
             w={`${boxes[index].width}px`}
             top="4px"
-            bg={targetTrackId === track.id ? "bg.accent-subtle" : undefined}
-            borderRadius="sm"
             justify="center"
           >
             <Tooltip content={`Expand ${track.label}`}>
@@ -86,8 +83,6 @@ export function TrackHeader(props: TrackHeaderProps) {
             left={`${boxes[index].x}px`}
             w={`${boxes[index].width}px`}
             top="4px"
-            bg={targetTrackId === track.id ? "bg.accent-subtle" : undefined}
-            borderRadius="sm"
             role="group"
             aria-label={`${track.label} track header`}
           >

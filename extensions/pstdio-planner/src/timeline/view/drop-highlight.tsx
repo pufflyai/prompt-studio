@@ -1,10 +1,7 @@
-// Tint both destination axes and fill the cell where the ticket will land. Surfaces mark the target; no outlines.
+// Tint the destination row and column and fill the cell where the ticket will land. Surfaces mark the target; no outlines.
 import { Box } from "@chakra-ui/react";
 import type { dropRegion } from "./drop-region";
 import { gutterWidth } from "./graph-geometry";
-
-// The landing cell reaches past the cards so they sit inside it.
-const cellFrame = 8;
 
 export function DropHighlight(props: { region: ReturnType<typeof dropRegion>; width: number; height: number }) {
   const { region, width, height } = props;
@@ -38,12 +35,11 @@ export function DropHighlight(props: { region: ReturnType<typeof dropRegion>; wi
           <Box
             data-drop-cell
             position="absolute"
-            left={`${track.x - cellFrame}px`}
+            left={`${track.x}px`}
             top={`${band.bodyTop}px`}
-            w={`${track.width + cellFrame * 2}px`}
+            w={`${track.width}px`}
             h={`${band.top + band.height - band.bodyTop}px`}
             bg="bg.accent-subtle"
-            borderRadius="md"
           />
         </>
       ) : null}
