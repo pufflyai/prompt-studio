@@ -65,6 +65,9 @@ import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
+// Core extensions install from the host's version tag, or from the main commit a nightly build bakes in.
+const hostReleaseRef = /^(?:pstdio@\d|[0-9a-f]{40}$)/;
+
 const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
 
@@ -198,7 +201,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-artifacts",
-            ref: expect.stringMatching(/^pstdio@\d/),
+            ref: expect.stringMatching(hostReleaseRef),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pstdio",
@@ -210,7 +213,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-notes",
-            ref: expect.stringMatching(/^pstdio@\d/),
+            ref: expect.stringMatching(hostReleaseRef),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pstdio",
@@ -222,7 +225,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-planner",
-            ref: expect.stringMatching(/^pstdio@\d/),
+            ref: expect.stringMatching(hostReleaseRef),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pufflyai",

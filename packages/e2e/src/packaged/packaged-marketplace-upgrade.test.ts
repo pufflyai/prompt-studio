@@ -128,6 +128,9 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       GIT_CONFIG_COUNT: "1",
       GIT_CONFIG_KEY_0: `url.file://${repository}.insteadOf`,
       GIT_CONFIG_VALUE_0: "https://github.com/pufflyai/prompt-studio",
+      // A nightly binary bakes a main commit that this fixture repository cannot contain,
+      // so the host release ref points at the fixture's tag for the current version.
+      PSTDIO_EXTENSION_RELEASE_REF: `pstdio@${cliPackage.version}`,
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
         defaultExtensions: [
           { source: "pstdio-planner", ref: "pstdio@0.26.2", skipInstall: true },
