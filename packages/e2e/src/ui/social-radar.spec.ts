@@ -9,7 +9,7 @@ const onePixelPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mN
 // A fixture command seeds one finished run in the extension's own storage. No agent or social account is used.
 const seedCommand = `defineCommand({ id: "seed", title: "Seed radar", async run(ctx) {
   const now = new Date().toISOString();
-  await ctx.storage.collection("runs").put("run-1", { id: "run-1", status: "done", sessionId: "session-1", startedAt: now, finishedAt: now, summary: "One review names Prompt Studio.", searches: { hn: 1 }, skippedSites: [{ site: "x", reason: "Browser unavailable" }] });
+  await ctx.storage.collection("runs").put("run-1", { id: "run-1", status: "done", sessionId: "session-1", startedAt: now, finishedAt: now, summary: "One review names Prompt Studio.", searches: { hn: 1 }, skippedSites: [{ site: "x", reason: "Login wall", needsLogin: true }] });
   await ctx.storage.collection("threads").put("thread-1", { id: "thread-1", runId: "run-1", site: "hn", url: "https://news.ycombinator.com/item?id=42", title: "Tried Prompt Studio for reviews", excerpt: "A review page in an evening.", topic: "Prompt Studio", mention: true, intent: "mention", relevance: 3, reason: "A first-hand review", status: "new", foundAt: now,
     snapshot: { takenAt: now, post: { author: "dana", body: "I built a review page in an evening.", images: [{ file: "review.png", alt: "The review page" }] }, comments: [{ id: "c1", author: "sam", body: "How does it compare to Cursor?" }, { id: "c2", author: "lee", body: "Setup notes: https://prompt.studio/docs/setup." }] },
     analysis: { summary: "People like the review page.", sentiment: "positive", replySentiment: { negative: 0, neutral: 1, positive: 2 }, topics: [{ label: "review flow", count: 2 }], questions: ["How does it compare to Cursor?"] } });
@@ -174,7 +174,7 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await page.getByRole("option", { name: /^Today · / }).click();
     await page.getByRole("option", { name: "Digest", exact: true }).click();
     await expect(page.getByText("Coverage", { exact: true })).toBeVisible();
-    await expect(page.getByText("Skipped: Browser unavailable")).toBeVisible();
+    await expect(page.getByText("Skipped: Login wall")).toBeVisible();
     await shot(page, "05-digest");
 
     // 06: settings are a page of their own; a section menu opens one section at a time.
@@ -204,6 +204,10 @@ test("researches, answers and posts through the radar screens", async ({ page, r
 
     const before = (await execute(request, projectId, "get-settings")).channels;
     const x = page.getByRole("option", { name: "X", exact: true });
+    // The seeded run hit a login wall on X, so its row asks the person to log in.
+    await x.locator("svg").first().hover();
+    await expect(page.getByRole("tooltip")).toBeVisible();
+    await shot(page, "08-channel-needs-login");
     await x.hover();
     await x.getByRole("button", { name: "Pause channel" }).click();
     await expect(x.getByRole("button", { name: "Resume channel" })).toBeVisible();

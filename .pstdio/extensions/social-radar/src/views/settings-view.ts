@@ -1,4 +1,5 @@
 import { type ControlGroup, type ControlParam, type ControlValueMap, defineView } from "@pstdio/sdk/extensions";
+import { needsLogin } from "../channel-state";
 import type { Run } from "../schemas";
 import { agentSchema, type Channel, type RadarSettings, readSettings } from "../settings";
 import { changeSettings } from "../settings-lifecycle";
@@ -34,7 +35,10 @@ const channelStatus = (channel: Channel, runs: Run[]) => {
   let streak = 0;
   while (finished[streak]?.skippedSites?.some((skip) => skip.site === channel.id)) streak += 1;
   const reason = finished[0]?.skippedSites?.find((skip) => skip.site === channel.id)?.reason;
-  if (streak && reason) return `Skipped on the last ${plural(streak, "run")}: ${reason}`;
+  const login = needsLogin(runs, channel.id) ? `Log in to ${channel.name} in the research agent's browser.` : "";
+  if (streak && reason)
+    return [login, `Skipped on the last ${plural(streak, "run")}: ${reason}`].filter(Boolean).join(" ");
+  if (login) return login;
   const targets = channel.targets.length ? plural(channel.targets.length, "target") : "no targets";
   return `${plural(channel.budget, "search", "searches")} · ${targets}`;
 };
