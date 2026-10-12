@@ -8,11 +8,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { expectPackagedStatusBarOrder } from "./packaged-status-bar-order";
-
-// Hosted Intel macOS runners took 22-26 s to pass this test and timed out at 30 s on 2026-10-10:
-// it starts the runtime, installs an extension, and loads the dashboard three times in Chromium.
-// The user approved 60 s on Intel on 2026-10-10; other platforms keep 30 s.
-const timeoutMs = process.platform === "darwin" && process.arch === "x64" ? 60_000 : 30_000;
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const expectPackagedConnectionStatus = async (baseUrl: string, headers: Record<string, string>) => {
   const browser = await chromium.launch();
@@ -104,6 +100,6 @@ export const registerConnectionStatusSmokeTests = () => {
         rmSync(tempRoot, { recursive: true, force: true });
       }
     },
-    timeoutMs,
+    PACKAGED_TEST_TIMEOUT,
   );
 };
