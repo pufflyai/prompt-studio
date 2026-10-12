@@ -15,9 +15,13 @@ export async function preparePlannerSource(root: string) {
   });
   const path = join(source, "package.json");
   const manifest = JSON.parse(readFileSync(path, "utf8"));
+  // The packed UI pins the SDK to the workspace version, which a release PR raises before
+  // npm has it. Overrides resolve that nested SDK to the workspace build too.
+  manifest.overrides = {};
   for (const name of ["sdk", "ui"]) {
-    manifest.dependencies[`@pstdio/${name}`] =
-      `file:${packWorkspacePackageTarball(join(repoRoot, "packages", name), root)}`;
+    const tarball = `file:${packWorkspacePackageTarball(join(repoRoot, "packages", name), root)}`;
+    manifest.dependencies[`@pstdio/${name}`] = tarball;
+    manifest.overrides[`@pstdio/${name}`] = tarball;
   }
   writeFileSync(path, JSON.stringify(manifest));
   const lock = Bun.spawn(["bun", "install", "--lockfile-only", "--ignore-scripts"], {
