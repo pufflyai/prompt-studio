@@ -1,22 +1,25 @@
-import type { HarnessSession, QuestionResponse } from "@pstdio/sdk/extensions";
 import { createAppServerOperation, type NativeOperation } from "./app-server-operation";
-import { CodexRequestRejectedError, createAppServerRpc } from "./app-server-rpc";
+import { CodexRequestRejectedError } from "./app-server-rpc";
+import type { createAppServerTransport } from "./app-server-transport";
 import { createAsyncQuestionReplies } from "./async-question-replies";
-import type { SpawnDeps } from "./codex-process";
+import { createCodexThread } from "./codex-thread";
+import { liveGoalUpdate } from "./live-goal-update";
 import { nativeThreadMessages } from "./native-history";
-import type { ThreadGoal } from "./protocol/v2/ThreadGoal";
+import { operationSession } from "./operation-session";
 import type { Turn } from "./protocol/v2/Turn";
-import { questionReplyError } from "./questions";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
+import { stopNativeThread } from "./stop-native-thread";
 import { codexTurnRequest } from "./turn-request";
 
-const reasoningConfig = (params: StartSpawnInput["params"]) => ({
-  model_reasoning_effort: params?.model_reasoning_effort ?? "medium",
-});
-const resumedTurns = (turns: Turn[] | undefined, snapshot: { thread: { turns: Turn[] } } | undefined) =>
-  turns ?? snapshot?.thread.turns ?? [];
+const needsNativeTurn = (command?: NativeOperation) => !command || command.method === "thread/compact/start";
 const knownNotStarted = (deliveryAttempted: boolean, error: unknown) =>
   !deliveryAttempted || error instanceof CodexRequestRejectedError;
+const publishFailure = (operation: ReturnType<typeof createAppServerOperation>, error: unknown) => {
+  // A failed session sink must not close the transport used by other threads.
+  try {
+    operation.fail(error);
+  } catch {}
+};
 const acknowledgedModel = (
   current: string | undefined,
   next: string | undefined,
@@ -29,203 +32,181 @@ const prepareQuestionRun = (
   const answer = input.questionResponse ? questions.prepare(input.questionResponse) : undefined;
   return { input: answer ? { ...input, prompt: answer.text } : input, accept: answer?.accept };
 };
-export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
-  const child = deps.spawnProcess(
-    ["app-server", "--listen", "stdio://", "--enable", "default_mode_request_user_input"],
-    { cwd: input.cwd, env: input.env },
-  );
+export const createCodexWorker = (
+  input: StartSpawnInput,
+  rpc: ReturnType<typeof createAppServerTransport>,
+  identity: string,
+) => {
   let closed = false;
-  let threadId: string | undefined;
-  let transcriptPath: string | null = null;
-  let model: string | undefined;
-  let unresolved = false;
+  const disposal = new AbortController();
   let active: ReturnType<typeof createAppServerOperation> | undefined;
-  const rpc = createAppServerRpc(child, (message) => {
-    if (message.params?.threadId && message.params.threadId !== threadId) return;
-    active?.receive(message);
-  });
+  const pending = new Set<Promise<unknown>>();
+  const owner = {
+    receive: (message: import("./app-server-rpc").RpcMessage) => {
+      thread.receive(message);
+      active?.receive(message);
+    },
+    disconnect: () => {
+      closed = true;
+      thread.disconnect();
+      active?.finish({ status: "disconnected" });
+    },
+  };
+  rpc.retain(owner);
+  const thread = createCodexThread(rpc, identity, owner);
+  const load = (run: StartSpawnInput & Partial<ResumeSpawnInput>) => {
+    if (closed) throw new Error("Codex owner disposed.");
+    const signal = run.signal ? AbortSignal.any([run.signal, disposal.signal]) : disposal.signal;
+    return thread.load({ ...run, signal });
+  };
+  const ready = rpc.ready;
   const lost = () => {
-    if (closed) return;
-    closed = true;
-    child.kill();
-    void child.onExit.then(({ code }) => active?.finish({ status: code ? "failed" : "disconnected" }));
+    thread.markUncertain();
+    active?.finish({ status: "disconnected" });
   };
-  child.onExit.then(lost);
-  rpc.finished.then(lost, lost);
-  const ready = rpc
-    .request("initialize", { clientInfo: { name: "pstdio", version: "1" }, capabilities: { experimentalApi: true } })
-    .then(() => rpc.write({ method: "initialized" }));
-  ready.catch(lost);
-  const resolveUncertainTurn = async () => {
-    const state = (await rpc.request("thread/read", { threadId, includeTurns: true })) as { thread: { turns: Turn[] } };
-    requireTerminalState(state.thread.turns);
+  const track = <T>(work: Promise<T>) => {
+    pending.add(work);
+    void work.finally(() => pending.delete(work)).catch(() => {});
+    return work;
   };
-  const requireTerminalState = (turns: Turn[]) => {
-    unresolved = turns.some((turn) => turn.status === "inProgress");
-    if (unresolved)
-      throw new Error("Native Codex execution is still in progress. Wait for its terminal state before retrying.");
+  const failDelivery = (
+    error: unknown,
+    attempted: boolean,
+    operation: ReturnType<typeof createAppServerOperation>,
+    session: (id: string) => ReturnType<typeof operationSession>,
+  ) => {
+    if (attempted && !(error instanceof CodexRequestRejectedError)) thread.markUncertain();
+    publishFailure(operation, error);
+    operation.finish({ status: closed ? "disconnected" : "failed" });
+    if (knownNotStarted(attempted, error)) throw error;
+    const id = thread.id();
+    if (id) return session(id);
+    throw error;
   };
-  const load = async (run: StartSpawnInput & Partial<ResumeSpawnInput>) => {
-    await ready;
-    if (closed) throw new Error("Codex worker disconnected.");
-    if (threadId) {
-      if (unresolved) await resolveUncertainTurn();
-      if (run.agentSessionId && threadId !== run.agentSessionId)
-        throw new Error("Codex worker belongs to a different thread.");
-      return threadId;
-    }
-    const snapshot = run.agentSessionId
-      ? ((await rpc.request("thread/read", { threadId: run.agentSessionId, includeTurns: true })) as {
-          thread: { turns: Turn[] };
-        })
-      : undefined;
-    const result = (await rpc.request(run.agentSessionId ? "thread/resume" : "thread/start", {
-      ...(run.agentSessionId ? { threadId: run.agentSessionId } : {}),
-      ...(run.model ? { model: run.model } : {}),
-      cwd: run.cwd,
-      approvalPolicy: "never",
-      sandbox: "danger-full-access",
-      config: reasoningConfig(run.params),
-    })) as { thread: { id: string; path: string | null; turns?: Turn[] }; model?: string };
-    threadId = result.thread.id;
-    transcriptPath = result.thread.path;
-    model = result.model ?? run.model ?? undefined;
-    requireTerminalState(resumedTurns(result.thread.turns, snapshot));
-    return threadId;
+  const nativeGoal = async (
+    operation: ReturnType<typeof createAppServerOperation>,
+    id: string,
+    command?: NativeOperation,
+  ) => {
+    if (command) return;
+    const state = (await rpc.request("thread/goal/get", { threadId: id })) as { goal?: { status: string } | null };
+    operation.setGoal(state.goal?.status === "active");
   };
-  const run = async (runInput: StartSpawnInput & Partial<ResumeSpawnInput>, command?: NativeOperation) => {
+  const execute = async (runInput: StartSpawnInput & Partial<ResumeSpawnInput>, command?: NativeOperation) => {
+    if (active) throw new Error("Codex already has an active operation.");
+    await Promise.allSettled([...pending]);
     if (active) throw new Error("Codex already has an active operation.");
     const asyncQuestions = createAsyncQuestionReplies(runInput.events);
     const questionRun = prepareQuestionRun(runInput, asyncQuestions);
     runInput = questionRun.input;
     let acknowledged = false;
+    let protocolError = false;
+    let protocolCleanup: Promise<void> | undefined;
+    const cleanupProtocol = (id: string) => (protocolCleanup ??= track(stopNativeThread(rpc, id, thread.nativeTurn)));
     let deliveryAttempted = false;
     const abort = () => {
-      if (!acknowledged || !threadId) {
-        child.kill();
-        return;
-      }
-      void operation.stop(rpc.request, threadId).catch(lost);
+      if (!acknowledged || !thread.id()) return;
+      void operation.stop(rpc.request, thread.id()!).catch(lost);
     };
     const operation = createAppServerOperation(runInput, {
       command,
-      transcriptPath: () => transcriptPath,
+      transcriptPath: thread.transcriptPath,
       write: rpc.write,
+      beforeStop: thread.nativeTurn,
       onProtocolError: (error) => {
-        operation.fail(error);
-        lost();
+        publishFailure(operation, error);
+        thread.markUncertain();
+        protocolError = true;
+        if (acknowledged && thread.id()) void cleanupProtocol(thread.id()!).catch(lost);
+        operation.finish({ status: "failed" });
       },
       onFinish: () => {
         if (active === operation) active = undefined;
         runInput.signal?.removeEventListener("abort", abort);
       },
     });
-    const session = (id: string) =>
-      ({
-        agentSessionId: id,
-        done: operation.done,
-        stop: () => operation.stop(rpc.request, id),
-        replyQuestion: (response: QuestionResponse) => {
-          if (!asyncQuestions.find(response)) return operation.replyQuestion(response);
-          const expectedTurnId = operation.activeTurnId();
-          if (!expectedTurnId)
-            return Promise.reject(questionReplyError("Codex question request is no longer pending."));
-          return asyncQuestions.reply(response, (text) =>
-            rpc.request("turn/steer", {
-              threadId: id,
-              expectedTurnId,
-              input: [{ type: "text", text, text_elements: [] }],
-            }),
-          );
-        },
-        timeoutStrategy: "provider",
-        pid: child.pid,
-      }) satisfies HarnessSession;
+    const session = (id: string) => operationSession(id, operation, asyncQuestions, rpc);
     active = operation;
     runInput.signal?.addEventListener("abort", abort, { once: true });
     try {
       runInput.signal?.throwIfAborted();
       const id = await load(runInput);
-      if (!command) {
-        const state = (await rpc.request("thread/goal/get", { threadId: id })) as { goal?: { status: string } | null };
-        operation.setGoal(state.goal?.status === "active");
-      }
+      await nativeGoal(operation, id, command);
+      runInput.signal?.throwIfAborted();
+      if (closed) throw new Error("Codex owner disposed.");
       operation.startDelivery();
       deliveryAttempted = true;
-      const turnInput = codexTurnRequest(runInput, id, model);
+      if (needsNativeTurn(command)) thread.prepareTurn();
+      const turnInput = codexTurnRequest(runInput, id, thread.model());
+      const revision = thread.turnRevision();
       const result = (await rpc.request(
         command?.method ?? "turn/start",
         command ? { ...command.params, threadId: id } : turnInput,
+        (value) => {
+          thread.acknowledge((value as { turn?: { id: string } }).turn?.id, revision);
+        },
       )) as { turn?: { id: string } };
-      model = acknowledgedModel(model, turnInput.model, command);
+      thread.setModel(acknowledgedModel(thread.model(), turnInput.model, command));
       acknowledged = true;
       operation.acknowledge(result.turn?.id);
+      if (protocolError) await cleanupProtocol(id);
       questionRun.accept?.();
+      if (runInput.signal?.aborted) await operation.stop(rpc.request, id);
       return session(id);
     } catch (error) {
-      operation.fail(error);
-      operation.finish({ status: closed ? "disconnected" : "failed" });
-      if (knownNotStarted(deliveryAttempted, error)) throw error;
-      // A lost acknowledgement may hide an accepted turn. Keep its session and never replay it.
-      if (threadId) return session(threadId);
-      throw error;
+      if (error instanceof CodexRequestRejectedError) thread.rejectTurn();
+      return failDelivery(error, deliveryAttempted, operation, session);
     }
+  };
+  const run = (runInput: StartSpawnInput & Partial<ResumeSpawnInput>, command?: NativeOperation) => {
+    const execution = execute(runInput, command);
+    return track(execution);
   };
   return {
     run,
     load,
     isClosed: () => closed,
-    threadId: () => threadId,
-    model: () => model,
+    threadId: thread.id,
+    model: thread.model,
     prepareGoalUpdate: () => {
       const owner = active;
-      const id = threadId;
+      const id = thread.id();
       if (!owner?.canUpdateGoal() || !id || closed) return;
-      return async (params: Record<string, unknown>, signal?: AbortSignal, prompt?: string) => {
-        signal?.throwIfAborted();
-        if (active !== owner || !owner.canUpdateGoal() || closed)
-          throw new Error("Current work finished. Send the goal again.");
-        const update = owner.beginGoalUpdate();
-        const abort = () => lost();
-        signal?.addEventListener("abort", abort, { once: true });
-        try {
-          await rpc.request("thread/goal/set", { ...params, threadId: id }, (result) => {
-            if (active !== owner || !owner.canUpdateGoal() || closed)
-              throw new Error("Current work ended while the goal was changing. Reconnect before submitting again.");
-            update.confirm((result as { goal: ThreadGoal }).goal.status);
-          });
-          if (active !== owner || !owner.canUpdateGoal() || closed) {
-            lost();
-            throw new Error("Current work ended while the goal was changing. Reconnect before submitting again.");
-          }
-          if (prompt) owner.recordGoalUpdate(prompt);
-        } catch (error) {
-          // A missing acknowledgement may hide a native mutation. Retire the owner without replaying it.
-          if (!(error instanceof CodexRequestRejectedError)) lost();
-          throw error;
-        } finally {
-          signal?.removeEventListener("abort", abort);
-          update.release();
-        }
-      };
+      const isCurrent = () => active === owner && owner.canUpdateGoal() && !closed;
+      return liveGoalUpdate(owner, id, rpc, isCurrent, track, lost, thread.nativeTurn);
     },
     readModel: async (id: string) => {
-      if (threadId === id && model) return model;
+      if (thread.id() === id && thread.model()) return thread.model();
       await ready;
       // Resume exposes native configuration; omit overrides so discovery cannot apply next-turn settings.
-      const result = (await rpc.request("thread/resume", { threadId: id })) as { model?: string };
-      return result.model;
+      await load({ ...input, agentSessionId: id, model: undefined, params: undefined });
+      return thread.model();
     },
-    request: async (method: string, params: Record<string, unknown>, signal?: AbortSignal) => {
-      signal?.throwIfAborted();
-      const abort = () => lost();
-      signal?.addEventListener("abort", abort, { once: true });
-      try {
-        await ready;
-        return await rpc.request(method, params);
-      } finally {
-        signal?.removeEventListener("abort", abort);
-      }
+    request: (method: string, params: Record<string, unknown>, signal?: AbortSignal) => {
+      const previous = [...pending];
+      return track(
+        (async () => {
+          signal?.throwIfAborted();
+          await ready;
+          const readOnly = ["thread/read", "thread/goal/get", "config/read"].includes(method);
+          if (!readOnly) await Promise.allSettled(previous);
+          if (!readOnly && params.threadId)
+            await load({
+              ...input,
+              signal,
+              agentSessionId: String(params.threadId),
+              model: undefined,
+              params: undefined,
+            });
+          signal?.throwIfAborted();
+          if (closed) throw new Error("Codex owner disposed.");
+          const readSignal = signal ? AbortSignal.any([signal, disposal.signal]) : disposal.signal;
+          const result = await rpc.request(method, params, undefined, readOnly ? readSignal : undefined);
+          if (!readOnly && signal?.aborted && thread.id()) await stopNativeThread(rpc, thread.id()!, thread.nativeTurn);
+          signal?.throwIfAborted();
+          return result;
+        })(),
+      );
     },
     readMessages: async (id: string) => {
       await ready;
@@ -236,9 +217,19 @@ export const createCodexWorker = (input: StartSpawnInput, deps: SpawnDeps) => {
     },
     dispose: async () => {
       closed = true;
+      disposal.abort();
       active?.finish({ status: "cancelled" });
-      child.kill();
-      await Promise.all([child.onExit, rpc.finished.catch(() => {})]);
+      await Promise.allSettled([...pending]);
+      await thread.settled();
+      if (thread.id() && !rpc.isClosed()) {
+        await stopNativeThread(rpc, thread.id()!, thread.nativeTurn);
+      }
+      await rpc.release(owner);
+    },
+    shutdown: () => {
+      closed = true;
+      disposal.abort();
+      active?.finish({ status: "cancelled" });
     },
   };
 };
