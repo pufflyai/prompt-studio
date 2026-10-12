@@ -244,3 +244,26 @@ test("terminal delivery releases cancellation without a turn start notification"
   expect(await a.done).toEqual({ status: "cancelled" });
   expect(p.calls.some((call) => call.method === "turn/interrupt")).toBe(false);
 });
+
+test.each([
+  "thread/goal/get",
+  "thread/unsubscribe",
+])("scope cleanup releases a transport lost during %s", async (method) => {
+  const { runtime, children, holdNext } = setup();
+  const a = await runtime.run(input("a", "p"));
+  const b = await runtime.run(input("b", "q"));
+  children[0].emit({
+    method: "turn/completed",
+    params: { threadId: a.agentSessionId, turn: { id: "turn-1", status: "completed" } },
+  });
+  expect(await a.done).toEqual({ status: "completed" });
+  const held = holdNext(method);
+  const disposed = runtime.disposeScope("p").then(
+    () => "released",
+    (error) => error.message,
+  );
+  await held.requested;
+  children[0].kill();
+  expect(await disposed).toBe("released");
+  expect(await b.done).toEqual({ status: "disconnected" });
+});

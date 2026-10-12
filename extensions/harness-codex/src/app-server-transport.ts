@@ -60,8 +60,12 @@ export const createAppServerTransport = (env: Record<string, string>, deps: Spaw
     release: async (owner: Owner) => {
       for (const [id, entry] of threads) {
         if (entry.owner !== owner) continue;
+        try {
+          if (!closed) await rpc.request("thread/unsubscribe", { threadId: id });
+        } catch (error) {
+          if (!closed) throw error;
+        }
         entry.owner = undefined;
-        if (!closed) await rpc.request("thread/unsubscribe", { threadId: id });
       }
       owners.delete(owner);
       if (!owners.size) {

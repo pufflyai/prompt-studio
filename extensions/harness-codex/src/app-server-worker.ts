@@ -222,7 +222,11 @@ export const createCodexWorker = (
       await Promise.allSettled([...pending]);
       await thread.settled();
       if (thread.id() && !rpc.isClosed()) {
-        await stopNativeThread(rpc, thread.id()!, thread.nativeTurn);
+        try {
+          await stopNativeThread(rpc, thread.id()!, thread.nativeTurn);
+        } catch (error) {
+          if (!rpc.isClosed()) throw error;
+        }
       }
       await rpc.release(owner);
     },

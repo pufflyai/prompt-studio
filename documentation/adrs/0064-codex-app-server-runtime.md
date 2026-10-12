@@ -20,6 +20,8 @@ Responses use globally unique request IDs. Notifications and server requests use
 
 A crash or native event-loop hang has a wider failure domain than a sleeping shell command. Transport loss disconnects all attached operations exactly once. Recreate the server, reconcile each recorded native history, and cold resume with attribution before new work. Never replay uncertain mutations. The POSIX server process group includes an npm launcher and its native child; cleanup reaches descendants even if the launcher exits first. No cross-account, cross-host daemon or core process broker is introduced.
 
+Scope cleanup releases local ownership if its transport closes during stopping or unsubscribe. A cleanup error on a live transport retains ownership and remains an error. Confirmed transport loss already ends its native execution; do not send another cleanup mutation to a dead connection.
+
 ## Upstream maturity
 
 The [official app-server documentation](https://learn.chatgpt.com/docs/app-server), checked on 2026-10-02, still labels the app-server command and WebSocket transport experimental and unsupported for production workloads. We choose local stdio despite that limit because it supplies one execution/history interface and native goal controls. This is a product adoption decision, not a claim of upstream production support. Experimental API access is needed for planning and question handling.
