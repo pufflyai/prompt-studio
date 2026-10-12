@@ -31,9 +31,10 @@ install later or restore a removed link.
 Apps running from the DMG or another unpacked folder do not install the command.
 
 The app's `bin` folder holds the runtime and a `pst` link to it on macOS and Linux.
-The desktop app puts that folder first on the runtime's `PATH`. Agents and other
-runtime processes therefore run the bundled `pst` even when the terminal command
-is missing, and it always matches the running runtime.
+The desktop app puts that folder first on the runtime's `PATH`, and agents inherit
+it, so they can run `pst` even when the terminal command is missing. Agents run
+commands in login shells. On macOS, a login shell moves `/usr/local/bin` ahead of
+the app's folder, so a different `pst` installed there takes priority.
 
 The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
 The Windows Setup installer creates a `pst.cmd` launcher in the installation's

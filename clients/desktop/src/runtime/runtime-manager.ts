@@ -168,7 +168,7 @@ export class DesktopRuntimeManager {
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
     const env = await this.#deps.resolveEnvironment(signal);
     signal.throwIfAborted();
-    // Agents then run the bundled pst, which matches this runtime, even when the person never installed the
+    // Agents inherit this PATH, so they can run the bundled pst even when the person never installed the
     // Terminal command. The Windows installer always adds pst to the user PATH, and Windows has no pst link.
     if (process.platform !== "win32") env.PATH = [dirname(sidecarPath), env.PATH].join(delimiter);
 
