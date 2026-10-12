@@ -18,10 +18,17 @@ const packageDirs = [
   "scripts",
 ];
 
-const pullRequest = (changedFiles: string[], labels: string[] = []) =>
-  resolveCiScope({ event: "pull_request", labels, changedFiles, packageDirs });
+const pullRequest = (changedFiles: string[], labels: string[] = [], affectedPackages: string[] = []) =>
+  resolveCiScope({ event: "pull_request", labels, changedFiles, packageDirs, affectedPackages });
 
-const full = { stage: "full", lernaFilter: "", license: true, publishedExtensions: true, harnessCli: true };
+const full = {
+  stage: "full",
+  lernaFilter: "",
+  license: true,
+  publishedExtensions: true,
+  harnessCli: true,
+  databaseTests: true,
+};
 
 const everyLinuxCheck = { ...full, stage: "pull_request" };
 
@@ -31,15 +38,20 @@ const scoped = {
   license: false,
   publishedExtensions: false,
   harnessCli: false,
+  databaseTests: false,
 };
 
 describe("CI stage", () => {
   test("a push to main runs the full stage", () => {
-    expect(resolveCiScope({ event: "push", labels: [], changedFiles: ["README.md"], packageDirs })).toEqual(full);
+    expect(
+      resolveCiScope({ event: "push", labels: [], changedFiles: ["README.md"], packageDirs, affectedPackages: [] }),
+    ).toEqual(full);
   });
 
   test("a manual run runs the full stage", () => {
-    expect(resolveCiScope({ event: "workflow_dispatch", labels: [], changedFiles: [], packageDirs })).toEqual(full);
+    expect(
+      resolveCiScope({ event: "workflow_dispatch", labels: [], changedFiles: [], packageDirs, affectedPackages: [] }),
+    ).toEqual(full);
   });
 
   test("the merge queue runs only its build and static check stage", () => {
@@ -48,6 +60,7 @@ describe("CI stage", () => {
       labels: [],
       changedFiles: ["packages/pstdio-api/src/app.ts", "bun.lock"],
       packageDirs,
+      affectedPackages: ["pstdio-api"],
     });
 
     expect(scope).toEqual({
@@ -56,6 +69,7 @@ describe("CI stage", () => {
       license: false,
       publishedExtensions: false,
       harnessCli: false,
+      databaseTests: false,
     });
   });
 
@@ -97,6 +111,14 @@ describe("pull request CI scope", () => {
   test("a repository tooling change runs every Linux check on every package", () => {
     expect(pullRequest(["scripts/test-setup.ts"])).toEqual(everyLinuxCheck);
   });
+});
+
+test("API and database tests run in their own shards when a change affects those packages", () => {
+  expect(pullRequest(["packages/pstdio-db/src/db/schema.ts"], [], ["pstdio-db", "pstdio-api"]).databaseTests).toBe(
+    true,
+  );
+  expect(pullRequest(["packages/pstdio-api/src/app.ts"], [], ["pstdio-api"]).databaseTests).toBe(true);
+  expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"], [], ["pstdio-dashboard"]).databaseTests).toBe(false);
 });
 
 test("published extensions are checked for extension and public contract changes", () => {

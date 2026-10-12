@@ -26,6 +26,7 @@ jobs:
     outputs:
       stage: ${{ steps.scope.outputs.stage }}
       lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
+      database_tests: ${{ steps.scope.outputs.databaseTests }}
       license: ${{ steps.scope.outputs.license }}
       published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
       harness_cli: ${{ steps.scope.outputs.harnessCli }}
@@ -125,15 +126,57 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build monorepo
-        run: bun run build
+      - name: Build the tested packages and their dependencies
+        run: bun run build -- ${{ needs.scope.outputs.lerna_filter }} --include-dependencies
 
       - name: Lint monorepo
         run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
 
       - name: Test monorepo (non-e2e)
         # Stream failures as they happen; buffered task output can be lost when the runner exits.
-        run: bunx lerna run test --ignore e2e ${{ needs.scope.outputs.lerna_filter }} --stream
+        # The API and database suites take minutes, so database_tests runs them in shards.
+        run: bunx lerna run test --ignore e2e --ignore pstdio-api --ignore pstdio-db ${{ needs.scope.outputs.lerna_filter }} --stream
+
+  # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
+  # Shards keep each job near the PR stage's 5-minute target.
+  database_tests:
+    name: database_tests (${{ matrix.package }} ${{ matrix.shard }})
+    needs: scope
+    if: needs.scope.outputs.database_tests == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { package: pstdio-api, shard: 1/4 }
+          - { package: pstdio-api, shard: 2/4 }
+          - { package: pstdio-api, shard: 3/4 }
+          - { package: pstdio-api, shard: 4/4 }
+          - { package: pstdio-db, shard: 1/3 }
+          - { package: pstdio-db, shard: 2/3 }
+          - { package: pstdio-db, shard: 3/3 }
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build ${{ matrix.package }} and its dependencies
+        run: bun run build -- --scope ${{ matrix.package }} --include-dependencies
+
+      - name: Test ${{ matrix.package }} shard ${{ matrix.shard }}
+        run: bun run --cwd packages/${{ matrix.package }} test --shard=${{ matrix.shard }}
 
   published_extensions:
     needs: scope
@@ -563,6 +606,7 @@ jobs:
       - scope
       - static_checks
       - lint_and_test
+      - database_tests
       - published_extensions
       - harness_cli_support
       - windows_test_and_build

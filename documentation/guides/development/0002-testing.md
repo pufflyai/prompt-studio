@@ -63,7 +63,8 @@ A newer event on the same pull request cancels the older run. Every merge queue 
 The pull request stage is meant to finish in a few minutes, so it runs only Linux jobs:
 
 - `static_checks` runs the whole-repo checks: formatting, package boundaries, knip, the lockfile, the extension API version and report, changesets, the monorepo build, committed build outputs, and translations.
-- `lint_and_test` lints and tests the changed packages and the packages that depend on them. It compares the merge commit with the target branch.
+- `lint_and_test` builds, lints and tests the changed packages and the packages that depend on them. It compares the merge commit with the target branch.
+- `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
 - `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. `license_check` runs when a `package.json` or `bun.lock` changes.
 - A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the three checks above. Markdown files, files under `design/`, and `LICENSE` do not count.
 
@@ -85,7 +86,7 @@ Pushes to `main` run every job. Tests no longer block merging, so a regression s
 
 The full stage adds:
 
-- `lint_and_test` for every package, and the published extension, harness CLI, and license checks.
+- `lint_and_test` and `database_tests` for every package, and the published extension, harness CLI, and license checks.
 - `windows_test_and_build` and `windows_database_tests`. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time.
 - `e2e` (three browser shards), `e2e_cli`, and `packaged_and_vite_e2e`.
 - The desktop source Electron specs and the packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow still runs the Intel tests and the desktop benchmarks.
