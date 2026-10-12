@@ -1,6 +1,6 @@
 name: Verify packaged toolchain
 
-# Native runners are slow and costly, so callers run this only before a release.
+# Runs on native runners after every merge to main and before every release.
 on:
   workflow_call:
     inputs:
