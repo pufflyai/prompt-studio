@@ -180,4 +180,4 @@ Pass overrides on a page navigation target or to `serializePageUrl`. Navigation 
 
 Native page-owned query and load callbacks receive defaults in `renderer.pageParams` and rerun when they change. Params do not change panel layout, page state keys, or breadcrumbs. Unknown or invalid URL params use defaults. Programmatic invalid params fail atomically.
 
-Use API `^0.1.3` or newer for these additions. Read `documentation/references/extensions/0005-webview-and-storage-api.md` and `documentation/guides/extensions/0002-workbench-cookbook.md` in the host repository for limits and examples.
+Use API `^0.1.4` or newer for these additions. Read `documentation/references/extensions/0005-webview-and-storage-api.md` and `documentation/guides/extensions/0002-workbench-cookbook.md` in the host repository for limits and examples.
