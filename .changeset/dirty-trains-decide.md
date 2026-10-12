@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Use extra-thin shared scrollbars in collection views and filter menus.
+Use extra-thin shared scrollbars in view tabs, filter rows, and filter menus.
