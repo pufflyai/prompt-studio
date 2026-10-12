@@ -50,7 +50,7 @@ Opening, reopening, pushing commits, editing the base, and editing labels also r
 
 ## Current enforcement
 
-PS-78 implements PRD PS-76. As checked on 2026-10-02, the active `main` ruleset requires `ci_passed` and has no merge queue. It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
+PS-78 implements PRD PS-76. Since 2026-10-12, the active `main` ruleset requires `ci_passed` and merges through a merge queue (see [Tests](0002-testing.md#merge-queue-stage)). It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
 
 The area-label workflow evaluates pull request heads and manual dispatches.
 
