@@ -1,5 +1,6 @@
 import type { LayoutModel } from "../../registries/layout/layout-model-types";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import type { WorkbenchPanelMenuStateController } from "../panel-menus/panel-menu-state-controller";
 import { pageLayoutScope } from "./owner-layout-scope";
@@ -48,7 +49,24 @@ const saveOutgoingMode = (
     const firstMode = !previous.activeModeId && !input.cache.readMode(state.projectId, state.activeModeId);
     if (sameMode || firstMode) {
       const adopted = adoptHostPanels(input.layout, state.activeModeId);
-      if (firstMode || adopted) input.cache.saveMode(state.projectId, state.activeModeId, input.layout.getLayout());
+      if (adopted && sameMode) input.cache.saveMode(state.projectId, state.activeModeId, input.layout.getLayout());
+      // Carry adopted tabs into first composition without saving untouched
+      // host geometry as authoritative incoming-mode choices.
+      if (adopted && firstMode)
+        return Object.values(input.layout.getLayout().regions).flatMap((region) =>
+          region.widgets.flatMap((value, order) =>
+            value.placementIdentity?.kind === "mode" && value.placementIdentity.modeId === state.activeModeId
+              ? [
+                  {
+                    identity: value.placementIdentity,
+                    region: region.id,
+                    order,
+                    value,
+                  } satisfies ResolvedOwnedPlacement<WorkbenchWidgetPlacement>,
+                ]
+              : [],
+          ),
+        );
     }
   }
 };
@@ -57,7 +75,7 @@ export const createOwnerLayoutScopeHandler =
   (input: OwnerLayoutScopeHandlerInput) => (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
     const previous = input.getState() ?? state;
     if (!state.activePageId && previous.projectId === state.projectId) return;
-    saveOutgoingMode(input, state, previous);
+    const adopted = saveOutgoingMode(input, state, previous);
     const scope = pageLayoutScope({
       projectId: state.projectId,
       pageId: state.activePageId,
@@ -73,4 +91,5 @@ export const createOwnerLayoutScopeHandler =
     input.menus.setPersistenceScope(scope);
     input.layout.setPersistenceScope(scope);
     if (initialLayout) input.layout.restoreLayout(initialLayout);
+    return adopted;
   };

@@ -54,7 +54,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
           <Tabs.Trigger
             value={placement.widgetId}
             title={label}
-            aria-label={indicatorLabel ? `${label} · ${indicatorLabel}` : label}
+            aria-label={snapshot.ariaLabel ?? label}
             disabled={disabled}
             aria-haspopup="menu"
             aria-expanded={behavior.open}

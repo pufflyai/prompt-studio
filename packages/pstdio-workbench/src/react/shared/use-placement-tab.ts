@@ -30,6 +30,13 @@ export const usePlacementTab = (placement: WorkbenchWidgetPlacement | undefined,
   const changed = projected && projected !== resource;
   const current = projected && snapshot.context ? { ...projected, context: snapshot.context } : projected;
   const workspace = placement?.placementIdentity?.kind === "shell" ? undefined : owner;
-  const indicator = resourceContextIndicator(workspace, current) ?? snapshot.indicator;
-  return { ...snapshot, indicator, ...(changed ? { label: projected.label } : {}) };
+  const contextIndicator = resourceContextIndicator(workspace, current);
+  const label =
+    (changed ? projected.label : snapshot.label) ?? resource?.label ?? placement?.title ?? placement?.contributionId;
+  return {
+    ...snapshot,
+    label,
+    indicator: contextIndicator ?? snapshot.indicator,
+    ariaLabel: contextIndicator ? `${label} · ${contextIndicator.label}` : label,
+  };
 };

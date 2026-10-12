@@ -43,13 +43,14 @@ const savedModeRecords = (
   modeId: string | undefined,
   modeLayout?: WorkbenchLayout,
   currentLayout?: WorkbenchLayout,
+  adopted: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] = [],
 ) => {
   const modeRecords = new Map(
     records(modeLayout)
       .filter((p) => p.identity.kind === "mode")
       .map((p) => [placementIdentityKey(p.identity), p]),
   );
-  for (const placement of records(currentLayout)) {
+  for (const placement of [...records(currentLayout), ...adopted]) {
     if (placement.identity.kind === "mode" && placement.identity.modeId === modeId)
       modeRecords.set(placementIdentityKey(placement.identity), placement);
   }
@@ -76,7 +77,8 @@ const canSeedDeclaration = (
     hasOwnerLayout &&
     !previous &&
     !newFixedDeclaration &&
-    ((enteringPage && placement.identity.kind !== "mode") || (!added.has(key) && !activated.has(key)))
+    !activated.has(key) &&
+    ((enteringPage && placement.identity.kind !== "mode") || !added.has(key))
   )
     return false;
   return true;
@@ -97,13 +99,14 @@ export const resolveOwnerPlacements = (input: {
   pageLayout?: WorkbenchLayout;
   modeLayout?: WorkbenchLayout;
   currentLayout?: WorkbenchLayout;
+  adoptedModePlacements?: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   enteringPage: boolean;
   getWidget?(id: string): RegisteredWidgetContribution | undefined;
   hasDeclaration?(identity: PlacementIdentity): boolean;
 }) => {
   const { state } = input;
   const page = records(input.pageLayout).filter((p) => p.identity.kind !== "mode");
-  const mode = savedModeRecords(state.activeModeId, input.modeLayout, input.currentLayout);
+  const mode = savedModeRecords(state.activeModeId, input.modeLayout, input.currentLayout, input.adoptedModePlacements);
   const saved = [...page, ...mode];
   const transferredDeclarations = new Set(
     saved.flatMap((p) => (p.value.declarationIdentity ? [placementIdentityKey(p.value.declarationIdentity)] : [])),
