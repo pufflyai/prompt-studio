@@ -41,11 +41,11 @@ declare const agentModelSchema: z.ZodObject<{
 }, z.core.$strip>;
 type AgentModel = z.infer<typeof agentModelSchema>;
 declare const automationRunStatusSchema: z.ZodEnum<{
-  failed: "failed";
   cancelled: "cancelled";
+  failed: "failed";
+  queued: "queued";
   rejected: "rejected";
   running: "running";
-  queued: "queued";
   succeeded: "succeeded";
 }>;
 declare const createAutomationRunInputSchema: z.ZodObject<{
@@ -71,11 +71,11 @@ declare const automationRunSchema: z.ZodObject<{
   projectId: z.ZodString;
   commandId: z.ZodString;
   status: z.ZodEnum<{
-    failed: "failed";
     cancelled: "cancelled";
+    failed: "failed";
+    queued: "queued";
     rejected: "rejected";
     running: "running";
-    queued: "queued";
     succeeded: "succeeded";
   }>;
   createdAt: z.ZodString;
@@ -97,8 +97,8 @@ declare const boardViewSchema: z.ZodObject<{
   title: z.ZodString;
   settings: z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodEnum<{
-      list: "list";
       board: "board";
+      list: "list";
     }>;
     columnGrouping: z.ZodString;
     rowGrouping: z.ZodString;
@@ -121,23 +121,23 @@ declare const boardViewSchema: z.ZodObject<{
       condition: z.ZodEnum<{
         contains: "contains";
         "does-not-contain": "does-not-contain";
-        is: "is";
-        "is-not": "is-not";
         gt: "gt";
         gte: "gte";
+        "has-all-of": "has-all-of";
+        "has-any-of": "has-any-of";
+        "has-none-of": "has-none-of";
+        is: "is";
+        "is-after": "is-after";
+        "is-any-of": "is-any-of";
+        "is-before": "is-before";
+        "is-empty": "is-empty";
+        "is-none-of": "is-none-of";
+        "is-not": "is-not";
+        "is-not-empty": "is-not-empty";
+        "is-on-or-after": "is-on-or-after";
+        "is-on-or-before": "is-on-or-before";
         lt: "lt";
         lte: "lte";
-        "is-before": "is-before";
-        "is-after": "is-after";
-        "is-on-or-before": "is-on-or-before";
-        "is-on-or-after": "is-on-or-after";
-        "is-any-of": "is-any-of";
-        "is-none-of": "is-none-of";
-        "has-any-of": "has-any-of";
-        "has-all-of": "has-all-of";
-        "has-none-of": "has-none-of";
-        "is-empty": "is-empty";
-        "is-not-empty": "is-not-empty";
       }>;
       value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
     }, z.core.$strip>>;
@@ -151,23 +151,23 @@ declare const boardViewSchema: z.ZodObject<{
         condition: z.ZodEnum<{
           contains: "contains";
           "does-not-contain": "does-not-contain";
-          is: "is";
-          "is-not": "is-not";
           gt: "gt";
           gte: "gte";
+          "has-all-of": "has-all-of";
+          "has-any-of": "has-any-of";
+          "has-none-of": "has-none-of";
+          is: "is";
+          "is-after": "is-after";
+          "is-any-of": "is-any-of";
+          "is-before": "is-before";
+          "is-empty": "is-empty";
+          "is-none-of": "is-none-of";
+          "is-not": "is-not";
+          "is-not-empty": "is-not-empty";
+          "is-on-or-after": "is-on-or-after";
+          "is-on-or-before": "is-on-or-before";
           lt: "lt";
           lte: "lte";
-          "is-before": "is-before";
-          "is-after": "is-after";
-          "is-on-or-before": "is-on-or-before";
-          "is-on-or-after": "is-on-or-after";
-          "is-any-of": "is-any-of";
-          "is-none-of": "is-none-of";
-          "has-any-of": "has-any-of";
-          "has-all-of": "has-all-of";
-          "has-none-of": "has-none-of";
-          "is-empty": "is-empty";
-          "is-not-empty": "is-not-empty";
         }>;
         value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
       }, z.core.$strip>>;
@@ -189,8 +189,8 @@ declare const boardViewsSchema: z.ZodObject<{
     title: z.ZodString;
     settings: z.ZodUnion<readonly [z.ZodObject<{
       viewMode: z.ZodEnum<{
-        list: "list";
         board: "board";
+        list: "list";
       }>;
       columnGrouping: z.ZodString;
       rowGrouping: z.ZodString;
@@ -213,23 +213,23 @@ declare const boardViewsSchema: z.ZodObject<{
         condition: z.ZodEnum<{
           contains: "contains";
           "does-not-contain": "does-not-contain";
-          is: "is";
-          "is-not": "is-not";
           gt: "gt";
           gte: "gte";
+          "has-all-of": "has-all-of";
+          "has-any-of": "has-any-of";
+          "has-none-of": "has-none-of";
+          is: "is";
+          "is-after": "is-after";
+          "is-any-of": "is-any-of";
+          "is-before": "is-before";
+          "is-empty": "is-empty";
+          "is-none-of": "is-none-of";
+          "is-not": "is-not";
+          "is-not-empty": "is-not-empty";
+          "is-on-or-after": "is-on-or-after";
+          "is-on-or-before": "is-on-or-before";
           lt: "lt";
           lte: "lte";
-          "is-before": "is-before";
-          "is-after": "is-after";
-          "is-on-or-before": "is-on-or-before";
-          "is-on-or-after": "is-on-or-after";
-          "is-any-of": "is-any-of";
-          "is-none-of": "is-none-of";
-          "has-any-of": "has-any-of";
-          "has-all-of": "has-all-of";
-          "has-none-of": "has-none-of";
-          "is-empty": "is-empty";
-          "is-not-empty": "is-not-empty";
         }>;
         value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
       }, z.core.$strip>>;
@@ -243,23 +243,23 @@ declare const boardViewsSchema: z.ZodObject<{
           condition: z.ZodEnum<{
             contains: "contains";
             "does-not-contain": "does-not-contain";
-            is: "is";
-            "is-not": "is-not";
             gt: "gt";
             gte: "gte";
+            "has-all-of": "has-all-of";
+            "has-any-of": "has-any-of";
+            "has-none-of": "has-none-of";
+            is: "is";
+            "is-after": "is-after";
+            "is-any-of": "is-any-of";
+            "is-before": "is-before";
+            "is-empty": "is-empty";
+            "is-none-of": "is-none-of";
+            "is-not": "is-not";
+            "is-not-empty": "is-not-empty";
+            "is-on-or-after": "is-on-or-after";
+            "is-on-or-before": "is-on-or-before";
             lt: "lt";
             lte: "lte";
-            "is-before": "is-before";
-            "is-after": "is-after";
-            "is-on-or-before": "is-on-or-before";
-            "is-on-or-after": "is-on-or-after";
-            "is-any-of": "is-any-of";
-            "is-none-of": "is-none-of";
-            "has-any-of": "has-any-of";
-            "has-all-of": "has-all-of";
-            "has-none-of": "has-none-of";
-            "is-empty": "is-empty";
-            "is-not-empty": "is-not-empty";
           }>;
           value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
         }, z.core.$strip>>;
@@ -280,8 +280,8 @@ declare const boardViewUpdateSchema: z.ZodObject<{
   title: z.ZodOptional<z.ZodString>;
   settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodOptional<z.ZodEnum<{
-      list: "list";
       board: "board";
+      list: "list";
     }>>;
     columnGrouping: z.ZodOptional<z.ZodString>;
     rowGrouping: z.ZodOptional<z.ZodString>;
@@ -304,23 +304,23 @@ declare const boardViewUpdateSchema: z.ZodObject<{
       condition: z.ZodEnum<{
         contains: "contains";
         "does-not-contain": "does-not-contain";
-        is: "is";
-        "is-not": "is-not";
         gt: "gt";
         gte: "gte";
+        "has-all-of": "has-all-of";
+        "has-any-of": "has-any-of";
+        "has-none-of": "has-none-of";
+        is: "is";
+        "is-after": "is-after";
+        "is-any-of": "is-any-of";
+        "is-before": "is-before";
+        "is-empty": "is-empty";
+        "is-none-of": "is-none-of";
+        "is-not": "is-not";
+        "is-not-empty": "is-not-empty";
+        "is-on-or-after": "is-on-or-after";
+        "is-on-or-before": "is-on-or-before";
         lt: "lt";
         lte: "lte";
-        "is-before": "is-before";
-        "is-after": "is-after";
-        "is-on-or-before": "is-on-or-before";
-        "is-on-or-after": "is-on-or-after";
-        "is-any-of": "is-any-of";
-        "is-none-of": "is-none-of";
-        "has-any-of": "has-any-of";
-        "has-all-of": "has-all-of";
-        "has-none-of": "has-none-of";
-        "is-empty": "is-empty";
-        "is-not-empty": "is-not-empty";
       }>;
       value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
     }, z.core.$strip>>;
@@ -334,23 +334,23 @@ declare const boardViewUpdateSchema: z.ZodObject<{
         condition: z.ZodEnum<{
           contains: "contains";
           "does-not-contain": "does-not-contain";
-          is: "is";
-          "is-not": "is-not";
           gt: "gt";
           gte: "gte";
+          "has-all-of": "has-all-of";
+          "has-any-of": "has-any-of";
+          "has-none-of": "has-none-of";
+          is: "is";
+          "is-after": "is-after";
+          "is-any-of": "is-any-of";
+          "is-before": "is-before";
+          "is-empty": "is-empty";
+          "is-none-of": "is-none-of";
+          "is-not": "is-not";
+          "is-not-empty": "is-not-empty";
+          "is-on-or-after": "is-on-or-after";
+          "is-on-or-before": "is-on-or-before";
           lt: "lt";
           lte: "lte";
-          "is-before": "is-before";
-          "is-after": "is-after";
-          "is-on-or-before": "is-on-or-before";
-          "is-on-or-after": "is-on-or-after";
-          "is-any-of": "is-any-of";
-          "is-none-of": "is-none-of";
-          "has-any-of": "has-any-of";
-          "has-all-of": "has-all-of";
-          "has-none-of": "has-none-of";
-          "is-empty": "is-empty";
-          "is-not-empty": "is-not-empty";
         }>;
         value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
       }, z.core.$strip>>;
@@ -367,8 +367,8 @@ declare const boardViewUpdateSchema: z.ZodObject<{
 declare const boardViewCreateSchema: z.ZodObject<{
   settings: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
     viewMode: z.ZodOptional<z.ZodEnum<{
-      list: "list";
       board: "board";
+      list: "list";
     }>>;
     columnGrouping: z.ZodOptional<z.ZodString>;
     rowGrouping: z.ZodOptional<z.ZodString>;
@@ -391,23 +391,23 @@ declare const boardViewCreateSchema: z.ZodObject<{
       condition: z.ZodEnum<{
         contains: "contains";
         "does-not-contain": "does-not-contain";
-        is: "is";
-        "is-not": "is-not";
         gt: "gt";
         gte: "gte";
+        "has-all-of": "has-all-of";
+        "has-any-of": "has-any-of";
+        "has-none-of": "has-none-of";
+        is: "is";
+        "is-after": "is-after";
+        "is-any-of": "is-any-of";
+        "is-before": "is-before";
+        "is-empty": "is-empty";
+        "is-none-of": "is-none-of";
+        "is-not": "is-not";
+        "is-not-empty": "is-not-empty";
+        "is-on-or-after": "is-on-or-after";
+        "is-on-or-before": "is-on-or-before";
         lt: "lt";
         lte: "lte";
-        "is-before": "is-before";
-        "is-after": "is-after";
-        "is-on-or-before": "is-on-or-before";
-        "is-on-or-after": "is-on-or-after";
-        "is-any-of": "is-any-of";
-        "is-none-of": "is-none-of";
-        "has-any-of": "has-any-of";
-        "has-all-of": "has-all-of";
-        "has-none-of": "has-none-of";
-        "is-empty": "is-empty";
-        "is-not-empty": "is-not-empty";
       }>;
       value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
     }, z.core.$strip>>;
@@ -421,23 +421,23 @@ declare const boardViewCreateSchema: z.ZodObject<{
         condition: z.ZodEnum<{
           contains: "contains";
           "does-not-contain": "does-not-contain";
-          is: "is";
-          "is-not": "is-not";
           gt: "gt";
           gte: "gte";
+          "has-all-of": "has-all-of";
+          "has-any-of": "has-any-of";
+          "has-none-of": "has-none-of";
+          is: "is";
+          "is-after": "is-after";
+          "is-any-of": "is-any-of";
+          "is-before": "is-before";
+          "is-empty": "is-empty";
+          "is-none-of": "is-none-of";
+          "is-not": "is-not";
+          "is-not-empty": "is-not-empty";
+          "is-on-or-after": "is-on-or-after";
+          "is-on-or-before": "is-on-or-before";
           lt: "lt";
           lte: "lte";
-          "is-before": "is-before";
-          "is-after": "is-after";
-          "is-on-or-before": "is-on-or-before";
-          "is-on-or-after": "is-on-or-after";
-          "is-any-of": "is-any-of";
-          "is-none-of": "is-none-of";
-          "has-any-of": "has-any-of";
-          "has-all-of": "has-all-of";
-          "has-none-of": "has-none-of";
-          "is-empty": "is-empty";
-          "is-not-empty": "is-not-empty";
         }>;
         value: z.ZodOptional<z.ZodUnion<readonly [z.ZodBoolean, z.ZodString, z.ZodNumber, z.ZodArray<z.ZodString>]>>;
       }, z.core.$strip>>;
@@ -490,8 +490,8 @@ interface LocalizedString {
 }
 type Localizable<T extends string = string> = T | LocalizedString;
 export declare const l10n: (key: string, defaultValue?: string) => {
-  default?: string | undefined;
   $l10n: string;
+  default?: string | undefined;
 };
 export declare const isLocalizedString: (value: unknown) => value is LocalizedString;
 declare const workbenchMenuTargets: readonly ["workbench.nav.actions", "workbench.nav.overflow"];
@@ -789,8 +789,8 @@ declare const skillSchema: z.ZodObject<{
   title: z.ZodString;
   description: z.ZodString;
   source_kind: z.ZodEnum<{
-    project: "project";
     extension: "extension";
+    project: "project";
   }>;
   files: z.ZodArray<z.ZodObject<{
     path: z.ZodString;
@@ -947,15 +947,15 @@ declare const queuedSteeringResultSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>, z.ZodObject<{
   status: z.ZodLiteral<"rejected">;
   reason: z.ZodEnum<{
-    unsupported: "unsupported";
-    inactive: "inactive";
-    stale_run: "stale_run";
     blocking_input: "blocking_input";
+    delivery_failed: "delivery_failed";
+    different_settings: "different_settings";
+    inactive: "inactive";
+    invalid_attachments: "invalid_attachments";
     missing: "missing";
     stale_revision: "stale_revision";
-    different_settings: "different_settings";
-    delivery_failed: "delivery_failed";
-    invalid_attachments: "invalid_attachments";
+    stale_run: "stale_run";
+    unsupported: "unsupported";
   }>;
   message: z.ZodString;
 }, z.core.$strip>, z.ZodObject<{
@@ -969,13 +969,13 @@ declare const sessionAttachmentRefSchema: z.ZodObject<{
   file_id: z.ZodString;
 }, z.core.$strip>;
 declare const sessionStatusSchema: z.ZodEnum<{
-  failed: "failed";
+  awaiting_input: "awaiting_input";
   cancelled: "cancelled";
   completed: "completed";
-  in_progress: "in_progress";
-  awaiting_input: "awaiting_input";
-  queued: "queued";
   disconnected: "disconnected";
+  failed: "failed";
+  in_progress: "in_progress";
+  queued: "queued";
 }>;
 type SessionStatus = z.infer<typeof sessionStatusSchema>;
 type SessionAttachmentRef = z.infer<typeof sessionAttachmentRefSchema>;
@@ -1220,7 +1220,7 @@ export declare const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 export declare const WEBVIEW_DECLARABLE_CAPABILITIES: readonly ["clipboard.write", "commands.execute", "commands.stream", "navigation.open", "placement.close", "notification.show", "notification.action", "notification.resolve", "notification.dismiss", "preferences.get", "preferences.set", "extension.settings.all", "extension.settings.get", "extension.settings.set", "extension.settings.delete", "terminal.session", "files.upload", "files.list", "files.delete"];
 export declare const WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES: readonly ["artifacts.read"];
 export declare const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES: readonly ["host.dispatchKeyboardEvent"];
-export declare const WEBVIEW_HOST_CAPABILITIES: readonly [...("commands.execute" | "commands.stream" | "navigation.open" | "placement.close" | "notification.show" | "notification.action" | "notification.resolve" | "notification.dismiss" | "preferences.get" | "preferences.set" | "extension.settings.all" | "extension.settings.get" | "extension.settings.set" | "extension.settings.delete" | "terminal.session" | "files.upload" | "files.list" | "files.delete")[], "artifacts.read", "host.dispatchKeyboardEvent"];
+export declare const WEBVIEW_HOST_CAPABILITIES: readonly [...("commands.execute" | "commands.stream" | "extension.settings.all" | "extension.settings.delete" | "extension.settings.get" | "extension.settings.set" | "files.delete" | "files.list" | "files.upload" | "navigation.open" | "notification.action" | "notification.dismiss" | "notification.resolve" | "notification.show" | "placement.close" | "preferences.get" | "preferences.set" | "terminal.session")[], "artifacts.read", "host.dispatchKeyboardEvent"];
 type WebviewHostCapability = (typeof WEBVIEW_HOST_CAPABILITIES)[number];
 type WebviewDeclarableCapability = (typeof WEBVIEW_DECLARABLE_CAPABILITIES)[number];
 type WebviewScopedDeclarableCapability = (typeof WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES)[number];
@@ -1985,11 +1985,11 @@ declare const harnessCommandStateSchema: z.ZodObject<{
     indicator: z.ZodOptional<z.ZodObject<{
       label: z.ZodString;
       tone: z.ZodEnum<{
-        success: "success";
         error: "error";
         info: "info";
-        warning: "warning";
         neutral: "neutral";
+        success: "success";
+        warning: "warning";
       }>;
     }, z.core.$strip>>;
     tagText: z.ZodOptional<z.ZodString>;
@@ -3619,7 +3619,7 @@ export declare const resolveDataTableFieldKind: (values: unknown[], column?: {
   renderer?: {
     type: string;
   };
-}) => "string" | "number" | "boolean" | "date";
+}) => "boolean" | "date" | "number" | "string";
 type WorkspaceType = string;
 interface WorkspaceProvisionPayload {
   projectId: string;
@@ -3796,7 +3796,6 @@ export declare const historyValueKey: (value: unknown) => string;
 export declare const historyMessageKey: (message: SessionMessage) => string;
 export declare const splitHistoryTurns: (messages: readonly SessionMessage[]) => SessionMessage[][];
 export declare const mergeHistoryMetadata: (known: SessionMessage, native: SessionMessage) => {
-  parts: SessionMessagePart[];
   id: string;
   role: SessionMessageRole;
   index?: number;
@@ -3812,15 +3811,16 @@ export declare const mergeHistoryMetadata: (known: SessionMessage, native: Sessi
       write?: number;
     };
   };
+  parts: SessionMessagePart[];
 };
 export declare const reconcileMessageHistory: (input: HistoryRecoveryInput, projection?: HistoryProjection) => {
   kind: "recovered";
   messages: SessionMessage[];
   category?: undefined;
 } | {
+  messages?: undefined;
   kind: "conflict";
   category: string;
-  messages?: undefined;
 };
 export declare const SDK_VERSION: string;
 type CommandResponse<TResult = unknown> = {
@@ -3899,13 +3899,13 @@ export declare const defineWorkspaceType: <Definition extends Omit<WorkspaceType
 export declare const defineHarness: <Definition extends Omit<HarnessProvider, "ref">>(definition: Definition) => Definition & ContributionDefinition<"harness">;
 export declare const defineConnection: <Definition extends Omit<ExtensionConnectionContribution, "ref">>(definition: Definition) => Definition & ContributionDefinition<"connection">;
 export declare const defineResourceHierarchyProvider: (definition: Omit<ResourceHierarchyProvider, "ref">) => {
+  id: string;
+  resourceKind: ResourceKindRef;
+  parent: (ctx: ExtensionContextBase, resource: ResourceRef) => MaybePromise<ResourceRef | ViewHierarchyParent | null>;
   ref: {
     kind: "resource-hierarchy-provider";
     id: string;
   };
-  id: string;
-  resourceKind: ResourceKindRef;
-  parent: (ctx: ExtensionContextBase, resource: ResourceRef) => MaybePromise<ResourceRef | ViewHierarchyParent | null>;
 };
 type SettingValue<TProperty> = TProperty extends {
   type: "boolean";

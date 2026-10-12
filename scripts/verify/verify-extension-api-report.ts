@@ -35,10 +35,7 @@ const buildReport = () => {
   if (result.status !== 0) throw new Error(`build:api-report failed:\n${result.stdout}${result.stderr}`);
 
   return new Map(
-    REPORT_FILES.map((file) => [
-      file,
-      normalizeReport(readFileSync(path.join(SDK_DIR, ".api-report/bundle", file), "utf8")),
-    ]),
+    REPORT_FILES.map((file) => [file, normalizeReport(readFileSync(path.join(SDK_DIR, ".api-report", file), "utf8"))]),
   );
 };
 
