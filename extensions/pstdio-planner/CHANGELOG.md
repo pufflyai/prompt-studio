@@ -1,5 +1,25 @@
 # pstdio-planner
 
+## 0.43.0
+
+_2026-10-12_
+
+### Minor Changes
+
+- 55e486d: Coordinate Auto Build through a prompted supervisor with inline ignore filters, review-aware dependency stacking, activity dots, capacity, and session controls.
+- c4c3913: Answer Planner review requests with `review --request-id`: tasks and decisions share one request list across tickets, the timeline, chat, and the CLI, and Review Needed stays on until every open request is settled. This replaces `resolve-human-request` and fixes handoffs that failed when they started a new chat.
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+- 55e486d: Add Auto build to fill available ticket slots and record stuck-agent requests for human review.
+- c4c3913: Add Planner timeline with shared filters and ticket forms, status and review icons, sticky track names, anchored menus, and one live extension view per frame.
+
+### Patch Changes
+
+- 55e486d: Rename the timeline to Project Timeline and match Auto build to the compact toolbar controls.
+- 67f599d: Rename Ticket timeline to Project Timeline in navigation and documentation.
+- 8bb636a: Keep Tickets working when Track is not usable by the timeline, block single-select changes that would hide values, show only the filtered tracks, and draw curved dependency arrows.
+- c866750: Make human review indicators and launch readiness follow actionable requests.
+- 33dd233: Show Project Timeline drop targets as soft surfaces, stop the blue focus ring while dragging, and remove Prerequisites from timeline ticket creation.
+
 ## 0.42.0
 
 _2026-10-10_
