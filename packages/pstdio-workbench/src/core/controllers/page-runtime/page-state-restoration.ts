@@ -6,6 +6,7 @@ import type {
   WorkbenchPageRuntimeState,
   WorkbenchPageSlotInstance,
 } from "../../registries/pages/page-registry-types";
+import { emptyPageState } from "../../registries/pages/page-slot-lifecycle";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { createWorkbenchInput } from "../../workbench-core-types";
@@ -58,19 +59,27 @@ export const pageStateFromLayout = (
   return { openStaticSlotIds, resourceInstances, activePrimaryInstanceKey };
 };
 
-export const loadWorkbenchLocationLayout = (input: createWorkbenchInput, context: OwnerLayoutContext) => {
-  const scope = pageLayoutScope(context);
+export const loadWorkbenchLocationLayout = (
+  input: createWorkbenchInput,
+  context: OwnerLayoutContext,
+  page?: WorkbenchPageContribution,
+) => {
+  const scope = pageLayoutScope(context, page);
   return input.persistence?.getSnapshot(scope)?.layout ?? input.layoutPersistence?.getLayout(scope);
 };
 
 export const createPageStateRestorer =
   (input: createWorkbenchInput) => (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
-    const layout = loadWorkbenchLocationLayout(input, {
-      modeId: page.modeId,
-      pageId: page.id,
-      projectId,
-      resource: location.resource,
-    });
-    if (!layout) return undefined;
+    const layout = loadWorkbenchLocationLayout(
+      input,
+      {
+        modeId: page.modeId,
+        pageId: page.id,
+        projectId,
+        resource: location.resource,
+      },
+      page,
+    );
+    if (!layout) return emptyPageState(page);
     return pageStateFromLayout(page, layout);
   };

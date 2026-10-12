@@ -58,11 +58,14 @@ export const createOwnerLayoutScopeHandler =
     const previous = input.getState() ?? state;
     if (!state.activePageId && previous.projectId === state.projectId) return;
     saveOutgoingMode(input, state, previous);
-    const scope = pageLayoutScope({
-      projectId: state.projectId,
-      pageId: state.activePageId,
-      resource: state.location?.resource,
-    });
+    const scope = pageLayoutScope(
+      {
+        projectId: state.projectId,
+        pageId: state.activePageId,
+        resource: state.location?.resource,
+      },
+      state.activePageId ? state.pages[state.activePageId] : undefined,
+    );
     const initialLayout =
       state.projectId &&
       !state.activePageId &&

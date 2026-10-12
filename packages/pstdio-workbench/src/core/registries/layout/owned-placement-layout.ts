@@ -9,6 +9,7 @@ import {
   type WorkbenchLayout,
   type WorkbenchRegion,
   type WorkbenchWidgetPlacement,
+  workbenchPanelRegions,
   workbenchRegions,
 } from "./layout-types";
 import { isPageRegion, ownerRegionSelection, restoreOwnerRegion } from "./owner-region-state";
@@ -234,7 +235,10 @@ const reconcileRegions = (
       widgets,
       savedWidgetOrder: undefined,
       activeWidgetId,
-      ...(docked.has(regionId) && !shared ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
+      ...(docked.has(regionId) &&
+      (!shared || (workbenchPanelRegions.some((id) => id === regionId) && !shared.widgets.length))
+        ? { visible: region.visible || opensPreviouslyEmptyRegion }
+        : {}),
     };
   }
   return { ...layout, regions };

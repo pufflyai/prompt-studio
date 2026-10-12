@@ -48,10 +48,14 @@ The workbench owns persistence scope selection. Hosts supply the storage adapter
 | Saved data | Owner key |
 | --- | --- |
 | Page sizes | Project and page type |
-| Page tabs, selection, and retention | Project, page, and routed resource; an unbound page has one instance |
+| Page tabs, selection, and retention | Project, page, and routed resource; an unbound or many-resource page has one instance |
 | Side and Secondary tabs, selection, sizes, visibility, and Side presentation | Project and mode |
 
 Saved owner records are authoritative. Declarations seed new owners. Returning to a saved page does not recreate a tab that moved out. Mode tabs and their bindings remain available across ordinary page navigation. Page bottom and mode Secondary save and restore independently.
+
+A Main view with `cardinality: "many"` keeps one collection of resource tabs. Its routed resource selects a tab in that collection; it does not create another layout owner. Leaving the page and returning, or reloading, restores its pinned tabs. A single-resource Main keeps its live view while rebinding to another resource, but each resource owner restores its own optional tabs and selections. Transferring that view changes its owner and preserves its resource binding.
+
+Configured persistence is the source of saved owner state. Clearing an inactive owner removes its saved choices; remembered registry state cannot recreate them. Compound navigation keeps its staged owner changes until the transaction commits.
 
 Layout cache version 6 discards older local arrangements. Routed locations, resources, tree state, and independent menu preferences stay valid. This ownership and cache reset follows the decision recorded for PS-609; it is a breaking behavior change and must pass the workbench track's release gate before publishing.
 

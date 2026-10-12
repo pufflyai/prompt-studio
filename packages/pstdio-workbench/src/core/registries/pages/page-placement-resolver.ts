@@ -2,7 +2,13 @@ import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
+import {
+  isPageSlotClosable,
+  PAGE_MAIN_SLOT_ID,
+  pageOwnerResource,
+  pageSlots,
+  type ResolvedPageSlot,
+} from "./page-main";
 import { pagePanelMenus } from "./page-panel-menus";
 import type {
   WorkbenchPageContribution,
@@ -109,7 +115,7 @@ export const resolvePagePlacements = <Value>(input: {
   const resolvePagePlacement = (placement: WorkbenchPagePlacementInput) =>
     input.resolvePagePlacement({
       ...placement,
-      ownerInstanceKey: resourceKey(input.resource),
+      ownerInstanceKey: resourceKey(pageOwnerResource(input.page, input.resource)),
     });
   const placements: ResolvedOwnedPlacement<Value>[] = [];
   for (const menu of pagePanelMenus(input.page)) {

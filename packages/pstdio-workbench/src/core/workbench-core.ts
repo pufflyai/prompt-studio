@@ -14,13 +14,10 @@ import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
-import { pageLayoutScope } from "./controllers/page-runtime/owner-layout-scope";
+import { createOwnerLayoutAccess } from "./controllers/page-runtime/owner-layout-access";
 import { createOwnerLayoutScopeHandler } from "./controllers/page-runtime/owner-layout-scope-handler";
 import { createLiveWorkbenchPageRegistry } from "./controllers/page-runtime/page-runtime";
-import {
-  createPageStateRestorer,
-  loadWorkbenchLocationLayout,
-} from "./controllers/page-runtime/page-state-restoration";
+import { createPageStateRestorer } from "./controllers/page-runtime/page-state-restoration";
 import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench-layout-cache";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
@@ -91,6 +88,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const layoutCache = createWorkbenchLayoutCache(input);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
+  const ownerLayouts = createOwnerLayoutAccess(cachedInput, layoutCache, (id) => core?.pages.getPage(id));
   const locationAwareLayout = createLayoutModel({
     defaultRegionVisibility: {
       ...input.defaultPanelOpenByRegionId,
@@ -127,7 +125,10 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const modePlacements = createWorkbenchModePlacementRegistry({
     loadLayout: (context) => layoutCache.readMode(context.projectId, context.modeId),
-    getProjectId: () => core?.pages.store.getState().projectId,
+    getContext: () => {
+      const state = core?.pages.store.getState();
+      return { projectId: state?.projectId, modeId: state?.activeModeId };
+    },
     views,
     viewMenus,
     getPanel: layout.getWidget,
@@ -142,9 +143,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     activatePanel: layout.activatePanel,
     getLayout: layout.getLayout,
     getScope: layout.getPersistenceScope,
-    resolveScope: (context) => pageLayoutScope({ ...context, resource: context.location?.resource }),
-    loadLayout: (context) =>
-      loadWorkbenchLocationLayout(cachedInput, { ...context, resource: context.location?.resource }),
+    resolveScope: ownerLayouts.resolveScope,
+    loadLayout: ownerLayouts.loadLocation,
     enteredWithPersistedLayout: layout.enteredWithPersistedLayout,
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
@@ -197,10 +197,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       menus: panelMenuState,
       getState: () => core?.pages.store.getState(),
     }),
-    loadPageLayout: (state) =>
-      layoutCache.layout.getLayout(
-        pageLayoutScope({ projectId: state.projectId, pageId: state.activePageId, resource: state.location?.resource }),
-      ),
+    loadPageLayout: ownerLayouts.loadPage,
     restorePageState: createPageStateRestorer(cachedInput),
 
     revealRegion: (region) => revealPanelRegion(core, region),

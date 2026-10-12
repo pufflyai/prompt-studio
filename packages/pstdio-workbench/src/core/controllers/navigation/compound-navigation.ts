@@ -4,13 +4,31 @@ import { placementIdentityKey } from "../../registries/layout/placement-reconcil
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import { pageStateKey } from "../../registries/pages/page-state-key";
 import type { OwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
-import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
+import {
+  getOwnedPlacementPreparation,
+  type OwnedPlacementLocationContext,
+} from "../../registries/placements/owned-placement-preparation";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
+
+const hasStagedModeState = (
+  core: WorkbenchCore,
+  modeId: string,
+  current: OwnedPlacementState,
+  original: OwnedPlacementState,
+) =>
+  core.modePlacements
+    .listPlacements(modeId)
+    .some(
+      (placement) =>
+        current.staticOverrides.get(placement.id) !== original.staticOverrides.get(placement.id) ||
+        current.resourceInstances.get(placement.id) !== original.resourceInstances.get(placement.id),
+    );
 
 const placementContext = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) =>
   state.activeModeId
@@ -25,9 +43,21 @@ const requirePanelPage = (state: WorkbenchPageRegistryStoreState<WorkbenchWidget
   const page = Object.values(state.pages).find(
     (page) => page.ref.extensionId === panel.page.extensionId && page.ref.id === panel.page.id,
   );
+
   if (!page || page.id !== state.activePageId)
     throw new Error(`Page panel "${panel.id}" is not owned by the proposed page`);
   return page;
+};
+
+const restoreProposedMode = (
+  core: WorkbenchCore,
+  context: OwnedPlacementLocationContext,
+  previous: OwnedPlacementLocationContext | undefined,
+  current: OwnedPlacementState,
+  original: OwnedPlacementState,
+) => {
+  if (hasStagedModeState(core, context.modeId, current, original)) return current;
+  return getOwnedPlacementPreparation(core.modePlacements).restore?.(context, current, previous) ?? current;
 };
 const prepareSharedPanel = (
   core: WorkbenchCore,
@@ -82,17 +112,21 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
       if (!proposed.projectId) throw new Error("Cannot navigate before a project is active");
       const resolved = locations.resolve(target);
       const page = proposed.pages[resolved.pageId]!;
+      const stateKey = pageStateKey(page, resolved.location, pages.resources);
+      const stagedPage = proposed.pageStates[stateKey] !== original.pageStates[stateKey];
       shellState =
         shell.restore?.(
           { modeId: page.modeId, pageId: page.id, projectId: proposed.projectId, location: resolved.location },
           shellState,
           placementContext(proposed),
         ) ?? shellState;
-      modeState =
-        mode.restore?.(
-          { modeId: page.modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
-          modeState,
-        ) ?? modeState;
+      modeState = restoreProposedMode(
+        core,
+        { modeId: page.modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
+        placementContext(proposed),
+        modeState,
+        originalMode,
+      );
       proposed = pages.prepare.location(
         {
           pageId: page.id,
@@ -101,6 +135,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           resource: resolved.location.resource,
           section: resolved.location.section,
           open: resolved.open,
+          ...(stagedPage ? { pageStates: proposed.pageStates } : {}),
           action: "preparePageNavigation",
         },
         proposed,

@@ -6,6 +6,7 @@ import type {
 } from "../../registries/layout/layout-types";
 import { placementIdentityKey, type ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
+import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
 
 const records = (layout?: WorkbenchLayout) =>
   Object.values(layout?.regions ?? {}).flatMap((region) =>
@@ -76,7 +77,8 @@ const canSeedDeclaration = (
     hasOwnerLayout &&
     !previous &&
     !newFixedDeclaration &&
-    ((enteringPage && placement.identity.kind !== "mode") || (!added.has(key) && !activated.has(key)))
+    !activated.has(key) &&
+    ((enteringPage && placement.identity.kind !== "mode") || !added.has(key))
   )
     return false;
   return true;
@@ -91,12 +93,29 @@ const restoreSavedTab = (
   return { ...placement, value: { ...placement.value, tab: getWidget ? widget?.tab : placement.value.tab } };
 };
 
+const restoreDeclaration = (
+  placement: ResolvedOwnedPlacement<WorkbenchWidgetPlacement>,
+  previous: ResolvedOwnedPlacement<WorkbenchWidgetPlacement> | undefined,
+  liveWidgetId: string | undefined,
+) => {
+  const widgetId = liveWidgetId ?? previous?.value.widgetId ?? placement.value.widgetId;
+  return {
+    ...placement,
+    region: previous?.region ?? placement.region,
+    value: {
+      ...placement.value,
+      widgetId,
+    },
+  };
+};
+
 /** Saved owners are authoritative; declarations only seed an owner that has no layout. */
 export const resolveOwnerPlacements = (input: {
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
   pageLayout?: WorkbenchLayout;
   modeLayout?: WorkbenchLayout;
   currentLayout?: WorkbenchLayout;
+  liveLayout?: WorkbenchLayout;
   enteringPage: boolean;
   getWidget?(id: string): RegisteredWidgetContribution | undefined;
   hasDeclaration?(identity: PlacementIdentity): boolean;
@@ -112,6 +131,16 @@ export const resolveOwnerPlacements = (input: {
   const added = new Set(state.reconciliation.add.map((p) => placementIdentityKey(p.identity)));
   const activated = new Set(state.reconciliation.activate.map((p) => placementIdentityKey(p.identity)));
   const removed = new Set(state.reconciliation.remove.map((placement) => placementIdentityKey(placement.identity)));
+  const liveWidgets = new Map(
+    records(input.liveLayout)
+      .filter(
+        (p) =>
+          p.identity.kind === "page" &&
+          p.identity.instanceKey === SINGLE_RESOURCE_INSTANCE_KEY &&
+          !p.value.declarationIdentity,
+      )
+      .map((p) => [placementIdentityKey(p.identity), p.value.widgetId]),
+  );
   const desired: ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] = [];
   for (const placement of state.placements) {
     const key = placementIdentityKey(placement.identity);
@@ -137,11 +166,7 @@ export const resolveOwnerPlacements = (input: {
       )
     )
       continue;
-    desired.push(
-      previous
-        ? { ...placement, region: previous.region, value: { ...placement.value, widgetId: previous.value.widgetId } }
-        : placement,
-    );
+    desired.push(restoreDeclaration(placement, previous, liveWidgets.get(key)));
     savedByKey.delete(key);
   }
   for (const placement of savedByKey.values()) {

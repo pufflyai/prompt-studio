@@ -10,6 +10,7 @@ import { restorePageGeometry } from "../../registries/layout/owner-region-state"
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput } from "../../workbench-core-types";
 import { modeLayoutScope, pageGeometryScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
+import { retireSingleResourceAliases } from "./owner-layout-widgets";
 
 const selectPlacements = (layout: WorkbenchLayout, include: (placement: WorkbenchWidgetPlacement) => boolean) => {
   const regions = { ...layout.regions };
@@ -42,14 +43,28 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     : input.layoutPersistence;
   const read = (scope?: string) => {
     scopes.add(scope);
-    const saved = runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter?.getLayout(scope));
-    const snapshot = memory.get(scope) ?? saved;
+    const snapshot = adapter
+      ? runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope))
+      : memory.get(scope);
     return snapshot ? mergeWithDefaultRegions(snapshot, input.defaultPanelOpenByRegionId) : undefined;
   };
-  const write = (layout: WorkbenchLayout, scope?: string) => {
+  const persist = (layout: WorkbenchLayout, scope?: string) => {
     scopes.add(scope);
-    memory.set(scope, layout);
+    if (!adapter) memory.set(scope, layout);
     return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => adapter?.setLayout(layout, scope));
+  };
+  const write = (layout: WorkbenchLayout, scope?: string) => {
+    const ownedWidgetIds = new Set(
+      Object.values(layout.regions).flatMap((region) => region.widgets.map((p) => p.widgetId)),
+    );
+    for (const previousScope of scopes) {
+      if (previousScope === scope) continue;
+      const previous = read(previousScope);
+      if (!previous) continue;
+      const next = retireSingleResourceAliases(previous, ownedWidgetIds);
+      if (next !== previous) persist(next, previousScope);
+    }
+    return persist(layout, scope);
   };
   return {
     removeResource(resource: ResourceRef) {

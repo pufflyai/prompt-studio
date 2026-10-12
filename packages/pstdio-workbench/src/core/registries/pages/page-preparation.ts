@@ -113,8 +113,20 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       ...(target.resource ? { resource: normalizeResource(target.resource) } : {}),
     };
     const stateKey = pageStateKey(page, target.location, input.resources);
+    const activePage = current.activePageId ? current.pages[current.activePageId] : undefined;
+    const enteringOwner =
+      current.projectId !== target.projectId ||
+      !activePage ||
+      pageStateKey(activePage, current.location, input.resources) !== stateKey;
+    const restored =
+      !target.pageStates && enteringOwner
+        ? input.restorePageState?.(page, target.location, target.projectId)
+        : undefined;
     const currentPageState =
-      pageStates[stateKey] ?? input.restorePageState?.(page, target.location, target.projectId) ?? emptyPageState(page);
+      restored ??
+      pageStates[stateKey] ??
+      input.restorePageState?.(page, target.location, target.projectId) ??
+      emptyPageState(page);
     const primaryState = selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
     const openFollowers =
       !target.pageStates ||

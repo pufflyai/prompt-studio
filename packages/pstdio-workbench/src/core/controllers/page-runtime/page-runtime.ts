@@ -12,7 +12,6 @@ import {
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
 import { restorePageGeometry } from "../../registries/layout/owner-region-state";
-import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
@@ -36,6 +35,7 @@ import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
 import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
+import { pageWidgetId, reuseSingleResourceWidgets } from "./page-widget-id";
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
@@ -81,6 +81,7 @@ const prepareRuntimeLayout = (
   latest: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   activation: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["placements"],
   enteringPage: boolean,
+  liveLayout: WorkbenchLayout,
 ) => {
   const modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
   const ownerManaged = Boolean(input.loadPageLayout && latest.activePageId);
@@ -93,13 +94,14 @@ const prepareRuntimeLayout = (
           modeLayout,
           enteringPage,
           currentLayout: input.layout.getLayout(),
+          liveLayout,
           getWidget: input.layout.getWidget,
           hasDeclaration: input.hasDeclaration,
         })
       : bindPlacementsToActivePageLocation(latest);
   return {
     ownerManaged,
-    layout: input.layout.getLayout(),
+    layout: ownerManaged ? reuseSingleResourceWidgets(input.layout.getLayout(), placements) : input.layout.getLayout(),
     modeLayout,
     placements,
     activate: ownerLayoutActivation(activation, placements).map((p) => p.identity),
@@ -123,6 +125,7 @@ const applyPageState = (
   storeBeforeTransition = input.registry.store.getState(),
 ) => {
   const previousScope = input.layout.getPersistenceScope();
+  const liveLayout = input.layout.getLayout();
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
     if (source === "transition") input.beforeApply?.(state);
@@ -134,7 +137,7 @@ const applyPageState = (
     const activation =
       latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
     const enteringPage = input.layout.getPersistenceScope() !== previousScope;
-    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(input, latest, activation, enteringPage);
+    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(input, latest, activation, enteringPage, liveLayout);
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
     // A restored cache needs the complete owned set; a delta belongs to the previous scope.
     if (ownerManaged || source === "scope-restore" || enteringPage) {
@@ -193,18 +196,14 @@ const toWidgetPlacement = (
   const panel = layout.getWidget(panelId);
   if (!panel) throw new Error(`Workbench page placement is not registered: ${input.pageId}.${input.slotId}`);
   return {
-    ...createPlacement(
-      `workbench.page.${encodeURIComponent(input.ownerInstanceKey ?? "")}.${encodeURIComponent(placementIdentityKey(input.identity))}`,
-      panel,
-      {
-        viewId: input.viewId,
-        title: resource?.label ?? view.title ?? panel.title,
-        role: placementRole(input.role),
-        closable: input.closable,
-        ...(resource ? { resource } : {}),
-        ...toTabState(input.open),
-      },
-    ),
+    ...createPlacement(pageWidgetId(input, layout), panel, {
+      viewId: input.viewId,
+      title: resource?.label ?? view.title ?? panel.title,
+      role: placementRole(input.role),
+      closable: input.closable,
+      ...(resource ? { resource } : {}),
+      ...toTabState(input.open),
+    }),
     ...(input.section ? { section: input.section } : {}),
   };
 };

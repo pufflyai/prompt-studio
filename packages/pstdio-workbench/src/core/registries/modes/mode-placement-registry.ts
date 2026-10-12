@@ -112,7 +112,7 @@ const copyPlacement = (placement: WorkbenchModePlacementContribution) => ({
 
 export const createWorkbenchModePlacementRegistry = (input: {
   views: WorkbenchViewRegistry;
-  getProjectId?(): string | undefined;
+  getContext?(): { projectId?: string; modeId?: string } | undefined;
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   viewMenus?: WorkbenchViewMenuRegistry;
   getPanel(panelId: string): RegisteredWidgetContribution | undefined;
@@ -177,11 +177,22 @@ export const createWorkbenchModePlacementRegistry = (input: {
       });
     },
     getState: () => state,
-    restore(context, current = state) {
-      if (input.getProjectId && context.projectId !== input.getProjectId()) current = createOwnedPlacementState();
+    restore(context, current = state, previousContext) {
+      const previous = previousContext ?? input.getContext?.();
+      if (input.getContext && context.projectId !== previous?.projectId) current = createOwnedPlacementState();
+      if (!input.loadLayout) return current;
+      const enteringOwner = context.projectId !== previous?.projectId || context.modeId !== previous?.modeId;
+      const owned = listPlacements(context.modeId);
+      if (enteringOwner) {
+        current = {
+          staticOverrides: new Map(current.staticOverrides),
+          resourceInstances: new Map(current.resourceInstances),
+        };
+        for (const declaration of owned) clearOwnedPlacementState(current, declaration.id);
+      }
       const saved = input.loadLayout?.(context);
       if (!saved) return current;
-      const declarations = listPlacements(context.modeId).filter((placement) =>
+      const declarations = owned.filter((placement) =>
         placement.item.kind === "view"
           ? !current.staticOverrides.has(placement.id)
           : !current.resourceInstances.has(placement.id),
