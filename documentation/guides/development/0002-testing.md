@@ -90,7 +90,7 @@ The full stage adds:
 - `windows_test_and_build` and `windows_database_tests`. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time.
 - `e2e` (three browser shards), `e2e_cli`, and `packaged_and_vite_e2e`.
 - The desktop source Electron specs and the packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow still runs the Intel tests and the desktop benchmarks.
-- `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows.
+- `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows. Linux runs the full packaged suite. Intel macOS runs only the essential CLI, runtime, and extension page tests in `scripts/verify/packaged-runtime-smoke.ts`, as the desktop release runs only `@essential` tests there: slow Intel runners turned timing races in the large UI suite into release failures that other platforms did not have. Windows runs its own short list.
 
 `build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
 
