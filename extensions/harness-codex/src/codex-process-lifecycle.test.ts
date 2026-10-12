@@ -21,23 +21,25 @@ test.skipIf(process.platform === "win32")("kills native descendants after their 
   let descendant: number | undefined;
   try {
     const lines = createInterface({ input: child.stdout });
-    descendant = await new Promise<number>((resolve) => lines.once("line", (line) => resolve(Number(line))));
+    const terminated = Promise.withResolvers<void>();
+    const ready = Promise.withResolvers<void>();
+    const pid = Promise.withResolvers<number>();
+    lines.on("line", (line) => {
+      if (line === "ready") ready.resolve();
+      else if (line === "terminated") terminated.resolve();
+      else pid.resolve(Number(line));
+    });
+    descendant = await pid.promise;
     expect(descendant).toBeGreaterThan(0);
+    await ready.promise;
+    const closed = new Promise<void>((resolve) => child.stdout.once("close", resolve));
     process.kill(child.pid!, "SIGKILL");
     await child.onExit;
     child.kill();
-    await new Promise<void>((resolve) => child.stdout.once("close", () => resolve()));
-    let alive = true;
-    for (let attempt = 0; attempt < 50; attempt++) {
-      try {
-        process.kill(descendant, 0);
-      } catch {
-        alive = false;
-        break;
-      }
-      await Bun.sleep(20);
-    }
-    expect(alive).toBe(false);
+    // An exited orphan can retain its PID until the container's init reaps it.
+    await terminated.promise;
+    await closed;
+    expect(child.stdout.destroyed).toBe(true);
   } finally {
     child.kill();
     if (descendant) {
