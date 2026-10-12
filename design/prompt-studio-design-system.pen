@@ -185118,6 +185118,645 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "Oc0qI",
+      "x": 46942,
+      "y": 0,
+      "name": "ChatPanel · Content width and pane scrollbar · PS-656",
+      "context": "ChatPanel fills its parent pane. Transcript content and the composer share a centered maximum width of 832px (52rem), shrinking to the available pane width. The vertical scrollbar remains at the trailing edge of the full pane. Implement with the shared chatContent layer style and chat-content size token. Empty states, notices, approvals, the working indicator, workspace hub, and queued messages use the same content column.",
+      "width": 1780,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "a2kXE",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Chat content stays readable; the scrollbar stays at the pane edge",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "kCkL8",
+          "name": "light examples",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "pCmrT",
+              "name": "1200px pane · light",
+              "theme": {
+                "mode": "light"
+              },
+              "width": 1200,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "MYGNb",
+                  "name": "Pane label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Wide pane · 832px centered content",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "R0OqCB",
+                  "name": "ChatPanel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 660,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "J8bQGm",
+                      "name": "Full pane scroll area",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "TDAZg",
+                          "name": "Transcript content column",
+                          "width": 832,
+                          "layout": "vertical",
+                          "gap": 16,
+                          "children": [
+                            {
+                              "id": "qeSaO",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "User message",
+                              "width": "fill_container"
+                            },
+                            {
+                              "id": "lEN5d",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Assistant message",
+                              "width": "fill_container",
+                              "descendants": {
+                                "EiVAs": {
+                                  "content": "The conversation stays in a centered column on wide panes. Long messages wrap within the same width as the composer, while the scroll area fills the parent pane. On narrow panes, the content uses the available space. The scrollbar remains at the pane edge in both layouts."
+                                }
+                              }
+                            },
+                            {
+                              "id": "QoFNU",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "Follow-up",
+                              "width": "fill_container",
+                              "descendants": {
+                                "ZdoE8": {
+                                  "content": "Keep the same alignment for the workspace hub and queued messages."
+                                }
+                              }
+                            },
+                            {
+                              "id": "lEQnJ",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Reply",
+                              "width": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "CaBmS",
+                          "layoutPosition": "absolute",
+                          "x": 1192,
+                          "y": 160,
+                          "name": "Vertical scrollbar thumb at pane edge",
+                          "fill": "$ds-border",
+                          "width": 4,
+                          "height": 100
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AxEUo",
+                      "name": "Centered composer column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "kXhkX",
+                          "name": "Composer content",
+                          "width": 832,
+                          "layout": "vertical",
+                          "padding": 8,
+                          "children": [
+                            {
+                              "id": "rlb4x",
+                              "type": "ref",
+                              "ref": "JGKK1",
+                              "name": "Workspace hub and composer",
+                              "width": "fill_container",
+                              "descendants": {
+                                "J3u0Q/m7n0s": {
+                                  "width": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "G2rJjO",
+              "name": "420px pane · light",
+              "theme": {
+                "mode": "light"
+              },
+              "width": 420,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "F6lUVb",
+                  "name": "Pane label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Narrow pane · content fills available width",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "gexms",
+                  "name": "ChatPanel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 660,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "CgFND",
+                      "name": "Full pane scroll area",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Vubog",
+                          "name": "Transcript content column",
+                          "width": 420,
+                          "layout": "vertical",
+                          "gap": 16,
+                          "children": [
+                            {
+                              "id": "f3DEiQ",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "User message",
+                              "width": "fill_container"
+                            },
+                            {
+                              "id": "t5S5PS",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Assistant message",
+                              "width": "fill_container",
+                              "descendants": {
+                                "EiVAs": {
+                                  "content": "The conversation stays in a centered column on wide panes. Long messages wrap within the same width as the composer, while the scroll area fills the parent pane. On narrow panes, the content uses the available space. The scrollbar remains at the pane edge in both layouts."
+                                }
+                              }
+                            },
+                            {
+                              "id": "y6h5PR",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "Follow-up",
+                              "width": "fill_container",
+                              "descendants": {
+                                "ZdoE8": {
+                                  "content": "Keep the same alignment for the workspace hub and queued messages."
+                                }
+                              }
+                            },
+                            {
+                              "id": "EYooo",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Reply",
+                              "width": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "Zj5ZL",
+                          "layoutPosition": "absolute",
+                          "x": 412,
+                          "y": 160,
+                          "name": "Vertical scrollbar thumb at pane edge",
+                          "fill": "$ds-border",
+                          "width": 4,
+                          "height": 100
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "G9t4v3",
+                      "name": "Centered composer column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "pIo7S",
+                          "name": "Composer content",
+                          "width": 420,
+                          "layout": "vertical",
+                          "padding": 8,
+                          "children": [
+                            {
+                              "id": "TOY5r",
+                              "type": "ref",
+                              "ref": "JGKK1",
+                              "name": "Workspace hub and composer",
+                              "width": "fill_container",
+                              "descendants": {
+                                "J3u0Q/m7n0s": {
+                                  "width": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "NcfMU",
+          "name": "dark examples",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "fooi9",
+              "name": "1200px pane · dark",
+              "theme": {
+                "mode": "dark"
+              },
+              "width": 1200,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "V3RJj",
+                  "name": "Pane label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Wide pane · 832px centered content",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "VeaN8",
+                  "name": "ChatPanel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 660,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "z3ahDO",
+                      "name": "Full pane scroll area",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "x4aNSl",
+                          "name": "Transcript content column",
+                          "width": 832,
+                          "layout": "vertical",
+                          "gap": 16,
+                          "children": [
+                            {
+                              "id": "nzR04",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "User message",
+                              "width": "fill_container"
+                            },
+                            {
+                              "id": "F0HMt",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Assistant message",
+                              "width": "fill_container",
+                              "descendants": {
+                                "EiVAs": {
+                                  "content": "The conversation stays in a centered column on wide panes. Long messages wrap within the same width as the composer, while the scroll area fills the parent pane. On narrow panes, the content uses the available space. The scrollbar remains at the pane edge in both layouts."
+                                }
+                              }
+                            },
+                            {
+                              "id": "j44xO",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "Follow-up",
+                              "width": "fill_container",
+                              "descendants": {
+                                "ZdoE8": {
+                                  "content": "Keep the same alignment for the workspace hub and queued messages."
+                                }
+                              }
+                            },
+                            {
+                              "id": "NkO7Y",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Reply",
+                              "width": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "k8GXa",
+                          "layoutPosition": "absolute",
+                          "x": 1192,
+                          "y": 160,
+                          "name": "Vertical scrollbar thumb at pane edge",
+                          "fill": "$ds-border",
+                          "width": 4,
+                          "height": 100
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bVEtT",
+                      "name": "Centered composer column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "a6x2j0",
+                          "name": "Composer content",
+                          "width": 832,
+                          "layout": "vertical",
+                          "padding": 8,
+                          "children": [
+                            {
+                              "id": "ku4mT",
+                              "type": "ref",
+                              "ref": "JGKK1",
+                              "name": "Workspace hub and composer",
+                              "width": "fill_container",
+                              "descendants": {
+                                "J3u0Q/m7n0s": {
+                                  "width": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qN8wG",
+              "name": "420px pane · dark",
+              "theme": {
+                "mode": "dark"
+              },
+              "width": 420,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "s3rRlM",
+                  "name": "Pane label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Narrow pane · content fills available width",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "LZzQt",
+                  "name": "ChatPanel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 660,
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TCOOl",
+                      "name": "Full pane scroll area",
+                      "clip": true,
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MLnl4",
+                          "name": "Transcript content column",
+                          "width": 420,
+                          "layout": "vertical",
+                          "gap": 16,
+                          "children": [
+                            {
+                              "id": "OHqt2",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "User message",
+                              "width": "fill_container"
+                            },
+                            {
+                              "id": "I42wA",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Assistant message",
+                              "width": "fill_container",
+                              "descendants": {
+                                "EiVAs": {
+                                  "content": "The conversation stays in a centered column on wide panes. Long messages wrap within the same width as the composer, while the scroll area fills the parent pane. On narrow panes, the content uses the available space. The scrollbar remains at the pane edge in both layouts."
+                                }
+                              }
+                            },
+                            {
+                              "id": "JsffG",
+                              "type": "ref",
+                              "ref": "CQVFo",
+                              "name": "Follow-up",
+                              "width": "fill_container",
+                              "descendants": {
+                                "ZdoE8": {
+                                  "content": "Keep the same alignment for the workspace hub and queued messages."
+                                }
+                              }
+                            },
+                            {
+                              "id": "qCsZ2",
+                              "type": "ref",
+                              "ref": "X7Yj6",
+                              "name": "Reply",
+                              "width": "fill_container"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 4,
+                          "id": "I7ODtZ",
+                          "layoutPosition": "absolute",
+                          "x": 412,
+                          "y": 160,
+                          "name": "Vertical scrollbar thumb at pane edge",
+                          "fill": "$ds-border",
+                          "width": 4,
+                          "height": 100
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aH1C5",
+                      "name": "Centered composer column",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IeiZk",
+                          "name": "Composer content",
+                          "width": 420,
+                          "layout": "vertical",
+                          "padding": 8,
+                          "children": [
+                            {
+                              "id": "o86nl",
+                              "type": "ref",
+                              "ref": "JGKK1",
+                              "name": "Workspace hub and composer",
+                              "width": "fill_container",
+                              "descendants": {
+                                "J3u0Q/m7n0s": {
+                                  "width": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
@@ -194464,6 +195103,10 @@
           }
         }
       ]
+    },
+    "chat-content-max": {
+      "type": "number",
+      "value": 832
     }
   },
   "fileToken": "5daee32e-f2e6-4f1b-a902-d5068ac252c1"

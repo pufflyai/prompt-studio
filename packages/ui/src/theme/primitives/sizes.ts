@@ -48,6 +48,7 @@ export const spacing = {
 
 export const sizes = {
   "scrollbar-thin": { value: sp[25] },
+  "chat-content": { value: "52rem" },
   "palette-width": { value: "44rem" },
   "palette-results-height": { value: "24rem" },
   "queue-send-now": { value: sp[250] },
