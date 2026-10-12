@@ -15,9 +15,6 @@ const createPanelWorkbench = (region: "secondary" | "side", owner: "shell" | "mo
     },
     defaultPanelOpenByRegionId: { secondary: false, side: false },
     initialSidePanelMode: "closed",
-    resolvePagePersistenceScope: ({ projectId, pageId, resource }) => ({
-      scope: `${projectId}/${resource?.id ?? pageId}`,
-    }),
   });
   const page = (id: string) => ({ extensionId: "test", kind: "page" as const, id });
   const panelRefs = {

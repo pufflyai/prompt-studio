@@ -24,7 +24,7 @@ test("invalidates the changed layout cache while preserving locations and indepe
   storage.setItem(
     workbenchStoragePersistenceKey("revision", "layout", "project/one"),
     JSON.stringify({
-      version: 4,
+      version: 5,
       layout: createDefaultWorkbenchLayout(),
     }),
   );

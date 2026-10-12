@@ -30,30 +30,26 @@ const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
 const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
   // A scope rotation temporarily removes every placement. Only an explicit tab
   // close should end the PTY bound to that placement.
-  let changingScope = false;
-  const willChangeScope = ctx.layout.onWillChangePersistenceScope(() => {
-    changingScope = true;
-  });
-  const didChangeScope = ctx.layout.onDidChangePersistenceScope(() => {
-    changingScope = false;
-  });
+  let previousScope = ctx.layout.getPersistenceScope();
+  let previousMode = ctx.modes.getActiveModeId();
   const unsubscribeLayout = ctx.layout.store.subscribe((state, previousState) => {
-    if (changingScope) return;
+    const scope = ctx.layout.getPersistenceScope();
+    const mode = ctx.modes.getActiveModeId();
+    const changingOwner = scope !== previousScope || mode !== previousMode;
+    previousScope = scope;
+    previousMode = mode;
+    if (changingOwner) return;
     const currentIds = new Set(terminalPlacements(state.layout).map((placement) => placement.widgetId));
     const previousIds = terminalPlacements(previousState.layout).map((placement) => placement.widgetId);
-    const scope = ctx.layout.getPersistenceScope();
     for (const instanceId of previousIds) {
-      if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
+      if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(instanceId));
     }
   });
   return {
     dispose() {
       unsubscribeLayout();
-      willChangeScope.dispose();
-      didChangeScope.dispose();
-      const scope = ctx.layout.getPersistenceScope();
       for (const instanceId of terminalInstanceIds(ctx)) {
-        void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
+        void ctx.terminal.killBinding(terminalPlacementBindingId(instanceId));
       }
     },
   };

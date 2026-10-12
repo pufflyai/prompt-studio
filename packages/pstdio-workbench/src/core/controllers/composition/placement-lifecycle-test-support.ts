@@ -17,7 +17,6 @@ export const openFile = (id: string) => ({
 export function harness(saved = new Map<string | undefined, WorkbenchLayout>()) {
   const w = createWorkbench({
     layoutPersistence: { getLayout: (s) => saved.get(s), setLayout: (l, s) => saved.set(s, l) },
-    resolvePagePersistenceScope: ({ projectId, resource }) => ({ scope: `${projectId}/${resource?.id ?? "home"}` }),
   });
   w.modes.registerMode({ id: "edit", activate() {} });
   for (const id of ["empty", "editor"])

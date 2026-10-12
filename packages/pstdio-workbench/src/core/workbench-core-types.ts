@@ -148,7 +148,7 @@ export interface WorkbenchPersistenceAdapter {
 export interface WorkbenchHost {
   getSnapshot(): WorkbenchSnapshot;
   restoreSnapshot(snapshot: WorkbenchSnapshot): void;
-  setPersistenceScope(scope: string | undefined, input?: { carryRegions?: readonly WorkbenchRegion[] }): void;
+  setPersistenceScope(scope: string | undefined): void;
   getPersistenceScope(): string | undefined;
 }
 
@@ -163,25 +163,11 @@ export interface WorkbenchCore extends WorkbenchCoreContributionContext {
 export type WorkbenchModuleContext = WorkbenchCoreContributionContext;
 export type WorkbenchModuleContributionContext = WorkbenchModuleContext;
 
-export interface WorkbenchPagePersistenceScopeInput {
-  currentScope?: string;
-  modeId?: string;
-  pageId?: string;
-  projectId?: string;
-  resource?: ResourceRef;
-}
-
-export interface WorkbenchPagePersistenceScope {
-  scope?: string;
-  carryRegions?: readonly WorkbenchRegion[];
-}
-
 export interface createWorkbenchInput {
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
   pageLocationPersistence?: WorkbenchPageLocationPersistence;
-  resolvePagePersistenceScope?(input: WorkbenchPagePersistenceScopeInput): WorkbenchPagePersistenceScope;
   pageResources?: WorkbenchPageResourceCodec;
   persistence?: WorkbenchPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;

@@ -25,8 +25,6 @@ export type {
   WorkbenchModuleContext,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
-  WorkbenchPagePersistenceScope,
-  WorkbenchPagePersistenceScopeInput,
   WorkbenchPersistenceAdapter,
   WorkbenchRenderers,
   WorkbenchSnapshot,

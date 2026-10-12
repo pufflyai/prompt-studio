@@ -17,7 +17,6 @@ const harness = (saved: Map<string | undefined, WorkbenchLayout>, fixedFiles = f
       getLayout: (scope) => saved.get(scope),
       setLayout: (layout, scope) => saved.set(scope, layout),
     },
-    resolvePagePersistenceScope: ({ projectId, resource }) => ({ scope: `${projectId}/${resource?.id ?? "home"}` }),
   });
   workbench.modes.registerMode({ id: "edit", activate() {} });
   for (const id of ["empty", "editor", "inspector"])

@@ -169,8 +169,6 @@ export type {
   WorkbenchPageLocationDiagnostic,
   WorkbenchPageLocationPersistence,
   WorkbenchPageNavigationResult,
-  WorkbenchPagePersistenceScope,
-  WorkbenchPagePersistenceScopeInput,
   WorkbenchPanelInstance,
   WorkbenchPanelMenuRegion,
   WorkbenchPanelMenuSide,

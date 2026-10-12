@@ -8,9 +8,16 @@ import {
   waitForStoryPlayback,
 } from "./mermaid-renderer-storybook";
 
-const storyIds = ["smoke", "webview", "boombox", "kiln", "page-surface", "page-surface-webview"].map(
-  (name) => `pstdio-workbench-guides-windowing--${name}`,
-);
+const storyIds = [
+  "smoke",
+  "webview",
+  "boombox",
+  "kiln",
+  "page-surface",
+  "page-surface-webview",
+  "owner-transfer",
+  "files-transfer",
+].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 
 test.describe("Workbench windowing stories", () => {
   let baseUrl = "";

@@ -1,5 +1,5 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
-import { contributionRefId } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
 import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
@@ -106,6 +106,11 @@ export const resolvePagePlacements = <Value>(input: {
   sharedPlacements: readonly ResolvedOwnedPlacement<Value>[];
   resolvePagePlacement(value: WorkbenchPagePlacementInput): Value;
 }) => {
+  const resolvePagePlacement = (placement: WorkbenchPagePlacementInput) =>
+    input.resolvePagePlacement({
+      ...placement,
+      ownerInstanceKey: resourceKey(input.resource),
+    });
   const placements: ResolvedOwnedPlacement<Value>[] = [];
   for (const menu of pagePanelMenus(input.page)) {
     const identity = pagePlacementIdentity(input.page.id, menu.slotId, "default");
@@ -113,7 +118,7 @@ export const resolvePagePlacements = <Value>(input: {
       identity,
       region: menu.region,
       order: 0,
-      value: input.resolvePagePlacement({
+      value: resolvePagePlacement({
         identity,
         pageId: input.page.id,
         slotId: menu.slotId,
@@ -126,9 +131,10 @@ export const resolvePagePlacements = <Value>(input: {
   }
   for (const slot of pageSlots(input.page)) {
     if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
-    if (staticSlotOpen(slot, input.state)) placements.push(placementFor({ ...input, slot, instanceKey: "default" }));
+    if (staticSlotOpen(slot, input.state))
+      placements.push(placementFor({ ...input, resolvePagePlacement, slot, instanceKey: "default" }));
     for (const instance of input.state.resourceInstances[slot.id] ?? []) {
-      placements.push(placementFor({ ...input, slot, ...instance }));
+      placements.push(placementFor({ ...input, resolvePagePlacement, slot, ...instance }));
     }
   }
   if (
@@ -138,6 +144,7 @@ export const resolvePagePlacements = <Value>(input: {
     placements.push(
       placementFor({
         ...input,
+        resolvePagePlacement,
         instanceKey: "default",
         slot: {
           id: PAGE_MAIN_SLOT_ID,

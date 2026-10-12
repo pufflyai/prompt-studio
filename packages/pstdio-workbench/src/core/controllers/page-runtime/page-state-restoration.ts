@@ -8,7 +8,8 @@ import type {
 } from "../../registries/pages/page-registry-types";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
-import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
+import type { createWorkbenchInput } from "../../workbench-core-types";
+import { type OwnerLayoutContext, pageLayoutScope } from "./owner-layout-scope";
 
 // The layout already persists instance resources, retention, and selection. Rebuild
 // the page owner's state from that cache instead of storing a second copy.
@@ -57,11 +58,8 @@ export const pageStateFromLayout = (
   return { openStaticSlotIds, resourceInstances, activePrimaryInstanceKey };
 };
 
-export const loadWorkbenchLocationLayout = (
-  input: createWorkbenchInput,
-  context: WorkbenchPagePersistenceScopeInput,
-) => {
-  const scope = input.resolvePagePersistenceScope?.(context).scope;
+export const loadWorkbenchLocationLayout = (input: createWorkbenchInput, context: OwnerLayoutContext) => {
+  const scope = pageLayoutScope(context);
   return input.persistence?.getSnapshot(scope)?.layout ?? input.layoutPersistence?.getLayout(scope);
 };
 
@@ -73,14 +71,6 @@ export const createPageStateRestorer =
       projectId,
       resource: location.resource,
     });
-    if (
-      !layout ||
-      !Object.values(layout.regions).some((region) =>
-        region.widgets.some(
-          (placement) => placement.placementIdentity?.kind === "page" && placement.placementIdentity.pageId === page.id,
-        ),
-      )
-    )
-      return undefined;
+    if (!layout) return undefined;
     return pageStateFromLayout(page, layout);
   };

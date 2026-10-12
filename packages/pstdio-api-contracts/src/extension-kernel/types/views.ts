@@ -52,6 +52,7 @@ export interface NavigationItemContribution extends ContributionDefinition<"navi
 }
 
 export interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
+  /** @deprecated For page ownership, use PageContribution.panelMenus.left. Mode ownership remains supported. */
   readonly owner: NavigationOwnerRef;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
@@ -115,6 +116,7 @@ export interface PlacementPresentation {
 export interface PlacementContribution extends ContributionDefinition<"placement">, PlacementPresentation {
   readonly mode: ModeRef;
   readonly item: PlacementItem;
+  /** @deprecated For Main, use page Main declarations. Mode Side and Secondary remain supported. */
   readonly region: ExtensionPanelRegion;
   readonly order?: number;
   readonly movableTo?: readonly ExtensionPanelRegion[];

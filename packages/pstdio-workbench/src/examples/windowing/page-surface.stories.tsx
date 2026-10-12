@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
+import { visibleWindowingLabel } from "./visible-label";
 import { WindowingStory } from "./windowing-story";
 
 const meta = {
@@ -38,22 +39,24 @@ export const PageSurface: Story = {
       ),
     );
     await userEvent.click(await popup.findByRole("menuitem", { name: "Hide Inspector" }));
-    await waitFor(() => expect(canvas.getByLabelText("Inspector binding")).not.toBeVisible());
+    await waitFor(() => expect(visibleWindowingLabel(canvasElement, "Inspector binding")).not.toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
     await userEvent.click(await popup.findByRole("menuitem", { name: "Show Inspector" }));
-    await waitFor(() => expect(canvas.getByLabelText("Inspector binding")).toBeVisible());
+    await waitFor(() => expect(visibleWindowingLabel(canvasElement, "Inspector binding")).toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
-    await expect(canvas.getByLabelText("Inspector binding")).toHaveTextContent("Workspace 2");
-    await expect(canvas.getByLabelText("Terminal binding")).toHaveTextContent("workspace-2");
-    await expect(canvas.getByLabelText("Mode tools binding")).toHaveTextContent("Project");
+    await expect(visibleWindowingLabel(canvasElement, "Inspector binding")).toHaveTextContent("Workspace 2");
+    await expect(visibleWindowingLabel(canvasElement, "Terminal binding")).toHaveTextContent("workspace-2");
+    await expect(visibleWindowingLabel(canvasElement, "Mode tools binding")).toHaveTextContent("Project");
     await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
-    await expect(canvas.getByLabelText("Inspector binding")).toHaveTextContent("Workspace 2");
+    await expect(visibleWindowingLabel(canvasElement, "Inspector binding")).toHaveTextContent("Workspace 2");
     const terminalPanel = canvasElement.querySelector('[data-workbench-panel="bottom"]')!;
     await userEvent.click(within(terminalPanel as HTMLElement).getByRole("button", { name: "Close Terminal" }));
     await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
     await userEvent.click(await popup.findByRole("menuitem", { name: "Open Terminal" }));
-    await waitFor(() => expect(canvas.getByLabelText("Terminal binding")).toHaveTextContent("workspace-2"));
-    await expect(canvas.getByLabelText("Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
+    await waitFor(() =>
+      expect(visibleWindowingLabel(canvasElement, "Terminal binding")).toHaveTextContent("workspace-2"),
+    );
+    await expect(visibleWindowingLabel(canvasElement, "Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
     await expect(canvas.queryByRole("alert")).toBeNull();
   },
 };

@@ -42,6 +42,7 @@ export type PageMain = PageMainView | PageMainPanels;
 /** A page-owned panel. Main presentation and routed context belong to the page. */
 export interface PageSlot extends PlacementPresentation {
   readonly id: string;
+  /** @deprecated For Side and Secondary, use mode placements. Page Main and bottom remain supported. */
   readonly region: PageSlotRegion;
   readonly order?: number;
   readonly item: PlacementItem;

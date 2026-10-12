@@ -1,4 +1,9 @@
-import { contributionRefId, defaultPageResourceCodec, resourceKey } from "@pstdio/sdk/extensions";
+import {
+  contributionRefId,
+  defaultPageResourceCodec,
+  type PlacementIdentity,
+  resourceKey,
+} from "@pstdio/sdk/extensions";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
 import { createPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
@@ -6,6 +11,7 @@ import {
   applyOwnedWidgetLayoutReconciliation,
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
+import { restorePageGeometry } from "../../registries/layout/owner-region-state";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
@@ -23,12 +29,17 @@ import {
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createOwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
 import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
+import { hasPlacementDeclaration } from "../../registries/placements/placement-declaration";
 import type { WorkbenchShellPlacementRegistry } from "../../registries/placements/shell-placement-registry";
 import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view-menu-registry";
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
+import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
 export interface ConnectWorkbenchPageRuntimeInput {
+  hasDeclaration?(identity: PlacementIdentity): boolean;
+  loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
+  loadPageGeometry?(projectId: string, pageId: string): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
@@ -65,6 +76,46 @@ const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreSta
       : placement,
   );
 };
+const prepareRuntimeLayout = (
+  input: ConnectWorkbenchPageRuntimeInput,
+  latest: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  activation: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["placements"],
+  enteringPage: boolean,
+) => {
+  const modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
+  const ownerManaged = Boolean(input.loadPageLayout && latest.activePageId);
+  const placements =
+    ownerManaged && input.loadPageLayout
+      ? resolveOwnerPlacements({
+          state: latest,
+          pageLayout:
+            enteringPage && !input.layout.enteredWithPersistedLayout() ? undefined : input.loadPageLayout(latest),
+          modeLayout,
+          enteringPage,
+          currentLayout: input.layout.getLayout(),
+          getWidget: input.layout.getWidget,
+          hasDeclaration: input.hasDeclaration,
+        })
+      : bindPlacementsToActivePageLocation(latest);
+  return {
+    ownerManaged,
+    layout: input.layout.getLayout(),
+    modeLayout,
+    placements,
+    activate: ownerLayoutActivation(activation, placements).map((p) => p.identity),
+  };
+};
+
+const restoreRuntimeGeometry = (
+  input: ConnectWorkbenchPageRuntimeInput,
+  state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  layout: WorkbenchLayout,
+) => {
+  const geometry =
+    state.projectId && state.activePageId ? input.loadPageGeometry?.(state.projectId, state.activePageId) : undefined;
+  return restorePageGeometry(layout, geometry);
+};
+
 const applyPageState = (
   input: ConnectWorkbenchPageRuntimeInput,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
@@ -82,15 +133,11 @@ const applyPageState = (
     const latest = stored === storeBeforeTransition ? state : stored;
     const activation =
       latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
-    const layoutInput = {
-      layout: input.layout.getLayout(),
-      modeLayout: latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined,
-      placements: bindPlacementsToActivePageLocation(latest),
-      activate: activation.map((placement) => placement.identity),
-    };
+    const enteringPage = input.layout.getPersistenceScope() !== previousScope;
+    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(input, latest, activation, enteringPage);
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
     // A restored cache needs the complete owned set; a delta belongs to the previous scope.
-    if (source === "scope-restore" || input.layout.getPersistenceScope() !== previousScope) {
+    if (ownerManaged || source === "scope-restore" || enteringPage) {
       layout = reconcileOwnedWidgetLayout(layoutInput);
     } else {
       layout = applyOwnedWidgetLayoutReconciliation({
@@ -98,10 +145,11 @@ const applyPageState = (
         remove: latest.reconciliation.remove.map((placement) => placement.identity),
       });
     }
-    input.layout.restoreLayout(layout);
+    input.layout.restoreLayout(restoreRuntimeGeometry(input, latest, layout));
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") {
-      for (const placement of activation) input.revealRegion?.(placement.region);
+      for (const placement of ownerLayoutActivation(activation, layoutInput.placements))
+        input.revealRegion?.(placement.region);
     }
   });
 };
@@ -145,19 +193,25 @@ const toWidgetPlacement = (
   const panel = layout.getWidget(panelId);
   if (!panel) throw new Error(`Workbench page placement is not registered: ${input.pageId}.${input.slotId}`);
   return {
-    ...createPlacement(`workbench.page.${encodeURIComponent(placementIdentityKey(input.identity))}`, panel, {
-      viewId: input.viewId,
-      title: resource?.label ?? view.title ?? panel.title,
-      role: placementRole(input.role),
-      closable: input.closable,
-      ...(resource ? { resource } : {}),
-      ...toTabState(input.open),
-    }),
+    ...createPlacement(
+      `workbench.page.${encodeURIComponent(input.ownerInstanceKey ?? "")}.${encodeURIComponent(placementIdentityKey(input.identity))}`,
+      panel,
+      {
+        viewId: input.viewId,
+        title: resource?.label ?? view.title ?? panel.title,
+        role: placementRole(input.role),
+        closable: input.closable,
+        ...(resource ? { resource } : {}),
+        ...toTabState(input.open),
+      },
+    ),
     ...(input.section ? { section: input.section } : {}),
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
+  loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
+  loadPageGeometry?: ConnectWorkbenchPageRuntimeInput["loadPageGeometry"];
   restorePageState?: CreateWorkbenchPageRegistryInput<WorkbenchWidgetPlacement>["restorePageState"];
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
@@ -208,7 +262,14 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    hasDeclaration: (identity) =>
+      hasPlacementDeclaration(
+        { pages: registry, modePlacements: input.modePlacements, shellPlacements: input.shellPlacements },
+        identity,
+      ),
     loadModeLayout: input.loadModeLayout,
+    loadPageLayout: input.loadPageLayout,
+    loadPageGeometry: input.loadPageGeometry,
     beforeApply: (state) => {
       input.beforeApply?.(state);
       const shell = getOwnedPlacementPreparation(input.shellPlacements);

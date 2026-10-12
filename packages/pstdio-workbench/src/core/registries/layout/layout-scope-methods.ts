@@ -1,11 +1,6 @@
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { LayoutModel, LayoutPersistenceAdapter, LayoutScope } from "./layout-model-types";
-import {
-  carryPinnedWorkbenchChrome,
-  carryWorkbenchRegionState,
-  createScopeEvent,
-  resolveScopedLayout,
-} from "./layout-scope";
+import { carryPinnedWorkbenchChrome, createScopeEvent, resolveScopedLayout } from "./layout-scope";
 import type { WorkbenchLayout, WorkbenchRegion } from "./layout-types";
 
 export interface CreateLayoutScopeMethodsInput {
@@ -33,7 +28,7 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
       input.persistence?.setLayout(input.getLayout(), currentScope),
     );
 
-  const setPersistenceScope: LayoutModel["setPersistenceScope"] = (nextScope, scopeInput = {}) => {
+  const setPersistenceScope: LayoutModel["setPersistenceScope"] = (nextScope) => {
     if (currentScope === nextScope) return;
     persistLayout();
     willChangeScope.notify(nextScope);
@@ -46,12 +41,7 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
     // Module-owned chrome is global workbench structure. Project scopes replace
     // Location workspaces, but must not unmount pinned navigation and headers.
     const withPinnedChrome = carryPinnedWorkbenchChrome(input.getLayout(), scopedLayout);
-    const nextLayout = carryWorkbenchRegionState(
-      input.getLayout(),
-      withPinnedChrome,
-      scopeInput.carryRegionState ?? [],
-    );
-    input.setLayout(nextLayout, "setPersistenceScope");
+    input.setLayout(withPinnedChrome, "setPersistenceScope");
     didChangeScope.notify(currentScope);
   };
 

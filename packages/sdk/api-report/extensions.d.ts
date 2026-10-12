@@ -2541,6 +2541,7 @@ interface NavigationItemContribution extends ContributionDefinition<"navigation-
   readonly action: NavigationTarget;
 }
 interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
+  /** @deprecated */
   readonly owner: NavigationOwnerRef;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
@@ -2592,6 +2593,7 @@ interface PlacementPresentation {
 interface PlacementContribution extends ContributionDefinition<"placement">, PlacementPresentation {
   readonly mode: ModeRef;
   readonly item: PlacementItem;
+  /** @deprecated */
   readonly region: ExtensionPanelRegion;
   readonly order?: number;
   readonly movableTo?: readonly ExtensionPanelRegion[];
@@ -2634,6 +2636,7 @@ interface PageMainPanels {
 type PageMain = PageMainView | PageMainPanels;
 interface PageSlot extends PlacementPresentation {
   readonly id: string;
+  /** @deprecated */
   readonly region: PageSlotRegion;
   readonly order?: number;
   readonly item: PlacementItem;

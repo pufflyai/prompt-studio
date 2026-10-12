@@ -189,6 +189,8 @@ export interface WorkbenchWidgetPlacement {
   // Owner-scoped composition uses this canonical identity. Widget IDs remain renderer keys
   // and must never be parsed to recover placement ownership.
   placementIdentity?: PlacementIdentity;
+  /** The declaration that created a tab transferred to another layout owner. */
+  declarationIdentity?: PlacementIdentity;
   viewId?: string;
   ownerId?: string;
   source?: ContributionSource;

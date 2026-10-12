@@ -259,7 +259,7 @@ describe("terminal session lifecycle", () => {
     workbench.layout.setPersistenceScope("workspace-1");
     const placement = openWorkbenchTerminal(workbench);
     await workbench.terminal.open({
-      bindingId: terminalPlacementBindingId("workspace-1", placement.instanceId),
+      bindingId: terminalPlacementBindingId(placement.instanceId),
       request: { cols: 80, rows: 24 },
     });
     workbench.layout.setPersistenceScope("workspaces");

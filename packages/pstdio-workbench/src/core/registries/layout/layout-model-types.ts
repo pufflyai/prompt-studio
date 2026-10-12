@@ -83,7 +83,7 @@ export interface LayoutModel {
   resetRegions(): void;
   getLayout(): WorkbenchLayout;
   restoreLayout(layout: WorkbenchLayout): void;
-  setPersistenceScope(scope: LayoutScope | undefined, input?: { carryRegionState?: readonly WorkbenchRegion[] }): void;
+  setPersistenceScope(scope: LayoutScope | undefined): void;
   getPersistenceScope(): LayoutScope | undefined;
   /** True when the current persistence scope already stores a layout. A new scope returns false. */
   /** Whether anything is stored for the active scope right now. */

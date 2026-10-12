@@ -89,9 +89,9 @@ describe("Workbench public API", () => {
     workbench.host.setPersistenceScope("resource:a");
     workbench.shell.setRegionSize("sidenav", 280);
     workbench.shell.setRegionSize("secondary", 360);
-    workbench.host.setPersistenceScope("resource:b", { carryRegions: ["sidenav"] });
+    workbench.host.setPersistenceScope("resource:b");
     workbench.shell.setRegionSize("secondary", 480);
-    workbench.host.setPersistenceScope("resource:a", { carryRegions: ["sidenav"] });
+    workbench.host.setPersistenceScope("resource:a");
     expect(workbench.host.getPersistenceScope()).toBe("resource:a");
     expect(workbench.shell.getRegionState("sidenav").size).toBe(280);
     expect(workbench.shell.getRegionState("secondary").size).toBe(360);

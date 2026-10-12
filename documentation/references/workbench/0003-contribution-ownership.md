@@ -23,7 +23,11 @@ type PlacementIdentity =
   | { kind: "shell"; placementId: string; instanceKey: string };
 ```
 
-An owner owns its placements, not a whole region. The active page and mode may both place content in one region. Reconciliation removes a placement only when its exact owner identity leaves or its open state changes.
+Each tab has one layout owner. Main and page bottom belong to the page instance. Side and Secondary belong to the mode within the project. Dropping a tab across that edge transfers it to the destination owner in the same layout change. Moving between Main and bottom, or between Side and Secondary, changes only its position.
+
+The tab's `widgetId` stays stable across transfers. Its owner identity changes while its resource, section, preview or pinned retention, draft, and mounted content stay with the tab. The original declaration remains available for opening the tool. Opening that declaration selects an existing transferred tab at its actual destination. Closing a transferred tab allows a later explicit open to create it at the declaration's default destination.
+
+Legacy page slots in Side or Secondary, mode placements in Main, and shell placements still load at their declared defaults. An explicit move applies destination ownership to these tabs too. Panel menus remain with their page or view; they do not become tab destinations.
 
 Resource identity forms the instance key for a resource-bound slot. The same resource in two slots is two independent placements. An update can change a placement's resource, and the placement keeps its instance key. Opening a resource finds the placement that shows it now. A new placement never takes a key that another placement already holds. Region, label, active tab, and registration timing do not define ownership.
 
@@ -33,9 +37,25 @@ Main contains the page's breadcrumb row, tab and action row, optional left and r
 
 Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
 
-Page bottom slots use normal page placement identities. Moving a tab between Main and bottom preserves its view and resource. Bottom is a destination only while the current page declares it through a slot or `regionSettings.bottom`. Cross-owner transfers and per-owner layout changes belong to the later windowing work.
+Page bottom slots use normal page placement identities. Moving a tab between Main and bottom preserves its view and resource. Bottom is a destination only while the current page declares it through a slot or `regionSettings.bottom`.
 
 The Page panels menu lives in Main's tab row. It shows or hides collapsible page menus and opens tools in the page bottom. It has no page-bottom visibility item.
+
+## Saved layouts
+
+The workbench owns persistence scope selection. Hosts supply the storage adapter, not a page-to-scope callback or a list of regions to carry during navigation.
+
+| Saved data | Owner key |
+| --- | --- |
+| Page sizes | Project and page type |
+| Page tabs, selection, and retention | Project, page, and routed resource; an unbound page has one instance |
+| Side and Secondary tabs, selection, sizes, visibility, and Side presentation | Project and mode |
+
+Saved owner records are authoritative. Declarations seed new owners. Returning to a saved page does not recreate a tab that moved out. Mode tabs and their bindings remain available across ordinary page navigation. Page bottom and mode Secondary save and restore independently.
+
+Layout cache version 6 discards older local arrangements. Routed locations, resources, tree state, and independent menu preferences stay valid. This ownership and cache reset follows the decision recorded for PS-609; it is a breaking behavior change and must pass the workbench track's release gate before publishing.
+
+Terminal bindings use the stable tab ID. Changing a page scope or transferring a tab cannot create or stop a terminal session. An explicit close follows the terminal surface's existing lifecycle contract.
 
 ## Navigation tree ownership
 

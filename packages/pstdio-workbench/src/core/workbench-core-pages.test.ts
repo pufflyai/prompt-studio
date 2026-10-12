@@ -158,11 +158,7 @@ describe("workbench core pages", () => {
     expect(workbench.pages.getPage("pstdio.planner.page.start")).toBeUndefined();
   });
   test("removes an active page while its persistence scope changes", () => {
-    const workbench = createWorkbench({
-      resolvePagePersistenceScope: ({ pageId, projectId }) => ({
-        scope: projectId && pageId ? `${projectId}/${pageId}` : projectId,
-      }),
-    });
+    const workbench = createWorkbench({});
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     registerView(workbench, { id: "start-view", title: "Start" });
     registerView(workbench, { id: "lab-view", title: "Lab" });

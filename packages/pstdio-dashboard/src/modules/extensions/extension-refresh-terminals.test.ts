@@ -5,7 +5,6 @@ import { createWorkbench, type WorkbenchLayout } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtures";
 
@@ -18,7 +17,6 @@ test("keeps a Start terminal alive while an open Lab page receives fresh webview
         layouts.set(scope, structuredClone(layout));
       },
     },
-    resolvePagePersistenceScope: resolveDashboardPersistenceScope,
   });
   workbench.modes.registerMode({ id: "project", panels: ["main", "secondary", "side"], activate() {} });
   workbench.modes.registerMode({ id: "sessions", panels: ["main", "side"], activate() {} });
@@ -67,7 +65,7 @@ test("keeps a Start terminal alive while an open Lab page receives fresh webview
       onError: () => () => {},
     }));
     const placement = openWorkbenchTerminal(workbench);
-    const bindingId = JSON.stringify([workbench.layout.getPersistenceScope(), placement.instanceId]);
+    const bindingId = placement.instanceId;
     await workbench.terminal.open({ bindingId, request: { cols: 80, rows: 24 } });
     expect(
       workbench.pageLocations.navigate({ kind: "page", page: { extensionId: "pstdio", kind: "page", id: "sessions" } })

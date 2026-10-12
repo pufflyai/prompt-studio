@@ -1,2 +1,1 @@
-export const terminalPlacementBindingId = (scope: string | undefined, instanceId: string) =>
-  JSON.stringify([scope, instanceId]);
+export const terminalPlacementBindingId = (instanceId: string) => instanceId;
