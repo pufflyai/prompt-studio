@@ -1,5 +1,6 @@
 import type { WorkbenchCore } from "../../core";
 import type { WindowingLifecycleProbe } from "./lifecycle-probe";
+import { registerWindowingPagePanels } from "./page-panels";
 import { type WindowingResources, windowingExtensionId, windowingPages } from "./resources";
 import { WindowingDraftView, WindowingResourceList, WindowingTerminalView, WindowingWebview } from "./views";
 
@@ -7,6 +8,7 @@ export const registerWindowingModule = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
+  options: { pagePanels?: boolean; mainView?: "files" | "webview" } = {},
 ) => {
   workbench.modes.registerMode({ id: "windowing", label: "Windowing", activate() {} });
   for (const [id, label, items, page] of [
@@ -82,6 +84,7 @@ export const registerWindowingModule = (
     title: "Webview",
     body: { kind: "react", render: () => <WindowingWebview /> },
   });
+  if (options.pagePanels) registerWindowingPagePanels(workbench);
   workbench.modePlacements.registerPlacement({
     id: "windowing.sessions",
     ref: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
@@ -122,16 +125,38 @@ export const registerWindowingModule = (
     parentId: "windowing.workspaces",
     modeId: "windowing",
     resource: { kinds: [{ kind: "resource-kind", id: "windowing.workspace" }] },
-    main: { kind: "view", view: { kind: "view", id: "windowing.files" }, cardinality: "one" },
+    main: {
+      kind: "view",
+      view: { kind: "view", id: `windowing.${options.mainView ?? "files"}` },
+      cardinality: "one",
+      ...(options.pagePanels
+        ? {
+            tab: {
+              getSnapshot: () => ({ label: options.mainView === "webview" ? "Webview" : "Files", icon: "Files" }),
+            },
+          }
+        : {}),
+    },
+    ...(options.pagePanels
+      ? {
+          panelMenus: {
+            left: { view: { kind: "view" as const, id: "windowing.workspace-menu" }, size: { defaultPx: 180 } },
+            right: { view: { kind: "view" as const, id: "windowing.inspector" }, size: { defaultPx: 200 } },
+          },
+          regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
+        }
+      : {}),
     slots: [
       {
         id: "changes",
-        region: "secondary",
+        ...(options.pagePanels ? { tab: { getSnapshot: () => ({ label: "Changes", icon: "GitCompare" }) } } : {}),
+        region: options.pagePanels ? "main" : "secondary",
         item: { kind: "view", view: { kind: "view", id: "windowing.changes" }, presence: "open" },
       },
       {
         id: "terminal",
-        region: "side",
+        ...(options.pagePanels ? { tab: { getSnapshot: () => ({ label: "Terminal", icon: "Terminal" }) } } : {}),
+        region: options.pagePanels ? "bottom" : "side",
         item: { kind: "view", view: { kind: "view", id: "windowing.terminal" }, presence: "open" },
       },
     ],

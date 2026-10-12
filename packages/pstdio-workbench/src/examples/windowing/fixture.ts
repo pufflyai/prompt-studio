@@ -8,7 +8,10 @@ import { createWindowingResources, windowingPages } from "./resources";
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
 
-export const createWindowingFixture = (mode: WindowingMode = "windowing") => {
+export const createWindowingFixture = (
+  mode: WindowingMode = "windowing",
+  options: { pagePanels?: boolean; mainView?: "files" | "webview" } = {},
+) => {
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
   const probe = createWindowingLifecycleProbe();
@@ -23,7 +26,7 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing") => {
       layoutPersistence: persistence.layout,
       pageLocationPersistence: persistence.pageLocation,
     });
-    registerWindowingModule(workbench, resources, probe);
+    registerWindowingModule(workbench, resources, probe, options);
     workbench.pageLocations.switchProject("windowing-project");
     if (!savedLocation)
       workbench.pageLocations.navigate({

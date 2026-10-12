@@ -120,6 +120,7 @@ export interface PlacementContribution extends ContributionDefinition<"placement
   readonly movableTo?: readonly ExtensionPanelRegion[];
 }
 
+/** @deprecated Use PageContribution.panelMenus for page-owned menus. */
 export interface ViewMenuContribution extends ContributionDefinition<"view-menu"> {
   readonly owner: ViewRef;
   readonly view: ViewRef;

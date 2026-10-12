@@ -243,6 +243,7 @@ export interface PackageManifest {
 /** UI surface contributions: views, typed references, and placements. */
 export interface UiContributions {
   views?: readonly ViewContribution[];
+  /** @deprecated Use PageContribution.panelMenus for page-owned menus. */
   viewMenus?: readonly ViewMenuContribution[];
   placements?: readonly PlacementContribution[];
   navigationItems?: readonly NavigationItemContribution[];

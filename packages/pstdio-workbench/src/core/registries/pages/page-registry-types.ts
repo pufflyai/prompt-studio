@@ -1,6 +1,7 @@
 import type {
   FileRendererSectionTarget,
   Localizable,
+  PageContribution,
   PageDocumentDeclaration,
   PageLocation,
   PageMain,
@@ -39,6 +40,8 @@ export interface WorkbenchPageContribution {
   document?: PageDocumentDeclaration;
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
+  panelMenus?: PageContribution["panelMenus"];
+  regionSettings?: PageContribution["regionSettings"];
 }
 
 export interface WorkbenchPageResourceCodec {
@@ -51,7 +54,7 @@ export interface WorkbenchPagePlacementInput {
   identity: PlacementIdentity;
   pageId: string;
   slotId: string;
-  role: PageSlotRole;
+  role: PageSlotRole | "panel-menu";
   viewId: string;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;

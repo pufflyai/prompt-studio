@@ -86,8 +86,10 @@ export const matchesWorkbenchPanelMenuOwner = (
   context: {
     locationPanel?: WorkbenchWidgetPlacement;
     subPanel?: WorkbenchWidgetPlacement;
+    placement?: WorkbenchWidgetPlacement;
   },
 ) => {
+  if (context.placement?.role === "panel-menu" && context.placement.placementIdentity?.kind === "page") return true;
   const owner = widget.panelMenuOwner ?? { level: "panel" };
   if (owner.contributionId) {
     const activeOwner = context.subPanel ?? context.locationPanel;

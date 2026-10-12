@@ -8,6 +8,7 @@ describe("Panel menu regions", () => {
       main: { left: "main-left-menu", right: "main-right-menu" },
       secondary: { left: "secondary-left-menu", right: "secondary-right-menu" },
       side: { left: "side-left-menu", right: "side-right-menu" },
+      bottom: { left: "bottom-left-menu", right: "bottom-right-menu" },
     });
 
     const layout = createDefaultWorkbenchLayout();

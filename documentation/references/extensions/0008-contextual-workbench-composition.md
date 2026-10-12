@@ -12,9 +12,37 @@ Pages declare `resource: { kinds }` separately from `main`. A Main view renders 
 
 ## Regions and targets
 
-Main, Side, and Secondary are the three panel regions. Page and mode owners can contribute to the same region.
+Main, Side, and Secondary remain shared panel regions. Page slots may also use `"bottom"`: a separate tab container inside Main that belongs to the page. Existing page Side and Secondary slots retain their behavior.
 
 Use page targets to change location and panel targets for auxiliary content. A panel target opens one instance without changing the page location. Generated refs such as `page.panels.inspector` keep the page as the panel's owner. A compound page-and-panel target enters an owner before opening its dependent panel, and commits only when all steps resolve.
+
+## Page panels and menus
+
+Declare headerless page menus with `panelMenus.left` or `panelMenus.right`. Each declaration contains a view reference, optional `size` (`defaultPx`, `minPx`, `maxPx`), `collapsible`, and `hiddenByDefault`. Menus follow the routed page resource independently of the selected tab.
+
+```ts
+definePage({
+  id: "workspace",
+  title: "Workspace",
+  path: "workspace",
+  mode: workbenchModes.project,
+  resource: { kinds: [workspaceKind.ref] },
+  main: { kind: "panels", empty: files.ref },
+  panelMenus: {
+    right: { view: inspector.ref, size: { defaultPx: 240 }, collapsible: true },
+  },
+  regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
+  slots: [{
+    id: "terminal",
+    region: "bottom",
+    item: { kind: "view", view: terminal.ref, presence: "open" },
+  }],
+});
+```
+
+Menus render below both Main header rows. They have no header, tabs, add action, or tab-drop target. The page bottom has its own tab header and remains separate from the mode's Secondary panel. Main's Page panels menu controls collapsible side menus and opens bottom tools.
+
+`viewMenus`, `ViewMenuContribution`, and `defineViewMenu` are deprecated in favor of page `panelMenus`. Existing view-owned menus keep their behavior during the deprecation period.
 
 ## Mode chrome and navigation
 

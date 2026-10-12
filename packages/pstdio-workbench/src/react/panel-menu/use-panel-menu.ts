@@ -24,6 +24,7 @@ const panelLabels: Record<WorkbenchPanelRegion, string> = {
   main: "Main",
   secondary: "Secondary",
   side: "Side",
+  bottom: "Page bottom",
 };
 
 const resolveRegionSize = (regionSize: WorkbenchRegionSize | undefined) => ({
@@ -42,6 +43,7 @@ export interface WorkbenchPanelMenuView {
   title: string;
   icon: string;
   has: boolean;
+  pageOwned: boolean;
   collapsed: boolean;
   collapsible: boolean;
   size: ReturnType<typeof resolveRegionSize>;
@@ -76,6 +78,7 @@ const useWorkbenchPanelMenu = (
                 location: activeLocationPanel,
               })) &&
             matchesWorkbenchPanelMenuOwner(contribution, {
+              placement,
               locationPanel: activeLocationPanel,
               subPanel: activeSubPanel,
             })
@@ -88,11 +91,15 @@ const useWorkbenchPanelMenu = (
   const widget = activePlacement ? registeredWidgets[activePlacement.contributionId] : undefined;
   const collapsible = useWorkbenchStore(workbench.layout.store, () => resolvePanelCollapsible(workbench, region));
   const panelStateKey = activePlacement ? `panel-menu:${activePlacement.widgetId}` : region;
-  const open = useWorkbenchStore(workbench.panelMenuState.store, (state) => state.openByMenuId[panelStateKey] ?? true);
+  const open = useWorkbenchStore(
+    workbench.panelMenuState.store,
+    (state) => state.openByMenuId[panelStateKey] ?? !widget?.hiddenByDefault,
+  );
 
   return {
     region,
     side,
+    pageOwned: activePlacement?.role === "panel-menu" && activePlacement.placementIdentity?.kind === "page",
     label: getWorkbenchPanelMenuLabel(panel, side),
     title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
     icon: widget?.icon ?? (side === "left" ? "PanelLeft" : "PanelRight"),

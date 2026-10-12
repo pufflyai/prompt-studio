@@ -94,6 +94,7 @@ const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord)
     return;
   }
   for (const [index, slot] of record.contribution.slots.entries()) {
+    if (slot.region === "bottom") continue;
     if (regions.includes(slot.region)) continue;
     addPageDiagnostic(runtime, {
       code: "extension_page_region_invalid",
@@ -108,6 +109,9 @@ const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord)
 const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) => {
   const page = record.contribution;
   const main = page.main;
+  Object.entries(page.panelMenus ?? {}).forEach(([side, menu]) => {
+    if (menu) ownRefMissing(runtime, record, menu.view, `pages.${record.localId}.panelMenus.${side}.view`);
+  });
   ownRefMissing(
     runtime,
     record,

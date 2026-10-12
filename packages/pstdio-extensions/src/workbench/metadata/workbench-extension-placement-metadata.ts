@@ -1,9 +1,11 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { PlacementItem } from "@pstdio/sdk/extensions";
+import type { PanelMenuDeclaration, PlacementItem } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime, RuntimePageMain, RuntimePageSlot, RuntimePlacementTab } from "../../types/runtime";
 import { normalizedRef, normalizeTarget, refreshEventIds } from "./workbench-extension-metadata-normalizers";
 
 type MetadataItem = WorkbenchExtensionMetadata["placements"][number]["item"];
+const menuRecord = (menu: PanelMenuDeclaration | undefined, extensionId: string) =>
+  menu ? { ...menu, view: normalizedRef(menu.view, extensionId) } : undefined;
 const itemRecord = (item: PlacementItem, extensionId: string): MetadataItem => {
   if (item.kind === "view") return { ...item, view: normalizedRef(item.view, extensionId) };
   const { binding } = item;
@@ -42,6 +44,13 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
     icon: page.contribution.icon,
     path: page.contribution.path,
     document: page.contribution.document,
+    panelMenus: page.contribution.panelMenus
+      ? {
+          left: menuRecord(page.contribution.panelMenus.left, page.extensionId),
+          right: menuRecord(page.contribution.panelMenus.right, page.extensionId),
+        }
+      : undefined,
+    regionSettings: page.contribution.regionSettings,
     mode: normalizedRef(page.contribution.mode, page.extensionId),
     parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
     resource: page.contribution.resource

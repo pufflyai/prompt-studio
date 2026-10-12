@@ -51,3 +51,5 @@ bun run --cwd packages/e2e test:ui -- src/ui/workbench-windowing.spec.ts
 The fixture uses today's workbench APIs. New ownership, policy, and layout behavior belongs to the later panel tickets. The Storybook itself has no database; the UI runner uses its existing isolated test runtime and shared Storybooks. A fresh checkout needs built SDK, UI, and workbench dependencies before running it.
 
 See [design rules](../../../design/DESIGN.md), [UI package guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
+
+The windowing PageSurface story adds page-owned left/right menus and a bottom panel inside Main. Its play function checks menu visibility, workspace rebinding, header placement, and reload. The windowing spec also drags a React draft into bottom and moves it back through the keyboard menu, checking that the draft and mount identity survive.

@@ -11,6 +11,7 @@ import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
 import { isPageSlotClosable, pagePlacementDeclarations } from "../../registries/pages/page-main";
+import { registerPagePanelMenus } from "../../registries/pages/page-panel-menus";
 import {
   type CreateWorkbenchPageRegistryInput,
   createWorkbenchPageRegistry,
@@ -128,6 +129,10 @@ const toTabState = (open: WorkbenchPagePlacementInput["open"]) => {
   if (open === "pin") return { pinned: true, tabRetention: "persistent" as const };
   return { pinned: false, tabRetention: "preview" as const };
 };
+const placementRole = (role: WorkbenchPagePlacementInput["role"]) => {
+  if (role === "panel-menu") return "panel-menu";
+  return role === "primary" ? "location" : "sub-panel";
+};
 const toWidgetPlacement = (
   input: WorkbenchPagePlacementInput,
   layout: LayoutModel,
@@ -143,7 +148,7 @@ const toWidgetPlacement = (
     ...createPlacement(`workbench.page.${encodeURIComponent(placementIdentityKey(input.identity))}`, panel, {
       viewId: input.viewId,
       title: resource?.label ?? view.title ?? panel.title,
-      role: input.role === "primary" ? "location" : "sub-panel",
+      role: placementRole(input.role),
       closable: input.closable,
       ...(resource ? { resource } : {}),
       ...toTabState(input.open),
@@ -196,6 +201,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
           input.viewMenus,
         );
       });
+      registrations.push(...registerPagePanelMenus(page, input.layout, input.views));
       return createDisposable(() => {
         for (const registration of registrations.reverse()) registration.dispose();
       });

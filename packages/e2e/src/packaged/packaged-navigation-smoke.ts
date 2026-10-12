@@ -22,7 +22,7 @@ export const writeNavigationExtension = (root: string) => {
     `export default {
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
       views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
-      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, slots: [], panels: {} }],
+      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, panelMenus: { right: { view: { kind: "view", id: "document" }, collapsible: false, size: { defaultPx: 200 } } }, regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } }, slots: [{ id: "tools", region: "bottom", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } }], panels: {} }],
       commands: [{
       id: "open-document", ref: { kind: "command", id: "open-document" }, title: "Open document",
       run(ctx: { navigation: { open(target: unknown): void } }) {
@@ -50,7 +50,19 @@ export const expectPackagedNavigation = async (input: {
   });
   const metadata = await metadataResponse.json();
   expect(metadata.pages).toContainEqual(
-    expect.objectContaining({ localId: "record", document: { metadataKey: "documentId" } }),
+    expect.objectContaining({
+      localId: "record",
+      document: { metadataKey: "documentId" },
+      panelMenus: {
+        right: {
+          view: { extensionId: "test.navigation-probe", kind: "view", id: "document" },
+          collapsible: false,
+          size: { defaultPx: 200 },
+        },
+      },
+      regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
+      slots: [expect.objectContaining({ id: "tools", region: "bottom" })],
+    }),
   );
   const documentResponse = await fetch(
     `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/test.navigation-probe.command.open-document/execute`,

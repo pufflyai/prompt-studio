@@ -38,6 +38,8 @@ export const toInternalWorkbenchPages = (
     title: page.title,
     path: page.path,
     document: page.document,
+    panelMenus: page.panelMenus,
+    regionSettings: page.regionSettings,
     modeId: contributionRefId(page.mode),
     resource: page.resource,
     main: pageMain(page.main, { extensionId: page.extensionId, placementId: `${page.id}.$main`, createTab }),

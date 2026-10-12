@@ -8,7 +8,9 @@ A saved location keeps the resource as it was when the page opened, and a URL ca
 
 A page declares its routed resource constraint with `resource: { kinds }`. It chooses Main presentation separately. A Main view declares `cardinality`; multiple instances require a routed resource. A Main panel collection declares an `empty` view and shows peer editor panels from its slots. The route keeps workspace context while a file panel becomes active.
 
-Page slots and mode placements share static-view and resource-binding items. Both use Main, Side, and Secondary. Static presence is fixed, open, or closed. A binding has kinds, view, cardinality, and optional add navigation. Generated refs such as `page.panels.inspector` identify page panels.
+Page slots and mode placements share static-view and resource-binding items. Both retain Main, Side, and Secondary. Page slots also accept bottom, inside Main. Static presence is fixed, open, or closed. A binding has kinds, view, cardinality, and optional add navigation. Generated refs such as `page.panels.inspector` identify page panels.
+
+Page menus always read the routed page resource, even when a different resource tab has focus. Page navigation rebinds the menus and bottom slots together. The bottom keeps its own tabs, selection, and size; it never uses Secondary's tab list. Main's breadcrumb sits above its tab row, and both rows sit above the page menus.
 
 Workspace Changes and Files use fixed static slots. They receive the page's workspace resource and remain available while switching workspaces. The dashboard's chat bubble opens a New session tab when Side is empty and preserves existing tabs on reopen. Hosts can supply this launcher action through Workbench's `onOpenSidePanel` prop.
 

@@ -10,7 +10,8 @@ export const createWindowingPersistence = () => {
       return saved && structuredClone(saved);
     },
     setLayout: (value, scope = "__global__") => {
-      layouts.set(scope, structuredClone(value));
+      // Match stored layouts: live tab callbacks are supplied again by registrations on reload.
+      layouts.set(scope, JSON.parse(JSON.stringify(value)));
     },
   };
   const pageLocation: WorkbenchPageLocationPersistence = {

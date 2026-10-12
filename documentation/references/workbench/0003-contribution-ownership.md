@@ -27,6 +27,16 @@ An owner owns its placements, not a whole region. The active page and mode may b
 
 Resource identity forms the instance key for a resource-bound slot. The same resource in two slots is two independent placements. An update can change a placement's resource, and the placement keeps its instance key. Opening a resource finds the placement that shows it now. A new placement never takes a key that another placement already holds. Region, label, active tab, and registration timing do not define ownership.
 
+## Page surfaces
+
+Main contains the page's breadcrumb row, tab and action row, optional left and right menus, and a separate bottom tab region. The mode's Secondary remains outside Main.
+
+Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
+
+Page bottom slots use normal page placement identities. Moving a tab between Main and bottom preserves its view and resource. Bottom is a destination only while the current page declares it through a slot or `regionSettings.bottom`. Cross-owner transfers and per-owner layout changes belong to the later windowing work.
+
+The Page panels menu lives in Main's tab row. It shows or hides collapsible page menus and opens tools in the page bottom. It has no page-bottom visibility item.
+
 ## Navigation tree ownership
 
 Mode and page Sidenav contributions carry opaque owner keys. TreeRenderer receives those keys through a configurable movement policy. It does not know mode or page semantics. The policy prevents a customized row from moving across owners while still allowing reorder and hide operations inside one owner.

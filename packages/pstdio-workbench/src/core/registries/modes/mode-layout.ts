@@ -5,7 +5,7 @@ import {
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
   type WorkbenchWidgetPlacement,
-  workbenchPanelRegions,
+  workbenchModePanelRegions,
 } from "../layout/layout-model";
 import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry-types";
 
@@ -13,21 +13,21 @@ const modePanelRegions = {
   main: ["main-header", "main-left-menu", "main", "main-right-menu"],
   secondary: ["secondary-header", "secondary-left-menu", "secondary", "secondary-right-menu"],
   side: ["side-header", "side-left-menu", "side", "side-right-menu"],
-} as const satisfies Record<WorkbenchPanelRegion, readonly WorkbenchRegion[]>;
+} as const satisfies Record<(typeof workbenchModePanelRegions)[number], readonly WorkbenchRegion[]>;
 
 const allModeRegions = Object.values(modePanelRegions).flat();
 
-export const panelsForMode = (mode: WorkbenchModeContribution) => mode.panels ?? workbenchPanelRegions;
+export const panelsForMode = (mode: WorkbenchModeContribution) => mode.panels ?? workbenchModePanelRegions;
 
 export const getWorkbenchModePanelForRegion = (region: WorkbenchRegion) =>
-  (Object.keys(modePanelRegions) as WorkbenchPanelRegion[]).find((panel) =>
+  (Object.keys(modePanelRegions) as (keyof typeof modePanelRegions)[]).find((panel) =>
     modePanelRegions[panel].some((candidate) => candidate === region),
   );
 
 export const isWorkbenchModePanelAvailable = (
   mode: WorkbenchModeContribution | undefined,
   panel: WorkbenchPanelRegion,
-) => !mode || panelsForMode(mode).includes(panel);
+) => panel === "bottom" || !mode || panelsForMode(mode).includes(panel);
 
 const placementById = (layout: WorkbenchLayout, widgetId: string | undefined) => {
   if (!widgetId) return undefined;
@@ -51,7 +51,7 @@ const withActivePlacement = (
 const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegion[]) => {
   if (regionIds.length === 0) return layout;
   const clearedPanels = new Set(
-    (Object.keys(modePanelRegions) as WorkbenchPanelRegion[]).filter((panel) =>
+    (Object.keys(modePanelRegions) as (keyof typeof modePanelRegions)[]).filter((panel) =>
       modePanelRegions[panel].some((region) => regionIds.includes(region)),
     ),
   );
@@ -60,7 +60,7 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
     return region.widgets.length > 0 || region.activeWidgetId !== undefined || region.visible;
   });
   const selectionsNeedClearing = Object.values(layout.locationSubPanelSelections ?? {}).some((selections) =>
-    Object.keys(selections).some((panel) => clearedPanels.has(panel as WorkbenchPanelRegion)),
+    Object.keys(selections).some((panel) => clearedPanels.has(panel as keyof typeof modePanelRegions)),
   );
   if (!regionsNeedClearing && !selectionsNeedClearing) return layout;
 
@@ -72,7 +72,7 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
     Object.entries(layout.locationSubPanelSelections ?? {}).map(([resourceKey, selections]) => [
       resourceKey,
       Object.fromEntries(
-        Object.entries(selections).filter(([panel]) => !clearedPanels.has(panel as WorkbenchPanelRegion)),
+        Object.entries(selections).filter(([panel]) => !clearedPanels.has(panel as keyof typeof modePanelRegions)),
       ),
     ]),
   );
@@ -86,7 +86,7 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
 
 export const applyModePanelAvailability = (layout: WorkbenchLayout, panels: readonly WorkbenchPanelRegion[]) => {
   const available = new Set(panels);
-  const unavailableRegions = (Object.keys(modePanelRegions) as WorkbenchPanelRegion[])
+  const unavailableRegions = (Object.keys(modePanelRegions) as (keyof typeof modePanelRegions)[])
     .filter((panel) => !available.has(panel))
     .flatMap((panel) => modePanelRegions[panel]);
   return clearRegions(layout, unavailableRegions);

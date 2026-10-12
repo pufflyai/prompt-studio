@@ -23,6 +23,7 @@ const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) =>
 };
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
+  if (region === "bottom") core.layout.setRegionVisible("bottom", true);
   if (region === "secondary") {
     core.shell.setRegionOpen("secondary", true);
   }

@@ -75,6 +75,7 @@ export const defineView = defineContribution("view") as <const Definition extend
 ) => Definition & ContributionDefinition<"view">;
 
 type ViewMenuDefinition = Omit<ViewMenuContribution, "ref">;
+/** @deprecated Use definePage({ panelMenus }) for page-owned menus. */
 export const defineViewMenu = defineContribution("view-menu") as <const Definition extends ViewMenuDefinition>(
   definition: NoExtraFields<Definition, ViewMenuDefinition>,
 ) => Definition & ContributionDefinition<"view-menu">;

@@ -16,6 +16,21 @@ const page = (main: object) => ({
   slots: [],
 });
 
+test("preserves page bottom and headerless menu declarations in host metadata", () => {
+  const declaration = {
+    ...page({ kind: "panels", empty: view }),
+    slots: [
+      { id: "tools", region: "bottom" as const, item: { kind: "view" as const, view, presence: "open" as const } },
+    ],
+    panelMenus: { right: { view, size: { defaultPx: 240 }, collapsible: false, hiddenByDefault: false } },
+    regionSettings: { bottom: { size: { defaultPx: 160 }, showHeader: true, alwaysShowTabs: true } },
+  };
+  const parsed = workbenchExtensionPageRecordSchema.parse(declaration);
+  expect(parsed.slots).toEqual(declaration.slots);
+  expect(parsed.panelMenus).toEqual(declaration.panelMenus);
+  expect(parsed.regionSettings).toEqual(declaration.regionSettings);
+});
+
 test.each([
   { kind: "view", view, cardinality: "many" },
   { kind: "panels", empty: view },

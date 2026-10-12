@@ -221,9 +221,13 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   const contentWithHeader = (
     <Flex direction="column" h="full" minH="0" minW="0" w="full">
-      <WorkbenchNavChrome workbench={workbench} hasNav={hasNavWidgets} regionControls={regionControls} />
       <Flex flex="1" minH="0" minW="0" overflow="hidden">
-        <WorkbenchBody workbench={workbench} />
+        <WorkbenchBody
+          workbench={workbench}
+          breadcrumbHeader={
+            <WorkbenchNavChrome workbench={workbench} hasNav={hasNavWidgets} regionControls={regionControls} />
+          }
+        />
       </Flex>
     </Flex>
   );

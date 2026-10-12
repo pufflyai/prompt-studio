@@ -1,6 +1,7 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutPersistenceAdapter } from "../../registries/layout/layout-model-types";
 import {
+  mergeWithDefaultRegions,
   type WorkbenchLayout,
   type WorkbenchWidgetPlacement,
   workbenchRegions,
@@ -41,7 +42,8 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     : input.layoutPersistence;
   const read = (scope?: string) => {
     scopes.add(scope);
-    return runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter?.getLayout(scope));
+    const saved = runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter?.getLayout(scope));
+    return saved ? mergeWithDefaultRegions(saved, input.defaultPanelOpenByRegionId) : undefined;
   };
   const write = (layout: WorkbenchLayout, scope?: string) => {
     scopes.add(scope);
