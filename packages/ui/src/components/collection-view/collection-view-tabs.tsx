@@ -2,6 +2,7 @@ import { Box, Button, Dialog, Icon, IconButton, Input, Tabs, Text } from "@chakr
 import { Copy, LayersPlus, Pencil, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { CollectionSavedView, CollectionViewState, CollectionViewsSource } from "./collection-view-types";
 
@@ -127,27 +128,29 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
           if (view) onActivate(view);
         }}
       >
-        <Tabs.List overflowX="auto" overflowY="hidden">
-          {views.map((view) => (
-            <ResourceContextMenu key={view.id} actions={actionsFor(view)} positioning={{ placement: "bottom-start" }}>
-              <Tabs.Trigger value={view.id} title={view.title}>
-                <Text as="span" data-tab-label>
-                  {view.title}
-                </Text>
-                {dirty && view.id === activeViewId ? (
-                  <Box
-                    aria-label="Unsaved view changes"
-                    width="0.375rem"
-                    height="0.375rem"
-                    flexShrink={0}
-                    borderRadius="full"
-                    bg="fg.warning"
-                  />
-                ) : null}
-              </Tabs.Trigger>
-            </ResourceContextMenu>
-          ))}
-        </Tabs.List>
+        <ScrollArea height="auto" showHorizontalScrollbar showVerticalScrollbar={false}>
+          <Tabs.List width="max-content">
+            {views.map((view) => (
+              <ResourceContextMenu key={view.id} actions={actionsFor(view)} positioning={{ placement: "bottom-start" }}>
+                <Tabs.Trigger value={view.id} title={view.title}>
+                  <Text as="span" data-tab-label>
+                    {view.title}
+                  </Text>
+                  {dirty && view.id === activeViewId ? (
+                    <Box
+                      aria-label="Unsaved view changes"
+                      width="0.375rem"
+                      height="0.375rem"
+                      flexShrink={0}
+                      borderRadius="full"
+                      bg="fg.warning"
+                    />
+                  ) : null}
+                </Tabs.Trigger>
+              </ResourceContextMenu>
+            ))}
+          </Tabs.List>
+        </ScrollArea>
       </Tabs.Root>
       <Tooltip content="Add view">
         <IconButton

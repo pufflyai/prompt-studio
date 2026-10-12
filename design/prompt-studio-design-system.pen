@@ -32253,7 +32253,7 @@
                       "type": "frame",
                       "id": "vy8f6",
                       "name": "cmp/ScrollArea",
-                      "context": "primitives/scroll-area.tsx: Chakra ScrollArea size xs; vertical scrollbar with a radius xs thumb.",
+                      "context": "primitives/scroll-area.tsx: ScrollArea defaults to size xs with a 2px thumb, a transparent track, and the shared border color. Keep the pointer hit area wider than the visible thumb. Collection views and filter menus use this shared scroll area.",
                       "reusable": true,
                       "clip": true,
                       "width": 320,
@@ -32279,13 +32279,13 @@
                         },
                         {
                           "type": "rectangle",
-                          "cornerRadius": 4,
+                          "cornerRadius": 2,
                           "id": "RynGe",
-                          "x": 312,
+                          "x": 314,
                           "y": 8,
                           "name": "Thumb",
                           "fill": "$ds-border",
-                          "width": 4,
+                          "width": 2,
                           "height": 48
                         }
                       ]

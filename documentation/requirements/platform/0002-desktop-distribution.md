@@ -149,9 +149,11 @@ for how nightlies are built and pruned.
 
 The configured publication channel is this repository's `pstdio@<version>`
 GitHub release. The release owner must approve this channel before the first
-production publish. `.github/workflows/release-packages.yml` creates it as a draft and calls
-`.github/workflows/release-desktop.yml`. Only the final publish job can write
-release contents. Native build artifacts are retained by Actions for 14 days.
+production publish. `.github/workflows/release-packages.yml` calls
+`.github/workflows/release-desktop.yml` to build and verify the native artifacts,
+then its publish job creates the release and attaches them after every release
+check passed. Only that publish job can write release contents. Native build
+artifacts are retained by Actions for 14 days.
 
 Repository administrators provision these GitHub Actions secrets:
 
@@ -175,7 +177,7 @@ Credentials are decoded only into the native runner's temporary directory. The
 macOS certificate is imported into an ephemeral keychain that is deleted even
 when the job fails. Never print, upload, or commit decoded credentials.
 
-## Release readiness evidence
+## Release verification evidence
 
 Each native target launches the actual application produced by Forge after the
 target's signing step. The packaged suite must prove all of the following before
@@ -205,7 +207,7 @@ The Intel clean start may take up to 28 seconds. The other targets run the full
 suites.
 
 The workflow uploads the Playwright JSON results as
-`release-readiness-<platform>-<architecture>` with 14-day retention. A release
+`test-results-desktop-<platform>-<architecture>` with 14-day retention. A release
 owner links every native job run and their evidence artifacts from the
 ticket validation report. Contract tests in the owning packages separately
 cover active-work refusal/confirmation, indefinite graceful wait, lock and bind
@@ -220,10 +222,11 @@ version.
 
 ## Release troubleshooting
 
-- **Release remains a draft:** open the native matrix and identify the first
-  failed target. The draft is the safety boundary; do not publish it manually.
+- **Release remains unpublished:** open the Release Packages run and identify the
+  first failed target. Nothing is published until every check passes; do not
+  publish manually. Re-run the failed jobs for a flake, or merge a fix to `main`.
 - **Missing credential:** provision the exact secret named in the failure and
-  rerun the desktop workflow for the existing version/tag.
+  re-run the failed jobs of the release run.
 - **macOS notarization or Gatekeeper failure:** verify the Developer ID identity,
   App Store Connect key permissions, Team ownership, timestamp service, and
   stapling result. Do not disable hardened runtime or signature validation.

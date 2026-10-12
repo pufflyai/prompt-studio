@@ -16,7 +16,7 @@ test("shareable page params update history, native queries and server preference
   try {
     const url = `/projects/${project.id}/extensions/test.page-params/board?range=now-6h`;
     await page.goto(url);
-    const view = page.frameLocator('iframe[title="Page params"]');
+    const view = page.frameLocator('iframe[title="Page params"]:visible');
     await expect(view.locator("#range")).toHaveText("now-6h");
     await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
     await expect(page.getByText("now-6h", { exact: true })).toBeVisible();
@@ -39,6 +39,7 @@ test("shareable page params update history, native queries and server preference
     await expect(page).toHaveURL(/range=now-24h/);
     await view.getByRole("button", { name: "Open details" }).click();
     await expect(page).toHaveURL(/details\?range=now-7d/);
+    await expect(view.locator("#range")).toHaveText("now-7d");
     await page.getByRole("button", { name: "Page params", exact: true }).click();
     await expect(page).toHaveURL(/board\?range=now-24h/);
     await expect(view.locator("#range")).toHaveText("now-24h");

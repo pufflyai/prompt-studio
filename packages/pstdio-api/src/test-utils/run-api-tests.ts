@@ -2,7 +2,12 @@ import { rmSync } from "node:fs";
 import { resolve } from "node:path";
 
 const packageRoot = resolve(import.meta.dirname, "../..");
-const files = Array.from(new Bun.Glob("src/**/*.test.ts").scanSync({ cwd: packageRoot })).sort();
+// CI splits the files across jobs with --shard=<index>/<count>, like `bun test --shard`.
+const shard = process.argv.find((arg) => arg.startsWith("--shard="))?.slice("--shard=".length) ?? "1/1";
+const [shardIndex = 1, shardCount = 1] = shard.split("/").map(Number);
+const files = Array.from(new Bun.Glob("src/**/*.test.ts").scanSync({ cwd: packageRoot }))
+  .sort()
+  .filter((_, index) => index % shardCount === shardIndex - 1);
 // Forward only coverage flags. Other callers pass their own --timeout, which would replace this runner's limit.
 const coverageArgs = process.argv.slice(2).filter((arg) => arg.startsWith("--coverage"));
 const coverage = coverageArgs.includes("--coverage");
