@@ -21,8 +21,9 @@ export const UserOwnedViews: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.pointer({ keys: "[MouseRight]", target: canvas.getByRole("tab", { name: "All tickets" }) });
     await userEvent.click(await body.findByRole("menuitem", { name: "Rename", exact: true }));
-    await userEvent.clear(body.getByRole("textbox", { name: "View name" }));
-    await userEvent.type(body.getByRole("textbox", { name: "View name" }), "Team tickets");
+    const name = await body.findByRole("textbox", { name: "View name" });
+    await userEvent.clear(name);
+    await userEvent.type(name, "Team tickets");
     await userEvent.click(body.getByRole("button", { name: "Rename", exact: true }));
     await expect(await canvas.findByRole("tab", { name: "Team tickets" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Remove Status filter", exact: true }));
