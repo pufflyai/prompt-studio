@@ -53,7 +53,7 @@ const isSelectedAttemptViable = (attempt: AttemptRecord) => {
 
 const isApprovedAttempt = (attempt: AttemptRecord) => attempt.state === "approved" && latestHead(attempt) !== null;
 
-const findPendingPrerequisites = (
+export const findPendingPrerequisites = (
   target: AttemptReadinessTicket,
   byRef: Map<string, AttemptReadinessTicket>,
   requests: ResolveAttemptReadinessInput["requests"],

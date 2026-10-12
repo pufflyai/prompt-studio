@@ -1,10 +1,12 @@
 import { type CommandContext, defineCommand } from "@pstdio/sdk/extensions";
 import { filterRowsByView } from "@pstdio/ui/collection-view";
+import { findPendingPrerequisites } from "../data/attempt-readiness";
 import { listAttempts } from "../data/attempt-storage";
 import { usableAutoBuildIgnore } from "../data/auto-build-ignore";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { ticketsCollection } from "../data/collections";
 import { resolveImplementationBase } from "../data/implementation-targets";
+import { readTicketReviewRequests } from "../data/review-request-storage";
 import { readPlanCommand } from "../timeline/commands/read-plan";
 import { timelineQueryData } from "../timeline/model/query-data";
 import { workflowName } from "../timeline/model/workflow";
@@ -13,14 +15,21 @@ import { readAutoBuildResumptions } from "./auto-build-resume";
 import { readAutoBuildAssignments } from "./auto-build-sessions";
 
 export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBuildMode) {
-  const [plan, attempts, tickets, resumptions, capacity, assignments] = await Promise.all([
+  const [plan, attempts, tickets, resumptions, capacity, assignments, requests] = await Promise.all([
     readPlanCommand.run(ctx, {}),
     listAttempts(ctx.storage),
     ticketsCollection(ctx.storage).list(),
     readAutoBuildResumptions(ctx),
     readImplementationCapacity(ctx),
     readAutoBuildAssignments(ctx),
+    readTicketReviewRequests(ctx.storage),
   ]);
+  const byRef = new Map(
+    tickets.flatMap((ticket) => [
+      [ticket.id, ticket],
+      [ticket.shorthand, ticket],
+    ]),
+  );
   const query = timelineQueryData(plan, (_key, fallback) => fallback ?? _key);
   const ignore = usableAutoBuildIgnore(mode.ignore, query.attributes);
   const ignored = new Set(ignore ? filterRowsByView(query.rows, ignore, query.attributes).map(({ id }) => id) : []);
@@ -40,7 +49,8 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
       row.gate ||
       row.blockedReason ||
       workflowName(row.status?.name) === "blocked" ||
-      row.flags.includes("human-needed");
+      row.flags.includes("human-needed") ||
+      findPendingPrerequisites(byRef.get(row.id)!, byRef, requests).length > 0;
     if (blocked) blockedTickets.push(row.shorthand);
     return !blocked && (!attempted.has(row.id) || resumptions.has(row.id));
   });

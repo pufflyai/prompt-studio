@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import { listAttempts } from "../data/attempt-storage";
+import { putTicket } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
-import { readAutoBuildCommand } from "./auto-build-mode";
+import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { requestHumanCommand, reviewCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 
@@ -40,6 +41,39 @@ async function dispatchCandidates(ctx: Awaited<ReturnType<typeof fixture>>["ctx"
   }
   return { started };
 }
+
+test.each([
+  true,
+  false,
+])("answered implementation input still waits for unanswered prerequisite input (block on review: %s)", async (blockOnReview) => {
+  const { ctx, storage, ticket } = await fixture();
+  const mode = await configureAutoBuildCommand.run(ctx, { enabled: true, blockOnReview });
+  const parent = await ticket("Prerequisite");
+  await putTicket(storage, { ...parent, statusId: "done" });
+  const child = await ticket("Dependent", [parent.id]);
+  const first = (await dispatchCandidates(ctx)).started[0]!;
+  ctx.sessions.get = async (id) => ({ type: "session", id, title: "Implementation", status: "completed" });
+  const ownRequest = await requestHumanCommand.run(ctx, {
+    ticket: child.id,
+    workspaceId: first.workspaceId,
+    sessionId: first.sessionId,
+    title: "Confirm",
+    instructions: "Continue the work",
+    request: { kind: "task" },
+  });
+  await reviewCommand.run(ctx, { requestId: ownRequest.id, response: { confirmed: true } });
+  await putTicket(storage, { ...parent, statusId: "ready" });
+  await requestHumanCommand.run(ctx, {
+    ticket: parent.id,
+    title: "Check prerequisite",
+    instructions: "Confirm its scope",
+    request: { kind: "task" },
+  });
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.some(({ id }) => id === child.id)).toBe(false);
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: child.id, revision: mode.revision })).toMatchObject({
+    decision: "wait",
+  });
+});
 
 test("resolved human input resumes the same implementation when capacity becomes available", async () => {
   const { ctx, ticket } = await fixture(1);
