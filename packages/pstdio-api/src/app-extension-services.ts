@@ -32,9 +32,9 @@ interface WireExtensionServicesInput {
   db: DbClient;
   dependencies: AppDependencies;
   eventBus: EventBus;
-  extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
+  extensionInstancesDBService: ReturnType<typeof createExtensionInstancesDBService>;
   extensionConnectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
-  installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
+  installedExtensionSourcesDBService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
   provisionWorkspacesUsingSource: (sourcePath: string) => Promise<void>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
@@ -54,8 +54,8 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
   };
   const extensionService = createExtensionService({
-    extensionInstancesService: input.extensionInstancesService,
-    installedExtensionSourcesService: input.installedExtensionSourcesService,
+    extensionInstancesService: input.extensionInstancesDBService,
+    installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionUserDataService: createExtensionUserDataDBService(input.db),
     eventBus: input.eventBus,
     onInstalledSourcesChanged: refreshInstalledSources,
@@ -112,14 +112,14 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
   });
   await extensionConnectionService.reconcile();
   const harnessRegistry = input.dependencies.createHarnessRegistry({
-    installedExtensionSourcesService: input.installedExtensionSourcesService,
+    installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
   });
   const extensionRuntime = await createInstalledExtensionRuntime({
     extensionService,
     harnessRegistry,
-    installedExtensionSourcesService: input.installedExtensionSourcesService,
+    installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     projectRuntimeCatalog: extensionRuntimeCatalog,
     projectService: input.projectService,
     provisionWorkspacesUsingSource: input.provisionWorkspacesUsingSource,
@@ -145,7 +145,6 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
 
   return {
     extensionRuntime,
-    refreshInstalledSources,
     extensionRuntimeCatalog,
     extensionConnectionService,
     extensionService,
