@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-A first start that stops while it unpacks the starter database now recovers on Retry, and the runtime log records how long each startup step took.
+First launch writes a smaller starter database, recovers on Retry if it stopped while unpacking it, and logs how long each startup step took.
