@@ -11,7 +11,7 @@ test.skipIf(process.platform === "win32")("kills native descendants after their 
   mkdirSync(bin);
   writeFileSync(
     join(bin, "codex"),
-    `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(import.meta.dir, "codex-process-fixture.ts"))} "$@"\n`,
+    `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(import.meta.dir, "codex-process.fixture.ts"))} "$@"\n`,
     { mode: 0o755 },
   );
   const previousPath = process.env.PATH;

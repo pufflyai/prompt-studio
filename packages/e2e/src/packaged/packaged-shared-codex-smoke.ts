@@ -26,7 +26,7 @@ export const registerSharedCodexSmokeTests = () => {
         const launcher = join(bin, "cli.ts");
         writeFileSync(
           launcher,
-          `#!/usr/bin/env bun\nimport ${JSON.stringify(join(import.meta.dir, "packaged-codex-peer.ts"))};\n`,
+          `#!/usr/bin/env bun\nimport ${JSON.stringify(join(import.meta.dir, "packaged-codex.fixture.ts"))};\n`,
         );
         chmodSync(launcher, 0o755);
         if (process.platform === "win32") await cmdShim(launcher, join(bin, "codex"));

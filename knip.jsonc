@@ -177,7 +177,15 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/*": {
-      "entry": ["package.json", "extension.ts", "*.test.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
+      // Tests launch fixture scripts by path.
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "*.test.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.fixture.ts"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
