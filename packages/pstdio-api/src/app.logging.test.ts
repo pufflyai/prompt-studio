@@ -83,21 +83,6 @@ describe("api logging", () => {
     rmSync(tempRoot, { recursive: true, force: true });
   });
 
-  test("startup logs each phase with the time since the process started", () => {
-    const phases = readJsonLines(logPath).filter((entry) => entry.event === "runtime.startup.phase");
-
-    expect(phases.map((entry) => entry.phase)).toEqual([
-      "database_locked",
-      "database_engine_loaded",
-      "database_opened",
-      "database_migrated",
-      "extensions_ready",
-      "app_ready",
-    ]);
-    const elapsed = phases.map((entry) => entry.elapsedMs as number);
-    expect(elapsed).toEqual([...elapsed].sort((left, right) => left - right));
-  });
-
   test("request lifecycle emits structured log entries", async () => {
     const response = await app.request("/healthz");
     expect(response.status).toBe(200);

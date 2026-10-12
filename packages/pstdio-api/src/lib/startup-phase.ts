@@ -1,11 +1,11 @@
 import type { DbOpenPhase } from "pstdio-db";
-import { apiLogger } from "./logger";
+import { startupLogger } from "./logger";
 
 export type StartupPhase = DbOpenPhase | "extensions_ready" | "app_ready";
 
 // Time since process start puts every step of one startup on the same clock, including Bun's own launch.
 export const logStartupPhase = (phase: StartupPhase) => {
-  apiLogger.info(
+  startupLogger.info(
     { event: "runtime.startup.phase", phase, elapsedMs: Math.round(performance.now()) },
     "Runtime startup step finished",
   );
