@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { createWorkspacesModule } from "../../workspaces/module";
+import { createSessionsModule } from "../module";
 import { createSessionBubbleModule } from "./module";
 
 const projectPage = { extensionId: "pstdio.test", kind: "page" as const, id: "project" };
@@ -252,5 +255,53 @@ describe("createSessionBubbleModule", () => {
     expect(sessionPlacements(workbench)).toEqual([
       expect.objectContaining({ resource: expect.objectContaining({ id: "session-1" }), tabRetention: "persistent" }),
     ]);
+  });
+});
+describe("New session while a session page is open", () => {
+  test("adds a Side Panel session tab from the panel's add button", async () => {
+    const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
+    const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
+      status: "completed",
+    });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.registerModule(createSessionsModule());
+    openSessionsPage(workbench, session);
+    const location = workbench.pages.store.getState().location;
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+    const side = workbench.layout.getLayout().regions.side;
+    expect(side.widgets.map((widget) => [widget.viewId, widget.resource?.type, widget.tabRetention])).toEqual([
+      [dashboardWidgetIds.sessionBubble, "session-draft", "persistent"],
+      [dashboardWidgetIds.sessionBubble, "session-draft", "persistent"],
+    ]);
+    expect(side.activeWidgetId).toBe(side.widgets[1]!.widgetId);
+    expect(workbench.pages.store.getState().location).toEqual(location);
+  });
+  test("replaces a Side Panel session tab from its own New session action", async () => {
+    const workbench = createWorkbench();
+    workbench.registerModule(createWorkspacesModule());
+    const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
+      status: "completed",
+    });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.registerModule(createSessionBubbleModule());
+    workbench.registerModule(createSessionsModule());
+    const panelSession = createDashboardResource("session", "session-2", "Panel", "MessageCircle", "project-1");
+    openSessionsPage(workbench, session);
+    await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: panelSession });
+    const location = workbench.pages.store.getState().location;
+    const origin = workbench.layout.getLayout().regions.side.widgets[0]!;
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession, {
+      replacePanel: origin.placementIdentity,
+    });
+    expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
+      expect.objectContaining({
+        placementIdentity: origin.placementIdentity,
+        resource: expect.objectContaining({ type: "session-draft" }),
+      }),
+    ]);
+    expect(workbench.pages.store.getState().location).toEqual(location);
   });
 });
