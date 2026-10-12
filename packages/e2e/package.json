@@ -7,7 +7,7 @@
     "test:cli": "bun test src/cli --timeout 30000 --silent",
     "test:scripts": "bun test src/scripts src/helpers src/local-workspace-registry.test.ts src/default-extensions.test.ts --timeout 30000 --silent",
     "test:packaged": "bun run test:packaged:cli && bun run test:packaged:browser",
-    "test:packaged:cli": "bun test src/packaged --preload ./src/packaged/packaged-test-timeout.ts --silent --path-ignore-patterns='**/*.spec.ts'",
+    "test:packaged:cli": "bun src/packaged/run-packaged-cli-tests.ts",
     "test:packaged:browser": "playwright test --config playwright.packaged.config.ts",
     "test:ui": "bun run src/scripts/run-playwright.ts",
     "test:vite-terminal": "bun run src/scripts/run-vite-terminal-playwright.ts",
