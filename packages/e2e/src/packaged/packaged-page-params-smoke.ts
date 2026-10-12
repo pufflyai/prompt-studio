@@ -17,6 +17,10 @@ export const registerPageParamsSmokeTests = () => {
       writePageParamsExtension(root);
       let started = await startPackagedServe(root);
       child = started.child;
+      const documentation = await fetch(`${started.baseUrl}/openapi.json`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(documentation.status).toBe(200);
       const response = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },

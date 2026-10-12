@@ -77,6 +77,12 @@ test("webview preference API round trips undeclared names and refuses read-only 
       (await handle.app.request(`/v1/projects/${project.id}/extensions/missing/preferences/lastRange`)).status,
     ).toBe(404);
     expect(handle.deps.eventBus.getSince(0).some((event) => event.table === "webview_preferences")).toBe(true);
+    const choices = { filters: { harnesses: ["codex"], enabled: true }, cleared: null };
+    expect((await put("?scope=project", choices)).status).toBe(200);
+    expect(await (await handle.app.request(`${path}?scope=project`)).json()).toEqual({
+      name: "lastRange",
+      value: choices,
+    });
   } finally {
     await handle.close();
     if (previousHome === undefined) delete process.env.PSTDIO_HOME;

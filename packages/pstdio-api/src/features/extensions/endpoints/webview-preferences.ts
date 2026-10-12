@@ -14,7 +14,7 @@ const value = z.union([
   z.array(z.string()),
   z.array(z.number()),
   z.array(z.boolean()),
-  z.record(z.string(), z.json()),
+  z.record(z.string(), z.json()).openapi({ type: "object", additionalProperties: true }),
 ]);
 const result = z.object({ name: z.string(), value: value.optional() });
 const error = z.object({ error: z.string(), code: z.string().optional() });
