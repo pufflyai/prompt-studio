@@ -20,20 +20,22 @@ folder. Drag the app onto Applications. Finder copies it. It may show a
 progress window, and it shows its own replace prompt or error when needed. The
 window itself does not change after the
 drop. When the copy finishes, open Applications and launch Prompt Studio from
-there, not from the DMG. Each time the app starts from Applications, it sets up
-`pst` without administrator rights, the way the Bun installer does: it links
-`~/.pstdio/bin/pst` to its bundled runtime and adds one marked line to the login
-shell's startup file that puts `~/.pstdio/bin` on `PATH` (`~/.zshrc` for zsh,
-`~/.bash_profile` for bash, `~/.config/fish/config.fish` for fish). It does this
-before the runtime starts, so agents and terminals the runtime starts find `pst`.
-Setup never shows a dialog. It skips a startup file that already mentions
-`~/.pstdio/bin`, replaces its own link when the app moved, and keeps a `pst` file
-in that folder that is not a link. For another shell it only creates the link.
-Apps running from the DMG or another unpacked folder do not set up the command.
+there, not from the DMG. On the first launch from
+Applications, the app links `/usr/local/bin/pst` to its bundled runtime. When the
+directory needs an administrator password, the app first explains why, then asks
+**Install** or **Not Now**. Only **Install** opens the macOS password window, which
+shows the app's reason under the title "osascript wants to make changes." Choosing
+**Not Now** or cancelling the password window leaves the app usable and does not
+ask again on later launches. Choose **Prompt Studio → Install pst Command…** to
+install later or restore a removed link.
+Apps running from the DMG or another unpacked folder do not install the command.
+
+The app's `bin` folder holds the runtime and a `pst` link to it on macOS and Linux.
+The desktop app puts that folder first on the runtime's `PATH`. Agents and other
+runtime processes therefore run the bundled `pst` even when the terminal command
+is missing, and it always matches the running runtime.
 
 The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
-The portable Linux app sets up `~/.pstdio/bin/pst` like macOS, using `~/.bashrc`
-for bash.
 The Windows Setup installer creates a `pst.cmd` launcher in the installation's
 stable `bin` folder and adds that folder to the current user's `PATH`. Setup does
 not require an administrator password. Close and reopen your terminal after installation,
@@ -48,10 +50,9 @@ Desktop updates keep `pst` on the matching bundled runtime.
 Existing commands are preserved. Remove a separate CLI installation before
 retrying setup to use the desktop's bundled version. A command earlier on a custom
 `PATH` takes priority; run `command -v pst` on macOS/Linux or `where.exe pst` on
-Windows to check which one runs. Deleting the macOS or portable Linux app leaves
-`~/.pstdio/bin/pst` and the `PATH` line behind; remove them by hand. Earlier
-versions linked `/usr/local/bin/pst` on macOS. That link still points at the same
-bundled runtime; remove it with `sudo rm /usr/local/bin/pst` if you no longer want it.
+Windows to check which one runs. Deleting the
+macOS app leaves its link behind; remove that link with `rm /usr/local/bin/pst`
+(use `sudo` if needed).
 
 The Linux ZIP is portable rather than system-integrated. Extract it to a stable
 directory without spaces, preserve executable permissions, and launch
