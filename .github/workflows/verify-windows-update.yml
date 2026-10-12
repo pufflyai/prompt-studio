@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       candidate-run-id:
-        description: Successful signing or readiness run containing the newer candidate
+        description: Successful signing or release run containing the newer candidate
         required: true
         type: string
       candidate-ref:

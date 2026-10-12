@@ -179,23 +179,24 @@ update metadata.
 | Windows x64 | Setup EXE, full nupkg, and RELEASES | Trusted Authenticode signatures and timestamps on app, sidecar, installer, and update payload; clean-home launch | Electron Squirrel updater through release-owned RELEASES metadata |
 
 Every target audits the packaged Electron fuse wire and emits a target manifest
-plus SHA-256 checksums. The publish job requires the complete four-target set,
-revalidates every checksum and component version, uploads the artifacts to the
-existing draft release, and only then publishes it. Native jobs receive read-only
-repository access; only the final publisher receives `contents: write`.
+plus SHA-256 checksums, then uploads them as workflow artifacts. The desktop
+workflow publishes nothing. The publish job of `release-packages.yml` requires the
+complete target set, revalidates every checksum and component version, and attaches
+the assets to the release only after every release check passed, including npm
+package checks. Native jobs receive read-only repository access.
 
 If macOS notarization returns HTTP 403 with "A required agreement is missing or
 has expired", the Apple Developer Account Holder must review pending agreements
 in the [developer account](https://developer.apple.com/account). Apple requires
 the Account Holder to accept updated developer agreements on behalf of the
 organization; see [Apple account roles](https://developer.apple.com/help/account/access/roles).
-After the required agreement is in effect, rerun the desktop release workflow.
+After the required agreement is in effect, re-run the failed jobs of the Release Packages run.
 Keep notarization and the complete four-target publish check enabled.
 
-The workflow checks out `inputs.tag` for application builds. Application fixes
-and checks outside `clients/desktop/src/e2e` require a release tag containing the
-fix. The Electron checks can use a separate compatible `validation_ref`, as
-described in the release retry instructions below.
+The workflow builds and tests the planned release commit. Its Electron checks come
+from that same commit. To fix a failed release, merge the fix to `main`; the next
+release run builds the fixed commit, unless npm publishing already started. See
+[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
 
 The native updater is configured in packaged macOS and Windows apps. It resolves
 the newest complete `pstdio@<version>` release on the device's update channel and
@@ -265,22 +266,10 @@ executables, verifies the packaged fuse policy, and uploads readiness and benchm
 and browser traces. Trace export removes runtime cookies and bearer
 credentials from every text entry before artifacts are uploaded.
 
-Release builds use the requested package tag. The Electron specs and their helpers
-come from `validation_ref` when supplied, or the workflow revision by default.
-Choose checks compatible with the tagged application when retrying an older draft;
-newer checks may require APIs that the release does not contain. Only
-`clients/desktop/src/e2e` is restored from that revision. Builds and publication
-still use the unchanged release tag. Windows signing trusts the `main` branch's
-GitHub identity, so run `Release Desktop` on `main`. The final job publishes the
-draft only after every native target passes all checks.
-
-To retry the original 0.40.0 application with its corrected release checks:
-
-```bash
-gh workflow run release-desktop.yml --repo pufflyai/prompt-studio --ref main \
-  -f version=0.40.0 -f tag=pstdio@0.40.0 \
-  -f validation_ref=3bbbe15db648232bdbce6c5256eca3f93aac6dfe
-```
+Windows signing trusts the `main` branch's GitHub identity and release tags, so
+desktop release builds run only from `release-packages.yml` on `main`. A failed
+release resumes by re-running the failed jobs or with the next push to `main`; see
+[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
 
 The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
@@ -307,6 +296,6 @@ Rebuild with `bun run --cwd clients/desktop package`. If an installed package re
 
 Release-only failures are fail closed. Missing signing credentials, an invalid
 native signature, a failed notarization staple, an incomplete artifact matrix,
-or version/checksum drift leaves the GitHub release in draft. See [Desktop
+or version/checksum drift stops the release before anything is published. See [Desktop
 distribution and updates](../../requirements/platform/0002-desktop-distribution.md) for credential
 names, verification commands, and operator recovery.
