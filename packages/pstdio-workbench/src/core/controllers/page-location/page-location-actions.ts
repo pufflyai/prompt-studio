@@ -21,6 +21,7 @@ interface PageLocationControllerActionsInput<Value> {
   resolveUrl(projectId: string, entry: WorkbenchPageBrowserEntry): ResolvedPageLocation | undefined;
   normalizeTarget(target: NavigationTargetPage): ResolvedPageLocation;
   normalizeStored(location: PageLocation): ResolvedPageLocation;
+  modeTarget(modeId: string): PageLocation;
   locationsEqual(left: PageLocation | undefined, right: PageLocation | undefined): boolean;
   commit(
     projectId: string,
@@ -76,6 +77,19 @@ export const createPageLocationControllerActions = <Value>(
           ? "none"
           : "push";
         return actions.commit(projectId, resolved, history, "navigatePageLocation");
+      } catch (error) {
+        return actions.fail("navigation", error);
+      }
+    },
+    switchMode(modeId) {
+      const projectId = input.registry.store.getState().projectId;
+      if (!projectId) return actions.fail("navigation", new Error("Cannot change mode before a project is active"));
+      try {
+        const resolved = actions.normalizeStored(actions.modeTarget(modeId));
+        const history = actions.locationsEqual(input.registry.store.getState().location, resolved.location)
+          ? "none"
+          : "push";
+        return actions.commit(projectId, resolved, history, "switchPageMode");
       } catch (error) {
         return actions.fail("navigation", error);
       }

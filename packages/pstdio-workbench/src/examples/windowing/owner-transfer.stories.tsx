@@ -13,7 +13,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const moveTab = async (panel: HTMLElement, name: string, destination: string) => {
-  const tab = within(panel).getByRole("tab", { name });
+  const tab = within(panel).getByRole("tab", { name: new RegExp(`^${name}(?: ·|$)`) });
   tab.focus();
   await userEvent.keyboard("{Shift>}{F10}{/Shift}");
   await userEvent.click(await within(document.body).findByRole("menuitem", { name: `Move to ${destination}` }));
@@ -59,7 +59,7 @@ export const OwnerTransfer: Story = {
     );
     await expect(
       within(canvasElement.querySelector('[data-workbench-panel="bottom"]') as HTMLElement).getByRole("tab", {
-        name: "Changes",
+        name: /^Changes(?: ·|$)/,
       }),
     ).toBeVisible();
   },

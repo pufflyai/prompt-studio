@@ -47,6 +47,17 @@ const openNoteWorkbench = (resolve: (resource: ResourceRef) => Promise<ResourceR
 };
 
 describe("open extension resource sync", () => {
+  test("refreshes relationship metadata when the resource's workspace changes", async () => {
+    let context: ResourceRef["context"] = { type: "workspace", id: "w1", label: "Workspace 1" };
+    const { workbench, open } = openNoteWorkbench((resource) => ({ ...resource, context }));
+    open({ type: "note", id: "n1" });
+    await settle();
+    expect(workbench.getPrimaryResource()?.context).toEqual(context);
+    context = { type: "workspace", id: "w2", label: "Workspace 2" };
+    publishExtensionEvent({ id: `${extensionId}.event.notes.changed`, projectId });
+    await settle();
+    expect(workbench.getPrimaryResource()?.context).toEqual(context);
+  });
   test("shows the extension's current reference for the open resource", async () => {
     const { workbench, open, resolved } = openNoteWorkbench((resource) => ({
       ...resource,

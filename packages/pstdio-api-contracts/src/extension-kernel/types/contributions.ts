@@ -5,6 +5,7 @@ import type { RendererCallback } from "./context";
 import type {
   ContributionDefinition,
   ModeRef,
+  PageRef,
   ResourceKindRef,
   SettingsSectionRef,
   SettingsSlotRef,
@@ -82,6 +83,8 @@ export interface ModeRegionSettings {
 
 export interface ModeContribution extends ContributionDefinition<"mode"> {
   label: Localizable<string>;
+  /** Fallback page when this mode has no allowed remembered page. */
+  basePage?: PageRef;
   icon?: string;
   regions: readonly ExtensionPanelRegion[];
   /** Default theme for this mode. An explicit user choice for the mode takes precedence. */

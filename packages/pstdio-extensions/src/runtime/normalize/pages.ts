@@ -60,6 +60,7 @@ export const registerPages = (
         ...contribution,
         ref,
         mode: normalizeContributionRef(ext, contribution.mode),
+        ...(contribution.modes ? { modes: contribution.modes.map((mode) => normalizeContributionRef(ext, mode)) } : {}),
         ...(contribution.parent ? { parent: normalizeContributionRef(ext, contribution.parent) } : {}),
         ...(contribution.resource
           ? { resource: { kinds: contribution.resource.kinds.map((kind) => normalizeContributionRef(ext, kind)) } }

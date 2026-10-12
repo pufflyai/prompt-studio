@@ -14,6 +14,17 @@ const resource = {
 };
 
 describe("extension page URLs", () => {
+  test("round trips registered mode identity and rejects duplicate or empty modes", () => {
+    const mode = { kind: "mode" as const, extensionId: "acme.music", id: "compose" };
+    const url = serializePageUrl({ projectId: resource.projectId, page, mode });
+    const parsed = parsePageUrl({ url, projectId: resource.projectId, pages: [page] });
+    expect(new URL(url, "http://test").searchParams.get("mode")).toBe("acme.music.mode.compose");
+    expect(parsed?.mode).toEqual({ kind: "mode", extensionId: "pstdio", id: "acme.music.mode.compose" });
+    for (const suffix of ["?mode=", "?mode=project&mode=project"])
+      expect(
+        parsePageUrl({ url: url.split("?")[0] + suffix, projectId: resource.projectId, pages: [page] }),
+      ).toBeUndefined();
+  });
   test("round trips a source range independently of document metadata", () => {
     const documentPage = { ...page, document: { metadataKey: "workspaceFilePath" } };
     const selected = { ...resource, metadata: { workspaceFilePath: "src/app.ts" } };

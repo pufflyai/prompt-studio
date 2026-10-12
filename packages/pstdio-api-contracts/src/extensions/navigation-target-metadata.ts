@@ -3,7 +3,7 @@ import { isNavigationHref } from "../extension-kernel/navigation-href";
 import { isFileSourcePosition } from "../extension-kernel/source-position";
 import type { FileSourcePosition } from "../extension-kernel/types/pages";
 import { extensionResourceRefSchema } from "./resource-ref";
-import { commandTargetSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
+import { commandTargetSchema, modeRefSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
 
 const sourcePositionSchema = z
   .object({
@@ -23,6 +23,7 @@ const sectionSchema = z.object({
 export interface MetadataPageTarget {
   kind: "page";
   page: z.infer<typeof pageRefSchema>;
+  mode?: z.infer<typeof modeRefSchema>;
   resource?: z.infer<typeof extensionResourceRefSchema>;
   open?: "preview" | "pin";
   section?: z.infer<typeof sectionSchema>;
@@ -36,6 +37,7 @@ const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
       .object({
         kind: z.literal("page"),
         page: pageRefSchema,
+        mode: modeRefSchema.optional(),
         resource: extensionResourceRefSchema.optional(),
         open: z.enum(["preview", "pin"]).optional(),
         section: sectionSchema.optional(),
