@@ -52,9 +52,10 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     await expect(page.getByRole("button", { name: "Create workspace", exact: true })).toHaveCount(0);
     await page.getByRole("option", { name: "Project folder", exact: true }).click();
     await expect(page.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
-    await expect(page.getByRole("tab")).toHaveCount(0);
+    const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+    await expect(mainHeader.getByRole("tab")).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Changes", exact: true })).toHaveCount(0);
-    await expect(page.locator('[data-workbench-panel-header="main"]')).not.toBeVisible();
+    await expect(mainHeader).toBeVisible();
     await page.getByRole("option", { name: "notes.md", exact: true }).click();
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("Shared notes");
     expect(gitRequests).toEqual([]);

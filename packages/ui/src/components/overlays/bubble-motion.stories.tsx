@@ -6,7 +6,12 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { BubbleButton } from "./bubble-button";
 import { BubblePanel } from "./bubble-panel";
 
-const FloatingPanel = () => {
+interface FloatingPanelProps {
+  showHeader?: boolean;
+}
+
+const FloatingPanel = (props: FloatingPanelProps) => {
+  const { showHeader } = props;
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -14,7 +19,13 @@ const FloatingPanel = () => {
       <BubbleButton isOpen={open} aria-label="Open Side Panel" onClick={() => setOpen(true)}>
         <MessageCircle />
       </BubbleButton>
-      <BubblePanel isOpen={open} title="Side Panel" closeLabel="Minimize" onClose={() => setOpen(false)}>
+      <BubblePanel
+        isOpen={open}
+        title="Side Panel"
+        showHeader={showHeader}
+        closeLabel="Minimize"
+        onClose={() => setOpen(false)}
+      >
         <Stack p="sm">
           <Input aria-label="Draft" placeholder="A draft stays here when minimized" />
         </Stack>
@@ -26,6 +37,7 @@ const meta = {
   tags: ["motion"],
   title: "Components/Overlays/Bubble/Motion",
   component: FloatingPanel,
+  args: { showHeader: true },
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof FloatingPanel>;
 export default meta;

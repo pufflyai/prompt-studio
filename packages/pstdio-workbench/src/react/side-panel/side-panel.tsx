@@ -108,6 +108,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && mode === "floating";
+  const showHeader = policy.legacyHeaders || policy.showHeader;
 
   return (
     <>
@@ -128,6 +129,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         aria-label="Side Panel"
         testId="workbench-side-panel-floating"
         closeLabel="Close Side Panel"
+        showHeader={showHeader}
         containerProps={{
           "data-workbench-panel": "side",
           bottom: floatingPanelBottom(bottomOffset),
@@ -136,8 +138,20 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         popOutLabel="Reattach Side Panel"
         onClose={policy.canClose ? () => workbench.sidePanel.setMode("closed") : undefined}
         onPopOut={() => workbench.sidePanel.setMode("attached")}
-        menu={visible ? <WorkbenchSidePanelHeader header={header} /> : undefined}
-        overlay={<WorkbenchTabDropTarget region="side" />}
+        menu={
+          visible ? (
+            <>
+              <WorkbenchSidePanelHeader header={header} />
+              <PanelHeaderMenu workbench={workbench} region="side" />
+            </>
+          ) : undefined
+        }
+        overlay={
+          <>
+            <PanelHeaderEdge workbench={workbench} region="side" visible={showHeader} />
+            <WorkbenchTabDropTarget region="side" />
+          </>
+        }
       >
         <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
       </BubblePanel>

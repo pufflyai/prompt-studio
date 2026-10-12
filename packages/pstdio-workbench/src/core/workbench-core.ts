@@ -172,6 +172,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
 
   const modes = createWorkbenchModeRegistry({
+    regionSettings: input.regionSettings,
     establishLocation,
     layout,
     resolveContext: () => core,

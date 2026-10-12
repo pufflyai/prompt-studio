@@ -20,6 +20,8 @@ const storyIds = [
   "mixed-panel-rules",
   "refused-panel-tabs",
   "panel-header-choices",
+  "floating-panel-headers",
+  "empty-floating-panel-headers",
   "legacy-panel-headers",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 

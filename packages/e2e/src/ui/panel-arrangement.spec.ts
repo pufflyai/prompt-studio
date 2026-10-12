@@ -17,6 +17,8 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   const originalUrl = page.url();
   const main = page.getByRole("region", { name: "Main", exact: true });
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+  await mainHeader.getByRole("button", { name: "main header options", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   await expect(mainHeader).not.toBeVisible();
   await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
   const secondary = page.locator('[data-workbench-panel-header="secondary"]');
@@ -40,6 +42,10 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
   await page.mouse.move(target.x + target.width / 2, target.y + 4, { steps: 12 });
   await page.mouse.up();
+  await expect(mainHeader).not.toBeVisible();
+  await page.getByLabel("main header edge", { exact: true }).focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
   await expect(mainHeader.getByRole("tab")).toHaveCount(2);
   const moved = mainHeader.locator(`[data-workbench-tab="${instanceId}"]`).getByRole("tab");
   await expect(moved).toHaveAttribute("aria-selected", "true");
@@ -56,6 +62,7 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   await expect(secondary.getByRole("tab")).toHaveCount(0);
   await moved.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
-  await expect(mainHeader).not.toBeVisible();
+  await expect(mainHeader).toBeVisible();
+  await expect(mainHeader.getByRole("tab")).toHaveCount(1);
   await expect(page.getByText("Project home", { exact: true })).toBeVisible();
 });

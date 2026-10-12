@@ -35,15 +35,14 @@ export const createCoreShell = (
       if (region !== "bottom" && modeId) return modeLayoutScope(state?.projectId, modeId);
       return layout.getPersistenceScope() ?? "unscoped";
     },
-    openDefault: (region, presentation) => {
+    getDefaultTarget: (region, presentation) => {
       const modeId = modes.getActiveModeId();
       const mode = modeId ? modes.getMode(modeId) : undefined;
-      const target =
-        presentation === "floating"
-          ? (mode?.floating?.defaultTab ?? getPolicy(region).defaultTab)
-          : getPolicy(region).defaultTab;
-      if (target) return resolve()?.navigation.openTarget(target);
+      return presentation === "floating"
+        ? (mode?.floating?.defaultTab ?? getPolicy(region).defaultTab)
+        : getPolicy(region).defaultTab;
     },
+    openDefault: (target) => resolve()?.navigation.openTarget(target),
   });
   return { shell, sidePanel };
 };

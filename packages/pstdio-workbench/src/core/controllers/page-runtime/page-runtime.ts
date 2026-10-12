@@ -12,6 +12,7 @@ import {
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
 import { restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
@@ -120,7 +121,10 @@ const restoreRuntimeGeometry = (
 ) => {
   const geometry =
     state.projectId && state.activePageId ? input.loadPageGeometry?.(state.projectId, state.activePageId) : undefined;
-  return restorePageGeometry(layout, geometry);
+  const page = state.activePageId ? state.pages[state.activePageId] : undefined;
+  return clampPanelSizes(restorePageGeometry(layout, geometry), (region) =>
+    region === "bottom" ? page?.regionSettings?.bottom : input.layout.getRegionSettings(region),
+  );
 };
 
 const applyPageState = (

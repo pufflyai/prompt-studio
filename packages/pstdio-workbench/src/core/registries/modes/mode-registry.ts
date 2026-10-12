@@ -1,7 +1,7 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
-import type { WorkbenchLayout } from "../layout/layout-model";
+import type { WorkbenchLayout, WorkbenchRegion } from "../layout/layout-model";
 import {
   applyModePanelAvailability,
   disposeReverse,
@@ -51,6 +51,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   let deferredSeedModeId: string | undefined;
   let transitioning = false;
 
+  const settingsForMode = (mode: WorkbenchModeContribution) => (region: WorkbenchRegion) =>
+    region === "bottom" ? undefined : { ...input.regionSettings?.[region], ...mode.regionSettings?.[region] };
+
   const initializeMode = (mode: WorkbenchModeContribution) => {
     if (initializedModes.has(mode.id)) return;
     const disposables = toDisposables(
@@ -65,7 +68,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     const context = input.resolveContext();
     const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
     const availableLayout = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
-    restoreModeLayout(context, availableLayout);
+    restoreModeLayout(context, availableLayout, settingsForMode(mode));
     context.layout.reconcilePanelMenus();
     if (!seededScopes.has(scopeKey) && !context.layout.enteredWithPersistedLayout()) {
       seedModeScope(mode, context, input.establishLocation);
@@ -104,6 +107,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       restoreModeLayout(
         context,
         restoreUnscopedModeLayout(context.layout.getLayout(), unscopedLayouts.get(id), panelsForMode(mode)),
+        settingsForMode(mode),
       );
     }
     activate(id, { seed: deferredSeedModeId !== id });

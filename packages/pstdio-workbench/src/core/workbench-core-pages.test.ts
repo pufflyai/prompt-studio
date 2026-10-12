@@ -339,7 +339,7 @@ describe("workbench core mode placement pages", () => {
       resource: { type: "session", id: "session-1" },
       tabRetention: "preview",
     });
-    expect(workbench.sidePanel.getMode()).toBe("attached");
+    expect(workbench.sidePanel.getMode()).toBe("floating");
     await workbench.navigation.openTarget({ kind: "page", page: sessionsPage });
     expect(workbench.layout.getLayout().regions.main.widgets.map((item) => item.contributionId)).toEqual([
       "workbench.page-placement.test.sessions.%24main",

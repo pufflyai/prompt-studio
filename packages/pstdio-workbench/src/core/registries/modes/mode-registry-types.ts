@@ -79,6 +79,7 @@ export interface WorkbenchModeRegistry {
 }
 
 export interface CreateWorkbenchModeRegistryInput {
+  regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
   establishLocation?(instanceId: string): void;
   layout: Pick<WorkbenchCoreContributionContext["layout"], "onDidChangePersistenceScope">;
   resolveContext(): WorkbenchModeActivationContext;

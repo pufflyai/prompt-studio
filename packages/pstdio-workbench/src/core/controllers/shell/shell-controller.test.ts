@@ -229,3 +229,22 @@ test("page bottom intent stays with its resource and mode intent survives naviga
   expect(core.shell.getPanelPolicy("bottom").showHeader).toBe(false);
   await fixture.dispose();
 });
+
+for (const initialSidePanelMode of [undefined, "closed"] as const) {
+  test(`revealing the first Side tab preserves default floating with initial mode ${initialSidePanelMode}`, async () => {
+    const core = createWorkbench({ initialSidePanelMode });
+    core.modes.registerMode({ id: "mode", panels: ["main", "side"], activate() {} });
+    core.modes.setActiveMode("mode");
+    core.layout.registerPanel({ id: "view", title: "View", region: "main", rendererId: "view", closable: true });
+    core.layout.openPanel("view");
+    expect(core.sidePanel.getMode()).toBe("closed");
+    const tab = core.layout.listPanelInstances("main")[0]!;
+    core.movePanel(tab.instanceId, "side");
+    expect(core.sidePanel.getMode()).toBe("floating");
+    expect(core.layout.getLayout().regions.side.visibility).toBeUndefined();
+    core.shell.setRegionOpen("side", false);
+    core.shell.revealRegion("side");
+    expect(core.sidePanel.getMode()).toBe("attached");
+    await core.dispose();
+  });
+}

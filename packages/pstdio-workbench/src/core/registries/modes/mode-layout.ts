@@ -4,9 +4,11 @@ import {
   type WorkbenchLayout,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
+  type WorkbenchRegionSettings,
   type WorkbenchWidgetPlacement,
   workbenchModePanelRegions,
 } from "../layout/layout-model";
+import { clampPanelSizes } from "../layout/panel-size-policy";
 import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry-types";
 
 const modePanelRegions = {
@@ -153,6 +155,11 @@ export const disposeReverse = (disposables: readonly Disposable[]) => {
   }
 };
 
-export const restoreModeLayout = (context: WorkbenchModeActivationContext, layout: WorkbenchLayout) => {
+export const restoreModeLayout = (
+  context: WorkbenchModeActivationContext,
+  layout: WorkbenchLayout,
+  getSettings: (region: WorkbenchRegion) => WorkbenchRegionSettings | undefined,
+) => {
+  layout = clampPanelSizes(layout, getSettings);
   if (layout !== context.layout.getLayout()) context.layout.restoreLayout(layout);
 };

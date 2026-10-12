@@ -7,7 +7,6 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
-import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
 import { movePanelHost } from "../region/move-panel-host";
 import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
@@ -84,12 +83,7 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
     hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
     hasSidenavWidgets: useWorkbenchRegionContent(workbench, "sidenav"),
-    hasSecondaryHeaderWidgets: useWorkbenchRegionContent(workbench, "secondary-header"),
-    hasSecondaryWidgets: useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true }),
-    hasSecondaryMenus: useWorkbenchPanelMenusPresent(workbench, "secondary"),
     hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
-    hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
-    hasSideMenus: useWorkbenchPanelMenusPresent(workbench, "side"),
     hasStatusWidgets:
       statusChrome !== undefined
         ? statusChrome !== false
@@ -119,28 +113,17 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
   const sidenavOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
   const secondaryPolicy = usePanelPolicy(workbench, "secondary");
+  const sidePolicy = usePanelPolicy(workbench, "side");
   const secondaryPanelOpen = secondaryPolicy.open;
-  const hasSecondaryPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
   const sidePanelMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
 
-  const {
-    hasActivityBarWidgets,
-    hasNavWidgets,
-    hasSideHeaderWidgets,
-    hasSideWidgets,
-    hasSideMenus,
-    hasSidenavWidgets,
-    hasSecondaryHeaderWidgets,
-    hasSecondaryWidgets,
-    hasSecondaryMenus,
-    hasStatusWidgets,
-  } = useWorkbenchLayoutFlags(workbench);
-  const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets || hasSidePanelHeader || hasSideMenus;
+  const { hasActivityBarWidgets, hasNavWidgets, hasSideHeaderWidgets, hasSidenavWidgets, hasStatusWidgets } =
+    useWorkbenchLayoutFlags(workbench);
+  const hasSidePanel = sidePolicy.provided;
   const showSidenav = hasSidenavWidgets;
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
-  const showSecondaryPanel =
-    hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader || hasSecondaryMenus;
+  const showSecondaryPanel = secondaryPolicy.provided;
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
   const showAttachedSidePanel = hasSidePanel && sidePanelMode === "attached";

@@ -38,9 +38,14 @@ export const createWorkbenchShellController = (input: {
   sidePanel: WorkbenchSidePanelController;
   getPolicy(region: WorkbenchRegion, context?: WorkbenchPanelPolicyContext): WorkbenchPanelPolicy;
   getOwnerKey(region: WorkbenchShellOpenRegion): string;
-  openDefault?(region: WorkbenchShellOpenRegion, presentation?: WorkbenchSidePanelMode): unknown | Promise<unknown>;
+  getDefaultTarget?(
+    region: WorkbenchShellOpenRegion,
+    presentation?: WorkbenchSidePanelMode,
+  ): WorkbenchPanelPolicy["defaultTab"];
+  openDefault?(target: NonNullable<WorkbenchPanelPolicy["defaultTab"]>): unknown | Promise<unknown>;
 }): WorkbenchShellController => {
-  const opening = new Map<string, Promise<void>>();
+  const opening = new Map<string, { completion: Promise<void>; intent: "open" | "closed" }>();
+  const ownerKey = (region: WorkbenchShellOpenRegion) => `${input.getOwnerKey(region)}/${region}`;
   const requireAction = (region: WorkbenchRegion, action: "open" | "close" | "resize") => {
     const policy = input.getPolicy(region);
     if (!policy.provided) throw new Error(`Panel is not provided: ${region}`);
@@ -49,6 +54,8 @@ export const createWorkbenchShellController = (input: {
     return policy;
   };
   const writeIntent = (region: WorkbenchShellOpenRegion, visibility: "open" | "closed" | "auto") => {
+    const operation = opening.get(ownerKey(region));
+    if (operation && visibility !== "auto") operation.intent = visibility;
     const layout = input.layout.getLayout();
     input.layout.restoreLayout({
       ...layout,
@@ -61,20 +68,38 @@ export const createWorkbenchShellController = (input: {
   const open = (region: WorkbenchShellOpenRegion, presentation?: WorkbenchSidePanelMode) => {
     const policy = requireAction(region, "open");
     const empty = input.layout.getLayout().regions[region].widgets.length === 0;
-    if (empty && policy.defaultTab && !policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
+    const target = input.getDefaultTarget?.(region, presentation) ?? policy.defaultTab;
+    if (empty && target && !policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
     writeIntent(region, "open");
     if (region === "side") input.layout.setSidePanelMode(presentation ?? "attached");
     if (!empty) return;
-    const key = `${input.getOwnerKey(region)}/${region}`;
+    const key = ownerKey(region);
     const pending = opening.get(key);
-    if (pending) return pending;
-    const result = input.openDefault?.(region, presentation);
-    if (!result) return;
-    const operation = Promise.resolve(result)
+    if (pending) return pending.completion;
+    if (!target || !input.openDefault) return;
+    let complete!: (value: unknown) => void;
+    let fail!: (error: unknown) => void;
+    const creation = new Promise<unknown>((resolve, reject) => {
+      complete = resolve;
+      fail = reject;
+    });
+    const operation = { completion: Promise.resolve(), intent: "open" as "open" | "closed" };
+    operation.completion = creation
       .then(() => {})
-      .finally(() => opening.delete(key));
+      .finally(() => {
+        if (opening.get(key) !== operation) return;
+        // Creation can navigate. Its completion must retain newer direct visibility choices.
+        if (ownerKey(region) === key && input.layout.getLayout().regions[region].visibility !== operation.intent)
+          writeIntent(region, operation.intent);
+        opening.delete(key);
+      });
     opening.set(key, operation);
-    return operation;
+    try {
+      complete(input.openDefault(target));
+    } catch (error) {
+      fail(error);
+    }
+    return operation.completion;
   };
   return {
     getPanelPolicy: input.getPolicy,
@@ -92,10 +117,10 @@ export const createWorkbenchShellController = (input: {
     revealRegion(region) {
       const policy = input.getPolicy(region);
       if (!policy.open) requireAction(region, "open");
+      // Pending creation must not undo a newer direct Close, even when its tab arrives late.
+      if (opening.get(ownerKey(region))?.intent === "closed") return;
       const layout = input.layout.getLayout();
-      const sideWasClosed =
-        region === "side" &&
-        (layout.regions.side.visibility === "closed" || !policy.open || !layout.regions.side.presentation);
+      const sideWasClosed = region === "side" && layout.regions.side.visibility === "closed";
       if (layout.regions[region].visibility === "closed") writeIntent(region, "auto");
       else input.layout.setRegionVisible(region, true);
       if (sideWasClosed) input.layout.setSidePanelMode("attached");
