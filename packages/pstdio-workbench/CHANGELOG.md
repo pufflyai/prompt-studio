@@ -1,5 +1,24 @@
 # @pstdio/workbench
 
+## 0.43.0
+
+_2026-10-12_
+
+### Minor Changes
+
+- 6001b76: Copy a link to the current page from the breadcrumb menu on every page.
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+- abff397: Add shared motion for tree reveals, panels, floating launchers, and newly streamed text with reduced motion support.
+
+### Patch Changes
+
+- 50dc299: Add searchable nested Notes with uniquely named folders, immediate creation, first-save titles stored in Markdown front matter, persistent subtree dragging, tab actions, and deletion-safe refreshes, confirmed deletion and optimistic rename and removal, hide Workspaces by default, keep nested context menus beside their items, and reduce sidenav footer spacing.
+- f1022ff: Pass hidden resource parameters to dependent command choices.
+- a4c23ad: Add native research agent controls, channel pauses, and manual Social radar sessions.
+- f099340: Simplify the artifact library with separated project brief and system diagram buttons, make library breadcrumbs clickable, move resource actions into the breadcrumb header, add version icons, and register searchable artifact resources.
+- 7ba285b: Load command-backed workspace choices in standalone and nested forms.
+- c46643f: Keep the Secondary Panel closed when you add a terminal to the Main or Side panel.
+
 ## 0.42.0
 
 _2026-10-10_

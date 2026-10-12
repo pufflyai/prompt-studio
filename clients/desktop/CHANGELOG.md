@@ -1,5 +1,13 @@
 # @pstdio/desktop
 
+## 0.43.0
+
+_2026-10-12_
+
+### Minor Changes
+
+- 2c97ba5: Add a nightly update channel: choose Stable or Nightly in Settings → Developer tools or with `pst update-channel`, and the desktop app now checks for updates on launch and every four hours.
+
 ## 0.42.0
 
 _2026-10-10_

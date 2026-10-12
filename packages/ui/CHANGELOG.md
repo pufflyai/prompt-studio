@@ -1,5 +1,26 @@
 # @pstdio/ui
 
+## 0.43.0
+
+_2026-10-12_
+
+### Minor Changes
+
+- 55e486d: Add a standalone collection filter control with editable criteria on one borderless row.
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+- abff397: Add shared motion for tree reveals, panels, floating launchers, and newly streamed text with reduced motion support.
+
+### Patch Changes
+
+- bb22a31: Show follow-up messages in the queue immediately while they are being sent.
+- 50dc299: Add searchable nested Notes with uniquely named folders, immediate creation, first-save titles stored in Markdown front matter, persistent subtree dragging, tab actions, and deletion-safe refreshes, confirmed deletion and optimistic rename and removal, hide Workspaces by default, keep nested context menus beside their items, and reduce sidenav footer spacing.
+- d495d76: Remove the browser focus outline around scrollable panels.
+- f0b78fc: Restore composer focus after delayed re-enabling.
+- 6db7df4: Draw every row of virtual lists, such as trees, after their page is hidden and shown again, and on first mount.
+- f822341: Wrap chat table cells by default and hide row numbers.
+- 775e88f: Open terminal hyperlinks printed by agent CLIs on Ctrl-click or Cmd-click, like plain URLs.
+- bbeb2fc: Show tooltips next to triggers that set their own id, such as the chat question steps, instead of the top-left corner.
+
 ## 0.42.0
 
 _2026-10-10_
