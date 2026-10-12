@@ -28,8 +28,8 @@ Describe the tool you want. Your agent builds it, and you can keep changing it t
 > Prompt Studio is in alpha. Expect rough edges and breaking changes between releases.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/pufflyai/prompt-studio/main/documentation/images/prompt-studio-0-41-views-dark.gif" />
-  <img alt="The Prompt Studio workbench switching between tools built as extensions." src="https://raw.githubusercontent.com/pufflyai/prompt-studio/main/documentation/images/prompt-studio-0-41-views-light.gif" width="100%" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/pufflyai/prompt-studio/main/documentation/images/readme-build-a-tool-dark.gif" />
+  <img alt="A coding agent builds a Shape Art tool from a short request (sped up). The tool appears in the navigation, a piece is styled and saved, then found through search and reopened in the tool." src="https://raw.githubusercontent.com/pufflyai/prompt-studio/main/documentation/images/readme-build-a-tool-light.gif" width="100%" />
 </picture>
 
 ## Why Prompt Studio
