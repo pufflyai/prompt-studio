@@ -61,8 +61,7 @@ function run(command: string, args: string[]) {
 
 if (import.meta.main) {
   const event = process.env.GITHUB_EVENT_NAME ?? "";
-  // Events without a pull request have no labels.
-  const labels: string[] = JSON.parse(process.env.PULL_REQUEST_LABELS || "null") ?? [];
+  const labels: string[] = JSON.parse(process.env.PULL_REQUEST_LABELS || "[]");
   const changedFiles = run("git", ["diff", "--name-only", PULL_REQUEST_BASE, "HEAD"]).split("\n").filter(Boolean);
   const packages = JSON.parse(run("bunx", ["lerna", "ls", "--all", "--json", "--loglevel", "silent"])) as Array<{
     location: string;

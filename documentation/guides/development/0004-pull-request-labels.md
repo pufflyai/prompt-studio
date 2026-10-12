@@ -16,6 +16,8 @@ The `PR area labels` workflow marks changes that need focused review. Labels des
 
 Reviewers own two separate labels: `breaking-change` for incompatible behavior or contracts, and `needs-migration` for required data transitions. Explain the affected consumers or migration in the PR description. These labels are never managed by the workflow.
 
+`ci:full` is not an area label. A person adds it to run the full Test and Build stage on a PR; see [CI stages](0002-testing.md#ci-stages).
+
 ## SDK and extension separation
 
 `sdk-extension-separation` fails when synchronized labels contain both `sdk` and `extensions`. Split those changes into independently valid PRs. Merge compatible SDK preparation first, then extension adoption, then remove obsolete SDK behavior when consumers no longer need it. `extension-runtime` does not trigger this rule by itself.

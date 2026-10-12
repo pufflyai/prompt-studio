@@ -52,7 +52,7 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 
 | Stage | Event | Runs | `ci_passed` requires |
 | --- | --- | --- | --- |
-| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, then lint and unit tests scoped to the changed packages. The published extension, harness CLI and license checks run when their files change. | No job failed |
+| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI and license checks run when their files change. | No job failed |
 | Merge queue | `merge_group` | Static checks and an unsigned build of every client. No tests and no lint. | The static check, client build and Docker jobs passed |
 | Full | A push to `main`, a manual run, or a pull request with the `ci:full` label | Every job, including Windows, e2e, the desktop tests and the packaged toolchain check | Every job passed |
 
@@ -91,7 +91,7 @@ The full stage adds:
 - The desktop source Electron specs and the packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow still runs the Intel tests and the desktop benchmarks.
 - `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows.
 
-Packaged apps from `build_clients` install core extensions from the run's commit, because the release tag of an unreleased version does not exist yet.
+`build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
 
 ## Published extension dependencies
 

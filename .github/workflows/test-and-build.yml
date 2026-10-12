@@ -430,10 +430,11 @@ jobs:
     needs: scope
     if: needs.scope.outputs.stage != 'pull_request'
     runs-on: ${{ matrix.os }}
-    # Slowest measured row: darwin-arm64 in release runs, 11.2 min for install, build, source specs and packaged smoke.
+    # Measured full-stage rows (run 38230274646): win32 11.9 min, darwin-arm64 9.8, darwin-x64 5.8, linux 5.7.
+    # Release runs took up to 11.8 min for the same steps on darwin-arm64. 20 min leaves about 70% headroom.
     timeout-minutes: 20
     env:
-      # The compiled CLI and desktop sidecar install core extensions from this commit, not from an unreleased tag.
+      # Packaged apps install this commit's core extensions, not those of the last release tag.
       PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
     strategy:
       fail-fast: false
