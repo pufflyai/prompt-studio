@@ -11,8 +11,9 @@ import {
   applyOwnedWidgetLayoutReconciliation,
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
-import { restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { restoreAdoptedModeGeometry, restorePageGeometry } from "../../registries/layout/owner-region-state";
 import { placementIdentityKey, type ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
+import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
@@ -151,16 +152,23 @@ const applyPageState = (
         remove: latest.reconciliation.remove.map((placement) => placement.identity),
       });
     }
-    const restored = restoreRuntimeGeometry(input, latest, layout);
+    const activated = ownerLayoutActivation(activation, layoutInput.placements);
+    const restored = restoreAdoptedModeGeometry(
+      restoreRuntimeGeometry(input, latest, layout),
+      previousLayout,
+      adopted?.map((placement) => placement.region) ?? [],
+      activated.map((placement) => placement.region),
+    );
+    const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
+    const available = mode ? applyModePanelAvailability(restored, panelsForMode(mode)) : restored;
     input.layout.restoreLayout(
       storeBeforeTransition.projectId === latest.projectId
-        ? reuseSingleMainView(previousLayout, restored, latest.pages)
-        : restored,
+        ? reuseSingleMainView(previousLayout, available, latest.pages)
+        : available,
     );
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") {
-      for (const placement of ownerLayoutActivation(activation, layoutInput.placements))
-        input.revealRegion?.(placement.region);
+      for (const placement of activated) input.revealRegion?.(placement.region);
     }
   });
 };
