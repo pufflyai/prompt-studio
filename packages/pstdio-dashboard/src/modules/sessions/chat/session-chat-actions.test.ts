@@ -205,6 +205,7 @@ const newSessionInput = {
   messages: [],
   followUp: { mutateAsync: () => Promise.reject(new Error("Must create a session")) },
   reconnect: () => undefined,
+  refreshQueue: async () => undefined,
 };
 describe("submitSessionMessage", () => {
   test("creates draft sessions in the selected workspace", async () => {
