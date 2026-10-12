@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createDefaultWorkbenchLayout, type WorkbenchWidgetPlacement } from "../layout/layout-types";
-import { resolvePageActivePlacement } from "./page-active-placement";
+import { resolvePageActivePlacement, resolvePageBreadcrumbPlacement } from "./page-active-placement";
 import type { WorkbenchPageContribution } from "./page-registry-types";
 
 const page: WorkbenchPageContribution = {
@@ -35,6 +35,9 @@ test("a routed workspace breadcrumb never appends an embedded resource", () => {
   const layout = createDefaultWorkbenchLayout();
   layout.regions.main.widgets = [tab("foreign-session")];
   expect(
-    resolvePageActivePlacement(layout, { ...page, resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] } }),
+    resolvePageBreadcrumbPlacement(layout, {
+      ...page,
+      resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
+    }),
   ).toBeUndefined();
 });
