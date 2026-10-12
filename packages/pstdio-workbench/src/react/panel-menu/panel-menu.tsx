@@ -116,12 +116,14 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
       <Portal>
         <Menu.Positioner>
           <Menu.Content aria-label={`${view.label} controls`} data-workbench-panel-menu-controls={view.region}>
-            <Header variant="narrow" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0} gap="xs">
-              <WorkbenchIcon name={view.icon} size={14} />
-              <Text flex="1" minW="0" textStyle="label/S/medium" truncate>
-                {view.title}
-              </Text>
-            </Header>
+            {!view.pageOwned && (
+              <Header variant="narrow" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0} gap="xs">
+                <WorkbenchIcon name={view.icon} size={14} />
+                <Text flex="1" minW="0" textStyle="label/S/medium" truncate>
+                  {view.title}
+                </Text>
+              </Header>
+            )}
             <Box flex="1" minH="0" minW="0" overflowY="auto">
               <WorkbenchRegion workbench={workbench} region={view.region} title={view.label} transparent />
             </Box>

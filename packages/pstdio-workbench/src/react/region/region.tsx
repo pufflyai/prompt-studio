@@ -181,6 +181,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
                 location: activeLocationPanel,
               })) &&
             matchesWorkbenchPanelMenuOwner(contribution, {
+              placement,
               locationPanel: activeLocationPanel,
               subPanel: activeSubPanel,
             })

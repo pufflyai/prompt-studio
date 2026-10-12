@@ -2,7 +2,7 @@ import type { ContextKeyService } from "../../shared/context/context-key-service
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
-export const workbenchFocusRegions = ["activity", "sidenav", "main", "secondary", "side", "status"] as const;
+export const workbenchFocusRegions = ["activity", "sidenav", "main", "bottom", "secondary", "side", "status"] as const;
 
 export type WorkbenchFocusRegionId = (typeof workbenchFocusRegions)[number];
 
@@ -29,6 +29,7 @@ const focusContextByRegion = {
   activity: "activityFocus",
   sidenav: "sidenavFocus",
   main: "mainFocus",
+  bottom: "pageBottomFocus",
   secondary: "secondaryFocus",
   side: "sideFocus",
   status: "statusFocus",

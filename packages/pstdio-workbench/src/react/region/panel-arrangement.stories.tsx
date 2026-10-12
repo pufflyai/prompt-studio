@@ -68,7 +68,7 @@ export const createArrangementWorkbench = (
     ref: { kind: "placement", extensionId: "storybook", id: "sessions" },
     modeId: "arrangement",
     region: "side",
-    movableTo,
+    movableTo: movableTo?.filter((region) => region !== "bottom"),
     item: {
       kind: "binding",
       binding: {

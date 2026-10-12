@@ -183,6 +183,7 @@ const reconcileRegions = (
   // Content opens an empty docked region, except the Side Panel: it opens only
   // when the user chooses it or a navigation reveals it.
   const docked = new Set<WorkbenchRegion>(dockedWorkbenchRegions.filter((region) => region !== "side"));
+  docked.add("bottom");
   const regions = { ...layout.regions };
   const desiredByKey = new Map(desired.map((placement) => [placementIdentityKey(placement.identity), placement]));
   const transferredCurrentKeys = new Set(desired.flatMap((placement) => placement.transferredFromKey ?? []));

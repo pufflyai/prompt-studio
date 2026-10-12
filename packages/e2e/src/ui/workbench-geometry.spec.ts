@@ -34,6 +34,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
 
 // Panels are inset from the window and separated from each other by the panel gap.
 const PANEL_GAP_PX = 4;
+const PANEL_BORDER_PX = 1;
 
 const expectNear = (actual: number, expected: number) => {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1);
@@ -44,7 +45,8 @@ const expectCanonicalFrame = async (
   options: { sidenav: "hidden" | "visible"; statusBar: "hidden" | "visible" },
 ) => {
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  const navChrome = page.locator('[data-workbench-region="nav"]');
+  const mainPanel = page.locator('[data-workbench-panel="main"]');
+  const navChrome = mainPanel.locator('[data-workbench-region="nav"]');
   const sidePanel = page.locator('[data-workbench-region="side"]');
   const statusBar = page.locator('[data-workbench-region="status"]');
 
@@ -62,11 +64,13 @@ const expectCanonicalFrame = async (
   }
   await expect(page.locator('[data-workbench-region="activity"]')).toBeHidden();
 
-  const [sidenavBox, navBox, sideBox] = await Promise.all([
+  const [sidenavBox, mainBox, navBox, sideBox] = await Promise.all([
     options.sidenav === "visible" ? sidenav.boundingBox() : Promise.resolve(null),
+    mainPanel.boundingBox(),
     navChrome.boundingBox(),
     sidePanel.boundingBox(),
   ]);
+  expect(mainBox).not.toBeNull();
   expect(navBox).not.toBeNull();
   expect(sideBox).not.toBeNull();
 
@@ -83,9 +87,15 @@ const expectCanonicalFrame = async (
     expectNear(sidenavBox.height, panelHeight);
   }
 
-  expectNear(navBox!.x, mainColumnX);
-  expectNear(navBox!.y, PANEL_GAP_PX);
-  expectNear(navBox!.width, sideX - PANEL_GAP_PX - mainColumnX);
+  expectNear(mainBox!.x, mainColumnX);
+  expectNear(mainBox!.y, PANEL_GAP_PX);
+  expectNear(mainBox!.width, sideX - PANEL_GAP_PX - mainColumnX);
+  expectNear(mainBox!.height, panelHeight);
+
+  // The breadcrumb belongs inside Main's frame, below its top border.
+  expectNear(navBox!.x, mainBox!.x + PANEL_BORDER_PX);
+  expectNear(navBox!.y, mainBox!.y + PANEL_BORDER_PX);
+  expectNear(navBox!.width, mainBox!.width - 2 * PANEL_BORDER_PX);
   expectNear(navBox!.height, 40);
 
   expectNear(sideBox!.x, sideX);
@@ -103,7 +113,7 @@ const expectCanonicalFrame = async (
   }
 };
 
-test("aligns an attached Side Panel with the active Location Panel", async ({ page, request }) => {
+test("aligns Main and attached Side frames with the breadcrumb inside Main", async ({ page, request }) => {
   test.setTimeout(30_000);
   await deleteAllProjects(request);
   const project = await createProject(request);

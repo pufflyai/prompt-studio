@@ -1,6 +1,8 @@
 import { Box, Grid } from "@chakra-ui/react";
 import { Header, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout } from "@pstdio/ui";
+import type { ReactNode } from "react";
 import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchRegionSize } from "../../core";
+import { pageHasBottom } from "../../core/registries/pages/page-panel-menus";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
@@ -15,11 +17,14 @@ import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-reg
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
+import { PagePanelsMenu } from "./page-panels-menu";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
+import { WorkbenchPageBottomLayout } from "./workbench-page-bottom";
 import { WorkbenchSecondaryPanel } from "./workbench-secondary-panel";
 
 interface WorkbenchBodyProps {
   workbench: WorkbenchCore;
+  breadcrumbHeader: ReactNode;
 }
 
 const SECONDARY_PANEL_SIZE = { defaultPx: 240, minPx: 128, maxPx: 420 };
@@ -47,7 +52,12 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
   const settings = useWorkbenchModeRegionSettings(workbench, "main");
 
-  const visible = (settings?.showHeader !== false || hasMainContentTabs) && (hasMainHeader || hasPanelHeader);
+  const page = useWorkbenchStore(workbench.pages.store, (state) =>
+    state.activePageId ? state.pages[state.activePageId] : undefined,
+  );
+  const hasPagePanels = Boolean(page?.panelMenus || pageHasBottom(page));
+  const visible =
+    hasPagePanels || ((settings?.showHeader !== false || hasMainContentTabs) && (hasMainHeader || hasPanelHeader));
 
   return (
     <Header
@@ -73,13 +83,14 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
         controlSize={PANEL_HEADER_CONTROL_SIZE}
       />
       <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" />
+      <PagePanelsMenu workbench={workbench} />
       <WorkbenchHeaderBorder workbench={workbench} region="main-header" />
     </Header>
   );
 };
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
-  const { workbench } = props;
+  const { workbench, breadcrumbHeader } = props;
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
@@ -120,7 +131,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     <Grid
       data-workbench-panel="main"
       data-workbench-page={pageId}
-      gridTemplateRows="auto minmax(0, 1fr)"
+      gridTemplateRows="auto auto minmax(0, 1fr)"
       h="full"
       minH="0"
       minW="0"
@@ -129,10 +140,11 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       layerStyle="panel"
       position="relative"
     >
+      {breadcrumbHeader}
       <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
       <WorkbenchTabDropTarget region="main" />
-      <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
-        {mainPanelWithMenus}
+      <Box gridRow="3" h="full" minH="0" minW="0" overflow="hidden">
+        <WorkbenchPageBottomLayout workbench={workbench}>{mainPanelWithMenus}</WorkbenchPageBottomLayout>
       </Box>
     </Grid>
   );

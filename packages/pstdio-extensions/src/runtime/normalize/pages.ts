@@ -65,6 +65,13 @@ export const registerPages = (
           ? { resource: { kinds: contribution.resource.kinds.map((kind) => normalizeContributionRef(ext, kind)) } }
           : {}),
         main: normalizeMain(input, contribution.main),
+        panelMenus: contribution.panelMenus
+          ? Object.fromEntries(
+              Object.entries(contribution.panelMenus).flatMap(([side, menu]) =>
+                menu ? [[side, { ...menu, view: normalizeContributionRef(ext, menu.view) }]] : [],
+              ),
+            )
+          : undefined,
         slots,
         panels: Object.fromEntries(
           slots.map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),

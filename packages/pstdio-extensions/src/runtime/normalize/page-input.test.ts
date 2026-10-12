@@ -33,6 +33,42 @@ const pageView = defineView({
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
 describe("page input validation", () => {
+  test("normalizes page menus and bottom slots independently of mode panels", () => {
+    const mode = defineMode({ id: "page-only", label: "Page only", regions: ["main"] });
+    const page = definePage({
+      id: "page-tools",
+      title: "Page tools",
+      path: "page-tools",
+      mode: mode.ref,
+      main: { kind: "panels", empty: pageView.ref },
+      panelMenus: { left: undefined, right: { view: pageView.ref, size: { defaultPx: 200 }, collapsible: false } },
+      regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
+      slots: [{ id: "tools", region: "bottom", item: { kind: "view", view: pageView.ref, presence: "open" } }],
+    });
+    const runtime = normalizeExtensionSources([
+      source(defineExtension({ modes: [mode], views: [pageView], pages: [page] })),
+    ]);
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.pages[0]?.contribution.panelMenus?.right?.view).toMatchObject({
+      extensionId: "pstdio.lab",
+      kind: "view",
+      id: "page",
+    });
+    expect(runtime.pages[0]?.contribution.slots[0]?.region).toBe("bottom");
+  });
+  test("reports a missing view in a page menu", () => {
+    const page = definePage({
+      id: "page-tools",
+      title: "Page tools",
+      path: "page-tools",
+      mode: workbenchModes.project,
+      main: { kind: "panels", empty: pageView.ref },
+      slots: [],
+      panelMenus: { left: { view: { kind: "view", id: "missing" } } },
+    });
+    const diagnostics = diagnosticsFor(defineExtension({ views: [pageView], pages: [page] }));
+    expect(diagnostics.map((diagnostic) => diagnostic.code)).toContain("extension_view_missing");
+  });
   test("rejects malformed mode theme and chrome references", () => {
     for (const extra of [
       { defaultTheme: "paper" },

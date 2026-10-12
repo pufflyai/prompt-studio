@@ -17,6 +17,7 @@ interface OpenPanelWidgetInput {
 }
 
 export const getPanelLabel = (region: WorkbenchPanelRegion) => {
+  if (region === "bottom") return "Page bottom";
   if (region === "secondary") return "Secondary";
   if (region === "side") return "Side";
   return "Main";
@@ -52,6 +53,7 @@ export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
     });
   }
 
+  if (region === "bottom") workbench.layout.setRegionVisible("bottom", true);
   if (region === "secondary") {
     workbench.shell.setRegionOpen("secondary", true);
   }

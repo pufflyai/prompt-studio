@@ -3,6 +3,7 @@ import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
 import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
+import { pagePanelMenus } from "./page-panel-menus";
 import type {
   WorkbenchPageContribution,
   WorkbenchPagePlacementInput,
@@ -106,6 +107,23 @@ export const resolvePagePlacements = <Value>(input: {
   resolvePagePlacement(value: WorkbenchPagePlacementInput): Value;
 }) => {
   const placements: ResolvedOwnedPlacement<Value>[] = [];
+  for (const menu of pagePanelMenus(input.page)) {
+    const identity = pagePlacementIdentity(input.page.id, menu.slotId, "default");
+    placements.push({
+      identity,
+      region: menu.region,
+      order: 0,
+      value: input.resolvePagePlacement({
+        identity,
+        pageId: input.page.id,
+        slotId: menu.slotId,
+        viewId: contributionRefId(menu.view),
+        role: "panel-menu",
+        resource: input.resource,
+        closable: false,
+      }),
+    });
+  }
   for (const slot of pageSlots(input.page)) {
     if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
     if (staticSlotOpen(slot, input.state)) placements.push(placementFor({ ...input, slot, instanceKey: "default" }));

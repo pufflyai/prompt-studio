@@ -8,7 +8,9 @@ import {
   waitForStoryPlayback,
 } from "./mermaid-renderer-storybook";
 
-const storyIds = ["smoke", "webview", "boombox", "kiln"].map((name) => `pstdio-workbench-guides-windowing--${name}`);
+const storyIds = ["smoke", "webview", "boombox", "kiln", "page-surface", "page-surface-webview"].map(
+  (name) => `pstdio-workbench-guides-windowing--${name}`,
+);
 
 test.describe("Workbench windowing stories", () => {
   let baseUrl = "";
@@ -53,13 +55,63 @@ test.describe("Workbench windowing stories", () => {
       });
       expect(outcome.errors).toEqual([]);
       expect(outcome.result).toMatchObject({ storyId, status: "success" });
-      if (storyId.endsWith("--webview")) {
+      if (storyId.endsWith("--page-surface")) {
+        const main = page.locator('[data-workbench-panel="main"]');
+        const bottom = main.locator('[data-workbench-panel="bottom"]');
+        const tab = main.getByRole("tab", { name: "Changes", exact: true });
+        await tab.click();
+        const draft = page.getByRole("textbox", { name: "Changes draft" });
+        await draft.fill("Keep the draft when moving into page bottom");
+        const mount = await page.getByLabel("Changes mount").textContent();
+        const source = (await tab.boundingBox())!;
+        const target = (await bottom.boundingBox())!;
+        await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
+        await expect(bottom.locator("[data-workbench-tab-drop][data-drop-active]")).toBeVisible();
+        await page.mouse.up();
+        await expect(bottom.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
+        await expect(draft).toHaveValue("Keep the draft when moving into page bottom");
+        await expect(page.getByLabel("Changes mount")).toHaveText(mount!);
+        await expect(page.getByLabel("Inspector binding")).toHaveText("Workspace 2");
+        await bottom.getByRole("tab", { name: "Changes", exact: true }).focus();
+        await page.keyboard.press("Shift+F10");
+        await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+        await expect(
+          main.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Changes", exact: true }),
+        ).toBeVisible();
+        await expect(draft).toHaveValue("Keep the draft when moving into page bottom");
+        await page.getByRole("button", { name: "Session 1", exact: true }).click();
+        const sessionTab = page
+          .locator('[data-workbench-panel="side"]')
+          .getByRole("tab", { name: "Session 1", exact: true });
+        await sessionTab.focus();
+        await page.keyboard.press("Shift+F10");
+        await page.getByRole("menuitem", { name: "Move to Page bottom", exact: true }).click();
+        await page.getByRole("button", { name: "Sessions", exact: true }).click();
+        await expect(bottom).not.toBeVisible();
+      }
+      if (storyId.endsWith("--webview") || storyId.endsWith("--page-surface-webview")) {
         const webview = page.frameLocator('iframe[title="Windowing webview"]');
         const draft = webview.getByRole("textbox", { name: "Webview draft" });
         const mount = await webview.getByLabel("Webview mount").textContent();
         await draft.fill("Retained iframe draft");
         await expect(draft).toHaveValue("Retained iframe draft");
         await expect(webview.getByLabel("Webview mount")).toHaveText(mount!);
+        if (storyId.endsWith("--page-surface-webview")) {
+          const bottom = page.locator('[data-workbench-panel="bottom"]');
+          const tab = page.getByRole("tab", { name: "Webview", exact: true });
+          const source = (await tab.boundingBox())!;
+          const target = (await bottom.boundingBox())!;
+          await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+          await page.mouse.down();
+          await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
+          await page.mouse.up();
+          await expect(bottom.getByRole("tab", { name: "Webview", exact: true })).toBeVisible();
+          await expect(draft).toHaveValue("Retained iframe draft");
+          await expect(webview.getByLabel("Webview mount")).toHaveText(mount!);
+          await expect(page.getByLabel("Inspector binding")).toHaveText("Workspace 1");
+        }
       }
     });
   }

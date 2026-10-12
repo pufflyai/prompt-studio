@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { localizableStringSchema } from "./common";
-import { workbenchPlacementPresentationSchema } from "./placement-metadata";
+import { regionSettingsSchema, regionSizeSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { placementItemSchema, resourceConstraintSchema } from "./resource-binding-metadata";
 import { modeRefSchema, pageRefSchema, viewRefSchema } from "./workbench-refs-metadata";
 
@@ -19,10 +19,19 @@ const mainSchema = z.discriminatedUnion("kind", [
 const slotSchema = workbenchPlacementPresentationSchema
   .extend({
     id: z.string(),
-    region: z.enum(["main", "secondary", "side"]),
+    region: z.enum(["main", "secondary", "side", "bottom"]),
     order: z.number().optional(),
     item: placementItemSchema,
     openOn: z.literal("page-resource").optional(),
+  })
+  .strict();
+
+const panelMenuSchema = z
+  .object({
+    view: viewRefSchema,
+    size: regionSizeSchema.strict().optional(),
+    collapsible: z.boolean().optional(),
+    hiddenByDefault: z.boolean().optional(),
   })
   .strict();
 
@@ -38,5 +47,7 @@ export const workbenchExtensionPageRecordSchema = z.object({
   parent: pageRefSchema.optional(),
   resource: resourceConstraintSchema.optional(),
   main: mainSchema,
+  panelMenus: z.object({ left: panelMenuSchema.optional(), right: panelMenuSchema.optional() }).strict().optional(),
+  regionSettings: z.object({ bottom: regionSettingsSchema.strict().optional() }).strict().optional(),
   slots: z.array(slotSchema),
 });

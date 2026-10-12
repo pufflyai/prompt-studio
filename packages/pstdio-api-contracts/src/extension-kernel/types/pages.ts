@@ -1,5 +1,5 @@
 import type { Localizable } from "../l10n";
-import type { ExtensionPanelRegion } from "./composition";
+import type { ExtensionPanelRegion, RegionSize } from "./composition";
 import type { ContributionDefinition, ModeRef, PageRef, PlacementRef, ViewRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { ResourceConstraint } from "./resource-binding";
@@ -9,7 +9,22 @@ import type { PlacementItem, PlacementPresentation } from "./views";
 export type PageSlotRole = "primary" | "auxiliary";
 export type PageSlotCardinality = "one" | "many";
 export type PageOpenIntent = "preview" | "pin";
-export type PageSlotRegion = ExtensionPanelRegion;
+export type PageSlotRegion = ExtensionPanelRegion | "bottom";
+
+/** A headerless menu bound to the page resource, independent of its selected tab. */
+export interface PanelMenuDeclaration {
+  readonly view: ViewRef;
+  readonly size?: RegionSize;
+  readonly collapsible?: boolean;
+  readonly hiddenByDefault?: boolean;
+}
+
+export interface PageRegionSettings {
+  readonly showHeader?: boolean;
+  readonly size?: RegionSize;
+  readonly collapsible?: boolean;
+  readonly alwaysShowTabs?: boolean;
+}
 
 export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
@@ -63,6 +78,8 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly resource?: ResourceConstraint;
   readonly document?: PageDocumentDeclaration;
   readonly main: PageMain;
+  readonly panelMenus?: { readonly left?: PanelMenuDeclaration; readonly right?: PanelMenuDeclaration };
+  readonly regionSettings?: { readonly bottom?: PageRegionSettings };
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;
 }

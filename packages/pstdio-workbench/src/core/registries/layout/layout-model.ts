@@ -74,6 +74,7 @@ export type {
 export {
   createDefaultWorkbenchLayout,
   getWorkbenchPanelForMenuRegion,
+  workbenchModePanelRegions,
   workbenchPanelMenuRegions,
   workbenchPanelRegions,
   workbenchRegions,

@@ -158,7 +158,7 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
       core.pages.openSlot({
         pageId: page.id,
         slotId: slot.id,
-        ...(resource ? { resource: resource } : {}),
+        ...(slot.item.kind === "binding" && resource ? { resource } : {}),
         ...(multiple ? { open: "pin" } : {}),
       });
       const opened = Object.values(core.layout.getLayout().regions)

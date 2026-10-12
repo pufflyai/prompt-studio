@@ -1,5 +1,5 @@
 import { extensionPanelRegions } from "@pstdio/sdk/extensions";
-import { localizableStringSchema, regionSettingsSchema } from "pstdio-api-contracts";
+import { localizableStringSchema, regionSettingsSchema, regionSizeSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 import { localRefSchema, navigationDeclarationSchema } from "./navigation-declaration";
 
@@ -35,7 +35,7 @@ const item = z.discriminatedUnion("kind", [
 const slot = z
   .object({
     id: z.string(),
-    region,
+    region: z.enum(["main", "side", "secondary", "bottom"]),
     item,
     order: z.number().optional(),
     openOn: z.literal("page-resource").optional(),
@@ -46,6 +46,15 @@ const slot = z
     if (value.openOn && value.item.kind !== "binding")
       ctx.addIssue({ code: "custom", path: ["openOn"], message: "a resource-binding item for page-resource" });
   });
+const panelMenuSchema = z
+  .object({
+    view: localRefSchema("view"),
+    size: regionSizeSchema.strict().optional(),
+    collapsible: z.boolean().optional(),
+    hiddenByDefault: z.boolean().optional(),
+  })
+  .strict();
+
 export const pageDeclarationSchema = z
   .object({
     id: z.string(),
@@ -72,6 +81,8 @@ export const pageDeclarationSchema = z
       z.object({ kind: z.literal("panels"), empty: localRefSchema("view") }).strict(),
     ]),
     slots: z.array(slot),
+    panelMenus: z.object({ left: panelMenuSchema.optional(), right: panelMenuSchema.optional() }).strict().optional(),
+    regionSettings: z.object({ bottom: regionSettingsSchema.strict().optional() }).strict().optional(),
     panels: z.record(z.string(), z.unknown()),
   })
   .strict()

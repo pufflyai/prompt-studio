@@ -42,13 +42,6 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
           ),
       },
     });
-    workbench.viewMenus.registerViewMenu({
-      id: side,
-      ownerViewId: "document",
-      viewId: side,
-      side,
-      regionSize: options.menuMinPx ? { minPx: options.menuMinPx, maxPx: 320 } : undefined,
-    });
   }
   workbench.pages.registerPage({
     id: "menus",
@@ -58,6 +51,15 @@ const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
     modeId: "menus",
     slots: [],
     main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" },
+    panelMenus: Object.fromEntries(
+      (options.both ? ["left", "right"] : ["right"]).map((side) => [
+        side,
+        {
+          view: { kind: "view", id: side },
+          size: options.menuMinPx ? { minPx: options.menuMinPx, maxPx: 320 } : undefined,
+        },
+      ]),
+    ),
   });
   workbench.pageLocations.switchProject("menu-stories");
   for (const side of options.closed ?? []) {

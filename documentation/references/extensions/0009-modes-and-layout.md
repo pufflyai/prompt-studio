@@ -42,6 +42,8 @@ const mode = defineMode({
 
 `regionSettings.sidenav` controls a custom sidebar even without a placement. Page-owned content still belongs in `slots`. Region settings inherit the host defaults per property. For example, setting `alwaysShowTabs` preserves the host's size unless the mode supplies its own `size`.
 
+Page `regionSettings.bottom` controls a separate bottom panel inside Main. It accepts `size`, `collapsible`, `showHeader`, and `alwaysShowTabs`. Mode region membership does not enable or disable this page panel. A page bottom is not a mode placement destination. Page `panelMenus` declare the left and right headerless menus and their own size and collapse settings; see [Workbench composition](0008-contextual-workbench-composition.md#page-panels-and-menus).
+
 Set `regionSettings.secondary.showHeader: false` for a player or timeline that supplies its own controls. A panel without tabs stays headerless. During a tab drag, only the hovered valid panel shows a faint overlay across its whole container without shifting its content. The overlay covers padding and header controls in attached and floating panels. Dropping another tab there reveals the shared tray. Main, Side, and Secondary use the same rule. Tab insertion keeps the shared Sidenav placement indicator.
 
 ## User arrangement
