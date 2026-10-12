@@ -596,12 +596,14 @@ jobs:
       ref: ${{ github.sha }}
 
   # The one status check the main ruleset and merge queue require. Job and matrix names can
-  # change without touching the ruleset. It must always run: GitHub treats a skipped required
-  # check as passing, and jobs are skipped when a job they need fails.
+  # change without touching the ruleset. It must run whenever the run finishes, because GitHub
+  # treats a skipped required check as passing and jobs are skipped when a job they need fails.
+  # A run cancelled by a newer run on the same commit (for example after a label is added)
+  # reports nothing, so its stale failure does not sit next to the newer run's result.
   # Pull requests may skip jobs their changes do not need. The merge queue requires its build
   # and static check jobs. The full stage requires every job.
   ci_passed:
-    if: always()
+    if: ${{ !cancelled() }}
     needs:
       - scope
       - static_checks
