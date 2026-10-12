@@ -121,7 +121,12 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
 };
 
 // Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
-export type DbOpenPhase = "database_locked" | "database_engine_loaded" | "database_opened" | "database_migrated";
+export type DbOpenPhase =
+  | "database_locked"
+  | "database_engine_loaded"
+  | "database_image_restored"
+  | "database_opened"
+  | "database_migrated";
 
 export const createDb = async (options?: { path?: string; onPhase?: (phase: DbOpenPhase) => void }) => {
   const onPhase = options?.onPhase ?? (() => {});
@@ -136,7 +141,7 @@ export const createDb = async (options?: { path?: string; onPhase?: (phase: DbOp
     onPhase("database_locked");
     const pgliteOpts = await resolvePgliteOptions();
     onPhase("database_engine_loaded");
-    pglite = openPglite(dbPath, pgliteOpts);
+    pglite = await openPglite(dbPath, pgliteOpts, () => onPhase("database_image_restored"));
     const openedPglite = pglite;
     await openedPglite.waitReady;
     onPhase("database_opened");
