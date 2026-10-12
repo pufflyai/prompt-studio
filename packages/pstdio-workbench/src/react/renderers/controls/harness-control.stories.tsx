@@ -2,7 +2,9 @@ import { Box } from "@chakra-ui/react";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { CommandParamFieldProps } from "../../command-palette/command-param-field";
+import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { HarnessControl } from "./harness-control";
 
 const SampleHarnessField = (props: CommandParamFieldProps) => {
@@ -58,10 +60,28 @@ const ResearchAgent = (props: { readOnly?: boolean }) => {
     </Box>
   );
 };
-const meta = { title: "pstdio-workbench/Controls/Research agent", component: ResearchAgent } satisfies Meta<
-  typeof ResearchAgent
->;
+const meta = {
+  title: "pstdio-workbench/Controls/Research agent",
+  component: ResearchAgent,
+  decorators: [
+    (Story) => (
+      <WorkbenchThemeProvider>
+        <Story />
+      </WorkbenchThemeProvider>
+    ),
+  ],
+} satisfies Meta<typeof ResearchAgent>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Editable: Story = {};
+export const Editable: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "High" }));
+    await userEvent.click(page.getByRole("menuitemradio", { name: "Medium" }));
+    await expect(canvas.getByRole("button", { name: "Medium" })).toBeEnabled();
+    await userEvent.click(canvas.getByRole("button", { name: "Medium" }));
+    await userEvent.click(page.getByRole("menuitemradio", { name: "High" }));
+  },
+};
 export const ReadOnly: Story = { args: { readOnly: true } };

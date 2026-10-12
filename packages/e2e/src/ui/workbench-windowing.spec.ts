@@ -19,6 +19,12 @@ const storyIds = [
   "files-transfer",
   "fixed-page-transfer",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
+storyIds.push(
+  "pstdio-workbench-showcases-dashboard--dashboard",
+  "pstdio-workbench-showcases-dashboard--interaction-checks",
+  "pstdio-workbench-controls-research-agent--editable",
+  "pstdio-workbench-controls-research-agent--read-only",
+);
 
 test.describe("Workbench windowing stories", () => {
   let baseUrl = "";
