@@ -116,8 +116,11 @@ test(
     ]);
     // Stop the first start as soon as it writes database files, like a desktop startup timeout would.
     while (readdirSync(root, { recursive: true }).length < 2 && firstStart.exitCode === null) await Bun.sleep(1);
+    expect(firstStart.exitCode).toBeNull();
     firstStart.kill("SIGKILL");
     await firstStart.exited;
+    // The stopped start must not leave a partial database where the next start looks for one.
+    expect(readdirSync(home)).toEqual([]);
 
     const db = await openPglite(home, { loadDataDir: image });
     try {

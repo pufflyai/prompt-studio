@@ -216,6 +216,7 @@ describe("packaged runtime lifecycle", () => {
       const first = startRuntime();
       const firstExited = new Promise((resolve) => first.once("exit", resolve));
       while (!writesDatabase() && first.exitCode === null) await Bun.sleep(1);
+      expect(first.exitCode).toBeNull();
       // The desktop stops a runtime this way when its startup deadline passes.
       first.kill("SIGKILL");
       await firstExited;

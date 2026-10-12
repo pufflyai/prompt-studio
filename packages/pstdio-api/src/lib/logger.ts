@@ -19,32 +19,35 @@ const resolveRootLogger = () => {
   return created;
 };
 
-const forComponent = (component: string, level?: string) => ({
-  error: (data: Record<string, unknown>, message?: string) => {
-    const logger = resolveRootLogger().child({ component }, level ? { level } : undefined);
-    if (message === undefined) {
-      logger.error(data);
-      return;
-    }
-    logger.error(data, message);
-  },
-  info: (data: Record<string, unknown>, message?: string) => {
-    const logger = resolveRootLogger().child({ component }, level ? { level } : undefined);
-    if (message === undefined) {
-      logger.info(data);
-      return;
-    }
-    logger.info(data, message);
-  },
-  warn: (data: Record<string, unknown>, message?: string) => {
-    const logger = resolveRootLogger().child({ component }, level ? { level } : undefined);
-    if (message === undefined) {
-      logger.warn(data);
-      return;
-    }
-    logger.warn(data, message);
-  },
-});
+const forComponent = (component: string, level?: string) => {
+  const options = level ? { level } : undefined;
+  return {
+    error: (data: Record<string, unknown>, message?: string) => {
+      const logger = resolveRootLogger().child({ component }, options);
+      if (message === undefined) {
+        logger.error(data);
+        return;
+      }
+      logger.error(data, message);
+    },
+    info: (data: Record<string, unknown>, message?: string) => {
+      const logger = resolveRootLogger().child({ component }, options);
+      if (message === undefined) {
+        logger.info(data);
+        return;
+      }
+      logger.info(data, message);
+    },
+    warn: (data: Record<string, unknown>, message?: string) => {
+      const logger = resolveRootLogger().child({ component }, options);
+      if (message === undefined) {
+        logger.warn(data);
+        return;
+      }
+      logger.warn(data, message);
+    },
+  };
+};
 
 export const apiLogger = forComponent("api");
 export const sessionLogger = forComponent("sessions");
