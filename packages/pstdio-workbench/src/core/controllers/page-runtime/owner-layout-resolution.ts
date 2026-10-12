@@ -76,7 +76,10 @@ const canSeedDeclaration = (
     placement.value.closable === false &&
     !occupiedMain &&
     !transferredDeclarations.has(key) &&
-    (placement.identity.kind !== "mode" || (added.has(key) && !enteringPage));
+    ((placement.identity.kind === "page" &&
+      (placement.identity.slotId === "$main" ||
+        page.some((p) => !p.value.declarationIdentity && p.value.contributionId === placement.value.contributionId))) ||
+      (added.has(key) && !enteringPage));
   if (hasOwnerLayout && !previous && !newFixedDeclaration && !activated.has(key) && (enteringPage || !added.has(key)))
     return false;
   return true;

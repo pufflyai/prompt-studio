@@ -17,6 +17,7 @@ const storyIds = [
   "page-surface-webview",
   "owner-transfer",
   "files-transfer",
+  "fixed-page-transfer",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 
 test.describe("Workbench windowing stories", () => {

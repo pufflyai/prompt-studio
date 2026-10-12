@@ -104,3 +104,42 @@ export const FilesTransfer: Story = {
     await expect(within(side).getByRole("tab", { name: "Session 1" })).toBeVisible();
   },
 };
+
+export const FixedPageTransfer: Story = {
+  args: { createFixture: () => createWindowingFixture("windowing", { pagePanels: true, changesPresence: "fixed" }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const main = canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement;
+    const tab = within(main).getByRole("tab", { name: "Changes" });
+    const instanceId = tab.parentElement!.getAttribute("data-workbench-tab");
+    await userEvent.click(tab);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Changes draft" }), "Fixed tool stays with Workspace 2");
+    const mount = visibleWindowingLabel(canvasElement, "Changes mount").textContent;
+    await moveTab(main, "Changes", "Side");
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
+    const side = canvasElement.querySelector('[data-workbench-panel="side"]') as HTMLElement;
+    await moveTab(side, "Changes", "Main");
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
+    await expect(within(main).queryByRole("tab", { name: "Changes" })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("textbox", { name: "Files draft" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
+    const liveMoved = main.querySelector(`[data-workbench-tab="${instanceId}"]`) as HTMLElement;
+    await userEvent.click(within(liveMoved).getByRole("tab"));
+    await expect(canvas.getByRole("textbox", { name: "Changes draft" })).toHaveValue(
+      "Fixed tool stays with Workspace 2",
+    );
+    await expect(visibleWindowingLabel(canvasElement, "Changes mount")).toHaveTextContent(mount!);
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
+    await waitFor(() => expect(canvasElement.contains(main)).toBe(false));
+    const restoredMain = canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement;
+    await expect(within(restoredMain).queryByRole("tab", { name: "Changes" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
+    const moved = restoredMain.querySelector(`[data-workbench-tab="${instanceId}"]`) as HTMLElement;
+    await userEvent.click(within(moved).getByRole("tab"));
+    await expect(within(moved).getByRole("tab")).toBeVisible();
+    await expect(within(canvas.getByRole("group", { name: "Changes view" })).getByText(/Changes ·/)).toHaveTextContent(
+      "workspace-1",
+    );
+  },
+};
