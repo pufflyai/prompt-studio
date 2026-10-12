@@ -57,6 +57,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
@@ -70,7 +71,6 @@ import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke
 const hostReleaseRef = /^(?:pstdio@\d|[0-9a-f]{40}$)/;
 
 const BUILD_TIMEOUT = 180_000;
-const SMOKE_TEST_TIMEOUT = 30_000;
 
 beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) {
@@ -142,7 +142,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 test(
@@ -271,7 +271,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 test(
@@ -342,7 +342,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 test(
@@ -446,7 +446,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 registerCoreDefaultExtensionSmokeTests();

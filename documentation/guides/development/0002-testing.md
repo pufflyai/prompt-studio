@@ -158,6 +158,8 @@ To review a timeout:
 
 When tests are added, review the job allowance or sharding. Do not lengthen the per-test limit because a suite has more tests.
 
+Hosted Intel macOS runners run the packaged and desktop suites two to three times slower than other platforms, and one Intel run can take twice as long as another. Every Intel suite therefore allows 60 seconds per test: the desktop Playwright suites (approved on 2026-10-10, together with Windows) and the packaged CLI suite, whose limit `packages/e2e/src/packaged/packaged-test-timeout.ts` sets and `run-packaged-cli-tests.ts` passes to `bun test --timeout` (approved on 2026-10-12, after tests that pass in 11 to 23 seconds on Intel timed out at 30 seconds on a slow runner). Other platforms keep 30 seconds. Tests that set their own longer limit keep it.
+
 ## Desktop benchmarks
 
 Desktop budgets live in `clients/desktop/src/e2e/*.bench.ts`. Run them against a packaged app:
