@@ -44,3 +44,11 @@ Declare direct dependencies in the consuming package. A helper workspace can exp
 A host reload defect, package resolver defect, or shared UI initialization defect belongs to the platform. Do not add aliases, global initialization hacks, or chrome overrides to these general examples. Report the failing entry and versions, and keep any necessary temporary exception with its owning ADR rather than teaching it as the normal authoring pattern.
 
 For copy actions, add `clipboard.write` to the view capabilities and use `CopyButton` from `@pstdio/ui`. Writes happen in the guest click handler; there is no clipboard bridge method. Clipboard reads are not supported.
+
+## Saved view preferences
+
+`preferences.get` and `preferences.set` accept names without a setting declaration. Such names belong to the calling extension. Dashboard hosts persist them on the server, so all clients and agents use the same data. A write succeeds only after storage. Use `user` (default), `project`, `workspace`, or `session` scope for the intended lifetime. Workspace and session scopes require IDs. Scope `default` is read only.
+
+Prefer your own extension's names. Access to preferences registered by another extension remains available with a deprecation warning until a later breaking API release. `dashboard.themePreference` and `dashboard.locale` are shared host preferences and retain their existing persistence.
+
+Use preferences for small saved view choices, page params for shareable view state, declared settings for user configuration, and commands with `ctx.storage` for product data. Agents can use the authenticated preference GET/PUT routes documented in the webview and storage reference.

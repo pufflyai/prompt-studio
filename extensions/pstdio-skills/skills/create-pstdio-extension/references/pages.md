@@ -171,3 +171,13 @@ export default defineExtension({
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels. Users leave a level through the breadcrumb or browser history; the Sidenav adds no Back row. Users can hide and reorder a level's labeled sections, but its rows keep the order their owner gives them.
 
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
+
+## Typed page params
+
+Use `params` on a page for shareable filters, search text, sort choices, and time ranges. The types are `string`, `number`, `boolean`, and `string[]`, with optional matching defaults. Names are lowercase letters, digits, and hyphens, starting with a letter. Do not use host URL selectors (`resource`, `section`, `document`, or source-coordinate keys) or names starting with `_`.
+
+Pass overrides on a page navigation target or to `serializePageUrl`. Navigation pushes history. A webview reads `page.location()` and `page.params<T>()` from `defineExtensionView`, subscribes with `page.subscribe`, and patches params with `page.updateParams`. Declare `page.params.update`. A `null` patch resets a name. Updates replace history and require the active page's extension owner.
+
+Native page-owned query and load callbacks receive defaults in `renderer.pageParams` and rerun when they change. Params do not change panel layout, page state keys, or breadcrumbs. Unknown or invalid URL params use defaults. Programmatic invalid params fail atomically.
+
+Use API `^0.1.3` or newer for these additions. Read `documentation/references/extensions/0005-webview-and-storage-api.md` and `documentation/guides/extensions/0002-workbench-cookbook.md` in the host repository for limits and examples.
