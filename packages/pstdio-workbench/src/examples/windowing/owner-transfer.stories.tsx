@@ -81,5 +81,26 @@ export const FilesTransfer: Story = {
     await expect(within(side).getByLabelText("Files selected file")).toHaveTextContent("README.md");
     await expect(within(side).getByLabelText("Files mount")).toHaveTextContent(mount!);
     await expect(within(side).getByText(/Files ·/)).toHaveTextContent("workspace-1");
+    await moveTab(main, "Changes", "Secondary");
+    const secondary = canvasElement.querySelector('[data-workbench-panel="secondary"]') as HTMLElement;
+    await moveTab(secondary, "Mode tools", "Main");
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
+    await expect(within(secondary).queryByRole("tab", { name: "Mode tools" })).not.toBeInTheDocument();
+    await expect(within(secondary).getByText(/Changes ·/)).toHaveTextContent("workspace-2");
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
+    await expect(within(main).getByRole("tab", { name: "Mode tools" })).toBeVisible();
+    await expect(within(secondary).queryByRole("tab", { name: "Mode tools" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
+    await moveTab(side, "Session 1", "Main");
+    await userEvent.click(within(main).getByRole("tab", { name: "Mode tools" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
+    await expect(within(main).getByRole("tab", { name: "Session 1" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
+    await expect(within(main).queryByRole("tab", { name: "Session 1" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
+    await expect(within(side).getByRole("tab", { name: "Session 1" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
+    await expect(within(main).getByRole("tab", { name: "Session 1" })).toBeVisible();
+    await expect(within(side).getByRole("tab", { name: "Session 1" })).toBeVisible();
   },
 };

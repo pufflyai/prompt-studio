@@ -101,6 +101,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   let modeState = originalMode;
   let shellState = originalShell;
   let proposed = original;
+  const stages: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[] = [];
   const activate = new Map<WorkbenchRegion, PlacementIdentity>();
   const owned = (modeId = proposed.activeModeId) => ({
     shell: shell.resolve(undefined, shellState),
@@ -165,6 +166,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
     }
+    stages.push(proposed);
     for (const placement of proposed.reconciliation.activate) activate.set(placement.region, placement.identity);
   }
   const present = new Set(proposed.placements.map((placement) => placementIdentityKey(placement.identity)));
@@ -189,8 +191,11 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           return pages.publish(final, "navigateCompoundTarget");
         };
         const result = final.location ? locations.commit(final, applyOwners) : publishWithoutLocation();
-        if (modeState !== originalMode) mode.publish();
-        if (shellState !== originalShell) shell.publish();
+        // Persist inactive owners after scope rotation saves the outgoing live layout.
+        pages.persistPreparedOwners(stages);
+        // The page transaction already applied the owned layout and activation.
+        if (modeState !== originalMode) mode.notifySubscribers();
+        if (shellState !== originalShell) shell.notifySubscribers();
         return result;
       }),
   };

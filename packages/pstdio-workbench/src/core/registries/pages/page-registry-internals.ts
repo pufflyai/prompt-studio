@@ -35,7 +35,11 @@ export interface WorkbenchPageRegistryInternals<Value> {
   publish(state: WorkbenchPageRegistryStoreState<Value>, action: string): void;
   onDidCommit(listener: () => void): Disposable;
   getPublishingState(): WorkbenchPageRegistryStoreState<Value>;
-  connectRuntime(apply: (state: WorkbenchPageRegistryStoreState<Value>) => void): Disposable;
+  persistPreparedOwners(states: readonly WorkbenchPageRegistryStoreState<Value>[]): void;
+  connectRuntime(
+    apply: (state: WorkbenchPageRegistryStoreState<Value>) => void,
+    persistOwners?: (states: readonly WorkbenchPageRegistryStoreState<Value>[]) => void,
+  ): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
   refreshModePlacements(): void;
   refreshShellPlacements(): void;

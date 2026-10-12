@@ -48,7 +48,10 @@ const saveOutgoingMode = (
     const firstMode = !previous.activeModeId && !input.cache.readMode(state.projectId, state.activeModeId);
     if (sameMode || firstMode) {
       const adopted = adoptHostPanels(input.layout, state.activeModeId);
-      if (firstMode || adopted) input.cache.saveMode(state.projectId, state.activeModeId, input.layout.getLayout());
+      // Keep initial host panels live until defaults have joined them. Saving
+      // earlier would mistake an incomplete bootstrap for the user's choices.
+      if (firstMode) return input.layout.getLayout();
+      if (adopted) input.cache.saveMode(state.projectId, state.activeModeId, input.layout.getLayout());
     }
   }
 };
@@ -57,7 +60,7 @@ export const createOwnerLayoutScopeHandler =
   (input: OwnerLayoutScopeHandlerInput) => (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
     const previous = input.getState() ?? state;
     if (!state.activePageId && previous.projectId === state.projectId) return;
-    saveOutgoingMode(input, state, previous);
+    const initialModeLayout = saveOutgoingMode(input, state, previous);
     const scope = pageLayoutScope(
       {
         projectId: state.projectId,
@@ -75,5 +78,6 @@ export const createOwnerLayoutScopeHandler =
         : undefined;
     input.menus.setPersistenceScope(scope);
     input.layout.setPersistenceScope(scope);
+    if (initialModeLayout) input.layout.restoreLayout(initialModeLayout);
     if (initialLayout) input.layout.restoreLayout(initialLayout);
   };

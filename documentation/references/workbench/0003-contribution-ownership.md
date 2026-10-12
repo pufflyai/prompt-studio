@@ -25,7 +25,7 @@ type PlacementIdentity =
 
 Each tab has one layout owner. Main and page bottom belong to the page instance. Side and Secondary belong to the mode within the project. Dropping a tab across that edge transfers it to the destination owner in the same layout change. Moving between Main and bottom, or between Side and Secondary, changes only its position.
 
-The tab's `widgetId` stays stable across transfers. Its owner identity changes while its resource, section, preview or pinned retention, draft, and mounted content stay with the tab. The original declaration remains available for opening the tool. Opening that declaration selects an existing transferred tab at its actual destination. Closing a transferred tab allows a later explicit open to create it at the declaration's default destination.
+The tab's `widgetId` stays stable across transfers. Its owner identity changes while its resource, section, preview or pinned retention, draft, and mounted content stay with the tab. The original declaration remains available for opening the tool. Opening that declaration selects a matching transferred tab in the current owner at its actual destination. If the tab belongs to an inactive page, opening the declaration creates a separate tab in its declared owner. Closing a transferred tab allows a later explicit open to create it at the declaration's default destination.
 
 Legacy page slots in Side or Secondary, mode placements in Main, and shell placements still load at their declared defaults. An explicit move applies destination ownership to these tabs too. Panel menus remain with their page or view; they do not become tab destinations.
 
@@ -53,13 +53,15 @@ The workbench owns persistence scope selection. Hosts supply the storage adapter
 
 Saved owner records are authoritative. Declarations seed new owners. Returning to a saved page does not recreate a tab that moved out. Mode tabs and their bindings remain available across ordinary page navigation. Page bottom and mode Secondary save and restore independently.
 
+Mode snapshots store the tabs that still belong to the mode. After a mode tool moves into a page, switching resources restores the remaining mode tabs, including an empty set. It does not replay the mode's default declarations. Returning to the destination page restores the moved tool there. New mode tools can be opened explicitly into an existing saved mode layout.
+
 A Main view with `cardinality: "many"` keeps one collection of resource tabs. Its routed resource selects a tab in that collection; it does not create another layout owner. Leaving the page and returning, or reloading, restores its pinned tabs. A single-resource Main keeps its live view while rebinding to another resource, but each resource owner restores its own optional tabs and selections. Transferring that view changes its owner and preserves its resource binding.
 
-Configured persistence is the source of saved owner state. Clearing an inactive owner removes its saved choices; remembered registry state cannot recreate them. Compound navigation keeps its staged owner changes until the transaction commits.
+Configured persistence is the source of saved owner state. Clearing an inactive owner removes its saved choices; remembered registry state cannot recreate them. Compound navigation publishes only its final location and saves changes made to inactive owners in that transaction. Section and parent-position changes stay within the same page/resource owner.
 
 Layout cache version 6 discards older local arrangements. Routed locations, resources, tree state, and independent menu preferences stay valid. This ownership and cache reset follows the decision recorded for PS-609; it is a breaking behavior change and must pass the workbench track's release gate before publishing.
 
-Terminal bindings use the stable tab ID. Changing a page scope or transferring a tab cannot create or stop a terminal session. An explicit close follows the terminal surface's existing lifecycle contract.
+Terminal bindings use the stable tab ID. Changing a page scope or transferring a tab cannot create or stop a terminal session. Resource and title updates reach the tab's current or saved owner without changing its identity or view. An explicit close follows the terminal surface's existing lifecycle contract.
 
 ## Navigation tree ownership
 

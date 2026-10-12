@@ -41,6 +41,7 @@ export interface ConnectWorkbenchPageRuntimeInput {
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadPageGeometry?(projectId: string, pageId: string): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
+  persistPreparedOwners?(states: readonly WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[]): void;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
@@ -83,7 +84,23 @@ const prepareRuntimeLayout = (
   enteringPage: boolean,
   liveLayout: WorkbenchLayout,
 ) => {
-  const modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
+  let modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
+  if (modeLayout && !enteringPage) {
+    // Membership comes from the saved mode owner. Within the same page, keep
+    // live selection and geometry while batched persistence catches up.
+    const regions = { ...modeLayout.regions };
+    for (const region of Object.values(regions)) {
+      const live = input.layout.getLayout().regions[region.id];
+      regions[region.id] = {
+        ...region,
+        activeWidgetId: live.activeWidgetId,
+        visible: live.visible,
+        size: live.size,
+        presentation: live.presentation,
+      };
+    }
+    modeLayout = { ...modeLayout, regions };
+  }
   const ownerManaged = Boolean(input.loadPageLayout && latest.activePageId);
   const placements =
     ownerManaged && input.loadPageLayout
@@ -166,7 +183,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     } finally {
       applyingTransition = false;
     }
-  });
+  }, input.persistPreparedOwners);
   const scope = input.layout.onDidChangePersistenceScope(() => {
     if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
   });
@@ -208,6 +225,7 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  persistPreparedOwners?: ConnectWorkbenchPageRuntimeInput["persistPreparedOwners"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadPageGeometry?: ConnectWorkbenchPageRuntimeInput["loadPageGeometry"];
@@ -266,6 +284,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
         { pages: registry, modePlacements: input.modePlacements, shellPlacements: input.shellPlacements },
         identity,
       ),
+    persistPreparedOwners: input.persistPreparedOwners,
     loadModeLayout: input.loadModeLayout,
     loadPageLayout: input.loadPageLayout,
     loadPageGeometry: input.loadPageGeometry,

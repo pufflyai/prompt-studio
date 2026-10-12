@@ -1,15 +1,15 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import { workbenchPageLocationKey } from "../../controllers/page-location/page-location-normalization";
+import { pageOwnerResource } from "./page-main";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "./page-registry-types";
 
 export const pageStateKey = (
   page: WorkbenchPageContribution,
   location: PageLocation | undefined,
   resources: WorkbenchPageResourceCodec,
-) =>
-  location && (page.main.kind === "panels" || (page.main.cardinality === "one" && location.resource))
-    ? `${page.id}|${workbenchPageLocationKey({ ...location, position: undefined }, resources)}`
-    : page.id;
+) => {
+  const resource = pageOwnerResource(page, location?.resource);
+  return resource ? `${page.id}|${resources.toUri(resources.normalize(resource))}` : page.id;
+};
 
 export const removePageStates = <State>(states: Readonly<Record<string, State>>, pageId: string) =>
   Object.fromEntries(Object.entries(states).filter(([key]) => key !== pageId && !key.startsWith(`${pageId}|`)));

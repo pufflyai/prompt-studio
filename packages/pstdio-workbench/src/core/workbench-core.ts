@@ -7,6 +7,7 @@ import { createPlacementCloseController } from "./controllers/composition/placem
 import { createPlacementPinController } from "./controllers/composition/placement-pin-controller";
 import { createLayoutResetController } from "./controllers/composition/reset-workbench-layout";
 import { removeWorkbenchResource } from "./controllers/composition/resource-removal";
+import { createTransferredPlacementUpdater } from "./controllers/composition/transferred-placement-update";
 import { createWorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
@@ -18,6 +19,7 @@ import { createOwnerLayoutAccess } from "./controllers/page-runtime/owner-layout
 import { createOwnerLayoutScopeHandler } from "./controllers/page-runtime/owner-layout-scope-handler";
 import { createLiveWorkbenchPageRegistry } from "./controllers/page-runtime/page-runtime";
 import { createPageStateRestorer } from "./controllers/page-runtime/page-state-restoration";
+import { createPreparedOwnerLayoutSaver } from "./controllers/page-runtime/prepared-owner-layouts";
 import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench-layout-cache";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
@@ -123,7 +125,10 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const { views, viewMenus, statusBar } = createCoreViews(input, renderers);
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
 
+  const updateTransferredPlacement = createTransferredPlacementUpdater(layout, layoutCache);
+
   const modePlacements = createWorkbenchModePlacementRegistry({
+    updateTransferredPlacement,
     loadLayout: (context) => layoutCache.readMode(context.projectId, context.modeId),
     getContext: () => {
       const state = core?.pages.store.getState();
@@ -136,6 +141,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const shellPlacements = createWorkbenchShellPlacementRegistry({
+    updateTransferredPlacement,
     views,
     viewMenus,
     getPanel: layout.getWidget,
@@ -189,6 +195,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const pages = createLiveWorkbenchPageRegistry({
+    persistPreparedOwners: createPreparedOwnerLayoutSaver({ cache: layoutCache, layout, resolveCore: () => core }),
     loadModeLayout: layoutCache.readMode,
     loadPageGeometry: layoutCache.readPageGeometry,
     beforeApply: createOwnerLayoutScopeHandler({

@@ -19,7 +19,7 @@ export const pageWidgetId = (input: WorkbenchPagePlacementInput, layout: LayoutM
     if (current) return current.widgetId;
     return `workbench.page.${crypto.randomUUID()}`;
   }
-  return `workbench.page.${encodeURIComponent(input.ownerInstanceKey ?? "")}.${encodeURIComponent(key)}`;
+  return `workbench.page.${crypto.randomUUID()}`;
 };
 
 export const reuseSingleResourceWidgets = (

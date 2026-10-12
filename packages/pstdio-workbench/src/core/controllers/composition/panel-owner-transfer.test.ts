@@ -146,3 +146,56 @@ test("a compound navigation retains staged page and mode tabs when revisiting th
   expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "file")).toBe(true);
   expect(w.layout.getLayout().regions.side.widgets.some((p) => p.resource?.id === "mode-file")).toBe(true);
 });
+
+test("a compound section jump keeps staged tabs in the same resource owner", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      openFile("stage"),
+      { ...navigate("alpha"), section: { anchors: [{ id: "summary", heading: "Summary" }] } },
+    ],
+  });
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "stage")).toBe(true);
+  expect(w.pages.store.getState().location?.section).toEqual({ anchors: [{ id: "summary", heading: "Summary" }] });
+});
+
+test("a compound navigation saves tabs opened in an owner before ending in another owner", async () => {
+  const w = harness();
+  registerReviewPage(w);
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(navigate("beta"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [navigate("alpha"), { ...openFile("stage"), open: "pin" }, modeFile, review],
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "stage")).toBe(true);
+  expect(w.layout.getLayout().regions.side.widgets.some((p) => p.resource?.id === "mode-file")).toBe(true);
+});
+
+test("a compound navigation preserves a staged tab in the live originating page", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [{ ...openFile("stage"), open: "pin" }, navigate("beta")],
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "stage")).toBe(true);
+});
+
+test("a staged page owner keeps only its replacement preview after multiple visits", async () => {
+  const w = harness();
+  registerReviewPage(w);
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(openFile("old-preview"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [openFile("new-preview"), navigate("beta"), navigate("alpha"), review],
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  const previews = w.layout.getLayout().regions.main.widgets.filter((p) => p.tabRetention === "preview");
+  expect(previews.map((p) => p.resource?.id)).toEqual(["new-preview"]);
+});

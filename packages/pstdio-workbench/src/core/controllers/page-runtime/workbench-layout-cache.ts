@@ -1,4 +1,4 @@
-import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutPersistenceAdapter } from "../../registries/layout/layout-model-types";
 import {
   mergeWithDefaultRegions,
@@ -7,6 +7,7 @@ import {
   workbenchRegions,
 } from "../../registries/layout/layout-types";
 import { restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput } from "../../workbench-core-types";
 import { modeLayoutScope, pageGeometryScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
@@ -67,6 +68,35 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     return persist(layout, scope);
   };
   return {
+    updateTransferredPlacement(
+      identity: PlacementIdentity,
+      update: (placement: WorkbenchWidgetPlacement) => WorkbenchWidgetPlacement,
+    ) {
+      const key = placementIdentityKey(identity);
+      let changed = false;
+      for (const scope of scopes) {
+        const layout = read(scope);
+        if (!layout) continue;
+        const regions = { ...layout.regions };
+        let updated = false;
+        for (const region of Object.values(regions)) {
+          regions[region.id] = {
+            ...region,
+            widgets: region.widgets.map((placement) => {
+              if (!placement.declarationIdentity || placementIdentityKey(placement.declarationIdentity) !== key)
+                return placement;
+              updated = true;
+              return update(placement);
+            }),
+          };
+        }
+        if (updated) {
+          persist({ ...layout, regions }, scope);
+          changed = true;
+        }
+      }
+      return changed;
+    },
     removeResource(resource: ResourceRef) {
       for (const scope of scopes) {
         const layout = read(scope);

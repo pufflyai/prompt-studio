@@ -6,6 +6,7 @@ import {
   type OwnedPlacementState,
   openResourcePlacement,
   openStaticPlacement,
+  updateResourcePlacementInstance,
   type WorkbenchOwnedPlacementItem,
 } from "./owned-placement-lifecycle";
 
@@ -41,6 +42,7 @@ export interface OwnedPlacementPreparation {
   resolve(modeId?: string, state?: OwnedPlacementState): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   apply(state: OwnedPlacementState): void;
   publish(): void;
+  notifySubscribers(): void;
 }
 const preparations = new WeakMap<object, OwnedPlacementPreparation>();
 export const setOwnedPlacementPreparation = (registry: object, preparation: OwnedPlacementPreparation) =>
@@ -66,4 +68,26 @@ export const prepareOwnedPlacement = (input: {
   if (input.item.kind === "view") openStaticPlacement(operation);
   else instanceKey = openResourcePlacement(operation);
   return { state, identity: input.identityFor(instanceKey) };
+};
+
+export interface OwnedPlacementUpdateInput {
+  resource?: ResourceRef;
+  title?: string;
+  open?: PageOpenIntent;
+}
+
+export const prepareOwnedPlacementUpdate = (input: {
+  label: string;
+  id: string;
+  item: WorkbenchOwnedPlacementItem;
+  current: OwnedPlacementState;
+  identity: PlacementIdentity;
+  update: OwnedPlacementUpdateInput;
+}) => {
+  const state = {
+    staticOverrides: new Map(input.current.staticOverrides),
+    resourceInstances: new Map(input.current.resourceInstances),
+  };
+  updateResourcePlacementInstance({ ...input, state, instanceKey: input.identity.instanceKey, ...input.update });
+  return state;
 };
