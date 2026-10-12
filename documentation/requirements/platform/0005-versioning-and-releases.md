@@ -18,72 +18,64 @@ Do not edit versions by hand. Add new released workspace packages to the fixed g
 
 ## Release pipeline
 
-`.github/workflows/release-packages.yml` runs on `main` with Bun from the root `packageManager` field and Node 24. It validates and builds the monorepo, compiles platform binaries, verifies packaged output and generates checksums.
+`.github/workflows/release-packages.yml` releases stable versions and nightlies with the same jobs, using Bun from the root `packageManager` field and Node 24. It builds and verifies every artifact from one commit, then publishes npm packages and desktop apps together. Nothing is published until every check passed. See [ADR 0072](../../adrs/0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md).
 
-Before publishing a host version that is not yet on npm, the workflow verifies the compiled CLI on native Linux, Intel macOS and Windows runners with `verify-packaged-toolchain.yml`. Other commits skip these native release checks. The build, compile, verify and checksum steps live in the `build-release` action so a rehearsal runs the same steps.
+1. **plan.** A stable release is pending while the GitHub release `pstdio@<version>` is missing or still a draft. `scripts/release/plan-release.ts` decides this and fails early when a public package was never published, because npm trusted publishing cannot create a package. It then places the tag `pstdio@<version>` on the commit to release. Packaged apps install core extensions from that tag, so it must exist before verification. A nightly instead versions, commits and tags `main` as described below.
+2. **Verify.** Every job builds from the planned commit:
+   - `verify-packaged-toolchain.yml` checks the compiled CLI on native Linux, Intel macOS and Windows.
+   - `harness-cli-support.yml` checks the native harnesses against the minimum and latest supported CLI versions.
+   - `release-desktop.yml` builds, signs, notarizes and tests every desktop target and uploads the artifacts. It publishes nothing.
+   - `verify-windows-update.yml` (stable only) builds a signed baseline from the newest published release, installs it, applies the Squirrel update to the signed candidate, and checks installed signatures, launch behavior and project-data preservation.
+3. **publish.** Runs only when every verify job passed and the tag still points at the planned commit. It runs the `build-release` action (build, compile, verify packaged output, checksums), checks the complete desktop release set and its checksums, runs `npm publish --dry-run` for every package npm does not have yet, publishes the `@pstdio/cli-*` platform packages, runs `changeset publish --no-git-tag`, creates the draft GitHub release with CLI assets, attaches the desktop assets and publishes the release.
+4. **version_pr.** Every push to `main` runs `changesets/action` with only its version command, which opens or updates the version PR. It never publishes.
 
-The workflow publishes generated `@pstdio/cli-*` platform packages at the host version. `changesets/action` then either opens the version PR or runs `changeset publish`. npm receives pstdio, SDK, UI and workbench at the shared version, including packages with no code changes.
-
-`release:version` runs Changesets, stamps changelog dates, synchronizes generated platform metadata, installs dependencies and synchronizes the lockfile. Desktop is versioned directly by Changesets; it has no separate version sync script. Published extension SDK and UI ranges stay under extension ownership because dependency propagation applies only to `workspace:` ranges.
-
-Publishing creates local npm package tags, but CI pushes only `pstdio@<version>`. It creates one draft GitHub release titled `v<version>` with:
+npm receives pstdio, SDK, UI and workbench at the shared version, including packages with no code changes. The GitHub release is titled `v<version>` and contains:
 
 - Combined package notes from `bun run --cwd scripts release:notes <version>`, in fixed-group order. Empty sections and date stamps are omitted.
 - GitHub's generated PR list, contributor notes and comparison link, starting at the previous published non-prerelease `pstdio@` tag.
-- CLI binaries, checksums and `install.sh`.
+- CLI binaries, checksums, `install.sh` and every desktop asset.
 
-The desktop workflow builds, signs and verifies native artifacts, attaches them to that draft and publishes it only after its checks pass. Desktop assets and updater URLs retain the `pstdio@` prefix. Core extension catalog entries use `{hostRelease}` to install from that same tag. No separate extension tags, tarballs or GitHub releases are produced.
+`release:version` runs Changesets, stamps changelog dates, synchronizes generated platform metadata, installs dependencies and synchronizes the lockfile. Desktop is versioned directly by Changesets; it has no separate version sync script. Published extension SDK and UI ranges stay under extension ownership because dependency propagation applies only to `workspace:` ranges.
+
+CI pushes only the `pstdio@<version>` tag. Desktop assets and updater URLs keep the `pstdio@` prefix. Core extension catalog entries use `{hostRelease}` to install from that same tag. No separate extension tags, tarballs or GitHub releases are produced.
+
+### Done marker and recovery
+
+The publish job publishes the GitHub release last, so a published GitHub release is the only proof that a version shipped. npm alone is not: it can hold a version whose desktop apps never shipped. Every publish step skips work that an earlier attempt finished: platform packages and `changeset publish` skip versions npm already has, the release action refreshes an existing draft, and asset uploads replace existing files.
+
+| Failure | Recovery |
+| --- | --- |
+| A verify job flakes | Re-run the failed jobs. Publish runs in the same run when they pass. |
+| A verify job finds a bug | Fix it on `main` in a PR without a changeset. That push plans the same version again and moves the unpublished tag to the new commit. |
+| Publish stops halfway | Re-run the publish job. It completes the remaining steps. |
+| npm has part of the version and a newer commit is on `main` | The next run keeps the tag and releases from the commit that started publishing, so npm and the desktop apps never come from different commits. Platform packages count: they are published first. |
+| Publishing started from a commit that can never finish | Release the next version instead: merge a changeset and the version PR. The unfinished version keeps no GitHub release. |
+| An older run is re-run in full | Its plan job releases nothing while publishing has not started, because the newest commit on `main` owns the release. |
+| An older run is re-run after a newer run moved the tag | Its publish job stops, because the tag no longer points at its commit. |
+
+Runs of one channel never overlap, so two attempts cannot publish at the same time. A newer run replaces a run of the same channel that is still waiting. Never publish by hand or run the desktop workflow alone.
 
 ## Nightly builds
 
-Maintainers use what `main` builds every day, packaged the way users get it. The nightly job runs the compiled CLI, the bundled runtime, the updater and migrations on existing data, which a source checkout skips.
+Maintainers use what `main` builds every day, packaged the way users get it. The nightly runs the compiled CLI, the bundled runtime, the updater and migrations on existing data, which a source checkout skips. Because it runs the same verify and publish jobs as a stable release, a red nightly predicts a red release.
 
-The `nightly_plan` and `nightly` jobs in `release-packages.yml` run every day at 03:00 UTC and from a manual dispatch on `main` with `channel: nightly`. They live in the release workflow because npm trusted publishing allows one trusted publisher per package, and that publisher names the workflow file. The run skips when the parent of the newest published nightly's tag commit is the current `main` commit.
+The nightly runs every day at 03:00 UTC and from a manual dispatch on `main` with `channel: nightly`. It lives in the release workflow because npm trusted publishing allows one trusted publisher per package, and that publisher names the workflow file. The run skips when the parent of the newest published nightly's tag commit is the current `main` commit.
 
-1. The job writes a temporary `patch` changeset for `pstdio`, then runs `release:version --nightly`. That runs `changeset version --snapshot nightly` with the `snapshot` settings in `.changeset/config.json`, followed by the same steps as a stable version. Every member of the fixed group gets the same version, such as `0.43.0-nightly.20261012030000`: the next stable version from the pending changesets, plus a date and time. It sorts after every earlier release and before the stable release it previews. Extension SDK and UI ranges stay unchanged.
-2. The job commits the version change on top of `main` and tags that commit `pstdio@<version>`. The commit is never pushed to `main`.
-3. It runs the `build-release` action, publishes platform packages and runs `changeset publish` with `--tag nightly`. The npm `latest` tag never moves. The `nightly` tag always points at the newest nightly.
-4. It pushes the tag and creates a draft GitHub prerelease with CLI binaries, checksums and an `install.sh` that installs that nightly.
-5. `release-desktop.yml` builds signed and notarized macOS and Linux desktop assets with `targets` set to those three targets and `prerelease: true`. Nightlies build no Windows assets. The release is published as a prerelease and never marked Latest. The `.deb` package version uses `~nightly` instead of `-nightly`, so dpkg sorts a nightly before the stable release it previews.
-6. After that release is published, `release:nightlies:prune` deletes every other nightly release and its tag, including drafts from failed runs, and nightly tags that a failed run left without a release. It never deletes a stable release or another prerelease.
+1. The plan job writes a temporary `patch` changeset for `pstdio`, then runs `release:version --nightly`. That runs `changeset version --snapshot nightly` with the `snapshot` settings in `.changeset/config.json`, followed by the same steps as a stable version. Every member of the fixed group gets the same version, such as `0.43.0-nightly.20261012030000`: the next stable version from the pending changesets, plus a date and time. It sorts after every earlier release and before the stable release it previews. Extension SDK and UI ranges stay unchanged.
+2. It commits the version change on top of `main`, tags that commit `pstdio@<version>` and pushes only the tag. The commit is never pushed to `main`.
+3. The verify jobs build that commit. Desktop builds cover macOS arm64, macOS x64 and Linux; nightlies build no Windows assets and skip the Windows update check. The `.deb` package version uses `~nightly` instead of `-nightly`, so dpkg sorts a nightly before the stable release it previews.
+4. The publish job publishes npm packages with `--tag nightly` and publishes a prerelease that is never marked Latest, with an `install.sh` that installs that nightly. The npm `latest` tag never moves. The `nightly` tag always points at the newest nightly.
+5. After the prerelease is published, `release:nightlies:prune` deletes every other nightly release and its tag, including drafts from failed runs, and nightly tags that a failed run left without a release. It never deletes a stable release or another prerelease.
 
-Only one nightly release exists at a time. npm versions cannot be deleted, so old nightly versions stay on npm. Because older nightly tags disappear, a nightly build installs core extensions from its `main` commit SHA, not from its tag. When `PSTDIO_EXTENSION_RELEASE_REF` is set during `build:all`, the compiled CLI and desktop sidecar use it as their default extension ref; otherwise they use `pstdio@<version>`. The nightly job sets it to the `main` SHA, and `release-desktop.yml` sets it from `extension_ref`. `main` is never force-pushed, so that SHA stays fetchable.
+Only one nightly release exists at a time. npm versions cannot be deleted, so old nightly versions stay on npm. Because older nightly tags disappear, a nightly build installs core extensions from its `main` commit SHA, not from its tag. When `PSTDIO_EXTENSION_RELEASE_REF` is set during `build:all`, the compiled CLI and desktop sidecar use it as their default extension ref; otherwise they use `pstdio@<version>`. The nightly sets it to the `main` SHA for the desktop builds and the publish job. `main` is never force-pushed, so that SHA stays fetchable.
 
 Stable release notes start at the previous non-prerelease tag, so nightly tags never appear in them. Nightly host versions do not change extension compatibility: extensions match `EXTENSION_API_VERSION`, and semver caret ranges exclude prereleases.
 
 The desktop side of the nightly channel is described in [Desktop distribution](0002-desktop-distribution.md#update-channels).
 
-## Release readiness
-
-Rehearse a release before merging the version PR. Approve or rerun its `Test and Build` CI, or start that workflow manually on `changeset-release/main`. After CI passes, `Release readiness` runs from `main`. It accepts only the current, same-repository Version Packages PR created by GitHub Actions, with changes limited to generated release metadata. Windows signing trusts only runs started from `main` or a release tag.
-
-You can also start `Release readiness` from `main` and keep its `ref` input at `changeset-release/main`. Both entry points resolve the candidate once and use that exact commit throughout the rehearsal. The `release-readiness` commit status reports success only when every rehearsal job passes. A version PR update needs its own CI and rehearsal; results for an older commit do not approve the new one.
-
-The main ruleset must require both `ci_passed` and `release-readiness`, with GitHub Actions as their source. `Release readiness gate` runs trusted policy from main when a PR opens, updates, or reopens. Ordinary PRs receive an immediate passing `release-readiness` status and run no rehearsal. The generated `changeset-release/main` PR stays blocked while its status is missing or pending, and passes only after its full rehearsal succeeds. Failed, cancelled, incomplete, or missing rehearsals cannot approve that commit. The rehearsal is the only status writer for release candidates, so late PR events cannot overwrite its result.
-
-Changesets creates a new candidate commit on `changeset-release/main` before opening or updating its PR. The gate reserves that branch's current commit even when triggered by another PR: statuses belong to commits, so a PR sharing the candidate cannot approve it. Do not repoint the release branch to an unrelated commit with an existing ordinary-PR approval; let Changesets generate the candidate.
-
-When deploying this gate, merge its workflow into main first. For every existing open PR, dispatch `release-readiness-gate.yml` from main with its `pr-number` input. Confirm ordinary PRs have passing statuses and the version PR's status is missing, pending, or has its own rehearsal result. Then add `release-readiness` to the main ruleset's required checks, selecting GitHub Actions as the source and preserving `ci_passed`. A missing status must block the version PR after the rule is enabled. Requiring it before deployment would block ordinary PRs whose status does not exist yet. The gate's manual dispatch initializes ordinary statuses only; it cannot approve a release without a rehearsal.
-
-Before the PR-triggered run can sign anything, it verifies that dependency inputs remain unchanged except the host's compiled CLI versions. It regenerates the lockfile from the trusted merge-base lockfile without running install scripts and compares it with the candidate lockfile. A changed PR snapshot or an unexpected dependency change stops the rehearsal.
-
-The rehearsal publishes nothing. It runs:
-
-- `scripts/release/check-npm-publishing.ts`. It fails when the pstdio version is already on npm or a public workspace package does not exist on npm. Trusted publishing cannot create a package, so publish its first version by hand or make it private.
-- The native packaged CLI checks on Linux, Intel macOS and Windows.
-- The native harness checks against both minimum and latest supported CLI versions.
-- The release job's build steps, `npm publish --dry-run` for each package that would publish, and the release notes.
-- The desktop workflow with `source_ref`. It builds, signs, notarizes and tests every desktop target from the branch and skips publishing. Packaged apps install default extensions from the branch because the release tag does not exist yet.
-- Complete desktop release-set and checksum verification through `publish-desktop-release.yml`. Only the publication step is skipped during a rehearsal.
-- The Windows installation and update workflow. It reuses the signed candidate from the desktop build, builds a signed older baseline, installs that baseline, applies the Squirrel update, and checks installed signatures, launch behavior and project-data preservation. The baseline defaults to the latest published pstdio release; manual dispatch can set `previous-tag` to another older release.
-
-The Windows check uploads `windows-installation-readiness` evidence and `windows-prepared-candidate` artifacts. It verifies a local update feed for the unpublished candidate. Checking the public update feed still requires a published release.
-
 ## Validation
 
 Run `bun run validate` and `bun run --cwd scripts verify:packages`. For changes to release logic, use a disposable Prompt Studio workspace to run `bun changeset status --verbose` and `bun run --cwd scripts release:version`. Check that all group versions agree, extension dependency ranges remain unchanged and `release:notes <version>` contains only actual entries. Do not publish from the disposable workspace.
-
-The first combined release must be checked for the `pstdio` entry in Changesets' published package output.
 
 ## One-time historical cleanup
 
@@ -95,9 +87,9 @@ After PS-410 merges, inventory the obsolete extension and private-package tags a
 | --- | --- |
 | No version PR | Confirm pending changesets reached main. |
 | Version validation fails | Add the named released package to the fixed group or ignore a private helper. |
-| Publish fails | Check registry trust, package metadata and build output. Run the release readiness workflow first. |
+| Publish fails | Check registry trust, package metadata and build output, then re-run the publish job. |
 | Notes generation fails | Check that every existing changelog includes the release version. |
-| Desktop release stays draft | Check native credentials, signatures, launch validation, checksums and version agreement. |
-| No nightly today | Check whether `main` changed since the newest published nightly, then check the `nightly` job. |
-| Nightly desktop job failed | Rerun the failed jobs of that run. To dispatch `Release Desktop` by hand instead, pass the nightly `version` and `tag`, `targets: ["darwin-arm64","darwin-x64","linux-x64"]`, `prerelease: true` and `extension_ref: <main SHA>`. The defaults build Windows and bake the tag, which pruning later deletes. |
-| Two nightlies are listed | The newest desktop run failed before pruning. Older nightlies are pruned after the next complete nightly. |
+| Release stays unpublished | Find the failed verify job. Check native credentials, signatures, launch validation, checksums and version agreement, then follow the recovery table. |
+| No nightly today | Check whether `main` changed since the newest published nightly, then check the nightly run's failed job. |
+| Nightly desktop job failed | Re-run the failed jobs of that run. |
+| Two nightlies are listed | The newest nightly failed before pruning. Older nightlies are pruned after the next complete nightly. |
