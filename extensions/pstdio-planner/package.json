@@ -17,6 +17,9 @@
     "typecheck": "tsc --noEmit"
   },
   "nx": {
+    "implicitDependencies": [
+      "@pstdio/ui"
+    ],
     "targets": {
       "build": {
         "inputs": [

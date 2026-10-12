@@ -14,7 +14,7 @@ The released UI package does not export a standalone filter control. Its collect
 
 Build a small, generated browser module from the public UI entry and package that module with Planner. External runtime dependencies remain package imports. A TypeScript declaration describes the packaged control through existing public SDK and UI types. The component source remains in the UI package; no source implementation is copied or maintained in Planner.
 
-The Planner build regenerates the module after the UI build. CI checks committed build output, published extension dependencies, and packaged runtime behavior. This is a temporary packaging workaround, not a second filter implementation.
+The Planner build regenerates the module after the UI build. Planner declares `@pstdio/ui` as an Nx implicit dependency to enforce that order. Its package dependency cannot do this: it names the released UI version, which stops matching the workspace version when a release PR raises it. CI checks committed build output, published extension dependencies, and packaged runtime behavior. This is a temporary packaging workaround, not a second filter implementation.
 
 ## Limitations
 
@@ -22,4 +22,4 @@ The generated module adds some UI code to Planner's package. UI changes require 
 
 ## Removal
 
-Once a UI release containing `CollectionFilter` is available, update Planner's UI dependency range and import that export directly. Remove the generated module, its declaration, its build script, and the related build, formatter, and dependency-scan configuration together. Keep the public UI component and its stories.
+Once a UI release containing `CollectionFilter` is available, update Planner's UI dependency range and import that export directly. Remove the generated module, its declaration, its build script, the Nx implicit dependency on `@pstdio/ui`, and the related build, formatter, and dependency-scan configuration together. Keep the public UI component and its stories.
