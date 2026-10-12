@@ -1,6 +1,14 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  chatContent: {
+    value: {
+      width: "full",
+      minWidth: "0",
+      maxWidth: "chat-content",
+      marginInline: "auto",
+    },
+  },
   settingsHeader: {
     value: {
       padding: "lg",
