@@ -55,13 +55,24 @@ export const settingsMenu = defineView({
     refreshEvents: [radarChanged],
     defaultExpandedSectionIds: ["channels"],
     async body(ctx, { renderer }) {
-      const { channels } = await readSettings(ctx.settings);
+      const { channels, agent } = await readSettings(ctx.settings);
       const paused = await pausedChannelIds(ctx);
       const runs = newest(await runsOf(ctx).list(), (run) => run.startedAt);
       const open = renderer.resource ?? sectionTarget().resource;
       const sectionNodes: TreeNode[] = sections.map((section) =>
         row(section.id, section.label, { icon: section.icon }, sectionTarget(section), open),
       );
+      // The host's model picker lists harnesses, models, and each model's options.
+      sectionNodes[2].actions = [
+        {
+          id: "choose-model",
+          label: "Choose model",
+          icon: "SlidersHorizontal",
+          command: commands["set-agent"].ref,
+          input: { agent: { type: "harness", label: "Model", required: true, defaultValue: agent } },
+          submitLabel: "Save",
+        },
+      ];
       const missing = builtInChannels.filter((builtIn) => !channels.some((channel) => channel.id === builtIn.id));
       return [
         { id: "sections", collapsible: false, nodes: sectionNodes },
