@@ -75,6 +75,8 @@ Package verification provisions Chromium through the compiled CLI before startin
 
 ## Isolation
 
+When an assertion waits for child-process or socket output, await the operation before asserting on its result or captured error. Bun's `expect(promise).rejects` and `.resolves` can synchronously drive a nested event loop and block Windows I/O callbacks. See [the pipe-read lesson](../../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md) for the safe rejection pattern.
+
 Bun tests preload `scripts/test-setup.ts`. It removes inherited `PSTDIO_*` runtime settings, creates a temporary home, and restores the environment around each test. Tests that need runtime settings must supply them inside their setup or to the process they start. Do not run tests that mutate `process.env` concurrently in one process.
 
 Windows CI passes `--timeout=15000` to its Bun test commands, including package scripts run through Lerna. Tests and lifecycle hooks get a 15 s default. Explicit test limits and custom runners retain their own limits. Other CI platforms retain their existing defaults. This temporary allowance accounts for hosted Windows runner variance; ADR 0044 records the evidence and removal criteria.
@@ -155,6 +157,8 @@ To review a timeout:
 6. Get approval for that exact value (see AGENTS.md), then verify it locally and in the affected CI jobs. Check that a never-ready case still fails and cleanup still completes.
 
 When tests are added, review the job allowance or sharding. Do not lengthen the per-test limit because a suite has more tests.
+
+Hosted Intel macOS runners run the packaged and desktop suites two to three times slower than other platforms, and one Intel run can take twice as long as another. Every Intel suite therefore allows 60 seconds per test: the desktop Playwright suites (approved on 2026-10-10, together with Windows) and the packaged CLI suite, whose limit `packages/e2e/src/packaged/packaged-test-timeout.ts` sets and `run-packaged-cli-tests.ts` passes to `bun test --timeout` (approved on 2026-10-12, after tests that pass in 11 to 23 seconds on Intel timed out at 30 seconds on a slow runner). Other platforms keep 30 seconds. Tests that set their own longer limit keep it.
 
 ## Desktop benchmarks
 

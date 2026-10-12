@@ -1,17 +1,24 @@
 import {
+  type Disposable,
   standardResourceIcons,
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
 } from "@pstdio/workbench";
 import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
+import { subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { machineTokensEnabled } from "@/shared/settings/synced-settings";
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { toDisposables } from "@/shared/workbench/disposable";
-import { dashboardSettingsDefaultPanel, registerDashboardSettingsContributions } from "./settings-contributions";
+import {
+  dashboardSettingsDefaultPanel,
+  machineTokensSettingsPanel,
+  registerDashboardSettingsContributions,
+} from "./settings-contributions";
 
 const createSettingsFooterNode = () => ({
   id: "dashboard.settings",
@@ -61,6 +68,25 @@ export const createSettingsModule = () =>
 
       const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => ctx.settings.refresh());
 
-      return [...toDisposables(surface), { dispose: unsubscribeProject }];
+      let machineTokensPanel: Disposable | undefined;
+      const syncMachineTokensPanel = () => {
+        const enabled = machineTokensEnabled();
+        if (enabled && !machineTokensPanel) machineTokensPanel = ctx.settings.registerPanel(machineTokensSettingsPanel);
+        if (!enabled && machineTokensPanel) {
+          machineTokensPanel.dispose();
+          machineTokensPanel = undefined;
+        }
+      };
+      const unsubscribeSettings = subscribeCollections((change) => {
+        if (!change || change.table === "settings") syncMachineTokensPanel();
+      });
+      syncMachineTokensPanel();
+
+      return [
+        ...toDisposables(surface),
+        { dispose: unsubscribeProject },
+        { dispose: unsubscribeSettings },
+        { dispose: () => machineTokensPanel?.dispose() },
+      ];
     },
   }) satisfies WorkbenchModuleContribution;

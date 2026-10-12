@@ -18,7 +18,7 @@ export const implementTicketCommand = defineCommand({
     const ticket = await findTicket(ctx.storage, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
-    await moveTicketToInProgress(ctx.storage, ticket.id);
+    await moveTicketToInProgress(ctx, ticket.id);
 
     return ctx.sessions.create({
       title: `Implement ticket: ${ticket.shorthand}`,

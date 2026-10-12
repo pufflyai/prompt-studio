@@ -5,14 +5,15 @@ import type { ChatLinkProps } from "../links/chat-link";
 
 export interface ChatRichContentProps extends Omit<BoxProps, "children">, ChatLinkProps {
   children: string;
+  streaming?: boolean;
 }
 
 const ChatRichContent = (props: ChatRichContentProps) => {
-  const { children, linkHandler, ...rest } = props;
+  const { children, linkHandler, streaming, ...rest } = props;
 
   return (
     <Box {...rest}>
-      <RichMessage defaultState={children} linkHandler={linkHandler} fullWidth />
+      <RichMessage defaultState={children} linkHandler={linkHandler} streaming={streaming} fullWidth />
     </Box>
   );
 };

@@ -1,5 +1,6 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import type { QueuedFollowUp, SessionMessage } from "@pstdio/ui/chat-ui";
+import { hasAcceptedPendingFollowUp, type PendingFollowUpState } from "./session-chat-state";
 
 const queuedPromptPrefix = "queued-prompt-";
 
@@ -49,6 +50,7 @@ export const splitQueuedFollowUps = (
   messages: SessionMessage[],
   sessionId: string | null,
   queue?: PendingQueuedFollowUpsResponse,
+  pending?: PendingFollowUpState | null,
 ) => {
   const transcriptMessages: SessionMessage[] = [];
   const queuedFollowUps: QueuedFollowUp[] = [];
@@ -76,5 +78,19 @@ export const splitQueuedFollowUps = (
     });
   }
 
+  if (pending?.destination === "queue" && !pending.failure && !hasAcceptedPendingFollowUp(messages, pending)) {
+    queuedFollowUps.push({
+      id: pending.userMessageId,
+      prompt: pending.prompt,
+      sending: true,
+      attachments: pending.attachments?.map((file) => ({
+        id: file.file_id,
+        name: file.name,
+        mediaType: file.mime_type ?? undefined,
+        size: file.size_bytes,
+        url: file.url,
+      })),
+    });
+  }
   return { messages: transcriptMessages, queuedFollowUps };
 };

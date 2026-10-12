@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-bunx changeset version
+# `--nightly` versions main as a snapshot prerelease; the remaining steps are shared.
+if [ "${1:-}" = "--nightly" ]; then
+  bun ./scripts/release/version-nightly.ts
+else
+  bunx changeset version
+fi
 bun run --cwd scripts release:stamp-dates
 bun run --cwd scripts release:platforms:sync
 # update the lock file

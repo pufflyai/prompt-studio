@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type DesktopReleaseManifest,
+  type DesktopReleaseTarget,
   parseDesktopReleaseTarget,
   prepareDesktopReleaseArtifacts,
   verifyDesktopReleaseSet,
@@ -109,10 +110,9 @@ test("parseDesktopReleaseTarget accepts supported targets and rejects invalid in
   );
 });
 
-test("verifyDesktopReleaseSet requires one version and the complete native matrix", () => {
+const writeReleaseSet = (targets: DesktopReleaseTarget[]) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-desktop-release-set-"));
   roots.push(root);
-  const targets = ["darwin-arm64", "darwin-x64", "linux-x64", "win32-x64"] as const;
   for (const target of targets) {
     const manifest: DesktopReleaseManifest = {
       schemaVersion: 1,
@@ -131,6 +131,11 @@ test("verifyDesktopReleaseSet requires one version and the complete native matri
     };
     write(join(root, target, `desktop-release-${target}.json`), JSON.stringify(manifest));
   }
+  return root;
+};
+
+test("verifyDesktopReleaseSet requires one version and the complete native matrix", () => {
+  const root = writeReleaseSet(["darwin-arm64", "darwin-x64", "linux-x64", "win32-x64"]);
 
   expect(verifyDesktopReleaseSet(root)).toEqual({ version: "1.2.3", releaseTag: "pstdio@1.2.3" });
   const windowsManifest = join(root, "win32-x64", "desktop-release-win32-x64.json");
@@ -140,4 +145,14 @@ test("verifyDesktopReleaseSet requires one version and the complete native matri
   write(windowsManifest, windowsContent);
   rmSync(join(root, "darwin-x64"), { recursive: true });
   expect(() => verifyDesktopReleaseSet(root)).toThrow("Missing desktop release target darwin-x64");
+});
+
+test("verifyDesktopReleaseSet checks the targets a nightly run built", () => {
+  const nightlyTargets: DesktopReleaseTarget[] = ["darwin-arm64", "darwin-x64", "linux-x64"];
+  const root = writeReleaseSet(nightlyTargets);
+
+  expect(verifyDesktopReleaseSet(root, nightlyTargets)).toEqual({ version: "1.2.3", releaseTag: "pstdio@1.2.3" });
+  expect(() => verifyDesktopReleaseSet(root)).toThrow("Missing desktop release target win32-x64");
+  rmSync(join(root, "darwin-x64"), { recursive: true });
+  expect(() => verifyDesktopReleaseSet(root, nightlyTargets)).toThrow("Missing desktop release target darwin-x64");
 });

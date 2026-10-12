@@ -3,7 +3,7 @@ import { seedWorkspaceViewsStory } from "../workspaces/collections/workspace-vie
 
 export const seedSidenavStory = (projectId: string) => {
   getWriter("settings")?.truncateAndWrite([
-    { id: "global", max_concurrent_sessions: null, notifications_enabled: true },
+    { id: "global", max_concurrent_sessions: null, notifications_enabled: true, machine_tokens_enabled: false },
   ]);
   getWriter("sessions")?.truncateAndWrite([
     sessionRow(projectId, "session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),

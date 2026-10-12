@@ -17,6 +17,20 @@ on:
         description: Git revision to rehearse before the release tag exists. A rehearsal publishes nothing.
         required: false
         type: string
+      targets:
+        description: JSON list of native targets to build. Nightlies skip Windows.
+        required: false
+        type: string
+        default: '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]'
+      prerelease:
+        description: Publish as a prerelease that is never marked Latest
+        required: false
+        type: boolean
+        default: false
+      extension_ref:
+        description: Git revision packaged apps install core extensions from (defaults to the tag)
+        required: false
+        type: string
     secrets:
       MACOS_CERTIFICATE:
         required: true
@@ -48,6 +62,20 @@ on:
         description: Git revision to rehearse before the release tag exists. A rehearsal publishes nothing.
         required: false
         type: string
+      targets:
+        description: JSON list of native targets to build
+        required: false
+        type: string
+        default: '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]'
+      prerelease:
+        description: Publish as a prerelease that is never marked Latest
+        required: false
+        type: boolean
+        default: false
+      extension_ref:
+        description: Git revision packaged apps install core extensions from (defaults to the tag)
+        required: false
+        type: string
 
 concurrency:
   group: desktop-release-${{ inputs.tag }}
@@ -57,8 +85,37 @@ permissions:
   contents: read
 
 jobs:
+  targets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      include: ${{ steps.targets.outputs.include }}
+    steps:
+      - name: Select native targets
+        id: targets
+        env:
+          TARGETS: ${{ inputs.targets }}
+        # Hosted Intel runners are slow and costly. They run only the packaged tests
+        # that prove the x64 build starts, serves, and runs terminals and pages.
+        run: |
+          set -euo pipefail
+          ALL='[
+            {"target":"darwin-arm64","platform":"darwin","arch":"arm64","os":"macos-15"},
+            {"target":"darwin-x64","platform":"darwin","arch":"x64","os":"macos-15-intel","essential_only":true},
+            {"target":"linux-x64","platform":"linux","arch":"x64","os":"ubuntu-latest"},
+            {"target":"win32-x64","platform":"win32","arch":"x64","os":"windows-2025"}
+          ]'
+          INCLUDE=$(jq -cn --argjson all "$ALL" --argjson targets "$TARGETS" \
+            '$all | map(select(.target as $target | $targets | index($target)))')
+          if [ "$(jq length <<< "$INCLUDE")" != "$(jq length <<< "$TARGETS")" ]; then
+            echo "Unknown desktop release target in $TARGETS" >&2
+            exit 1
+          fi
+          echo "include=$INCLUDE" >> "$GITHUB_OUTPUT"
+
   native:
     name: ${{ matrix.target }}
+    needs: targets
     permissions:
       contents: read
       id-token: write
@@ -66,30 +123,12 @@ jobs:
     timeout-minutes: 30
     env:
       # Packaged apps install default extensions from this ref. A rehearsal runs before the tag exists.
-      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_ref || inputs.tag }}
+      # A nightly uses its main commit, because older nightly tags are deleted.
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_ref || inputs.extension_ref || inputs.tag }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: darwin-arm64
-            platform: darwin
-            arch: arm64
-            os: macos-15
-          # Hosted Intel runners are slow and costly. They run only the packaged tests
-          # that prove the x64 build starts, serves, and runs terminals and pages.
-          - target: darwin-x64
-            platform: darwin
-            arch: x64
-            os: macos-15-intel
-            essential_only: true
-          - target: linux-x64
-            platform: linux
-            arch: x64
-            os: ubuntu-latest
-          - target: win32-x64
-            platform: win32
-            arch: x64
-            os: windows-2025
+        include: ${{ fromJSON(needs.targets.outputs.include) }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -343,3 +382,5 @@ jobs:
       version: ${{ inputs.version }}
       tag: ${{ inputs.tag }}
       source_ref: ${{ inputs.source_ref }}
+      targets: ${{ inputs.targets }}
+      prerelease: ${{ inputs.prerelease }}

@@ -4,10 +4,23 @@ on:
   push:
     branches:
       - main
+  # Nightly builds live here, not in their own workflow, because npm trusted
+  # publishing allows one publisher per package and names this workflow file.
+  schedule:
+    - cron: "0 3 * * *"
   workflow_dispatch:
+    inputs:
+      channel:
+        description: stable runs the release pipeline; nightly publishes a nightly build of main
+        type: choice
+        options:
+          - stable
+          - nightly
+        default: stable
 
+# A queued nightly must never replace a queued stable run, so each channel has its own group.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ (github.event_name == 'schedule' || inputs.channel == 'nightly') && 'nightly' || 'stable' }}
   cancel-in-progress: false
 
 permissions:
@@ -17,6 +30,7 @@ jobs:
   # Native runners are slow and costly, so native checks run only when this commit
   # publishes a new pstdio version. The publish scripts use the same npm check.
   plan:
+    if: github.event_name != 'schedule' && inputs.channel != 'nightly'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -62,6 +76,9 @@ jobs:
       NPM_CONFIG_PROVENANCE: true
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Packaged checks in build-release read older release tags, such as the Planner upgrade check.
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -123,39 +140,10 @@ jobs:
 
       - name: Create pstdio GitHub Release
         if: steps.release.outputs.published == 'true'
-        run: |
-          TAG="pstdio@${VERSION}"
-          RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
-          NOTES_FILE="$(mktemp)"
-          bun run --cwd scripts release:notes "$VERSION" > "$NOTES_FILE"
-
-          rm -rf "$RELEASE_ASSETS_DIR"
-          mkdir -p "$RELEASE_ASSETS_DIR"
-
-          install -m 755 packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-arm64"
-          install -m 755 packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-x64"
-          install -m 755 packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64"
-          install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64"
-          install -m 755 packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-x64.exe"
-          install -m 755 packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-arm64.exe"
-          install -m 644 packages/pstdio/dist/platforms/checksums.sha256 "$RELEASE_ASSETS_DIR/checksums.sha256"
-          install -m 755 packages/pstdio/install.sh "$RELEASE_ASSETS_DIR/install.sh"
-
-          RELEASE_DRAFT=$(gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null || true)
-
-          if [ "$RELEASE_DRAFT" = "true" ]; then
-            echo "Release $TAG exists as a draft, refreshing CLI assets."
-            gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/* --clobber
-          elif [ "$RELEASE_DRAFT" = "false" ]; then
-            echo "Release $TAG already exists, skipping."
-          else
-            PREVIOUS_TAG=$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq 'map(select(.tagName | startswith("pstdio@")))[0].tagName')
-            gh release create "$TAG" --title "v$VERSION" --notes-file "$NOTES_FILE" --generate-notes --notes-start-tag "$PREVIOUS_TAG" --draft --verify-tag
-            gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
-          fi
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/actions/create-pstdio-release
+        with:
+          version: ${{ steps.release.outputs.version }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   desktop_release:
     if: needs.release.outputs.pstdio_published == 'true'
@@ -174,3 +162,155 @@ jobs:
       APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
       APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
       APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+
+  # Main changes many times a day, and signing and notarizing costs runner minutes,
+  # so a nightly runs only when main moved since the newest published nightly.
+  nightly_plan:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.channel == 'nightly')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.changed.outputs.changed }}
+    steps:
+      - name: Compare main with the newest nightly
+        id: changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          LAST_TAG=$(gh release list --exclude-drafts --limit 100 --json tagName,isPrerelease \
+            --jq 'map(select(.isPrerelease and (.tagName | test("^pstdio@.+-nightly\\.")))) | .[0].tagName // ""')
+          # A nightly tag points at its version commit, whose parent is the main commit it built.
+          if [ -n "$LAST_TAG" ] && [ "$(gh api "repos/$GH_REPO/commits/$LAST_TAG" --jq '.parents[0].sha')" = "$GITHUB_SHA" ]; then
+            echo "Main has not changed since $LAST_TAG."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Runs the same version script and build action as a stable release, so every
+  # nightly also tests the release steps.
+  nightly:
+    needs: nightly_plan
+    if: needs.nightly_plan.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    env:
+      NPM_CONFIG_PROVENANCE: true
+      # The compiled CLI installs core extensions from this main commit, not from the
+      # nightly tag, which is deleted once a newer nightly is published.
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Packaged checks in build-release read older release tags, such as the Planner upgrade check.
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Pin npm for trusted publishing
+        run: npm i -g npm@11.16.0
+
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+
+      - name: Version nightly
+        id: version
+        run: |
+          set -euo pipefail
+          bun run --cwd scripts release:version --nightly
+          VERSION=$(jq -r .version packages/pstdio/package.json)
+          {
+            echo "version=$VERSION"
+            echo "tag=pstdio@$VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      # The version change is never pushed to main. The tag keeps it so the desktop
+      # workflow builds the same versions.
+      - name: Commit nightly version
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: version nightly $TAG"
+          git tag "$TAG"
+
+      - name: Build release artifacts
+        uses: ./.github/actions/build-release
+
+      - name: Publish platform packages
+        run: bun run --cwd scripts release:platforms:publish nightly
+
+      - name: Publish npm packages
+        run: bunx changeset publish --tag nightly --no-git-tag
+
+      - name: Push nightly tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: git push origin "refs/tags/$TAG"
+
+      - name: Create pstdio GitHub prerelease
+        uses: ./.github/actions/create-pstdio-release
+        with:
+          version: ${{ steps.version.outputs.version }}
+          prerelease: "true"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  nightly_desktop:
+    needs: nightly
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/release-desktop.yml
+    with:
+      version: ${{ needs.nightly.outputs.version }}
+      tag: ${{ needs.nightly.outputs.tag }}
+      targets: '["darwin-arm64","darwin-x64","linux-x64"]'
+      prerelease: true
+      # Main is never force-pushed, so this commit stays fetchable after the tag is pruned.
+      extension_ref: ${{ github.sha }}
+    secrets:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+
+  # Runs only after the desktop workflow published the new nightly with every asset.
+  nightly_prune:
+    needs: [nightly, nightly_desktop]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Delete older nightlies and their tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun run --cwd scripts release:nightlies:prune "${{ needs.nightly.outputs.tag }}"

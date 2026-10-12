@@ -117,7 +117,7 @@ const moduleStatus = async (host: Host, projectId: string, localId: string) => {
 
 const openTimeline = async (page: Page, host: Host, projectId: string) => {
   await page.goto(`${host.baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-planner/ticket-timeline`);
-  return page.frameLocator('iframe[title="Timeline"]');
+  return page.locator('[data-workbench-region="main"]').frameLocator("iframe");
 };
 
 const timelineCache = (host: Host) => {

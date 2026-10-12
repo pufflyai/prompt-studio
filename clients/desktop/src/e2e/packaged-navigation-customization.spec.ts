@@ -81,10 +81,11 @@ test("restores each project's navigation order, placement, and visibility after 
     const alpha = await createPackagedProject(app, "Alpha");
     const beta = await createPackagedProject(app, "Beta");
 
+    // Workspaces is hidden by default, so toggling it shows the row.
     await openPackagedProject(app.page, alpha);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
     await toggleRow(app.page, "Workspaces");
-    await expect(row(app.page, "Workspaces")).toHaveCount(0);
+    await expect(row(app.page, "Workspaces")).toBeVisible();
     await moveSearchBelowSessions(app.page);
 
     await openPackagedProject(app.page, beta);
@@ -97,11 +98,11 @@ test("restores each project's navigation order, placement, and visibility after 
     await openPackagedProject(app.page, beta);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
     await expect(row(app.page, "Search")).toHaveCount(0);
-    await expect(row(app.page, "Workspaces")).toBeVisible();
+    await expect(row(app.page, "Workspaces")).toHaveCount(0);
 
     await openPackagedProject(app.page, alpha);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
-    await expect(row(app.page, "Workspaces")).toHaveCount(0);
+    await expect(row(app.page, "Workspaces")).toBeVisible();
     await expectAbove(app.page, "Sessions", "Search");
   } finally {
     await disposePackagedApp(app);
@@ -127,15 +128,16 @@ test("keeps a navigation reset after relaunch without changing another project",
     await openPackagedProject(app.page, alpha);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
     await toggleRow(app.page, "Workspaces");
+    await expect(row(app.page, "Workspaces")).toBeVisible();
     await moveSearchBelowSessions(app.page);
     await resetSidenav(app.page);
-    await expect(row(app.page, "Workspaces")).toBeVisible();
+    await expect(row(app.page, "Workspaces")).toHaveCount(0);
 
     app = await relaunch(app);
 
     await openPackagedProject(app.page, alpha);
     await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
-    await expect(row(app.page, "Workspaces")).toBeVisible();
+    await expect(row(app.page, "Workspaces")).toHaveCount(0);
     await expectAbove(app.page, "Search", "Sessions");
 
     await openPackagedProject(app.page, beta);

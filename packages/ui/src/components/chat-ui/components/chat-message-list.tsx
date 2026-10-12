@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { useEffect, useLayoutEffect, useRef, type WheelEvent } from "react";
+import type { WheelEvent } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import { ChatMessage } from "./ai-message";
@@ -14,6 +14,7 @@ import {
 import { MessageActionPanel } from "./message-action-panel";
 import { MessagePartsRenderer } from "./message-parts-renderer";
 import { getAssistantMessageActionTargetId, type MessageGroup, type SessionMessage } from "./message-types";
+import { useTailReady } from "./use-chat-tail-ready";
 
 interface ChatMessageListProps {
   leadingResponses: SessionMessage[];
@@ -60,9 +61,6 @@ type ChatMessageListItem =
 
 const ESTIMATED_TURN_HEIGHT = 720;
 const INITIAL_TAIL_VIEWPORT_HEIGHT = 1;
-const TAIL_READY_STABLE_FRAME_COUNT = 3;
-const TAIL_READY_FRAME_LIMIT = 20;
-const TAIL_READY_PIXEL_EPSILON = 1;
 const VIRTUAL_LIST_OVERSCAN = 4;
 const VIRTUAL_LIST_GAP = 8;
 
@@ -94,75 +92,6 @@ const getEstimatedTailOffset = (count: number, viewportHeight: number) => {
 
 const getInitialViewportHeight = (scrollElement: HTMLElement | null) =>
   scrollElement?.clientHeight || INITIAL_TAIL_VIEWPORT_HEIGHT;
-
-interface TailLayoutSnapshot {
-  scrollTop: number;
-  totalSize: number;
-}
-
-const isTailLayoutStable = (current: TailLayoutSnapshot, previous: TailLayoutSnapshot) =>
-  Math.abs(current.scrollTop - previous.scrollTop) <= TAIL_READY_PIXEL_EPSILON &&
-  Math.abs(current.totalSize - previous.totalSize) <= TAIL_READY_PIXEL_EPSILON;
-
-// A tail that fits in the viewport has no scroll position to settle, so it can show at once.
-const tailFitsViewport = (scrollElement: HTMLElement | null, totalSize: number) =>
-  Boolean(scrollElement) && Math.max(scrollElement!.scrollHeight, totalSize) <= scrollElement!.clientHeight;
-
-const readTailLayoutSnapshot = (scrollElement: HTMLElement | null, totalSize: number): TailLayoutSnapshot => ({
-  scrollTop: scrollElement?.scrollTop ?? 0,
-  totalSize,
-});
-
-const useTailReady = (input: {
-  itemCount: number;
-  onReady?: () => void;
-  scrollRef: { current: HTMLElement | null };
-  totalSize: number;
-}) => {
-  const { itemCount, onReady, scrollRef, totalSize } = input;
-  const onReadyRef = useRef(onReady);
-
-  useEffect(() => {
-    onReadyRef.current = onReady;
-  }, [onReady]);
-
-  // Runs before paint, so a conversation that fits is never hidden for the frames a long one waits.
-  useLayoutEffect(() => {
-    if (
-      itemCount === 0 ||
-      typeof requestAnimationFrame === "undefined" ||
-      tailFitsViewport(scrollRef.current, totalSize)
-    ) {
-      onReadyRef.current?.();
-      return;
-    }
-
-    let frameId = 0;
-    let checkedFrameCount = 0;
-    let stableFrameCount = 0;
-    let previousSnapshot: TailLayoutSnapshot | null = null;
-
-    const waitForStableTail = () => {
-      checkedFrameCount += 1;
-
-      const nextSnapshot = readTailLayoutSnapshot(scrollRef.current, totalSize);
-      stableFrameCount =
-        previousSnapshot && isTailLayoutStable(nextSnapshot, previousSnapshot) ? stableFrameCount + 1 : 0;
-      previousSnapshot = nextSnapshot;
-
-      if (stableFrameCount >= TAIL_READY_STABLE_FRAME_COUNT || checkedFrameCount >= TAIL_READY_FRAME_LIMIT) {
-        onReadyRef.current?.();
-        return;
-      }
-
-      frameId = requestAnimationFrame(waitForStableTail);
-    };
-
-    frameId = requestAnimationFrame(waitForStableTail);
-
-    return () => cancelAnimationFrame(frameId);
-  }, [itemCount, scrollRef, totalSize]);
-};
 
 const handleExpandedStickyMessageWheel = (event: WheelEvent<HTMLElement>) => {
   if (shouldStopStickyUserMessageWheel(event.currentTarget, event.deltaY)) {
@@ -225,7 +154,7 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
               pb={isExpandedCollapsible ? "3rem" : undefined}
               onWheel={isExpandedCollapsible ? handleExpandedStickyMessageWheel : undefined}
             >
-              <MessagePartsRenderer message={group.userMessage} streaming={streaming} />
+              <MessagePartsRenderer message={group.userMessage} />
             </Box>
             {isCollapsible ? (
               <StickyMessageToggle
@@ -243,7 +172,7 @@ const StickyMessageGroup = (props: StickyMessageGroupProps) => {
         <StickyMessageResponse
           key={message.id}
           message={message}
-          streaming={streaming}
+          streaming={streaming && message.id === actionMessageId}
           hideQuestionForms={hideQuestionForms}
           showAssistantActions={message.id === actionMessageId}
         />
@@ -267,7 +196,7 @@ const ChatMessageListEntry = (props: ChatMessageListEntryProps) => {
     return (
       <ChatMessageListResponse
         message={item.message}
-        streaming={streaming}
+        streaming={streaming && groupCount === 0 && item.showAssistantActions}
         hideQuestionForms={groupCount > 0 || hideActiveQuestionForms}
         animate={animate}
         showAssistantActions={item.showAssistantActions}
@@ -278,7 +207,7 @@ const ChatMessageListEntry = (props: ChatMessageListEntryProps) => {
   return (
     <StickyMessageGroup
       group={item.group}
-      streaming={streaming}
+      streaming={streaming && item.groupIndex === groupCount - 1}
       hideQuestionForms={item.groupIndex < groupCount - 1 || hideActiveQuestionForms}
       isExpanded={expandedStickyMessageIds.has(item.group.userMessage.id)}
       animate={animate}

@@ -2,6 +2,7 @@ import { createSystem, defineConfig } from "@chakra-ui/react";
 import { globalCss } from "./global";
 import { colors } from "./primitives/colors";
 import { fontSizes, fonts, fontWeights } from "./primitives/fonts";
+import { durations, easings } from "./primitives/motion";
 import { borderWidths, radii, sizes, spacing } from "./primitives/sizes";
 import { alertSlotRecipe } from "./recipes/alert";
 import { badgeRecipe } from "./recipes/badge";
@@ -19,6 +20,13 @@ import { inputRecipe } from "./recipes/input";
 import { kbdRecipe } from "./recipes/kbd";
 import { listRowAccessoryRecipe } from "./recipes/list-row-accessory";
 import { menuSlotRecipe } from "./recipes/menu";
+import {
+  bubbleLauncherRecipe,
+  bubblePanelRecipe,
+  streamingTextRecipe,
+  treeChevronRecipe,
+  treeRevealRecipe,
+} from "./recipes/motion";
 import { numberInputSlotRecipe } from "./recipes/number-input";
 import { paletteSlotRecipe } from "./recipes/palette";
 import { popoverRecipe } from "./recipes/popover";
@@ -41,6 +49,7 @@ import { layerStyles } from "./tokens/layer-styles";
 import { textStyles } from "./tokens/text";
 
 const config = defineConfig({
+  conditions: { startingStyle: "@starting-style" },
   globalCss,
   utilities: {
     WebkitAppRegion: {
@@ -56,6 +65,11 @@ const config = defineConfig({
     textStyles,
     layerStyles,
     recipes: {
+      bubbleLauncher: bubbleLauncherRecipe,
+      bubblePanel: bubblePanelRecipe,
+      streamingText: streamingTextRecipe,
+      treeChevron: treeChevronRecipe,
+      treeReveal: treeRevealRecipe,
       chatQuestionBubble: chatQuestionBubbleRecipe,
       badge: badgeRecipe,
       button: buttonRecipe,
@@ -67,6 +81,8 @@ const config = defineConfig({
       textarea: textareaRecipe,
     },
     tokens: {
+      durations,
+      easings,
       colors,
       borderWidths,
       fonts,

@@ -53,6 +53,10 @@
     "pstdio-shader-lab",
     "shape-art"
   ],
+  "snapshot": {
+    "useCalculatedVersion": true,
+    "prereleaseTemplate": "{tag}.{datetime}"
+  },
   "privatePackages": {
     "version": true,
     "tag": false

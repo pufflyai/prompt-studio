@@ -171,9 +171,10 @@ for (const mode of ["cleared", "mismatch"]) {
     );
     try {
       for (let i = 0; !messages.some((m) => m.parts.some((p) => p.type === "tool")) && i < 50; i++) await Bun.sleep(10);
-      await expect(session.replyQuestion!({ callId: "question-1", answers: [["Hi"], ["colleague"]] })).rejects.toThrow(
-        "not accepted",
+      const error = await session.replyQuestion!({ callId: "question-1", answers: [["Hi"], ["colleague"]] }).catch(
+        (error: unknown) => error,
       );
+      expect(error).toMatchObject({ message: expect.stringContaining("not accepted") });
       await session.done;
       expect(messages.flatMap((m) => m.parts).find((p) => p.type === "tool")).toMatchObject({ status: "failed" });
     } finally {

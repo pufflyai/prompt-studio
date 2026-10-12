@@ -110,6 +110,19 @@ describe("createWorkbenchTerminalModule", () => {
     });
     expect(workbench.shell.getRegionState("secondary").open).toBe(true);
   });
+  test.each([
+    "main",
+    "side",
+  ] as const)("adding a terminal to the %s panel keeps the secondary panel closed", async (region) => {
+    const workbench = setup();
+    workbench.shell.setRegionOpen("secondary", false);
+    const terminalPanelId = shellPlacementContributionId(WORKBENCH_TERMINAL_WIDGET_ID);
+    const add = workbench.composition.panelsFor(region).addable.find((panel) => panel.panelId === terminalPanelId);
+    await add?.open?.();
+    const widgets = workbench.layout.getLayout().regions[region].widgets;
+    expect(widgets.some((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)).toBe(true);
+    expect(workbench.shell.getRegionState("secondary").open).toBe(false);
+  });
   test("opening the terminal again creates another workbench tab", async () => {
     const workbench = setup();
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);

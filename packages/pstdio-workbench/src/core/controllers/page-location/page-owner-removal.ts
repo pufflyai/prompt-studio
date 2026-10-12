@@ -38,6 +38,7 @@ export const connectPageOwnerRemoval = <Value>(input: PageOwnerRemovalInput<Valu
               resources: input.resources,
               ...(state.location.resource ? { resource: state.location.resource } : {}),
               ...(state.location.section ? { section: state.location.section } : {}),
+              ...(state.location.params ? { params: state.location.params } : {}),
             })
           : input.start();
       input.commit(state.projectId, resolved, "replace", "removePageLocationOwner");

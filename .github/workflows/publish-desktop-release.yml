@@ -13,6 +13,16 @@ on:
         description: Candidate revision for a rehearsal that publishes nothing
         required: false
         type: string
+      targets:
+        description: JSON list of native targets the release must contain
+        required: false
+        type: string
+        default: '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]'
+      prerelease:
+        description: Publish as a prerelease that is never marked Latest
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,9 +51,11 @@ jobs:
 
       - name: Verify and flatten release set
         shell: bash
+        env:
+          TARGETS: ${{ inputs.targets }}
         run: |
           set -euo pipefail
-          bun clients/desktop/scripts/verify-release-set.ts desktop-release
+          bun clients/desktop/scripts/verify-release-set.ts desktop-release --targets "$(jq -r 'join(",")' <<< "$TARGETS")"
           mkdir desktop-publish
           find desktop-release -type f -exec cp '{}' desktop-publish/ \;
           cd desktop-publish
@@ -54,9 +66,14 @@ jobs:
         if: inputs.source_ref == ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRERELEASE: ${{ inputs.prerelease }}
         shell: bash
         run: |
           set -euo pipefail
           test "$(gh release view '${{ inputs.tag }}' --json isDraft -q .isDraft)" = "true"
           gh release upload "${{ inputs.tag }}" desktop-publish/* --clobber
-          gh release edit "${{ inputs.tag }}" --draft=false
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release edit "${{ inputs.tag }}" --draft=false --prerelease --latest=false
+          else
+            gh release edit "${{ inputs.tag }}" --draft=false
+          fi

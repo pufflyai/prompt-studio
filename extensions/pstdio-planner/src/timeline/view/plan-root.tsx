@@ -1,6 +1,6 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
 import { Box, Flex, Text } from "@chakra-ui/react";
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
 import {
   type CollectionViewsSource,
   filterRowsByView,
@@ -10,6 +10,8 @@ import {
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 import { stepReview } from "../model/review";
+import { AutoBuildButton } from "./auto-build-button";
+import { AutoBuildDialog } from "./auto-build-dialog";
 import { BackgroundMenu } from "./background-menu";
 import { Details } from "./details";
 import { PlanEditor } from "./plan-editor";
@@ -18,6 +20,7 @@ import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
 import { PlanUnavailable } from "./plan-unavailable";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
+import { useAutoBuild } from "./use-auto-build";
 import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
 import { useTimelineViews } from "./use-timeline-views";
@@ -50,6 +53,8 @@ interface PlanContentProps extends PlanRootProps {
 function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource, error } = props;
   const [search, setSearch] = useState("");
+  const autoBuild = useAutoBuild(client);
+  const [autoBuildOpen, setAutoBuildOpen] = useState(false);
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
@@ -77,8 +82,37 @@ function PlanContent(props: PlanContentProps) {
         search={search}
         onSearchChange={setSearch}
         resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${filtered.length}`}
+        actions={
+          <AutoBuildButton
+            enabled={autoBuild.mode?.enabled ?? false}
+            supervisor={autoBuild.mode?.supervisor}
+            sessions={autoBuild.mode?.sessions ?? []}
+            running={autoBuild.mode?.capacity.running ?? 0}
+            capacity={autoBuild.mode?.capacity.limit ?? 0}
+            stuck={autoBuild.mode?.stuck}
+            error={autoBuild.mode?.error}
+            onOpenSession={(session) =>
+              void host.call("navigation.open", {
+                target: {
+                  kind: "panel",
+                  panel: workbenchPanels.projectSession,
+                  open: "preview",
+                  resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
+                },
+              })
+            }
+            disabled={!autoBuild.mode || autoBuild.saving}
+            onConfigure={() => {
+              void autoBuild.refresh().then((success) => {
+                if (success) setAutoBuildOpen(true);
+              });
+            }}
+            onTurnOff={() => autoBuild.configure(false)}
+            t={t}
+          />
+        }
       />
-      {[error, actionError].filter(Boolean).map((message) => (
+      {[error, actionError, autoBuildOpen ? undefined : autoBuild.error].filter(Boolean).map((message) => (
         <Text key={message} role="alert" color="fg.error" px="md" pt="sm" flexShrink="0">
           {message}
         </Text>
@@ -117,6 +151,19 @@ function PlanContent(props: PlanContentProps) {
           client={client}
           plan={plan}
           onDone={done}
+        />
+      ) : null}
+      {autoBuildOpen ? (
+        <AutoBuildDialog
+          prompt={autoBuild.mode!.prompt}
+          ignore={autoBuild.mode!.ignore}
+          blockOnReview={autoBuild.mode!.blockOnReview}
+          data={queryData}
+          saving={autoBuild.saving}
+          error={autoBuild.error}
+          onEnable={(prompt, ignore, blockOnReview) => autoBuild.configure(true, prompt, ignore, blockOnReview)}
+          onClose={() => setAutoBuildOpen(false)}
+          t={t}
         />
       ) : null}
       {context ? (

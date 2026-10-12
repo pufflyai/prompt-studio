@@ -30,7 +30,10 @@ export function usePlanActions({
   const selected = plan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
   const relations = relationsFor(selected, plan);
   const open = (target: NavigationTarget) => void host.call("navigation.open", { target });
-  const [review, setReview] = useState<string[]>();
+  const [reviewDeadline, setReviewDeadline] = useState<{ id: string | null }>();
+  const review = reviewDeadline
+    ? reviewQueue(plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === reviewDeadline.id)?.rows ?? [])
+    : undefined;
   // Inline edits revert when a save fails; the error stays visible above the graph.
   const run = (promise: Promise<unknown>) =>
     promise.catch((reason) => {
@@ -56,7 +59,7 @@ export function usePlanActions({
     onReview: (deadlineId) => {
       const rows = plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === deadlineId)?.rows ?? [];
       const queue = reviewQueue(rows);
-      setReview(queue);
+      setReviewDeadline({ id: deadlineId });
       setSelectedId(queue[0]);
     },
     onDelete: (deadline) => {

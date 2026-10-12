@@ -30,6 +30,8 @@ const waitReason = (ticket: string, wait: AttemptWait, capacity: AttemptCapacity
       return `${dependency} has more than one approved attempt. Choose the one ${ticket} should build on.`;
     case "divergent-dependency-attempts":
       return `the attempts for ${listTickets(wait.dependencyIds)} don't build on each other. Merge one of them first.`;
+    case "human-input-needed":
+      return `${listTickets(wait.dependencyIds)} needs human input. Open its review requests and answer them or recover the unreadable records first.`;
     case "capacity-full":
       return capacityReason(capacity);
   }

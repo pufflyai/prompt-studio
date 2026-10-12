@@ -7,7 +7,7 @@ import { createNotificationsModule, DASHBOARD_NOTIFICATIONS_KEYBINDING } from ".
 
 describe("createNotificationsModule", () => {
   test("registers a shortcut for opening notifications", () => {
-    receiveSettings({ notifications_enabled: true, max_concurrent_sessions: null });
+    receiveSettings({ notifications_enabled: true, machine_tokens_enabled: false, max_concurrent_sessions: null });
     const workbench = createWorkbench();
     const module = workbench.registerModule(createNotificationsModule());
 

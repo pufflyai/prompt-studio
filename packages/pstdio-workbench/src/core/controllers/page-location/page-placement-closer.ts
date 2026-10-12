@@ -46,6 +46,7 @@ export const createPagePlacementCloser = (input: PagePlacementCloserInput) => {
       page,
       ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
       ...(resolution.target.section ? { section: resolution.target.section } : {}),
+      ...(location.params ? { params: location.params } : {}),
       ...(location.parent ? { parent: location.parent } : {}),
     });
     return input.commit(

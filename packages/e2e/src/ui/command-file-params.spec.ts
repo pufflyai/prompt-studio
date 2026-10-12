@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
@@ -28,6 +28,7 @@ const createFilesExtension = () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-ps-256-files-"));
   const sdkExtensionsModule = ["@pstdio", "sdk", "extensions"].join("/");
   mkdirSync(root, { recursive: true });
+  symlinkSync(join(import.meta.dirname, "../../node_modules"), join(root, "node_modules"), "junction");
   writeFileSync(
     join(root, "package.json"),
     JSON.stringify({

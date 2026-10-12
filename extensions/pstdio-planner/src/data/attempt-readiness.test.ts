@@ -45,6 +45,7 @@ const resolve = (input: {
   activeImplementationCount?: number;
 }) =>
   resolveAttemptReadiness({
+    requests: new Map(),
     target: input.target ?? "PS-3",
     tickets: input.tickets,
     attempts: input.attempts ?? [],

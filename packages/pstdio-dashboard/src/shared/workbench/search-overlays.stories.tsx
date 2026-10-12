@@ -19,7 +19,7 @@ const SearchOverlayStory = (props: SearchOverlayStoryProps) => {
   const [workbench] = useState(() => createWorkbench());
   useEffect(() => {
     const previousSettings = readSettings();
-    receiveSettings({ notifications_enabled: true, max_concurrent_sessions: null });
+    receiveSettings({ notifications_enabled: true, machine_tokens_enabled: false, max_concurrent_sessions: null });
     const projects = workbench.registerModule(createProjectsModule());
     const notifications = workbench.registerModule(createNotificationsModule());
     selectDashboardProject(workbench, { id: "storybook-search-overlays", name: "Prompt Studio" });

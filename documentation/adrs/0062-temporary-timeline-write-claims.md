@@ -22,7 +22,7 @@ A process crash can leave a claim behind. There is no timed expiry: an old write
 
 ## Isolation
 
-Claims live in the `timeline.write-claims` collection. The guard and recovery commands live under Planner's timeline directory. No host database state or SDK API changes are needed. Recovery is documented in [Planner's timeline guide](../../extensions/pstdio-planner/docs/0005-timeline.md).
+Claims live in the `timeline.write-claims` collection. The shared guard lives in Planner's data directory; recovery commands live under its timeline directory. No host database state or SDK API changes are needed. Recovery is documented in [Planner's timeline guide](../../extensions/pstdio-planner/docs/0005-timeline.md). Attempt launches also use the guard; see [ADR 0070](0070-temporary-planner-launch-claims.md).
 
 ## Removal
 

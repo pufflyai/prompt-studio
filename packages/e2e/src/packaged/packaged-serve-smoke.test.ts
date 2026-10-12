@@ -15,6 +15,7 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 // Chat tables wrap by default, hide row numbers, and retain the wrapping control.
+// Streaming chunks retain earlier DOM and settle without running animations.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
@@ -44,9 +45,12 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
+// Timeline coverage configures Auto build mode and checks implementation status in both Planner views.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
+// Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
@@ -54,6 +58,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
@@ -63,8 +68,10 @@ import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
+// Core extensions install from the host's version tag, or from the main commit a nightly build bakes in.
+const hostReleaseRef = /^(?:pstdio@\d|[0-9a-f]{40}$)/;
+
 const BUILD_TIMEOUT = 180_000;
-const SMOKE_TEST_TIMEOUT = 30_000;
 
 beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) {
@@ -136,7 +143,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 test(
@@ -196,7 +203,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-artifacts",
-            ref: expect.stringMatching(/^pstdio@\d/),
+            ref: expect.stringMatching(hostReleaseRef),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pstdio",
@@ -208,7 +215,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-notes",
-            ref: expect.stringMatching(/^pstdio@\d/),
+            ref: expect.stringMatching(hostReleaseRef),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pstdio",
@@ -220,7 +227,7 @@ test(
           origin: {
             kind: "git",
             path: "extensions/pstdio-planner",
-            ref: expect.stringMatching(/^pstdio@\d/),
+            ref: expect.stringMatching(hostReleaseRef),
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pufflyai",
@@ -265,7 +272,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 test(
@@ -336,7 +343,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 test(
@@ -395,6 +402,7 @@ test(
         headers: runtimeAuthorization(started.descriptor),
         metadata,
       });
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,
@@ -439,7 +447,7 @@ test(
       rmSync(tempRoot, { recursive: true, force: true });
     }
   },
-  SMOKE_TEST_TIMEOUT,
+  PACKAGED_TEST_TIMEOUT,
 );
 
 registerCoreDefaultExtensionSmokeTests();

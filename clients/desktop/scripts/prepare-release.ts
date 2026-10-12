@@ -19,7 +19,8 @@ const result = prepareDesktopReleaseArtifacts({
   runtimePackagePath: join(repoRoot, "packages", "pstdio", "package.json"),
   target,
   releaseNotes: readFileSync(resolvedNotesPath, "utf8").trim(),
-  publishedAt: process.env.PSTDIO_DESKTOP_PUBLISHED_AT ?? new Date().toISOString(),
+  // Scheduled runs have no repository payload, so the variable can be empty.
+  publishedAt: process.env.PSTDIO_DESKTOP_PUBLISHED_AT || new Date().toISOString(),
 });
 
 process.stdout.write(`Desktop release artifacts prepared at ${result.outputPath}\n`);

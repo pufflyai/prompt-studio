@@ -84,11 +84,16 @@ distribute an unsigned development package as a supported desktop release.
 ## Updates
 
 Packaged macOS and Windows applications query the public GitHub Releases API for the newest
-complete `pstdio@<version>` release. They then point Electron's native updater at
+complete `pstdio@<version>` release on their [update channel](#update-channels). They then point Electron's native updater at
 that release's architecture-aware JSON metadata on macOS, or its `RELEASES` and
 full nupkg files on Windows. Source builds do not use the
 native updater. A check compares the published version with the installed desktop
 version before downloading. Equal or older releases are not downloaded.
+
+The app checks in the background after the runtime starts and every four hours.
+A background check stays silent unless an update finished downloading, and then
+shows the ready-to-install dialog once for that version. Failed background checks
+are only logged as `desktop.update.background.failed`.
 
 **Prompt Studio → Check for Updates…** shows a native dialog for each result:
 
@@ -111,7 +116,34 @@ running persistent CLI runtime.
 
 Electron has no built-in Linux updater. Use the package manager for DEB installs,
 or download and replace the portable directory from the GitHub release page.
-The desktop **Check for updates** capability opens that release page on Linux.
+The desktop **Check for updates** capability opens the newest release page with a
+Linux package for the chosen channel when that release is newer than the running
+app. Otherwise it shows **You're up to date.** Background checks do nothing on Linux.
+
+## Update channels
+
+Packaged macOS and Linux apps follow one of two channels. Windows apps and source
+builds always follow stable and offer no choice.
+
+| Channel | Releases offered |
+| --- | --- |
+| `stable` (default) | Published releases that are neither drafts nor prereleases, by GitHub flag or semver |
+| `nightly` | The same, plus published `-nightly.` prereleases; the highest semver wins |
+
+A stable release such as `0.43.0` ranks above every `0.43.0-nightly.*` build, so
+the nightly channel moves to it. The app never offers a version that is not newer
+than the running one. Switching from nightly back to stable therefore keeps the
+nightly build until a newer stable release exists. Downgrading would run an older
+app on a database that newer migrations already changed.
+
+The channel is a device setting in `PSTDIO_HOME/desktop/update-channel.json`, not
+runtime data, so a remote runtime cannot move this app to nightly. The desktop app
+reads it before every check. People change it in **Settings → Workbench →
+Update channel**, which calls the `getUpdateChannel` and `setUpdateChannel`
+desktop bridge calls. Agents use `pst update-channel [stable|nightly]`, which
+writes the same file. Changing the channel in the app starts a background check
+right away. See [Versioning and releases](0005-versioning-and-releases.md#nightly-builds)
+for how nightlies are built and pruned.
 
 ## Release ownership and secrets
 

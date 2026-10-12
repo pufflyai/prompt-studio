@@ -29,7 +29,7 @@ export const usePendingSessionFollowUp = (
 
   return {
     pendingFollowUp,
-    pendingWork: Boolean(pendingFollowUp && !pendingFollowUp.failure),
+    pendingWork: Boolean(pendingFollowUp && !pendingFollowUp.failure && pendingFollowUp.destination === "conversation"),
     displayedMessages: mergeMessagesWithPendingFollowUp(messages, pendingFollowUp),
     streamingStartedAt: resolveSessionWorkStartedAt(
       lastRequestStarted,

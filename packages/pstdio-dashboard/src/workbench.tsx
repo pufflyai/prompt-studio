@@ -33,6 +33,7 @@ import { createSettingsModule } from "./modules/settings/module";
 import { createSidenavModule } from "./modules/sidenav/module";
 import { createStartModule } from "./modules/start/module";
 import { createTerminalModule } from "./modules/terminal/module";
+import { createUpdatesModule } from "./modules/updates/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
 import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
 import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
@@ -76,6 +77,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createNotificationsModule(),
   createSettingsModule(),
   createPerformanceModule(),
+  createUpdatesModule(),
   createStartModule(),
   createWorkbenchTerminalModule(),
   createTerminalModule(),

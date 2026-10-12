@@ -31,9 +31,26 @@ If an older `pst` is already installed, the app keeps it. Remove the other insta
 
 ### Update the app
 
-On macOS, choose **Prompt Studio → Check for Updates…**. On Windows, choose **Help → Check for Updates…**. A downloaded update installs when you quit the app.
+On macOS and Windows, the app checks for updates when it starts and every four hours. When an update has downloaded, the app tells you. It installs when you quit the app. To check now, choose **Prompt Studio → Check for Updates…** on macOS or **Help → Check for Updates…** on Windows.
 
-Linux has no built-in updater. **Help → Check for Updates…** opens the releases page. Update the `.deb` with your package manager, or download a new portable build.
+Linux has no built-in updater. **Help → Check for Updates…** opens the page of the newest release for your update channel. Update the `.deb` with your package manager, or download a new portable build.
+
+### Choose an update channel
+
+On macOS and Linux, the desktop app can follow one of two update channels:
+
+- **Stable** installs released versions. This is the default.
+- **Nightly** installs a signed build of the latest `main` branch. A new nightly is published once a day when `main` changed. Nightlies can have bugs, and they run new database migrations on your data.
+
+Choose the channel in **Settings → Workbench → Update channel**, or run:
+
+```sh
+pst update-channel nightly
+pst update-channel stable
+pst update-channel        # prints the current channel
+```
+
+The choice belongs to this computer. The app never installs an older version. If you switch from Nightly back to Stable, the app keeps the nightly build until a newer stable release is out. Windows always follows Stable.
 
 ## Install only the command-line tool
 
@@ -45,6 +62,8 @@ pst --version
 ```
 
 The package installs two names for the same command: `pst` and `pstdio`.
+
+To follow nightly builds of the command-line tool, install `pstdio@nightly` instead. Each nightly GitHub release also has an `install.sh` that installs that nightly.
 
 ## Start Prompt Studio
 

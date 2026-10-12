@@ -19,6 +19,7 @@ const targetFromLocation = (location: PageLocation): NavigationTargetPage => ({
   page: location.page,
   ...(location.resource ? { resource: location.resource } : {}),
   ...(location.section ? { section: location.section } : {}),
+  ...(location.params ? { params: location.params } : {}),
   ...(location.parent ? { parent: targetFromLocation(location.parent) } : {}),
 });
 const pageTitle = (page: WorkbenchPageContribution) => {

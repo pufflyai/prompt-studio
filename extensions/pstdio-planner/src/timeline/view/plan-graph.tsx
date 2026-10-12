@@ -96,7 +96,7 @@ export function PlanGraph(props: PlanViewProps) {
         userSelect={panning ? "none" : undefined}
         touchAction="none"
         role="region"
-        aria-label="Ticket timeline canvas"
+        aria-label="Project Timeline canvas"
         tabIndex={0}
         {...handlers}
         onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)}
@@ -108,7 +108,6 @@ export function PlanGraph(props: PlanViewProps) {
             width={canvasWidth}
             contentLeft={box.contentLeft}
             collapsed={collapsed}
-            targetTrackId={region?.trackId}
             onToggle={toggle}
             onRename={actions.onRenameTrack}
             onNewTrack={actions.onNewTrack}

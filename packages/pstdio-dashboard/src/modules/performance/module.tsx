@@ -9,10 +9,10 @@ import { PerformanceStatusItem } from "./components/performance-status-item";
 import { createPerformanceHost } from "./performance-host";
 import { createPerformanceMonitoringController } from "./performance-monitoring-controller";
 
-const SETTINGS_PANEL_ID = "performance";
-const SETTINGS_VIEW_ID = "dashboard.settings.performance";
+const SETTINGS_PANEL_ID = "developer-tools";
+const SETTINGS_VIEW_ID = "dashboard.settings.developer-tools";
 
-// Developer tools: the device-local performance switch, the frame-rate meter in
+// Developer tools: the settings panel with the device-local performance switch, the frame-rate meter in
 // the status bar with its popover, and commands that open it or copy a snapshot.
 export const createPerformanceModule = () =>
   ({
@@ -72,17 +72,17 @@ export const createPerformanceModule = () =>
       const disposables = [
         ctx.views.registerView({
           id: SETTINGS_VIEW_ID,
-          title: "Performance",
+          title: "Developer tools",
           body: { kind: "react", render: () => <DeveloperToolsPanel controller={controller} /> },
         }),
         ctx.settings.registerPanel({
           kind: "view",
           id: SETTINGS_PANEL_ID,
-          title: "Performance",
-          section: "developer-tools",
+          title: "Developer tools",
+          section: "workbench",
           scope: "global",
-          order: 10,
-          icon: "Gauge",
+          order: 40,
+          icon: "Wrench",
           viewId: SETTINGS_VIEW_ID,
         }),
         ctx.commands.registerCommand(

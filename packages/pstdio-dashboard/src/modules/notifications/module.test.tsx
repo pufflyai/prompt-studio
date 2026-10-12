@@ -16,11 +16,11 @@ test("exposes the notification center only while opted in", async () => {
   expect(workbench.commands.getCommand(dashboardCommandIds.openNotifications)).toBeUndefined();
   expect(() => workbench.overlays.openOverlay(id)).toThrow();
   for (let index = 0; index < 2; index++) {
-    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: true });
+    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: true, machine_tokens_enabled: false });
     expect(workbench.overlays.getOverlay(id)).toBeDefined();
     await workbench.commands.executeCommand(dashboardCommandIds.openNotifications);
     expect(workbench.layout.getLayout().regions.overlay.widgets).toHaveLength(1);
-    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: false });
+    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: false, machine_tokens_enabled: false });
     expect(workbench.layout.getLayout().regions.overlay.widgets).toHaveLength(0);
     expect(workbench.overlays.getOverlay(id)).toBeUndefined();
     expect(workbench.commands.getCommand(dashboardCommandIds.openNotifications)).toBeUndefined();

@@ -139,8 +139,7 @@ export const setTicketTags = async (input: { storage: ExtensionStorageApi; ticke
   if (!ticket) return null;
   await assertSingleSelectTagIds(input.storage, input.tagIds, ticket.tagIds);
   const next = { ...ticket, tagIds: input.tagIds, updatedAt: new Date().toISOString() };
-  await putTicket(input.storage, next);
-  return next;
+  return putTicket(input.storage, next);
 };
 
 export interface TagDraftOptionCreate {

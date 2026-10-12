@@ -29,10 +29,7 @@ export function StatusIcon(props: { row: PlanRow }) {
 
 export function ReviewStatusIcon(props: { row: PlanRow }) {
   const { row } = props;
-  const pending =
-    row.requestErrors.length > 0 ||
-    row.requests.some((request) => request.state === "open") ||
-    row.flags.includes("human-needed");
+  const pending = row.requestErrors.length > 0 || row.requests.some((request) => request.state === "open");
   const answered = row.requests.some((request) => request.state === "answered");
   if (!pending && !answered) return null;
   const label = pending ? "Review requested" : "Review answered";

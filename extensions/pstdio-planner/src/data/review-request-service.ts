@@ -1,38 +1,18 @@
-// Settle review requests and keep the Review Needed flag in step with the requests that are still open.
+// Settle review requests and notify readers to derive the current Review Needed flag.
 import { type CommandContext, workbenchPanels } from "@pstdio/sdk/extensions";
 import { plannerTicketsChanged } from "../events";
 import { actorFromSource } from "./attempt-actors";
 import { ticketsCollection } from "./collections";
 import {
   deleteTicketReviewRequests,
-  hasPendingInput,
-  listTicketReviewRequests,
   readReviewRequest,
   reviewOutcomesCollection,
   reviewRequestsCollection,
 } from "./review-request-storage";
 import type { ReviewOutcome, ReviewRequestView } from "./review-request-types";
 import { validateResponse } from "./review-request-validation";
-import { seedDefaultTags } from "./seed";
-
-export const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
 
 type StorageContext = Pick<CommandContext, "storage">;
-
-// The flag is a projection of open requests. Every lifecycle change rewrites it from the stored requests,
-// so an interrupted earlier update is repaired by the next one.
-export const syncReviewNeededFlag = async (ctx: StorageContext, ticketId: string) => {
-  const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, ticketId));
-  if (pending) await seedDefaultTags(ctx.storage);
-  const ticket = await ticketsCollection(ctx.storage).get(ticketId);
-  if (!ticket) return;
-  const tagIds = ticket.tagIds ?? [];
-  if (tagIds.includes(HUMAN_REQUESTED_OPTION_ID) === pending) return;
-  const next = pending
-    ? [...tagIds, HUMAN_REQUESTED_OPTION_ID]
-    : tagIds.filter((id) => id !== HUMAN_REQUESTED_OPTION_ID);
-  await ticketsCollection(ctx.storage).put(ticket.id, { ...ticket, tagIds: next, updatedAt: new Date().toISOString() });
-};
 
 // A write that raced with ticket deletion removes its own records so no orphan request remains.
 export const keepOwnedRequest = async (ctx: StorageContext, request: Pick<ReviewRequestView, "id" | "ticketId">) => {
@@ -45,7 +25,6 @@ export const keepOwnedRequest = async (ctx: StorageContext, request: Pick<Review
 };
 
 export const publishRequestChange = async (ctx: CommandContext, ticketId: string) => {
-  await syncReviewNeededFlag(ctx, ticketId);
   await ctx.events.emit(plannerTicketsChanged, { ticketId });
 };
 

@@ -30,6 +30,13 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({
       extensionId: "pstdio.pstdio-planner",
+      localId: "ticket-requests",
+      path: "ticket-requests",
+    }),
+  );
+  expect(metadata.pages).toContainEqual(
+    expect.objectContaining({
+      extensionId: "pstdio.pstdio-planner",
       localId: "timeline",
       path: "ticket-timeline",
     }),
@@ -47,6 +54,27 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
+  // Empty ready work exercises the shipped action without starting real agents.
+  expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
+  expect(
+    await execute("auto-build.configure", { enabled: true, prompt: "Choose valid tasks.", blockOnReview: false }),
+  ).toMatchObject({
+    enabled: true,
+    blockOnReview: false,
+  });
+  expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
+  expect(await execute("auto-build.read", {})).toMatchObject({
+    enabled: true,
+    prompt: "Choose valid tasks.",
+    blockOnReview: false,
+    stuck: false,
+  });
+  expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
+    enabled: false,
+  });
+  expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  await expectImplementationStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
     content: "# Timeline smoke ticket\n\nShared Planner body",
@@ -116,12 +144,30 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 type Execute = ReturnType<typeof commandRunner>;
 const reviewNeeded = "default-human-requested-true";
 
+async function expectImplementationStatus(execute: Execute) {
+  const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });
+  await execute("implement-ticket", {
+    id: ticket.id,
+    agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
+  });
+  const plan = await execute("timeline.plan.read", {});
+  expect(plan.sections.flatMap((section: { rows: unknown[] }) => section.rows)).toContainEqual(
+    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "In Progress" }) }),
+  );
+  const query = await execute("query-tickets", {});
+  expect(query.rows).toContainEqual(
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: "in-progress" }) }),
+  );
+}
+
 // Review requests start from empty storage; answering one request must not hide another.
 async function expectReviewRequests(execute: Execute, deadlineId: string) {
   const { ticket } = await execute("timeline.ticket.create", {
     content: "# Review request smoke",
     deadline: deadlineId,
   });
+  await execute("update-ticket", { id: ticket.id, tagIds: [reviewNeeded] });
+  expect((await execute("get-ticket", { id: ticket.id })).tagIds ?? []).not.toContain(reviewNeeded);
   const handoff = await execute("request-human", {
     ticket: ticket.id,
     reason: "approved-revision",
@@ -160,6 +206,8 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
       ],
     },
   });
+  await execute("set-ticket-tags", { rowId: ticket.id, tagIds: [] });
+  expect((await execute("get-ticket", { id: ticket.id })).tagIds).toContain(reviewNeeded);
   expect(handoff).toMatchObject({ state: "open", context: { sessionId: expect.any(String) } });
 
   await execute("review", { requestId: task.id, response: { confirmed: true } });

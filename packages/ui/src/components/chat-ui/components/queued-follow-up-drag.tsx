@@ -33,7 +33,7 @@ export const QueueDropZone = (props: { item: QueuedFollowUp; index: number; kind
   const { item, index, kind } = props;
   const drop = useDroppable({
     id: `${item.id}:${kind}`,
-    disabled: Boolean(item.steeringDelivery),
+    disabled: Boolean(item.sending || item.steeringDelivery),
     data: { item, kind, order: index * 3 + ["before", "combine", "after"].indexOf(kind) },
   });
   const position = {

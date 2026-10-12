@@ -4,6 +4,7 @@ import type { SetStateAction } from "react";
 import type { SessionNotice } from "../data/session-notice";
 
 export type PendingFollowUpState = {
+  destination: "conversation" | "queue";
   prompt: string;
   messageCount: number;
   submittedAt: number;
@@ -20,11 +21,13 @@ export const createPendingFollowUpState = (input: {
   prompt: string;
   messageCount: number;
   pendingId: string;
+  destination?: PendingFollowUpState["destination"];
   previousRunStarted?: string | null;
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;
 }): PendingFollowUpState => {
   return {
+    destination: input.destination ?? "conversation",
     prompt: input.prompt,
     messageCount: input.messageCount,
     submittedAt: Date.now(),
@@ -97,6 +100,7 @@ export const mergeMessagesWithPendingFollowUp = (
 ): SessionMessage[] => {
   if (!pending) return messages;
   if (!pending.failure && hasAcceptedPendingFollowUp(messages, pending)) return messages;
+  if (!pending.failure && pending.destination === "queue") return messages;
   return [...messages, ...createOptimisticFollowUpMessages(pending)];
 };
 

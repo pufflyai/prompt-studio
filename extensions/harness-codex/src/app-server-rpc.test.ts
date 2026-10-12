@@ -43,9 +43,9 @@ test("RPC EOF rejects an outstanding request while its real TCP peer remains ali
   try {
     await rpc.request("initialize", {});
     const pending = rpc.request("hold", {});
-    const rejected = expect(pending).rejects.toThrow("connection closed");
+    const rejected = pending.catch((error: unknown) => error);
     expect(await Promise.race([rpc.finished.then(() => true), Bun.sleep(500).then(() => false)])).toBe(true);
-    await rejected;
+    expect(await rejected).toMatchObject({ message: expect.stringContaining("connection closed") });
     expect(child.exitCode).toBeNull();
     expect(child.signalCode).toBeNull();
   } finally {

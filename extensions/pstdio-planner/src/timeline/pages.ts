@@ -9,7 +9,7 @@ import {
 
 export const timelineView = defineView({
   id: "timeline",
-  title: l10n("timeline.view.title", "Timeline"),
+  title: l10n("timeline.view.title", "Project Timeline"),
   icon: "chart-no-axes-gantt",
   body: {
     kind: "webview",
@@ -20,7 +20,7 @@ export const timelineView = defineView({
 
 export const timelinePage = definePage({
   id: "timeline",
-  title: l10n("timeline.page.title", "Ticket timeline"),
+  title: l10n("timeline.page.title", "Project Timeline"),
   path: "ticket-timeline",
   icon: "chart-no-axes-gantt",
   mode: workbenchModes.project,
@@ -33,7 +33,7 @@ export const timelineNavigation = defineNavigationItem({
   owner: workbenchModes.project,
   slot: "content",
   group: "Project Planning",
-  label: l10n("timeline.page.title", "Ticket timeline"),
+  label: l10n("timeline.page.title", "Project Timeline"),
   icon: "chart-no-axes-gantt",
   action: { kind: "page", page: timelinePage.ref },
 });

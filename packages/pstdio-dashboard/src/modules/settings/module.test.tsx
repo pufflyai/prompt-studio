@@ -1,12 +1,30 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbench } from "@pstdio/workbench";
 import { registerWorkbenchExtensionContributions } from "@pstdio/workbench/extensions";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
+import { getWriter } from "@/lib/sync/collections";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
+import { receiveSettings } from "@/shared/settings/synced-settings";
 import { createSettingsModule } from "./module";
 
 describe("createSettingsModule", () => {
+  afterEach(() => getWriter("settings")!.remove("global"));
+
+  test("shows the Machine tokens panel only while its beta switch is on", () => {
+    const workbench = createWorkbench();
+    const registration = workbench.registerModule(createSettingsModule());
+    const machineTokens = () => workbench.settings.listPanels().find((panel) => panel.id === "machine-tokens");
+    const settings = { max_concurrent_sessions: null, notifications_enabled: false };
+
+    expect(machineTokens()).toBeUndefined();
+    receiveSettings({ ...settings, machine_tokens_enabled: true });
+    expect(machineTokens()).toMatchObject({ kind: "view", section: "project", scope: "project" });
+    receiveSettings({ ...settings, machine_tokens_enabled: false });
+    expect(machineTokens()).toBeUndefined();
+    registration.dispose();
+  });
+
   test("registers the settings command", () => {
     const workbench = createWorkbench();
 

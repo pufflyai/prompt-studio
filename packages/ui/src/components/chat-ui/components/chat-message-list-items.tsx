@@ -22,7 +22,11 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
   return (
     <ChatMessage.Root from={from} {...(animate ? messageFadeInProps : undefined)}>
       <ChatMessage.Content from={from}>
-        <MessagePartsRenderer message={message} streaming={streaming} hideQuestionForms={hideQuestionForms} />
+        <MessagePartsRenderer
+          message={message}
+          streaming={streaming && from === "assistant"}
+          hideQuestionForms={hideQuestionForms}
+        />
         {showActions ? (
           <MessageActionPanel message={message} alwaysVisible={from === "user"} copyAlwaysVisible={from !== "user"} />
         ) : null}

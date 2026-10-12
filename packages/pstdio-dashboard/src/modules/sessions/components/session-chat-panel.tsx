@@ -149,7 +149,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   );
   const openWorkspaceOnSelection = input.panel.region !== "side";
 
-  const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId, queue);
+  const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId, queue, pendingFollowUp);
   const chatMessages = useApiFileParts(splitDisplay.messages);
   const effectiveStreaming = streaming || view.status === "in_progress" || pendingWork;
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
@@ -165,6 +165,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     return submitSessionMessage({
       conversationKey: view.draftKey,
       sessionId,
+      sessionStatus: view.status,
       lastRequestStarted: view.lastRequestStarted,
       projectId,
       agent: selectedAgent || null,

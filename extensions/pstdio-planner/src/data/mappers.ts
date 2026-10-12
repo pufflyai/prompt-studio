@@ -10,6 +10,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { l10n, workbenchPages } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
+import { HUMAN_REQUESTED_OPTION_ID } from "./review-request-storage";
 import { ticketPageTarget } from "./ticket-page-target";
 import {
   resolveTicketHierarchy,
@@ -240,7 +241,7 @@ const tagToAttribute = (tag: StoredTag): KanbanRendererAttributeDescriptor => ({
   },
   filterable: true,
   displayable: true,
-  editable: true,
+  editable: !tag.options.some((option) => option.id === HUMAN_REQUESTED_OPTION_ID),
   groupable: isSingleSelectTicketTag(tag),
 });
 

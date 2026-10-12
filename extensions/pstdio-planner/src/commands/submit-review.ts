@@ -209,7 +209,7 @@ export const submitReviewCommand = defineCommand({
       commitSha: revision.headSha,
       metadata: { verdict: commandParams.verdict },
     });
-    await rollUpAttemptTicket(ctx.storage, attempt.ticketId);
+    await rollUpAttemptTicket(ctx, attempt.ticketId);
 
     if (commandParams.verdict === "changes_requested") {
       await ctx.sessions.followup({

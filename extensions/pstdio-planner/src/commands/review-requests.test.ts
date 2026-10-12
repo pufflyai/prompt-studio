@@ -4,6 +4,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
 import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
+import { findTicket } from "../data/resolve";
 import { REVIEW_OUTCOMES_COLLECTION, reviewRequestsCollection } from "../data/review-request-storage";
 import { seedDefaultTags } from "../data/seed";
 import { reviewRequestCleanupHook } from "../hooks/review-request-cleanup";
@@ -65,7 +66,7 @@ const setup = async () => {
         ...extra,
       },
     });
-  const flagged = async () => (await ticketsCollection(storage).get("ps-1"))?.tagIds?.includes(FLAG);
+  const flagged = async () => (await findTicket(storage, "ps-1"))?.tagIds?.includes(FLAG);
   return { storage, created, opened, context, flagged };
 };
 
@@ -357,7 +358,7 @@ describe("attempt handoffs", () => {
     const attempt = (await readAttempt(storage, "workspace-1"))!;
     await putAttempt(storage, { ...attempt, state: "implementing" });
 
-    await rollUpAttemptTicket(storage, "ps-1");
+    await rollUpAttemptTicket(context(), "ps-1");
 
     expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("in-review");
   });

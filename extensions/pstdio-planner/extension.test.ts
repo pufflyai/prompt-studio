@@ -244,6 +244,10 @@ describe("pstdio planner workspace contributions", () => {
   });
   test("contributes ticket workspace and merge hooks", () => {
     expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
+      "auto-build.plan-changed",
+      "auto-build.project-opened",
+      "auto-build.session-completed",
+      "auto-build.tickets-changed",
       "git-merged-mark-done",
       "review-request-cleanup",
       "session-awaiting-input",
@@ -305,6 +309,7 @@ describe("pstdio planner workspace contributions", () => {
     let detailTarget: unknown;
     await tickets.body.onRowActivate?.(
       {
+        storage: createMemoryStorage(),
         navigation: {
           open: (target: unknown) => {
             detailTarget = target;
