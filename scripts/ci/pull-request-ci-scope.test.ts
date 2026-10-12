@@ -18,75 +18,66 @@ const packageDirs = [
   "scripts",
 ];
 
-const pullRequest = (changedFiles: string[], affectedPackages: string[] = []) =>
-  resolveCiScope({ event: "pull_request", changedFiles, packageDirs, affectedPackages });
+const pullRequest = (changedFiles: string[], labels: string[] = []) =>
+  resolveCiScope({ event: "pull_request", labels, changedFiles, packageDirs });
 
-const everything = {
-  lernaFilter: "",
-  windows: true,
-  e2e: true,
-  license: true,
-  publishedExtensions: true,
-  harnessCli: true,
+const full = { stage: "full", lernaFilter: "", license: true, publishedExtensions: true, harnessCli: true };
+
+const everyLinuxCheck = { ...full, stage: "pull_request" };
+
+const scoped = {
+  stage: "pull_request",
+  lernaFilter: "--since HEAD~1",
+  license: false,
+  publishedExtensions: false,
+  harnessCli: false,
 };
 
-describe("pull request CI scope", () => {
-  for (const harness of ["harness-codex", "harness-open-code", "harness-claude-code"]) {
-    test(`${harness} discovery changes require native Windows checks`, () => {
-      const scope = pullRequest([`extensions/${harness}/src/detection.ts`], [harness]);
-      expect(scope.lernaFilter).toBe("--since HEAD~1");
-      expect(scope.windows).toBe(true);
-    });
-  }
-  test("a push to main runs every job on every package", () => {
-    const scope = resolveCiScope({
-      event: "push",
-      changedFiles: ["README.md"],
-      packageDirs,
-      affectedPackages: [],
-    });
-
-    expect(scope).toEqual(everything);
+describe("CI stage", () => {
+  test("a push to main runs the full stage", () => {
+    expect(resolveCiScope({ event: "push", labels: [], changedFiles: ["README.md"], packageDirs })).toEqual(full);
   });
 
-  test("a package change tests changed packages and skips unrelated heavy jobs", () => {
-    const scope = pullRequest(["clients/landing-page/src/pages/index.astro"], ["@pstdio/landing-page"]);
+  test("a manual run runs the full stage", () => {
+    expect(resolveCiScope({ event: "workflow_dispatch", labels: [], changedFiles: [], packageDirs })).toEqual(full);
+  });
+
+  test("the merge queue runs only its build and static check stage", () => {
+    const scope = resolveCiScope({
+      event: "merge_group",
+      labels: [],
+      changedFiles: ["packages/pstdio-api/src/app.ts", "bun.lock"],
+      packageDirs,
+    });
 
     expect(scope).toEqual({
-      lernaFilter: "--since HEAD~1",
-      windows: false,
-      e2e: false,
+      stage: "merge_queue",
+      lernaFilter: "",
       license: false,
       publishedExtensions: false,
       harnessCli: false,
     });
   });
 
-  test("a change in a filesystem or process package runs Windows", () => {
-    expect(pullRequest(["packages/pstdio-db/src/db/connection.ts"], ["pstdio-db"]).windows).toBe(true);
-    expect(pullRequest(["packages/pstdio/src/cli.ts"], ["pstdio"]).windows).toBe(true);
+  test("the ci:full label runs the full stage on a pull request", () => {
+    expect(pullRequest(["packages/ui/src/index.ts"], ["ci:full"])).toEqual(full);
   });
 
-  test("a change to a dependency of a filesystem or process package runs Windows", () => {
-    expect(pullRequest(["packages/pstdio-logging/src/index.ts"], ["pstdio-logging", "pstdio-api"]).windows).toBe(true);
+  test("other labels keep the scoped pull request stage", () => {
+    expect(pullRequest(["clients/landing-page/src/pages/index.astro"], ["release", "breaking-change"])).toEqual(scoped);
   });
+});
 
-  test("an agent command runner change requires Windows checks", () => {
-    const scope = pullRequest(["packages/pstdio-api/src/features/extensions/process-command.ts"], ["pstdio-api"]);
-
-    expect(scope.lernaFilter).toBe("--since HEAD~1");
-    expect(scope.windows).toBe(true);
-  });
-
-  test("a change that affects the e2e package runs the e2e jobs", () => {
-    expect(pullRequest(["extensions/pstdio-planner/src/index.ts"], ["pstdio-planner", "e2e"]).e2e).toBe(true);
+describe("pull request CI scope", () => {
+  test("a package change tests changed packages and skips unrelated jobs", () => {
+    expect(pullRequest(["clients/landing-page/src/pages/index.astro"])).toEqual(scoped);
   });
 
   test("a manifest change runs the license check", () => {
-    expect(pullRequest(["packages/ui/package.json"], ["@pstdio/ui"]).license).toBe(true);
+    expect(pullRequest(["packages/ui/package.json"]).license).toBe(true);
   });
 
-  test("documentation outside packages runs no heavy jobs", () => {
+  test("documentation outside packages runs no extra jobs", () => {
     const scope = pullRequest([
       "README.md",
       "documentation/guides/development/0002-testing.md",
@@ -94,24 +85,17 @@ describe("pull request CI scope", () => {
       "LICENSE",
     ]);
 
-    expect(scope).toEqual({
-      lernaFilter: "--since HEAD~1",
-      windows: false,
-      e2e: false,
-      license: false,
-      publishedExtensions: false,
-      harnessCli: false,
-    });
+    expect(scope).toEqual(scoped);
   });
 
-  test("any other change outside packages runs everything", () => {
-    expect(pullRequest(["bun.lock"])).toEqual(everything);
-    expect(pullRequest([".github/workflows/test-and-build.yml"])).toEqual(everything);
-    expect(pullRequest(["tsconfig.base.json"])).toEqual(everything);
+  test("any other change outside packages runs every Linux check on every package", () => {
+    expect(pullRequest(["bun.lock"])).toEqual(everyLinuxCheck);
+    expect(pullRequest([".github/workflows/test-and-build.yml"])).toEqual(everyLinuxCheck);
+    expect(pullRequest(["tsconfig.base.json"])).toEqual(everyLinuxCheck);
   });
 
-  test("a repository tooling change runs everything", () => {
-    expect(pullRequest(["scripts/test-setup.ts"], ["pstdio-scripts"])).toEqual(everything);
+  test("a repository tooling change runs every Linux check on every package", () => {
+    expect(pullRequest(["scripts/test-setup.ts"])).toEqual(everyLinuxCheck);
   });
 });
 

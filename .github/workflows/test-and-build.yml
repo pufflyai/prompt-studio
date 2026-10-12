@@ -1,16 +1,20 @@
 name: Test and Build
 
-# Every pull request update runs the jobs its changes need. Each push to main runs every job,
-# so a failure in a job the pull request skipped still shows up on the commit that caused it.
+# Each event runs one stage. Pull requests get fast Linux checks scoped to their changes.
+# The merge queue builds every client and runs whole-repo deterministic checks, so it rejects a
+# merged result only when it cannot build or fails a check. Pushes to main and manual runs run
+# every job, and the `ci:full` label runs that full stage on a pull request.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  merge_group:
   push:
     branches:
       - main
   workflow_dispatch:
 
 concurrency:
-  # Only a newer push to the same pull request replaces a run. Every main commit keeps
+  # Only a newer event on the same pull request replaces a run. Every queue and main commit keeps
   # its own run until it finishes, so a red commit can always be traced.
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -20,9 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      stage: ${{ steps.scope.outputs.stage }}
       lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
-      windows: ${{ steps.scope.outputs.windows }}
-      e2e: ${{ steps.scope.outputs.e2e }}
       license: ${{ steps.scope.outputs.license }}
       published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
       harness_cli: ${{ steps.scope.outputs.harnessCli }}
@@ -44,17 +47,20 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Choose the jobs and packages to test
+      - name: Choose the stage, jobs, and packages to test
         id: scope
+        env:
+          PULL_REQUEST_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: bun scripts/ci/pull-request-ci-scope.ts
 
-  test_and_build:
-    needs: scope
+  # Whole-repo checks that give the same result for the same commit. Every stage runs them.
+  static_checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
         with:
+          # The extension API report compares with the last release tag.
           fetch-depth: 0
 
       - name: Setup Node
@@ -95,6 +101,33 @@ jobs:
       - name: Check translations
         run: bun run verify:translations
 
+  lint_and_test:
+    needs: scope
+    if: needs.scope.outputs.stage != 'merge_queue'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # A scoped run lints and tests the packages changed since the target branch.
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build monorepo
+        run: bun run build
+
       - name: Lint monorepo
         run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
 
@@ -128,7 +161,7 @@ jobs:
 
   windows_test_and_build:
     needs: scope
-    if: needs.scope.outputs.windows == 'true'
+    if: needs.scope.outputs.stage == 'full'
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -180,18 +213,18 @@ jobs:
         run: bun test packages/e2e/src/packaged/harness-npm-detection.test.ts --timeout 30000
 
       - name: Lint monorepo
-        run: bunx lerna run lint ${{ needs.scope.outputs.lerna_filter }}
+        run: bunx lerna run lint
 
       - name: Test monorepo (non-e2e)
         # ADR 0044: hosted Windows runner variance exceeds Bun's 5 s default.
-        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api ${{ needs.scope.outputs.lerna_filter }} --stream --concurrency=1 -- --timeout=15000
+        run: bunx lerna run test --ignore e2e --ignore pstdio-wt --ignore pstdio-db --ignore pstdio-api --stream --concurrency=1 -- --timeout=15000
 
       - name: Test Git worktrees with their existing 30-second limit
         run: bun run --cwd packages/pstdio-wt test
 
   windows_database_tests:
     needs: scope
-    if: needs.scope.outputs.windows == 'true'
+    if: needs.scope.outputs.stage == 'full'
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -223,11 +256,11 @@ jobs:
       # so the platform checks do not wait for hundreds of database initializations.
       - name: Test database and API packages
         # ADR 0044: retain the existing Windows default and the API runner's own limit.
-        run: bunx lerna run test --scope pstdio-db --scope pstdio-api ${{ needs.scope.outputs.lerna_filter }} --stream --concurrency=1 -- --timeout=15000
+        run: bunx lerna run test --scope pstdio-db --scope pstdio-api --stream --concurrency=1 -- --timeout=15000
 
   e2e:
     needs: scope
-    if: needs.scope.outputs.e2e == 'true'
+    if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -274,7 +307,7 @@ jobs:
 
   e2e_cli:
     needs: scope
-    if: needs.scope.outputs.e2e == 'true'
+    if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -307,7 +340,7 @@ jobs:
 
   packaged_and_vite_e2e:
     needs: scope
-    if: needs.scope.outputs.e2e == 'true'
+    if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -390,8 +423,98 @@ jobs:
         if: failure()
         run: echo "::error::${{ steps.license_check_report.outputs.report }}"
 
+  # Builds every client without signing, because signing secrets are trusted only on main and
+  # release tags. Hosted Intel runners are slow, so the full stage tests on the other three.
+  build_clients:
+    name: build_clients (${{ matrix.target }})
+    needs: scope
+    if: needs.scope.outputs.stage != 'pull_request'
+    runs-on: ${{ matrix.os }}
+    # Slowest measured row: darwin-arm64 in release runs, 11.2 min for install, build, source specs and packaged smoke.
+    timeout-minutes: 20
+    env:
+      # The compiled CLI and desktop sidecar install core extensions from this commit, not from an unreleased tag.
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ github.sha }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-latest, platform: linux, arch: x64, tests: true }
+          - { target: darwin-arm64, os: macos-15, platform: darwin, arch: arm64, tests: true }
+          - { target: darwin-x64, os: macos-15-intel, platform: darwin, arch: x64, tests: false }
+          - { target: win32-x64, os: windows-2025, platform: win32, arch: x64, tests: true }
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: node scripts/ci/install-native-dependencies.ts
+
+      - name: Build monorepo
+        if: matrix.platform == 'linux'
+        run: bun run build
+
+      - name: Compile CLI binaries for every platform
+        if: matrix.platform == 'linux'
+        run: bun run --cwd scripts build:all
+
+      - name: Scaffold platform packages
+        if: matrix.platform == 'linux'
+        run: bun run --cwd scripts release:platforms:scaffold
+
+      - name: Build unsigned desktop app
+        id: desktop
+        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
+
+      # Chromium refuses to start on Linux unless its sandbox helper is owned by root and setuid.
+      - name: Configure the Linux Chromium sandboxes
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'linux'
+        run: |
+          set -euo pipefail
+          (cd clients/desktop && bun -e 'require("electron")')
+          for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox clients/desktop/node_modules/electron/dist/chrome-sandbox; do
+            sudo chown root:root "$sandbox"
+            sudo chmod 4755 "$sandbox"
+          done
+
+      - name: Set up Windows desktop tests
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'win32'
+        uses: ./.github/actions/setup-windows-desktop-tests
+
+      # The source suite reuses the desktop build from packaging.
+      - name: Test source Electron
+        if: needs.scope.outputs.stage == 'full' && matrix.tests
+        working-directory: clients/desktop
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
+
+      # A source failure must not hide the packaged results for the same build. The job still fails.
+      - name: Smoke packaged desktop app
+        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        env:
+          DEBUG: pw:api,pw:browser
+        working-directory: clients/desktop
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
+
+      - name: Preserve desktop test reports and traces
+        if: always() && needs.scope.outputs.stage == 'full' && matrix.tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-test-results-${{ matrix.target }}
+          path: clients/desktop/test-results
+          if-no-files-found: ignore
+
   build_docker:
-    needs: test_and_build
+    needs: scope
+    if: needs.scope.outputs.stage != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -420,18 +543,43 @@ jobs:
         if: matrix.image == 'pstdio/api'
         run: docker run --rm --entrypoint bun pstdio/api:${{ github.sha }} -e 'await import("./src/app.ts");'
 
-  # The one status check the main ruleset requires. Job and matrix names can change
-  # without touching the ruleset. It must always run: GitHub treats a skipped required
+  # The compiled CLI on Linux, Intel macOS and Windows, as the release checks it.
+  packaged_toolchain:
+    needs: scope
+    if: needs.scope.outputs.stage == 'full'
+    uses: ./.github/workflows/verify-packaged-toolchain.yml
+    with:
+      ref: ${{ github.sha }}
+
+  # The one status check the main ruleset and merge queue require. Job and matrix names can
+  # change without touching the ruleset. It must always run: GitHub treats a skipped required
   # check as passing, and jobs are skipped when a job they need fails.
-  # Pull requests may skip jobs their changes do not need. On main every job must pass.
+  # Pull requests may skip jobs their changes do not need. The merge queue requires its build
+  # and static check jobs. The full stage requires every job.
   ci_passed:
     if: always()
-    needs: [scope, published_extensions, harness_cli_support, test_and_build, windows_test_and_build, windows_database_tests, e2e, e2e_cli, packaged_and_vite_e2e, license_check, build_docker]
+    needs:
+      - scope
+      - static_checks
+      - lint_and_test
+      - published_extensions
+      - harness_cli_support
+      - windows_test_and_build
+      - windows_database_tests
+      - e2e
+      - e2e_cli
+      - packaged_and_vite_e2e
+      - license_check
+      - build_clients
+      - build_docker
+      - packaged_toolchain
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require every blocking job to succeed
+      - name: Require every job of this stage to succeed
         if: >-
           contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') ||
-          (github.event_name != 'pull_request' && contains(needs.*.result, 'skipped'))
+          (needs.scope.outputs.stage == 'merge_queue' && (needs.static_checks.result != 'success' ||
+          needs.build_clients.result != 'success' || needs.build_docker.result != 'success')) ||
+          (needs.scope.outputs.stage == 'full' && contains(needs.*.result, 'skipped'))
         run: exit 1

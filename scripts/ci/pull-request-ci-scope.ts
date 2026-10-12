@@ -8,29 +8,14 @@ const PULL_REQUEST_BASE = "HEAD~1";
 // Repository tooling, such as the test preload and build scripts, affects every package.
 const REPOSITORY_TOOLING_DIR = "scripts";
 
-// Packages that do filesystem or process work, where Windows behaves differently.
-// A change to one of their dependencies can break them on Windows too.
-const WINDOWS_SENSITIVE_PACKAGES = [
-  "@pstdio/desktop",
-  "harness-codex",
-  "harness-open-code",
-  "harness-claude-code",
-  "pstdio",
-  "pstdio-api",
-  "pstdio-api-runtime-host",
-  "pstdio-db",
-  "pstdio-dev",
-  "pstdio-extensions",
-  "pstdio-paths",
-  "pstdio-storage",
-  "pstdio-wt",
-];
+// A person adds this label to run the full after-merge suite on a pull request.
+const FULL_RUN_LABEL = "ci:full";
 
 interface CiScopeInput {
   event: string;
+  labels: string[];
   changedFiles: string[];
   packageDirs: string[];
-  affectedPackages: string[];
 }
 
 const isInside = (file: string, dir: string) => file.startsWith(`${dir}/`);
@@ -38,19 +23,24 @@ const isPackageFile = (file: string, packageDirs: string[]) =>
   !isInside(file, REPOSITORY_TOOLING_DIR) && packageDirs.some((dir) => isInside(file, dir));
 const isDocumentation = (file: string) => file.endsWith(".md") || file.startsWith("design/") || file === "LICENSE";
 
-export function resolveCiScope({ event, changedFiles, packageDirs, affectedPackages }: CiScopeInput) {
-  // Only pull requests are narrowed. Every commit on main is tested in full.
-  // Files outside every package, such as the lockfile or workflows, can affect any job.
-  const full =
-    event !== "pull_request" ||
-    changedFiles.some((file) => !isPackageFile(file, packageDirs) && !isDocumentation(file));
-  if (full)
-    return { lernaFilter: "", windows: true, e2e: true, license: true, publishedExtensions: true, harnessCli: true };
+// The workflow runs the jobs of one stage. A pull request gets fast Linux checks, the merge
+// queue builds every client and runs deterministic checks, and the full stage runs everything.
+export function resolveCiScope({ event, labels, changedFiles, packageDirs }: CiScopeInput) {
+  if (event === "merge_group") {
+    return { stage: "merge_queue", lernaFilter: "", license: false, publishedExtensions: false, harnessCli: false };
+  }
+  if (event !== "pull_request" || labels.includes(FULL_RUN_LABEL)) {
+    return { stage: "full", lernaFilter: "", license: true, publishedExtensions: true, harnessCli: true };
+  }
+
+  // Files outside every package, such as the lockfile or workflows, can affect any package.
+  if (changedFiles.some((file) => !isPackageFile(file, packageDirs) && !isDocumentation(file))) {
+    return { stage: "pull_request", lernaFilter: "", license: true, publishedExtensions: true, harnessCli: true };
+  }
 
   return {
+    stage: "pull_request",
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
-    windows: affectedPackages.some((name) => WINDOWS_SENSITIVE_PACKAGES.includes(name)),
-    e2e: affectedPackages.includes("e2e"),
     publishedExtensions: changedFiles.some((file) =>
       ["extensions", "packages/sdk", "packages/ui", "packages/pstdio-api-contracts"].some((dir) => isInside(file, dir)),
     ),
@@ -69,27 +59,20 @@ function run(command: string, args: string[]) {
   return result.stdout;
 }
 
-const lernaPackages = (...filters: string[]) =>
-  JSON.parse(run("bunx", ["lerna", "ls", "--all", "--json", "--loglevel", "silent", ...filters])) as Array<{
-    name: string;
-    location: string;
-  }>;
-
 if (import.meta.main) {
   const event = process.env.GITHUB_EVENT_NAME ?? "";
+  // Events without a pull request have no labels.
+  const labels: string[] = JSON.parse(process.env.PULL_REQUEST_LABELS || "null") ?? [];
   const changedFiles = run("git", ["diff", "--name-only", PULL_REQUEST_BASE, "HEAD"]).split("\n").filter(Boolean);
-  const packageDirs = lernaPackages().map((pkg) => relative(process.cwd(), pkg.location));
-  const affectedPackages = lernaPackages("--since", PULL_REQUEST_BASE).map((pkg) => pkg.name);
-  const scope = resolveCiScope({ event, changedFiles, packageDirs, affectedPackages });
+  const packages = JSON.parse(run("bunx", ["lerna", "ls", "--all", "--json", "--loglevel", "silent"])) as Array<{
+    location: string;
+  }>;
+  const packageDirs = packages.map((pkg) => relative(process.cwd(), pkg.location));
+  const scope = resolveCiScope({ event, labels, changedFiles, packageDirs });
 
   const outputs = Object.entries(scope).map(([key, value]) => `${key}=${value}`);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${outputs.join("\n")}\n`);
-  const summary = [
-    `## CI scope (${event})`,
-    ...outputs.map((line) => `- ${line}`),
-    "",
-    `Affected packages: ${affectedPackages.join(", ") || "none"}`,
-  ];
+  const summary = [`## CI scope (${event})`, ...outputs.map((line) => `- ${line}`)];
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary.join("\n")}\n`);
   console.log(summary.join("\n"));
 }
