@@ -8,7 +8,10 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["bun"]
+    "types": ["bun"],
+    "paths": {
+      "@pstdio/sdk/*": ["../../../packages/sdk/src/*"]
+    }
   },
   "include": ["extension.ts", "src"]
 }
