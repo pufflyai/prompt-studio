@@ -1,6 +1,6 @@
 ---
 title: "Prompt Studio 0.43"
-description: "Plan tickets on a Project Timeline, let Auto Build assign ready work to agents, organize Notes in folders, copy a link to any page, and follow nightly builds."
+description: "Plan tickets on a Project Timeline, let Auto Build assign ready work to agents, organize Notes in folders, and follow nightly builds."
 published: 2026-10-12T15:00:37Z
 author: aurelien-franky
 category: release
@@ -9,7 +9,7 @@ image:
   dark: ./images/blog-prompt-studio-0-43.png
 ---
 
-Prompt Studio 0.43 adds a Project Timeline and Auto Build to Planner, folders to Notes, and a Copy link action on every page. Place tickets on tracks and milestones, let a supervisor agent start the ones that are ready, and send someone a link to the exact page you have open.
+Prompt Studio 0.43 adds a Project Timeline and Auto Build to Planner, and folders to Notes. Place tickets on tracks and milestones, let a supervisor agent start the ones that are ready, and keep related notes together.
 
 ## Project Timeline
 
