@@ -6,6 +6,7 @@ import { pageHasBottom } from "../../core/registries/pages/page-panel-menus";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
 import { openPanelWidget } from "../region/panel-widget-open";
 import { WorkbenchIcon } from "../shared/icon";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -19,6 +20,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
   const menus = useWorkbenchPanelMenus(workbench, "main").filter((menu) => menu.has && page?.panelMenus?.[menu.side]);
   const panels = useWorkbenchCompositionPanels(workbench).bottom.addable;
   const resource = useWorkbenchLocationResource(workbench);
+  const bottom = usePanelPolicy(workbench, "bottom");
   if (!page?.panelMenus && !pageHasBottom(page)) return null;
   return (
     <Menu.Root positioning={{ placement: "bottom-end", getAnchorElement: () => triggerRef.current }}>
@@ -61,6 +63,16 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                 Open {panel.contribution.title}
               </Menu.Item>
             ))}
+            {bottom.provided && (bottom.open ? bottom.canClose : bottom.canOpen) ? (
+              <Menu.Item
+                value="bottom-visibility"
+                onClick={() => {
+                  void workbench.shell.setRegionOpen("bottom", !bottom.open);
+                }}
+              >
+                {bottom.open ? "Hide" : "Show"} Page bottom
+              </Menu.Item>
+            ) : null}
           </Menu.Content>
         </Menu.Positioner>
       </Portal>

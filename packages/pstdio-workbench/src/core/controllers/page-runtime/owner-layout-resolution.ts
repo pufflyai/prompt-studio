@@ -5,7 +5,27 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../registries/layout/layout-types";
 import { placementIdentityKey, type ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
-import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
+import type { WorkbenchPageRegistry, WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
+import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
+
+type OwnerState = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
+const ownerReaders = new WeakMap<
+  WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
+  (state: OwnerState) => ReturnType<typeof savedOwnerPlacements>
+>();
+
+export const connectOwnerPlacementReader = (
+  registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
+  read: (state: OwnerState) => ReturnType<typeof savedOwnerPlacements>,
+) => {
+  ownerReaders.set(registry, read);
+  return () => ownerReaders.delete(registry);
+};
+
+export const readSavedOwnerPlacements = (
+  registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
+  state: OwnerState,
+) => ownerReaders.get(registry)?.(state);
 
 const records = (layout?: WorkbenchLayout) =>
   Object.values(layout?.regions ?? {}).flatMap((region) =>
@@ -56,6 +76,16 @@ const savedModeRecords = (
   return [...modeRecords.values()];
 };
 
+export const savedOwnerPlacements = (input: {
+  modeId?: string;
+  pageLayout?: WorkbenchLayout;
+  modeLayout?: WorkbenchLayout;
+  currentLayout?: WorkbenchLayout;
+}) => [
+  ...records(input.pageLayout).filter((p) => p.identity.kind !== "mode"),
+  ...savedModeRecords(input.modeId, input.modeLayout, input.currentLayout),
+];
+
 const canSeedDeclaration = (
   placement: ResolvedOwnedPlacement<WorkbenchWidgetPlacement>,
   page: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
@@ -76,7 +106,8 @@ const canSeedDeclaration = (
     hasOwnerLayout &&
     !previous &&
     !newFixedDeclaration &&
-    ((enteringPage && placement.identity.kind !== "mode") || (!added.has(key) && !activated.has(key)))
+    !activated.has(key) &&
+    ((enteringPage && placement.identity.kind !== "mode") || !added.has(key))
   )
     return false;
   return true;
@@ -97,14 +128,19 @@ export const resolveOwnerPlacements = (input: {
   pageLayout?: WorkbenchLayout;
   modeLayout?: WorkbenchLayout;
   currentLayout?: WorkbenchLayout;
+  previousPageLayout?: WorkbenchLayout;
   enteringPage: boolean;
   getWidget?(id: string): RegisteredWidgetContribution | undefined;
   hasDeclaration?(identity: PlacementIdentity): boolean;
 }) => {
   const { state } = input;
   const page = records(input.pageLayout).filter((p) => p.identity.kind !== "mode");
-  const mode = savedModeRecords(state.activeModeId, input.modeLayout, input.currentLayout);
-  const saved = [...page, ...mode];
+  const saved = savedOwnerPlacements({ ...input, modeId: state.activeModeId });
+  const liveSingleByKey = new Map(
+    records(input.previousPageLayout)
+      .filter((p) => p.identity.kind === "page" && p.identity.instanceKey === SINGLE_RESOURCE_INSTANCE_KEY)
+      .map((p) => [placementIdentityKey(p.identity), p.value.widgetId]),
+  );
   const transferredDeclarations = new Set(
     saved.flatMap((p) => (p.value.declarationIdentity ? [placementIdentityKey(p.value.declarationIdentity)] : [])),
   );
@@ -137,11 +173,12 @@ export const resolveOwnerPlacements = (input: {
       )
     )
       continue;
-    desired.push(
-      previous
-        ? { ...placement, region: previous.region, value: { ...placement.value, widgetId: previous.value.widgetId } }
-        : placement,
-    );
+    const widgetId = liveSingleByKey.get(key) ?? previous?.value.widgetId ?? placement.value.widgetId;
+    desired.push({
+      ...placement,
+      region: previous?.region ?? placement.region,
+      value: { ...placement.value, widgetId },
+    });
     savedByKey.delete(key);
   }
   for (const placement of savedByKey.values()) {

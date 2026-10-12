@@ -57,7 +57,13 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
   );
   const regionsNeedClearing = regionIds.some((regionId) => {
     const region = layout.regions[regionId];
-    return region.widgets.length > 0 || region.activeWidgetId !== undefined || region.visible;
+    return (
+      region.widgets.length > 0 ||
+      region.activeWidgetId !== undefined ||
+      region.visible ||
+      region.visibility !== undefined ||
+      region.headerVisible !== undefined
+    );
   });
   const selectionsNeedClearing = Object.values(layout.locationSubPanelSelections ?? {}).some((selections) =>
     Object.keys(selections).some((panel) => clearedPanels.has(panel as keyof typeof modePanelRegions)),
@@ -66,7 +72,14 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
 
   const regions = { ...layout.regions };
   for (const regionId of regionIds) {
-    regions[regionId] = { ...regions[regionId], widgets: [], activeWidgetId: undefined, visible: false };
+    regions[regionId] = {
+      ...regions[regionId],
+      widgets: [],
+      activeWidgetId: undefined,
+      visible: false,
+      visibility: undefined,
+      headerVisible: undefined,
+    };
   }
   const locationSubPanelSelections = Object.fromEntries(
     Object.entries(layout.locationSubPanelSelections ?? {}).map(([resourceKey, selections]) => [

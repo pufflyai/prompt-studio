@@ -1,6 +1,7 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { PanelMenuDeclaration, PlacementItem } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime, RuntimePageMain, RuntimePageSlot, RuntimePlacementTab } from "../../types/runtime";
+import { panelSettingsMetadata } from "./panel-settings-metadata";
 import { normalizedRef, normalizeTarget, refreshEventIds } from "./workbench-extension-metadata-normalizers";
 
 type MetadataItem = WorkbenchExtensionMetadata["placements"][number]["item"];
@@ -50,7 +51,7 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
           right: menuRecord(page.contribution.panelMenus.right, page.extensionId),
         }
       : undefined,
-    regionSettings: page.contribution.regionSettings,
+    regionSettings: panelSettingsMetadata(page.contribution.regionSettings, page.extensionId),
     mode: normalizedRef(page.contribution.mode, page.extensionId),
     parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
     resource: page.contribution.resource

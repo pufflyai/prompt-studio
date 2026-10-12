@@ -1,10 +1,11 @@
-import { Box, Grid, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { Artwork } from "./boombox-artwork";
 import { type BoomboxTrack, boomboxTracks } from "./boombox-data";
 import { BoomboxNav, BoomboxRail } from "./boombox-navigation";
+import { BoomboxQueue } from "./boombox-queue";
 import { getBoomboxStore } from "./boombox-state";
 import { usePrimaryResource, useShowcaseStore } from "./showcase-store";
 import { boomboxTheme } from "./themes";
@@ -43,7 +44,7 @@ const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
           <Text textStyle="paragraph/S/semibold">Ari Park · 5 songs · 19 min</Text>
         </Stack>
       </HStack>
-      <Grid flex="1" minH="0" gridTemplateColumns={{ base: "minmax(0, 1fr)", xl: "minmax(0, 1fr) 18rem" }}>
+      <Box flex="1" minH="0">
         <Stack overflowY="auto" gap="xs" px={{ base: "md", md: "xl" }} py="lg">
           <HStack px="sm" color="fg.muted" textStyle="label/XS">
             <Text w="8">#</Text>
@@ -114,69 +115,7 @@ const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
             );
           })}
         </Stack>
-        <Box
-          display={{ base: "none", xl: "block" }}
-          minH="0"
-          overflowY="auto"
-          borderLeftWidth="1px"
-          borderColor="border.subtle"
-        >
-          <Queue workbench={input.workbench} />
-        </Box>
-      </Grid>
-    </Stack>
-  );
-};
-const Queue = (props: { workbench: WorkbenchCore }) => {
-  const store = getBoomboxStore(props.workbench);
-  const state = useShowcaseStore(store);
-  const activeId = usePrimaryResource(props.workbench)?.id;
-  const queued = boomboxTracks.filter((track) => state.queueIds.includes(track.id));
-  return (
-    <Stack h="full" p="md" gap="lg">
-      <Stack gap="xs">
-        <Text textStyle="heading/S/semibold">Queue</Text>
-        <Text color="fg.muted" textStyle="paragraph/S/regular">
-          Playing now
-        </Text>
-        {boomboxTracks
-          .filter((track) => track.id === activeId)
-          .map((track) => (
-            <HStack key={track.id}>
-              <Artwork track={track} />
-              <Stack gap="0">
-                <Text textStyle="paragraph/S/semibold">{track.title}</Text>
-                <Text color="fg.muted" textStyle="paragraph/XS/regular">
-                  {track.artist}
-                </Text>
-              </Stack>
-            </HStack>
-          ))}
-      </Stack>
-      <Stack gap="sm">
-        <Text color="fg.muted" textStyle="paragraph/S/regular">
-          Next up
-        </Text>
-        {queued.map((track) => (
-          <HStack key={track.id}>
-            <Artwork track={track} />
-            <Stack gap="0" flex="1">
-              <Text textStyle="paragraph/S/semibold">{track.title}</Text>
-              <Text color="fg.muted" textStyle="paragraph/XS/regular">
-                {track.artist}
-              </Text>
-            </Stack>
-            <IconButton
-              aria-label={`Remove ${track.title} from queue`}
-              size="xs"
-              variant="ghost"
-              onClick={() => store.setState({ queueIds: state.queueIds.filter((id) => id !== track.id) })}
-            >
-              <WorkbenchIcon name="X" />
-            </IconButton>
-          </HStack>
-        ))}
-      </Stack>
+      </Box>
     </Stack>
   );
 };
@@ -246,15 +185,26 @@ const Player = (props: { workbench: WorkbenchCore }) => {
   );
 };
 export const createBoomboxWorkbench = () => {
-  const workbench = createWorkbench({ startPage: homePage });
+  const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "attached" });
   workbench.themes.register([boomboxTheme]);
   workbench.modes.registerMode({
     id: "boombox",
     label: "Boombox",
     chrome: { nav: "boombox.nav", sidenav: false, activity: "boombox.rail" },
     resourceKinds: ["boombox.track"],
+    panels: ["main", "side", "secondary"],
+    floatingBubble: false,
     regionSettings: {
-      secondary: { size: { defaultPx: 88, minPx: 88, maxPx: 88 }, collapsible: false, showHeader: false },
+      side: { canOpen: true, canClose: true, floatable: false, acceptsTabs: false },
+      secondary: {
+        size: { defaultPx: 88, minPx: 88, maxPx: 88 },
+        canOpen: false,
+        canClose: false,
+        acceptsTabs: false,
+        resizable: false,
+        movable: false,
+        showHeader: false,
+      },
     },
     activate: () => undefined,
   });
@@ -278,11 +228,25 @@ export const createBoomboxWorkbench = () => {
     title: "Player",
     body: { kind: "react", render: (input) => <Player workbench={input.workbench} /> },
   });
+  workbench.views.registerView({
+    id: "boombox.up-next",
+    title: "Up next",
+    body: { kind: "react", render: (input) => <BoomboxQueue workbench={input.workbench} /> },
+  });
+  workbench.modePlacements.registerPlacement({
+    id: "boombox.up-next",
+    ref: { extensionId: "storybook.showcases", kind: "placement", id: "boombox.up-next" },
+    modeId: "boombox",
+    region: "side",
+    movableTo: ["side"],
+    item: { kind: "view", presence: "fixed", view: { kind: "view", id: "boombox.up-next" } },
+  });
   workbench.modePlacements.registerPlacement({
     id: "boombox.player",
     ref: { extensionId: "storybook.showcases", kind: "placement", id: "boombox.player" },
     modeId: "boombox",
     region: "secondary",
+    movableTo: ["secondary"],
     item: {
       kind: "view",
       presence: "fixed",

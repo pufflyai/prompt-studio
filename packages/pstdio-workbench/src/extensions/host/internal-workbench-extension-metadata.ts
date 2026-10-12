@@ -60,7 +60,9 @@ export interface InternalWorkbenchExtensionMetadata {
     defaultTheme?: string;
     chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
     panelRegions: WorkbenchExtensionMetadata["modes"][number]["regions"];
-    regionSettings?: WorkbenchExtensionMetadata["modes"][number]["regionSettings"];
+    regionSettings?: import("../../core").WorkbenchModeContribution["regionSettings"];
+    floatingBubble?: boolean;
+    floating?: import("../../core").WorkbenchModeContribution["floating"];
     floatingPanels?: WorkbenchExtensionMetadata["modes"][number]["floatingPanels"];
   }>;
   pages: WorkbenchPageContribution[];

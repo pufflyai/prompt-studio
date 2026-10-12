@@ -19,12 +19,16 @@ test("public mode metadata enforces the same floating and region policy as core 
           label: "Kiln",
           regions: ["main", "side", "secondary"],
           floatingPanels: "hidden",
-          regionSettings: { side: { collapsible: false }, secondary: { collapsible: false, alwaysShowTabs: true } },
+          regionSettings: {
+            side: { collapsible: false, canOpen: true, canClose: true, showHeader: false },
+            secondary: { collapsible: false, alwaysShowTabs: true },
+          },
         },
       ],
     },
   });
   workbench.modes.setActiveMode("example.lab.mode.kiln");
+  workbench.shell.setRegionOpen("side", true);
   expect(workbench.sidePanel.canFloat()).toBe(false);
   expect(workbench.shell.getSidePanelPresentation()).toBe("attached");
   workbench.shell.setSidePanelPresentation("floating");
@@ -37,5 +41,7 @@ test("public mode metadata enforces the same floating and region policy as core 
     expect(workbench.shell.getRegionState(region).open).toBe(true);
   }
   expect(workbench.layout.getRegionSettings("secondary")?.alwaysShowTabs).toBe(true);
+  expect(workbench.shell.getPanelPolicy("side").legacyHeaders).toBe(true);
+  expect(workbench.shell.getPanelPolicy("side").showHeader).toBe(false);
   registration.dispose();
 });

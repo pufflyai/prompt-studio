@@ -6,7 +6,7 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchRegions,
 } from "../../registries/layout/layout-types";
-import { restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { isPageRegion, restorePageGeometry } from "../../registries/layout/owner-region-state";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput } from "../../workbench-core-types";
 import { modeLayoutScope, pageGeometryScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
@@ -26,6 +26,17 @@ const selectPlacements = (layout: WorkbenchLayout, include: (placement: Workbenc
   }
   return { ...layout, regions };
 };
+const selectPanelChoices = (layout: WorkbenchLayout, owner: "page" | "mode" | "geometry") => ({
+  ...layout,
+  regions: Object.fromEntries(
+    workbenchRegions.map((id) => {
+      const region = layout.regions[id];
+      if (owner !== "geometry" && isPageRegion(id) === (owner === "page")) return [id, region];
+      const { visibility: _intent, headerVisible: _header, ...geometry } = region;
+      return [id, geometry];
+    }),
+  ) as WorkbenchLayout["regions"],
+});
 /** Page caches hold page and shell placements. Shared mode choices have one project/mode owner. */
 export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
   // The persistence adapter does not enumerate keys. Track only scopes visited
@@ -72,14 +83,20 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
         return restorePageGeometry(layout, geometry);
       },
       setLayout: (layout: WorkbenchLayout, scope?: string) => {
-        const snapshot = selectPlacements(layout, (p) => p.placementIdentity?.kind !== "mode");
+        const snapshot = selectPanelChoices(
+          selectPlacements(layout, (p) => p.placementIdentity?.kind !== "mode"),
+          "page",
+        );
         for (const id of workbenchRegions) {
           snapshot.regions[id].savedWidgetOrder = layout.regions[id].widgets.map((widget) => widget.widgetId);
         }
         const owner = pageOwnerFromLayoutScope(scope);
         if (owner)
           write(
-            selectPlacements(snapshot, () => false),
+            selectPanelChoices(
+              selectPlacements(snapshot, () => false),
+              "geometry",
+            ),
             pageGeometryScope(owner.projectId, owner.pageId),
           );
         return write(snapshot, scope);
@@ -89,7 +106,13 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     readPageGeometry: (projectId: string, pageId: string) => read(pageGeometryScope(projectId, pageId)),
     saveMode: (projectId: string | undefined, modeId: string, layout: WorkbenchLayout) =>
       write(
-        selectPlacements(layout, (p) => p.placementIdentity?.kind === "mode" && p.placementIdentity.modeId === modeId),
+        selectPanelChoices(
+          selectPlacements(
+            layout,
+            (p) => p.placementIdentity?.kind === "mode" && p.placementIdentity.modeId === modeId,
+          ),
+          "mode",
+        ),
         modeLayoutScope(projectId, modeId),
       ),
   };

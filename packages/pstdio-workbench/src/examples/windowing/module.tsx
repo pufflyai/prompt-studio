@@ -1,4 +1,5 @@
 import type { WorkbenchCore } from "../../core";
+import type { WindowingFixtureOptions } from "./fixture-options";
 import type { WindowingLifecycleProbe } from "./lifecycle-probe";
 import { registerWindowingPagePanels } from "./page-panels";
 import { type WindowingResources, windowingExtensionId, windowingPages } from "./resources";
@@ -8,9 +9,16 @@ export const registerWindowingModule = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
-  options: { pagePanels?: boolean; mainView?: "files" | "webview" } = {},
+  options: WindowingFixtureOptions = {},
 ) => {
-  workbench.modes.registerMode({ id: "windowing", label: "Windowing", activate() {} });
+  if (options.registerMode) options.registerMode(workbench);
+  else
+    workbench.modes.registerMode({
+      id: "windowing",
+      label: "Windowing",
+      regionSettings: options.regionSettings,
+      activate() {},
+    });
   for (const [id, label, items, page] of [
     ["workspaces", "Workspaces", resources.workspaces, windowingPages.workspace],
     ["notes-list", "Notes", resources.notes, windowingPages.notes],

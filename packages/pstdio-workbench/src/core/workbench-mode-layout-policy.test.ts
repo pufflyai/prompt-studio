@@ -6,8 +6,10 @@ test("mode floating policy governs shell requests, and each mode keeps its own S
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.modes.registerMode({ id: "kiln", floatingPanels: "hidden", activate: () => undefined });
   workbench.modes.setActiveMode("project");
+  workbench.shell.setSidePanelPresentation("floating");
   expect(workbench.shell.getSidePanelPresentation()).toBe("floating");
   workbench.modes.setActiveMode("kiln");
+  workbench.shell.setRegionOpen("side", true);
   expect(workbench.sidePanel.canFloat()).toBe(false);
   expect(workbench.shell.getSidePanelPresentation()).toBe("attached");
   workbench.shell.setSidePanelPresentation("floating");
@@ -32,6 +34,7 @@ test("a mode without floating panels shows a floating panel attached and preserv
     const workbench = createWorkbench({ initialSidePanelMode: initialMode });
     workbench.modes.registerMode({ id: "kiln", floatingPanels: "hidden", activate: () => undefined });
     workbench.modes.setActiveMode("kiln");
+    if (initialMode !== "closed") workbench.shell.setSidePanelPresentation("floating");
     expect(workbench.sidePanel.getMode()).toBe(initialMode === "closed" ? "closed" : "attached");
   }
 });

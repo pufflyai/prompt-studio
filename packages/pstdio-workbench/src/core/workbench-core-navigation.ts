@@ -1,5 +1,6 @@
 import { activateModePlacementInstance } from "./controllers/composition/owned-addable-panels";
 import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
+import { validatePanelNavigation } from "./controllers/navigation/panel-navigation-policy";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import {
   createNavigationRegistry,
@@ -23,11 +24,7 @@ const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) =>
 };
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
-  if (region === "bottom") core.layout.setRegionVisible("bottom", true);
-  if (region === "secondary") {
-    core.shell.setRegionOpen("secondary", true);
-  }
-  if (region === "side" && core.sidePanel.getMode() === "closed") core.sidePanel.setMode("attached");
+  if (region === "bottom" || region === "secondary" || region === "side") core.shell.revealRegion(region);
 };
 
 const openPageSlotTarget = (core: WorkbenchCore, target: NavigationTargetPanel, panel: PageSlotPanelRef) => {
@@ -84,6 +81,7 @@ const openShellPlacementTarget = (core: WorkbenchCore, target: NavigationTargetS
 };
 
 const openCorePanelTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {
+  validatePanelNavigation(core, target, core.pages.store.getState());
   const panel = target.panel;
   if (panel.kind === "shell-placement") {
     openShellPlacementTarget(core, { ...target, panel });

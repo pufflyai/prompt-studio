@@ -23,8 +23,8 @@ import {
 } from "./controllers/page-runtime/page-state-restoration";
 import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench-layout-cache";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
-import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
-import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
+import { registerPanelCommands } from "./controllers/shell/panel-commands";
+import { restorePanelPolicy } from "./controllers/shell/restore-panel-policy";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { createCommandRegistry } from "./registries/commands/command-registry";
@@ -56,6 +56,7 @@ import {
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
 import { createCoreRenderers } from "./workbench-core-renderers";
+import { createCoreShell } from "./workbench-core-shell";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
 import { createCoreViews } from "./workbench-core-views";
 import { createWorkbenchModuleRegistry } from "./workbench-module-registry";
@@ -92,6 +93,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const layoutCache = createWorkbenchLayoutCache(input);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({
+    resolveLayout: (layout) => restorePanelPolicy(core, layout),
     defaultRegionVisibility: {
       ...input.defaultPanelOpenByRegionId,
       side: (input.initialSidePanelMode ?? "floating") !== "closed",
@@ -175,18 +177,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     resolveContext: () => core,
   });
 
-  const sidePanel = createWorkbenchSidePanelController({
-    getFloatingPanels: () => {
-      const activeModeId = modes.getActiveModeId();
-      return (
-        (activeModeId ? modes.getMode(activeModeId)?.floatingPanels : undefined) ?? input.floatingPanels ?? "visible"
-      );
-    },
-    onDidChangePolicy: modes.onDidChangeActive,
-    initialMode: input.initialSidePanelMode,
-    layout,
-  });
-  const shell = createWorkbenchShellController({ layout, sidePanel });
+  const { shell, sidePanel } = createCoreShell(() => core, input, layout, modes, layoutCache);
 
   const pages = createLiveWorkbenchPageRegistry({
     loadModeLayout: layoutCache.readMode,
@@ -308,6 +299,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   setWorkbenchRenderers(core, renderers);
   registerArrangementCommands(core);
+  registerPanelCommands(core);
   layout.store.subscribe(() => {
     const state = pages.store.getState();
     if (state.activeModeId) layoutCache.saveMode(state.projectId, state.activeModeId, layout.getLayout());

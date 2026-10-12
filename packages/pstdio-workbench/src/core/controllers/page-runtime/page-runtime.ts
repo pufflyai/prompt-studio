@@ -35,7 +35,12 @@ import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
-import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
+import {
+  connectOwnerPlacementReader,
+  ownerLayoutActivation,
+  resolveOwnerPlacements,
+  savedOwnerPlacements,
+} from "./owner-layout-resolution";
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
@@ -81,6 +86,7 @@ const prepareRuntimeLayout = (
   latest: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   activation: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["placements"],
   enteringPage: boolean,
+  previousPageLayout?: WorkbenchLayout,
 ) => {
   const modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
   const ownerManaged = Boolean(input.loadPageLayout && latest.activePageId);
@@ -93,6 +99,7 @@ const prepareRuntimeLayout = (
           modeLayout,
           enteringPage,
           currentLayout: input.layout.getLayout(),
+          previousPageLayout,
           getWidget: input.layout.getWidget,
           hasDeclaration: input.hasDeclaration,
         })
@@ -123,6 +130,7 @@ const applyPageState = (
   storeBeforeTransition = input.registry.store.getState(),
 ) => {
   const previousScope = input.layout.getPersistenceScope();
+  const previousLayout = input.layout.getLayout();
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
     if (source === "transition") input.beforeApply?.(state);
@@ -134,7 +142,16 @@ const applyPageState = (
     const activation =
       latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
     const enteringPage = input.layout.getPersistenceScope() !== previousScope;
-    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(input, latest, activation, enteringPage);
+    const samePage =
+      latest.projectId === storeBeforeTransition.projectId &&
+      latest.activePageId === storeBeforeTransition.activePageId;
+    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(
+      input,
+      latest,
+      activation,
+      enteringPage,
+      samePage ? previousLayout : undefined,
+    );
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
     // A restored cache needs the complete owned set; a delta belongs to the previous scope.
     if (ownerManaged || source === "scope-restore" || enteringPage) {
@@ -154,6 +171,14 @@ const applyPageState = (
   });
 };
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
+  const disconnectReader = connectOwnerPlacementReader(input.registry, (state) =>
+    savedOwnerPlacements({
+      modeId: state.activeModeId,
+      pageLayout: input.loadPageLayout?.(state),
+      modeLayout: state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
+      currentLayout: input.layout.getLayout(),
+    }),
+  );
   let applyingTransition = false;
   const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime((state) => {
     const storeBeforeTransition = input.registry.store.getState();
@@ -168,6 +193,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
   });
   return createDisposable(() => {
+    disconnectReader();
     scope.dispose();
     runtime.dispose();
   });

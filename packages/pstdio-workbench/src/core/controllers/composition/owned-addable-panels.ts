@@ -176,7 +176,18 @@ export const createOwnedAddablePanels = (core: WorkbenchCore, input: AddablePane
   const addable: WorkbenchCompositionAddablePanel[] = [];
   const add = (panelId: string, open: WorkbenchCompositionAddablePanel["open"]) => {
     const contribution = core.layout.getWidget(panelId);
-    if (contribution) addable.push({ panelId, region: input.region, contribution, open });
+    if (contribution)
+      addable.push({
+        panelId,
+        region: input.region,
+        contribution,
+        open: (resource) => {
+          const policy = core.shell.getPanelPolicy(input.region);
+          if (!policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${input.region}`);
+          if (!policy.open && !policy.canOpen) throw new Error(`Panel cannot open: ${input.region}`);
+          return open?.(resource);
+        },
+      });
   };
   addShellPanels(core, input, add);
   addModePanels(core, input, add);

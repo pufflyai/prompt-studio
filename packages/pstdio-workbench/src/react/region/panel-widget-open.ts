@@ -25,6 +25,9 @@ export const getPanelLabel = (region: WorkbenchPanelRegion) => {
 
 export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
   const { open, pinned, region, resource, widget, workbench } = input;
+  const policy = workbench.shell.getPanelPolicy(region);
+  if (!policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
+  if (!policy.open && !policy.canOpen) throw new Error(`Panel cannot open: ${region}`);
 
   if (open) {
     await open(resource);
@@ -53,11 +56,5 @@ export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
     });
   }
 
-  if (region === "bottom") workbench.layout.setRegionVisible("bottom", true);
-  if (region === "secondary") {
-    workbench.shell.setRegionOpen("secondary", true);
-  }
-  if (region === "side" && workbench.sidePanel.getMode() === "closed") {
-    workbench.sidePanel.setMode("attached");
-  }
+  if (region !== "main") workbench.shell.revealRegion(region);
 };

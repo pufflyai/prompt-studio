@@ -8,6 +8,9 @@ export const callbackSchema = z.custom<(...args: never[]) => unknown>(
   "a callback function",
 );
 const region = z.enum(extensionPanelRegions);
+const panelSettingsSchema = regionSettingsSchema
+  .extend({ defaultTab: navigationDeclarationSchema.optional() })
+  .strict();
 const presentation = {
   mountStrategy: z.enum(["active", "keep-mounted"]).optional(),
   hiddenByDefault: z.boolean().optional(),
@@ -82,7 +85,7 @@ export const pageDeclarationSchema = z
     ]),
     slots: z.array(slot),
     panelMenus: z.object({ left: panelMenuSchema.optional(), right: panelMenuSchema.optional() }).strict().optional(),
-    regionSettings: z.object({ bottom: regionSettingsSchema.strict().optional() }).strict().optional(),
+    regionSettings: z.object({ bottom: panelSettingsSchema.optional() }).strict().optional(),
     panels: z.record(z.string(), z.unknown()),
   })
   .strict()
@@ -114,6 +117,8 @@ export const modeDeclarationSchema = z
     icon: z.string().optional(),
     regions: z.array(region),
     floatingPanels: z.enum(["visible", "hidden"]).optional(),
+    floatingBubble: z.boolean().optional(),
+    floating: z.object({ defaultTab: navigationDeclarationSchema.optional() }).strict().optional(),
     defaultTheme: localRefSchema("theme").optional(),
     chrome: z
       .object(
@@ -126,7 +131,7 @@ export const modeDeclarationSchema = z
       )
       .strict()
       .optional(),
-    regionSettings: z.record(z.string(), regionSettingsSchema.strict()).optional(),
+    regionSettings: z.record(z.string(), panelSettingsSchema).optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

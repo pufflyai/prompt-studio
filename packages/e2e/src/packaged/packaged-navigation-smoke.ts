@@ -20,6 +20,8 @@ export const writeNavigationExtension = (root: string) => {
   writeFileSync(
     join(source, "extension.ts"),
     `export default {
+      modes: [{ id: "policy", ref: { kind: "mode", id: "policy" }, label: "Panel policy", regions: ["main", "side", "secondary"], floatingBubble: false, floating: { defaultTab: { kind: "panel", panel: { kind: "placement", id: "policy-tools" } } }, regionSettings: { side: { canOpen: false, canClose: false, acceptsTabs: false, resizable: true, movable: false, floatable: false, showHeader: false, collapsible: false }, secondary: { canOpen: true, canClose: true, defaultTab: { kind: "panel", panel: { kind: "placement", id: "policy-tools" } } } } }],
+      placements: [{ id: "policy-tools", ref: { kind: "placement", id: "policy-tools" }, mode: { kind: "mode", id: "policy" }, region: "secondary", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "closed" } }],
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
       views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
       pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, panelMenus: { right: { view: { kind: "view", id: "document" }, collapsible: false, size: { defaultPx: 200 } } }, regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } }, slots: [{ id: "tools", region: "bottom", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } }], panels: {} }],
@@ -62,6 +64,38 @@ export const expectPackagedNavigation = async (input: {
       },
       regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
       slots: [expect.objectContaining({ id: "tools", region: "bottom" })],
+    }),
+  );
+  expect(metadata.modes).toContainEqual(
+    expect.objectContaining({
+      localId: "policy",
+      floatingBubble: false,
+      regionSettings: {
+        side: {
+          canOpen: false,
+          canClose: false,
+          acceptsTabs: false,
+          resizable: true,
+          movable: false,
+          floatable: false,
+          showHeader: false,
+          collapsible: false,
+        },
+        secondary: {
+          canOpen: true,
+          canClose: true,
+          defaultTab: {
+            kind: "panel",
+            panel: { kind: "placement", extensionId: "test.navigation-probe", id: "policy-tools" },
+          },
+        },
+      },
+      floating: {
+        defaultTab: {
+          kind: "panel",
+          panel: { kind: "placement", extensionId: "test.navigation-probe", id: "policy-tools" },
+        },
+      },
     }),
   );
   const documentResponse = await fetch(

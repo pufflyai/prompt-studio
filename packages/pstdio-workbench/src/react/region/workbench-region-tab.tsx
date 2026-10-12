@@ -20,6 +20,14 @@ const TabIcon = (props: { indicator?: import("../../core").WorkbenchTabSnapshot[
   return icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null;
 };
 
+const isLockedTab = (props: WorkbenchRegionTabProps) => {
+  const { workbench, placement } = props;
+  const locked =
+    !placement.closable &&
+    workbench.getPanelDestinations(placement.widgetId).every((region) => region === props.region);
+  return locked;
+};
+
 export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const { workbench, placement, activeWidgetId, disabled = false, sortable = false } = props;
   const behavior = useRegionTab(props);
@@ -35,6 +43,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
       placement.resource ? workbench.resources.getKind(placement.resource.type)?.icon : undefined,
     );
   const active = placement.widgetId === activeWidgetId;
+  const locked = isLockedTab(props);
   return (
     <>
       <Box
@@ -69,7 +78,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
           onPointerCancel={behavior.onPointerCancel}
           onClickCapture={behavior.onClick}
         >
-          <TabIcon indicator={snapshot.indicator} icon={icon} />
+          <TabIcon indicator={snapshot.indicator} icon={locked ? "Lock" : icon} />
           <Text as="span" id={labelId} data-tab-label>
             {label}
           </Text>

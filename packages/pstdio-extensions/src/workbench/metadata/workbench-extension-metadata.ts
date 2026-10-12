@@ -4,6 +4,7 @@ import { toCommandPaletteContributions } from "../../runtime/command-palette-con
 import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
 import type { ExtensionRuntime } from "../../types/runtime";
+import { panelSettingsMetadata } from "./panel-settings-metadata";
 import {
   commandRef,
   normalizedRef,
@@ -136,7 +137,15 @@ export const createWorkbenchExtensionMetadata = (
     label: mode.contribution.label,
     icon: mode.contribution.icon,
     regions: [...mode.contribution.regions],
-    regionSettings: mode.contribution.regionSettings,
+    regionSettings: panelSettingsMetadata(mode.contribution.regionSettings, mode.extensionId),
+    floatingBubble: mode.contribution.floatingBubble,
+    floating: mode.contribution.floating
+      ? {
+          defaultTab: mode.contribution.floating.defaultTab
+            ? normalizeTarget(mode.contribution.floating.defaultTab, mode.extensionId)
+            : undefined,
+        }
+      : undefined,
     floatingPanels: mode.contribution.floatingPanels,
     defaultTheme: mode.contribution.defaultTheme
       ? normalizedRef(mode.contribution.defaultTheme, mode.extensionId)

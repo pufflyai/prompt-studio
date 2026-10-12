@@ -2,6 +2,7 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageMain, WorkbenchPageSlot } from "../../core";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
+import { adaptPanelSettings } from "./workbench-extension-panel-settings";
 
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
@@ -39,7 +40,7 @@ export const toInternalWorkbenchPages = (
     path: page.path,
     document: page.document,
     panelMenus: page.panelMenus,
-    regionSettings: page.regionSettings,
+    regionSettings: adaptPanelSettings(page.regionSettings, page.extensionId),
     modeId: contributionRefId(page.mode),
     resource: page.resource,
     main: pageMain(page.main, { extensionId: page.extensionId, placementId: `${page.id}.$main`, createTab }),

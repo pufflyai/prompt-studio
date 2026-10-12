@@ -2,16 +2,14 @@ import { createWorkbench } from "../../core";
 import { createBoomboxWorkbench } from "../showcases/boombox";
 import { createKilnWorkbench } from "../showcases/kiln";
 import { createWindowingPersistence } from "./adapters";
+import type { WindowingFixtureOptions } from "./fixture-options";
 import { createWindowingLifecycleProbe } from "./lifecycle-probe";
 import { registerWindowingModule } from "./module";
 import { createWindowingResources, windowingPages } from "./resources";
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
 
-export const createWindowingFixture = (
-  mode: WindowingMode = "windowing",
-  options: { pagePanels?: boolean; mainView?: "files" | "webview" } = {},
-) => {
+export const createWindowingFixture = (mode: WindowingMode = "windowing", options: WindowingFixtureOptions = {}) => {
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
   const probe = createWindowingLifecycleProbe();

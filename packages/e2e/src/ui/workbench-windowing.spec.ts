@@ -17,6 +17,10 @@ const storyIds = [
   "page-surface-webview",
   "owner-transfer",
   "files-transfer",
+  "mixed-panel-rules",
+  "refused-panel-tabs",
+  "panel-header-choices",
+  "legacy-panel-headers",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 
 test.describe("Workbench windowing stories", () => {

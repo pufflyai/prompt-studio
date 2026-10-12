@@ -74,10 +74,20 @@ export interface ModeRegionSettings {
   /** Hide the panel header when the mode supplies its own controls. */
   readonly showHeader?: boolean;
   readonly size?: RegionSize;
-  /** Allow dragging this region closed. Explicit hide/show is always available. */
+  /** @deprecated Use canOpen and canClose for tab panels. Page-menu collapse remains supported. Explicit hide/show remains available. */
   readonly collapsible?: boolean;
   /** Keep a tab visible when this region has only one visible item. */
   readonly alwaysShowTabs?: boolean;
+  readonly canOpen?: boolean;
+  readonly canClose?: boolean;
+  readonly acceptsTabs?: boolean;
+  readonly resizable?: boolean;
+  /** Whole-panel movement, independent of tab movement. */
+  readonly movable?: boolean;
+  /** Supported only by Side. */
+  readonly floatable?: boolean;
+  /** Runs only on direct opening of an empty panel. Uses the normal navigation policy. */
+  readonly defaultTab?: NavigationTarget;
 }
 
 export interface ModeContribution extends ContributionDefinition<"mode"> {
@@ -86,8 +96,11 @@ export interface ModeContribution extends ContributionDefinition<"mode"> {
   regions: readonly ExtensionPanelRegion[];
   /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
   defaultTheme?: ThemeRef;
-  /** Whether side panels may float while this mode is active. Defaults to visible. */
+  /** @deprecated Use regionSettings.side.floatable. Defaults to visible. */
   floatingPanels?: "visible" | "hidden";
+  /** Bubble availability does not grant opening or floating permission. */
+  floatingBubble?: boolean;
+  floating?: { readonly defaultTab?: NavigationTarget };
   /** Replace host chrome with a view, or hide it with false, while the mode is active. */
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", ViewRef | false>>;
   /** Region-level layout policy. The mode owns it; placements cannot set it. */
