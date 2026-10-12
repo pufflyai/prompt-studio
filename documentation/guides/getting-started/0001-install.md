@@ -17,8 +17,8 @@ Download the app from [prompt.studio](https://prompt.studio). The site offers th
 
 The app includes the `pst` command. You do not need Bun, Node.js, or a separate CLI download.
 
-- On macOS, drag the app to Applications and open it from there. On the first launch, the app adds the `pst` command at `/usr/local/bin/pst`. macOS may ask for an administrator password. If you cancel, choose **Prompt Studio → Install pst Command…** later.
-- On Linux, the `.deb` package installs the app and `/usr/bin/pst`. For the portable `.zip`, extract it to a folder whose path has no spaces, then run `prompt-studio` from that folder. The portable build does not add `pst`.
+- On macOS, drag the app to Applications and open it from there. When the app starts, it links `~/.pstdio/bin/pst` to its bundled CLI and adds that folder to your `PATH` in your shell's startup file (`~/.zshrc`, `~/.bash_profile`, or `~/.config/fish/config.fish`). It never asks for a password. Open a new terminal window before you use `pst`.
+- On Linux, the `.deb` package installs the app and `/usr/bin/pst`. For the portable `.zip`, extract it to a folder whose path has no spaces, then run `prompt-studio` from that folder. The portable app sets up `~/.pstdio/bin/pst` the same way as on macOS, using `~/.bashrc` for bash.
 - On Windows, run the Setup installer. It does not need an administrator password. It adds `pst` to your `PATH`. Close and reopen your terminal before you use it.
 
 Check the command:

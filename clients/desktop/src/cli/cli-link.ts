@@ -3,6 +3,9 @@ interface CliPaths {
   command: string;
 }
 
+// The DEB package links the command while it installs, so the app itself does not set one up.
+export const DEB_CLI_PATHS = { binary: "/usr/lib/prompt-studio/resources/bin/pstdio", command: "/usr/bin/pst" };
+
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 const pathsScript = (paths: CliPaths) => `binary=${quote(paths.binary)}
 command=${quote(paths.command)}

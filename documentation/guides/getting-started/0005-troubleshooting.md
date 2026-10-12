@@ -30,7 +30,7 @@ Run `pst` or open the desktop app to start the runtime again. When you quit the 
 
 ## The `pst` command is missing or out of date
 
-Run `command -v pst` on macOS or Linux, or `where.exe pst` on Windows. If it points to an old installation, remove that installation. On macOS, then choose **Prompt Studio → Install pst Command…** in the desktop app.
+Run `command -v pst` on macOS or Linux, or `where.exe pst` on Windows. If it points to an old installation, remove that installation. On macOS and the portable Linux app, the desktop app links `~/.pstdio/bin/pst` and adds that folder to `PATH` each time it starts; open a new terminal window afterwards. If you use a shell other than zsh, bash, or fish, add `~/.pstdio/bin` to your `PATH` yourself.
 
 On Windows, close and reopen your terminal after you install the app, so it sees the new `PATH`.
 

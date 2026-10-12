@@ -11,7 +11,6 @@ export const createApplicationMenuTemplate = (
   platform: NodeJS.Platform,
   checkForUpdates: () => void,
   executeCommand: (commandId: string) => void,
-  installCli?: () => void,
 ) => {
   const command = (id: string, label: string, accelerator?: string) =>
     ({
@@ -77,7 +76,6 @@ export const createApplicationMenuTemplate = (
           { role: "about" },
           { type: "separator" },
           updateItem,
-          ...(installCli ? [{ label: "Install pst Command…", click: installCli }] : []),
           { type: "separator" },
           { role: "services" },
           { type: "separator" },

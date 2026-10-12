@@ -1,8 +1,10 @@
+import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } from "electron";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath, resolvePstdioUpdateChannelPath } from "pstdio-paths";
-import { createMacOSCliSetup } from "./cli/macos-cli-setup";
+import { DEB_CLI_PATHS } from "./cli/cli-link";
+import { setupUserCli } from "./cli/user-cli-setup";
 import { runWindowsInstallerEvent, windowsInstallerEvent } from "./cli/windows-installer";
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
@@ -180,10 +182,26 @@ const startRuntime = async () => {
   }
 };
 
+// Windows gets pst from its installer and the Linux DEB from its package scripts. A DMG or an
+// unpacked test app is not a stable path for a command to point at.
+const setupCliCommand = () => {
+  const binary = join(process.resourcesPath, "bin", "pstdio");
+  if (!app.isPackaged || process.platform === "win32" || binary === DEB_CLI_PATHS.binary) return;
+  if (process.platform === "darwin" && !app.isInApplicationsFolder()) return;
+  try {
+    const result = setupUserCli({
+      binary,
+      home: homedir(),
+      shell: process.env.SHELL || userInfo().shell || "/bin/sh",
+      platform: process.platform,
+    });
+    logger.info({ event: "desktop.cli.setup", ...result }, "pst command setup");
+  } catch (error) {
+    logger.error({ event: "desktop.cli.setup.failed", message: String(error) }, "pst command setup failed");
+  }
+};
+
 const bootstrap = async () => {
-  const cliSetup = createMacOSCliSetup((error) => {
-    logger.error({ event: "desktop.cli.install.failed", message: error.message }, "CLI setup failed");
-  });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       createApplicationMenuTemplate(
@@ -194,7 +212,6 @@ const bootstrap = async () => {
         (commandId) => {
           if (state.kind === "workbench") windowController?.executeCommand(commandId);
         },
-        cliSetup?.install,
       ),
     ),
   );
@@ -266,8 +283,9 @@ const bootstrap = async () => {
     performance: performanceMonitor,
   });
   void performanceMonitor.start();
+  // Before the runtime starts, so the shell PATH it reads already includes the command.
+  setupCliCommand();
   await startRuntime();
-  void cliSetup?.onFirstLaunch();
   // Squirrel.Windows still holds its update lock on first run, so wait for the interval.
   if (!process.argv.includes("--squirrel-firstrun")) void updateManager.checkInBackground();
   setInterval(() => void updateManager.checkInBackground(), UPDATE_CHECK_INTERVAL_MS);
