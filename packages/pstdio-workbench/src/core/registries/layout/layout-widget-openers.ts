@@ -18,6 +18,10 @@ import type {
 } from "./layout-types";
 
 interface CreateWidgetOpenersInput {
+  resolveExistingWidget?(
+    widget: RegisteredWidgetContribution,
+    input: OpenWidgetInput,
+  ): WorkbenchWidgetPlacement | undefined;
   getLayout(): WorkbenchLayout;
   requireWidget(id: string): RegisteredWidgetContribution;
   applyAndActivate(
@@ -221,6 +225,8 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   const openWidget = (id: string, openInput: OpenWidgetInput = {}): WorkbenchWidgetPlacement => {
     const widget = requireWidget(id);
     const placementInput = withPlacementRole(widget, openInput);
+    const resolved = input.resolveExistingWidget?.(widget, placementInput);
+    if (resolved) return resolved;
     const layout = getLayout();
     const regionId = placementInput.region ?? widget.region ?? widget.fallbackRegion ?? "main";
     const region = layout.regions[regionId];

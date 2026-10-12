@@ -2,6 +2,7 @@ import type { PageLocation } from "@pstdio/sdk/extensions";
 import { isWorkbenchProjectUrl, parseWorkbenchPageUrl } from "@pstdio/sdk/extensions";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
+import { createPageEditorCommit, createPreparedPageCommit } from "./page-editor-commit";
 import { createPageLocationControllerActions } from "./page-location-actions";
 import { createPageHistoryEntry, createPageLocationFailureHandler } from "./page-location-history-entry";
 import {
@@ -95,12 +96,15 @@ export const createWorkbenchPageLocationController = <Value>(
     publish: publishHistory,
     rememberRootLevel: rootLevel.remember,
   });
+  const commitExistingEditor = createPageEditorCommit(input, publish, internals.resources);
   const commit = (
     projectId: string,
     resolved: ResolvedPageLocation,
     history: "push" | "replace" | "none",
     action: string,
   ) => {
+    const existing = commitExistingEditor(projectId, resolved, history, action);
+    if (existing) return existing;
     const state = internals.prepare.location(
       {
         pageId: resolved.pageId,
@@ -268,18 +272,7 @@ export const createWorkbenchPageLocationController = <Value>(
         resources: internals.resources,
         active: input.registry.store.getState().location,
       }),
-    commit: (state, beforePublish) => {
-      if (!state.projectId || !state.location) throw new Error("Cannot navigate before a project is active");
-      const history = workbenchPageLocationsEqual(
-        input.registry.store.getState().location,
-        state.location,
-        internals.resources,
-        pages(),
-      )
-        ? "none"
-        : "push";
-      return publish(state.projectId, state, history, "navigateCompoundTarget", beforePublish);
-    },
+    commit: createPreparedPageCommit(input, publish, internals.resources),
   });
   return controller;
 };

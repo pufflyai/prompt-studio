@@ -106,8 +106,7 @@ export const useWorkbenchRegionTabsState = (
       shouldShowRegionTabs(visiblePlacements, {
         alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
       }));
-  const hasActions =
-    leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs));
+  const hasActions = leadingItems.length > 0 || eligibleSubPanels.length > 0;
   const hasTrailingActions =
     region === "main" &&
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {

@@ -14,9 +14,18 @@ export const openFile = (id: string) => ({
   resource: resource(id),
   open: "preview" as const,
 });
-export function harness(saved = new Map<string | undefined, WorkbenchLayout>()) {
+export function harness(
+  saved = new Map<string | undefined, WorkbenchLayout>(),
+  input: Parameters<typeof createWorkbench>[0] = {},
+) {
   const w = createWorkbench({
-    layoutPersistence: { getLayout: (s) => saved.get(s), setLayout: (l, s) => saved.set(s, l) },
+    layoutPersistence: {
+      getLayout: (s) => saved.get(s),
+      setLayout: (l, s) => saved.set(s, l),
+      listScopes: (projectId) =>
+        [...saved.keys()].filter((s): s is string => Boolean(s?.startsWith(`project/${projectId}/`))),
+    },
+    ...input,
   });
   w.modes.registerMode({ id: "edit", activate() {} });
   for (const id of ["empty", "editor"])

@@ -70,6 +70,7 @@ export const createPageStateRestorer =
       pageId: page.id,
       projectId,
       resource: location.resource,
+      page,
     });
     if (!layout) return undefined;
     return pageStateFromLayout(page, layout);

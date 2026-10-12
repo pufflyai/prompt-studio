@@ -38,6 +38,7 @@ import { createDisposable } from "../../shared/disposable";
 import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
+  existingEditor?(placement: WorkbenchWidgetPlacement): string | undefined;
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadPageGeometry?(projectId: string, pageId: string): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
@@ -95,6 +96,7 @@ const prepareRuntimeLayout = (
           currentLayout: input.layout.getLayout(),
           getWidget: input.layout.getWidget,
           hasDeclaration: input.hasDeclaration,
+          existingEditor: input.existingEditor,
         })
       : bindPlacementsToActivePageLocation(latest);
   return {
@@ -209,6 +211,7 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  existingEditor?: ConnectWorkbenchPageRuntimeInput["existingEditor"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadPageGeometry?: ConnectWorkbenchPageRuntimeInput["loadPageGeometry"];
@@ -262,6 +265,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    existingEditor: input.existingEditor,
     hasDeclaration: (identity) =>
       hasPlacementDeclaration(
         { pages: registry, modePlacements: input.modePlacements, shellPlacements: input.shellPlacements },

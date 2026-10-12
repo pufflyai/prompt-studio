@@ -62,6 +62,7 @@ export const registerWindowingModule = (
     workbench.views.registerView({
       id: `windowing.${id}`,
       title: label,
+      instancePolicy: "per-resource",
       body: {
         kind: "react",
         render: ({ instance }) => <WindowingDraftView label={label} resource={instance.resource} probe={probe} />,
@@ -125,18 +126,13 @@ export const registerWindowingModule = (
     parentId: "windowing.workspaces",
     modeId: "windowing",
     resource: { kinds: [{ kind: "resource-kind", id: "windowing.workspace" }] },
-    main: {
-      kind: "view",
-      view: { kind: "view", id: `windowing.${options.mainView ?? "files"}` },
-      cardinality: "one",
-      ...(options.pagePanels
-        ? {
-            tab: {
-              getSnapshot: () => ({ label: options.mainView === "webview" ? "Webview" : "Files", icon: "Files" }),
-            },
-          }
-        : {}),
-    },
+    main: options.pagePanels
+      ? { kind: "panels", empty: { kind: "view", id: "windowing.workspaces" } }
+      : {
+          kind: "view",
+          view: { kind: "view", id: `windowing.${options.mainView ?? "files"}` },
+          cardinality: "one",
+        },
     ...(options.pagePanels
       ? {
           panelMenus: {
@@ -147,6 +143,23 @@ export const registerWindowingModule = (
         }
       : {}),
     slots: [
+      ...(options.pagePanels
+        ? [
+            {
+              id: "files",
+              region: "main" as const,
+              order: -1,
+              tab: {
+                getSnapshot: () => ({ label: options.mainView === "webview" ? "Webview" : "Files", icon: "Files" }),
+              },
+              item: {
+                kind: "view" as const,
+                view: { kind: "view" as const, id: `windowing.${options.mainView ?? "files"}` },
+                presence: "open" as const,
+              },
+            },
+          ]
+        : []),
       {
         id: "changes",
         ...(options.pagePanels ? { tab: { getSnapshot: () => ({ label: "Changes", icon: "GitCompare" }) } } : {}),

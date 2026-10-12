@@ -91,6 +91,39 @@ const restoreSavedTab = (
   return { ...placement, value: { ...placement.value, tab: getWidget ? widget?.tab : placement.value.tab } };
 };
 
+const mainFallbackHasContent = (
+  state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  placement: ResolvedOwnedPlacement<WorkbenchWidgetPlacement>,
+  saved: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
+) => {
+  const page = state.activePageId ? state.pages[state.activePageId] : undefined;
+  return (
+    page?.main.kind === "panels" &&
+    placement.identity.kind === "page" &&
+    placement.identity.slotId === "$main" &&
+    saved.some(
+      (p) => p.region === "main" && placementIdentityKey(p.identity) !== placementIdentityKey(placement.identity),
+    )
+  );
+};
+
+const savedPlacements = (input: {
+  placements: Iterable<ResolvedOwnedPlacement<WorkbenchWidgetPlacement>>;
+  removed: ReadonlySet<string>;
+  enteringPage: boolean;
+  getWidget?: Parameters<typeof restoreSavedTab>[1];
+  hasDeclaration?(identity: PlacementIdentity): boolean;
+}) => {
+  const restored: ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] = [];
+  for (const placement of input.placements) {
+    if (!placement.value.declarationIdentity && input.hasDeclaration?.(placement.identity)) continue;
+    if (input.removed.has(placementIdentityKey(placement.identity)) && !input.enteringPage) continue;
+    const tab = restoreSavedTab(placement, input.getWidget);
+    if (tab) restored.push(tab);
+  }
+  return restored;
+};
+
 /** Saved owners are authoritative; declarations only seed an owner that has no layout. */
 export const resolveOwnerPlacements = (input: {
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
@@ -100,6 +133,7 @@ export const resolveOwnerPlacements = (input: {
   enteringPage: boolean;
   getWidget?(id: string): RegisteredWidgetContribution | undefined;
   hasDeclaration?(identity: PlacementIdentity): boolean;
+  existingEditor?(placement: WorkbenchWidgetPlacement): string | undefined;
 }) => {
   const { state } = input;
   const page = records(input.pageLayout).filter((p) => p.identity.kind !== "mode");
@@ -112,10 +146,14 @@ export const resolveOwnerPlacements = (input: {
   const added = new Set(state.reconciliation.add.map((p) => placementIdentityKey(p.identity)));
   const activated = new Set(state.reconciliation.activate.map((p) => placementIdentityKey(p.identity)));
   const removed = new Set(state.reconciliation.remove.map((placement) => placementIdentityKey(placement.identity)));
+  const remaining = saved.filter((p) => input.enteringPage || !removed.has(placementIdentityKey(p.identity)));
   const desired: ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] = [];
   for (const placement of state.placements) {
     const key = placementIdentityKey(placement.identity);
+    if (mainFallbackHasContent(state, placement, remaining)) continue;
     const previous = savedByKey.get(key);
+    const existingEditor = input.existingEditor?.(placement.value);
+    if (existingEditor && existingEditor !== (previous?.value.widgetId ?? placement.value.widgetId)) continue;
     const transferred = saved.find(
       (p) =>
         p.value.declarationIdentity &&
@@ -144,12 +182,5 @@ export const resolveOwnerPlacements = (input: {
     );
     savedByKey.delete(key);
   }
-  for (const placement of savedByKey.values()) {
-    if (!placement.value.declarationIdentity && input.hasDeclaration?.(placement.identity)) continue;
-    if (!removed.has(placementIdentityKey(placement.identity)) || input.enteringPage) {
-      const restored = restoreSavedTab(placement, input.getWidget);
-      if (restored) desired.push(restored);
-    }
-  }
-  return desired;
+  return [...desired, ...savedPlacements({ ...input, placements: savedByKey.values(), removed })];
 };

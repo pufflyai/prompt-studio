@@ -39,6 +39,7 @@ const metadata = {
       localId: "outline",
       extensionId,
       title: "Outline",
+      instancePolicy: "per-resource",
       body: {
         kind: "tree",
         bodyHandlerId: `${treeViewId}.tree.body`,
@@ -366,6 +367,7 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
       page: { extensionId, kind: "page", id: "review" },
     });
     expect(workbench.views.getView(treeViewId)?.id).toBe(treeViewId);
+    expect(workbench.views.getView(treeViewId)?.instancePolicy).toBe("per-resource");
     expect(getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)).toBeDefined();
     expect(getWorkbenchRenderers(workbench).getControlsRenderer(controlsViewId)).toBeDefined();
     expect(workbench.viewMenus.getViewMenu(`${extensionId}.view-menu.review-outline`)).toMatchObject({

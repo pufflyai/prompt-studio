@@ -2528,6 +2528,7 @@ interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly body: ViewBody;
+  readonly instancePolicy?: "per-resource" | "multiple";
 }
 type NavigationOwnerRef = ModeRef | PageRef;
 type NavigationTreeSlot = "header" | "content" | "footer";

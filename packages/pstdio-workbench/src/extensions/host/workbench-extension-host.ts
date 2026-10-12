@@ -237,6 +237,10 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
         input.dataTableAdapter,
       ),
     );
+    for (const panel of input.metadata.panels) {
+      const view = input.workbench.views.getView(panel.id);
+      if (view) view.instancePolicy = panel.instancePolicy;
+    }
     disposables.push(...registerViewMenus(input));
     disposables.push(
       registerWorkbenchExtensionCommandPaletteResources(context, input.metadata.commandPaletteResources ?? []),

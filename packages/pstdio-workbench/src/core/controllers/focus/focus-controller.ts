@@ -18,6 +18,8 @@ export interface WorkbenchFocusController {
   clearFocus(): void;
   getActiveRegion(): WorkbenchFocusRegionId | undefined;
   onDidChange(listener: WorkbenchFocusChangeListener): Disposable;
+  requestPanelFocus(instanceId: string): void;
+  onDidRequestPanelFocus(listener: (instanceId: string) => void): Disposable;
 }
 
 export interface CreateWorkbenchFocusControllerInput {
@@ -43,6 +45,7 @@ export const createWorkbenchFocusController = (
     initialState: { activeRegion: undefined },
   });
   const context = input.context.createScope("workbench.focus");
+  const panelFocusListeners = new Set<(instanceId: string) => void>();
 
   const applyContext = (region: WorkbenchFocusRegionId | undefined) => {
     context.set("workbenchFocus", region !== undefined);
@@ -56,6 +59,13 @@ export const createWorkbenchFocusController = (
 
   return {
     store,
+    requestPanelFocus(instanceId) {
+      for (const listener of panelFocusListeners) listener(instanceId);
+    },
+    onDidRequestPanelFocus(listener) {
+      panelFocusListeners.add(listener);
+      return createDisposable(() => panelFocusListeners.delete(listener));
+    },
 
     setActiveRegion(region) {
       if (input.isRegionFocusable?.(region) === false) return;

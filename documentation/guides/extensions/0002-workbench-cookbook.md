@@ -45,6 +45,8 @@ Use `ctx.storage` for extension-owned data. The [Lab state commands](../../../ex
 
 Open resource pages with `open: "preview"` for replaceable tabs or `open: "pin"` for retained tabs. Reopening the same resource reuses its instance. The default tab title is the resource label, falling back to the view title. A tab query can supply an explicit label, icon, or indicator.
 
+For movable documents, add `instancePolicy: "per-resource"` to the editor view. Keep `cardinality: "many"` when different documents should coexist. After a document moves to Side or Secondary, another explicit open finds and focuses that same editor. Main selects the adjacent document. When the last document leaves Main, a collection shows its declared `main.empty` view and a resource page returns to its declared parent. Page-local tools stay with their page. The `+` catalog can reopen closed tools and focus tools that moved elsewhere.
+
 For a callback that refers to a page defined later, give the callback its public handler type. The [compiled table navigation example](../../../extensions/pstdio-skills/skills/create-pstdio-extension/references/examples/table-navigation.ts) uses `DataTableRendererRowActivationHandler` to avoid a TypeScript inference cycle.
 
 `ctx.commands.execute(ref, { params })` returns a `CommandOutcome`. Check its `status` before reading `value`. A command with no parameters still takes `{}` as its invocation argument.

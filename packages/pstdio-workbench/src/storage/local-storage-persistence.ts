@@ -99,6 +99,7 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
     storage,
   });
   const snapshotPersistence: WorkbenchPersistenceAdapter = {
+    listScopes: (projectId) => layoutPersistence.listScopes?.(projectId) ?? [],
     getSnapshot: (scope) => {
       const layout = layoutPersistence.getLayout(scope);
       return layout ? { layout } : undefined;

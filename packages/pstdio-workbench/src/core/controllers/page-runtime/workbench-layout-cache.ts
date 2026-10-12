@@ -28,12 +28,12 @@ const selectPlacements = (layout: WorkbenchLayout, include: (placement: Workbenc
 };
 /** Page caches hold page and shell placements. Shared mode choices have one project/mode owner. */
 export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
-  // The persistence adapter does not enumerate keys. Track only scopes visited
-  // by this workbench so live removal can edit their existing cached layouts.
+  // Keep visited scopes available even when a persistence adapter cannot list them.
   const scopes = new Set<string | undefined>();
   const memory = new Map<string | undefined, WorkbenchLayout>();
   const adapter: LayoutPersistenceAdapter | undefined = input.persistence
     ? {
+        listScopes: (projectId) => input.persistence?.listScopes?.(projectId) ?? [],
         getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
         setLayout: (layout, scope) => input.persistence?.setSnapshot({ layout }, scope),
         flush: input.persistence.flush,
@@ -52,6 +52,14 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => adapter?.setLayout(layout, scope));
   };
   return {
+    listLayouts(projectId: string) {
+      const known = new Set([...scopes, ...(adapter?.listScopes?.(projectId) ?? [])]);
+      return [...known].flatMap((scope) => {
+        if (!scope?.startsWith(`project/${projectId}/owner/`) || scope.endsWith("/geometry")) return [];
+        const layout = read(scope);
+        return layout ? [{ scope, layout }] : [];
+      });
+    },
     removeResource(resource: ResourceRef) {
       for (const scope of scopes) {
         const layout = read(scope);

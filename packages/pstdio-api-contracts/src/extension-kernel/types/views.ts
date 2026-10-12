@@ -36,6 +36,8 @@ export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly body: ViewBody;
+  /** Reuse one open editor per view/resource across owners. Omission preserves existing placement behavior. */
+  readonly instancePolicy?: "per-resource" | "multiple";
 }
 
 export type NavigationOwnerRef = ModeRef | PageRef;

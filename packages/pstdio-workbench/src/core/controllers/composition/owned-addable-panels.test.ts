@@ -1,6 +1,27 @@
 import { describe, expect, test } from "bun:test";
 import type { PlacementItem } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../workbench-core";
+import { harness, navigate } from "./placement-lifecycle-test-support";
+
+test("the declared tool catalog includes fixed tools and focuses a moved instance", async () => {
+  const w = harness();
+  w.modePlacements.registerPlacement({
+    id: "files",
+    ref: { kind: "placement", extensionId: "test", id: "files" },
+    modeId: "edit",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "empty" }, presence: "fixed" },
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  const tool = w.layout.getLayout().regions.side.widgets[0]!;
+  w.movePanel(tool.widgetId, "secondary");
+  const add = w.composition.panelsFor("side").addable.find((p) => p.panelId === tool.contributionId);
+  expect(add).toBeDefined();
+  await add!.open?.();
+  expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(tool.widgetId);
+  expect(w.layout.getLayout().activeWidgetId).toBe(tool.widgetId);
+  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
+});
 
 describe("placement add command availability", () => {
   test.each(["shell", "mode", "page"] as const)("%s bindings only offer available add commands", (owner) => {

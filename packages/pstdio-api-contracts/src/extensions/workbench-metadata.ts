@@ -121,6 +121,7 @@ export const workbenchExtensionViewRecordSchema = z.object({
   title: localizableStringSchema,
   icon: z.string().optional(),
   body: workbenchExtensionViewBodySchema,
+  instancePolicy: z.enum(["per-resource", "multiple"]).optional(),
 });
 
 const workbenchExtensionModeRecordSchema = z.object({

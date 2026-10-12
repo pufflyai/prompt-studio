@@ -17,6 +17,12 @@ const storyIds = [
   "page-surface-webview",
   "owner-transfer",
   "files-transfer",
+  "note-reuse",
+  "note-neighbor",
+  "inactive-owner-reload",
+  "workspace-catalog",
+  "workspace-catalog-close",
+  "collection-catalog",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 
 test.describe("Workbench windowing stories", () => {

@@ -62,6 +62,7 @@ export const createOwnerLayoutScopeHandler =
       projectId: state.projectId,
       pageId: state.activePageId,
       resource: state.location?.resource,
+      page: state.activePageId ? state.pages[state.activePageId] : undefined,
     });
     const initialLayout =
       state.projectId &&

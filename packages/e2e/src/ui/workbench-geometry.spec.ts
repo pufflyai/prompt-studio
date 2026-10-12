@@ -156,7 +156,8 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   const mainPanelHeader = page.locator('[data-workbench-panel-header="main"]');
   const rightMenu = page.locator('[data-workbench-panel-menu="main-right"]');
   await expect(rightMenu).toBeVisible();
-  await expect(mainPanelHeader).toBeHidden();
+  await expect(mainPanelHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
+  await expect(mainPanelHeader.getByRole("tab")).toHaveCount(0);
 
   await page.getByRole("separator", { name: "Resize Main right menu" }).press("Home");
   await expect(rightMenu).toBeHidden();
@@ -165,6 +166,7 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
 
   await expect(rightMenu).toBeVisible();
   await expect(page.getByRole("menu", { name: "Main right menu controls" })).toHaveCount(0);
-  await expect(mainPanelHeader).toBeHidden();
+  await expect(mainPanelHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
+  await expect(mainPanelHeader.getByRole("tab")).toHaveCount(0);
   await expect(ticketLink).toBeVisible();
 });

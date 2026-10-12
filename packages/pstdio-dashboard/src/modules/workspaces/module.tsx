@@ -169,7 +169,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
             kind: "view",
             id: dashboardWidgetIds.workspaceDiffs,
           },
-          presence: "fixed",
+          presence: "open",
         },
       },
       {
@@ -184,7 +184,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
             kind: "view",
             id: dashboardWidgetIds.workspaceFiles,
           },
-          presence: "fixed",
+          presence: "open",
         },
       },
     ],
