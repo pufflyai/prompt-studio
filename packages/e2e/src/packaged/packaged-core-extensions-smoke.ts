@@ -10,6 +10,7 @@ import { expectNotesResources } from "./packaged-notes-resources-smoke";
 import { expectPlannerCommands } from "./packaged-planner-commands-smoke";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
+import { preparePlannerSource } from "./packaged-planner-source";
 import { expectPlannerWorkflow } from "./packaged-planner-workflow-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { expectTicketWorkspaceCleanup } from "./packaged-ticket-workspace-cleanup-smoke";
@@ -86,22 +87,23 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
 
         try {
           const npmConfigPath = join(tempRoot, ".npmrc");
-          const started = await startPackagedServe(tempRoot, {
-            NPM_CONFIG_USERCONFIG: npmConfigPath,
-            PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-              defaultExtensions: CORE_DEFAULT_EXTENSION_NAMES.map((installName) => ({
-                installName,
-                source: join(REPO_ROOT, "extensions", installName),
-              })),
-            }),
-          });
-          child = started.child;
           const registry = await startLocalWorkspaceRegistry({
             configPath: npmConfigPath,
             outputRoot: tempRoot,
             packagePaths: [join(REPO_ROOT, "packages/sdk"), join(REPO_ROOT, "packages/ui")],
           });
           closeRegistry = registry.close;
+          const plannerSource = await preparePlannerSource(tempRoot);
+          const started = await startPackagedServe(tempRoot, {
+            NPM_CONFIG_USERCONFIG: npmConfigPath,
+            PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+              defaultExtensions: CORE_DEFAULT_EXTENSION_NAMES.map((installName) => ({
+                installName,
+                source: installName === "pstdio-planner" ? plannerSource : join(REPO_ROOT, "extensions", installName),
+              })),
+            }),
+          });
+          child = started.child;
 
           const projectFolder = join(tempRoot, "project");
           mkdirSync(projectFolder);

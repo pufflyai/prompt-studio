@@ -47,7 +47,7 @@ const blockAttempt = async (
     commitSha: attempt.revisions.at(-1)?.headSha ?? null,
     metadata: { phase: input.phase, reason: input.reason, retryCount: input.retryCount },
   });
-  await rollUpAttemptTicket(ctx.storage, attempt.ticketId);
+  await rollUpAttemptTicket(ctx, attempt.ticketId);
   const ticket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
   await createReviewRequest(ctx, {

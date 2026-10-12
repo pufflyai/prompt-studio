@@ -1,9 +1,9 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
+import { withWriteGuard } from "../../data/write-guard";
 import { moveTicket } from "../model/edit-plan";
 import { resolvePlan } from "../model/resolve-plan";
 import type { PlannerTicket } from "../planner";
 import { deadlineOrNone, loadPlan, savePlan } from "./plan-store";
-import { withWriteGuard } from "./write-guard";
 
 // Validate placement before creation and preserve the ticket identity if the plan write fails.
 export async function placeNewTicket<T extends PlannerTicket>(

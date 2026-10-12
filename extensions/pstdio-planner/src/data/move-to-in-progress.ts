@@ -1,25 +1,30 @@
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "./collections";
-import { findTicket, resolveStatusId } from "./resolve";
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+import { plannerTicketsChanged } from "../events";
+import { statusesCollection, ticketsCollection } from "./collections";
+import { findTicket } from "./resolve";
 
 // Conventional names for the in-progress board column, tried in order.
 const IN_PROGRESS_NAMES = ["In Progress", "wip"];
 
-// Moves a ticket into the project's in-progress column. Best-effort and
-// idempotent: a missing ticket or absent in-progress column is a no-op, and a
-// ticket already in progress is left untouched (so it emits no redundant change).
-export const moveTicketToInProgress = async (storage: ExtensionStorageApi, ticketRef: string) => {
+// Publish the saved status so open Planner views refresh when an attempt starts.
+export const moveTicketToInProgress = async (
+  ctx: Pick<ExtensionContextBase, "storage" | "events">,
+  ticketRef: string,
+) => {
+  const { storage, events } = ctx;
   const ticket = await findTicket(storage, ticketRef);
   if (!ticket) return;
-
+  const statuses = await statusesCollection(storage).list();
   for (const name of IN_PROGRESS_NAMES) {
-    try {
-      const statusId = await resolveStatusId(storage, name);
-      if (ticket.statusId === statusId) return;
-      await ticketsCollection(storage).put(ticket.id, { ...ticket, statusId, updatedAt: new Date().toISOString() });
-      return;
-    } catch {
-      // Try the next conventional name; the project may not have this column.
-    }
+    const status = statuses.find((status) => status.name.trim().toLowerCase() === name.toLowerCase());
+    if (!status) continue;
+    if (ticket.statusId === status.id) return;
+    await ticketsCollection(storage).put(ticket.id, {
+      ...ticket,
+      statusId: status.id,
+      updatedAt: new Date().toISOString(),
+    });
+    await events.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    return;
   }
 };

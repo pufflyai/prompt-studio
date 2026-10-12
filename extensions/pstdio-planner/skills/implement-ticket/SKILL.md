@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.14
+  version: 0.0.15
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
@@ -31,6 +31,23 @@ Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>
    - `pst pstdio-planner submit-change-request --workspace-id <workspace-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-attempt-state implementing`
    - After requested changes, use `changes_requested` as the expected state.
 6. Follow the completion steps below.
+
+## When stuck
+
+When you cannot proceed without a person's decision or action, create a Planner review request. This records the blocker and sets Review Needed in the timeline. Do this before ending the turn. Do not only ask in chat or set a ticket status.
+
+Use `pst pstdio-planner request-human` with the ticket, a short title, concrete instructions, and a task or decision request. Include what you tried, the evidence, and exactly what the person must decide or do.
+
+```bash
+pst pstdio-planner request-human --ticket PS-12 \
+  --title "Confirm the missing requirement" \
+  --instructions "The ticket allows two outcomes. Choose the required behavior before implementation continues." \
+  --request '{"kind":"decision","questions":[{"id":"behavior","label":"Which behavior is required?","required":true,"input":{"kind":"text"}}]}'
+```
+
+For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. In a managed attempt, also pass `--workspace-id <workspace-id> --expected-attempt-state implementing`, or `changes_requested` after review. Pass `--session-id <implementation-session-id>` when known so Planner can reuse the linked conversation.
+
+Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the requested action or decision, then resume. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
 
 ## Adversarial review
 

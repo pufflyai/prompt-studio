@@ -1,6 +1,6 @@
 // Inspect and conditionally release a known abandoned write claim after stopping its writer.
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import type { WriteClaim } from "./write-guard";
+import type { WriteClaim } from "../../data/write-guard";
 
 export const readClaimsCommand = defineCommand({
   id: "timeline.write-claim.read",

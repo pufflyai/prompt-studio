@@ -52,10 +52,9 @@ const preserveImportMetaUrlPlugin = (packagePath: string) => {
   };
 };
 
-// A Bun `--compile`d binary cannot resolve an externally imported module's on-disk
-// node_modules, so importing an installed extension throws a ResolveMessage for the first
-// bare dependency it imports (e.g. @pstdio/sdk, mustache). Bundling the entry inlines those
-// deps into a self-contained module the binary can import. No dependency is special-cased.
+// Bundling gives development and compiled hosts the same dependency resolution. Host source
+// conditions must not select files omitted from published packages, and compiled Bun cannot
+// resolve an externally imported module's node_modules. Dependencies are treated uniformly.
 export const bundleEntry = async (entryPath: string, packagePath: string, outDir: string) => {
   const bundlePath = join(outDir, `${basename(entryPath, extname(entryPath))}${RUNTIME_BUNDLE_SUFFIX}`);
   if (await Bun.file(bundlePath).exists()) return bundlePath;

@@ -3,10 +3,10 @@ import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensio
 import { setTicketAttribute } from "../../commands/set-ticket-attribute";
 import { findTicket } from "../../data/resolve";
 import { createTagOption, createTicketTag, readTicketTags, updateTagOption } from "../../data/tag-operations";
+import { withWriteGuard } from "../../data/write-guard";
 import { plannerTicketsChanged } from "../../events";
 import { trackProperty } from "../model/tracks";
 import type { PlannerTicket } from "../planner";
-import { withWriteGuard } from "./write-guard";
 
 export async function readTrack(ctx: CommandContext) {
   const { tags } = await readTicketTags(ctx.storage);

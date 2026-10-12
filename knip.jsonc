@@ -198,9 +198,10 @@
         "src/**/*.test.tsx",
         "src/views/tags-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
+        "vendor/collection-filter.js",
         "src/timeline/view/entry.tsx"
       ],
-      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+      "project": ["*.ts", "src/**/*.{ts,tsx}", "vendor/**/*.js"]
     },
     "extensions/pstdio-skills": {
       // The skill's example extensions are typechecked source.

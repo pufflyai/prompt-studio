@@ -60,7 +60,7 @@ test("a legacy flag cannot ask for input, block launch, or freeze attempt rollup
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
   });
-  expect((await rollUpAttemptTicket(storage, ticket.id)).statusId).toBe("in-progress");
+  expect((await rollUpAttemptTicket(ctx, ticket.id)).statusId).toBe("in-progress");
 });
 
 test("unreadable requests block launch and dependent work without a flag", async () => {

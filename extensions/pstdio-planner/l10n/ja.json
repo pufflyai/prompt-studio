@@ -1,6 +1,7 @@
 {
   "timeline.page.title": "プロジェクトタイムライン",
   "timeline.view.title": "プロジェクトタイムライン",
+  "commands.autoBuild.title": "自動ビルド",
   "commands.openTickets": "チケットを開く",
   "archiveState.active": "アクティブ",
   "archiveState.archived": "アーカイブ済み",
@@ -40,5 +41,10 @@
   "settings.tickets.markDoneOnMerge.title": "マージ時に完了にする",
   "settings.tickets.markDoneOnMerge.description": "ワークスペースのブランチまたはリンクされたプルリクエストがマージされると、チケットを完了に移動します。",
   "requests.view.title": "レビュー依頼",
-  "requests.page.title": "レビュー依頼"
+  "requests.page.title": "レビュー依頼",
+  "timeline.autoBuild.start": "自動ビルド",
+  "timeline.autoBuild.stop": "自動ビルドを停止",
+  "timeline.autoBuild.cancel": "キャンセル",
+  "timeline.autoBuild.description": "スーパーバイザーはあなたの指示に従い、空きができると有効な未割り当てチケットを割り当てます。確認の間は待機し、作業を開始できるようになると再開します。",
+  "timeline.autoBuild.documentation": "Auto Build のドキュメント"
 }

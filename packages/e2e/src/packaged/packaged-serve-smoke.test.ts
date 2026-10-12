@@ -46,6 +46,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
+// Timeline coverage configures Auto build mode and checks implementation status in both Planner views.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
@@ -400,6 +401,7 @@ test(
         headers: runtimeAuthorization(started.descriptor),
         metadata,
       });
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

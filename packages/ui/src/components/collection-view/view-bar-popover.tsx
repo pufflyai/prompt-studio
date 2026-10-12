@@ -34,6 +34,10 @@ export const ViewBarPopover = (props: ViewBarPopoverProps) => {
         getAnchorElement: () => anchorRef.current,
       }}
       onOpenChange={(details) => onOpenChange(details.open)}
+      onInteractOutside={(event) => {
+        const target = event.detail.originalEvent.target;
+        if (target instanceof Node && anchorRef.current?.contains(target)) event.preventDefault();
+      }}
     >
       <Portal disabled={nested}>
         <Popover.Positioner>

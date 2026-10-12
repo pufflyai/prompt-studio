@@ -142,10 +142,12 @@ export const createAnchoredWorkspace = async (
     rowId?: string;
   },
   base: string,
+  beforeDispatch?: () => Promise<void>,
 ) => {
   const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
   const attemptMode = "worktree";
+  await beforeDispatch?.();
   const workspace = await ctx.workspaces.create({
     project_id: ctx.projectId,
     shorthand_base: shorthand,

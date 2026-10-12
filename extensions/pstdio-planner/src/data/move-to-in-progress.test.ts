@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "../commands/command-context.fixture";
 import { putTicket, ticketsCollection } from "./collections";
 import { moveTicketToInProgress } from "./move-to-in-progress";
 import { seedDefaultStatuses } from "./seed";
@@ -35,7 +36,7 @@ describe("moveTicketToInProgress", () => {
     await seedDefaultStatuses(storage);
     const ticket = await seedTicket(storage, "backlog");
 
-    await moveTicketToInProgress(storage, ticket.shorthand);
+    await moveTicketToInProgress(makeCommandContext({ storage, params: {} }), ticket.shorthand);
 
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
   });
@@ -46,7 +47,7 @@ describe("moveTicketToInProgress", () => {
     const ticket = await seedTicket(storage, "in-progress");
     const before = (await ticketsCollection(storage).get(ticket.id))!.updatedAt;
 
-    await moveTicketToInProgress(storage, ticket.id);
+    await moveTicketToInProgress(makeCommandContext({ storage, params: {} }), ticket.id);
 
     expect((await ticketsCollection(storage).get(ticket.id))!.updatedAt).toBe(before);
   });
@@ -55,14 +56,14 @@ describe("moveTicketToInProgress", () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
 
-    await expect(moveTicketToInProgress(storage, "T-999")).resolves.toBeUndefined();
+    await expect(moveTicketToInProgress(makeCommandContext({ storage, params: {} }), "T-999")).resolves.toBeUndefined();
   });
 
   test("leaves the ticket untouched when there is no in-progress column", async () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage, "custom-status");
 
-    await moveTicketToInProgress(storage, ticket.id);
+    await moveTicketToInProgress(makeCommandContext({ storage, params: {} }), ticket.id);
 
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("custom-status");
   });

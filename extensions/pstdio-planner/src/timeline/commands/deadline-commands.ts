@@ -1,9 +1,9 @@
 // Create, change, and delete deadlines. Deleting a deadline keeps its tickets, without a due date.
 
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { withWriteGuard } from "../../data/write-guard";
 import { addDeadline, removeDeadline, updateDeadline } from "../model/edit-plan";
 import { findDeadlineId, loadPlan, savePlan } from "./plan-store";
-import { withWriteGuard } from "./write-guard";
 
 const deadlineParam = params.text({ label: "Deadline", description: "Deadline id or date.", required: true });
 

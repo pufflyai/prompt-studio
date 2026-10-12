@@ -5,14 +5,6 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
-const waitFor = async (predicate: () => boolean, message: string) => {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    if (predicate()) return;
-    await Bun.sleep(1);
-  }
-  throw new Error(message);
-};
-
 const writeExtension = (root: string) => {
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(
@@ -118,6 +110,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
     const sourcePath = join(root, "extension");
     writeTwoWebviewExtension(sourcePath);
     const successes: string[] = [];
+    const firstReported = Promise.withResolvers<void>();
     let firstStarted: () => void = () => {};
     let secondStarted: () => void = () => {};
     let releaseFirst: () => void = () => {};
@@ -142,6 +135,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       reportBuildFailure: async () => {},
       reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         successes.push(webviewId);
+        if (webviewId === "pstdio.lab.view.first") firstReported.resolve();
       },
       buildWebview: async (input) => {
         const { entryPath } = input;
@@ -163,7 +157,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       await Promise.all([firstBuildStarted, secondBuildStarted]);
 
       releaseFirst();
-      await Bun.sleep(10);
+      await firstReported.promise;
 
       expect(successes).toEqual(["pstdio.lab.view.first"]);
 
@@ -184,6 +178,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath);
     let runCount = 0;
+    const buildStarted = Promise.withResolvers<void>();
     let unblockBuild: () => void = () => {};
     const buildUnblocked = new Promise<void>((resolve) => {
       unblockBuild = resolve;
@@ -197,6 +192,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
       reportBuildSuccess: async () => {},
       buildWebview: async (input) => {
         runCount++;
+        buildStarted.resolve();
         await buildUnblocked;
         writeManagedBuildOutput(input);
         return { success: true, details: "" };
@@ -206,7 +202,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     try {
       const firstRefresh = manager.ensure("installed-lab");
-      await waitFor(() => runCount === 1, "Timed out waiting for first refresh build.");
+      await buildStarted.promise;
 
       const secondRefresh = manager.refresh();
       await Bun.sleep(10);
@@ -227,6 +223,8 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
     const successes: string[] = [];
     let sourceHash = "hash-1";
     let runCount = 0;
+    const firstStarted = Promise.withResolvers<void>();
+    const secondStarted = Promise.withResolvers<void>();
     let releaseFirst: () => void = () => {};
     let releaseSecond: () => void = () => {};
     const firstReleased = new Promise<void>((resolve) => {
@@ -246,8 +244,13 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
       },
       buildWebview: async (input) => {
         runCount++;
-        if (runCount === 1) await firstReleased;
-        else await secondReleased;
+        if (runCount === 1) {
+          firstStarted.resolve();
+          await firstReleased;
+        } else {
+          secondStarted.resolve();
+          await secondReleased;
+        }
         writeManagedBuildOutput(input);
         return { success: true, details: "" };
       },
@@ -256,13 +259,13 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     try {
       const firstRefresh = manager.ensure("installed-lab");
-      await waitFor(() => runCount === 1, "Timed out waiting for first refresh build.");
+      await firstStarted.promise;
 
       writeFileSync(join(sourcePath, "src/main.tsx"), "console.log('updated webview');");
       sourceHash = "hash-2";
       const secondRefresh = manager.refresh();
       releaseFirst();
-      await waitFor(() => runCount === 2, "Timed out waiting for second refresh build.");
+      await secondStarted.promise;
 
       expect(successes).toEqual([]);
 
@@ -281,7 +284,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
     const sourcePath = join(root, "extension");
     writeExtension(sourcePath);
     const reports: string[] = [];
-    let runCount = 0;
+    const buildStarted = Promise.withResolvers<void>();
     let unblockBuild: () => void = () => {};
     const buildUnblocked = new Promise<void>((resolve) => {
       unblockBuild = resolve;
@@ -298,7 +301,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
         reports.push("success");
       },
       buildWebview: async (input) => {
-        runCount++;
+        buildStarted.resolve();
         await buildUnblocked;
         writeManagedBuildOutput(input);
         return { success: true, details: "" };
@@ -308,7 +311,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     try {
       const refresh = manager.ensure("installed-lab");
-      await waitFor(() => runCount === 1, "Timed out waiting for build.");
+      await buildStarted.promise;
 
       manager.dispose();
       unblockBuild();

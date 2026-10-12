@@ -141,7 +141,7 @@ export const submitChangeRequestCommand = defineCommand({
       commitSha: revision.headSha,
       metadata: {},
     });
-    await rollUpAttemptTicket(ctx.storage, attempt.ticketId);
+    await rollUpAttemptTicket(ctx, attempt.ticketId);
     return next;
   },
 });

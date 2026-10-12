@@ -9,6 +9,20 @@ type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "session
 
 interface ReadinessParams {
   base?: string;
+  dependencyReview?: "approved" | "submitted";
+}
+
+export async function readImplementationCapacity(ctx: Pick<ReadinessContext, "storage" | "sessions" | "settings">) {
+  const attempts = await listAttempts(ctx.storage);
+  const active = attempts.filter(
+    (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
+  );
+  const sessions = await Promise.all(active.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)));
+  const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
+  const running = sessions.filter((session) => liveStatuses.has(session?.status ?? "")).length;
+  const settings = await ctx.settings.all();
+  const configured = settings["automation.maxInProgress"];
+  return { running, limit: typeof configured === "number" ? configured : 2 };
 }
 
 const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) => {
@@ -50,15 +64,7 @@ export const loadAttemptReadiness = async (
   }
   const rootPath = home.root_path;
 
-  const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
-  const active = attempts.filter(
-    (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
-  );
-  const sessions = await Promise.all(active.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)));
-  const activeImplementationCount = sessions.filter((session) => liveStatuses.has(session?.status ?? "")).length;
-  const settings = await ctx.settings.all();
-  const configuredCapacity = settings["automation.maxInProgress"];
-  const maxInProgress = typeof configuredCapacity === "number" ? configuredCapacity : 2;
+  const capacity = await readImplementationCapacity(ctx);
   const mainHeadSha = await runGit(ctx, rootPath, [
     "rev-parse",
     "--verify",
@@ -75,10 +81,11 @@ export const loadAttemptReadiness = async (
     tickets,
     attempts,
     selections,
+    dependencyReview: commandParams.dependencyReview,
     doneStatusIds,
     mainHeadSha,
-    activeImplementationCount,
-    maxInProgress,
+    activeImplementationCount: capacity.running,
+    maxInProgress: capacity.limit,
     isAncestor: async (baseSha, headSha) => {
       const result = await ctx.process.run({
         command: ["git", "-C", rootPath, "merge-base", "--is-ancestor", baseSha, headSha],
@@ -89,7 +96,7 @@ export const loadAttemptReadiness = async (
     },
   });
 
-  return { readiness, workspace: home, target, capacity: { running: activeImplementationCount, limit: maxInProgress } };
+  return { readiness, workspace: home, target, capacity };
 };
 
 export const attemptReadinessCommand = defineCommand({

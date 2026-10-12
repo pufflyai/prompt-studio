@@ -33,6 +33,7 @@ export type AttemptReadinessResult =
 
 interface ResolveAttemptReadinessInput {
   requests: Map<string, TicketReviewRequests>;
+  dependencyReview?: "approved" | "submitted";
   target: string;
   tickets: AttemptReadinessTicket[];
   attempts: AttemptRecord[];
@@ -52,7 +53,7 @@ const isSelectedAttemptViable = (attempt: AttemptRecord) => {
 
 const isApprovedAttempt = (attempt: AttemptRecord) => attempt.state === "approved" && latestHead(attempt) !== null;
 
-const findPendingPrerequisites = (
+export const findPendingPrerequisites = (
   target: AttemptReadinessTicket,
   byRef: Map<string, AttemptReadinessTicket>,
   requests: ResolveAttemptReadinessInput["requests"],
@@ -141,9 +142,15 @@ export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInpu
   for (const dependency of unresolvedTickets) {
     const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
     const attempts = input.attempts.filter((attempt) => attempt.ticketId === dependency.id);
-    const selected = selection
-      ? attempts.filter((attempt) => attempt.workspaceId === selection.workspaceId && isSelectedAttemptViable(attempt))
-      : attempts.filter(isApprovedAttempt);
+    const eligible = (attempt: AttemptRecord) => {
+      if (isApprovedAttempt(attempt)) return true;
+      if (input.dependencyReview === "submitted")
+        return ["review_ready", "reviewing"].includes(attempt.state) && latestHead(attempt) !== null;
+      return input.dependencyReview === undefined && Boolean(selection) && isSelectedAttemptViable(attempt);
+    };
+    const selected = attempts.filter(
+      (attempt) => (!selection || attempt.workspaceId === selection.workspaceId) && eligible(attempt),
+    );
 
     if (selected.length === 0) {
       return {

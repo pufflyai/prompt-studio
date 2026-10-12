@@ -103,13 +103,6 @@ export interface TicketAttemptSelection {
   selectedAt: string;
 }
 
-export interface AttemptLaunchClaim {
-  ticketId: string;
-  ownerRunId: string;
-  createdAt: string;
-  expiresAt: string;
-}
-
 export interface ReviewLaunchClaim {
   workspaceId: string;
   revision: number;
