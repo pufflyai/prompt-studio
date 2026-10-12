@@ -25,6 +25,7 @@ import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
+import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
@@ -332,7 +333,9 @@ const buildApp = async (
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
   const database = await openAppDatabase(input.config.database.path, input.lifecycle);
   try {
-    return await buildApp(input, dependencies, database);
+    const app = await buildApp(input, dependencies, database);
+    logStartupPhase("app_ready");
+    return app;
   } catch (error) {
     // Nothing else owns the database until startup returns its close function.
     await database.close();

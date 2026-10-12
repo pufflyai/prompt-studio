@@ -21,6 +21,7 @@ import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions
 import { createHarnessRegistryService } from "./features/harnesses/harness-registry-service";
 import type { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
+import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionService } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import type { createProjectService } from "./services/project-service";
@@ -140,6 +141,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     eventBus: input.eventBus,
     invalidate: extensionRuntimeCatalog.invalidate,
   });
+  logStartupPhase("extensions_ready");
 
   return {
     extensionRuntime,

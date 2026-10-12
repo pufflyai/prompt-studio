@@ -121,6 +121,10 @@ The workbench registers file rendering without loading its editor implementation
 
 Recovery codes distinguish a missing sidecar, readiness timeout, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. Recovery never recommends deleting the database.
 
+The runtime records each startup step as a `runtime.startup.phase` entry in the shared log file and in its output, which desktop keeps in `desktop-runtime.log`. The steps are `database_locked`, `database_engine_loaded`, `database_image_restored` (first start only), `database_opened`, `database_migrated`, `extensions_ready`, and `app_ready`. Each entry has `elapsedMs`, the time since the runtime process started. These entries are written at every log level, so the log of a startup timeout shows which step was still running. The runtime publishes its descriptor at `database_locked`, before the database opens; `/runtime/ready` waits for `app_ready`.
+
+A first start that stops while it unpacks the starter database leaves the data folder empty, so Retry unpacks it again. See [Tests](../../guides/development/0002-testing.md) for the starter database image.
+
 The runtime's `db.open.failed` event identifies database startup failures even when PGlite returns an opaque WebAssembly error. Desktop uses that event to show database recovery guidance. It leaves damaged files untouched and can retry after the user restores them.
 
 The main thread stays available during sidecar verification. It streams the executable checksum and awaits the version subprocess under the startup deadline. The lifecycle protocol reads packaged files directly with their content types. It does not route local asset reads through Electron's networking service.

@@ -27,6 +27,7 @@ import {
 import type { AppLifecycle } from "./app-contracts";
 import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
+import { logStartupPhase } from "./lib/startup-phase";
 
 const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
   const message = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
@@ -36,7 +37,13 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
 
 export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}) => {
   try {
-    return await createDb({ path, onLockAcquired: lifecycle.onDatabaseLockAcquired });
+    return await createDb({
+      path,
+      onPhase: (phase) => {
+        logStartupPhase(phase);
+        if (phase === "database_locked") lifecycle.onDatabaseLockAcquired?.();
+      },
+    });
   } catch (err) {
     const hint = pgliteRecoveryHint(err, path);
     apiLogger.error({ dataDir: path, err, event: "db.open.failed", hint }, hint ?? "PGlite database failed to open");

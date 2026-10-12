@@ -120,7 +120,16 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   return { fsBundle: dataFile, wasmModule, loadDataDir: initialDatabase };
 };
 
-export const createDb = async (options?: { path?: string; onLockAcquired?: () => void }) => {
+// Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
+export type DbOpenPhase =
+  | "database_locked"
+  | "database_engine_loaded"
+  | "database_image_restored"
+  | "database_opened"
+  | "database_migrated";
+
+export const createDb = async (options?: { path?: string; onPhase?: (phase: DbOpenPhase) => void }) => {
+  const onPhase = options?.onPhase ?? (() => {});
   const requestedPath = resolveDbPath(options?.path);
   ensureDbDirectory(requestedPath);
   const dbPath = requestedPath === ":memory:" ? requestedPath : fs.realpathSync(requestedPath);
@@ -129,12 +138,13 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
 
   let pglite: PGlite | undefined;
   try {
-    options?.onLockAcquired?.();
+    onPhase("database_locked");
     const pgliteOpts = await resolvePgliteOptions();
-    pglite = openPglite(dbPath, pgliteOpts);
+    onPhase("database_engine_loaded");
+    pglite = await openPglite(dbPath, pgliteOpts, () => onPhase("database_image_restored"));
     const openedPglite = pglite;
     await openedPglite.waitReady;
-    console.log("[createDb] PGlite ready");
+    onPhase("database_opened");
 
     const db = drizzle(openedPglite, { schema });
     await withMigrationsFolder(async (migrationsFolder) => {
@@ -161,6 +171,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       await finishBoardViewRules(openedPglite);
       await snapshotLegacyQueuedRequests(db);
     });
+    onPhase("database_migrated");
 
     let closed = false;
     const close = async () => {

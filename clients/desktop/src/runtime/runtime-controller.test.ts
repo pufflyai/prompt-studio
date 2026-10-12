@@ -95,7 +95,12 @@ describe("desktop runtime controller", () => {
   test("classifies actionable startup failures", () => {
     expect(classifyRuntimeFailure("listen EADDRINUSE: address already in use").code).toBe("port_bind_failure");
     expect(classifyRuntimeFailure("Failed to start server. Is port 59152 in use?").code).toBe("port_bind_failure");
-    expect(classifyRuntimeFailure("PGlite database is already locked").code).toBe("pglite_ownership_conflict");
+    expect(
+      classifyRuntimeFailure("pstdio.db is in use by pid 42 (pstdio serve) — refusing to open it a second time").code,
+    ).toBe("pglite_ownership_conflict");
+    expect(classifyRuntimeFailure("Timed out waiting for another process choosing the pstdio.db lock").code).toBe(
+      "pglite_ownership_conflict",
+    );
     expect(classifyRuntimeFailure("invalid checkpoint record").code).toBe("pglite_recovery_failure");
   });
 
@@ -105,5 +110,18 @@ describe("desktop runtime controller", () => {
 
     expect(classifyRuntimeFailure(output).code).toBe("pglite_recovery_failure");
     expect(classifyRuntimeFailure(message).code).toBe("unexpected_exit");
+  });
+
+  test("reads a logged startup step as progress, not as a database ownership conflict", () => {
+    const output = [
+      JSON.stringify({ event: "runtime.startup.phase", phase: "database_locked", elapsedMs: 120 }),
+      JSON.stringify({
+        event: "db.open.failed",
+        msg: "PGlite database failed to open",
+        err: { message: "unreachable" },
+      }),
+    ].join("\n");
+
+    expect(classifyRuntimeFailure(output).code).toBe("pglite_recovery_failure");
   });
 });

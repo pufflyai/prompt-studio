@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
@@ -77,6 +77,15 @@ const waitForDescriptor = async (path: string) => {
     await Bun.sleep(50);
   }
   throw new Error(`Packaged runtime descriptor was not created. Runtime log:\n${readRuntimeLogs(join(path, ".."))}`);
+};
+
+const waitForOwner = async (path: string, child: ChildProcess) => {
+  const deadline = Date.now() + TEST_TIMEOUT - 5_000;
+  while (Date.now() < deadline) {
+    if (existsSync(path) && readDescriptor(path).pid === child.pid) return readDescriptor(path);
+    await Bun.sleep(50);
+  }
+  throw new Error(`Packaged runtime ${child.pid} did not publish its descriptor.`);
 };
 
 const assertAuthenticatedReady = async (descriptor: RuntimeDescriptor) => {
@@ -181,6 +190,40 @@ describe("packaged runtime lifecycle", () => {
       await runBinaryAsync(["close"], home, env);
       expect(await exited).toBe(0);
       expect(existsSync(descriptorPath)).toBe(false);
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
+    "finishes a first start that was stopped while it unpacked its database",
+    async () => {
+      const home = createRuntimeHome();
+      const env = createRuntimeEnv(home);
+      const descriptorPath = join(home, "runtime.json");
+      const startRuntime = () => {
+        const child = spawn(PACKAGED_BINARY_PATH, ["serve", "--foreground", "--owner", "persistent", "--port", "0"], {
+          cwd: home,
+          env,
+          stdio: "ignore",
+        });
+        children.push(child);
+        return child;
+      };
+      // Any file inside a database folder other than the lock means the first start is writing the database.
+      const writesDatabase = () =>
+        readdirSync(home, { recursive: true }).some((entry) => /^pstdio\.db(?!\.lock)[^\\/]*[\\/]/.test(String(entry)));
+
+      const first = startRuntime();
+      const firstExited = new Promise((resolve) => first.once("exit", resolve));
+      while (!writesDatabase() && first.exitCode === null) await Bun.sleep(1);
+      expect(first.exitCode).toBeNull();
+      // The desktop stops a runtime this way when its startup deadline passes.
+      first.kill("SIGKILL");
+      await firstExited;
+
+      const retry = startRuntime();
+      await assertAuthenticatedReady(await waitForOwner(descriptorPath, retry));
+      await runBinaryAsync(["close"], home, env);
     },
     TEST_TIMEOUT,
   );
