@@ -97,7 +97,7 @@ The lifecycle and workbench renderers use the same hardened web preferences and 
 
 ## Performance monitoring
 
-Developer tools adds one device-local switch, **Enable performance monitoring**. It is off by default. Electron main saves it as `{ "enabled": boolean }` in `performance-monitoring.json` under its user data, next to the other host-state files. The runtime database never stores it, so a remote runtime cannot turn it on for this device. Browser dashboards save their own switch in `localStorage`. See the [Developer tools guide](../../guides/0003-developer-tools.md) for the person-facing behavior.
+The Developer tools settings panel has one desktop-backed switch, **Enable performance monitoring**. It is off by default. Electron main saves it as `{ "enabled": boolean }` in `performance-monitoring.json` under its user data, next to the other host-state files. The runtime database never stores it, so a remote runtime cannot turn it on for this device. Browser dashboards save their own switch in `localStorage`. See the [Developer tools guide](../../guides/0003-developer-tools.md) for the person-facing behavior.
 
 Measurement has one owner per process:
 
@@ -198,12 +198,20 @@ fix. The Electron checks can use a separate compatible `validation_ref`, as
 described in the release retry instructions below.
 
 The native updater is configured in packaged macOS and Windows apps. It resolves
-the newest complete `pstdio@<version>` release and points Electron at that
-release's update metadata. This avoids depending on services that require plain
-SemVer Git tags, which do not match the monorepo tag format. Source builds and
-Linux open the release page instead. Windows uses the release download directory
-as its Squirrel feed, including the `pstdio@<version>` tag. Release assets keep explicit
-platform and architecture names.
+the newest complete `pstdio@<version>` release on the device's update channel and
+points Electron at that release's update metadata. This avoids depending on services
+that require plain SemVer Git tags, which do not match the monorepo tag format.
+Source builds and Linux open the release page instead. Windows uses the release
+download directory as its Squirrel feed, including the `pstdio@<version>` tag.
+Release assets keep explicit platform and architecture names.
+
+`release/desktop-update-channel.ts` reads the channel from
+`PSTDIO_HOME/desktop/update-channel.json` before every check. Windows and source
+builds always use stable. `DesktopUpdateManager` checks after startup and every four
+hours. Only a check from the menu shows the "up to date" and error dialogs. The
+manager never offers a version that is not newer than the running app, so leaving
+the nightly channel never downgrades. Nightlies have no Windows assets, so the
+`targets` input of `release-desktop.yml` lists the targets a run builds and verifies.
 
 ## Development and tests
 

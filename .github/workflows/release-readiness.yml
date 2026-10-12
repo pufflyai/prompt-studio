@@ -165,6 +165,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ needs.npm.outputs.ref }}
+          # Packaged checks in build-release read older release tags, such as the Planner upgrade check.
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

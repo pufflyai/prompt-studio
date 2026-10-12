@@ -1,5 +1,5 @@
 import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { statusesCollection, updateTicket } from "../data/collections";
 import {
   findTicket,
   resolveDependencyIds,
@@ -7,6 +7,7 @@ import {
   resolveTagOptionIds,
   resolveTicketId,
 } from "../data/resolve";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { validateTicketDependencies } from "../data/ticket-dependencies";
 import type { StoredTicket } from "../data/types";
 import { plannerTicketsChanged } from "../events";
@@ -40,7 +41,6 @@ export const updateTicketCommand = defineCommand({
     blockedReason: params.text(),
   },
   async run(ctx, commandParams) {
-    const collection = ticketsCollection(ctx.storage);
     const existing = await findTicket(ctx.storage, commandParams.id);
     if (!existing) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
@@ -52,11 +52,12 @@ export const updateTicketCommand = defineCommand({
       commandParams.tags !== undefined
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : commandParams.tagIds;
+    if (tagIds !== undefined) await assertSingleSelectTagIds(ctx.storage, tagIds, existing.tagIds);
     const parentId = await resolveParentUpdate(ctx.storage, commandParams.parent, commandParams.unlinkParent);
     const dependsOn = await resolveDependencyUpdate(ctx.storage, commandParams.dependsOn, commandParams.clearDependsOn);
     if (dependsOn !== undefined) await validateTicketDependencies(ctx.storage, existing, dependsOn);
 
-    const next = {
+    const draft = {
       ...existing,
       ...(commandParams.content !== undefined
         ? { content: commandParams.content, title: deriveTitle(commandParams.content) }
@@ -68,7 +69,7 @@ export const updateTicketCommand = defineCommand({
       ...(commandParams.blockedReason !== undefined ? { blockedReason: commandParams.blockedReason || null } : {}),
       updatedAt: new Date().toISOString(),
     };
-    await collection.update(existing.id, next);
+    const next = await updateTicket(ctx.storage, draft);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
     return next;

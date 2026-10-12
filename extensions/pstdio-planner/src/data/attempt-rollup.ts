@@ -1,13 +1,15 @@
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+import { plannerTicketsChanged } from "../events";
 import { listAttempts } from "./attempt-storage";
 import { statusesCollection, ticketsCollection } from "./collections";
+import { hasPendingInput, listTicketReviewRequests } from "./review-request-storage";
 
-const HUMAN_REQUESTED_OPTION_ID = "default-human-requested-true";
-
-export const rollUpAttemptTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
+export const rollUpAttemptTicket = async (ctx: Pick<ExtensionContextBase, "storage" | "events">, ticketId: string) => {
+  const { storage } = ctx;
   const ticket = await ticketsCollection(storage).get(ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${ticketId}"`);
-  if ((ticket.tagIds ?? []).includes(HUMAN_REQUESTED_OPTION_ID)) return ticket;
+  // Open requests pause status updates even when an interrupted write left the flag unset.
+  if (hasPendingInput(await listTicketReviewRequests(storage, ticketId))) return ticket;
 
   const statuses = await statusesCollection(storage).list();
   const statusId = (name: string) =>
@@ -43,5 +45,6 @@ export const rollUpAttemptTicket = async (storage: ExtensionStorageApi, ticketId
   if (!nextStatusId || (ticket.statusId === nextStatusId && ticket.blockedReason === blockedReason)) return ticket;
   const next = { ...ticket, statusId: nextStatusId, blockedReason, updatedAt: new Date().toISOString() };
   await ticketsCollection(storage).put(ticket.id, next);
+  await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
   return next;
 };

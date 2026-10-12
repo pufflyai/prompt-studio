@@ -17,6 +17,6 @@ export const loadFontEditor = async (host: GuestHost) => {
 export const showError = (host: GuestHost, error: unknown) =>
   host.call("notification.show", {
     level: "error",
-    title: "Font editor",
+    title: "Icon Set editor",
     message: error instanceof Error ? error.message : "The font operation failed.",
   });

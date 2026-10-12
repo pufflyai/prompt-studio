@@ -63,13 +63,20 @@ interface SectionGapProps {
   indicator: TreeListDropIndicator | null;
 }
 
-// The space after a section is a drop zone of its own: dropping here places a row behind the section.
+// The last drop zone uses the tree's existing padding instead of adding a section gap.
 export const SectionGap = (props: SectionGapProps) => {
   const { sectionId, nextSectionId, gap, indicator } = props;
   const id = toGapDragId(sectionId);
   const droppable = useDroppable({ id, data: { nextSectionId } });
   return (
-    <Box ref={droppable.setNodeRef} position="relative" w="full" pt={gap} flexShrink={0}>
+    <Box
+      ref={droppable.setNodeRef}
+      position={nextSectionId ? "relative" : "absolute"}
+      top={nextSectionId ? undefined : "100%"}
+      w="full"
+      pt={nextSectionId ? gap : "xs"}
+      flexShrink={0}
+    >
       {indicator?.lineId === id ? <DropLine edge="middle" /> : null}
     </Box>
   );

@@ -24,10 +24,14 @@ import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
+import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
+import { ticketBoard } from "./data/ticket-board";
 import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
+import { ticketCreateForm } from "./ticket-create-form";
 import { ticketStatuses } from "./ticket-status-provider";
+import { planChanged } from "./timeline/contracts";
 
 export { ticketResourceKind } from "./resource-kinds";
 
@@ -78,17 +82,47 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
+  const requests = defineView({
+    id: "ticket-requests",
+    title: l10n("requests.view.title", "Review requests"),
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/ticket-review-requests.tsx", baseUrl),
+      capabilities: ["commands.execute", "navigation.open"],
+    },
+  });
+  const requestsPage = definePage({
+    id: "ticket-requests",
+    title: l10n("requests.page.title", "Review requests"),
+    parent: { kind: "page", id: "tickets" },
+    path: "ticket-requests",
+    mode: workbenchModes.project,
+    resource: { kinds: [ticketResourceKind.ref] },
+    main: { kind: "view", view: requests.ref, cardinality: "one" },
+    slots: [],
+  });
   const tickets = defineView({
-    id: "tickets",
+    id: ticketBoard.id,
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
     icon: "square-kanban",
     body: {
       kind: "kanban",
       attributes: buildTicketAttributes(ticketStatuses.ref),
       query: queryTickets,
-      refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
-      onRowActivate: (ctx, { row }) => {
-        if (row.resource) ctx.navigation.open(ticketPageTarget(row.resource));
+      refreshEvents: [
+        plannerTicketsChanged,
+        planChanged,
+        viewDataEvents.sessionsChanged,
+        viewDataEvents.workspacesChanged,
+      ],
+      onRowActivate: async (ctx, { row }) => {
+        if (!row.resource) return;
+        const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
+        ctx.navigation.open(
+          pending
+            ? { kind: "page", page: requestsPage.ref, resource: row.resource, parent: ticketPageTarget(row.resource) }
+            : ticketPageTarget(row.resource),
+        );
       },
       onAttributeChange: setTicketAttribute,
       onReorder: reorderTicket,
@@ -97,32 +131,12 @@ export const createPlannerUi = (baseUrl: string) => {
       createRow: {
         command: createTicketCommand.ref,
         columnParam: "statusId",
-        title: l10n("kanbanRenderers.tickets.createRow.title", "New ticket"),
-        submitLabel: l10n("kanbanRenderers.tickets.createRow.submitLabel", "Create ticket"),
-        params: {
-          content: {
-            type: "markdown",
-            label: l10n("kanbanRenderers.tickets.createRow.content.label", "Description"),
-            placeholder: l10n("kanbanRenderers.tickets.createRow.content.placeholder", "Describe the ticket..."),
-            required: true,
-          },
-          files: {
-            type: "files",
-            label: l10n("kanbanRenderers.tickets.createRow.attachments.label", "Attach files"),
-            multiple: true,
-          },
-        },
+        ...ticketCreateForm,
         attributesParam: "attributes",
         attachments: {
           command: attachTicketFileCommand.ref,
           resourceParam: "ticketId",
           fileParam: "ref",
-        },
-        labels: {
-          cancel: l10n("kanbanRenderers.tickets.createRow.cancel", "Cancel"),
-          properties: l10n("kanbanRenderers.tickets.createRow.properties", "Properties"),
-          submitError: l10n("kanbanRenderers.tickets.createRow.submitError", "Could not create ticket"),
-          removeFile: l10n("kanbanRenderers.tickets.createRow.removeFile", "Remove file"),
         },
       },
       defaultSettings: {
@@ -167,14 +181,14 @@ export const createPlannerUi = (baseUrl: string) => {
       kind: "controls",
       query: (ctx, input) => queryTicketProperties(ctx, input.renderer.resource),
       onValueChange: (ctx, input) => updateTicketProperty(ctx, input.renderer.resource, input),
-      refreshEvents: [plannerTicketsChanged],
+      refreshEvents: [plannerTicketsChanged, planChanged],
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings],
-    pages: [ticketsPage, ticketDetailPage],
+    views: [tickets, editor, files, properties, tagSettings, requests],
+    pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({
         id: "ticket.properties",
@@ -190,7 +204,7 @@ export const createPlannerUi = (baseUrl: string) => {
         slot: "content",
         label: l10n("kanbanRenderers.tickets.title", "Tickets"),
         icon: "square-kanban",
-        group: "",
+        group: "Project Planning",
         action: { kind: "page", page: ticketsPage.ref },
       }),
     ],

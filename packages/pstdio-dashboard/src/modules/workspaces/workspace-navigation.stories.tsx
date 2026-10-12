@@ -25,7 +25,9 @@ const WorkspaceNavigationStory = (props: { providers: WorkspaceProviderDescripto
       title: "Workspace navigation",
       body: {
         kind: "tree",
-        getBody: () => [{ id: "navigation.root", nodes: [workspaceNavigationNode(providers)] }],
+        getBody: () => [
+          { id: "navigation.root", nodes: [{ ...workspaceNavigationNode(providers), hiddenByDefault: false }] },
+        ],
         getChildren: () => [],
       },
     });

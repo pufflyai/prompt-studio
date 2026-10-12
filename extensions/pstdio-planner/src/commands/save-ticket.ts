@@ -1,5 +1,5 @@
 import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
+import { putTicket } from "../data/collections";
 import {
   fileNameFromPath,
   readTicketMarkdown,
@@ -14,6 +14,7 @@ import {
   resolveTagOptionIds,
   resolveTicketId,
 } from "../data/resolve";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
 import { validateTicketFileName } from "../data/ticket-file-name";
 import type { StoredTicket, StoredTicketFile } from "../data/types";
@@ -75,6 +76,7 @@ export const saveTicketCommand = defineCommand({
     const statusId =
       commandParams.status !== undefined ? await resolveStatusId(ctx.storage, commandParams.status) : ticket.statusId;
     const tagIds = await resolveTags(ctx.storage, frontmatter.tagNames, ticket.tagIds ?? []);
+    await assertSingleSelectTagIds(ctx.storage, tagIds, ticket.tagIds);
     const dependsOn = await resolveDependencies(
       ctx.storage,
       frontmatter.dependsOn,
@@ -101,7 +103,7 @@ export const saveTicketCommand = defineCommand({
       draft: false,
       updatedAt: new Date().toISOString(),
     };
-    await ticketsCollection(ctx.storage).put(ticket.id, next);
+    await putTicket(ctx.storage, next);
 
     return { shorthand: ticket.shorthand, files: files.length };
   },

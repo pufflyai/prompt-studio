@@ -1,5 +1,13 @@
 # pstdio-artifacts
 
+## 0.43.0
+
+_2026-10-12_
+
+### Patch Changes
+
+- f099340: Simplify the artifact library with separated project brief and system diagram buttons, make library breadcrumbs clickable, move resource actions into the breadcrumb header, add version icons, and register searchable artifact resources.
+
 ## 0.42.0
 
 _2026-10-10_

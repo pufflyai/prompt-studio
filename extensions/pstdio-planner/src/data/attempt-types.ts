@@ -103,45 +103,11 @@ export interface TicketAttemptSelection {
   selectedAt: string;
 }
 
-export interface AttemptLaunchClaim {
-  ticketId: string;
-  ownerRunId: string;
-  createdAt: string;
-  expiresAt: string;
-}
-
 export interface ReviewLaunchClaim {
   workspaceId: string;
   revision: number;
   reviewId: string;
   createdAt: string;
-}
-
-export type HumanRequestReason =
-  | "approved-revision"
-  | "ambiguous-dependency-attempt"
-  | "divergent-dependency-attempts"
-  | "dependency-cycle"
-  | "dependency-missing"
-  | "implementation-disconnected"
-  | "review-disconnected"
-  | "workspace-adoption-required";
-
-export interface HumanRequestRecord {
-  id: string;
-  ticketId: string;
-  workspaceId: string | null;
-  revision: number | null;
-  sessionId: string;
-  relatedSessionId: string | null;
-  reason: HumanRequestReason;
-  question: string;
-  expectedAction: string;
-  state: "open" | "resolved";
-  requestedAt: string;
-  resolvedAt: string | null;
-  resolvedBy: ActorRef | null;
-  resolution: string | null;
 }
 
 export type AttemptEventType =

@@ -1,5 +1,46 @@
 # pstdio
 
+## 0.43.0
+
+_2026-10-12_
+
+### Minor Changes
+
+- 6001b76: Copy a link to the current page from the breadcrumb menu on every page.
+- 0851ba5: Add paged session queries, shared filters, harness details and saved token totals.
+- f0b78fc: Keep ticket drafts and attachments, remember the selected create action, align modal controls, preserve filter pickers, and keep settings Save controls visible.
+- abff397: Add shared motion for tree reveals, panels, floating launchers, and newly streamed text with reduced motion support.
+- 2c97ba5: Add a nightly update channel: choose Stable or Nightly in Settings → Developer tools or with `pst update-channel`, and the desktop app now checks for updates on launch and every four hours.
+- 7ba285b: Load command-backed workspace choices in standalone and nested forms.
+- 98b1708: Let extensions watch artifact mounts with `watch: true` and refresh views and hooks through `artifactChanged(mount)` when files change outside the mount API.
+- c0a8d81: Add the `Attachments` harness capability, list harness capabilities in agent info, and hide the model menu for harnesses without models.
+
+### Patch Changes
+
+- ec9f15f: Advance the extension API to 0.1.3 for workflow status deprecations after the 0.1.2 release.
+- 6e7b670: Keep running Codex turns alive when an extension edit or install re-provisions project workspaces.
+- bb22a31: Show follow-up messages in the queue immediately while they are being sent.
+- c46643f: Merge the Performance and Connection settings into one Developer tools entry under Workbench, next to Update channel.
+- 50dc299: Add searchable nested Notes with uniquely named folders, immediate creation, first-save titles stored in Markdown front matter, persistent subtree dragging, tab actions, and deletion-safe refreshes, confirmed deletion and optimistic rename and removal, hide Workspaces by default, keep nested context menus beside their items, and reduce sidenav footer spacing.
+- f1022ff: Pass hidden resource parameters to dependent command choices.
+- d495d76: Remove the browser focus outline around scrollable panels.
+- d10dabf: Keep sessions idle until their first prompt or attachment is submitted.
+- a4c23ad: Add native research agent controls, channel pauses, and manual Social radar sessions.
+- f0b78fc: Restore composer focus after delayed re-enabling.
+- f099340: Simplify the artifact library with separated project brief and system diagram buttons, make library breadcrumbs clickable, move resource actions into the breadcrumb header, add version icons, and register searchable artifact resources.
+- c46643f: Show the Machine tokens settings only after you turn on Machine tokens in Experimental → Beta features.
+- 55e486d: Resolve extension dependencies through published exports in development and packaged runtimes.
+- c4c3913: Add Planner timeline with shared filters and ticket forms, status and review icons, sticky track names, anchored menus, and one live extension view per frame.
+- 6db7df4: Draw every row of virtual lists, such as trees, after their page is hidden and shown again, and on first mount.
+- f822341: Wrap chat table cells by default and hide row numbers.
+- c46643f: Keep the Secondary Panel closed when you add a terminal to the Main or Side panel.
+- 775e88f: Open terminal hyperlinks printed by agent CLIs on Ctrl-click or Cmd-click, like plain URLs.
+- bbeb2fc: Show tooltips next to triggers that set their own id, such as the chat question steps, instead of the top-left corner.
+- c7e5a85: Hide file views for workspaces without local file access.
+- 7e4e145: Build an extension's webviews once it loads after a failed load, such as after installing its dependencies, without restarting the runtime.
+- 8bb636a: Build extension webviews in a fresh process so a view added by an extension update loads without a restart, and rebuild a webview whose bundle went missing.
+- 357240c: Deprecate workflow status APIs in favor of extension-owned commands, settings panels, and query-owned enums.
+
 ## 0.42.0
 
 _2026-10-10_

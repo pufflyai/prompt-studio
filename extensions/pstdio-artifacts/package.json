@@ -1,6 +1,6 @@
 {
   "name": "pstdio-artifacts",
-  "version": "0.42.0",
+  "version": "0.43.0",
   "displayName": "Artifacts",
   "description": "Publish interactive HTML pages and browse their saved revisions.",
   "publisher": "pstdio",
@@ -21,7 +21,7 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.35.0",
+    "@pstdio/sdk": "^0.42.0",
     "@pstdio/ui": "0.26.0",
     "entities": "4.5.0",
     "react": "^19.2.0",

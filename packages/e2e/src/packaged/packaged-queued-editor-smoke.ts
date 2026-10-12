@@ -1,4 +1,5 @@
 import { chromium, expect } from "@playwright/test";
+import { expectPackagedQueuedSubmission } from "./packaged-queued-submission-smoke";
 
 export const expectPackagedQueuedEditorCancellation = async (
   baseUrl: string,
@@ -18,6 +19,7 @@ export const expectPackagedQueuedEditorCancellation = async (
     await page.goto(`${baseUrl}/projects/${projectId}/session?resource=${resource}`);
     const editor = page.getByTestId("content-editable").last();
     await expect(editor).toBeEditable();
+    await expectPackagedQueuedSubmission(page, sessionId);
     const grip = page.getByRole("button", { name: "Drag queued follow-up 1", exact: true });
     const queue = grip.locator("xpath=ancestor::*[@data-send-now-visible]");
     const topRadius = await queue.evaluate((element) => getComputedStyle(element).borderTopRightRadius);

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   DesktopReleaseConfigError,
+  resolveDesktopReleasePage,
   resolveDesktopSigning,
   resolveDesktopUpdateFeed,
   resolveDesktopUpdateStrategy,
@@ -58,6 +59,21 @@ describe("desktop release configuration", () => {
   });
 });
 
+const macRelease = (version: string, options: { prerelease?: boolean; draft?: boolean } = {}) => ({
+  tag_name: `pstdio@${version}`,
+  draft: options.draft ?? false,
+  prerelease: options.prerelease ?? version.includes("-"),
+  assets: [
+    { name: `Prompt-Studio-${version}-darwin-arm64.zip` },
+    { name: "RELEASES-darwin-arm64.json" },
+    { name: `Prompt-Studio-${version}-linux-x64.deb` },
+  ],
+});
+
+const feedVersion = async (channel: "stable" | "nightly", releases: ReturnType<typeof macRelease>[]) =>
+  (await resolveDesktopUpdateFeed({ platform: "darwin", arch: "arm64", channel, fetchReleases: async () => releases }))
+    .version;
+
 describe("desktop update strategy", () => {
   test("uses the signed GitHub release channel on supported native updaters", () => {
     expect(resolveDesktopUpdateStrategy("darwin")).toEqual({ kind: "automatic" });
@@ -65,10 +81,7 @@ describe("desktop update strategy", () => {
   });
 
   test("keeps Linux on the documented manual release path", () => {
-    expect(resolveDesktopUpdateStrategy("linux")).toEqual({
-      kind: "manual",
-      releasesUrl: "https://github.com/pufflyai/prompt-studio/releases",
-    });
+    expect(resolveDesktopUpdateStrategy("linux")).toEqual({ kind: "manual" });
   });
 
   test("resolves feeds from the newest complete pstdio package release", async () => {
@@ -97,6 +110,7 @@ describe("desktop update strategy", () => {
       await resolveDesktopUpdateFeed({
         platform: "darwin",
         arch: "arm64",
+        channel: "stable",
         fetchReleases: async () => releases,
       }),
     ).toEqual({
@@ -107,6 +121,7 @@ describe("desktop update strategy", () => {
       await resolveDesktopUpdateFeed({
         platform: "win32",
         arch: "x64",
+        channel: "stable",
         fetchReleases: async () => releases,
       }),
     ).toEqual({ version: "0.25.3", url: "https://github.com/pufflyai/prompt-studio/releases/download/pstdio@0.25.3" });
@@ -117,6 +132,7 @@ describe("desktop update strategy", () => {
       resolveDesktopUpdateFeed({
         platform: "darwin",
         arch: "x64",
+        channel: "nightly",
         fetchReleases: async () => [
           {
             tag_name: "pstdio@0.25.3",
@@ -127,5 +143,53 @@ describe("desktop update strategy", () => {
         ],
       }),
     ).rejects.toThrow("No complete darwin-x64 desktop update release is published");
+  });
+});
+
+describe("desktop update channels", () => {
+  test("stable ignores nightly builds, other prereleases and drafts", async () => {
+    const releases = [
+      macRelease("0.42.3"),
+      macRelease("0.42.4", { prerelease: true }),
+      macRelease("0.43.0-nightly.20261011030000"),
+      macRelease("0.43.0-rc.1"),
+      macRelease("0.44.0", { draft: true }),
+    ];
+    expect(await feedVersion("stable", releases)).toBe("0.42.3");
+  });
+
+  test("nightly picks the newest of stable releases and nightly builds", async () => {
+    const releases = [
+      macRelease("0.42.3"),
+      macRelease("0.43.0-nightly.20261010030000"),
+      macRelease("0.43.0-nightly.20261011030000"),
+      macRelease("0.43.0-rc.1"),
+    ];
+    expect(await feedVersion("nightly", releases)).toBe("0.43.0-nightly.20261011030000");
+  });
+
+  test("a stable release replaces nightly builds of the same version", async () => {
+    const releases = [macRelease("0.43.0-nightly.20261011030000"), macRelease("0.43.0")];
+    expect(await feedVersion("nightly", releases)).toBe("0.43.0");
+  });
+
+  test("nightly skips a build whose native update set is still incomplete", async () => {
+    const incomplete = { ...macRelease("0.43.0-nightly.20261012030000"), assets: [] };
+    const releases = [macRelease("0.43.0-nightly.20261011030000"), incomplete];
+    expect(await feedVersion("nightly", releases)).toBe("0.43.0-nightly.20261011030000");
+  });
+
+  test("Linux opens the newest release page with a Linux package for the chosen channel", async () => {
+    const releases = [macRelease("0.42.3"), macRelease("0.43.0-nightly.20261011030000")];
+    const page = (channel: "stable" | "nightly") =>
+      resolveDesktopReleasePage({ platform: "linux", arch: "x64", channel, fetchReleases: async () => releases });
+    expect(await page("stable")).toEqual({
+      version: "0.42.3",
+      url: "https://github.com/pufflyai/prompt-studio/releases/tag/pstdio@0.42.3",
+    });
+    expect(await page("nightly")).toEqual({
+      version: "0.43.0-nightly.20261011030000",
+      url: "https://github.com/pufflyai/prompt-studio/releases/tag/pstdio@0.43.0-nightly.20261011030000",
+    });
   });
 });

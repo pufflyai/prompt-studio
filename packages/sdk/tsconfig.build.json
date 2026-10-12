@@ -6,6 +6,8 @@
     "emitDeclarationOnly": true,
     "outDir": "./dist",
     "rootDir": "..",
+    // Keeps union and inferred property order fixed, so the API report changes only when the API does.
+    "stableTypeOrdering": true,
     "paths": {
       "@/*": ["./src/*"],
       "pstdio-api-contracts": ["../pstdio-api-contracts/src/index.ts"],

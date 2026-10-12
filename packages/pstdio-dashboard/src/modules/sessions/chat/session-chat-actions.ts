@@ -144,6 +144,7 @@ const submitNewSessionMessage = (input: {
 
 const submitFollowUpMessage = (input: {
   sessionId: string;
+  sessionStatus?: string;
   lastRequestStarted?: string | null;
   messages: SessionMessage[];
   agent: string | null;
@@ -158,6 +159,10 @@ const submitFollowUpMessage = (input: {
   onQuestionResponseError?: () => void;
 }) => {
   const pending = createPendingFollowUpState({
+    destination:
+      !input.questionResponse && ["in_progress", "awaiting_input", "queued"].includes(input.sessionStatus ?? "")
+        ? "queue"
+        : "conversation",
     prompt: input.text,
     messageCount: input.messages.length,
     pendingId: `pending-${nextPendingId++}`,
@@ -183,6 +188,10 @@ const submitFollowUpMessage = (input: {
         if (input.questionResponse) input.onSubmitted?.();
         // Queued turns use their queue entry; accepted answers update the existing question.
         if (followUp?.status === "queued" || input.questionResponse) clearPendingFollowUp(input.sessionId, pending);
+        else
+          updatePendingFollowUp(input.sessionId, (current) =>
+            current?.userMessageId === pending.userMessageId ? { ...current, destination: "conversation" } : current,
+          );
         input.reconnect();
       },
       // The conversation keeps ownership of the failed message.
@@ -199,6 +208,7 @@ export const submitSessionMessage = (input: {
   /** The conversation that owns the message: the session id, or the draft key of a new session. */
   conversationKey: string;
   sessionId: string | null;
+  sessionStatus?: string;
   lastRequestStarted?: string | null;
   projectId: string | undefined;
   agent: string | null;

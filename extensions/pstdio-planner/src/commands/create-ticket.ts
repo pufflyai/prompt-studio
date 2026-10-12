@@ -3,11 +3,22 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
+
+const ticketTitle = (input: { content?: string; title?: string }) =>
+  input.content ? deriveTitle(input.content) : (input.title ?? "Untitled");
+
+const attributeTagIds = (attributes: Record<string, unknown>) =>
+  Object.entries(attributes).flatMap(([id, value]) => {
+    if (id === "status" || id === "milestone") return [];
+    if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+    return typeof value === "string" && value ? [value] : [];
+  });
 
 // Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
 // board passes ids; the CLI passes human names/shorthands, so status, tags,
@@ -45,29 +56,23 @@ export const createTicketCommand = defineCommand({
     const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx.storage, commandParams.dependsOn) : [];
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
+    const attributes = commandParams.attributes ?? {};
+    const tagIds =
+      commandParams.tags !== undefined
+        ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
+        : (commandParams.tagIds ?? attributeTagIds(attributes));
+    await assertSingleSelectTagIds(ctx.storage, tagIds);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
     const { id, shorthand } = await allocateTicketIdentity(ctx);
     const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
 
-    const attributes = commandParams.attributes ?? {};
     const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
-    // Every attribute other than `status` is a tag attribute; its value is one
-    // option id or a list of them.
-    const attributeTagIds = Object.entries(attributes).flatMap(([attributeId, value]) => {
-      if (attributeId === "status") return [];
-      if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
-      return typeof value === "string" && value ? [value] : [];
-    });
 
     const statusId =
       commandParams.status !== undefined
         ? await resolveStatusId(ctx.storage, commandParams.status)
         : (commandParams.statusId ?? attributeStatusId ?? defaultStatus?.id ?? null);
-    const tagIds =
-      commandParams.tags !== undefined
-        ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
-        : (commandParams.tagIds ?? attributeTagIds);
     const parentId =
       commandParams.parent !== undefined
         ? await resolveTicketId(ctx.storage, commandParams.parent)
@@ -76,7 +81,7 @@ export const createTicketCommand = defineCommand({
     const ticket = await putTicket(ctx.storage, {
       id,
       shorthand,
-      title: commandParams.content ? deriveTitle(commandParams.content) : (commandParams.title ?? "Untitled"),
+      title: ticketTitle(commandParams),
       content: commandParams.content ?? "",
       statusId,
       tagIds,

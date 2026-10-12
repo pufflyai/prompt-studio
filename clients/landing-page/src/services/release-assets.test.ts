@@ -38,3 +38,20 @@ test("selects the Windows installer for Windows visitors", () => {
     "https://example.test/Prompt-Studio-0.37.0-win32-x64-Setup.exe",
   );
 });
+
+test("never offers a nightly build, even when it is newer", () => {
+  const nightlyVersion = "0.43.0-nightly.20261011183426";
+  const nightly: GitHubRelease = {
+    tag_name: `pstdio@${nightlyVersion}`,
+    draft: false,
+    prerelease: true,
+    assets: ["darwin-arm64.dmg", "darwin-x64.dmg", "linux-x64.deb"].map((suffix) => {
+      const name = `Prompt-Studio-${nightlyVersion}-${suffix}`;
+      return { name, browser_download_url: `https://example.test/${name}`, size: 1 };
+    }),
+  };
+
+  expect(latestDesktopRelease([nightly, release])?.version).toBe("0.37.0");
+  // The version check also holds if a nightly were ever published without the prerelease flag.
+  expect(latestDesktopRelease([{ ...nightly, prerelease: false }, release])?.version).toBe("0.37.0");
+});

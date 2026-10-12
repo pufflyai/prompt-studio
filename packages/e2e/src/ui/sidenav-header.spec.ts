@@ -4,6 +4,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
+import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 test.use({ notificationsEnabled: true });
@@ -78,7 +79,7 @@ const row = (sidenav: Locator, name: (typeof allSectionRowNames)[number]) =>
 
 const expectSidenavSections = async (
   sidenav: Locator,
-  visibleNames: readonly (typeof allSectionRowNames)[number][] = allSectionRowNames,
+  visibleNames: readonly (typeof allSectionRowNames)[number][] = withoutWorkspaces,
 ) => {
   const rows = visibleNames.map((name) => row(sidenav, name));
   for (const sectionRow of rows) await expect(sectionRow).toBeVisible({ timeout: 30_000 });
@@ -116,11 +117,11 @@ test("removes and restores owner-scoped collections across project and session p
   for (const name of withoutWorkspaces) stableElements.push(await row(sidenav, name).elementHandle());
   expect(stableElements.every(Boolean)).toBe(true);
 
-  await row(sidenav, "Workspaces").click();
+  await (await showSidenavEntry(page, "Workspaces")).click();
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
   ).toBeVisible();
-  await expectSidenavSections(sidenav);
+  await expectSidenavSections(sidenav, allSectionRowNames);
   for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);
 
   await row(sidenav, "Sessions").click();
@@ -139,7 +140,7 @@ test("removes and restores owner-scoped collections across project and session p
   await row(sidenav, "Tickets").click();
   await expect(row(sidenav, "Tickets")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
-  await expectSidenavSections(sidenav);
+  await expectSidenavSections(sidenav, allSectionRowNames);
 });
 
 test("customizes the Sidenav from any point and persists section visibility", async ({ page, request }) => {
@@ -163,6 +164,8 @@ test("customizes the Sidenav from any point and persists section visibility", as
   for (const name of ["Header", "Navigation", "Footer"]) {
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
+  await workspacesToggle.click();
+  await expect(row(sidenav, "Workspaces")).toBeVisible();
   await workspacesToggle.click();
   await expect(row(sidenav, "Workspaces")).toHaveCount(0);
   await searchToggle.click();
@@ -241,6 +244,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   const option = (name: string) => sidenav.getByRole("option", { name, exact: true });
   const zone = sidenav.locator("[data-tree-list-empty-drop-zone]");
   await expect(option("Tickets")).toBeVisible({ timeout: 30_000 });
+  await showSidenavEntry(page, "Workspaces");
   const lowerHalfOf = (target: Locator) => async () => {
     const box = (await target.boundingBox())!;
     return box.y + box.height * 0.75;
@@ -263,7 +267,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   };
   const top = async (target: Locator) => (await target.boundingBox())!.y;
 
-  await drag(option("Search"), lowerHalfOf(option("Tickets")));
+  await drag(option("Search"), lowerHalfOf(option("Workspaces")));
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).not.toHaveAttribute(
     "data-tree-list-node-id",
     "search",
@@ -272,8 +276,8 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   await drag(option("Search"), middleOf(zone));
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
 
-  await drag(option("Settings"), lowerHalfOf(option("Tickets")));
-  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Tickets")));
+  await drag(option("Settings"), lowerHalfOf(option("Workspaces")));
+  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
   expect(await top(option("Settings"))).toBeLessThan(await top(option("Scribble")));
   await drag(option("Settings"), middleOf(zone));
   expect(await top(option("Settings"))).toBeGreaterThan(await top(option("Scribble")));

@@ -108,6 +108,55 @@ export const NoModels: Story = {
   },
 };
 
+// A harness without models, such as a remote machine whose template picks the model.
+export const WithoutModelChoice: Story = {
+  render: () => {
+    const [selectedAgent, setSelectedAgent] = useState("claude-code");
+
+    return (
+      <WorkspaceAgentMenu
+        agentOptions={[...agentOptions, { label: "Outdated Agent", value: "unavailable", icon: Cpu, disabled: true }]}
+        selectedAgent={selectedAgent}
+        onSelectAgent={setSelectedAgent}
+        modelOptions={[]}
+        selectedModel=""
+        onSelectModel={() => undefined}
+        offersModels={false}
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(document.body);
+    await expect(canvas.queryByRole("button", { name: "Select model" })).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Select harness" }));
+    // An unavailable harness cannot be picked.
+    await userEvent.click(await body.findByRole("menuitem", { name: "Outdated Agent" }), { pointerEventsCheck: 0 });
+    await expect(canvas.getByRole("button", { name: "Select harness" })).toHaveTextContent("Claude Code");
+    if (!body.queryByRole("menuitem", { name: "Codex" }))
+      await userEvent.click(canvas.getByRole("button", { name: "Select harness" }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "Codex" }));
+    await expect(canvas.getByRole("button", { name: "Select harness" })).toHaveTextContent("Codex");
+  },
+};
+
+// A session's harness is fixed and offers no models, so there is nothing to choose.
+export const WithoutModelChoiceLockedAgent: Story = {
+  args: {
+    agentOptions,
+    selectedAgent: "claude-code",
+    onSelectAgent: () => undefined,
+    modelOptions: [],
+    selectedModel: "",
+    onSelectModel: () => undefined,
+    offersModels: false,
+    isAgentSwitchDisabled: true,
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("button")).toBeNull();
+  },
+};
+
 export const Disabled: Story = {
   args: {
     agentOptions,

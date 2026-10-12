@@ -154,7 +154,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   installWorkbenchKanbanRenderer(workbench, { renderParamField });
   installWorkbenchDataTableRenderer(workbench, { renderParamField });
   installWorkbenchFileRenderer(workbench);
-  installWorkbenchControlsRenderer(workbench);
+  installWorkbenchControlsRenderer(workbench, { renderParamField });
   const [attachedSidePanelSlot, setAttachedSidePanelSlot] = useState<HTMLDivElement | null>(null);
   const [floatingSidePanelSlot, setFloatingSidePanelSlot] = useState<HTMLDivElement | null>(null);
   const sidePanelHostRef = useRef<HTMLDivElement | null>(null);

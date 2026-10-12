@@ -12,6 +12,7 @@ import * as projectsCommand from "./projects";
 import * as resourcesCommand from "./resources";
 import * as serveCommand from "./serve";
 import * as sessionsCommand from "./sessions";
+import * as updateChannelCommand from "./update-channel";
 import * as viewsCommand from "./views";
 import * as workspaceCommand from "./workspace";
 
@@ -31,6 +32,7 @@ export const topLevelCommandModules = [
   resourcesCommand,
   serveCommand,
   sessionsCommand,
+  updateChannelCommand,
   workspaceCommand,
 ];
 

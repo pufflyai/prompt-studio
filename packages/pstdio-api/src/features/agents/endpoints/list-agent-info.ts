@@ -37,6 +37,8 @@ export const listAgentInfoHandler = (deps: AgentsRouteDeps): AppRouteHandler<typ
         availability: toAvailabilityInfo(await harness.detect({ projectId: project })),
         ...(harness.skills ? { skills: { dir: harness.skills.dir, global_dir: harness.skills.globalDir } } : {}),
         ...(harness.params ? { params: harness.params as AgentInfo["params"] } : {}),
+        capabilities: await harness.capabilities({ projectId: project }),
+        supportsModels: harness.supportsModels,
       })),
     );
     return c.json(result, 200);

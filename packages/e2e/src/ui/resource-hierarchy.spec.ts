@@ -82,8 +82,8 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(breadcrumb).toContainText(root.shorthand);
     await expect(breadcrumb).toContainText(parent.shorthand);
     await expect(breadcrumb).toContainText(child.shorthand);
-    await expect(sidenav.getByRole("button", { name: "New file" })).toHaveCount(1);
-    await expect(sidenav.getByRole("button", { name: "Create workspace" })).toHaveCount(1);
+    await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
+    await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
 
     const workspaceRow = sidenav.getByRole("option", {
       name: new RegExp(attempt.workspace.workspace_shorthand),
@@ -110,8 +110,8 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await page.getByRole("button", { name: "Navigate back" }).click();
     await expect(breadcrumb).toContainText(child.shorthand);
     await expect(breadcrumb).not.toContainText(attempt.workspace.workspace_shorthand);
-    await expect(sidenav.getByRole("button", { name: "New file" })).toHaveCount(1);
-    await expect(sidenav.getByRole("button", { name: "Create workspace" })).toHaveCount(1);
+    await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
+    await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

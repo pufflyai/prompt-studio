@@ -8,6 +8,7 @@ import { findTicket } from "../../data/resolve";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import { normalizeTicketDependencies } from "../../data/ticket-dependencies";
+import { readStoredPlan } from "../../timeline/commands/plan-store";
 import { buildTicketPropertiesControls, type TicketRef } from "./params";
 
 // Resolve a dependency/parent reference to the real ticket id (so its chip opens the
@@ -27,14 +28,25 @@ export const queryTicketProperties = async (
   const ticket = await findTicket(ctx.storage, ticketId);
   if (!ticket) return {};
 
-  const [{ statuses }, { tags }] = await Promise.all([readTicketStatuses(ctx.storage), readTicketTags(ctx.storage)]);
+  const [{ statuses }, { tags }, plan] = await Promise.all([
+    readTicketStatuses(ctx.storage),
+    readTicketTags(ctx.storage),
+    readStoredPlan(ctx.storage),
+  ]);
 
   const dependencies = await Promise.all(
     normalizeTicketDependencies(ticket.dependsOn).map((value) => resolveTicketRef(ctx.storage, value)),
   );
   const parent = ticket.parentId ? await resolveTicketRef(ctx.storage, ticket.parentId) : null;
 
-  return buildTicketPropertiesControls({ ticket, statuses, tags, dependencies, parent });
+  return buildTicketPropertiesControls({
+    ticket,
+    statuses,
+    tags,
+    dependencies,
+    parent,
+    plan: plan ?? { deadlines: [], order: [] },
+  });
 };
 
 // Loads the control declarations for the ticket properties panel. Returns an empty

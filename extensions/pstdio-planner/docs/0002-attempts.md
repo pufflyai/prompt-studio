@@ -52,6 +52,26 @@ If two implementation sessions are already running in the project, Run attempt d
 
 `pst tickets implement` is a lighter option. It moves the ticket to In Progress and starts one agent session with the implement-ticket prompt. It does not create a worktree, a managed attempt, or a review.
 
+## Auto build
+
+Open **Project Timeline** and select **Auto Build**. Set **Maximum parallel tasks** and confirm with **Auto Build**. This edits the same limit as **Maximum in-progress tickets** in Settings. From the CLI, configure the mode:
+
+```sh
+pst pstdio-planner auto-build configure --enabled true
+pst pstdio-planner auto-build read
+pst pstdio-planner auto-build configure --enabled false
+```
+
+Planner starts eligible Todo tickets across the project in timeline order until **Maximum in-progress tickets** is reached. Existing running implementations count toward this limit. Auto build uses the project's default agent and target branch. It reacts to ticket, timeline, and session changes and rechecks once per minute to recover after restarts or settings changes. The mode works while the timeline is closed.
+
+The selected view, filters, and search only affect the display. Use **Stop Auto Build** to stop future launches; already dispatched work continues. A launch failure turns the mode off and shows the error. Resolve it before turning the mode on again.
+
+Dependencies decide which tickets can run together. Independent tickets in the same track can start in parallel, and dependencies in other tracks still apply. Approved or explicitly selected dependency revisions can provide a stacked base, as with Run attempt.
+
+The mode skips gates, blocked work, tickets that need human input, and tickets with an existing attempt other than an abandoned attempt.
+
+When an agent cannot continue without a person, the implementation skill tells it to use `pst pstdio-planner request-human` with a concrete task or decision. This creates a review request and sets Review Needed. The agent reads the saved response before resuming.
+
 ## Dependencies
 
 A ticket can depend on other tickets. Set dependencies with `--depends-on` on [`pst tickets create` and `pst tickets update`](0004-cli.md#dependencies).
@@ -73,7 +93,7 @@ Planner sets the ticket status from its attempts:
 2. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
 3. Otherwise, if every attempt is blocked, the ticket is Blocked.
 
-Planner leaves tickets in Done alone. While the Review Needed flag is set, Planner does not change the ticket status, and automation extensions are expected to skip the ticket. The flag clears when a person or an agent resolves the last open request with `resolve-human-request`. Automations cannot resolve requests.
+Planner leaves tickets in Done alone. Planner pauses status changes while any review request is open or unreadable. Attempt readiness uses the same rule for the target and all its prerequisites, including completed ones. Automation extensions, including Auto build, must use `attempt-readiness` before `run-attempt`. A manual or stale tag alone does not pause status changes or prevent launch. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
 
 ## When a session disconnects
 
@@ -95,8 +115,8 @@ Extensions and agents drive attempts through Planner's commands. Each ID below i
 | `list-attempts`         | Lists the project's attempts.                                                    |
 | `reconcile-attempt`     | Recovers an attempt whose session disconnected.                                  |
 | `select-attempt`        | Chooses which attempt of a ticket later tickets build on. Not for automations.   |
-| `request-human`         | Sets the Review Needed flag with a question for a person.                        |
-| `resolve-human-request` | Answers that question. Only a person or an agent can do this, not an automation. |
+| `request-human`         | Asks a person for a task confirmation or a decision and sets Review Needed.      |
+| `review`                | Answers a review request. Only a person or an agent can do this.                 |
 | `workspace-activity`    | Returns a workspace's sessions and whether any of them is still running.         |
 
 In `workspace-activity`, each session carries a phase: `implementation`, `review`, or `other`. The statuses `queued`, `in_progress`, and `awaiting_input` count as running.

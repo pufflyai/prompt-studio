@@ -1,7 +1,9 @@
 import { type ControlGroup, type ControlParam, type ControlValueMap, defineView } from "@pstdio/sdk/extensions";
+import { needsLogin } from "../channel-state";
 import type { Run } from "../schemas";
-import { type Channel, type RadarSettings, readSettings, writeSettings } from "../settings";
-import { changed, newest, radarChanged, runsOf } from "../store";
+import { type Channel, type RadarSettings, readSettings } from "../settings";
+import { changeSettings } from "../settings-lifecycle";
+import { newest, radarChanged, runsOf } from "../store";
 import { plural } from "../text";
 import { type SettingsPart, settingsPartOf } from "./settings-menu";
 
@@ -38,7 +40,10 @@ const channelStatus = (channel: Channel, runs: Run[]) => {
   let streak = 0;
   while (finished[streak]?.skippedSites?.some((skip) => skip.site === channel.id)) streak += 1;
   const reason = finished[0]?.skippedSites?.find((skip) => skip.site === channel.id)?.reason;
-  if (streak && reason) return `Skipped on the last ${plural(streak, "run")}: ${reason}`;
+  const login = needsLogin(runs, channel.id) ? `Log in to ${channel.name} in the research agent's browser.` : "";
+  if (streak && reason)
+    return [login, `Skipped on the last ${plural(streak, "run")}: ${reason}`].filter(Boolean).join(" ");
+  if (login) return login;
   const targets = channel.targets.length ? plural(channel.targets.length, "target") : "no targets";
   return `${plural(channel.budget, "search", "searches")} · ${targets}`;
 };
@@ -75,14 +80,14 @@ const partGroups = (part: SettingsPart, settings: RadarSettings, runs: Run[]): C
         params: [{ id: "voice", type: "text", name: "Voice", defaultValue: settings.voice, singleLine: false }],
       },
     ];
+  // The harness control ships in SDK 0.43.0; until then the agent is read-only here and edited with Choose model.
   if (part.id === "agent") {
     const { harnessId, model, params = {} } = settings.agent;
     return [
       {
         id: "agent",
         title: "Research agent",
-        description:
-          "The harness and model that run each morning's session. Change them with Choose model in the menu.",
+        description: "The harness and model that run each research session. Change them with Choose model in the menu.",
         params: [
           readOnly("harness", "Harness", harnessId),
           readOnly("model", "Model", model ?? "Harness default"),
@@ -144,28 +149,23 @@ export const settingsView = defineView({
     async query(ctx, { renderer }) {
       const settings = await readSettings(ctx.settings);
       const runs = newest(await runsOf(ctx).list(), (run) => run.startedAt);
+      const groups = partGroups(settingsPartOf(renderer.resource), settings, runs);
       return {
-        groups: partGroups(settingsPartOf(renderer.resource), settings, runs),
-        values: {
-          brandTerms: settings.brandTerms,
-          topics: settings.topics,
-          competitors: settings.competitors,
-          voice: settings.voice,
-          "scroll-screens": settings.scrollScreens,
-          ...Object.fromEntries(
-            settings.channels.flatMap((channel) => [
-              [`budget-${channel.id}`, channel.budget],
-              [`targets-${channel.id}`, channel.targets],
-              ...(channel.url ? [[`url-${channel.id}`, channel.url]] : []),
-            ]),
+        groups,
+        values: Object.fromEntries(
+          groups.flatMap((group) =>
+            group.params.flatMap((param) =>
+              "defaultValue" in param && param.defaultValue !== undefined ? [[param.id, param.defaultValue]] : [],
+            ),
           ),
-        },
+        ),
       };
     },
-    async onApply(ctx, { values }) {
-      const saved = await writeSettings(ctx.settings, applyValues(await readSettings(ctx.settings), values));
-      await changed(ctx);
-      return saved;
-    },
+    onApply: (ctx, { values, renderer }) =>
+      changeSettings(ctx, (settings) => {
+        const groups = partGroups(settingsPartOf(renderer.resource), settings, []);
+        const ids = new Set(groups.flatMap((group) => group.params.map((param) => param.id)));
+        return applyValues(settings, Object.fromEntries(Object.entries(values).filter(([id]) => ids.has(id))));
+      }),
   },
 });

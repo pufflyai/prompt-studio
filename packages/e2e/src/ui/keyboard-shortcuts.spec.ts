@@ -3,6 +3,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-extension";
+import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
 test.use({ notificationsEnabled: true });
 
@@ -133,6 +134,7 @@ test("main shortcuts navigate and open creation forms", async ({ page, request }
     ["P", "Tickets", /\/tickets$/],
   ] as const) {
     await page.goto(`/projects/${project.id}/tickets`);
+    await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
     await page.keyboard.press(`Alt+Shift+${key}`);

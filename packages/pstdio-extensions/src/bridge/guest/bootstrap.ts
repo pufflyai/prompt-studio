@@ -2,6 +2,7 @@ import { guest } from "rimless";
 import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
+import { createViewLifecycle } from "./view-lifecycle";
 
 const MOUNT_ID = "pstdio-extension-mount";
 
@@ -103,31 +104,25 @@ const start = async () => {
       handlers.delete(handler);
     };
   };
-  let cleanup: (() => void) | undefined;
+  const viewLifecycle = createViewLifecycle(async (message: InitMessage) => {
+    injectStyles(message.styles);
+    const module = (await import(/* @vite-ignore */ message.moduleUrl)) as {
+      default?: ExtensionViewModule;
+    } & Partial<ExtensionViewModule>;
+    const view = module.default ?? (module.mount ? (module as ExtensionViewModule) : undefined);
+    if (!view?.mount) throw new Error("Extension module does not export a default view (defineExtensionView).");
+
+    const host = createGuestHost((request) => connection.remote.call(request), subscribeHostEvent, message.extensionId);
+    return await view.mount(ensureMount(), host, propsStore);
+  });
   let keyboardForwarderInstalled = false;
 
   const connection = await guest.connect({
     init: async (message: InitMessage) => {
       try {
         applyTheme(message.theme, message.themeVariables);
-        injectStyles(message.styles);
         propsStore.set(message.props);
-
-        const mountEl = ensureMount();
-        const module = (await import(/* @vite-ignore */ message.moduleUrl)) as {
-          default?: ExtensionViewModule;
-        } & Partial<ExtensionViewModule>;
-        const view: ExtensionViewModule | undefined =
-          module.default ?? (module.mount ? (module as ExtensionViewModule) : undefined);
-        if (!view?.mount) throw new Error("Extension module does not export a default view (defineExtensionView).");
-
-        const host = createGuestHost(
-          (request) => connection.remote.call(request),
-          subscribeHostEvent,
-          message.extensionId,
-        );
-        const result = await view.mount(mountEl, host, propsStore);
-        cleanup = typeof result === "function" ? result : undefined;
+        await viewLifecycle.initialize(message);
 
         if (!keyboardForwarderInstalled) {
           keyboardForwarderInstalled = true;
@@ -175,7 +170,7 @@ const start = async () => {
   connection.remote.ready({});
 
   window.addEventListener("beforeunload", () => {
-    cleanup?.();
+    viewLifecycle.dispose();
   });
 };
 

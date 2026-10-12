@@ -1,5 +1,6 @@
 import { expect, type Page, request } from "@playwright/test";
 import { installShortcutReferenceExtension } from "../ui/helpers/shortcut-reference-extension";
+import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 
 export const verifyPackagedShortcutReference = async (
   page: Page,
@@ -40,6 +41,7 @@ export const verifyPackagedShortcutReference = async (
   await page.keyboard.press("Escape");
   await expect(palette).not.toBeVisible();
   await page.goto(`${origin}/projects/${projectId}/extensions/e2e.shortcut-reference/reference`);
+  await showSidenavEntry(page, "Workspaces");
   await page.mouse.move(0, 0);
   await page.getByRole("button", { name: "Help", exact: true }).focus();
   const workspaceLabel = page.getByRole("option", { name: "Workspaces", exact: true }).getByText("Workspaces");

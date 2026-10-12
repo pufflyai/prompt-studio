@@ -6,14 +6,6 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { loadExtensionSource } from "./extension-runtime";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
-const waitFor = async (predicate: () => boolean, message: string) => {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    if (predicate()) return;
-    await Bun.sleep(1);
-  }
-  throw new Error(message);
-};
-
 const writeExtension = (root: string) => {
   mkdirSync(join(root, "src"), { recursive: true });
   writeFileSync(
@@ -84,6 +76,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
       buildWebview: async (input) => {
         buildCount++;
         mkdirSync(input.outdir, { recursive: true });
+        writeFileSync(join(input.outdir, "module.js"), "");
         return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -104,6 +97,10 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
     writeExtension(sourcePath);
     let firstBuildCount = 0;
     let secondBuildCount = 0;
+    const firstStarted = Promise.withResolvers<void>();
+    const secondStarted = Promise.withResolvers<void>();
+    const firstPublished = Promise.withResolvers<void>();
+    const updatedFirstStarted = Promise.withResolvers<void>();
     let releaseInitialFirst: () => void = () => {};
     let releaseUpdatedFirst: () => void = () => {};
     let releaseSecond: () => void = () => {};
@@ -122,17 +119,26 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
         { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
       ],
       reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildSuccess: async (_installedExtensionId, webviewId) => {
+        if (webviewId === "pstdio.lab.view.first") firstPublished.resolve();
+      },
       buildWebview: async (input) => {
         if (input.entryPath.endsWith("first.tsx")) {
           firstBuildCount++;
-          if (firstBuildCount === 1) await initialFirstReleased;
-          else await updatedFirstReleased;
+          if (firstBuildCount === 1) {
+            firstStarted.resolve();
+            await initialFirstReleased;
+          } else {
+            updatedFirstStarted.resolve();
+            await updatedFirstReleased;
+          }
         } else {
           secondBuildCount++;
+          secondStarted.resolve();
           await secondReleased;
         }
         mkdirSync(input.outdir, { recursive: true });
+        writeFileSync(join(input.outdir, "module.js"), "");
         return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -140,20 +146,16 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
 
     try {
       const initialRefresh = manager.ensure("installed-lab");
-      await waitFor(
-        () => firstBuildCount === 1 && secondBuildCount === 1,
-        "Timed out waiting for the initial webview builds.",
-      );
+      await Promise.all([firstStarted.promise, secondStarted.promise]);
       releaseInitialFirst();
-      await waitFor(
-        () => existsSync(join(root, "cache/installed-lab/pstdio.lab.view.first/dist")),
-        "First build was not published.",
-      );
+      await firstPublished.promise;
+      expect(existsSync(join(root, "cache/installed-lab/pstdio.lab.view.first/dist"))).toBe(true);
 
       writeFileSync(join(sourcePath, "src/first.tsx"), "console.log('updated first');");
       const targetedRefresh = manager.refresh(sourcePath);
-      await waitFor(() => firstBuildCount === 2, "Changed webview rebuild did not start.");
+      await updatedFirstStarted.promise;
 
+      expect(firstBuildCount).toBe(2);
       expect(secondBuildCount).toBe(1);
       releaseUpdatedFirst();
       await targetedRefresh;
@@ -171,6 +173,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
     const sourcePath = join(root, "extension");
     writeSingleWebviewExtension(sourcePath);
     const successes: Array<{ sourceHash?: string | null; sourcePath: string }> = [];
+    const buildStarted = Promise.withResolvers<void>();
     let sourceHash = "hash-1";
     let runCount = 0;
     let releaseBuild: () => void = () => {};
@@ -188,8 +191,10 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
       },
       buildWebview: async (input) => {
         runCount++;
+        buildStarted.resolve();
         if (runCount === 1) await buildReleased;
         mkdirSync(input.outdir, { recursive: true });
+        writeFileSync(join(input.outdir, "module.js"), "");
         return { success: true, details: "" };
       },
       webviewCacheRoot: join(root, "cache"),
@@ -197,7 +202,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
 
     try {
       const targetedRefresh = manager.ensure("installed-lab");
-      await waitFor(() => runCount === 1, "Timed out waiting for targeted build.");
+      await buildStarted.promise;
 
       writeFileSync(join(sourcePath, "extension.ts"), "export default { views: ;");
       sourceHash = "hash-2";

@@ -1,43 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInNewContext } from "node:vm";
-import { buildExtensionWebview, formatExtensionWebviewBuildError } from "./extension-webview-builder";
+import { buildExtensionWebview } from "./extension-webview-builder";
 
 describe("buildExtensionWebview", () => {
-  test("formats ordinary build errors", () => {
-    expect(formatExtensionWebviewBuildError(new Error("Build process stopped"))).toBe("Build process stopped");
-  });
-
-  test("formats aggregate diagnostics once in their original order", () => {
-    const error = new AggregateError(
-      [new Error("Missing first package"), new Error("Missing second package"), new Error("Bundle failed")],
-      "Bundle failed",
-    );
-
-    expect(formatExtensionWebviewBuildError(error)).toBe(
-      "Bundle failed\nMissing first package\nMissing second package",
-    );
-  });
-
-  test("expands nested aggregate diagnostics once in depth-first order", () => {
-    const error = new AggregateError(
-      [
-        new Error("Missing first package"),
-        new AggregateError(
-          [new Error("Missing second package"), new Error("Bundle failed")],
-          "Dependency resolution failed",
-        ),
-      ],
-      "Bundle failed",
-    );
-
-    expect(formatExtensionWebviewBuildError(error)).toBe(
-      "Bundle failed\nMissing first package\nDependency resolution failed\nMissing second package",
-    );
-  });
-
   test("builds self-contained production browser code", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-builder-test-"));
     const entryPath = join(root, "main.ts");
@@ -72,6 +40,49 @@ describe("buildExtensionWebview", () => {
       expect(result.details).toContain("Could not resolve");
       expect(result.details).toContain(missingPackage);
       expect(result.details).toContain("bun install");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("builds the dependency files present at build time after an extension folder is replaced", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-builder-test-"));
+    const packagePath = join(root, "extension");
+    const controller = new AbortController();
+    // An extension update replaces its folder, including node_modules, while the host keeps running.
+    const writeExtension = (folder: string, exports: Record<string, string>, entry: string) => {
+      mkdirSync(join(folder, "node_modules", "ui"), { recursive: true });
+      writeFileSync(join(folder, "node_modules", "ui", "package.json"), JSON.stringify({ name: "ui", exports }));
+      writeFileSync(join(folder, "node_modules", "ui", "index.js"), "export const shell = 'shell';");
+      writeFileSync(join(folder, "node_modules", "ui", "timeline.js"), "export const timeline = 'timeline';");
+      writeFileSync(join(folder, "main.ts"), entry);
+    };
+
+    try {
+      writeExtension(packagePath, { ".": "./index.js" }, 'import { shell } from "ui"; console.log(shell);');
+      const first = await buildExtensionWebview({
+        entryPath: join(packagePath, "main.ts"),
+        outdir: join(root, "first"),
+        signal: controller.signal,
+      });
+      expect(first).toEqual({ success: true, details: "" });
+
+      const next = join(root, "next");
+      writeExtension(
+        next,
+        { ".": "./index.js", "./timeline": "./timeline.js" },
+        'import { timeline } from "ui/timeline"; console.log(timeline);',
+      );
+      renameSync(packagePath, join(root, "previous"));
+      renameSync(next, packagePath);
+
+      const second = await buildExtensionWebview({
+        entryPath: join(packagePath, "main.ts"),
+        outdir: join(root, "second"),
+        signal: controller.signal,
+      });
+      expect(second).toEqual({ success: true, details: "" });
+      expect(readFileSync(join(root, "second", "module.js"), "utf8")).toContain("timeline");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Stack, Text, useRecipe } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
@@ -96,6 +96,7 @@ const RowDescription = (props: {
 
 const RowContent = (props: RowContentProps & { labelId: string }) => {
   const { item, isExpanded, showChevron, isDisabled, variant, tone, labelId } = props;
+  const chevron = useRecipe({ key: "treeChevron" });
   const isEmptyStateVariant = variant === "empty-state";
   const isDenseVariant =
     variant === "compact" ||
@@ -121,12 +122,7 @@ const RowContent = (props: RowContentProps & { labelId: string }) => {
     <HStack id={labelId} gap="2" minW="0" flex="1" overflow="hidden" alignItems="center">
       {showChevron ? (
         <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">
-          <Icon
-            as={ChevronRight}
-            boxSize="12px"
-            transform={isExpanded ? "rotate(90deg)" : "rotate(0deg)"}
-            transition="transform 120ms ease"
-          />
+          <Icon as={ChevronRight} boxSize="12px" css={chevron()} data-open={isExpanded} />
         </Box>
       ) : null}
       <Stack gap="0" minW="0" flex="1">

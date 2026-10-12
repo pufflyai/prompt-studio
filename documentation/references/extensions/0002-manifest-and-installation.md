@@ -112,6 +112,14 @@ Installs and updates are explicit. Source that appears in the extensions root is
   example before its dependencies are installed, a webview request loads it again once its
   `package.json`, the files its entry imports, or its installed dependencies change. Reload always
   loads it again. A restart is not needed.
+- Extension contribution modules are bundled in the managed runtime cache in development and
+  packaged hosts. Dependencies use their published exports, independently of the host's development
+  import conditions. Package asset URLs still point to the installed source files.
+- Each webview build runs in a new Bun process, so a build after an update reads the dependencies
+  that the update installed ([ADR 0070](../../adrs/0070-temporary-build-extension-webviews-in-a-child-process.md)).
+  A webview request also rebuilds a bundle whose published module is missing, for example after its
+  cache folder was removed. A webview request does not retry a failed build until the build's inputs
+  change. Reload, a new install, or a change in the extension's folder builds it again.
 - Skill files are read from the installed folder. Editing a folder that ships skills or a
   `workspace.provision` hook re-provisions the workspaces of every project that runs it, so agent
   skill folders such as `.agents/skills` match the edit. A write that leaves the folder's content

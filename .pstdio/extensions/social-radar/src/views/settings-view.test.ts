@@ -10,6 +10,19 @@ const groupIds = async (ctx: Context, type: string, id: string) =>
   (await settingsView.body.query(ctx, { renderer: renderer(type, id) })).groups?.map((group) => group.id);
 
 describe("social radar settings sections", () => {
+  test("applying a loaded section preserves later changes to other sections", async () => {
+    const { ctx } = setup();
+    const voiceRenderer = renderer(settingsSection.id, "voice");
+    const loaded = await settingsView.body.query(ctx, { renderer: voiceRenderer });
+    const agent = { harnessId: "research", model: "research-model", params: { effort: "high" } };
+    await commands["set-agent"].run(ctx, { agent });
+    await settingsView.body.onApply(ctx, {
+      renderer: voiceRenderer,
+      values: { ...loaded.values, voice: "Plain and kind." },
+    });
+    expect((await commands["get-settings"].run(ctx, {})).agent).toEqual(agent);
+  });
+
   test("each section and channel shows only its own groups", async () => {
     const { ctx } = setup();
     expect(await groupIds(ctx, settingsSection.id, "research")).toEqual(["research"]);

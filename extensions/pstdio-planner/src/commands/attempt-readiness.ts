@@ -3,11 +3,26 @@ import { type AttemptReadinessTicket, resolveAttemptReadiness } from "../data/at
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
+import { readTicketReviewRequests } from "../data/review-request-storage";
 
 type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage">;
 
 interface ReadinessParams {
   base?: string;
+  dependencyReview?: "approved" | "submitted";
+}
+
+export async function readImplementationCapacity(ctx: Pick<ReadinessContext, "storage" | "sessions" | "settings">) {
+  const attempts = await listAttempts(ctx.storage);
+  const active = attempts.filter(
+    (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
+  );
+  const sessions = await Promise.all(active.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)));
+  const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
+  const running = sessions.filter((session) => liveStatuses.has(session?.status ?? "")).length;
+  const settings = await ctx.settings.all();
+  const configured = settings["automation.maxInProgress"];
+  return { running, limit: typeof configured === "number" ? configured : 2 };
 }
 
 const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) => {
@@ -21,13 +36,14 @@ export const loadAttemptReadiness = async (
   ticketRef: string,
   commandParams: ReadinessParams,
 ) => {
-  const [storedTickets, attempts, selections, statuses, home, providers] = await Promise.all([
+  const [storedTickets, attempts, selections, statuses, home, providers, requests] = await Promise.all([
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
     statusesCollection(ctx.storage).list(),
     ctx.workspaces.getDefault(),
     ctx.workspaces.listProviders(),
+    readTicketReviewRequests(ctx.storage),
   ]);
   const storedTarget = await findTicket(ctx.storage, ticketRef);
   const target: AttemptReadinessTicket = storedTarget ?? {
@@ -48,15 +64,7 @@ export const loadAttemptReadiness = async (
   }
   const rootPath = home.root_path;
 
-  const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
-  const active = attempts.filter(
-    (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
-  );
-  const sessions = await Promise.all(active.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)));
-  const activeImplementationCount = sessions.filter((session) => liveStatuses.has(session?.status ?? "")).length;
-  const settings = await ctx.settings.all();
-  const configuredCapacity = settings["automation.maxInProgress"];
-  const maxInProgress = typeof configuredCapacity === "number" ? configuredCapacity : 2;
+  const capacity = await readImplementationCapacity(ctx);
   const mainHeadSha = await runGit(ctx, rootPath, [
     "rev-parse",
     "--verify",
@@ -68,14 +76,16 @@ export const loadAttemptReadiness = async (
   );
 
   const readiness = await resolveAttemptReadiness({
+    requests,
     target: target.id,
     tickets,
     attempts,
     selections,
+    dependencyReview: commandParams.dependencyReview,
     doneStatusIds,
     mainHeadSha,
-    activeImplementationCount,
-    maxInProgress,
+    activeImplementationCount: capacity.running,
+    maxInProgress: capacity.limit,
     isAncestor: async (baseSha, headSha) => {
       const result = await ctx.process.run({
         command: ["git", "-C", rootPath, "merge-base", "--is-ancestor", baseSha, headSha],
@@ -86,7 +96,7 @@ export const loadAttemptReadiness = async (
     },
   });
 
-  return { readiness, workspace: home, target, capacity: { running: activeImplementationCount, limit: maxInProgress } };
+  return { readiness, workspace: home, target, capacity };
 };
 
 export const attemptReadinessCommand = defineCommand({

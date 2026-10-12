@@ -1,3 +1,5 @@
+export type { CollectionFilterProps } from "./collection-filter";
+export { CollectionFilter } from "./collection-filter";
 export type { CollectionViewBarProps } from "./collection-view-bar";
 export { CollectionViewBar } from "./collection-view-bar";
 export { withTitleField } from "./collection-view-fields";

@@ -13,7 +13,7 @@ import {
 } from "../repository/font-repository";
 
 const requireProjectFiles = (ctx: ExtensionContextBase) => {
-  if (!ctx.projectFiles) throw new Error("Font editor commands require project files.");
+  if (!ctx.projectFiles) throw new Error("Icon Set editor commands require project files.");
   return ctx.projectFiles;
 };
 
@@ -118,7 +118,7 @@ export const fontEditorCommands = {
   }),
   "config.get": defineCommand({
     id: "config.get",
-    title: "Get font editor configuration",
+    title: "Get Icon Set editor configuration",
     cli: true,
     async run(ctx, _commandParams) {
       return readRepositoryConfig(requireProjectFiles(ctx));
@@ -126,7 +126,7 @@ export const fontEditorCommands = {
   }),
   "config.set": defineCommand({
     id: "config.set",
-    title: "Set font editor configuration",
+    title: "Set Icon Set editor configuration",
     description: "Update settings and rebuild verified outputs.",
     cli: true,
     params: configPatchParams,

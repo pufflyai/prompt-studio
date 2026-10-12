@@ -178,7 +178,11 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
           category: "Terminal",
           icon: "SquareTerminal",
         },
-        { execute: (_args, context) => openWorkbenchTerminal(ctx, { resource: context?.resource }) },
+        {
+          // "Add panel" moves the new tab into its chosen region and reveals that region itself.
+          execute: (_args, context) =>
+            openWorkbenchTerminal(ctx, { resource: context?.resource, reveal: context?.source !== "panel-add" }),
+        },
       ),
     ];
     return disposables;

@@ -117,7 +117,8 @@ export const finishRun = z.object({
   runId: text,
   summary: text,
   searches: z.record(siteSchema, z.number().int().nonnegative()),
-  skippedSites: z.array(z.object({ site: siteSchema, reason: text })),
+  // needsLogin separates a login wall, which the person can fix, from blocks a run cannot recover from.
+  skippedSites: z.array(z.object({ site: siteSchema, reason: text, needsLogin: z.boolean() })),
 });
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type SnapshotComment = Snapshot["comments"][number];
@@ -152,6 +153,6 @@ export interface Run {
   finishedAt?: string;
   summary?: string;
   searches?: Record<string, number>;
-  skippedSites?: { site: string; reason: string }[];
+  skippedSites?: { site: string; reason: string; needsLogin: boolean }[];
   failureReason?: string;
 }

@@ -1,4 +1,12 @@
 import type { ResourceRef } from "./resources";
+import type { ExtensionHarnessInput } from "./sessions";
+
+export type HarnessControlValue = Pick<ExtensionHarnessInput, keyof ExtensionHarnessInput>;
+/** The host supplies the same harness, model and option picker used by command forms. */
+export interface HarnessControl extends BaseControl {
+  type: "harness";
+  defaultValue: HarnessControlValue;
+}
 
 export interface BaseControl {
   id: string;
@@ -218,6 +226,7 @@ export interface VectorControl extends BaseControl {
 }
 
 export type ControlParam =
+  | HarnessControl
   | NumberControl
   | BooleanControl
   | TextControl
@@ -242,5 +251,5 @@ export interface ControlGroup {
   defaultCollapsed?: boolean;
 }
 
-export type ControlValue = number | string | boolean | null | string[] | RangeValue | VectorValue;
+export type ControlValue = number | string | boolean | null | string[] | RangeValue | VectorValue | HarnessControlValue;
 export type ControlValueMap = Record<string, ControlValue>;

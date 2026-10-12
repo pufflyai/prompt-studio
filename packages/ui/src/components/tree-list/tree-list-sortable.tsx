@@ -12,10 +12,12 @@ import {
 import { SharedTreeListDragContext } from "./tree-list-drag-provider";
 import { type TreeListDropIndicator, treeListDropIndicator } from "./tree-list-drop-indicator";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
-import { TreeListNodeRow } from "./tree-list-node-row";
+import { TreeListNodes } from "./tree-list-nodes";
 import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tree-list-reorder";
+import { TreeListReveal } from "./tree-list-reveal";
 import { TreeListSectionHeader } from "./tree-list-section-header";
-import { DropLine, SectionGap, SortableHost } from "./tree-list-sortable-host";
+import { SectionGap, SortableHost } from "./tree-list-sortable-host";
+import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
 
 type TreeListRowVariant = "compact" | "tree";
 
@@ -34,6 +36,8 @@ interface SortableSectionGroupProps {
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   indicator: TreeListDropIndicator | null;
   dragging: boolean;
+  focusRowId?: string;
+  onRowFocus: (id: string) => void;
 }
 
 const SortableSectionGroup = (props: SortableSectionGroupProps) => {
@@ -52,13 +56,13 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     onSectionContextMenu,
     indicator,
     dragging,
+    focusRowId,
+    onRowFocus,
   } = props;
 
   const headerRow = sectionRows.find((row) => row.kind === "section-header");
   const nodeRows = sectionRows.filter((row) => row.kind === "node");
-  const topLevelNodeIds = nodeRows
-    .filter((row) => row.kind === "node" && row.level === 0)
-    .map((row) => (row.kind === "node" ? row.node.id : ""));
+  const topLevelNodeIds = section.nodes.map((node) => node.id);
 
   return (
     <SortableHost
@@ -80,8 +84,8 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
                 collapsible={headerRow.collapsible}
                 expanded={headerRow.expanded}
                 focusId={headerRow.key}
-                tabIndex={-1}
-                onFocus={() => {}}
+                tabIndex={headerRow.key === focusRowId ? 0 : -1}
+                onFocus={() => onRowFocus(headerRow.key)}
                 onToggle={() => onToggleSection?.(headerRow.sectionId)}
                 onContextMenu={onSectionContextMenu}
               />
@@ -91,92 +95,29 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
           {dragging && !headerRow && nodeRows.length === 0 ? (
             <Box h="tree-empty-drop-zone" data-tree-list-empty-drop-zone="" />
           ) : null}
-          <SortableContext items={topLevelNodeIds} strategy={verticalListSortingStrategy}>
-            <Stack gap={nodeGap} w="full" minW="0">
-              {nodeRows.map((row) =>
-                row.kind === "node" ? (
-                  <SortableOrPlainNodeRow
-                    key={row.key}
-                    row={row}
-                    expandedNodeIds={expandedNodeIds}
-                    activeNodeId={activeNodeId}
-                    rowVariant={rowVariant}
-                    nodeGap={nodeGap}
-                    linkComponent={linkComponent}
-                    onNavigate={onNavigate}
-                    onToggleNode={onToggleNode}
-                    onMoveNode={onMoveNode}
-                    indicator={indicator}
-                  />
-                ) : null,
-              )}
-            </Stack>
-          </SortableContext>
+          <TreeListReveal open={!headerRow || (headerRow.kind === "section-header" && headerRow.expanded)}>
+            <SortableContext items={topLevelNodeIds} strategy={verticalListSortingStrategy}>
+              <TreeListNodes
+                sectionId={section.id}
+                nodes={section.nodes}
+                expandedNodeIds={expandedNodeIds}
+                activeNodeId={activeNodeId}
+                rowVariant={rowVariant}
+                nodeGap={nodeGap}
+                linkComponent={linkComponent}
+                onNavigate={onNavigate}
+                onToggleNode={onToggleNode}
+                onMoveNode={onMoveNode}
+                sortable
+                indicator={indicator}
+                focusRowId={focusRowId}
+                onRowFocus={onRowFocus}
+              />
+              {section.nodes.length === 0 ? section.emptyState : null}
+            </SortableContext>
+          </TreeListReveal>
         </>
       )}
-    </SortableHost>
-  );
-};
-
-interface SortableOrPlainNodeRowProps {
-  row: Extract<VirtualRow, { kind: "node" }>;
-  expandedNodeIds: string[];
-  activeNodeId?: string | string[] | null;
-  rowVariant: TreeListRowVariant;
-  nodeGap: StackProps["gap"];
-  linkComponent?: TreeListLinkComponent;
-  onNavigate?: (event: TreeListNavigateEvent) => void;
-  onToggleNode?: (nodeId: string) => void;
-  onMoveNode?: (sourceNodeId: string, targetNodeId?: string, position?: "before" | "after" | "inside") => void;
-  indicator: TreeListDropIndicator | null;
-}
-
-// Top-level nodes participate in their section's SortableContext and can move
-// between sections. Nested rows inherit position from their parent and render plain.
-const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
-  const {
-    row,
-    expandedNodeIds,
-    activeNodeId,
-    rowVariant,
-    nodeGap,
-    linkComponent,
-    onNavigate,
-    onToggleNode,
-    onMoveNode,
-    indicator,
-  } = props;
-  const nodeRow = (
-    <TreeListNodeRow
-      sectionId={row.sectionId}
-      node={row.node}
-      level={row.level}
-      expandedNodeIds={expandedNodeIds}
-      activeNodeId={activeNodeId}
-      rowVariant={rowVariant}
-      nodeGap={nodeGap}
-      linkComponent={linkComponent}
-      onNavigate={onNavigate}
-      onToggleNode={onToggleNode}
-      onMoveNode={onMoveNode}
-    />
-  );
-  if (row.level > 0)
-    return (
-      <Box position="relative" w="full" minW="0">
-        {nodeRow}
-        {indicator?.lineId === row.node.id ? <DropLine edge={indicator.edge} /> : null}
-      </Box>
-    );
-  return (
-    <SortableHost
-      id={row.node.id}
-      disabled={row.node.canReorder === false}
-      indicator={indicator}
-      handle="self"
-      liftedBg="bg.hover"
-    >
-      {() => nodeRow}
     </SortableHost>
   );
 };
@@ -202,12 +143,28 @@ const SortableSections = (props: SortableSectionsProps) => {
   const target = active && pointerY !== null ? dropTargetFor(String(active.id), over, pointerY) : null;
   const indicator = treeListDropIndicator(sections, target, expandedNodeIds);
   const rows = buildVirtualRows(sections, expandedSectionIds, expandedNodeIds);
+  const keyboard = useTreeListKeyboardNavigation({
+    rows,
+    activeNodeId: rest.activeNodeId,
+    expandedNodeIds,
+    onToggleNode: rest.onToggleNode,
+    onToggleSection: rest.onToggleSection,
+  });
   return (
     <SortableContext
       items={sections.map((section) => toSectionDragId(section.id))}
       strategy={verticalListSortingStrategy}
     >
-      <Stack gap="0" w="full" minW="0" maxW="full">
+      <Stack
+        ref={keyboard.rootRef}
+        role="listbox"
+        onKeyDown={keyboard.handleKeyDown}
+        gap="0"
+        w="full"
+        minW="0"
+        maxW="full"
+        position="relative"
+      >
         {sections.map((section, index) => (
           <Fragment key={section.id}>
             <SortableSectionGroup
@@ -225,6 +182,8 @@ const SortableSections = (props: SortableSectionsProps) => {
               onSectionContextMenu={rest.onSectionContextMenu}
               indicator={indicator}
               dragging={Boolean(active)}
+              focusRowId={keyboard.focusRowId}
+              onRowFocus={keyboard.onRowFocus}
             />
             <SectionGap
               sectionId={section.id}

@@ -57,7 +57,7 @@ export const startRun = (ctx: ExtensionContextBase) =>
       if (run.status !== "running") continue;
       const session = run.sessionId ? await ctx.sessions.get(run.sessionId) : null;
       if (session?.status && activeStatuses.has(session.status))
-        return { runId: run.id, alreadyRunning: true as const };
+        return { runId: run.id, sessionId: run.sessionId, alreadyRunning: true as const };
       await failRun(ctx, run, "session ended without finish-run");
     }
     const { agent } = await readSettings(ctx.settings);

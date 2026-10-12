@@ -24,6 +24,7 @@ import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
+import { verifyPackagedViewInitialization } from "./packaged-webview-initialization";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
@@ -105,7 +106,8 @@ test.describe("packaged extension webviews", () => {
           expect(labWebview?.webview.moduleUrl).toBeTruthy();
 
           browser = await browserCase.type.launch({ headless: true, ...browserCase.launchOptions });
-          const page = await browser.newPage();
+          const context = await browser.newContext();
+          const page = await context.newPage();
           page.setDefaultTimeout(10_000);
           page.setDefaultNavigationTimeout(10_000);
           const extensionAssetStatuses: number[] = [];
@@ -137,6 +139,7 @@ test.describe("packaged extension webviews", () => {
 
           const frame = page.frameLocator('iframe[title="Lab"]');
           await frame.getByRole("heading", { name: "Sandbox webview" }).waitFor({ timeout: 30_000 });
+          await verifyPackagedViewInitialization(page, labWebview!.webview.runtimeUrl);
           await frame.getByRole("button", { name: "Say hello" }).click();
           await page.getByText("Hello from Extension Lab").waitFor({ timeout: 10_000 });
 

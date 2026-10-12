@@ -1,4 +1,7 @@
 import { definePage, defineResourceKind, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
+import { artifactPage, artifactPanelRef, libraryPageRef, libraryPanelRef } from "./artifact-refs";
+import { queryArtifactTab } from "./artifact-tab";
+import { changedEvent } from "./events";
 
 export const artifact = defineResourceKind({
   id: "artifact",
@@ -15,25 +18,26 @@ export const view = defineView({
   },
 });
 export const library = definePage({
-  id: "artifacts",
+  id: libraryPageRef.id,
   title: l10n("pages.artifacts", "Artifacts"),
-  path: "artifacts",
+  path: libraryPageRef.id,
   icon: "file-code",
   mode: workbenchModes.project,
   main: { kind: "panels", empty: view.ref },
   slots: [
     {
-      id: "library",
+      id: libraryPanelRef.id,
       region: "main",
       order: 0,
       mountStrategy: "keep-mounted",
       item: { kind: "view", view: view.ref, presence: "fixed" },
     },
     {
-      id: "artifact",
+      id: artifactPanelRef.id,
       region: "main",
       order: 1,
       mountStrategy: "keep-mounted",
+      tab: { query: queryArtifactTab, refreshEvents: [changedEvent] },
       item: {
         kind: "binding",
         binding: { kinds: [artifact.ref], view: view.ref, cardinality: "many" },
@@ -53,9 +57,9 @@ export const openView = defineView({
   },
 });
 export const detail = definePage({
-  id: "artifact",
+  id: artifactPage.id,
   title: l10n("pages.artifact", "Artifact"),
-  path: "artifacts/view",
+  path: artifactPage.path,
   mode: workbenchModes.project,
   parent: library.ref,
   resource: { kinds: [artifact.ref] },

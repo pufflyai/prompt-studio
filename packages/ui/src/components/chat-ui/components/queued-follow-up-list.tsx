@@ -82,7 +82,7 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
     return null;
   };
   const reorder = (selected: QueuedFollowUp, target: QueuedFollowUp, kind: string) => {
-    const eligible = dragItems.filter((item) => !item.steeringDelivery);
+    const eligible = dragItems.filter((item) => !item.sending && !item.steeringDelivery);
     const start = eligible.findIndex((item) => item.id === selected.id);
     const end = eligible.findIndex((item) => item.id === target.id);
     if (start < 0 || end < 0 || start === end) return;

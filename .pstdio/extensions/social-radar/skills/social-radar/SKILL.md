@@ -101,10 +101,10 @@ The command refuses a file the site does not allow. Skip media when the tools ar
 
 ## Finish
 
-Save results as you go. Finish even when every channel is skipped. Summarize the real findings in two or three sentences. Build `searches` from the channel ids returned by `get-context`, including zero for each channel you did not search. Include custom channels and omit removed channels. Report every skipped channel with its returned id and a plain reason. For example, when the returned channels are `hn` and `lobsters`:
+Save results as you go. Finish even when every channel is skipped. Summarize the real findings in two or three sentences. Build `searches` from the channel ids returned by `get-context`, including zero for each channel you did not search. Include custom channels and omit removed channels. Report every skipped channel with its returned id, a plain reason, and `needsLogin`. Set `needsLogin` to `true` only when the site asked you to log in, so the person knows to log in before the next run. Set it to `false` for captchas, rate limits, unavailable endpoints, and missing tools. For example, when the returned channels are `hn` and `lobsters`:
 
 ```sh
-pst social-radar finish-run --input '{"runId":"<runId>","summary":"<summary>","searches":{"hn":1,"lobsters":0},"skippedSites":[{"site":"lobsters","reason":"Browser tool unavailable"}]}'
+pst social-radar finish-run --input '{"runId":"<runId>","summary":"<summary>","searches":{"hn":1,"lobsters":0},"skippedSites":[{"site":"lobsters","reason":"Browser tool unavailable","needsLogin":false}]}'
 ```
 
 Do not report a completed run until this command succeeds. It sends one notification that opens the run's digest. Search counts are self-reported: the platform cannot measure browser actions. If research fails, keep what you saved and report the failure in the session instead of inventing results.

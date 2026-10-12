@@ -47,6 +47,32 @@ afterEach(() => {
   tempDirs.length = 0;
 });
 
+test("loads published dependency exports independently of host source conditions", async () => {
+  isolateRuntimeCache();
+  const extensionDir = createTempDir();
+  writePackage(extensionDir);
+  const dependencyDir = join(extensionDir, "node_modules", "published-library");
+  mkdirSync(dependencyDir, { recursive: true });
+  writeFileSync(
+    join(dependencyDir, "package.json"),
+    JSON.stringify({
+      name: "published-library",
+      type: "module",
+      exports: { ".": { source: "./src/index.ts", import: "./index.js" } },
+    }),
+  );
+  writeFileSync(join(dependencyDir, "index.js"), 'export const marker = "published-library";');
+  writeFileSync(
+    join(extensionDir, "extension.ts"),
+    'import { marker } from "published-library"; export default { commands: { check: { title: marker, run: async () => marker } } };',
+  );
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const loaded = await loadExtensionPackage({ path: extensionDir }, diagnostics);
+  expect(diagnostics).toEqual([]);
+  const commands = loaded?.definition.commands as Record<string, { title: string }> | undefined;
+  expect(commands?.check.title).toBe("published-library");
+});
+
 test.each([
   ["e2e", false],
   ["@workspace/e2e", false],

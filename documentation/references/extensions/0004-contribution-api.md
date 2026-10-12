@@ -118,6 +118,8 @@ A command action may pass params with `target: { command: preview.ref, params: {
 
 ## Dashboard UI Contributions
 
+Native controls views can declare a harness field with `{ id: "agent", name: "Model", type: "harness", defaultValue: { harnessId, model, params } }`. Its value is the same object accepted by `ctx.sessions.create({ harness: value })`. The host renders its harness, model and model options inline using the command-form picker. Use `onApply` to save the choice or `onValueChange` to save each edit. This control requires API 0.1.3.
+
 Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`

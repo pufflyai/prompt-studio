@@ -1,13 +1,14 @@
 import { defineView, type NavigationTarget, type ResourceRef, type TreeNode } from "@pstdio/sdk/extensions";
+import { needsLogin, pausedChannelIds } from "../channel-state";
 import { commands } from "../commands";
-import { readSettings } from "../settings";
+import { type Channel, readSettings } from "../settings";
 import { builtInChannels } from "../sites";
-import { channelResource, pageRef, radarChanged, settingsSection } from "../store";
+import { channelResource, newest, pageRef, radarChanged, runsOf, settingsSection } from "../store";
 
 export const sections = [
   { id: "research", label: "Research", icon: "Telescope" },
   { id: "voice", label: "Voice", icon: "PenLine" },
-  { id: "agent", label: "Agent", icon: "Bot" },
+  { id: "agent", label: "Research agent", icon: "Bot" },
 ] as const;
 type Section = (typeof sections)[number];
 export type SettingsPart = { kind: "section"; id: Section["id"] } | { kind: "channel"; id: string };
@@ -19,20 +20,31 @@ const settingsTarget = (resource: ResourceRef) =>
   ({ kind: "page", page: pageRef("settings"), resource }) satisfies NavigationTarget;
 export const sectionTarget = (section: Section = sections[0]) =>
   settingsTarget({ type: settingsSection.id, id: section.id, label: section.label });
+type RowIcon = Pick<TreeNode, "icon" | "iconColor" | "iconTooltip">;
 const row = (
   id: string,
   label: string,
-  icon: string,
+  icon: RowIcon,
   target: ReturnType<typeof settingsTarget>,
   open?: ResourceRef,
 ) => ({
   id,
   label,
-  icon,
+  ...icon,
   resource: target.resource,
   target,
   selected: open?.type === target.resource.type && open.id === target.resource.id,
 });
+const channelIcon = (channel: Channel, paused: boolean, loginNeeded: boolean) => {
+  if (paused) return { icon: "Pause" };
+  if (loginNeeded)
+    return {
+      icon: "KeyRound",
+      iconColor: "fg.warning",
+      iconTooltip: `The last run could not log in to ${channel.name}. Log in to it in the research agent's browser.`,
+    };
+  return { icon: channel.url ? "Globe" : "RadioTower" };
+};
 
 /** Lists the settings sections and channels beside the settings view; each row opens the page on it. */
 export const settingsMenu = defineView({
@@ -44,9 +56,11 @@ export const settingsMenu = defineView({
     defaultExpandedSectionIds: ["channels"],
     async body(ctx, { renderer }) {
       const { channels, agent } = await readSettings(ctx.settings);
+      const paused = await pausedChannelIds(ctx);
+      const runs = newest(await runsOf(ctx).list(), (run) => run.startedAt);
       const open = renderer.resource ?? sectionTarget().resource;
       const sectionNodes: TreeNode[] = sections.map((section) =>
-        row(section.id, section.label, section.icon, sectionTarget(section), open),
+        row(section.id, section.label, { icon: section.icon }, sectionTarget(section), open),
       );
       // The host's model picker lists harnesses, models, and each model's options.
       sectionNodes[2].actions = [
@@ -89,11 +103,18 @@ export const settingsMenu = defineView({
             ...row(
               channel.id,
               channel.name,
-              channel.url ? "Globe" : "RadioTower",
+              channelIcon(channel, paused.has(channel.id), needsLogin(runs, channel.id)),
               settingsTarget({ type: channelResource.id, id: channel.id, label: channel.name }),
               open,
             ),
             actions: [
+              {
+                id: "set-channel-paused",
+                label: paused.has(channel.id) ? "Resume channel" : "Pause channel",
+                icon: paused.has(channel.id) ? "Play" : "Pause",
+                command: commands["set-channel-paused"].ref,
+                params: { id: channel.id, paused: !paused.has(channel.id) },
+              },
               {
                 id: "remove-channel",
                 label: "Remove channel",

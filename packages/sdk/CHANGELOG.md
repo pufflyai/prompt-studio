@@ -1,5 +1,22 @@
 # @pstdio/sdk
 
+## 0.43.0
+
+_2026-10-12_
+
+### Minor Changes
+
+- 0851ba5: Add paged session queries, shared filters, harness details and saved token totals.
+- 98b1708: Let extensions watch artifact mounts with `watch: true` and refresh views and hooks through `artifactChanged(mount)` when files change outside the mount API.
+- c0a8d81: Add the `Attachments` harness capability, list harness capabilities in agent info, and hide the model menu for harnesses without models.
+
+### Patch Changes
+
+- ec9f15f: Advance the extension API to 0.1.3 for workflow status deprecations after the 0.1.2 release.
+- a4c23ad: Add native research agent controls, channel pauses, and manual Social radar sessions.
+- c46643f: Show the Machine tokens settings only after you turn on Machine tokens in Experimental → Beta features.
+- 357240c: Deprecate workflow status APIs in favor of extension-owned commands, settings panels, and query-owned enums.
+
 ## 0.42.0
 
 _2026-10-10_

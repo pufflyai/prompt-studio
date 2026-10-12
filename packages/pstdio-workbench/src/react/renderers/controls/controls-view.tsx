@@ -13,13 +13,16 @@ import {
   type WorkbenchPanelInstance,
 } from "../../../core";
 import { runUserAction } from "../../../core/shared/run-user-action";
+import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
+import { HarnessControl } from "./harness-control";
 
 interface WorkbenchControlsViewProps {
   workbench: WorkbenchCore;
   contribution: RegisteredControlsRendererContribution;
   placement: WorkbenchPanelInstance;
+  renderParamField?: CommandParamFieldRenderer;
 }
 interface ControlsViewState {
   params: Param[];
@@ -31,7 +34,7 @@ interface ControlsViewState {
 }
 const initialState: ControlsViewState = { params: [], groups: [], values: {}, readOnly: false, loading: true };
 export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
-  const { workbench, contribution, placement } = props;
+  const { workbench, contribution, placement, renderParamField } = props;
   const resource = placement.resource;
   const [state, setState] = useState<ControlsViewState>(initialState);
   const read = useRendererRead({
@@ -90,6 +93,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
             contribution={contribution}
             readOnly={readOnly}
             onChange={handleChange}
+            renderParamField={renderParamField}
           />
         ) : null}
       </ScrollArea>
@@ -136,9 +140,28 @@ interface ControlsContentProps {
   contribution: RegisteredControlsRendererContribution;
   readOnly: boolean;
   onChange(id: string, value: ParamValue): void;
+  renderParamField?: CommandParamFieldRenderer;
 }
 const ControlsContent = (props: ControlsContentProps) => {
-  const { state, contribution, readOnly, onChange } = props;
+  const { state, contribution, readOnly, onChange, renderParamField } = props;
+  // Host-backed controls reuse command fields; the UI editor still owns group layout.
+  const hostParam = (param: Param): Param => {
+    if (param.type !== "harness") return param;
+    return {
+      id: param.id,
+      name: "",
+      type: "property",
+      value: (
+        <HarnessControl
+          param={param}
+          value={state.values[param.id] ?? param.defaultValue}
+          readOnly={readOnly}
+          renderParamField={renderParamField}
+          onChange={(value) => onChange(param.id, value)}
+        />
+      ),
+    };
+  };
   if (state.loading)
     return (
       <Box p="md">
@@ -159,8 +182,8 @@ const ControlsContent = (props: ControlsContentProps) => {
     return (
       <ParamEditor
         variant="small"
-        params={state.params}
-        groups={state.groups}
+        params={state.params.map(hostParam)}
+        groups={state.groups.map((group) => ({ ...group, params: group.params.map(hostParam) }))}
         defaultValues={state.values}
         readOnly={readOnly}
         onChange={onChange}

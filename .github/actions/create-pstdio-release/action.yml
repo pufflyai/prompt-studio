@@ -1,0 +1,62 @@
+name: Create pstdio GitHub release
+description: Create the draft pstdio release with CLI assets. The desktop workflow publishes it.
+inputs:
+  version:
+    description: Published pstdio version
+    required: true
+  prerelease:
+    description: Create a nightly prerelease whose install.sh installs that nightly
+    required: false
+    default: "false"
+  github-token:
+    description: Token that can create releases
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Create pstdio GitHub Release
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        PRERELEASE: ${{ inputs.prerelease }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+        TAG="pstdio@${VERSION}"
+        RELEASE_ASSETS_DIR="packages/pstdio/dist/release-assets"
+        NOTES_FILE="$(mktemp)"
+        bun run --cwd scripts release:notes "$VERSION" > "$NOTES_FILE"
+
+        rm -rf "$RELEASE_ASSETS_DIR"
+        mkdir -p "$RELEASE_ASSETS_DIR"
+
+        install -m 755 packages/pstdio/dist/platforms/cli-darwin-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-arm64"
+        install -m 755 packages/pstdio/dist/platforms/cli-darwin-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-darwin-x64"
+        install -m 755 packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-x64"
+        install -m 755 packages/pstdio/dist/platforms/cli-linux-arm64/bin/pstdio "$RELEASE_ASSETS_DIR/pstdio-linux-arm64"
+        install -m 755 packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-x64.exe"
+        install -m 755 packages/pstdio/dist/platforms/cli-win-arm64/bin/pstdio.exe "$RELEASE_ASSETS_DIR/pstdio-win-arm64.exe"
+        install -m 644 packages/pstdio/dist/platforms/checksums.sha256 "$RELEASE_ASSETS_DIR/checksums.sha256"
+        install -m 755 packages/pstdio/install.sh "$RELEASE_ASSETS_DIR/install.sh"
+
+        PRERELEASE_FLAGS=()
+        if [ "$PRERELEASE" = "true" ]; then
+          # "latest" never points at a prerelease, so the nightly install.sh downloads from its own tag.
+          sed -i "s#/releases/latest/download\"#/releases/download/${TAG}\"#" "$RELEASE_ASSETS_DIR/install.sh"
+          grep -q "/releases/download/${TAG}\"" "$RELEASE_ASSETS_DIR/install.sh"
+          PRERELEASE_FLAGS=(--prerelease --latest=false)
+        fi
+
+        RELEASE_DRAFT=$(gh release view "$TAG" --json isDraft -q '.isDraft' 2>/dev/null || true)
+
+        if [ "$RELEASE_DRAFT" = "true" ]; then
+          echo "Release $TAG exists as a draft, refreshing CLI assets."
+          gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/* --clobber
+        elif [ "$RELEASE_DRAFT" = "false" ]; then
+          echo "Release $TAG already exists, skipping."
+        else
+          # Notes start at the previous stable release, so nightly tags never shape stable notes.
+          PREVIOUS_TAG=$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq 'map(select(.tagName | startswith("pstdio@")))[0].tagName')
+          gh release create "$TAG" --title "v$VERSION" --notes-file "$NOTES_FILE" --generate-notes --notes-start-tag "$PREVIOUS_TAG" --draft --verify-tag "${PRERELEASE_FLAGS[@]}"
+          gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
+        fi

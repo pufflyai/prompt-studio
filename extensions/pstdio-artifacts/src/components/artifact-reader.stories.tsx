@@ -28,9 +28,6 @@ const meta = {
     content,
     revisions: [exampleArtifact],
     onSelect: () => {},
-    onBack: () => {},
-    onRename: async () => {},
-    onDelete: async () => {},
   },
 } satisfies Meta<typeof ArtifactReader>;
 export default meta;
@@ -40,6 +37,17 @@ export const NewRevision: Story = {
   args: {
     revisions: [{ ...exampleArtifact, id: "revision-2", revisionId: "revision-2", label: "Ready" }, exampleArtifact],
   },
+};
+
+export const NarrowHeader: Story = {
+  decorators: [
+    (Story) => (
+      <Box width="xs" height="full" data-testid="narrow-reader">
+        <Story />
+      </Box>
+    ),
+  ],
+  args: { content: { ...content, label: "A longer label for the current version" } },
 };
 
 export const Visualization: Story = {

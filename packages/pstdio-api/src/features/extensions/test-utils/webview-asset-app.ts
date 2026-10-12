@@ -52,7 +52,7 @@ export const createApp = (input: {
   sources?: SourceRow[];
   failure?: string;
   onLoad?: () => void;
-  ensureWebviews?: (installedExtensionId: string) => Promise<void>;
+  ensureWebviews?: (installedExtensionId: string, webviewId?: string) => Promise<void>;
   onCatalog?: (catalog: ReturnType<typeof createProjectExtensionRuntimeCatalog>) => void;
 }) => {
   const app = new OpenAPIHono();

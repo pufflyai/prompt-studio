@@ -2,7 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FileText, Folder } from "lucide-react";
 import { useState } from "react";
-import { expect, fireEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { TreeList } from "./tree-list";
 import type { TreeListSection } from "./tree-list.types";
 
@@ -168,6 +168,7 @@ export const NotesInSortableNavigation: Story = {
 };
 
 export const ExpandedNavigation: Story = {
+  tags: ["motion"],
   render: () => <MovableNotes />,
   parameters: {
     docs: {
@@ -175,5 +176,18 @@ export const ExpandedNavigation: Story = {
         story: "Drag Workspaces below expanded Notes. The placement line appears after the last visible descendant.",
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const source = canvas.getByRole("option", { name: "Workspaces", exact: true });
+    const target = canvas.getByRole("option", { name: "Notes", exact: true });
+    const start = source.getBoundingClientRect();
+    const end = target.getBoundingClientRect();
+    const clientX = start.left + start.width / 2;
+    await userEvent.pointer({ target: source, keys: "[MouseLeft>]", coords: { clientX, clientY: start.top + 14 } });
+    await userEvent.pointer({ target: source, coords: { clientX, clientY: start.top + 20 } });
+    await userEvent.pointer({ target, coords: { clientX, clientY: end.bottom - 2 } });
+    await waitFor(() => expect(canvasElement.querySelector('[data-tree-list-drop-indicator="after"]')).toBeVisible());
+    await userEvent.pointer({ target, keys: "[/MouseLeft]", coords: { clientX, clientY: end.bottom - 2 } });
   },
 };

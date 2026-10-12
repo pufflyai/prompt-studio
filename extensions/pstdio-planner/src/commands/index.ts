@@ -1,3 +1,4 @@
+import { checkAutoBuildCommand } from "../hooks/auto-build";
 import { applyTicketTemplateCommand } from "./apply-ticket-template";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
@@ -10,6 +11,10 @@ import {
   selectAttemptCommand,
 } from "./attempt-history";
 import { attemptReadinessCommand } from "./attempt-readiness";
+import { autoBuildCommand } from "./auto-build";
+import { autoBuildCandidatesCommand } from "./auto-build-candidates";
+import { autoBuildDispatchCommand } from "./auto-build-dispatch";
+import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -18,7 +23,6 @@ import { deleteTicketCommand } from "./delete-ticket";
 import { documentLinkCommand } from "./document-link";
 import { getTicketCommand } from "./get-ticket";
 import { getTicketContentCommand } from "./get-ticket-content";
-import { requestHumanCommand, resolveHumanRequestCommand } from "./human-requests";
 import { implementTicketCommand } from "./implement-ticket";
 import { implementationPolicyCommand } from "./implementation-policy";
 import { implementationTargetsCommand, setImplementationTargetCommand } from "./implementation-targets";
@@ -36,6 +40,14 @@ import { readTicketsCommand } from "./read-tickets";
 import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
+import {
+  cancelReviewRequestCommand,
+  listReviewRequestsCommand,
+  openReviewRequestCommand,
+  readReviewRequestCommand,
+  requestHumanCommand,
+  reviewCommand,
+} from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
 import { runReviewCommand } from "./run-review";
 import { saveTicketCommand } from "./save-ticket";
@@ -95,6 +107,12 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  autoBuildCommand,
+  autoBuildCandidatesCommand,
+  autoBuildDispatchCommand,
+  configureAutoBuildCommand,
+  readAutoBuildCommand,
+  checkAutoBuildCommand,
   documentLinkCommand,
   checkMergedPullRequestsCommand,
   openTicketsCommand,
@@ -121,7 +139,11 @@ export const plannerCommands = [
   readAttemptHistoryCommand,
   selectAttemptCommand,
   requestHumanCommand,
-  resolveHumanRequestCommand,
+  reviewCommand,
+  readReviewRequestCommand,
+  listReviewRequestsCommand,
+  cancelReviewRequestCommand,
+  openReviewRequestCommand,
   listAttemptsCommand,
   reconcileAttemptCommand,
   runAttemptCommand,

@@ -1,7 +1,7 @@
 {
   "name": "font-editor",
   "version": "0.1.1",
-  "displayName": "Prompt Studio Font Editor",
+  "displayName": "Icon Set editor",
   "description": "Edit, rebuild, and verify the repository's icon font.",
   "publisher": "pstdio",
   "main": "./extension.ts",

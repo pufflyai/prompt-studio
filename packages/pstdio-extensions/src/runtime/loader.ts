@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync, rmSync } from "nod
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
-import { isPackagedRuntime, resolvePstdioHome } from "pstdio-paths";
+import { resolvePstdioHome } from "pstdio-paths";
 import { isPackageAssetDescriptor } from "../artifacts/asset-validation";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { bundleEntry } from "./bundle-entry";
@@ -225,9 +225,12 @@ const remapRuntimePackageAssets = (value: unknown, runtimePackagePath: string, p
 
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
-  const entryPath = isPackagedRuntime()
-    ? await bundleEntry(runtimePackage.entryPath, runtimePackage.packagePath, dirname(runtimePackage.entryPath))
-    : runtimePackage.entryPath;
+  // Extension dependencies use their published exports, independently of the host's development conditions.
+  const entryPath = await bundleEntry(
+    runtimePackage.entryPath,
+    runtimePackage.packagePath,
+    dirname(runtimePackage.entryPath),
+  );
   const mod = await importWithCacheKey(entryPath);
   return remapRuntimePackageAssets(mod, runtimePackage.packagePath, packagePath);
 };

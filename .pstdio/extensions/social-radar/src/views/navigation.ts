@@ -80,8 +80,15 @@ export const radarTree = defineView({
         {
           id: "runs",
           label: "Runs",
-          actions: [{ id: "run-daily", label: "Run now", icon: "Play", command: commands["run-daily"].ref }],
-          emptyState: { title: "No runs yet", description: "Run now, or wait for the 07:00 run." },
+          actions: [
+            {
+              id: "start-research",
+              label: "Start research session",
+              icon: "Play",
+              command: commands["start-research"].ref,
+            },
+          ],
+          emptyState: { title: "No runs yet", description: "Start a research session, or wait for the 07:00 run." },
           nodes: runs.map((run) => runNode(run, threads, names)),
         },
       ];

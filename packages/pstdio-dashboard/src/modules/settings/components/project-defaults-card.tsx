@@ -127,6 +127,7 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
                 modelOptions={modelOptions}
                 selectedModel={selectedModelId}
                 onSelectModel={handleSelectModel}
+                offersModels={selectedHarness?.supportsModels ?? true}
                 isDisabled={updateProjectDefaults.isPending}
                 isAgentsLoading={isAgentsLoading}
                 isModelsLoading={isModelsLoading}

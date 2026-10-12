@@ -1,5 +1,6 @@
 import type { HASHES, SignToolOptions } from "@electron/windows-sign/dist/esm/types";
-import { rcompare, valid } from "semver";
+import type { UpdateChannel } from "pstdio-paths";
+import { prerelease, rcompare, valid } from "semver";
 
 const RELEASE_REPOSITORY = "pufflyai/prompt-studio";
 const RELEASES_URL = `https://github.com/${RELEASE_REPOSITORY}/releases`;
@@ -17,16 +18,17 @@ export class DesktopReleaseConfigError extends Error {
 
 type ReleaseEnvironment = Record<string, string | undefined>;
 
-type GitHubRelease = {
+export type GitHubRelease = {
   tag_name: string;
   draft: boolean;
   prerelease: boolean;
   assets: Array<{ name: string }>;
 };
 
-type UpdateFeedInput = {
+type ReleaseLookupInput = {
   platform: NodeJS.Platform;
   arch: string;
+  channel: UpdateChannel;
   fetchReleases?: () => Promise<GitHubRelease[]>;
 };
 
@@ -87,7 +89,7 @@ export const resolveDesktopSigning = (input: SigningInput): DesktopSigningConfig
 
 export const resolveDesktopUpdateStrategy = (platform: NodeJS.Platform) => {
   if (platform === "darwin" || platform === "win32") return { kind: "automatic" as const };
-  return { kind: "manual" as const, releasesUrl: RELEASES_URL };
+  return { kind: "manual" as const };
 };
 
 const fetchPublishedReleases = async () => {
@@ -112,29 +114,50 @@ const hasUpdateAssets = (release: GitHubRelease, platform: NodeJS.Platform, arch
       names.has(`RELEASES-${target}.json`) && [...names].some((name) => name.includes(target) && name.endsWith(".zip"))
     );
   }
+  if (platform === "linux") return [...names].some((name) => name.endsWith(`-linux-${arch}.deb`));
   return names.has("RELEASES") && [...names].some((name) => name.endsWith("-full.nupkg"));
 };
 
-export const resolveDesktopUpdateFeed = async (input: UpdateFeedInput) => {
+// Stable never offers a prerelease. Nightly also offers nightly builds, and semver
+// ranks a stable release above every nightly build of the same version.
+const acceptsRelease = (release: GitHubRelease, version: string, channel: UpdateChannel) => {
+  const tags = prerelease(version);
+  if (!release.prerelease && !tags) return true;
+  return channel === "nightly" && tags?.[0] === "nightly";
+};
+
+const newestRelease = async (input: ReleaseLookupInput) => {
   const releases = await (input.fetchReleases ?? fetchPublishedReleases)();
-  const release = releases
-    .filter((candidate) => !candidate.draft && !candidate.prerelease)
+  const newest = releases
+    .filter((candidate) => !candidate.draft)
     .map((candidate) => ({ release: candidate, version: releaseVersion(candidate) }))
     .filter(
       (candidate): candidate is { release: GitHubRelease; version: string } =>
-        candidate.version !== null && hasUpdateAssets(candidate.release, input.platform, input.arch),
+        candidate.version !== null &&
+        acceptsRelease(candidate.release, candidate.version, input.channel) &&
+        hasUpdateAssets(candidate.release, input.platform, input.arch),
     )
     .sort((left, right) => rcompare(left.version, right.version))[0];
 
-  if (!release) {
+  if (!newest) {
     throw new Error(`No complete ${input.platform}-${input.arch} desktop update release is published`);
   }
+  return newest;
+};
 
-  const releaseRoot = `${RELEASE_DOWNLOAD_URL}/${release.release.tag_name}`;
+export const resolveDesktopUpdateFeed = async (input: ReleaseLookupInput) => {
+  const newest = await newestRelease(input);
+  const releaseRoot = `${RELEASE_DOWNLOAD_URL}/${newest.release.tag_name}`;
   return {
-    version: release.version,
+    version: newest.version,
     url: input.platform === "darwin" ? `${releaseRoot}/RELEASES-darwin-${input.arch}.json` : releaseRoot,
   };
+};
+
+// Platforms without a native updater open the release page a person installs from.
+export const resolveDesktopReleasePage = async (input: ReleaseLookupInput) => {
+  const newest = await newestRelease(input);
+  return { version: newest.version, url: `${RELEASES_URL}/tag/${newest.release.tag_name}` };
 };
 
 export const desktopReleasesUrl = RELEASES_URL;

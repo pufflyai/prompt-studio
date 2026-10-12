@@ -111,7 +111,7 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
 }
 
 function MessagePartsContent(props: MessagePartsProps) {
-  const { message, hideQuestionForms = false, onOpenFile, toolInvocationTimeline } = props;
+  const { message, streaming = false, hideQuestionForms = false, onOpenFile, toolInvocationTimeline } = props;
   const linkHandler = useChatLinkHandler();
   const imageHistory = useChatImageHistory();
   const localImages = indexChatImageSources([message], linkHandler);
@@ -131,7 +131,7 @@ function MessagePartsContent(props: MessagePartsProps) {
             value={imageHistory.get(part) ?? localImages.get(part) ?? emptyChatImageSources}
           >
             <div>
-              <Response>{part.text}</Response>
+              <Response streaming={streaming}>{part.text}</Response>
             </div>
           </ChatImageSourcesContext>,
         );

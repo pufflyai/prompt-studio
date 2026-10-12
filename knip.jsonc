@@ -1,9 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["wait", "version"],
+  "ignoreBinaries": ["gh", "wait", "version"],
   "ignoreIssues": {
-    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs,performance}.ts": ["exports"],
+    "packages/pstdio/src/adapters/cli/commands/{close,inbox,logs,performance,update-channel}.ts": ["exports"],
     "packages/pstdio/src/adapters/cli/commands/notifications/list.ts": ["exports"],
     "packages/pstdio-api/src/features/extensions/extension-webviews.ts": ["types"],
     "packages/pstdio-api/src/features/extensions/repo-extensions.ts": ["types"],
@@ -196,9 +196,12 @@
         "*.test.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/views/tags-settings-panel.tsx"
+        "src/views/tags-settings-panel.tsx",
+        "src/views/ticket-review-requests.tsx",
+        "vendor/collection-filter.js",
+        "src/timeline/view/entry.tsx"
       ],
-      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+      "project": ["*.ts", "src/**/*.{ts,tsx}", "vendor/**/*.js"]
     },
     "extensions/pstdio-skills": {
       // The skill's example extensions are typechecked source.

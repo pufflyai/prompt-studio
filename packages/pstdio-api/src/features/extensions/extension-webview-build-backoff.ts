@@ -38,6 +38,13 @@ export const createWebviewBuildBackoff = () => {
     forget: (key: string) => {
       failures.delete(key);
     },
+    // Forgets the source load failure and every webview build failure of one installed extension.
+    forgetExtension: (installedExtensionId: string) => {
+      for (const key of failures.keys()) {
+        if (key === installedExtensionId || key.startsWith(processKey(installedExtensionId, ""))) failures.delete(key);
+      }
+    },
+    hasFailure: (key: string) => failures.has(key),
     isBlocked: (key: string, signature: string) => failures.get(key) === signature,
     recordFailure: (key: string, signature: string) => {
       failures.set(key, signature);

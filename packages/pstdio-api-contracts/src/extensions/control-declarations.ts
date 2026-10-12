@@ -6,6 +6,11 @@ const base = { id: z.string(), name: z.string(), description: z.string().optiona
 const numeric = { min: z.number().optional(), max: z.number().optional(), step: z.number().optional() };
 const vector = z.strictObject({ x: z.number(), y: z.number() });
 const range = z.tuple([z.number(), z.number()]);
+const harness = z.strictObject({
+  harnessId: z.string().min(1),
+  model: z.string().optional(),
+  params: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
+});
 const selectionValue = z.union([z.string(), z.array(z.string())]);
 const selectionOption = z.strictObject({
   id: z.string(),
@@ -31,9 +36,10 @@ const readOnlyContent = z.union([
   z.strictObject({ type: z.literal("image-gallery"), images: z.array(image) }),
 ]);
 
-export const controlValueSchema = z.union([primitive, z.array(z.string()), range, vector]);
+export const controlValueSchema = z.union([primitive, z.array(z.string()), range, vector, harness]);
 export const controlValuesSchema = z.record(z.string(), controlValueSchema);
 export const controlParamSchema = z.discriminatedUnion("type", [
+  z.strictObject({ ...base, type: z.literal("harness"), defaultValue: harness }),
   z.strictObject({ ...base, ...numeric, type: z.literal("number"), defaultValue: z.number() }),
   z.strictObject({ ...base, type: z.literal("boolean"), defaultValue: z.boolean() }),
   z.strictObject({ ...base, type: z.literal("text"), defaultValue: z.string(), singleLine: z.boolean().optional() }),

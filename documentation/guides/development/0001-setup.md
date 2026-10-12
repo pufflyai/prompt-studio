@@ -18,6 +18,10 @@ Run `bun run clean` to remove dependencies, build and release output, caches,
 test reports and temporary test data, desktop packages and sidecars, and vendored
 PGlite assets. Run `bun run reset` to clean, install dependencies, and rebuild.
 
+## Daily-drive the nightly build
+
+Maintainers run the nightly desktop build for their own daily work. A source checkout skips the compiled CLI, the bundled runtime, the updater, and migrations on existing data, so bugs in those parts only show up in packaged builds. Install the desktop app once, then run `pst update-channel nightly` or choose **Settings → Workbench → Update channel → Nightly**. The app updates to the newest nightly through the normal updater. See [Install](../getting-started/0001-install.md#choose-an-update-channel).
+
 ## Run Locally
 
 Start an isolated API, dashboard, database, and seeded project. Startup builds the workbench and its dependencies before launching the API and dashboard, so extension views work from a clean checkout:

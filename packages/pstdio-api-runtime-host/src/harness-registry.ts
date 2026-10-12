@@ -52,6 +52,8 @@ export type HarnessHandle = {
   cwdRequirement: "required" | "optional";
   supportsReattach: boolean;
   supportsHistory: boolean;
+  /** The harness offers a model choice through `listModels`. */
+  supportsModels: boolean;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
   detect(options?: HarnessCallOptions): Promise<HarnessDetectionResult>;
   listModels(options?: HarnessCallOptions): Promise<AgentModel[]>;
@@ -199,6 +201,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     cwdRequirement: provider.cwdRequirement ?? "required",
     supportsReattach: typeof provider.reattach === "function",
     supportsHistory: typeof provider.getMessages === "function",
+    supportsModels: typeof provider.listModels === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
     detect: async (options) => detectHarness(provider, await ctx(options)),
     listModels: async (options) => (provider.listModels ? provider.listModels(await ctx(options)) : []),

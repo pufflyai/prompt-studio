@@ -15,16 +15,17 @@ const meta = {
 } satisfies Meta<typeof BetaFeaturesContent>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Off: Story = { args: { enabled: false } };
-export const On: Story = { args: { enabled: true } };
-export const Loading: Story = { args: { enabled: undefined } };
-export const Failure: Story = { args: { enabled: false, error: "Could not save settings. Try again." } };
+const off = { notifications_enabled: false, machine_tokens_enabled: false };
+export const Off: Story = { args: { settings: off } };
+export const On: Story = { args: { settings: { notifications_enabled: true, machine_tokens_enabled: true } } };
+export const Loading: Story = { args: { settings: undefined } };
+export const Failure: Story = { args: { settings: off, error: "Could not save settings. Try again." } };
 
 const BetaFeaturesNavigation = () => {
   const [client] = useState(() => {
     const next = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
     next.setQueryData(["settings"], null);
-    receiveSettings({ max_concurrent_sessions: null, notifications_enabled: false });
+    receiveSettings({ max_concurrent_sessions: null, ...off });
     return next;
   });
   const [workbench] = useState(() => {

@@ -1,5 +1,5 @@
 {
-  "version": "2.20",
+  "version": "2.21",
   "children": [
     {
       "type": "frame",
@@ -8167,7 +8167,7 @@
                                 {
                                   "type": "icon",
                                   "id": "Iu63q",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -10131,7 +10131,7 @@
                                 {
                                   "type": "icon",
                                   "id": "MU4jk",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -13937,7 +13937,7 @@
                                 {
                                   "type": "icon",
                                   "id": "ccEQs",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -16741,7 +16741,7 @@
                                 {
                                   "type": "icon",
                                   "id": "NOupv",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -18821,7 +18821,7 @@
                                 {
                                   "type": "icon",
                                   "id": "Jj9KA",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -19239,7 +19239,7 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     "ROY2j": {
-                                      "content": "Agent"
+                                      "content": "Research agent"
                                     },
                                     "uFz3m": {
                                       "type": "frame",
@@ -20130,7 +20130,7 @@
                                 {
                                   "type": "icon",
                                   "id": "H58Mg",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -20548,7 +20548,7 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     "ROY2j": {
-                                      "content": "Agent"
+                                      "content": "Research agent"
                                     },
                                     "uFz3m": {
                                       "type": "frame",
@@ -21284,7 +21284,7 @@
                                 {
                                   "type": "icon",
                                   "id": "nGKKT",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -21702,13 +21702,16 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     "ROY2j": {
-                                      "content": "Agent"
+                                      "content": "Research agent"
                                     },
                                     "uFz3m": {
                                       "type": "frame",
                                       "id": "CGsAb",
+                                      "x": 240,
+                                      "y": 0,
                                       "name": "End",
-                                      "height": "fill_container",
+                                      "enabled": false,
+                                      "height": "fill_container(28)",
                                       "gap": 4,
                                       "alignItems": "center",
                                       "children": [
@@ -22128,7 +22131,7 @@
                                               "id": "yzRwB",
                                               "name": "Instructions for every d",
                                               "fill": "$ds-fg-subtle",
-                                              "content": "The harness and model that run each morning's session. Change them with Choose model in the menu.",
+                                              "content": "Choose the harness, model and options for research sessions.",
                                               "fontFamily": "$font-body",
                                               "fontSize": 10,
                                               "fontWeight": "normal"
@@ -22168,14 +22171,17 @@
                                           "fontWeight": "500"
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "h0Bz2y",
-                                          "name": "Value",
-                                          "fill": "$ds-fg",
-                                          "content": "pstdio.harness-codex.harness.codex",
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
+                                          "id": "w8GhC",
+                                          "type": "ref",
+                                          "ref": "clw66",
+                                          "descendants": {
+                                            "xr1ec": {
+                                              "icon": "terminal"
+                                            },
+                                            "sefGB": {
+                                              "content": "Codex"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -22203,14 +22209,17 @@
                                           "fontWeight": "500"
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "xXvgg",
-                                          "name": "Value",
-                                          "fill": "$ds-fg",
-                                          "content": "gpt-6-astra",
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
+                                          "id": "bcyDQ",
+                                          "type": "ref",
+                                          "ref": "clw66",
+                                          "descendants": {
+                                            "xr1ec": {
+                                              "icon": "cpu"
+                                            },
+                                            "sefGB": {
+                                              "content": "gpt-6-astra"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -22238,14 +22247,17 @@
                                           "fontWeight": "500"
                                         },
                                         {
-                                          "type": "text",
-                                          "id": "x4laOo",
-                                          "name": "Value",
-                                          "fill": "$ds-fg",
-                                          "content": "high",
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
+                                          "id": "MU9yY",
+                                          "type": "ref",
+                                          "ref": "clw66",
+                                          "descendants": {
+                                            "xr1ec": {
+                                              "icon": "sliders-horizontal"
+                                            },
+                                            "sefGB": {
+                                              "content": "High"
+                                            }
+                                          }
                                         }
                                       ]
                                     }
@@ -22515,7 +22527,7 @@
                                 {
                                   "type": "icon",
                                   "id": "ZL3NL",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",
@@ -22933,7 +22945,7 @@
                                       "fill": "$ds-fg-muted"
                                     },
                                     "ROY2j": {
-                                      "content": "Agent"
+                                      "content": "Research agent"
                                     },
                                     "uFz3m": {
                                       "type": "frame",
@@ -23359,7 +23371,7 @@
                                               "id": "Y0vdp",
                                               "name": "4 searches · 3 targets",
                                               "fill": "$ds-fg-subtle",
-                                              "content": "4 searches · 3 targets",
+                                              "content": "Paused · 4 searches · 3 targets",
                                               "fontFamily": "$font-body",
                                               "fontSize": 10,
                                               "fontWeight": "normal"
@@ -23650,7 +23662,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Research, Voice and Agent are sections. Each channel is a row under Channels: + adds a built-in site back or a new channel with a link, and the trash icon on a row removes it.",
+                  "content": "Research, Voice and Research agent are sections. Channel rows offer Pause or Resume without changing targets or budgets. The trash action removes a channel.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -23833,7 +23845,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Choose model opens the host's model picker, the one sessions use, so it lists each model's options. The page shows the current choice.",
+                  "content": "The Research agent page edits the harness, model and model options directly. Apply saves the choice for manual and scheduled sessions.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 11,
@@ -24415,7 +24427,7 @@
                             {
                               "type": "icon",
                               "id": "JVcs3",
-                              "name": "Run now",
+                              "name": "Start research session",
                               "width": 12,
                               "height": 12,
                               "icon": "play",
@@ -26444,7 +26456,7 @@
                                 {
                                   "type": "icon",
                                   "id": "TAnmr",
-                                  "name": "Run now",
+                                  "name": "Start research session",
                                   "width": 12,
                                   "height": 12,
                                   "icon": "play",

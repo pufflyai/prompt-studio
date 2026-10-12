@@ -1,7 +1,9 @@
 import { defineCommand, type ExtensionContextBase, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { tagsCollection, ticketsCollection } from "../data/collections";
+import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
 import { ticketTagAttributeId } from "../data/mappers";
+import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { plannerTicketsChanged } from "../events";
+import { moveTicketInPlan } from "../timeline/commands/move-ticket";
 
 const selectedTagOptionIds = (value: string | string[] | undefined, tagOptionIds: Set<string>) => {
   if (Array.isArray(value)) return value.filter((id) => tagOptionIds.has(id));
@@ -27,8 +29,7 @@ export const applyTicketAttribute = async (input: {
   if (attributeId === "status") {
     const statusId = typeof value === "string" ? value : "";
     const next = { ...existing, statusId: statusId || null, updatedAt: new Date().toISOString() };
-    await collection.put(rowId, next);
-    return next;
+    return putTicket(storage, next);
   }
 
   const tag = (await tagsCollection(storage).list()).find(
@@ -39,19 +40,26 @@ export const applyTicketAttribute = async (input: {
   const tagOptionIds = new Set(tag.options.map((option) => option.id));
   const others = (existing.tagIds ?? []).filter((id) => !tagOptionIds.has(id));
   const selected = selectedTagOptionIds(value, tagOptionIds);
+  await assertSingleSelectTagIds(storage, [...others, ...selected], existing.tagIds);
   const next = {
     ...existing,
     tagIds: [...others, ...selected],
     updatedAt: new Date().toISOString(),
   };
-  await collection.put(rowId, next);
-  return next;
+  return putTicket(storage, next);
 };
 
 export const setTicketAttribute = async (
-  ctx: Pick<ExtensionContextBase, "events" | "storage">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events">,
   input: { rowId: string; attributeId: string; value?: unknown },
 ) => {
+  if (input.attributeId === "milestone") {
+    await moveTicketInPlan(ctx, {
+      ticket: input.rowId,
+      deadline: typeof input.value === "string" && input.value ? input.value : "none",
+    });
+    return ticketsCollection(ctx.storage).get(input.rowId);
+  }
   const value =
     typeof input.value === "string" ||
     (Array.isArray(input.value) && input.value.every((item) => typeof item === "string"))

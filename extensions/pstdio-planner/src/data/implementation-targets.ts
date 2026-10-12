@@ -3,6 +3,30 @@ import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 export const targetBranchSetting = "implementation.defaultTargetBranch";
 export const savedTargetBranch = (settings: Record<string, unknown>) => (settings[targetBranchSetting] ?? "") as string;
 
+export const resolveImplementationBase = async (ctx: ExtensionContextBase, settings: Record<string, unknown>) => {
+  const configured = savedTargetBranch(settings);
+  if (configured) return configured;
+  const workspace = await ctx.workspaces.getDefault();
+  const cwd = workspace?.root_path;
+  if (!cwd) throw new Error("Attach a Git project folder before using Auto build.");
+  const remote = await ctx.process.run({
+    command: ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+    cwd,
+  });
+  if (remote.exitCode === 0) return remote.stdout.trim();
+  // Repositories without a remote commonly keep their default under one of these names.
+  for (const branch of ["main", "master"]) {
+    const local = await ctx.process.run({
+      command: ["git", "show-ref", "--verify", "--quiet", `refs/heads/${branch}`],
+      cwd,
+    });
+    if (local.exitCode === 0) return branch;
+  }
+  throw new Error(
+    "Set Default target branch in Planner settings. The repository default branch is not available locally.",
+  );
+};
+
 // One row per remote branch, so the setting's dropdown can load its choices
 // from this command.
 export const readImplementationTargets = async (ctx: ExtensionContextBase) => {
