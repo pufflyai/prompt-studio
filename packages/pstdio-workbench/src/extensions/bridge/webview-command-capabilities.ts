@@ -34,6 +34,7 @@ export const createExtensionWebviewHostCapabilities =
     const base = createWorkbenchWebviewHostCapabilities({
       workbench: context.workbench,
       placement: context.placement,
+      extensionId: context.extensionId ?? input.extensionIdForWebview(context.webviewId),
       hostEvents: context.hostEvents,
     });
     return {

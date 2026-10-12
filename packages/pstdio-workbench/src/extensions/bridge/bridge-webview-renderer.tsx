@@ -12,6 +12,7 @@ import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilit
 export interface BridgeWebviewRenderContext {
   workbench: WorkbenchCore;
   webviewId: string;
+  extensionId?: string;
   placement: WorkbenchPanelInstance;
   /** Channel for pushing host events (e.g. terminal output) into this webview. */
   hostEvents: HostEventPublisher;
@@ -106,8 +107,9 @@ export const renderBridgeWebviewFrame = (input: {
         },
       }}
       props={createProps(context)}
+      workbench={context.workbench}
       theme={createTheme(context)}
-      capabilities={createHostCapabilities(context)}
+      capabilities={createHostCapabilities({ ...context, extensionId: ownerId ?? context.extensionId })}
       hostEvents={context.hostEvents}
     />
   );

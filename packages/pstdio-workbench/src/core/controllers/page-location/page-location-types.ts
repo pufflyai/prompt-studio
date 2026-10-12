@@ -1,6 +1,7 @@
 import type {
   NavigationTargetPage,
   PageLocation,
+  PageParamValue,
   PageRef,
   PlacementIdentity,
   ResourceRef,
@@ -72,6 +73,7 @@ export interface WorkbenchPageLocationController {
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  updateParams(patch: Readonly<Record<string, PageParamValue | null>>): PageLocation;
   replay(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
   /** Opens the last location outside every Sidenav level, or the start page when there is none. */

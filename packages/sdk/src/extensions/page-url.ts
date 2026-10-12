@@ -3,10 +3,17 @@ import type {
   FileSourcePosition,
   PageDocumentDeclaration,
   PageLocation,
+  PageParamDefinition,
+  PageParams,
   PageRef,
   ResourceRef,
 } from "pstdio-api-contracts/extension-kernel";
-import { isFileSourcePosition } from "pstdio-api-contracts/extension-kernel";
+import {
+  isFileSourcePosition,
+  normalizePageParams,
+  pageParamsQuery,
+  parsePageParams,
+} from "pstdio-api-contracts/extension-kernel";
 import { defaultPageResourceCodec } from "./page-resource-codec";
 
 export interface PageUrlDefinition {
@@ -14,6 +21,7 @@ export interface PageUrlDefinition {
   ref: PageRef;
   path: string;
   document?: PageDocumentDeclaration;
+  params?: Readonly<Record<string, PageParamDefinition>>;
 }
 export interface PageResourceCodec {
   normalize(resource: ResourceRef): ResourceRef;
@@ -118,6 +126,8 @@ export const serializeWorkbenchPageUrl = (input: {
     }
   }
   if (input.location.section) query.set("section", serializeSection(input.location.section));
+  const params = normalizePageParams(page.params, input.location.params);
+  for (const [name, value] of pageParamsQuery(page.params, params)) query.append(name, value);
   const encoded = query.toString();
   const path = routePath(input.projectId, page);
   return encoded ? `${path}?${encoded}` : path;
@@ -180,6 +190,7 @@ const parseSourcePosition = (
 
 export interface ParsedWorkbenchPageUrl {
   pageId: string;
+  params?: PageParams;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
@@ -228,8 +239,10 @@ export const parseWorkbenchPageUrl = (input: {
   if (sectionValue !== null && !section) return undefined;
   const position = parseSourcePosition(url, page, document, section);
   if (position === false) return undefined;
+  const params = parsePageParams(page.params, url.searchParams);
   return {
     pageId: page.id,
+    ...(params ? { params } : {}),
     ...(resource ? { resource } : {}),
     ...(section ? { section } : {}),
     ...(position ? { position } : {}),
@@ -240,12 +253,13 @@ export const parseWorkbenchPageUrl = (input: {
 export const serializePageUrl = (input: {
   projectId: string;
   page: PageUrlDefinition;
+  params?: PageParams;
   resource?: ResourceRef;
   position?: FileSourcePosition;
 }) =>
   serializeWorkbenchPageUrl({
     projectId: input.projectId,
-    location: { page: input.page.ref, resource: input.resource, position: input.position },
+    location: { page: input.page.ref, resource: input.resource, position: input.position, params: input.params },
     pages: [input.page],
     resources: defaultPageResourceCodec,
   });

@@ -9,6 +9,7 @@ import {
   shouldClearFileSectionSelection,
 } from "../../../core/registries/renderers/file-section-navigation";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { usePageParams } from "../use-page-params";
 import { FileRendererContentView } from "./file-renderer-content";
 import {
   createFileEditController,
@@ -88,7 +89,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const position = useFilePosition(workbench, resource);
   const sectionNavigation = getFileSectionNavigation(resource);
   const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
-  const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource });
+  const pageParams = usePageParams(workbench, props.placement);
+  const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource, pageParams });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{
     loadKey: string;
@@ -134,10 +136,12 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // object identity, while callbacks read the latest objects through refs.
   const contributionRef = useRef(contribution);
   const resourceRef = useRef(resource);
+  const pageParamsRef = useRef(pageParams);
   const placementRef = useRef(props.placement);
   useEffect(() => {
     contributionRef.current = contribution;
     resourceRef.current = resource;
+    pageParamsRef.current = pageParams;
     placementRef.current = props.placement;
   });
   const contributionId = contribution.id;
@@ -163,7 +167,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       read.request(
         {
           queryKey: loadKey,
-          load: (signal) => contributionRef.current.load(resourceRef.current, signal),
+          load: (signal) => contributionRef.current.load(resourceRef.current, signal, pageParamsRef.current),
           onValue: (next) => {
             if (cancelled || removed) return;
             const updateLoaded = acceptFileRendererLoad(next, loadKey, controller);

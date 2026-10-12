@@ -110,6 +110,13 @@ const apiSecurity = (host: CreateAppInput["host"], runtime: RuntimeRouteDeps | u
   return host.kind === "standalone" && host.token ? { token: host.token } : undefined;
 };
 
+const sessionQueueChanged =
+  (sessions: ReturnType<typeof createAppDatabaseServices>["sessionsDBService"], eventBus: EventBus) =>
+  async (id: string) => {
+    const session = await sessions.update(id, {});
+    if (session) eventBus.emit("sessions", "set", session);
+  };
+
 const buildApp = async (
   input: CreateAppInput,
   dependencies: AppDependencies,
@@ -129,11 +136,9 @@ const buildApp = async (
     extensionAutomationPreferencesService: extensionAutomationPreferencesDBService,
     extensionConnectionsDBService,
     extensionInstancesService,
-    extensionSettingsDBService,
     extensionSkillPreferencesDBService,
     extensionStorageService,
     installedExtensionSourcesService,
-    boardViewsService,
     notificationsDbService,
     sessionQueueEntriesService: rawSessionQueueEntriesService,
     sessionsDBService,
@@ -143,10 +148,10 @@ const buildApp = async (
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
-  const sessionQueueEntriesService = createSessionQueueService(rawSessionQueueEntriesService, async (id) => {
-    const session = await sessionsDBService.update(id, {});
-    if (session) eventBus.emit("sessions", "set", session);
-  });
+  const sessionQueueEntriesService = createSessionQueueService(
+    rawSessionQueueEntriesService,
+    sessionQueueChanged(sessionsDBService, eventBus),
+  );
   const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
     db: extensionAutomationPreferencesDBService,
     eventBus,
@@ -221,7 +226,7 @@ const buildApp = async (
     extensionInstancesService,
     extensionRuntimeCatalog,
     extensionService,
-    extensionSettingsDBService,
+    extensionSettingsDBService: dbs.extensionSettingsDBService,
     extensionSettingsService,
     extensionStorageService,
     fileService,
@@ -262,6 +267,7 @@ const buildApp = async (
     extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },
     closeDb,
+    boardViewsService: dbs.boardViewsService,
     eventBus,
     automationService,
     harnessRegistry,
@@ -274,7 +280,6 @@ const buildApp = async (
     workspaceSessionService,
     skillService,
     fileService,
-    boardViewsService,
     notificationsDbService,
     notificationService,
     installedExtensionSourcesService,
@@ -283,7 +288,8 @@ const buildApp = async (
     extensionConnectionService,
     extensionFileService,
     extensionRuntimeCatalog,
-    extensionSettingsDBService,
+    webviewPreferencesDBService: dbs.webviewPreferencesDBService,
+    extensionSettingsDBService: dbs.extensionSettingsDBService,
     extensionService,
     extensionUpgradeService,
     extensionSettingsService,

@@ -68,7 +68,6 @@ import {
 } from "./endpoints/get-marketplace-extension-contributions";
 import { getProjectExtensionUiHandler, getProjectExtensionUiRoute } from "./endpoints/get-project-extension-ui";
 import { installExtensionHandler, installExtensionRoute } from "./endpoints/install-extension";
-
 import { listExtensionAppearanceHandler, listExtensionAppearanceRoute } from "./endpoints/list-extension-appearance";
 import { listExtensionCommandsHandler, listExtensionCommandsRoute } from "./endpoints/list-extension-commands";
 import { listProjectExtensionsHandler, listProjectExtensionsRoute } from "./endpoints/list-project-extensions";
@@ -86,6 +85,16 @@ import {
   uninstallProjectExtensionRoute,
 } from "./endpoints/uninstall-project-extension";
 import { upgradeProjectExtensionHandler, upgradeProjectExtensionRoute } from "./endpoints/upgrade-project-extension";
+import {
+  getGlobalWebviewPreferenceHandler,
+  getGlobalWebviewPreferenceRoute,
+  getWebviewPreferenceHandler,
+  getWebviewPreferenceRoute,
+  setGlobalWebviewPreferenceHandler,
+  setGlobalWebviewPreferenceRoute,
+  setWebviewPreferenceHandler,
+  setWebviewPreferenceRoute,
+} from "./endpoints/webview-preferences";
 import {
   createProjectExtensionLifecycle,
   type ProjectExtensionLifecycleRouteDeps,
@@ -161,7 +170,7 @@ export const createExtensionRoutes = (
   deps: ExtensionsRouteDeps &
     ExtensionWebviewMetadataDeps &
     ExtensionWebviewRouteDeps &
-    Pick<RouteDeps, "installedExtensionSourcesService">,
+    Pick<RouteDeps, "installedExtensionSourcesService" | "webviewPreferencesDBService">,
 ) => {
   const routes = new OpenAPIHono<AppBindings>();
 
@@ -174,6 +183,10 @@ export const createExtensionRoutes = (
     projectExtensionLifecycle: createProjectExtensionLifecycle(deps),
   });
   registerExtensionSettingsRoutes(routes, deps);
+  routes.openapi(getWebviewPreferenceRoute, getWebviewPreferenceHandler(deps));
+  routes.openapi(setWebviewPreferenceRoute, setWebviewPreferenceHandler(deps));
+  routes.openapi(getGlobalWebviewPreferenceRoute, getGlobalWebviewPreferenceHandler(deps));
+  routes.openapi(setGlobalWebviewPreferenceRoute, setGlobalWebviewPreferenceHandler(deps));
 
   return routes;
 };

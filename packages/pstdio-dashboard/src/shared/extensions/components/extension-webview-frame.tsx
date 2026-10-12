@@ -30,6 +30,8 @@ import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
 import { openExtensionViews } from "../open-extension-views";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
+import { useWebviewPageProps } from "../use-webview-page-props";
+import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
 import { executeWebviewCommand } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { notificationStatusRouteVerb } from "./notification-transition-route";
@@ -54,17 +56,11 @@ const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
-  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
+  const { themePreference, themePreferences } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [hostEvents] = useState(createHostEventPublisher);
   const [streamCommand] = useState(() => createCommandStreamCapability(hostEvents));
-  const [pageLocation, setPageLocation] = useState(() => props.workbench?.pages.store.getState().location);
-  useEffect(() => {
-    const store = props.workbench?.pages.store;
-    if (!store) return;
-    setPageLocation(store.getState().location);
-    return store.subscribe(() => setPageLocation(store.getState().location));
-  }, [props.workbench]);
+  const { pageLocation, pageParams } = useWebviewPageProps(props.workbench);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
   const paused = usePausedExtensions();
@@ -152,7 +148,17 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
 
   const baseCapabilities = {
     ...(props.workbench
-      ? createWorkbenchWebviewHostCapabilities({ workbench: props.workbench, placement: props.placement, hostEvents })
+      ? createWorkbenchWebviewHostCapabilities({
+          workbench: props.workbench,
+          placement: props.placement,
+          hostEvents,
+          extensionId,
+          ownedPreferences: createDashboardOwnedPreferences({
+            projectId,
+            instanceId: extensionInstanceId,
+            installName,
+          }),
+        })
       : {}),
     "commands.stream": (params: unknown) =>
       streamCommand(params as WebviewCommandsStreamParams, {
@@ -199,17 +205,6 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     "notification.dismiss": (params: unknown) => {
       const input = params as { id?: string; dedupeKey?: string };
       return resolveNotification({ ...input, status: "dismissed" });
-    },
-    "preferences.get": (params: unknown) => {
-      const { name } = params as { name: string };
-      if (name === "dashboard.themePreference") return themePreference;
-      if (name === "dashboard.locale") return locale;
-    },
-    "preferences.set": (params: unknown) => {
-      const { name, value } = params as { name: string; value: string };
-      if (name === "dashboard.themePreference") setThemePreference(value);
-      if (name === "dashboard.locale") void i18n.changeLanguage(value);
-      return { name, value };
     },
     "extension.settings.all": async () => {
       const response = await listSettings();
@@ -282,7 +277,16 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <BridgedWebviewSurface
       key={view.id}
       view={view}
-      extensionProps={{ projectId, themePreference, locale, lastCommand, resource, pageLocation, translations }}
+      extensionProps={{
+        projectId,
+        themePreference,
+        locale,
+        lastCommand,
+        resource,
+        pageLocation,
+        pageParams,
+        translations,
+      }}
       theme={colorScheme}
       capabilities={capabilities}
       hostEvents={hostEvents}

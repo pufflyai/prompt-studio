@@ -1,9 +1,11 @@
+import type { PageParams } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceRef } from "../../../core";
 
 interface FileRendererLoadKeyInput {
   fileRendererId: string;
   resource: ResourceRef | undefined;
+  pageParams?: PageParams;
 }
 const stableValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -23,7 +25,8 @@ export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
         metadata: resource.metadata,
       })
     : null;
-  return `${JSON.stringify(resourceKey(resource))}:${fileRendererId}:${JSON.stringify(resourceValue)}`;
+  const key = `${JSON.stringify(resourceKey(resource))}:${fileRendererId}:${JSON.stringify(resourceValue)}`;
+  return input.pageParams ? `${key}:${JSON.stringify(stableValue(input.pageParams))}` : key;
 };
 export const isCurrentLoadedFile = (
   loaded: {

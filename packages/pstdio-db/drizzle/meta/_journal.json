@@ -281,6 +281,13 @@
       "when": 1791591069372,
       "tag": "0039_ordinary_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1791814823799,
+      "tag": "0040_fine_rattler",
+      "breakpoints": true
     }
   ]
 }

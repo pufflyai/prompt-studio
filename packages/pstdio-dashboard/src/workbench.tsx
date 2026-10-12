@@ -123,6 +123,12 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     ...(pageLocationBrowser ? { pageLocationBrowser } : {}),
   });
 
+  workbench.preferences.registerSchema({
+    properties: {
+      "dashboard.themePreference": { type: "string", scope: "user" },
+      "dashboard.locale": { type: "string", scope: "user" },
+    },
+  });
   const modules = createDashboardModules({
     initialProjectId: urlProjectId,
     projectTabs: input.projectTabs,

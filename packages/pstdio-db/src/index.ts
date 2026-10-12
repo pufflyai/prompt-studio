@@ -32,6 +32,7 @@ export { createSessionQueueEntriesDBService } from "./services/session-queue-ent
 export { createSessionsDBService } from "./services/sessions/sessions";
 export { createSettingsDBService } from "./services/settings/settings";
 export { createSkillsDBService } from "./services/skills/skills";
+export { createWebviewPreferencesDBService } from "./services/webview-preferences/webview-preferences";
 export { createWorkspaceSessionsDBService } from "./services/workspace-sessions/workspace-sessions";
 export {
   WorkspaceNameConflictError,

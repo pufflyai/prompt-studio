@@ -48,6 +48,7 @@ export interface ControlsRendererContribution {
   executeQuery(
     resource: ResourceRef | undefined,
     signal: AbortSignal,
+    pageParams?: import("@pstdio/sdk/extensions").PageParams,
   ): Promise<ControlsQueryResult> | ControlsQueryResult;
   /** Live-save a single control edit. Omit for explicit-apply or read-only panels. */
   updateValue?(input: ControlsUpdateValueInput): Promise<void> | void;

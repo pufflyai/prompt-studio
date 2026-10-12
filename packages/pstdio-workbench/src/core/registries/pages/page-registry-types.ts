@@ -5,6 +5,7 @@ import type {
   PageLocation,
   PageMain,
   PageOpenIntent,
+  PageParamDefinition,
   PageRef,
   PageSlot,
   PageSlotRole,
@@ -37,6 +38,7 @@ export interface WorkbenchPageContribution {
   parentId?: string;
   resource?: ResourceConstraint;
   document?: PageDocumentDeclaration;
+  params?: Readonly<Record<string, PageParamDefinition>>;
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
 }

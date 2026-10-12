@@ -4,6 +4,7 @@ export * from "./automation";
 export * from "./board-views";
 export * from "./extension-kernel";
 export * from "./extensions";
+export { pageParamDefinitionsSchema, pageParamValueSchema } from "./extensions/page-params-schema";
 export * from "./extensions.terminal";
 export * from "./files";
 export * from "./harness";

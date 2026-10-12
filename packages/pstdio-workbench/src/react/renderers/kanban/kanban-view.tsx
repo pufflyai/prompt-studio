@@ -20,6 +20,7 @@ import { reportUserActionError, runUserAction } from "../../../core/shared/run-u
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { RendererReadNotice } from "../renderer-read-notice";
+import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { ViewToolbarActions } from "../view-toolbar-actions";
 import { bindReactKanbanPresentation } from "./kanban-presentation";
@@ -96,6 +97,7 @@ export const mergeKanbanViewRowActions = (
 
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, placement } = props;
+  const pageParams = usePageParams(workbench, placement);
   const contribution = bindReactKanbanPresentation(props.contribution);
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useResolvedContributionAttributes(contribution.attributes);
@@ -122,9 +124,9 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     queryKey: contribution.id,
     // The view can narrow what the query returns, so it loads again while the board stays on
     // screen. Search is not part of it, so typing a search never runs the query.
-    refreshKey: JSON.stringify([settings, filter, sorts]),
+    refreshKey: JSON.stringify([settings, filter, sorts, pageParams]),
 
-    load: (signal) => contribution.executeQuery({ settings, filter, sorts }, signal),
+    load: (signal) => contribution.executeQuery({ settings, filter, sorts, pageParams }, signal),
     subscribe: (refresh) => {
       const subscription = contribution.subscribe?.(refresh);
       const events = getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {

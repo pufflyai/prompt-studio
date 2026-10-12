@@ -51,6 +51,13 @@ export {
 export { isLocalizedString, type Localizable, type LocalizedString, l10n } from "./l10n";
 export { isNavigationTarget, qualifyNavigationTarget } from "./navigation";
 export { packageAsset } from "./package-asset";
+export {
+  normalizePageParams,
+  pageParamsQuery,
+  parsePageParams,
+  resolvePageParams,
+  validatePageParamDefinitions,
+} from "./page-params";
 export { commandRef, eventRef } from "./refs";
 export { defineSlot } from "./slots";
 export { isFileSourcePosition } from "./source-position";

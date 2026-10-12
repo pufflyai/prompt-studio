@@ -20,6 +20,7 @@ import {
   createSessionsDBService,
   createSettingsDBService,
   createSkillsDBService,
+  createWebviewPreferencesDBService,
   createWorkspaceSessionsDBService,
   createWorkspacesDBService,
   type DbClient,
@@ -68,4 +69,5 @@ export const createAppDatabaseServices = (db: DbClient) => ({
   resourceLinksService: createResourceLinksDBService(db),
   extensionResourceSequencesService: createExtensionResourceSequencesDBService(db),
   extensionSettingsDBService: createExtensionSettingsDBService(db),
+  webviewPreferencesDBService: createWebviewPreferencesDBService(db),
 });

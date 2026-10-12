@@ -148,3 +148,46 @@ const node = {
 ```
 
 Import `TreeNode` and `workbenchPanels` from `@pstdio/sdk/extensions`. Use the existing `sessionSlots` menu refs to contribute session commands. The host supplies the row resource as command context and preserves it when collecting parameters.
+
+## Share a filtered page
+
+Declare the values that should travel in a link:
+
+```ts
+const board = definePage({
+  id: "board",
+  title: "Board",
+  path: "board",
+  mode: workbenchModes.project,
+  main: { kind: "view", view: boardView.ref, cardinality: "one" },
+  slots: [],
+  params: {
+    range: { type: "string", default: "now-1h" },
+    refresh: { type: "number", default: 30 },
+    "var-harness": { type: "string[]", default: [] },
+  },
+});
+```
+
+The webview declares `page.params.update`, `navigation.open`, and any preference capabilities it uses. Read live values through the page client:
+
+```ts
+export default defineExtensionView({
+  render({ mount, page, host }) {
+    const draw = () => { mount.textContent = String(page.params().range); };
+    draw();
+    const stop = page.subscribe(draw);
+    // Call from the time picker's change handler. This replaces history.
+    const changeRange = (range: string) => page.updateParams({ range });
+    // Call from a clear-filter action.
+    const clearHarness = () => page.updateParams({ "var-harness": null });
+    // Save a separate default choice on the server.
+    const rememberRange = (range: string) => host.call("preferences.set", { name: "lastRange", value: range });
+    return stop;
+  },
+});
+```
+
+Use `navigation.open` with `{ kind: "page", page: board.ref, params: { range: "now-7d" } }` for an explicit destination. It pushes history, so Back restores the previous range. To build a link outside a webview, call `serializePageUrl({ projectId, page: { id: board.id, ref: board.ref, path: board.path, params: board.params }, params: { range: "now-7d" } })` with a qualified page ref.
+
+A native view query reads `renderer.pageParams?.range`. The host reruns it when a page-owned placement's params change. Use page params for shareable view state, preferences for saved view choices, declared settings for user configuration, and `ctx.storage` for extension product data.

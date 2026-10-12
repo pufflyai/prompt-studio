@@ -3,10 +3,11 @@ import type {
   FileSourcePosition,
   NavigationTargetPage,
   PageLocation,
+  PageParams,
   PageRef,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
-import { isFileSourcePosition } from "@pstdio/sdk/extensions";
+import { isFileSourcePosition, normalizePageParams } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 
 export const workbenchPageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;
@@ -101,8 +102,18 @@ export const workbenchPageLocationsEqual = (
   resources: WorkbenchPageResourceCodec,
   pages: readonly WorkbenchPageContribution[] = [],
 ) => {
-  if (!left || !right) return left === right;
-  return workbenchPageLocationKey(left, resources, pages) === workbenchPageLocationKey(right, resources, pages);
+  let a = left;
+  let b = right;
+  while (a && b) {
+    if (
+      workbenchPageLocationRouteKey(a, resources, pages) !== workbenchPageLocationRouteKey(b, resources, pages) ||
+      JSON.stringify(a.params ?? {}) !== JSON.stringify(b.params ?? {})
+    )
+      return false;
+    a = a.parent;
+    b = b.parent;
+  }
+  return a === b;
 };
 
 const canonicalPosition = (position: FileSourcePosition) =>
@@ -120,6 +131,7 @@ const createLocation = (input: {
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
+  params?: PageParams;
   parent?: PageLocation;
   resources: WorkbenchPageResourceCodec;
 }) => {
@@ -131,6 +143,7 @@ const createLocation = (input: {
     throw new Error("Page location has an invalid source position");
   return Object.freeze({
     page: canonicalPageRef(input.page),
+    ...(input.params ? { params: input.params } : {}),
     ...(input.resource ? { resource: canonicalResource(input.resource, input.resources) } : {}),
     ...(input.section ? { section: canonicalSection(input.section) } : {}),
     ...(input.position
@@ -159,6 +172,13 @@ const declaredParent = (input: {
   });
 };
 
+const locationFields = (location: Pick<PageLocation, "resource" | "section" | "position" | "params">) => ({
+  resource: location.resource,
+  section: location.section,
+  position: location.position,
+  params: location.params,
+});
+
 const normalizeResolvedLocation = (input: {
   page: WorkbenchPageContribution;
   pages: readonly WorkbenchPageContribution[];
@@ -167,6 +187,7 @@ const normalizeResolvedLocation = (input: {
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
+  params?: PageParams;
   parent?: PageLocation;
 }): PageLocation => {
   const candidate = createLocation({
@@ -175,6 +196,7 @@ const normalizeResolvedLocation = (input: {
     ...(input.resource ? { resource: input.resource } : {}),
     ...(input.section ? { section: input.section } : {}),
     ...(input.position ? { position: input.position } : {}),
+    ...(input.params ? { params: input.params } : {}),
   });
   const routeKey = workbenchPageLocationRouteKey(candidate, input.resources, input.pages);
   if (input.seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${input.page.id}`);
@@ -187,6 +209,7 @@ const normalizeResolvedLocation = (input: {
     ...(candidate.resource ? { resource: candidate.resource } : {}),
     ...(candidate.section ? { section: candidate.section } : {}),
     ...(candidate.position ? { position: candidate.position } : {}),
+    ...(candidate.params ? { params: candidate.params } : {}),
     ...(parent ? { parent } : {}),
   });
 };
@@ -214,6 +237,7 @@ const normalizePageTarget = (input: {
     ...(input.target.resource ? { resource: input.target.resource } : {}),
     ...(input.target.section ? { section: input.target.section } : {}),
     ...(input.target.position ? { position: { ...input.target.position } } : {}),
+    params: normalizePageParams(page.params, input.target.params),
   });
   const routeKey = workbenchPageLocationRouteKey(candidate, input.resources, input.pages);
   if (input.seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${page.id}`);
@@ -230,6 +254,7 @@ const normalizePageTarget = (input: {
     ...(candidate.resource ? { resource: candidate.resource } : {}),
     ...(candidate.section ? { section: candidate.section } : {}),
     ...(candidate.position ? { position: candidate.position } : {}),
+    ...(candidate.params ? { params: candidate.params } : {}),
     ...(contextualParent ? { parent: contextualParent } : {}),
   });
   return { pageId: page.id, location, ...(input.target.open ? { open: input.target.open } : {}) };
@@ -256,6 +281,7 @@ export const normalizeWorkbenchPageLocation = (input: {
       ...(location.resource ? { resource: location.resource } : {}),
       ...(location.section ? { section: location.section } : {}),
       ...(location.position ? { position: location.position } : {}),
+      params: normalizePageParams(page.params, location.params, false),
     });
     const routeKey = workbenchPageLocationRouteKey(candidate, input.resources, input.pages);
     if (seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${page.id}`);
@@ -268,9 +294,7 @@ export const normalizeWorkbenchPageLocation = (input: {
         pages: input.pages,
         resources: input.resources,
         seen,
-        ...(candidate.resource ? { resource: candidate.resource } : {}),
-        ...(candidate.section ? { section: candidate.section } : {}),
-        ...(candidate.position ? { position: candidate.position } : {}),
+        ...locationFields(candidate),
         ...(explicitParent ? { parent: explicitParent } : {}),
       }),
     };
@@ -285,6 +309,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
+  params?: PageParams;
 }) => {
   const page = pageForId(input.pages, input.pageId);
   if (!page) throw new Error(`Unknown page: ${input.pageId}`);
@@ -298,6 +323,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),
       ...(input.position ? { position: input.position } : {}),
+      ...(input.params ? { params: input.params } : {}),
     }),
   };
 };

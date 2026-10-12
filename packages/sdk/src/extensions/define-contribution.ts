@@ -34,7 +34,7 @@ import type {
   ViewMenuContribution,
   WorkspaceTypeProvider,
 } from "pstdio-api-contracts/extension-kernel";
-import { defineSlot } from "pstdio-api-contracts/extension-kernel";
+import { defineSlot, validatePageParamDefinitions } from "pstdio-api-contracts/extension-kernel";
 
 const defineContribution =
   <Kind extends ContributionKind>(_kind: Kind) =>
@@ -137,6 +137,7 @@ type RequiredPageResource<Definition extends PageDefinition> = Definition extend
   : unknown;
 
 const createPage = (definition: PageDefinition) => {
+  validatePageParamDefinitions(definition.params);
   const ref = { kind: "page" as const, id: definition.id };
   const panels = Object.fromEntries(
     definition.slots.map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),

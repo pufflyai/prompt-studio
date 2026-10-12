@@ -49,6 +49,7 @@ export const installWorkbenchTreeRenderer = (
     createElement(WorkbenchTreeView, {
       workbench: scope,
       treeViewId: treeId,
+      placement: instance,
       readOwnerKey: rendererReadKey(instance),
       resource: instance.resource,
       viewId: viewContextId(scope, instance.panelId, instance.viewId),

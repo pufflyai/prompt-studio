@@ -246,6 +246,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               },
               undefined,
               signal,
+              state.pageParams,
             );
             const mapRows = (rows: unknown[]) =>
               rows.map((row) => {

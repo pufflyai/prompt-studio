@@ -202,12 +202,14 @@ export const executeKanbanRendererCommand = (
   params: Record<string, unknown>,
   resource?: ResourceRef,
   signal?: AbortSignal,
+  pageParams?: import("@pstdio/sdk/extensions").PageParams,
 ) => {
   const commandResource = resource ?? context.workbench.getPrimaryResource();
   return executeWorkbenchExtensionCommand(context, commandId, {
     params: {
       renderer: {
         rendererId: record.id,
+        ...(pageParams ? { pageParams } : {}),
         projectId: context.projectId,
         ...(commandResource ? { resource: commandResource } : {}),
         invocation: { placement: "visible" },

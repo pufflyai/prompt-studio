@@ -198,19 +198,23 @@ export const registerSettings = (input: InternalRegisterWorkbenchExtensionContri
     );
   }
 
-  const properties = Object.fromEntries(
-    (input.metadata.settingsDefinitions ?? []).map((setting) => [
-      setting.key,
-      {
-        type: setting.type,
-        scope: preferenceScope(setting.scope),
-        default: asPreferenceValue(setting.default),
-        enum: setting.enum as PreferenceValue[] | undefined,
-        description: text(setting.description),
-      } satisfies PreferencePropertySchema,
-    ]),
-  );
-  if (Object.keys(properties).length > 0) disposables.push(input.workbench.preferences.registerSchema({ properties }));
+  // Keep the existing last-definition-wins rule for shared legacy names.
+  const definitions = new Map(input.metadata.settingsDefinitions.map((setting) => [setting.key, setting]));
+  const propertiesByOwner = new Map<string, Record<string, PreferencePropertySchema>>();
+  for (const setting of definitions.values()) {
+    const properties = propertiesByOwner.get(setting.extensionId) ?? Object.create(null);
+    properties[setting.key] = {
+      type: setting.type,
+      scope: preferenceScope(setting.scope),
+      default: asPreferenceValue(setting.default),
+      enum: setting.enum as PreferenceValue[] | undefined,
+      description: text(setting.description),
+    } satisfies PreferencePropertySchema;
+    propertiesByOwner.set(setting.extensionId, properties);
+  }
+  for (const [ownerId, properties] of propertiesByOwner) {
+    disposables.push(input.workbench.preferences.registerSchema({ properties }, { ownerId }));
+  }
 
   const panels = [...input.metadata.settingsPanels].sort(
     (left, right) => left.extensionId.localeCompare(right.extensionId) || left.id.localeCompare(right.id),
