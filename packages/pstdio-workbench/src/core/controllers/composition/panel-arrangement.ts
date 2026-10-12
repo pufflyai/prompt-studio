@@ -10,6 +10,7 @@ import { workbenchPanelRegions } from "../../registries/layout/layout-types";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { getShellNavigationScope } from "../shell/shell-navigation-scope";
 import { panelDestinations } from "./panel-destinations";
 import { transferPanelOwner } from "./panel-owner-transfer";
 
@@ -52,20 +53,22 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         },
       },
     };
-    batchWorkbenchChanges(() => {
-      // Moving selects the instance directly; navigation owns auxiliary-selection restoration.
-      const selected =
-        found.placement.role === "location"
-          ? (selectRegionActiveWidget(next, destination, instanceId) ?? next)
-          : activateInLayout(next, destination, placement);
-      core.layout.restoreLayout({
-        ...selected,
-        activeWidgetId: instanceId,
-        activeResourceKey: found.placement.resourceKey,
-        activeLocationWidgetId: found.placement.role === "location" ? instanceId : layout.activeLocationWidgetId,
-      });
-      core.layout.reconcilePanelMenus();
-      revealPanelRegion(core, destination);
-    });
+    getShellNavigationScope(core.shell).run(() =>
+      batchWorkbenchChanges(() => {
+        // Moving selects the instance directly; navigation owns auxiliary-selection restoration.
+        const selected =
+          found.placement.role === "location"
+            ? (selectRegionActiveWidget(next, destination, instanceId) ?? next)
+            : activateInLayout(next, destination, placement);
+        core.layout.restoreLayout({
+          ...selected,
+          activeWidgetId: instanceId,
+          activeResourceKey: found.placement.resourceKey,
+          activeLocationWidgetId: found.placement.role === "location" ? instanceId : layout.activeLocationWidgetId,
+        });
+        core.layout.reconcilePanelMenus();
+        revealPanelRegion(core, destination);
+      }),
+    );
   },
 });

@@ -33,9 +33,9 @@ test("a newer Close survives the completion of a pending default that opens a re
   core.commands.registerCommand(
     { id: "create", label: "Create" },
     {
-      execute: async () => {
+      execute: async (_args, context) => {
         await gate;
-        await core.navigation.openTarget({ kind: "panel", panel });
+        await context!.navigation!.openTarget({ kind: "panel", panel });
       },
     },
   );
@@ -113,8 +113,8 @@ test("a Close after default navigation survives remaining creation work", async 
   core.commands.registerCommand(
     { id: "create", label: "Create" },
     {
-      execute: async () => {
-        await core.navigation.openTarget({ kind: "panel", panel });
+      execute: async (_args, context) => {
+        await context!.navigation!.openTarget({ kind: "panel", panel });
         created();
         await remaining;
       },
@@ -187,9 +187,9 @@ test("a Close before late default navigation stays closed while creation is pend
   core.commands.registerCommand(
     { id: "create", label: "Create" },
     {
-      execute: async () => {
+      execute: async (_args, context) => {
         await gate;
-        await core.navigation.openTarget({ kind: "panel", panel });
+        await context!.navigation!.openTarget({ kind: "panel", panel });
         created();
         await remaining;
       },
@@ -219,9 +219,9 @@ test("a synchronous default command Close is the latest accepted choice", async 
   core.commands.registerCommand(
     { id: "create", label: "Create" },
     {
-      execute: async () => {
+      execute: async (_args, context) => {
         core.shell.setRegionOpen("side", false);
-        await core.navigation.openTarget({ kind: "panel", panel });
+        await context!.navigation!.openTarget({ kind: "panel", panel });
       },
     },
   );

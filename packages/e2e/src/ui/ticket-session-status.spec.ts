@@ -87,7 +87,7 @@ test.describe("session status on ticket workspace badges", () => {
 
     // Scenario 3: the indicator opens its session in the Side Panel and leaves the board in place.
     await indicator.click();
-    const sidePanel = page.locator('[data-workbench-region="side"]');
+    const sidePanel = page.locator('[data-workbench-panel="side"]:visible');
     await expect(sidePanel).toBeVisible({ timeout: 15_000 });
     await expect(card).toBeVisible();
 

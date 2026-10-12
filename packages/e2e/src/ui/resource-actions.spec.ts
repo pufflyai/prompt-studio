@@ -101,6 +101,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
 
     await openProjectHome(page, "Resource Actions");
     await workspacesNavigation.click();
+    await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
     const workspaceRow = page.getByRole("row").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
     await workspaceRow.getByRole("button", { name: "Row actions" }).click();

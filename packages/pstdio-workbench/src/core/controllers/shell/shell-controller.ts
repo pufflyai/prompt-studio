@@ -4,6 +4,7 @@ import type { ResourceRef } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { WorkbenchSidePanelController, WorkbenchSidePanelMode } from "../side-panel/side-panel-controller";
 import type { WorkbenchPanelPolicy } from "./panel-policy";
+import { registerShellNavigationScope } from "./shell-navigation-scope";
 
 export interface WorkbenchPanelPolicyContext {
   modeId?: string;
@@ -42,9 +43,23 @@ export const createWorkbenchShellController = (input: {
     region: WorkbenchShellOpenRegion,
     presentation?: WorkbenchSidePanelMode,
   ): WorkbenchPanelPolicy["defaultTab"];
-  openDefault?(target: NonNullable<WorkbenchPanelPolicy["defaultTab"]>): unknown | Promise<unknown>;
+  openDefault?(
+    target: NonNullable<WorkbenchPanelPolicy["defaultTab"]>,
+    run: <T>(action: () => T) => T,
+  ): unknown | Promise<unknown>;
 }): WorkbenchShellController => {
-  const opening = new Map<string, { completion: Promise<void>; intent: "open" | "closed" }>();
+  type Opening = { completion: Promise<void>; intent: "open" | "closed" | "auto" };
+  const opening = new Map<string, Opening>();
+  let revealingDefault: Opening | undefined;
+  const runNavigation = <T>(operation: Opening | undefined, action: () => T) => {
+    const previous = revealingDefault;
+    revealingDefault = operation;
+    try {
+      return action();
+    } finally {
+      revealingDefault = previous;
+    }
+  };
   const ownerKey = (region: WorkbenchShellOpenRegion) => `${input.getOwnerKey(region)}/${region}`;
   const requireAction = (region: WorkbenchRegion, action: "open" | "close" | "resize") => {
     const policy = input.getPolicy(region);
@@ -83,25 +98,22 @@ export const createWorkbenchShellController = (input: {
       complete = resolve;
       fail = reject;
     });
-    const operation = { completion: Promise.resolve(), intent: "open" as "open" | "closed" };
+    const operation: Opening = { completion: Promise.resolve(), intent: "open" };
     operation.completion = creation
       .then(() => {})
       .finally(() => {
         if (opening.get(key) !== operation) return;
-        // Creation can navigate. Its completion must retain newer direct visibility choices.
-        if (ownerKey(region) === key && input.layout.getLayout().regions[region].visibility !== operation.intent)
-          writeIntent(region, operation.intent);
         opening.delete(key);
       });
     opening.set(key, operation);
     try {
-      complete(input.openDefault(target));
+      complete(input.openDefault(target, (action) => runNavigation(operation, action)));
     } catch (error) {
       fail(error);
     }
     return operation.completion;
   };
-  return {
+  const shell: WorkbenchShellController = {
     getPanelPolicy: input.getPolicy,
     getRegionState(region) {
       const state = input.layout.getLayout().regions[region];
@@ -117,8 +129,10 @@ export const createWorkbenchShellController = (input: {
     revealRegion(region) {
       const policy = input.getPolicy(region);
       if (!policy.open) requireAction(region, "open");
-      // Pending creation must not undo a newer direct Close, even when its tab arrives late.
-      if (opening.get(ownerKey(region))?.intent === "closed") return;
+      const pending = opening.get(ownerKey(region));
+      // Only this creation's publication is subject to its saved visibility choice.
+      if (pending && revealingDefault === pending && pending.intent === "closed") return;
+      if (pending && revealingDefault !== pending) pending.intent = "auto";
       const layout = input.layout.getLayout();
       const sideWasClosed = region === "side" && layout.regions.side.visibility === "closed";
       if (layout.regions[region].visibility === "closed") writeIntent(region, "auto");
@@ -176,4 +190,6 @@ export const createWorkbenchShellController = (input: {
       });
     },
   };
+  registerShellNavigationScope(shell, { run: (action) => runNavigation(undefined, action) });
+  return shell;
 };

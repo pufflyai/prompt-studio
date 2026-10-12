@@ -102,7 +102,7 @@ test.describe("Ticket sidenav sessions", () => {
     // Clicking it opens the session in the Side Panel and keeps the ticket in view (the ticket
     // stays in its own sidenav — we did not navigate away to Sessions level).
     await sessionRow.click();
-    const sidePanel = page.getByTestId("workbench-side-panel-attached");
+    const sidePanel = page.locator('[data-workbench-panel="side"]:visible');
     await expect(sidePanel).toBeVisible();
     await expect(sidePanel.locator("[data-testid='content-editable'][contenteditable='true']")).toBeVisible();
     await expect(sidenav.getByRole("option", { name: `${ticket.shorthand} Sidenav session proof` })).toBeVisible();

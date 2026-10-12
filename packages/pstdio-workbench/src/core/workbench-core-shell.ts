@@ -42,7 +42,7 @@ export const createCoreShell = (
         ? (mode?.floating?.defaultTab ?? getPolicy(region).defaultTab)
         : getPolicy(region).defaultTab;
     },
-    openDefault: (target) => resolve()?.navigation.openTarget(target),
+    openDefault: (target, run) => resolve()?.navigation.openTarget(target, { run }),
   });
   return { shell, sidePanel };
 };
