@@ -1,5 +1,5 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
-import { type MouseEvent, type ReactNode, useRef, useState } from "react";
+import { type MouseEvent, type ReactNode, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { type PromptCommand, PromptEditor } from "../../rich-text";
 import type { PromptSelectionSnapshot } from "../../rich-text/prompt-input/plugins/preserve-selection-plugin";
@@ -15,7 +15,7 @@ import { ChatInputToolbar } from "./chat-input-toolbar";
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
 import { type ComposerDecision, submitComposerResponse } from "./composer-decision";
 import { ComposerTakeover } from "./composer-takeover";
-import { focusPromptEditor, useComposerFocus } from "./use-chat-input-focus";
+import { useComposerFocus } from "./use-chat-input-focus";
 import { useChatInputHistory } from "./use-chat-input-history";
 import { useChatInputText } from "./use-chat-input-text";
 import { useComposerRequest } from "./use-composer-request";
@@ -120,17 +120,8 @@ export const ChatInput = (props: ChatInputProps) => {
 
   const restingBorderColor = recessed ? "border.subtle" : "border";
   const [submitting, setSubmitting] = useState(false);
-  const [isSelected, setIsSelected] = useState(false);
   const { editorKey, editorState, remountEditor, setEditorState, setText, text } = useChatInputText(defaultState);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  const focusAfterSubmission = useComposerFocus(
-    containerRef,
-    autoFocus,
-    !isDisabled && !submitting && !occupied,
-    focusSignal,
-    setIsSelected,
-  );
+  const focus = useComposerFocus(autoFocus, focusSignal);
 
   const history = useChatInputHistory({
     recentUserMessages,
@@ -149,8 +140,7 @@ export const ChatInput = (props: ChatInputProps) => {
     if (!(target instanceof Element) || !event.currentTarget.contains(target)) return;
     if (target.closest("button, input, textarea, select, a, label, [role=button], [role=combobox]")) return;
     if (occupied) return;
-    setIsSelected(true);
-    focusPromptEditor(containerRef.current);
+    focus.request();
   };
 
   const replaceDraftText = (value: string) => {
@@ -183,7 +173,7 @@ export const ChatInput = (props: ChatInputProps) => {
       if (!retainTextUntilAcknowledged) replaceDraftText(sentText);
     } finally {
       setSubmitting(false);
-      focusAfterSubmission();
+      focus.request();
     }
   };
 
@@ -200,7 +190,6 @@ export const ChatInput = (props: ChatInputProps) => {
 
   return (
     <Box
-      ref={containerRef}
       position="relative"
       width="100%"
       paddingX="xs"
@@ -211,13 +200,10 @@ export const ChatInput = (props: ChatInputProps) => {
       borderTopRadius={attachedToTop ? "0" : undefined}
       borderWidth="1px"
       borderStyle="solid"
-      borderColor={isSelected ? selectedChatInputBorderColor : restingBorderColor}
-      zIndex={isSelected ? 1 : 0}
+      borderColor={restingBorderColor}
+      zIndex={0}
       transition="border-color 0.2s ease-in-out"
-      _hover={{
-        borderColor: isSelected ? selectedChatInputBorderColor : restingBorderColor,
-        zIndex: 1,
-      }}
+      _hover={{ zIndex: 1 }}
       _focusWithin={{
         borderColor: selectedChatInputBorderColor,
         zIndex: 1,
@@ -226,7 +212,6 @@ export const ChatInput = (props: ChatInputProps) => {
       onDropCapture={occupied ? undefined : attachmentEventHandlers.onDropCapture}
       onDragOver={occupied ? undefined : attachmentEventHandlers.onDragOver}
       onClick={handleContainerClick}
-      onBlur={() => setIsSelected(false)}
     >
       <Flex direction="column" color="fg" gap="xs">
         <ComposerTakeover
@@ -260,6 +245,8 @@ export const ChatInput = (props: ChatInputProps) => {
                 initialSelection={initialSelection}
                 onSelectionChange={onSelectionChange}
                 isEditable={!isDisabled && !submitting && !occupied}
+                focusRequested={focus.requested}
+                onFocusRequestComplete={focus.complete}
                 placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
                 onChange={(nextText, state) => {
                   setEditorState(JSON.stringify(state));
