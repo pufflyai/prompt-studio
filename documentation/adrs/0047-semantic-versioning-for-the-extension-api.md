@@ -26,7 +26,7 @@ The API is also not settled. Breaking changes will keep coming for a while, and 
 - CI keeps a checked-in report of the public `@pstdio/sdk/extensions` types. It fails when the report is out of date, when the report changed since the last release without a version bump, when the version moved more than one step, and when the version is lower than the one on `main`. The report keeps `@deprecated` tags, so a deprecation also requires a bump.
 - The alpha status of the product lives in the `pstdio` package version, not in the API version.
 
-The report bundles `tsc` declarations instead of the SDK's published type bundle. The published bundle splits shared types into chunks with hashed names, and generating types while bundling prints some inferred unions in a different order on each run. A report must be stable, or every build would look like an API change.
+The report is not the SDK's published type bundle, because that bundle splits shared types into chunks with hashed names. The report builds each public extension entry into one self-contained file instead. A report must be stable, or every build would look like an API change. By default TypeScript prints union members in the order it first created their types, which changes with the order it checks files. PS-660 turned on the TypeScript 6.0 option `stableTypeOrdering`, which orders types the same way every time.
 
 ## Consequences
 
