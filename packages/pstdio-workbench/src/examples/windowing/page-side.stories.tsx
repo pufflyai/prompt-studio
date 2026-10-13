@@ -1,4 +1,3 @@
-import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
@@ -126,6 +125,7 @@ export const PagePanelsLeftTop: Story = {
 
 export const NarrowPageSide: Story = {
   args: {
+    width: "2xl",
     createFixture: () => {
       const fixture = createWindowingFixture();
       fixture.workbench.pageLocations.navigate({ kind: "page", page: windowingPages.sessions });
@@ -135,15 +135,12 @@ export const NarrowPageSide: Story = {
       return fixture;
     },
   },
-  render: (args) => (
-    <Box w="2xl">
-      <WindowingStory {...args} />
-    </Box>
-  ),
   play: async ({ canvasElement }) => {
-    const aside = panel(canvasElement, "aside").getBoundingClientRect();
-    const editor = canvasElement.querySelector("[data-workbench-editor]")!.getBoundingClientRect();
-    await expect(aside.width).toBeLessThan(280);
-    await expect(editor.width).toBeGreaterThanOrEqual(480);
+    await waitFor(() => {
+      const aside = panel(canvasElement, "aside").getBoundingClientRect();
+      const editor = canvasElement.querySelector("[data-workbench-editor]")!.getBoundingClientRect();
+      expect(aside.width).toBeLessThan(280);
+      expect(editor.width).toBeGreaterThanOrEqual(480);
+    });
   },
 };
