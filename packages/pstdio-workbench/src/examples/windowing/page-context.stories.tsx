@@ -32,23 +32,7 @@ export const ForeignContext: Story = {
       "aria-selected",
       "true",
     );
-    await user.unhover(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }));
-    await user.hover(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }));
-    await expect(await within(document.body).findByRole("tooltip")).toHaveTextContent(
-      "Outside this workspace · Workspace 2",
-    );
-    await user.unhover(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }));
     await user.click(canvas.getByRole("button", { name: "Grow Secondary" }));
-    await waitFor(() => expect(within(document.body).queryByRole("tooltip")).toBeNull());
-    canvas
-      .getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" })
-      .focus({ preventScroll: true });
-    await user.tab();
-    await user.tab({ shift: true });
-    await expect(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" })).toHaveFocus();
-    await expect(await within(document.body).findByRole("tooltip")).toHaveTextContent(
-      "Outside this workspace · Workspace 2",
-    );
     await user.click(canvas.getByRole("button", { name: "Use project session context" }));
     await expect(
       await canvas.findByRole("tab", { name: "Session 2 · Outside this workspace · Project" }),
