@@ -1,5 +1,6 @@
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { type BrowserContext, test } from "@playwright/test";
+import { redactSensitiveText } from "pstdio-logging";
 import { redactTraceArchive } from "../testing/trace-redaction";
 
 export const startElectronTrace = async (context: BrowserContext, name: string) => {
@@ -15,10 +16,10 @@ export const startElectronTrace = async (context: BrowserContext, name: string) 
       await context.tracing.stop({ path });
       writeFileSync(path, redactTraceArchive(readFileSync(path)));
       await test.info().attach(name, { path, contentType: "application/zip" });
-    } catch {
+    } catch (error) {
       rmSync(path, { force: true });
       await test.info().attach(`${name}-unavailable`, {
-        body: "Could not save the Electron browser trace.",
+        body: redactSensitiveText(`Could not save the Electron browser trace: ${String(error)}`),
         contentType: "text/plain",
       });
     }
