@@ -72,7 +72,11 @@ export const createWorkbenchShellController = (input: {
     if (!allowed) throw new Error(`Panel cannot ${action}: ${region}`);
     return policy;
   };
-  const writeIntent = (region: WorkbenchShellOpenRegion, visibility: "open" | "closed" | "auto") => {
+  const writeIntent = (
+    region: WorkbenchShellOpenRegion,
+    visibility: "open" | "closed" | "auto",
+    presentation?: "attached" | "floating",
+  ) => {
     const operation = opening.get(ownerKey(region));
     if (operation && visibility !== "auto") operation.intent = visibility;
     const layout = input.layout.getLayout();
@@ -80,7 +84,12 @@ export const createWorkbenchShellController = (input: {
       ...layout,
       regions: {
         ...layout.regions,
-        [region]: { ...layout.regions[region], visibility, visible: visibility !== "closed" },
+        [region]: {
+          ...layout.regions[region],
+          visibility,
+          visible: visibility !== "closed",
+          ...(presentation ? { presentation } : {}),
+        },
       },
     });
   };
@@ -95,8 +104,8 @@ export const createWorkbenchShellController = (input: {
     const empty = input.layout.getLayout().regions[region].widgets.length === 0;
     const target = input.getDefaultTarget?.(region, presentation) ?? policy.defaultTab;
     if (empty && target && !policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
-    writeIntent(region, "open");
-    if (region === "side") input.layout.setSidePanelMode(effectivePresentation ?? "attached");
+    const sidePresentation = effectivePresentation === "floating" ? "floating" : "attached";
+    writeIntent(region, "open", region === "side" ? sidePresentation : undefined);
     if (!empty) return;
     const key = ownerKey(region);
     const pending = opening.get(key);
