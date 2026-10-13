@@ -35,7 +35,7 @@ test("sync notifications distinguish complete snapshots from row events", () => 
   });
   try {
     const writer = getWriter("projects")!;
-    writer.truncateAndWrite([{ id: "snapshot-project" }]);
+    writer.truncateAndWrite([{ id: "snapshot-project", name: "Snapshot project" }]);
     writer.upsert({ id: "snapshot-project", name: "Renamed" });
     writer.remove("snapshot-project");
     expect(changes.map((change) => change.type)).toEqual(["snapshot", "row", "row"]);

@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Rebuild the shared filter bundle after saved-view tab updates.
+Package Planner's shared filter with its declared runtime dependencies.
