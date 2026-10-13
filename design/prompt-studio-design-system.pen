@@ -187248,6 +187248,219 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "qAB2l",
+      "x": 52682,
+      "y": 0,
+      "name": "PS-613 · Whole panels and closed-edge previews",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1100,
+      "height": 440,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "GD5zO",
+          "name": "Placement rules",
+          "fill": "$ds-fg",
+          "content": "Empty header moves the panel · tabs move tools · Escape cancels",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "JBD9p",
+          "name": "Sidebar left · Follows you in Project",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "JB8it",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Sidebar left · Follows you in Project"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "RFIho",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KCPay",
+          "name": "Navigation far right",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "XCoCP",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Navigation far right"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "ZlpVj",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "j7RLG4",
+          "name": "Flip Main and Secondary · Secondary top",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "Rs4ta",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Flip Main and Secondary · Secondary top"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "q3UnX",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BudSV",
+          "name": "Side panel · Stays with Workspace 1",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "cwj0B",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Side panel · Stays with Workspace 1"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "fxMHY",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "y1bi2",
+          "name": "Bottom panel · Stays with Workspace 1",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "q2Fic",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Bottom panel · Stays with Workspace 1"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "L5v24",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "Rbigv",
+          "name": "Edge priority",
+          "fill": "$ds-fg-muted",
+          "content": "48 px inside the page · outer window edges win at intersections · forbidden targets stay absent",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "themes": {

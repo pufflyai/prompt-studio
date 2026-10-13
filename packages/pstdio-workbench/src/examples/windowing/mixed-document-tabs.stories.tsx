@@ -43,7 +43,7 @@ export const MixedDocumentTabs: Story = {
     const header = within(canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement);
     header.getByRole("tab", { name: "Note A" }).focus();
     await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Move to Side" }));
+    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Move to Sidebar" }));
     await expect(header.getByRole("tab", { name: "Note B", selected: true })).toBeVisible();
     await expect(
       within(within(canvasElement).getByRole("navigation", { name: "breadcrumb" })).getByText("Note B", {

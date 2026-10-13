@@ -37,14 +37,14 @@ export const createWorkbenchRegionControls = (workbench: WorkbenchCore, input: W
     add(
       "secondary",
       input.secondaryPanelOpen ? "Hide Secondary Panel" : "Show Secondary Panel",
-      "PanelBottom",
+      workbench.getPanelEdge("secondary") === "top" ? "PanelTop" : "PanelBottom",
       input.secondaryPanelOpen,
     );
   if (input.hasSidePanel)
     add(
       "side",
       input.sidePanelMode !== "closed" ? "Hide Side Panel" : "Show Side Panel",
-      "PanelRight",
+      workbench.getPanelEdge("side") === "left" ? "PanelLeft" : "PanelRight",
       input.sidePanelMode !== "closed",
     );
   return controls;

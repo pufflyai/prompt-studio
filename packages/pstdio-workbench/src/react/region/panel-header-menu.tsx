@@ -3,6 +3,7 @@ import { PANEL_HEADER_CONTROL_SIZE, ResourceActionMenu, ResourceContextMenu } fr
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
+import { geometryPositions, moveGeometry, panelPositionLabel } from "./panel-drag-area";
 
 interface PanelHeaderMenuProps {
   workbench: WorkbenchCore;
@@ -16,6 +17,13 @@ export const PanelHeaderMenu = (props: PanelHeaderMenuProps) => {
   return (
     <ResourceActionMenu
       actions={[
+        ...geometryPositions(workbench, region).map((edge) => ({
+          key: `move-${edge}`,
+          label: panelPositionLabel(region, edge),
+          onClick: () => {
+            void moveGeometry(workbench, region, edge);
+          },
+        })),
         {
           key: "hide-header",
           label: "Hide header",

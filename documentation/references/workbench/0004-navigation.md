@@ -28,7 +28,19 @@ Visited registered views remain mounted when navigation hides them. Returning to
 
 A resource binding with `cardinality: "one"` keeps one placement when its resource changes. The host updates that live view's resource and attached menus. A binding with `cardinality: "many"` gives each open resource its own placement.
 
-The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the current page route and the primary resource anchor. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
+The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the tab's resource and live view. Moving a document out of Main selects its adjacent document or parent/collection fallback. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
+
+## Panel arrangement
+
+`workbench.repositionPanel({ panel, edge })` moves a whole panel within its owner. Side accepts left/right beside the Main/Secondary column. Sidenav accepts far left/right outside all panels. Main and Secondary accept top/bottom and reverse their shared vertical split. Page `aside` accepts left/right inside Main; page `bottom` accepts top/bottom around the editor. Panel identity, tabs, resources, and retained views do not change. A panel with `movable: false` rejects the command. Either fixed leaf prevents flipping Main and Secondary.
+
+`workbench.setActionBarPosition({ edge })` accepts `left`, `right`, `top`, or `bottom`. The host methods are `repositionPanel(panel, edge)`, `getPanelPositions(panel)`, `getPanelEdge(panel)`, and `setActionBarPosition(edge)`. Both commands save mode geometry per project/mode. Page panel geometry saves per project/page type. Existing region sizes remain the single source of panel dimensions. The constrained trees store panel order, with no separate saved direction flags.
+
+Drag empty header space to move a panel. Main uses the empty breadcrumb row, while its tab row moves tools. Header menus, Shift+F10, touch menus, and the command palette invoke the same arrangement commands. Previews name only permitted placements; Escape cancels without saving.
+
+During a tab drag, a closed permitted Side or Secondary offers an outer edge target at its saved position. Closed page side and bottom panels offer a 48 px band inside the page. Outer targets win at intersections; a page band moves inward when needed to remain reachable. Dropping uses `workbench.movePanel` to reveal the attached panel and transfer the same tab in one transaction. It creates no default tab or keep-open intent. Cancel and Escape leave tabs and visibility unchanged.
+
+Tab move destinations group under `Stays with <page title>` (Editor, Bottom panel, Side panel) and `Follows you in <mode label>` (Sidebar, Bottom panel). Menus omit the current panel and forbidden destinations. Drop previews use the same owner labels. Tab targets show the shared placement indicator at the insertion point.
 
 Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.
 

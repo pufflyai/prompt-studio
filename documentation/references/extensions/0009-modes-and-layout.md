@@ -77,6 +77,26 @@ Set `regionSettings.secondary.showHeader: false` for a player or timeline that s
 
 ## User arrangement
 
+Mode declarations accept additive `layout` and `actionBarEdge` defaults. `layout` has exactly three splits: outer horizontal Navigation (`sidenav`) and content, horizontal Side (`side`) and the Main/Secondary column, then vertical Main (`main`) and Secondary (`secondary`). Each split can reverse its two children. Other trees are rejected during normalization. Panel dimensions still use `regionSettings.size`; user resizing saves the existing region size. `actionBarEdge` accepts left/right/top/bottom and defaults to left. Top and bottom action bars render horizontally; custom chrome views should adapt their content to the available frame.
+
+```ts
+defineMode({
+  id: "review",
+  label: "Review",
+  regions: ["main", "side", "secondary"],
+  actionBarEdge: "top",
+  layout: {
+    axis: "horizontal",
+    children: ["sidenav", {
+      axis: "horizontal",
+      children: ["side", { axis: "vertical", children: ["main", "secondary"] }],
+    }],
+  },
+});
+```
+
+Omitting these fields preserves the existing default positions. Saved user geometry takes priority over authored defaults, except when a panel is fixed with `movable: false`. Hidden and floating panels retain their saved attached edge. Page panel moves remain inside the page and use page-type geometry. Whole-panel moves never change tab ownership or resource binding.
+
 A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Explicit `movableTo` restrictions and the mode's supported panels remain hard limits. Navigation chrome and the Sidenav do not become tabs.
 
 The + control follows the scrolling tab group. Its choices include active panels from other regions that are allowed in this destination. A single-instance panel is reused. Resource bindings retain their declared Add action. Panel menu openers stay at the far right.

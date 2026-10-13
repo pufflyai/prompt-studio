@@ -21,6 +21,9 @@ import type { SlotRef } from "./slots";
 import type { WebviewCapabilityDeclaration } from "./webview-capabilities";
 
 export type * from "./kanban-renderer";
+export type * from "./panel-layout";
+
+import type { ModeLayout, PanelEdge } from "./panel-layout";
 
 export interface CliContribution {
   path?: string[];
@@ -92,6 +95,10 @@ export interface ModeRegionSettings {
 }
 
 export interface ModeContribution extends ContributionDefinition<"mode"> {
+  /** Constrained panel topology. Omission uses Navigation left, Side right, Secondary below Main. */
+  layout?: ModeLayout;
+  /** Mode-owned outer action bar edge. Defaults to left. */
+  actionBarEdge?: PanelEdge;
   label: Localizable<string>;
   /** Fallback page when this mode has no allowed remembered page. */
   basePage?: PageRef;

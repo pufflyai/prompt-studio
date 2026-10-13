@@ -9,9 +9,10 @@ import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybindi
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { useModeChrome } from "../region/mode-chrome";
 import { movePanelHost } from "../region/move-panel-host";
+import { PanelEdgeTargets } from "../region/panel-edge-targets";
 import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
-import { WorkbenchTabDragProvider } from "../region/tab-drag-context";
+import { WorkbenchPanelDragSurface, WorkbenchTabDragProvider } from "../region/tab-drag-context";
 import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
 import { installWorkbenchFileRenderer } from "../renderers/file/install-file-renderer";
@@ -126,6 +127,8 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const showSecondaryPanel = secondaryPolicy.provided;
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
+  const sidenavEdge = useWorkbenchStore(workbench.layout.store, () => workbench.getPanelEdge("sidenav"));
+  const actionBarEdge = useWorkbenchStore(workbench.layout.store, (state) => state.layout.actionBarEdge ?? "left");
   const showAttachedSidePanel = hasSidePanel && sidePanelMode === "attached";
   // Closed removes the Side Panel's footprint, not its live region. Keeping the
   // portal in the hidden attached slot preserves provider and renderer state.
@@ -168,13 +171,24 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     </Flex>
   );
 
+  const contentWithSide = (
+    <WorkbenchSidePanelBoundary
+      workbench={workbench}
+      showAttachedSidePanel={showAttachedSidePanel}
+      contentFrame={contentWithHeader}
+      sideHeader={sideHeader}
+      contentMinSizePx={CONTENT_MIN_SIZE_PX}
+      onAttachedSlotChange={setAttachedSidePanelSlot}
+    />
+  );
   const contentWithSidenav = (
     <ResizableSplitLayout
       flex="1"
       minH="0"
       minW="0"
       resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
-      contentPanel={contentWithHeader}
+      contentPanel={contentWithSide}
+      resizableSide={sidenavEdge === "left" ? "left" : "right"}
       collapsed={!showSidenav || !sidenavOpen}
       collapsible={sidenavCollapsible}
       defaultSizePx={sidenavSize.defaultPx}
@@ -190,12 +204,24 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   );
 
   const contentFrame = (
-    <Flex position="relative" h="full" minH="0" minW="0" w="full" bg={workbenchBackgrounds.main} color="fg">
+    <Flex
+      data-workbench-drag-frame
+      direction={actionBarEdge === "top" || actionBarEdge === "bottom" ? "column" : "row"}
+      position="relative"
+      h="full"
+      minH="0"
+      minW="0"
+      w="full"
+      bg={workbenchBackgrounds.main}
+      color="fg"
+    >
       <WorkbenchActivityBar workbench={workbench} visible={hasActivityBarWidgets} />
       <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
         {contentWithSidenav}
       </Flex>
       <WorkbenchOverlayLayer workbench={workbench} />
+      <WorkbenchPanelDragSurface />
+      <PanelEdgeTargets workbench={workbench} />
     </Flex>
   );
 
@@ -214,14 +240,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           pr="panel-gap"
           pl={hasActivityBarWidgets ? "0" : "panel-gap"}
         >
-          <WorkbenchSidePanelBoundary
-            workbench={workbench}
-            showAttachedSidePanel={showAttachedSidePanel}
-            contentFrame={contentFrame}
-            sideHeader={sideHeader}
-            contentMinSizePx={CONTENT_MIN_SIZE_PX}
-            onAttachedSlotChange={setAttachedSidePanelSlot}
-          />
+          {contentFrame}
         </Flex>
         <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} />
         <WorkbenchFloatingSidePanel

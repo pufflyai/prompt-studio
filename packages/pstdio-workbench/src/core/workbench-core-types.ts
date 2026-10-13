@@ -84,6 +84,17 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  getPanelEdge(
+    panel: import("./registries/layout/panel-geometry").MovablePanel,
+  ): import("@pstdio/sdk/extensions").PanelEdge;
+  getPanelPositions(
+    panel: import("./registries/layout/panel-geometry").MovablePanel,
+  ): import("@pstdio/sdk/extensions").PanelEdge[];
+  repositionPanel(
+    panel: import("./registries/layout/panel-geometry").MovablePanel,
+    edge: import("@pstdio/sdk/extensions").PanelEdge,
+  ): void;
+  setActionBarPosition(edge: import("@pstdio/sdk/extensions").PanelEdge): void;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
   movePanel(

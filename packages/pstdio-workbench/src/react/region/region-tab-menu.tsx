@@ -6,7 +6,7 @@ import type { WorkbenchCommandParamsRequest } from "../../core/controllers/comma
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import { WorkbenchIcon } from "../shared/icon";
 import { runPlacementAction } from "../shared/run-placement-action";
-import { getPanelLabel } from "./panel-widget-open";
+import { panelDestinationGroups, panelDestinationName } from "./panel-destination-labels";
 
 const SharedAction = (props: { value: string; label: string; icon: string; onActivate(): void }) => {
   const { value, label, icon, onActivate } = props;
@@ -100,15 +100,25 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
                   onActivate={pin}
                 />
               ) : null}
-              {destinations.map((region) => (
-                <SharedAction
-                  key={region}
-                  value={`move-${region}`}
-                  label={`Move to ${getPanelLabel(region)}`}
-                  icon="ArrowRight"
-                  onActivate={() => workbench.movePanel(placement.widgetId, region)}
-                />
-              ))}
+            </Menu.ItemGroup>
+            {panelDestinationGroups(workbench).map((group) => {
+              const regions = group.regions.filter((region) => destinations.includes(region));
+              return regions.length ? (
+                <Menu.ItemGroup key={group.label}>
+                  <Menu.ItemGroupLabel>{group.label}</Menu.ItemGroupLabel>
+                  {regions.map((region) => (
+                    <SharedAction
+                      key={region}
+                      value={`move-${region}`}
+                      label={`Move to ${panelDestinationName(region)}`}
+                      icon="ArrowRight"
+                      onActivate={() => workbench.movePanel(placement.widgetId, region)}
+                    />
+                  ))}
+                </Menu.ItemGroup>
+              ) : null;
+            })}
+            <Menu.ItemGroup>
               {placement.closable ? <SharedAction value="close" label="Close tab" icon="x" onActivate={close} /> : null}
               {currentRegion && ["main", "side", "secondary", "bottom", "aside"].includes(currentRegion) ? (
                 <SharedAction

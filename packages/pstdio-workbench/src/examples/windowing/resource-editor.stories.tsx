@@ -19,7 +19,15 @@ const mainHeader = (element: HTMLElement) =>
 const move = async (element: HTMLElement, name: string, destination: string) => {
   within(element).getByRole("tab", { name }).focus();
   await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-  await userEvent.click(await within(document.body).findByRole("menuitem", { name: `Move to ${destination}` }));
+  await userEvent.click(
+    await within(
+      within(document.body).getByRole("group", {
+        name: destination === "Side" || destination === "Secondary" ? /^Follows you in/ : /^Stays with/,
+      }),
+    ).findByRole("menuitem", {
+      name: `Move to ${{ Main: "Editor", Side: "Sidebar", Secondary: "Bottom panel", "Page side": "Side panel", "Page bottom": "Bottom panel" }[destination]}`,
+    }),
+  );
 };
 
 export const NoteReuse: Story = {

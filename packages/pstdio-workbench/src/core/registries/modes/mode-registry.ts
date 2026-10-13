@@ -2,6 +2,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { WorkbenchLayout, WorkbenchRegion } from "../layout/layout-model";
+import { enforceFixedGeometry, panelEdges, validModeLayout } from "../layout/panel-geometry";
 import {
   applyModePanelAvailability,
   disposeReverse,
@@ -69,8 +70,25 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   const prepareScope = (mode: WorkbenchModeContribution) => {
     const context = input.resolveContext();
     const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
-    const availableLayout = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
-    restoreModeLayout(context, availableLayout, settingsForMode(mode));
+    const current = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
+    const needsDefaults = (!current.modeLayout && mode.layout) || (!current.actionBarEdge && mode.actionBarEdge);
+    const availableLayout = needsDefaults
+      ? {
+          ...current,
+          modeLayout: current.modeLayout ?? mode.layout,
+          actionBarEdge: current.actionBarEdge ?? mode.actionBarEdge,
+        }
+      : current;
+    restoreModeLayout(
+      context,
+      enforceFixedGeometry(
+        availableLayout,
+        { ...availableLayout, modeLayout: mode.layout },
+        ["side", "sidenav", "main", "secondary"],
+        (panel) => settingsForMode(mode)(panel)?.movable !== false,
+      ),
+      settingsForMode(mode),
+    );
     context.layout.reconcilePanelMenus();
     if (!seededScopes.has(scopeKey) && !context.layout.enteredWithPersistedLayout()) {
       seedModeScope(mode, context, input.establishLocation);
@@ -192,6 +210,8 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
 
     registerMode(mode) {
+      if (mode.layout && !validModeLayout(mode.layout)) throw new Error("Invalid mode layout");
+      if (mode.actionBarEdge && !panelEdges.includes(mode.actionBarEdge)) throw new Error("Invalid action bar edge");
       const snapshot = store.getState();
       if (snapshot.modes[mode.id]) throw new Error(`Workbench mode already registered: ${mode.id}`);
 

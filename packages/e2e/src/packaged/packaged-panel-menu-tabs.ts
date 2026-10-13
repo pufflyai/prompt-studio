@@ -25,7 +25,7 @@ export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, pr
   const instanceId = await tab.locator("..").getAttribute("data-workbench-tab");
   await tab.focus();
   await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Move to Sidebar", exact: true }).click();
   const moved = page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: "Cams", exact: true });
   await expect(moved).toBeVisible();
   await page.getByRole("option", { name: "Lab", exact: true }).click();

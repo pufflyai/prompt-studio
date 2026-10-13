@@ -31,6 +31,14 @@ test("publishes qualified mode theme and chrome references through the metadata 
     defaultTheme: theme.ref,
     floatingPanels: "hidden",
     floatingBubble: false,
+    actionBarEdge: "top",
+    layout: {
+      axis: "horizontal",
+      children: [
+        "sidenav",
+        { axis: "horizontal", children: ["side", { axis: "vertical", children: ["secondary", "main"] }] },
+      ],
+    },
     floating: { defaultTab: { kind: "command", target: { command: { kind: "command", id: "new-session" } } } },
     chrome: { sidenav: view.ref, nav: false, activity: false },
     regionSettings: {
@@ -64,6 +72,8 @@ test("publishes qualified mode theme and chrome references through the metadata 
   const metadata = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
   await rm(packagePath, { recursive: true, force: true });
   expect(metadata.modes[0]).toMatchObject({
+    actionBarEdge: "top",
+    layout: mode.layout,
     floatingBubble: false,
     floating: {
       defaultTab: {

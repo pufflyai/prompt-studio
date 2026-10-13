@@ -282,7 +282,7 @@ test("renames a moved session and restores its destination after reload", async 
   await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true }));
   await page.getByRole("menuitem", { name: "Session to rename", exact: true }).click();
   await openTabCustomMenu(side.getByRole("tab", { name: "Session to rename", exact: true }));
-  await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Move to Editor", exact: true }).click();
   const main = page.locator('[data-workbench-panel-header="main"]');
   const moved = main.getByRole("tab", { name: "Session to rename", exact: true });
   await expect(moved).toBeVisible();

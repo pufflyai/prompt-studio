@@ -1,9 +1,11 @@
 import { Box } from "@chakra-ui/react";
-import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
+import { Header, type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
+import { PanelDragArea } from "../region/panel-drag-area";
 import { WorkbenchRegion } from "../region/region";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchStatusBarItems } from "./workbench-status-bar-items";
 
@@ -33,6 +35,11 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
           overflow="hidden"
           w="full"
         >
+          <PanelDragArea workbench={workbench} panel="sidenav" asChild>
+            <Header variant="main" flexShrink={0}>
+              Navigation
+            </Header>
+          </PanelDragArea>
           <Box flex="1" minH="0" minW="0" overflow="hidden">
             <WorkbenchRegion workbench={workbench} region="sidenav" title="Sidenav" />
           </Box>
@@ -51,22 +58,27 @@ export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
 
 export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
+  const edge = useWorkbenchStore(workbench.layout.store, (state) => state.layout.actionBarEdge ?? "left");
+  const horizontal = edge === "top" || edge === "bottom";
 
   return (
-    <WorkbenchFocusRegion
-      workbench={workbench}
-      region="activity"
-      data-workbench-region="activity"
-      display={props.visible === false ? "none" : "block"}
-      as="nav"
-      flexShrink={0}
-      h="full"
-      minH="0"
-      overflow="hidden"
-      w="3.5rem"
-    >
-      <WorkbenchRegion workbench={workbench} region="activity" title="Activity bar" />
-    </WorkbenchFocusRegion>
+    <PanelDragArea workbench={workbench} panel="activity" asChild>
+      <WorkbenchFocusRegion
+        workbench={workbench}
+        region="activity"
+        data-workbench-region="activity"
+        display={props.visible === false ? "none" : "block"}
+        as="nav"
+        flexShrink={0}
+        h={horizontal ? "14" : "full"}
+        minH="0"
+        overflow="hidden"
+        w={horizontal ? "full" : "14"}
+        order={edge === "right" || edge === "bottom" ? 1 : 0}
+      >
+        <WorkbenchRegion workbench={workbench} region="activity" title="Activity bar" />
+      </WorkbenchFocusRegion>
+    </PanelDragArea>
   );
 };
 

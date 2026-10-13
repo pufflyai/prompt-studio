@@ -46,6 +46,9 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
     const emptyView = page?.main.kind === "panels" ? contributionRefId(page.main.empty) : undefined;
     const target = {
       ...layout.regions[destination],
+      ...(destination === "side" && !core.shell.getPanelPolicy("side").open
+        ? { presentation: "attached" as const }
+        : {}),
       widgets: layout.regions[destination].widgets.filter(
         (tab) => destination !== "main" || !emptyView || tab.viewId !== emptyView,
       ),

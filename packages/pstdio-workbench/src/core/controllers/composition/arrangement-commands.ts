@@ -2,6 +2,50 @@ import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registrie
 import type { WorkbenchCore } from "../../workbench-core-types";
 
 export const registerArrangementCommands = (core: WorkbenchCore) => {
+  core.commands.registerCommand<{
+    panel: import("../../registries/layout/panel-geometry").MovablePanel;
+    edge: import("@pstdio/sdk/extensions").PanelEdge;
+  }>(
+    {
+      id: "workbench.repositionPanel",
+      label: "Reposition whole panel",
+      category: "Workbench",
+      params: {
+        panel: {
+          type: "string",
+          label: "Panel",
+          required: true,
+          options: ["main", "secondary", "side", "sidenav", "aside", "bottom"].map((value) => ({
+            label: value,
+            value,
+          })),
+        },
+        edge: {
+          type: "string",
+          label: "Edge",
+          required: true,
+          options: ["left", "right", "top", "bottom"].map((value) => ({ label: value, value })),
+        },
+      },
+    },
+    { execute: ({ panel, edge }) => core.repositionPanel(panel, edge) },
+  );
+  core.commands.registerCommand<{ edge: import("@pstdio/sdk/extensions").PanelEdge }>(
+    {
+      id: "workbench.setActionBarPosition",
+      label: "Move action bar",
+      category: "Workbench",
+      params: {
+        edge: {
+          type: "string",
+          label: "Edge",
+          required: true,
+          options: ["left", "right", "top", "bottom"].map((value) => ({ label: value, value })),
+        },
+      },
+    },
+    { execute: ({ edge }) => core.setActionBarPosition(edge) },
+  );
   core.commands.registerCommand(
     {
       id: "workbench.resetLayout",
@@ -25,6 +69,8 @@ export const registerArrangementCommands = (core: WorkbenchCore) => {
           required: true,
           options: [
             { label: "Main", value: "main" },
+            { label: "Page side panel", value: "aside" },
+            { label: "Page bottom panel", value: "bottom" },
             { label: "Side", value: "side" },
             { label: "Secondary", value: "secondary" },
           ],
