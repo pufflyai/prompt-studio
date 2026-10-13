@@ -144,7 +144,7 @@ test("pending default creation is shared by the mode owner across pages", async 
   await fixture.dispose();
 });
 
-test("navigation and drops reject a panel that refuses tabs before changing owners", async () => {
+test("a panel that refuses incoming tabs rejects drops and opens its declared tool", async () => {
   const fixture = createWindowingFixture("windowing", {
     pagePanels: true,
     regionSettings: { side: { acceptsTabs: false } },
@@ -153,14 +153,16 @@ test("navigation and drops reject a panel that refuses tabs before changing owne
   const before = core.layout.getLayout();
   const tab = core.layout.listPanelInstances("bottom")[0]!;
   expect(() => core.movePanel(tab.instanceId, "side")).toThrow("cannot move");
-  await expect(
-    core.navigation.openTarget({
-      kind: "panel",
-      panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
-      resource: fixture.resources.sessions[0],
-    }),
-  ).rejects.toThrow("cannot accept tabs");
   expect(core.layout.getLayout()).toBe(before);
+  await core.navigation.openTarget({
+    kind: "panel",
+    panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
+    resource: fixture.resources.sessions[0],
+  });
+  const sessions = core.layout.listPanelInstances("side");
+  expect(sessions).toHaveLength(1);
+  expect(sessions[0]!.resource).toEqual(fixture.resources.sessions[0]);
+  expect(core.layout.getLayout().activeWidgetId).toBe(sessions[0]!.instanceId);
   await fixture.dispose();
 });
 
