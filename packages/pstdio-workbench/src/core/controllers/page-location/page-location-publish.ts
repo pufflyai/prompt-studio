@@ -15,6 +15,7 @@ export const createPageLocationPublisher = <Value>(
     entry: ReturnType<typeof createPageHistoryEntry>;
     publish(): void;
     rememberRootLevel(location: PageLocation): PageLocation | undefined;
+    rememberMode(location: PageLocation): Readonly<Record<string, PageLocation>>;
   },
 ) => {
   return (
@@ -35,8 +36,9 @@ export const createPageLocationPublisher = <Value>(
       beforePublish?.();
       internals.publish(state, action);
       const rootLevel = hooks.rememberRootLevel(location);
+      const modeLocations = hooks.rememberMode(location);
       runWorkbenchEffect(`page location cache for ${projectId}`, () =>
-        input.persistence.save(projectId, { location, ...(rootLevel ? { rootLevel } : {}) }),
+        input.persistence.save(projectId, { location, modeLocations, ...(rootLevel ? { rootLevel } : {}) }),
       );
       if (history !== "none") hooks.publish();
       return { ok: true, location } as const;

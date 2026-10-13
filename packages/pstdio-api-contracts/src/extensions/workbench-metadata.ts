@@ -130,6 +130,7 @@ const workbenchExtensionModeRecordSchema = z.object({
   label: localizableStringSchema,
   icon: z.string().optional(),
   regions: z.array(z.enum(extensionPanelRegions)),
+  basePage: pageRefSchema.optional(),
   floatingPanels: z.enum(["visible", "hidden"]).optional(),
   regionSettings: z.partialRecord(z.enum(dockedWorkbenchRegions), regionSettingsSchema).optional(),
   defaultTheme: contributionRefSchema("theme").optional(),

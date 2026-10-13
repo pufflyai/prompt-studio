@@ -4,6 +4,7 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 export const pageTargetFromLocation = (location: PageLocation): NavigationTargetPage => ({
   kind: "page",
   page: location.page,
+  ...(location.mode ? { mode: location.mode } : {}),
   ...(location.resource ? { resource: location.resource } : {}),
   ...(location.section ? { section: location.section } : {}),
   ...(location.parent ? { parent: pageTargetFromLocation(location.parent) } : {}),

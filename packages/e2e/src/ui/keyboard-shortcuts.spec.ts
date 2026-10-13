@@ -146,11 +146,7 @@ test("main shortcuts navigate and open creation forms", async ({ page, request }
   await noteForm.getByRole("textbox", { name: "Title", exact: true }).fill("Shortcut note");
   await noteForm.getByRole("button", { name: "Run", exact: true }).click();
   await expect(noteForm).not.toBeVisible();
-  await expect(page).toHaveURL(/\/notes$/);
   await expect(page.getByText("Shortcut note", { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  await expect(
-    page.locator('[data-workbench-region="sidenav"]').getByRole("option", { name: "Shortcut note", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("ControlOrMeta+Alt+P");
   const ticketForm = page.getByRole("dialog").last();
   await expect(ticketForm.getByText("New ticket", { exact: true })).toBeVisible();

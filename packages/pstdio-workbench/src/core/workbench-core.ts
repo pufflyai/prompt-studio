@@ -52,6 +52,7 @@ import {
   createCoreCompositionController,
   primaryWorkbenchResource,
 } from "./workbench-core-connections";
+import { navigateCoreMode } from "./workbench-core-modes";
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
 import { createCoreRenderers } from "./workbench-core-renderers";
@@ -155,7 +156,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
 
-  const navigationTrees = createWorkbenchNavigationTrees(renderers);
+  const navigationTrees = createWorkbenchNavigationTrees(renderers, () => core);
 
   const overlays = createWorkbenchOverlayRegistry({ layout, views, viewMenus });
   const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });
@@ -176,6 +177,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
 
   const modes = createWorkbenchModeRegistry({
+    navigateMode: (modeId) => navigateCoreMode(core, modeId),
     establishLocation,
     layout,
     resolveContext: () => core,

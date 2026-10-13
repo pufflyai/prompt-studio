@@ -3,6 +3,7 @@ import { isValidLocalContributionId, workbenchModeDefinitions, workbenchPageDefi
 import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
+import { validatePageModeLists } from "./page-mode-validation";
 
 export interface PageDiagnosticInput {
   code: string;
@@ -75,8 +76,7 @@ const hostModeRegions = new Map(
   ]),
 );
 
-const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord) => {
-  const mode = record.contribution.mode;
+const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord, mode = record.contribution.mode) => {
   const modeOwner = mode.extensionId ?? record.extensionId;
   const regions =
     modeOwner === "pstdio"
@@ -176,7 +176,8 @@ const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) 
     seen.add(slot.id);
     validateSlotContent(runtime, record, slot, index);
   }
-  validateModeAndRegions(runtime, record);
+  for (const mode of record.contribution.modes ?? [record.contribution.mode])
+    validateModeAndRegions(runtime, record, mode);
 };
 
 const reservedPaths = new Set<string>(
@@ -276,6 +277,7 @@ const validateParentCycles = (runtime: Accumulator) => {
 };
 
 export const validatePageDefinitions = (runtime: Accumulator) => {
+  validatePageModeLists(runtime);
   for (const record of runtime.pages) validatePageStructure(runtime, record);
   validatePaths(runtime);
   validateParentCycles(runtime);

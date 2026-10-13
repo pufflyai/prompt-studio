@@ -1,8 +1,33 @@
 import { describe, expect, test } from "bun:test";
+import type { PageRef } from "@pstdio/sdk/extensions";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
 import { resolveTreeListSelection } from "../../react/renderers/tree/tree-list-adapter";
 import { registerWorkbenchExtensionTreeRenderers } from "./tree-renderer-contributions";
 import { metadata, treeId } from "./tree-renderer-contributions.fixture";
+
+const registerDocumentPage = (workbench: ReturnType<typeof createWorkbench>, page: PageRef) => {
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.views.registerView({ id: "ticket", title: "Ticket", body: { kind: "react", render: () => null } });
+  const main = { kind: "view" as const, view: { kind: "view" as const, id: "ticket" }, cardinality: "one" as const };
+  workbench.pages.registerPage({
+    id: "start",
+    ref: { ...page, id: "start" },
+    path: "start",
+    modeId: "project",
+    main,
+    slots: [],
+  });
+  workbench.pages.registerPage({
+    id: "ticket",
+    ref: page,
+    path: "ticket",
+    modeId: "project",
+    parentId: "start",
+    resource: { kinds: [{ kind: "resource-kind", id: "ticket" }] },
+    main,
+    slots: [],
+  });
+};
 
 describe("extension tree renderer contributions", () => {
   test("runs a host tree action in the workbench with its parameters", async () => {
@@ -124,6 +149,7 @@ describe("extension tree resource navigation", () => {
   ])("preserves the declared document selection in a composed navigation tree: %s", async (documentId) => {
     const workbench = createWorkbench();
     const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
+    registerDocumentPage(workbench, page);
     const resource = {
       type: "ticket",
       id: "ticket-1",
