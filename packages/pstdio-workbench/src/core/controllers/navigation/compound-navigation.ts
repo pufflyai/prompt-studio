@@ -14,6 +14,7 @@ import {
 } from "../../registries/placements/owned-placement-preparation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
+import { locatePreparedPageState } from "../page-runtime/page-placement-location";
 import { activateNavigationPlacement, commitPreparedNavigation } from "./navigation-commit";
 import { prepareEditorOpen } from "./prepared-editor-open";
 import { prepareExistingResourceEditor } from "./resource-editor-resolver";
@@ -224,6 +225,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
       prepareExistingOpen(existing, target);
       activations.delete(existing.region);
       activations.set(existing.region, { editor: existing });
+      proposed = locatePreparedPageState(proposed, [...stages, proposed]);
       stages.push(proposed);
       continue;
     }
@@ -237,6 +239,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
     }
+    proposed = locatePreparedPageState(proposed, [...stages, proposed]);
     stages.push(proposed);
     for (const placement of proposed.reconciliation.activate) {
       activations.delete(placement.region);
@@ -244,17 +247,20 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     }
   }
   const present = new Set(proposed.placements.map((placement) => placementIdentityKey(placement.identity)));
-  const final = pages.prepare.compose(
-    original,
-    {
-      ...proposed,
-      activate: [...activations.values()].flatMap((activation) => {
-        const identity = "identity" in activation ? activation.identity : activation.editor.identity;
-        return identity && present.has(placementIdentityKey(identity)) ? [identity] : [];
-      }),
-      action: "prepareCompoundNavigation",
-    },
-    owned(),
+  const final = locatePreparedPageState(
+    pages.prepare.compose(
+      original,
+      {
+        ...proposed,
+        activate: [...activations.values()].flatMap((activation) => {
+          const identity = "identity" in activation ? activation.identity : activation.editor.identity;
+          return identity && present.has(placementIdentityKey(identity)) ? [identity] : [];
+        }),
+        action: "prepareCompoundNavigation",
+      },
+      owned(),
+    ),
+    stages,
   );
   return {
     commit: () =>

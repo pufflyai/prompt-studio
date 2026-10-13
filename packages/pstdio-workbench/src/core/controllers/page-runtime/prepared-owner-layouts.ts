@@ -6,6 +6,7 @@ import { hasPlacementDeclaration } from "../../registries/placements/placement-d
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { findOtherOwnedResourceEditor } from "../navigation/resource-editor-resolver";
 import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
+import { locatePagePlacements } from "./page-placement-location";
 import { pageOwnerScope, preparedOwnerStates } from "./prepared-owner-states";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
@@ -25,15 +26,18 @@ export const createPreparedOwnerLayoutSaver =
       if (scope === finalScope) continue;
       const pageLayout = input.cache.layout.getLayout(scope);
       const modeLayout = input.cache.readMode(state.projectId, state.activeModeId);
-      const placements = resolveOwnerPlacements({
+      const placements = locatePagePlacements(
         state,
-        pageLayout,
-        modeLayout,
-        enteringPage: true,
-        getWidget: input.layout.getWidget,
-        existingEditor: (placement, state) => findOtherOwnedResourceEditor(input.resolveCore(), placement, state),
-        hasDeclaration: (identity) => hasPlacementDeclaration(input.resolveCore(), identity),
-      });
+        resolveOwnerPlacements({
+          state,
+          pageLayout,
+          modeLayout,
+          enteringPage: true,
+          getWidget: input.layout.getWidget,
+          existingEditor: (placement, state) => findOtherOwnedResourceEditor(input.resolveCore(), placement, state),
+          hasDeclaration: (identity) => hasPlacementDeclaration(input.resolveCore(), identity),
+        }),
+      );
       const layout = reconcileOwnedWidgetLayout({
         layout: pageLayout ?? createDefaultWorkbenchLayout(),
         modeLayout,

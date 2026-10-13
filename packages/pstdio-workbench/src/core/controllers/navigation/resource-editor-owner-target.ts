@@ -20,6 +20,20 @@ const pageOwnerMode = (page: WorkbenchPageContribution, requested: ModeRef | und
   return locationModeRef(modeId);
 };
 
+const mainEditorSourceTarget = (
+  page: WorkbenchPageContribution,
+  editor: OpenResourceEditor,
+  requested: NavigationTargetPage | NavigationTargetPanel | undefined,
+) => {
+  if (requested?.kind === "page" && (requested.section || requested.position)) return requested;
+  const resource = editor.tab.resource;
+  const document = page.document ? resource?.metadata?.[page.document.metadataKey] : undefined;
+  return {
+    section: editor.tab.section,
+    position: typeof document === "string" && document ? editor.tab.position : undefined,
+  };
+};
+
 const mainEditorOwnerTarget = (
   core: WorkbenchCore,
   editor: OpenResourceEditor,
@@ -36,11 +50,14 @@ const mainEditorOwnerTarget = (
     if (context) requested = { ...context, resource: editor.tab.resource };
   }
   const context = editor.tab.pageContext;
+  const source = mainEditorSourceTarget(page, editor, requested);
   return resourceEditorPageTarget(core, page.ref, editor.tab.resource, {
     ...(requested?.kind === "page" ? requested : {}),
     kind: "page",
     page: page.ref,
     resource: requested?.resource ?? editor.tab.resource,
+    section: source.section,
+    position: source.position,
     parent:
       (requested?.kind === "page" ? requested.parent : undefined) ??
       (context?.parent ? pageLocationTarget(context.parent) : undefined),

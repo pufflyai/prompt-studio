@@ -53,6 +53,16 @@ export const findPreparedResourceEditor = (
   );
   if (!found) return undefined;
   const { state, placement } = found;
+  const location =
+    state.location && placement.identity.kind === "page" && placement.identity.slotId === "$main"
+      ? {
+          ...state.location,
+          ...placement.value.pageContext,
+          resource: placement.value.resource,
+          section: placement.value.section,
+          position: placement.value.position,
+        }
+      : state.location;
   return {
     editor: {
       scope:
@@ -62,6 +72,6 @@ export const findPreparedResourceEditor = (
       region: placement.region,
       tab: { ...placement.value, placementIdentity: placement.identity },
     },
-    owner: state.location ? pageLocationTarget(state.location) : undefined,
+    owner: location ? pageLocationTarget(location) : undefined,
   };
 };
