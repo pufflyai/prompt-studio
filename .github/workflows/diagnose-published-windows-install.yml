@@ -1,0 +1,55 @@
+name: Diagnose published Windows install
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install published 0.43.0 and record shortcut targets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path evidence | Out-Null
+          $root = Join-Path $env:LOCALAPPDATA 'PromptStudio'
+          if (Test-Path $root) { throw 'Runner already has Prompt Studio installed' }
+          gh release download 'pstdio@0.43.0' --pattern 'Prompt-Studio-0.43.0-win32-x64-Setup.exe' --dir evidence
+          if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
+          $setup = Get-Item evidence/*Setup.exe
+          Get-FileHash $setup.FullName | ConvertTo-Json | Set-Content evidence/installer-hash.json
+          Get-AuthenticodeSignature $setup.FullName | Select-Object Status, StatusMessage, SignerCertificate | ConvertTo-Json -Depth 4 | Set-Content evidence/installer-signature.json
+          $installed = Start-Process -FilePath $setup.FullName -ArgumentList '--silent' -Wait -PassThru
+          if ($installed.ExitCode -ne 0) { throw "Installer exited with $($installed.ExitCode)" }
+          $shell = New-Object -ComObject WScript.Shell
+          $programs = [Environment]::GetFolderPath('Programs')
+          $shortcuts = @(Get-ChildItem $programs -Recurse -Filter '*.lnk' | ForEach-Object {
+            $link = $shell.CreateShortcut($_.FullName)
+            @{ path = $_.FullName; target = $link.TargetPath; arguments = $link.Arguments; workingDirectory = $link.WorkingDirectory }
+          })
+          $shortcuts | ConvertTo-Json -AsArray | Set-Content evidence/shortcuts.json
+          @{ programs = $programs; launcher = (Join-Path $root 'Prompt Studio.exe'); root = $root; exitCode = $installed.ExitCode } | ConvertTo-Json | Set-Content evidence/install.json
+          Get-ChildItem $root -Recurse | Select-Object FullName, Length | ConvertTo-Json | Set-Content evidence/installed-files.json
+          Get-ChildItem $env:LOCALAPPDATA -Filter '*Squirrel*.log' -Recurse -ErrorAction SilentlyContinue | Copy-Item -Destination evidence
+          $shortcuts | ConvertTo-Json -AsArray
+          $launcher = Join-Path $root 'Prompt Studio.exe'
+          if (-not ($shortcuts | Where-Object { $_.target -eq $launcher })) {
+            throw 'Existing check: Start menu shortcut must launch the installed app'
+          }
+      - name: Preserve install evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: published-windows-install-attempt-${{ github.run_attempt }}
+          path: |
+            evidence/*.json
+            evidence/*.log
+          if-no-files-found: warn
+          retention-days: 14
