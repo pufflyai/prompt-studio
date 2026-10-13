@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.4"
+    "pstdio": "^0.1.5"
   },
   "private": true,
   "type": "module",
