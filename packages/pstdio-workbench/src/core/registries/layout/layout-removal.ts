@@ -6,24 +6,24 @@ export const removeLayoutPlacements = (
   layout: WorkbenchLayout,
   remove: (placement: WorkbenchWidgetPlacement) => boolean,
 ) => {
-  const removed = new Set<string>();
+  const removed = new Set(
+    Object.values(layout.regions).flatMap((region) =>
+      region.widgets.filter(remove).map((placement) => placement.widgetId),
+    ),
+  );
+  if (!removed.size) return layout;
   const regions = { ...layout.regions };
   for (const region of Object.values(regions)) {
-    const widgets = region.widgets.filter((placement) => {
-      if (!remove(placement)) return true;
-      removed.add(placement.widgetId);
-      return false;
-    });
+    const widgets = region.widgets.filter((placement) => !removed.has(placement.widgetId));
     regions[region.id] = {
       ...region,
       widgets,
       activeWidgetId: widgets.some((p) => p.widgetId === region.activeWidgetId)
         ? region.activeWidgetId
         : widgets[0]?.widgetId,
-      savedWidgetOrder: region.savedWidgetOrder?.filter((id) => widgets.some((p) => p.widgetId === id)),
+      savedWidgetOrder: region.savedWidgetOrder?.filter((id) => !removed.has(id)),
     };
   }
-  if (!removed.size) return layout;
   let next = { ...layout, regions };
   for (const id of removed) next = removeLocationSubPanelSelection(next, id);
   const remaining = Object.values(regions).flatMap((region) => region.widgets);
