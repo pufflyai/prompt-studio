@@ -3,7 +3,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../workbench-core";
 import { registerResourcePage } from "./page-runtime-test-support";
 
-test("applies a shell Sub Panel opened after a scoped page becomes active", async () => {
+test("keeps a shell resource independent of page binding during workspace navigation", async () => {
   const workbench = createWorkbench({});
   const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
@@ -107,10 +107,28 @@ test("applies a shell Sub Panel opened after a scoped page becomes active", asyn
     page: pageRef,
     resource: { type: "workspace", id: "workspace-1" },
   });
+  const [terminal] = workbench.layout.getLayout().regions.secondary.widgets;
+  expect(terminal).toMatchObject({
+    resource: { type: "terminal", id: "terminal://workspace-1" },
+    resourceKey: resourceKey({ type: "terminal", id: "terminal://workspace-1" }),
+    viewId: "terminal",
+    placementIdentity: { kind: "shell", placementId: "terminal" },
+  });
+  expect(terminal!.ownerResourceKey).toBeUndefined();
+
+  await workbench.navigation.openTarget({
+    kind: "page",
+    page: pageRef,
+    resource: { type: "workspace", id: "workspace-2" },
+  });
+  expect(workbench.pages.store.getState().location?.resource?.id).toBe("workspace-2");
   expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([
     expect.objectContaining({
-      resource: { type: "terminal", id: "terminal://workspace-1" },
-      ownerResourceKey: resourceKey({ type: "workspace", id: "workspace-1" }),
+      widgetId: terminal!.widgetId,
+      resource: terminal!.resource,
+      placementIdentity: terminal!.placementIdentity,
+      viewId: "terminal",
     }),
   ]);
+  expect(workbench.layout.getLayout().regions.secondary.widgets[0]!.ownerResourceKey).toBeUndefined();
 });

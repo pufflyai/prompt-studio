@@ -63,6 +63,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // It also transfers a page tab to Side, keeps its identity across navigation/reload, and does not recreate its source.
+// Terminal checks retain a mode-owned Secondary tab after a resource page and reload.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 

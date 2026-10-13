@@ -12,7 +12,7 @@ export type WindowingMode = "windowing" | "boombox" | "kiln";
 
 export const createWindowingFixture = (
   mode: WindowingMode = "windowing",
-  options: WindowingModuleOptions & { pageModes?: boolean; contextNavigation?: boolean } = {},
+  options: WindowingModuleOptions = {},
 ) => {
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();

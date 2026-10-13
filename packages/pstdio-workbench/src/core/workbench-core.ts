@@ -37,6 +37,7 @@ import { createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
 import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
+import type { WorkbenchRegion } from "./registries/layout/layout-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -98,6 +99,20 @@ const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefi
   persistence?.dispose?.();
 };
 
+const resolveRegionSettings = (
+  input: createWorkbenchInput,
+  core: WorkbenchCore | undefined,
+  regionId: WorkbenchRegion,
+) => {
+  if (regionId === "bottom") {
+    const pageId = core?.pages.store.getState().activePageId;
+    return pageId ? core?.pages.getPage(pageId)?.regionSettings?.bottom : undefined;
+  }
+  const activeModeId = core?.modes.getActiveModeId();
+  const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
+  return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
+};
+
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
@@ -114,15 +129,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
     // The active mode owns region policy; the host input is the fallback. Resolved
     // lazily because the mode registry is created after the layout model.
-    getRegionSettings: (regionId) => {
-      if (regionId === "bottom") {
-        const pageId = core?.pages.store.getState().activePageId;
-        return pageId ? core?.pages.getPage(pageId)?.regionSettings?.bottom : undefined;
-      }
-      const activeModeId = core?.modes.getActiveModeId();
-      const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
-      return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
-    },
+    getRegionSettings: (regionId) => resolveRegionSettings(input, core, regionId),
     persistence: layoutCache.layout,
   });
 

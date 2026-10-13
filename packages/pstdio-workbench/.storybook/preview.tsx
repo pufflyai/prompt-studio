@@ -20,7 +20,7 @@ const preview: Preview = {
           "pstdio-workbench",
           [
             "Showcases",
-            ["Scribble", "Boombox", "Zipline", "Pigeon", "*"],
+            ["Dashboard", "Scribble", "Boombox", "Zipline", "Pigeon", "*"],
             "Guides",
             ["Onboarding", "Renderers", "Command parameters", "Panels and pages", "Resource menu slots", "*"],
             "Reference",

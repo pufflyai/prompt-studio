@@ -9,7 +9,9 @@ export const reuseSingleMainView = (
   pages: Readonly<Record<string, WorkbenchPageContribution>>,
 ) => {
   const primary = (value: WorkbenchLayout) =>
-    value.regions.main.widgets.find((p) => p.role === "location" && p.placementIdentity?.kind === "page");
+    value.regions.main.widgets.find(
+      (p) => p.role === "location" && p.placementIdentity?.kind === "page" && !p.declarationIdentity,
+    );
   const source = primary(previous);
   const target = primary(layout);
   if (!source || !target || source.widgetId === target.widgetId) return layout;

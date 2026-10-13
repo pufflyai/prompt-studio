@@ -16,6 +16,7 @@ export interface WindowingModuleOptions {
   mainView?: "files" | "webview";
   changesPresence?: "open" | "fixed";
   pageModes?: boolean;
+  contextNavigation?: boolean;
 }
 
 export const registerWindowingModule = (
