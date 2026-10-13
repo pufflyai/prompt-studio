@@ -18,6 +18,7 @@ export async function fixture(limit = 2) {
         },
       },
       workspaces: {
+        get: async () => null,
         list: async () => [],
         create: async () => {
           sequence += 1;

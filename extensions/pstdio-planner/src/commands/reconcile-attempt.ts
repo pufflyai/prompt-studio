@@ -12,6 +12,7 @@ import type { AttemptBlocker, AttemptRecord, AttemptReview } from "../data/attem
 import { ticketsCollection } from "../data/collections";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
 import { renderOwnedTemplate } from "../data/template-store";
+import { withWriteGuard } from "../data/write-guard";
 
 const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
 
@@ -314,13 +315,15 @@ export const reconcileAttemptCommand = defineCommand({
   cli: true,
   params: { workspaceId: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
-    if (attempt.state === "implementing" || attempt.state === "changes_requested") {
-      return reconcileImplementation(ctx, attempt);
-    }
-    if (attempt.state === "reviewing") return reconcileReview(ctx, attempt);
-    return { decision: "unchanged" as const, attempt };
+    return withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, async () => {
+      const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+      if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+      if (attempt.state === "implementing" || attempt.state === "changes_requested") {
+        return reconcileImplementation(ctx, attempt);
+      }
+      if (attempt.state === "reviewing") return reconcileReview(ctx, attempt);
+      return { decision: "unchanged" as const, attempt };
+    });
   },
 });
 

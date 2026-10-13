@@ -92,6 +92,9 @@ const setup = async () => {
           run: async () => ({ exitCode: 0, stdout: `${headSha}\n`, stderr: "" }),
         },
         sessions: {
+          listByWorkspace: async () => [
+            { type: "session", id: "implementation-1", title: "Implementation", status: "completed" },
+          ],
           get: async (id: string) => ({
             id,
             title: id,

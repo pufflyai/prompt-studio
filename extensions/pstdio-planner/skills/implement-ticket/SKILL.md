@@ -28,8 +28,8 @@ Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>
 3. Run the required validation, follow the adversarial review step below, and commit the finished change in the managed workspace.
 4. Create the change request report described below.
 5. Keep the `reportId` returned by `pst reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
-   - `pst pstdio-planner submit-change-request --workspace-id <workspace-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-attempt-state implementing`
-   - After requested changes, use `changes_requested` as the expected state.
+   - `pst pstdio-planner submit-change-request --workspace-id <workspace-id> --implementation-session-id <owner-session-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-revision <last-revision-number>`
+   - Read the owner session ID and last revision number with `pst pstdio-planner read-attempt-history --workspace-id <workspace-id>`. Use revision 0 before the first submission. A later correction can be submitted after passed review; old reviews remain on their original commits.
 6. Follow the completion steps below.
 
 ## When stuck
@@ -45,7 +45,7 @@ pst pstdio-planner request-human --ticket PS-12 \
   --request '{"kind":"decision","questions":[{"id":"behavior","label":"Which behavior is required?","required":true,"input":{"kind":"text"}}]}'
 ```
 
-For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. In a managed attempt, also pass `--workspace-id <workspace-id> --expected-attempt-state implementing`, or `changes_requested` after review. Pass `--session-id <implementation-session-id>` when known so Planner can reuse the linked conversation.
+For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. In a managed workspace, pass `--workspace-id <workspace-id>` and `--session-id <implementation-session-id>` so Planner can reuse the linked conversation. Optional expected state and status guards must use values read from the latest record. Do not guess a phase or change it to permit a request.
 
 Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the requested action or decision, then resume. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
 
@@ -89,3 +89,8 @@ Report evidence includes:
 - Any file needed to prove the ticket is implemented correctly
 
 Use concrete artifacts that another person or agent can inspect and reproduce.
+
+
+### Repair a changed dependency base
+
+For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. Read the ticket and existing review findings. Run `pst pstdio-planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.

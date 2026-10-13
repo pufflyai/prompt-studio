@@ -48,7 +48,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
-// Timeline coverage configures Auto build mode and checks implementation status in both Planner views.
+// Timeline coverage configures Auto build, queries next tickets, and checks implementation status in both Planner views.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
@@ -234,6 +234,27 @@ test(
         metadata,
       });
       expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "auto-build-resume.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "auto-build-candidates.ts")),
+      ).toBe(true);
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "next-tickets.ts"))).toBe(
+        true,
+      );
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "update-stack.ts"))).toBe(
+        true,
+      );
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "stack-validation.ts"))).toBe(
+        true,
+      );
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "model", "milestone-eta.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "milestone-eta.tsx")),
+      ).toBe(true);
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

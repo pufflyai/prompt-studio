@@ -3,9 +3,47 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
 import { createTicketCommand } from "../../commands/create-ticket";
 import { requestHumanCommand, reviewCommand } from "../../commands/review-requests";
+import { putAttempt } from "../../data/attempt-storage";
 import { putTicket, statusesCollection, ticketsCollection } from "../../data/collections";
 import { DEFAULT_STATUSES } from "../../data/seed";
+import { createDeadlineCommand } from "./deadline-commands";
+import { moveTicketCommand } from "./move-ticket";
 import { readPlanCommand } from "./read-plan";
+
+test("the plan query derives milestone ETA from saved complexity and observed attempt starts", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const done = await createTicketCommand.run(ctx, { content: "# Finished work", statusId: "done" });
+  const open = await createTicketCommand.run(ctx, { content: "# Remaining work", statusId: "ready" });
+  await putTicket(storage, { ...done, tagIds: ["default-complexity-simple"] });
+  await putTicket(storage, { ...open, tagIds: ["default-complexity-complex"] });
+  const deadline = (await createDeadlineCommand.run(ctx, { date: "2030-01-01", name: "Release" }))!;
+  await moveTicketCommand.run(ctx, { ticket: done.id, deadline: deadline.id });
+  await moveTicketCommand.run(ctx, { ticket: open.id, deadline: deadline.id });
+  const startedAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  await putAttempt(storage, {
+    schemaVersion: 1,
+    workspaceId: "owner-workspace",
+    workspaceShorthand: "WS-1",
+    ticketId: done.id,
+    ticketShorthand: done.shorthand,
+    implementationSessionId: "owner",
+    state: "approved",
+    base: { workspaceId: null, headSha: "base" },
+    revisions: [],
+    blocker: null,
+    implementationDisconnectRetries: 0,
+    reviewDisconnectRetries: 0,
+    createdAt: startedAt,
+    updatedAt: startedAt,
+  });
+  const plan = await readPlanCommand.run(ctx, {});
+  const section = plan.sections.find(({ deadline: milestone }) => milestone?.id === deadline.id)!;
+  expect(section.eta).toMatchObject({ completedComplexity: 1, totalComplexity: 4, startedAt });
+  expect(section.eta!.remainingMs).toBeGreaterThanOrEqual(6 * 60 * 60 * 1000);
+  expect(section.counts).toMatchObject({ done: 1, total: 2 });
+  expect(plan.sections.find(({ deadline }) => !deadline)?.eta).toBeNull();
+});
 
 test("uses Planner's configured status identities for progress, completion, and dependencies", async () => {
   const storage = createMemoryStorage();

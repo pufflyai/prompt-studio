@@ -20,7 +20,7 @@ The selected timeline view, search, and display filters only affect what you see
 
 Planner checks every three minutes and also checks when tickets change or a session finishes. When the board has changed or capacity has become available, and valid unassigned work exists, Planner starts or resumes the supervisor session with your prompt and Auto Build instructions.
 
-The supervisor reads the current candidates and capacity, chooses relevant tickets using your prompt, and launches or resumes their managed attempts. It then ends its turn and sleeps. Planner reuses that session for later prompts and does not repeatedly prompt it for an unchanged board. Board changes during a running supervisor turn are checked after it finishes.
+The supervisor queries current work with `pst tickets next`, using track, status, tag, or parent filters to match your prompt. The prompt carries instructions, not a candidate snapshot. The query returns launchable tickets, waiting reasons, capacity, and the current Auto Build revision. The supervisor reads each chosen ticket's full instructions, then launches or resumes its managed attempt. It re-runs the query after dispatching, ends its turn when no relevant work can run, and sleeps. Planner reuses that session for later prompts and does not repeatedly prompt it for an unchanged board. Board changes during a running supervisor turn are checked after it finishes.
 
 Each new implementation uses its own managed Git workspace and the default agent. Its ticket moves to **In Progress** in both Tickets and Project Timeline. The supervisor does not consume an implementation slot. Set **Maximum in-progress tickets** in Planner Settings to control how many implementation sessions can run together.
 
@@ -44,6 +44,8 @@ The popover shows a small banner when the supervisor fails or needs input, all r
 
 If an implementation needs help, answer every open [review request](0006-review-requests.md). The supervisor can then resume that attempt in the same workspace and session when capacity is available, with your answers included.
 
+An unfinished implementation whose session completed, was cancelled, failed, or disconnected can also resume in the same workspace and session. Planner uses the selected attempt, or the sole remaining attempt when no selection exists. Multiple attempts require an explicit selection. Recovery still waits for prerequisites, capacity, and all open review requests. Each stopped turn resumes once. Submitted work is offered as `update-stack` when its workspace has an unrecorded HEAD, its required base differs from the latest revision, or it lacks the current selected dependency base. The supervisor follows up with the existing implementation owner. It does not create another attempt or change an old review verdict.
+
 If nothing starts, check the ignore filters, prerequisites, default agent, and in-progress limit. The supervisor can also leave valid tickets unassigned when they do not match your prompt.
 
 ## Agent commands
@@ -51,8 +53,11 @@ If nothing starts, check the ignore filters, prerequisites, default agent, and i
 The supervisor uses public Planner commands:
 
 ```sh
-pst pstdio-planner auto-build candidates
+pst tickets next --track Workbench
+pst tickets panel --id PS-123
 pst pstdio-planner auto-build dispatch --ticket PS-123 --revision <mode-revision>
 ```
 
-The candidate command reports the current mode revision, valid tickets, and capacity. Dispatch rechecks the mode, ignore filters, assignments, prerequisites, and capacity before launching or resuming work. A prompt from an earlier mode cannot dispatch work after Auto Build is stopped or restarted.
+The `next` query reports the current mode revision, launchable `tickets`, `waiting` tickets with reasons and dependency IDs, and capacity. It is read-only and works while Auto Build is off. Filters restrict the query; prerequisites in other tracks still apply. With **Block on review** off, submitted dependency revisions remain valid stack bases. Incompatible branches, requested changes, and actively running implementation owners still block new children. The query exposes the upstream repair instead of leaving the track with no actionable work.
+
+Dispatch rechecks the mode, ignore filters, assignments, prerequisites, and capacity before launching or resuming work. Use the revision from the latest query. An earlier revision cannot dispatch work after Auto Build is stopped or restarted. The old `pst pstdio-planner auto-build candidates` command is deprecated in favor of `pst tickets next` and remains available during the transition.

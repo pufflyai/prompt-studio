@@ -64,6 +64,7 @@ export async function expectPackagedPlannerTimeline(input: {
     blockOnReview: false,
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
+  expect(await execute("next-tickets", {})).toMatchObject({ enabled: true, tickets: [], waiting: [] });
   expect(await execute("auto-build.read", {})).toMatchObject({
     enabled: true,
     prompt: "Choose valid tasks.",
@@ -98,6 +99,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(plan.sections).toContainEqual(
     expect.objectContaining({
       deadline: expect.objectContaining({ id: deadline.id }),
+      eta: null,
       rows: expect.arrayContaining([expect.objectContaining({ id: result.ticket.id })]),
     }),
   );

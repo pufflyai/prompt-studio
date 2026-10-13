@@ -2,8 +2,8 @@ import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
-import { readAutoBuildCandidates } from "./auto-build-candidates";
 import { isLiveSession } from "./auto-build-sessions";
+import { readNextTickets } from "./next-tickets";
 
 export const autoBuildCommand = defineCommand({
   id: "auto-build",
@@ -27,23 +27,22 @@ async function wakeSupervisor(ctx: CommandContext) {
     const supervisor = await readAutoBuildSupervisor(ctx);
     const session = supervisor.sessionId ? await ctx.sessions.get(supervisor.sessionId) : null;
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
-    const { candidates, capacity, snapshot } = await readAutoBuildCandidates(ctx, mode);
+    const { tickets: candidates, capacity, snapshot } = await readNextTickets(ctx, mode);
     if (!candidates.length || capacity.running >= capacity.limit || snapshot === supervisor.lastWake)
       return { prompted: false };
     const prompt = [
       mode.prompt,
       "## Auto Build supervisor instructions",
       "You coordinate ticket attempts. Do not implement tickets yourself or change the board to bypass its rules.",
-      "Read current valid, unassigned tickets and available capacity with:",
-      "pst pstdio-planner auto-build candidates",
-      `For each relevant candidate, launch or resume its managed attempt with:\npst pstdio-planner auto-build dispatch --ticket <ticket> --revision ${mode.revision}`,
-      "Re-read candidates after dispatching. Respect the user's prompt and the returned capacity. The dispatch command enforces current ignore filters, assignments, dependencies, and capacity.",
+      "Query current work yourself with pst tickets next. Use --track, --status, --tags, or --parent to match the user's request; for example: pst tickets next --track Workbench. Queries return launchable tickets, waiting reasons, available capacity, and the current mode revision. Read a ticket's full instructions with pst tickets panel --id <ticket> before choosing it.",
+      "For each relevant returned ticket, launch or resume its managed attempt with:\npst pstdio-planner auto-build dispatch --ticket <ticket> --revision <revision-from-query>",
+      "An update-stack action means the existing owner's workspace has newer unsubmitted work or outdated dependency ancestry. Dispatch it to that same owner; it integrates the required base, validates the result, and records a new revision. Never fabricate a review rejection or create an alternative workspace just to repair a stack.",
+      "Re-run tickets next after dispatching. Respect the user's prompt and the returned capacity. Waiting tickets are context, not permission to bypass blockers. The dispatch command enforces current ignore filters, assignments, dependencies, and capacity.",
       "Do not call run-attempt directly, create implementation sessions yourself, or change Auto Build settings.",
       mode.blockOnReview
         ? "Children wait for dependency review approval."
         : "Children may start while dependency revisions are in review. Dispatch creates their workspaces on the submitted dependency commit so their work stacks on top.",
       "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build will re-prompt this same session when the board changes or capacity frees up. If Auto Build is stopped, finish your turn without dispatching more work.",
-      `Current capacity: ${capacity.running}/${capacity.limit}. Candidates: ${JSON.stringify(candidates)}.`,
     ].join("\n\n");
     const current = await readAutoBuildMode(ctx);
     if (!current.enabled || current.revision !== mode.revision) return { prompted: false };

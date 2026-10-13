@@ -1,9 +1,14 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
-import { type AttemptReadinessTicket, resolveAttemptReadiness } from "../data/attempt-readiness";
+import {
+  type AttemptReadinessTicket,
+  resolveAttemptDependencies,
+  resolveAttemptReadiness,
+} from "../data/attempt-readiness";
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { readTicketReviewRequests } from "../data/review-request-storage";
+import { isLiveSession } from "./auto-build-sessions";
 
 type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage">;
 
@@ -14,10 +19,8 @@ interface ReadinessParams {
 
 export async function readImplementationCapacity(ctx: Pick<ReadinessContext, "storage" | "sessions" | "settings">) {
   const attempts = await listAttempts(ctx.storage);
-  const active = attempts.filter(
-    (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
-  );
-  const sessions = await Promise.all(active.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)));
+  const implementationIds = [...new Set(attempts.map(({ implementationSessionId }) => implementationSessionId))];
+  const sessions = await Promise.all(implementationIds.map((id) => ctx.sessions.get(id)));
   const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
   const running = sessions.filter((session) => liveStatuses.has(session?.status ?? "")).length;
   const settings = await ctx.settings.all();
@@ -31,11 +34,7 @@ const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) =
   return result.stdout.trim();
 };
 
-export const loadAttemptReadiness = async (
-  ctx: ReadinessContext,
-  ticketRef: string,
-  commandParams: ReadinessParams,
-) => {
+const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, commandParams: ReadinessParams) => {
   const [storedTickets, attempts, selections, statuses, home, providers, requests] = await Promise.all([
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
@@ -64,7 +63,6 @@ export const loadAttemptReadiness = async (
   }
   const rootPath = home.root_path;
 
-  const capacity = await readImplementationCapacity(ctx);
   const mainHeadSha = await runGit(ctx, rootPath, [
     "rev-parse",
     "--verify",
@@ -75,7 +73,17 @@ export const loadAttemptReadiness = async (
     statuses.filter((status) => status.name.trim().toLowerCase() === "done").map((status) => status.id),
   );
 
-  const readiness = await resolveAttemptReadiness({
+  const owners = await Promise.all(
+    attempts.map(async (attempt) => ({
+      workspaceId: attempt.workspaceId,
+      session: await ctx.sessions.get(attempt.implementationSessionId),
+    })),
+  );
+  const activeImplementationWorkspaceIds = new Set(
+    owners.filter(({ session }) => isLiveSession(session)).map(({ workspaceId }) => workspaceId),
+  );
+  const input = {
+    activeImplementationWorkspaceIds,
     requests,
     target: target.id,
     tickets,
@@ -84,9 +92,7 @@ export const loadAttemptReadiness = async (
     dependencyReview: commandParams.dependencyReview,
     doneStatusIds,
     mainHeadSha,
-    activeImplementationCount: capacity.running,
-    maxInProgress: capacity.limit,
-    isAncestor: async (baseSha, headSha) => {
+    isAncestor: async (baseSha: string, headSha: string) => {
       const result = await ctx.process.run({
         command: ["git", "-C", rootPath, "merge-base", "--is-ancestor", baseSha, headSha],
       });
@@ -94,10 +100,27 @@ export const loadAttemptReadiness = async (
       if (result.exitCode === 1) return false;
       throw new Error(result.stderr.trim() || "Could not compare dependency commits.");
     },
-  });
-
-  return { readiness, workspace: home, target, capacity };
+  };
+  return { input, workspace: home, target };
 };
+
+export async function loadAttemptDependencies(ctx: ReadinessContext, ticketRef: string, params: ReadinessParams) {
+  const { input, workspace, target } = await loadDependencyInput(ctx, ticketRef, params);
+  return { readiness: await resolveAttemptDependencies(input), workspace, target };
+}
+
+export async function loadAttemptReadiness(ctx: ReadinessContext, ticketRef: string, params: ReadinessParams) {
+  const [{ input, workspace, target }, capacity] = await Promise.all([
+    loadDependencyInput(ctx, ticketRef, params),
+    readImplementationCapacity(ctx),
+  ]);
+  const readiness = await resolveAttemptReadiness({
+    ...input,
+    activeImplementationCount: capacity.running,
+    maxInProgress: capacity.limit,
+  });
+  return { readiness, workspace, target, capacity };
+}
 
 export const attemptReadinessCommand = defineCommand({
   id: "attempt-readiness",

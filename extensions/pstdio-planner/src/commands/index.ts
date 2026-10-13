@@ -32,6 +32,7 @@ import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
 import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
 import { newTicketCommand } from "./new-ticket";
+import { nextTicketsCommand } from "./next-tickets";
 import { openTicketsCommand } from "./open-tickets";
 import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
@@ -102,6 +103,7 @@ import {
   ticketWorktreesRemoveAllCommand,
 } from "./ticket-workspaces";
 import { unarchiveTicketCommand } from "./unarchive-ticket";
+import { updateStackCommand } from "./update-stack";
 import { updateTicketCommand } from "./update-ticket";
 import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
@@ -155,6 +157,8 @@ export const plannerCommands = [
   queryTicketsCommand,
   readTicketsCommand,
   listTicketsCommand,
+  nextTicketsCommand,
+  updateStackCommand,
   createTicketCommand,
   newTicketCommand,
   attachTicketFileCommand,

@@ -126,7 +126,8 @@ export type AttemptEventType =
   | "attempt_selected"
   | "attempt_blocked"
   | "attempt_abandoned"
-  | "attempt_merged";
+  | "attempt_merged"
+  | "stack_updated";
 
 export interface AttemptTimelineEvent {
   id: string;

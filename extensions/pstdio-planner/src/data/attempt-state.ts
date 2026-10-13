@@ -17,7 +17,7 @@ export const deriveRevisionVerdict = (revision: AttemptRevision) => {
 
 export const appendRevision = (revisions: AttemptRevision[], input: RevisionInput) => {
   const previous = revisions.at(-1);
-  if (previous?.headSha === input.headSha) {
+  if (previous?.headSha === input.headSha && previous.baseSha === input.baseSha) {
     if (previous.changeRequestReportId === input.changeRequestReportId) return revisions;
     throw new Error("A new revision requires a different HEAD");
   }

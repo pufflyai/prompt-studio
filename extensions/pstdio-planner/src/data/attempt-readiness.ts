@@ -33,6 +33,7 @@ export type AttemptReadinessResult =
 
 interface ResolveAttemptReadinessInput {
   requests: Map<string, TicketReviewRequests>;
+  activeImplementationWorkspaceIds?: Set<string>;
   dependencyReview?: "approved" | "submitted";
   target: string;
   tickets: AttemptReadinessTicket[];
@@ -76,6 +77,15 @@ export const findPendingPrerequisites = (
 };
 
 export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInput): Promise<AttemptReadinessResult> => {
+  if (input.activeImplementationCount >= input.maxInProgress) {
+    return { decision: "wait", reason: "capacity-full", dependencyIds: [] };
+  }
+  return resolveAttemptDependencies(input);
+};
+
+export const resolveAttemptDependencies = async (
+  input: Omit<ResolveAttemptReadinessInput, "activeImplementationCount" | "maxInProgress">,
+): Promise<AttemptReadinessResult> => {
   const byRef = new Map(
     input.tickets.flatMap((ticket) => [
       [ticket.id, ticket],
@@ -84,10 +94,6 @@ export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInpu
   );
   const target = byRef.get(input.target);
   if (!target) return { decision: "wait", reason: "dependency-missing", dependencyIds: [input.target] };
-
-  if (input.activeImplementationCount >= input.maxInProgress) {
-    return { decision: "wait", reason: "capacity-full", dependencyIds: [] };
-  }
 
   const unresolved = new Map<string, AttemptReadinessTicket>();
   const visited = new Set<string>();
@@ -143,6 +149,7 @@ export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInpu
     const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
     const attempts = input.attempts.filter((attempt) => attempt.ticketId === dependency.id);
     const eligible = (attempt: AttemptRecord) => {
+      if (input.activeImplementationWorkspaceIds?.has(attempt.workspaceId)) return false;
       if (isApprovedAttempt(attempt)) return true;
       if (input.dependencyReview === "submitted")
         return ["review_ready", "reviewing"].includes(attempt.state) && latestHead(attempt) !== null;

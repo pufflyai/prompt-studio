@@ -14,6 +14,14 @@ A Track rule in the filter also chooses the track columns. For example, Track is
 
 Use ticket filters for Status, Milestone, Milestone date, Milestone progress, and Needs attention. For example, exclude Done tickets, exclude Completed past milestone, or show Needs attention → Yes. These properties are available in both Tickets and Project Timeline and can be saved in shared views. Change a ticket's milestone in its Properties panel or by dragging it in the timeline. The board create form creates unscheduled tickets; the timeline form also chooses placement and preserves the saved ticket when placement needs a retry. The timeline has no separate Display menu. Dependency arrows are smooth curves from the prerequisite to the ticket that waits on it. The graph keeps its dependency execution order. Milestone progress uses active tickets, matching the graph; archived tickets remain available in Tickets without active timeline properties. Hover and drop indicators use the shared navigation indicator color. The add-milestone preview appears above ticket cards.
 
+## Milestone ETA
+
+Each milestone shows its estimated time remaining to the left of its progress bar. The bar counts completed tickets. The ETA weights tickets by the configured Complexity options, ordered from simplest to most complex: 1, 2, 3, and so on. A ticket without a complexity uses the middle weight. Projects without complexity options use equal weights.
+
+Planner measures completed complexity against elapsed time since the milestone's first recorded attempt started. It applies that observed pace to the remaining complexity. Parallel work and waiting are already included in the elapsed time. Hover or focus the ETA to see its basis. Filters do not change the full milestone estimate.
+
+`ETA —` means there is not yet a completed ticket and a recorded start to measure. Completed milestones show `Done`. Unscheduled work has no milestone ETA. The estimate reflects past pace; it is not a promised deadline. The plan CLI returns the same derived ETA without storing another workflow state.
+
 ## Auto Build
 
 Auto Build uses your prompt and ignore filters to assign valid, unassigned tickets across the project. A supervisor sleeps between checks and resumes when more work can run. The selected view, search, and display filters only affect what you see.
