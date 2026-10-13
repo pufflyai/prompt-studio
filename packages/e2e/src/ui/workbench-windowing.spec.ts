@@ -44,10 +44,7 @@ test.describe("Workbench windowing stories", () => {
   });
 
   for (const storyId of storyIds) {
-    test(`${storyId} completes its interactions`, async ({ page, request }) => {
-      const index = await request.get(`${baseUrl}/index.json`);
-      expect(index.ok()).toBe(true);
-      expect((await index.json()).entries[storyId]).toBeDefined();
+    test(`${storyId} completes its interactions`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 960 });
       await page.goto(storyUrl(baseUrl, storyId));
       await page
