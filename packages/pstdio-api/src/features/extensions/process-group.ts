@@ -13,13 +13,33 @@ export const signalProcessTree = (child: SignalableChild, signal: NodeJS.Signals
   if (process.platform === "win32" && signal === "SIGKILL") {
     // Killing cmd.exe alone leaves the CLI inside an npm wrapper running.
     // /T includes descendants; /F is required for a timed-out console process.
+    const started = performance.now();
     try {
-      Bun.spawnSync(["taskkill.exe", "/PID", String(child.pid), "/T", "/F"], {
-        stdout: "ignore",
-        stderr: "ignore",
+      const result = Bun.spawnSync(["taskkill.exe", "/PID", String(child.pid), "/T", "/F"], {
+        stdout: "pipe",
+        stderr: "pipe",
         windowsHide: true,
       });
-    } catch {}
+      console.error(
+        JSON.stringify({
+          event: "process.tree.stop.measurement",
+          pid: child.pid,
+          elapsedMs: performance.now() - started,
+          exitCode: result.exitCode,
+          stdout: result.stdout.toString(),
+          stderr: result.stderr.toString(),
+        }),
+      );
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          event: "process.tree.stop.measurement",
+          pid: child.pid,
+          elapsedMs: performance.now() - started,
+          error: String(error),
+        }),
+      );
+    }
     try {
       child.kill(signal);
     } catch {}
