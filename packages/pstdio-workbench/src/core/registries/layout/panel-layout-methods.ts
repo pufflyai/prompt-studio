@@ -62,8 +62,13 @@ export const createPanelLayoutMethods = (input: CreatePanelLayoutMethodsInput) =
   openPanel(id: string, openInput: OpenWorkbenchPanelInput = {}) {
     const widget = input.getWidgets()[id];
     if (!widget) throw new Error(`Panel not registered: ${id}`);
+    const region = openInput.region ?? widget.region;
+    const role = region === "side" || region === "secondary" ? "sub-panel" : openInput.role;
     return toPanelInstance(
-      input.widgetOpeners.openWidget(id, toOpenWidgetInput(openInput, defaultPanelTabRetention(widget, openInput))),
+      input.widgetOpeners.openWidget(
+        id,
+        toOpenWidgetInput({ ...openInput, role: openInput.role ?? role }, defaultPanelTabRetention(widget, openInput)),
+      ),
     );
   },
 

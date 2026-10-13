@@ -4,11 +4,7 @@ import { createWorkbench } from "../../workbench-core";
 import { registerResourcePage } from "./page-runtime-test-support";
 
 test("applies a shell Sub Panel opened after a scoped page becomes active", async () => {
-  const workbench = createWorkbench({
-    resolvePagePersistenceScope: ({ projectId, resource }) => ({
-      scope: projectId && resource ? `${projectId}/${resourceKey(resource)}` : undefined,
-    }),
-  });
+  const workbench = createWorkbench({});
   const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.views.registerView({

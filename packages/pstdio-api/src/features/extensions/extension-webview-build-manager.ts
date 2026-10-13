@@ -59,24 +59,46 @@ const inspectWebviewBuild = (row: InstalledSourceWithManifest, packageName: stri
   return { buildInputs, signature, sourceEntryPath };
 };
 
-// A finished build publishes only while its installed source still has the same build inputs.
+// Finished builds report success or failure against the owner of the same inputs.
 const findCurrentBuildSource = async (
   listInstalledSources: () => Promise<InstalledSourceWithManifest[]>,
   row: InstalledSourceWithManifest,
-  result: Extract<WebviewBuildResult, { builtNow: true }>,
+  signature: string,
   packageName: string,
   webview: ManagedWebview,
+  loadSource: typeof loadExtensionSource,
 ) => {
   const currentRow = (await listInstalledSources()).find((current) => current.id === row.id);
   if (!currentRow || currentRow.source_path !== row.source_path) return null;
 
-  const current = inspectWebviewBuild(currentRow, packageName, webview);
-  return current.signature === result.signature ? currentRow : null;
+  let currentView = webview;
+  if (currentRow.source_hash !== row.source_hash) {
+    const loaded = await loadSource(currentRow.source_path);
+    // Invalid source leaves the last accepted declaration active.
+    if (!loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
+      const declared = collectExtensionWebviews(loaded).find((view) => view.id === webview.id);
+      if (!declared || resolvePackageAssetFile(declared.entry) !== resolvePackageAssetFile(webview.entry)) return null;
+      currentView = declared;
+      packageName = loaded.metadata.name;
+    }
+  }
+  const current = inspectWebviewBuild(currentRow, packageName, currentView);
+  return current.signature === signature ? currentRow : null;
 };
 
 const isPublished = (webviewCacheRoot: string, installedExtensionId: string, webviewId: string) => {
   const { distDir } = resolveManagedWebviewPaths({ installedExtensionId, webviewCacheRoot, webviewId });
   return existsSync(publishedWebviewModule(distDir));
+};
+
+const publishCompletedBuild = async (
+  row: InstalledSourceWithManifest,
+  result: Extract<WebviewBuildResult, { builtNow: true }>,
+  reportSuccess: ReturnType<typeof createBuildReporters>["reportSuccess"],
+) => {
+  rmSync(result.distDir, { recursive: true, force: true });
+  renameSync(result.stageDir, result.distDir);
+  return reportSuccess(row.id, result.webviewId, { sourcePath: row.source_path });
 };
 
 export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
@@ -93,7 +115,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
   const { reportFailure, reportSuccess } = createBuildReporters(input);
 
-  const buildNewManagedWebview = async (input: {
+  const buildNewManagedWebview = async (build: {
     buildInputs: ReturnType<typeof inspectManagedWebviewBuildInputs>;
     key: string;
     packageName: string;
@@ -102,7 +124,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     sourceEntryPath: string;
     webview: ManagedWebview;
   }) => {
-    const { buildInputs, key, packageName, row, signature, sourceEntryPath, webview } = input;
+    const { buildInputs, key, packageName, row, signature, sourceEntryPath, webview } = build;
     building.set(key, signature);
     backoff.forget(key);
     const paths = resolveManagedWebviewPaths({
@@ -113,6 +135,19 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     const stageDir = `${paths.distDir}.staging-${crypto.randomUUID()}`;
     prepareWebviewBuildCache(paths.distDir, activeStages);
     activeStages.add(stageDir);
+
+    const reportCurrentFailure = async (error: unknown) => {
+      const currentRow = await findCurrentBuildSource(
+        input.listInstalledSources,
+        row,
+        signature,
+        packageName,
+        webview,
+        loadSource,
+      );
+      if (currentRow && !disposed && building.get(key) === signature)
+        await reportFailure(currentRow.id, webview.id, error, expectedWebviewBuildSource(currentRow));
+    };
 
     let readyForPublish = false;
     try {
@@ -126,12 +161,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       });
       if (!buildSource.success) {
         if (building.get(key) === signature) {
-          await reportFailure(
-            row.id,
-            webview.id,
-            webviewBuildFailure(row.install_name, webview.id, buildSource.details),
-            expectedWebviewBuildSource(row),
-          );
+          await reportCurrentFailure(webviewBuildFailure(row.install_name, webview.id, buildSource.details));
           backoff.recordFailure(key, signature);
         }
         return null;
@@ -145,7 +175,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
         entryPath: buildSource.entryPath,
         isDisposed: () => disposed,
         key,
-        reportFailure,
+        reportFailure: (_id, _webviewId, error) => reportCurrentFailure(error),
         row,
         signature,
         webviewId: webview.id,
@@ -190,18 +220,6 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     return buildNewManagedWebview({ buildInputs, key, packageName, row, signature, sourceEntryPath, webview });
   };
 
-  const publishCompletedBuild = async (
-    row: InstalledSourceWithManifest,
-    result: Extract<WebviewBuildResult, { builtNow: true }>,
-  ) => {
-    rmSync(result.distDir, { recursive: true, force: true });
-    renameSync(result.stageDir, result.distDir);
-    const expectedSource = { sourcePath: row.source_path };
-    if (await reportSuccess(row.id, result.webviewId, expectedSource)) {
-      backoff.forget(result.key);
-    }
-  };
-
   // Resolves with the managed webview ids once the source loaded and every build was attempted.
   const refreshRow = async (row: InstalledSourceWithManifest, validatedSource?: LoadedExtension) => {
     if (disposed) return null;
@@ -221,13 +239,14 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
           const currentRow = await findCurrentBuildSource(
             input.listInstalledSources,
             row,
-            result,
+            result.signature,
             loaded.metadata.name,
             webview,
+            loadSource,
           );
           if (!currentRow || disposed || building.get(key) !== result.signature) return;
 
-          await publishCompletedBuild(currentRow, result);
+          if (await publishCompletedBuild(currentRow, result, reportSuccess)) backoff.forget(result.key);
         } finally {
           rmSync(result.stageDir, { recursive: true, force: true });
           activeStages.delete(result.stageDir);

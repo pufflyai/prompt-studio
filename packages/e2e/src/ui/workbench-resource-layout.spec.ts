@@ -44,7 +44,7 @@ const openWorkspace = async (page: Page, shorthand: string) => {
   await row.getByRole("cell").filter({ hasText: shorthand }).first().click();
 };
 
-test("restores each resource's panel state across navigation and reload", async ({ page, request }) => {
+test("keeps mode panel state across page navigation and reload", async ({ page, request }) => {
   test.slow();
   const repoRoot = createGitRepo("pstdio-resource-layout-", "resource layout restore e2e");
   const project = await createProject(request, repoRoot);
@@ -74,7 +74,8 @@ test("restores each resource's panel state across navigation and reload", async 
 
     await workspacesNavigation.click();
     await openWorkspace(page, attemptB.workspace.workspace_shorthand);
-    await expect(page.getByRole("region", { name: "Secondary Panel" })).not.toBeVisible();
+    await expect(page.getByRole("region", { name: "Secondary Panel" })).toBeVisible();
+    await expect(separator).toHaveAttribute("aria-valuenow", workspaceASize!);
 
     await workspacesNavigation.click();
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);

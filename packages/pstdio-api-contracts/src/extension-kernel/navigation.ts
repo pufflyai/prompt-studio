@@ -9,14 +9,25 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isContributionRef = (value: unknown, kind: string) =>
   isRecord(value) && value.kind === kind && typeof value.id === "string";
 
+const isResourceContext = (value: unknown) => {
+  if (!isRecord(value) || typeof value.id !== "string") return false;
+  if (value.label !== undefined && typeof value.label !== "string") return false;
+  if (value.type === "project") return value.projectId === undefined;
+  return value.type === "workspace" && (value.projectId === undefined || typeof value.projectId === "string");
+};
+
 const isResource = (value: unknown) =>
-  isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
+  isRecord(value) &&
+  typeof value.type === "string" &&
+  typeof value.id === "string" &&
+  (value.context === undefined || isResourceContext(value.context));
 
 const isOpenIntent = (value: unknown) => value === undefined || value === "preview" || value === "pin";
 
 const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean => {
   if (!isRecord(value) || value.kind !== "page" || !isContributionRef(value.page, "page")) return false;
   if (ancestors.has(value)) return false;
+  if (value.mode !== undefined && !isContributionRef(value.mode, "mode")) return false;
   if (value.resource !== undefined && !isResource(value.resource)) return false;
   if (value.section !== undefined && !isRecord(value.section)) return false;
   if (value.position !== undefined && (!isFileSourcePosition(value.position) || value.section !== undefined))
@@ -68,6 +79,7 @@ const toPageTarget = (
 ): Extract<NavigationTarget, { kind: "page" }> => ({
   ...target,
   page: withExtensionOwner(target.page, extensionId),
+  ...(target.mode ? { mode: withExtensionOwner(target.mode, extensionId) } : {}),
   ...(target.resource ? { resource: qualifyResource(target.resource, extensionId, projectId) } : {}),
   ...(target.parent ? { parent: toPageTarget(target.parent, extensionId, projectId) } : {}),
 });

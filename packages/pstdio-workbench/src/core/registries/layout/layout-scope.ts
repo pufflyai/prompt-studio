@@ -27,17 +27,6 @@ export const carryPinnedWorkbenchChrome = (current: WorkbenchLayout, incoming: W
   return { ...incoming, regions };
 };
 
-export const carryWorkbenchRegionState = (
-  current: WorkbenchLayout,
-  incoming: WorkbenchLayout,
-  regionIds: readonly WorkbenchRegion[],
-) => {
-  if (regionIds.length === 0) return incoming;
-  const regions = { ...incoming.regions };
-  for (const regionId of regionIds) regions[regionId] = current.regions[regionId];
-  return { ...incoming, regions };
-};
-
 export const resolveScopedLayout = (
   defaultRegionVisibility: Partial<Record<WorkbenchRegion, boolean>> | undefined,
   persisted: WorkbenchLayout | undefined,

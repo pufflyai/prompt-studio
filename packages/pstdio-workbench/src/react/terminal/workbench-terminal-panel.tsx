@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ResourceRef, WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { terminalPlacementBindingId } from "./terminal-placement-binding";
+import { updateTerminalPlacementTitle } from "./terminal-placement-title";
 
 interface ControllerTerminalBridgeOptions {
   getBindingId?: () => string | undefined;
@@ -74,8 +75,7 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   }, [placement]);
   const [bridge] = useState(() =>
     createControllerTerminalBridge(workbench.terminal, {
-      getBindingId: () =>
-        terminalPlacementBindingId(workbench.layout.getPersistenceScope(), placementRef.current.instanceId),
+      getBindingId: () => terminalPlacementBindingId(placementRef.current.instanceId),
       getResource: () => placementRef.current.resource,
       getTitle: () => placementRef.current.title,
     }),
@@ -92,19 +92,11 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
     if (!region) return false;
     return (region.activeWidgetId ?? region.widgets[0]?.widgetId) === placement.instanceId;
   });
-  const updateShellPlacement = workbench.shellPlacements.updatePlacement;
 
   useEffect(() => {
     if (!sessionId || !processTitle) return;
-    const currentPlacement = workbench.layout.getLayout().regions;
-    const current = Object.values(currentPlacement)
-      .flatMap((region) => region.widgets)
-      .find((candidate) => candidate.widgetId === placement.instanceId);
-    const identity = current?.placementIdentity;
-    if (identity?.kind === "shell" && current?.resource) {
-      updateShellPlacement(identity, { resource: { ...current.resource, label: processTitle } });
-    }
-  }, [sessionId, processTitle, placement.instanceId, workbench.layout, updateShellPlacement]);
+    updateTerminalPlacementTitle(workbench, placement.instanceId, processTitle);
+  }, [sessionId, processTitle, placement.instanceId, workbench]);
 
   if (!workbench.terminal.isAvailable()) {
     return (

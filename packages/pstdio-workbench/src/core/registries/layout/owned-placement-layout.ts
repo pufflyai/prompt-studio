@@ -11,6 +11,7 @@ import {
   type WorkbenchWidgetPlacement,
   workbenchRegions,
 } from "./layout-types";
+import { isPageRegion, ownerRegionSelection, restoreOwnerRegion } from "./owner-region-state";
 import { composeOwnedPlacements, placementIdentityKey, type ResolvedOwnedPlacement } from "./placement-reconciliation";
 
 export type WorkbenchOwnedWidgetPlacement = ResolvedOwnedPlacement<WorkbenchWidgetPlacement>;
@@ -188,7 +189,8 @@ const reconcileRegions = (
   const desiredByKey = new Map(desired.map((placement) => [placementIdentityKey(placement.identity), placement]));
   const transferredCurrentKeys = new Set(desired.flatMap((placement) => placement.transferredFromKey ?? []));
   for (const regionId of workbenchRegions) {
-    const region = layout.regions[regionId];
+    const shared = !isPageRegion(regionId) ? modeLayout?.regions[regionId] : undefined;
+    const region = restoreOwnerRegion(layout, regionId, modeLayout);
     const pageOwnsPrimaryLocation = desired.some(
       (entry) => entry.region === regionId && entry.identity.kind === "page" && entry.placement.role === "location",
     );
@@ -222,10 +224,9 @@ const reconcileRegions = (
       if (entry.region === regionId && !placedKeys.has(key)) widgets.push(entry.placement);
     }
     // Page caches omit mode tabs. Recover their shared selection from the mode's cache.
+    const selections = ownerRegionSelection(layout, regionId, modeLayout);
     const activeWidgetId =
-      [region.activeWidgetId, modeLayout?.regions[regionId].activeWidgetId].find((id) =>
-        widgets.some((placement) => placement.widgetId === id),
-      ) ?? widgets[0]?.widgetId;
+      selections.find((id) => widgets.some((placement) => placement.widgetId === id)) ?? widgets[0]?.widgetId;
     const opensPreviouslyEmptyRegion =
       region.widgets.length === 0 && widgets.some((placement) => !placement.hiddenByDefault);
     regions[regionId] = {
@@ -233,7 +234,7 @@ const reconcileRegions = (
       widgets,
       savedWidgetOrder: undefined,
       activeWidgetId,
-      ...(docked.has(regionId) ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
+      ...(docked.has(regionId) && !shared ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
     };
   }
   return { ...layout, regions };

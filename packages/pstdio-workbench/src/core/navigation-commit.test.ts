@@ -22,7 +22,6 @@ function harness(
   const entries: WorkbenchPageBrowserEntry[] = [{ url: "/projects/project" }];
   const workbench = createWorkbench({
     startPage: page("home"),
-    resolvePagePersistenceScope: ({ pageId }) => ({ scope: pageId }),
     panelMenuStatePersistence: {
       getMenuStates() {
         if (armed && failure === "menu-read") throw new Error("Menu cache read failed");

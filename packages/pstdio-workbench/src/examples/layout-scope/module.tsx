@@ -55,9 +55,7 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
   // the button highlight reflects switches even when scoped layouts coincide.
   const [activeScope, setActiveScope] = useState<LayoutScope | undefined>(() => workbench.layout.getPersistenceScope());
   const switchTo = (scope: LayoutScope) => {
-    workbench.layout.setPersistenceScope(scope, {
-      carryRegionState: ["sidenav"],
-    });
+    workbench.layout.setPersistenceScope(scope);
     setActiveScope(scope);
   };
   return (

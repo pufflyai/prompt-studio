@@ -8,6 +8,11 @@ export interface ResourceResolution {
 
 export type ResourceRole = "primary" | "context" | "source" | "result";
 
+/** Canonical containing context supplied by the resource owner, independent of tab placement. */
+export type ResourceContext =
+  | { type: "workspace"; id: string; projectId?: string; label?: string }
+  | { type: "project"; id: string; label?: string };
+
 export interface ResourceRef {
   type: string;
   id: string;
@@ -17,6 +22,7 @@ export interface ResourceRef {
   icon?: string;
   extensionId?: string;
   metadata?: JsonObject;
+  context?: ResourceContext;
 }
 
 export interface ResourceRemovedEvent {

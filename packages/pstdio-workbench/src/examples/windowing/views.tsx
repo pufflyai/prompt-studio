@@ -2,6 +2,7 @@ import { Box, Button, Input, Stack, Text } from "@chakra-ui/react";
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
 import { useShowcaseStore } from "../showcases/showcase-store";
+import { WindowingFileTree } from "./file-tree";
 import type { WindowingLifecycleProbe } from "./lifecycle-probe";
 
 interface ResourceListProps {
@@ -42,7 +43,7 @@ export const WindowingDraftView = (props: DraftViewProps) => {
     setMount(probe.mounted(key));
   }, [key, probe]);
   return (
-    <Stack p="md" gap="sm">
+    <Stack role="group" aria-label={`${label} view`} p="md" gap="sm">
       <Text textStyle="heading/S/semibold">{resource?.label ?? label}</Text>
       <Text color="fg.muted" textStyle="paragraph/S/regular">
         {label} · {resourceKey(resource)}
@@ -50,6 +51,12 @@ export const WindowingDraftView = (props: DraftViewProps) => {
       <Text aria-label={`${label} mount`} textStyle="paragraph/S/regular">
         Mount {mount}
       </Text>
+      {(label === "Files" || label === "Changes") && <WindowingFileTree label={label} />}
+      {resource?.context && (
+        <Text aria-label={`${label} context`} color="fg.muted">
+          {resource.context.label ?? "Project"}
+        </Text>
+      )}
       <Input aria-label={`${label} draft`} size="sm" value={draft} onChange={(event) => setDraft(event.target.value)} />
     </Stack>
   );

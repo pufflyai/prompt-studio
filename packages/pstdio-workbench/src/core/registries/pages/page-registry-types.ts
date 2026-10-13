@@ -35,6 +35,8 @@ export interface WorkbenchPageContribution {
   icon?: string;
   path: string;
   modeId: string;
+  /** Authoritative availability. Absent means legacy singleton navigation. */
+  modeIds?: readonly string[];
   parentId?: string;
   resource?: ResourceConstraint;
   document?: PageDocumentDeclaration;
@@ -51,6 +53,7 @@ export interface WorkbenchPageResourceCodec {
 }
 
 export interface WorkbenchPagePlacementInput {
+  ownerInstanceKey?: string;
   identity: PlacementIdentity;
   pageId: string;
   slotId: string;
@@ -130,6 +133,7 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
+  listAvailablePages(modeId: string | undefined): WorkbenchPageContribution[];
   pinPlacement(identity: PlacementIdentity, open?: PageOpenIntent): void;
   openSlot(input: WorkbenchPageSlotOpenInput): void;
 }

@@ -35,7 +35,6 @@ import { createStartModule } from "./modules/start/module";
 import { createTerminalModule } from "./modules/terminal/module";
 import { createUpdatesModule } from "./modules/updates/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
-import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
 import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
 
 export { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
@@ -120,7 +119,6 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
       secondary: { size: WORKBENCH_TERMINAL_PANEL_SIZE },
       sidenav: { size: DASHBOARD_SIDENAV_REGION_SIZE },
     },
-    resolvePagePersistenceScope: resolveDashboardPersistenceScope,
     ...persistence,
     ...(pageLocationBrowser ? { pageLocationBrowser } : {}),
   });

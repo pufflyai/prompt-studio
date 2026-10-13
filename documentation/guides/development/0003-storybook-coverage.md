@@ -48,8 +48,10 @@ bun run --cwd packages/pstdio-workbench build-storybook
 bun run --cwd packages/e2e test:ui -- src/ui/workbench-windowing.spec.ts
 ```
 
-The fixture uses today's workbench APIs. New ownership, policy, and layout behavior belongs to the later panel tickets. The Storybook itself has no database; the UI runner uses its existing isolated test runtime and shared Storybooks. A fresh checkout needs built SDK, UI, and workbench dependencies before running it.
+The fixture uses the current workbench APIs. The Storybook itself has no database; the UI runner uses its existing isolated test runtime and shared Storybooks. A fresh checkout needs built SDK, UI, and workbench dependencies before running it.
 
 See [design rules](../../../design/DESIGN.md), [UI package guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
 
 The windowing PageSurface story adds page-owned left/right menus and a bottom panel inside Main. Its play function checks menu visibility, workspace rebinding, header placement, and reload. The windowing spec also drags a React draft into bottom and moves it back through the keyboard menu, checking that the draft and mount identity survive.
+
+OwnerTransfer and FilesTransfer move workspace views into Side. They check the original resource binding, draft, mount count, and the view's internal file selection across workspace navigation. OwnerTransfer also moves the same tab into another workspace's bottom, checks separate page and mode bottom panels, and reloads the saved owner layout. Labels in retained views must be queried through the visible instance; hidden views keep their DOM and state.

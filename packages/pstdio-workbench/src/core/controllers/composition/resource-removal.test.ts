@@ -76,7 +76,6 @@ test("removal reconciles mode and shell bindings including inactive cached shell
         saved.set(scope, layout);
       },
     },
-    resolvePagePersistenceScope: ({ projectId, pageId }) => ({ scope: `${projectId}/${pageId}` }),
   });
   core.modes.registerMode({ id: "project", activate: () => undefined });
   core.views.registerView({ id: "editor", title: "Editor", body: { kind: "react", render: () => null } });

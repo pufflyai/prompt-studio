@@ -10,6 +10,7 @@ import type { JsonObject, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { RendererEventReference } from "./renderer-base";
 import type { ResourceBinding } from "./resource-binding";
+import type { ResourceContext } from "./resources";
 import type { TreeRendererContribution } from "./tree-renderer";
 
 type NativeViewBody<Kind extends string, Definition> = {
@@ -52,6 +53,7 @@ export interface NavigationItemContribution extends ContributionDefinition<"navi
 }
 
 export interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
+  /** @deprecated For page ownership, use PageContribution.panelMenus.left. Mode ownership remains supported. */
   readonly owner: NavigationOwnerRef;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
@@ -90,6 +92,8 @@ export interface PlacementTabMenuGroup {
 }
 
 export interface PlacementTabSnapshot extends Struct {
+  /** Current resource relationship, refreshed by the owner without changing tab placement. */
+  readonly context?: ResourceContext;
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly indicator?: {
@@ -115,6 +119,7 @@ export interface PlacementPresentation {
 export interface PlacementContribution extends ContributionDefinition<"placement">, PlacementPresentation {
   readonly mode: ModeRef;
   readonly item: PlacementItem;
+  /** @deprecated For Main, use page Main declarations. Mode Side and Secondary remain supported. */
   readonly region: ExtensionPanelRegion;
   readonly order?: number;
   readonly movableTo?: readonly ExtensionPanelRegion[];

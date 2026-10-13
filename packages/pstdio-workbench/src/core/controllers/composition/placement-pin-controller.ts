@@ -1,5 +1,6 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { hasPlacementDeclaration } from "../../registries/placements/placement-declaration";
 import type { WorkbenchCore } from "../../workbench-core-types";
 
 export const createPlacementPinController =
@@ -13,6 +14,13 @@ export const createPlacementPinController =
     if (!placement) throw new Error(`Placement is not open: ${key}`);
     const open = pinned ? "pin" : "preview";
     if (!placement.tabRetention || (placement.tabRetention === "persistent") === pinned) return;
+    if (placement.declarationIdentity || !hasPlacementDeclaration(core, identity)) {
+      core.layout.updateWidgetPlacement(placement.widgetId, {
+        pinned,
+        tabRetention: pinned ? "persistent" : "preview",
+      });
+      return;
+    }
     if (identity.kind === "page") core.pages.pinPlacement(identity, open);
     else if (identity.kind === "mode") core.modePlacements.updatePlacement(identity, { open });
     else core.shellPlacements.updatePlacement(identity, { open });

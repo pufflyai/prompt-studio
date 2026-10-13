@@ -18,7 +18,8 @@ const sameReference = (left: ResourceRef, right: ResourceRef) =>
   left.label === right.label &&
   left.icon === right.icon &&
   left.shorthand === right.shorthand &&
-  JSON.stringify(left.metadata ?? {}) === JSON.stringify(right.metadata ?? {});
+  JSON.stringify(left.metadata ?? {}) === JSON.stringify(right.metadata ?? {}) &&
+  JSON.stringify(left.context) === JSON.stringify(right.context);
 
 // A page keeps the reference captured when it opened, and a pasted link carries only the
 // identity. The owning extension knows the current reference, so the host asks it again
@@ -94,6 +95,7 @@ export const watchOpenExtensionResource = (
         icon: resolved.icon,
         shorthand: resolved.shorthand,
         metadata: resolved.metadata,
+        context: resolved.context,
       };
       if (sameReference(latest, current)) return;
       setResourceBreadcrumb(ctx, current);

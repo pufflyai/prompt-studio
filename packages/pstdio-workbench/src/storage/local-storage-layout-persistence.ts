@@ -6,17 +6,17 @@ import {
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
 
-interface PersistedWorkbenchLayoutV5 {
-  version: 5;
+interface PersistedWorkbenchLayoutV6 {
+  version: 6;
   layout: WorkbenchLayout;
 }
 
-type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV5;
+type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV6;
 
-// Version 5 makes the side region's visibility the Side Panel's open state. Older
-// layouts saved a side visibility that never meant open, so they are discarded.
+// Version 6 stores tabs per page instance or mode. Old mixed-owner arrangements
+// cannot seed the new ownership rule and are discarded.
 // Only the layout cache changes; routed locations and independent preferences stay valid.
-const WORKBENCH_LAYOUT_VERSION = 5 as const;
+const WORKBENCH_LAYOUT_VERSION = 6 as const;
 const WORKBENCH_LAYOUT_INDEX_VERSION = 1 as const;
 const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
 
@@ -67,7 +67,7 @@ export const createLocalStorageLayoutPersistence = (
   };
 
   const resourceProjectId = (scope: string | undefined) =>
-    scope?.match(/^project\/([^/]+)\/mode\/[^/]+\/resource\//)?.[1];
+    scope?.match(/^project\/([^/]+)\/(?:mode\/[^/]+|owner\/page\/[^/]+)\/resource\//)?.[1];
   const scopeProjectId = (scope: string | undefined) => scope?.match(/^project\/([^/]+)/)?.[1];
 
   const storedProjectScopes = (projectId: string) => {
@@ -161,7 +161,7 @@ export const createLocalStorageLayoutPersistence = (
       return undefined;
     },
     setLayout: (layout, scope) => {
-      const persisted: PersistedWorkbenchLayoutV5 = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      const persisted: PersistedWorkbenchLayoutV6 = { version: WORKBENCH_LAYOUT_VERSION, layout };
       const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
       pending.delete(key);
       pending.set(key, {
@@ -195,7 +195,7 @@ export const createLocalStorageLayoutPersistence = (
         }
         storage.setItem(
           key,
-          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV5),
+          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV6),
         );
       }
     },

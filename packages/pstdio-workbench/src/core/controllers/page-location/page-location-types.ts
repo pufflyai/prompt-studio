@@ -28,6 +28,8 @@ export interface PersistedWorkbenchPageLocation {
   location: PageLocation;
   // The last location outside every Sidenav level. Users return here when a level hides the project rows.
   rootLevel?: PageLocation;
+  /** Last Main location per mode in this project. Rechecked before restoration. */
+  modeLocations?: Readonly<Record<string, PageLocation>>;
 }
 
 export interface WorkbenchPageLocationPersistence {
@@ -72,6 +74,7 @@ export interface WorkbenchPageLocationController {
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  switchMode(modeId: string): WorkbenchPageNavigationResult;
   replay(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
   /** Opens the last location outside every Sidenav level, or the start page when there is none. */

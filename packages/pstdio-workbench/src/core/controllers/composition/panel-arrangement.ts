@@ -11,6 +11,7 @@ import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { panelDestinations } from "./panel-destinations";
+import { transferPanelOwner } from "./panel-owner-transfer";
 
 export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
   getPanelDestinations(instanceId: string) {
@@ -31,6 +32,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
     const source = layout.regions[found.regionId];
     const remaining = source.widgets.filter((t) => t.widgetId !== instanceId);
     const target = layout.regions[destination];
+    const placement = transferPanelOwner(core, found.placement, destination);
     const next = {
       ...removeLocationSubPanelSelection(layout, instanceId),
       regions: {
@@ -46,11 +48,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         [destination]: {
           ...target,
           visible: true,
-          widgets: insertAtPosition(
-            destination === found.regionId ? remaining : target.widgets,
-            found.placement,
-            position,
-          ),
+          widgets: insertAtPosition(destination === found.regionId ? remaining : target.widgets, placement, position),
         },
       },
     };
@@ -59,7 +57,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
       const selected =
         found.placement.role === "location"
           ? (selectRegionActiveWidget(next, destination, instanceId) ?? next)
-          : activateInLayout(next, destination, found.placement);
+          : activateInLayout(next, destination, placement);
       core.layout.restoreLayout({
         ...selected,
         activeWidgetId: instanceId,

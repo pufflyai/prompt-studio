@@ -87,9 +87,6 @@ describe("workbench page runtime", () => {
         getLayout: (scope) => layouts.get(scope),
         setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
       },
-      resolvePagePersistenceScope: ({ projectId, resource }) => ({
-        scope: projectId && resource ? `${projectId}/${resourceKey(resource)}` : undefined,
-      }),
     });
     const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
@@ -178,13 +175,7 @@ describe("workbench page runtime", () => {
     });
   });
   test("rotates the host persistence scope before applying a page resource", async () => {
-    const workbench = createWorkbench({
-      resolvePagePersistenceScope: ({ projectId, resource }) => ({
-        scope: projectId
-          ? `project/${projectId}/${resource ? `resource/${resourceKey(resource)}` : "page"}`
-          : undefined,
-      }),
-    });
+    const workbench = createWorkbench({});
     const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     workbench.views.registerView({
@@ -222,7 +213,7 @@ describe("workbench page runtime", () => {
       page: pageRef,
       resource: { type: "workspace", id: "workspace-1" },
     });
-    const expectedScope = `project/project-1/resource/${resourceKey({ type: "workspace", id: "workspace-1" })}`;
+    const expectedScope = `project/project-1/owner/page/workspace/resource/${encodeURIComponent(resourceKey({ type: "workspace", id: "workspace-1" }))}`;
     expect(workbench.layout.getPersistenceScope()).toBe(expectedScope);
     expect(workbench.panelMenuState.getPersistenceScope()).toBe(expectedScope);
     expect(workbench.getPrimaryResource()).toMatchObject({ type: "workspace", id: "workspace-1" });

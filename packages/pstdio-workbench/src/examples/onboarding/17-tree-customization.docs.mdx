@@ -31,10 +31,10 @@ Scopes name one persisted arrangement:
 
 - A `LayoutScope` is a string key such as `"project/demo/mode/tickets/resource/ticket:PS-100"`. The host chooses the
   key format; the workbench only uses it to store and look up state.
-- `workbench.layout.setPersistenceScope(scope, options?)` saves the current layout under the old scope and restores
+- `workbench.layout.setPersistenceScope(scope)` saves the current layout under the old scope and restores
   the layout saved under the new one.
-- `carryRegionState: ["sidenav"]` keeps the named regions unchanged across the switch. The example uses it so the
-  project-owned Sidenav does not remount while resource scopes rotate.
+- Pinned workbench chrome stays mounted when scopes rotate. Routed pages choose their own owner scopes and share
+  mode-owned Side and Secondary state automatically.
 - `workbench.layout.getPersistenceScope()` returns the active scope key. It lives outside the store, so the example
   mirrors it in local state to drive the button highlight.
 

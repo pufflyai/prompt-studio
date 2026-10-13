@@ -2,6 +2,7 @@ import type { PageSlotRef, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
+import { resolvePageMode } from "../../registries/pages/page-availability";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { OwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
@@ -80,17 +81,18 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   for (const target of targets) {
     if (target.kind === "page") {
       if (!proposed.projectId) throw new Error("Cannot navigate before a project is active");
-      const resolved = locations.resolve(target);
+      const resolved = locations.resolve(target, proposed.activeModeId);
       const page = proposed.pages[resolved.pageId]!;
+      const modeId = resolvePageMode(page, resolved.location.mode, proposed.activeModeId);
       shellState =
         shell.restore?.(
-          { modeId: page.modeId, pageId: page.id, projectId: proposed.projectId, location: resolved.location },
+          { modeId, pageId: page.id, projectId: proposed.projectId, location: resolved.location },
           shellState,
           placementContext(proposed),
         ) ?? shellState;
       modeState =
         mode.restore?.(
-          { modeId: page.modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
+          { modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
           modeState,
         ) ?? modeState;
       proposed = pages.prepare.location(
@@ -104,7 +106,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           action: "preparePageNavigation",
         },
         proposed,
-        owned(page.modeId),
+        owned(modeId),
       );
     } else if (target.kind === "panel") {
       const panel = target.panel;

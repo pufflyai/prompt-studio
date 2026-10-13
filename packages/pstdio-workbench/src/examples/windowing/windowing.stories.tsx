@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
+import { visibleWindowingLabel } from "./visible-label";
 import { WindowingStory } from "./windowing-story";
 
 const meta = {
@@ -14,30 +15,30 @@ export const Smoke: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const draft = await canvas.findByRole("textbox", { name: "Files draft" });
-    await expect(canvas.getByLabelText("Files mount")).toHaveTextContent("Mount 1");
+    await expect(visibleWindowingLabel(canvasElement, "Files mount")).toHaveTextContent("Mount 1");
     await userEvent.type(draft, "Keep this draft while hiding a panel");
-    const mount = canvas.getByLabelText("Files mount").textContent;
+    const mount = visibleWindowingLabel(canvasElement, "Files mount").textContent;
     await userEvent.click(canvas.getByRole("button", { name: "Hide Secondary Panel" }));
     await userEvent.click(canvas.getByRole("button", { name: "Show Secondary Panel" }));
     await expect(draft).toHaveValue("Keep this draft while hiding a panel");
-    await expect(canvas.getByLabelText("Files mount")).toHaveTextContent(mount!);
-    await expect(canvas.getByLabelText("Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
+    await expect(visibleWindowingLabel(canvasElement, "Files mount")).toHaveTextContent(mount!);
+    await expect(visibleWindowingLabel(canvasElement, "Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
-    await expect(canvas.getByLabelText("Terminal binding")).toHaveTextContent("workspace-2");
+    await expect(visibleWindowingLabel(canvasElement, "Terminal binding")).toHaveTextContent("workspace-2");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
-    await expect(canvas.getByLabelText("Terminal binding")).toHaveTextContent("workspace-1");
+    await expect(visibleWindowingLabel(canvasElement, "Terminal binding")).toHaveTextContent("workspace-1");
     await userEvent.click(canvas.getByRole("button", { name: "Grow Secondary" }));
-    const size = canvas.getByLabelText("Secondary size").textContent;
+    const size = visibleWindowingLabel(canvasElement, "Secondary size").textContent;
     await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
-    await expect(canvas.getByLabelText("Secondary size")).toHaveTextContent(size!);
-    await expect(canvas.getByLabelText("Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
+    await expect(visibleWindowingLabel(canvasElement, "Secondary size")).toHaveTextContent(size!);
+    await expect(visibleWindowingLabel(canvasElement, "Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
     await expect(canvas.getByRole("textbox", { name: "Files draft" })).toHaveValue("");
     await userEvent.click(canvas.getByRole("button", { name: "Stop Terminal 1" }));
-    await expect(canvas.getByLabelText("Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 1");
+    await expect(visibleWindowingLabel(canvasElement, "Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 1");
     await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
-    await expect(canvas.getByLabelText("Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 1");
+    await expect(visibleWindowingLabel(canvasElement, "Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 1");
     await userEvent.click(canvas.getByRole("button", { name: "Start Terminal 1" }));
-    await expect(canvas.getByLabelText("Terminal lifecycle")).toHaveTextContent("Starts 2 · Stops 1");
+    await expect(visibleWindowingLabel(canvasElement, "Terminal lifecycle")).toHaveTextContent("Starts 2 · Stops 1");
     await userEvent.click(canvas.getByRole("button", { name: "Note A" }));
     await expect(canvas.getByRole("textbox", { name: "Notes draft" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Note B" }));
