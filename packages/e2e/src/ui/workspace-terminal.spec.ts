@@ -212,7 +212,7 @@ const isAlive = (pid: number) => {
   }
 };
 
-test("closing a terminal tab leaves no shell process behind", async ({ page, request }) => {
+test("closing a terminal tab preserves its runtime", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Terminal Cleanup" }),
   });
@@ -243,6 +243,9 @@ test("closing a terminal tab leaves no shell process behind", async ({ page, req
       .click();
     await expect(page.locator(".xterm:visible")).toHaveCount(0);
 
+    expect(isAlive(shellPid)).toBe(true);
+    // Interactive shells ignore SIGTERM; hang up this fixture shell for cleanup.
+    process.kill(shellPid, "SIGHUP");
     await expect(() => expect(isAlive(shellPid)).toBe(false)).toPass({ timeout: 10_000 });
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
