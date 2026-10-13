@@ -41,6 +41,20 @@ const pageIdentity = (pageId: string, slotId: string): PlacementIdentity => ({
 });
 const renderedIdentities = (widgets: readonly WorkbenchWidgetPlacement[]) =>
   widgets.map((placement) => placement.placementIdentity);
+
+test("a new mode panel opens an empty Secondary region while a saved populated region stays closed", () => {
+  const layout = createDefaultWorkbenchLayout({ secondary: false });
+  const placements = [owned(modeIdentity("player"), "secondary", 0, "player")];
+  const initial = reconcileOwnedWidgetLayout({ layout, modeLayout: layout, placements });
+  expect(initial.regions.secondary.visible).toBe(true);
+  const collapsed = {
+    ...initial,
+    regions: { ...initial.regions, secondary: { ...initial.regions.secondary, visible: false } },
+  };
+  const restored = reconcileOwnedWidgetLayout({ layout: collapsed, modeLayout: collapsed, placements });
+  expect(restored.regions.secondary.visible).toBe(false);
+});
+
 describe("owned placement layout reconciliation", () => {
   test("applies exact removals without deleting placements outside the published transition", () => {
     const existing = owned(pageIdentity("ticket", "content"), "main", 0, "ticket-content", "ticket-view");
@@ -93,7 +107,7 @@ describe("owned placement layout reconciliation", () => {
     expect(next.regions.side.activeWidgetId).toBe("project-sessions");
     expect(next.activeWidgetId).toBe("project-sessions");
   });
-  test("binds declarative Sub Panels to the active Location", () => {
+  test("binds page-owned Sub Panels to the active Location", () => {
     const board = owned(pageIdentity("workspaces", "content"), "main", 0, "board", "workspace-view");
     const initial = reconcileOwnedWidgetLayout({
       layout: createDefaultWorkbenchLayout(),
@@ -112,7 +126,7 @@ describe("owned placement layout reconciliation", () => {
       id: "workspace:one",
     };
     workspace.value.resourceKey = "workspace:one";
-    const terminal = owned(modeIdentity("terminal"), "secondary", 0, "terminal", "terminal-view");
+    const terminal = owned(pageIdentity("workspaces", "terminal"), "secondary", 0, "terminal", "terminal-view");
     terminal.value.resource = {
       type: "terminal",
       id: "terminal:one",

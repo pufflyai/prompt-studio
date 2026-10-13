@@ -49,4 +49,27 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await terminalInput.pressSequentially("exit");
   await terminalInput.press("Enter");
   await closed;
+  if (await showSecondary.isVisible()) await showSecondary.click();
+  const newConnection = page.waitForEvent("websocket", (socket) => new URL(socket.url()).pathname === "/v1/terminal");
+  const secondary = page.locator('[data-workbench-panel-header="secondary"]');
+  await secondary.getByRole("button", { name: "Add panel" }).click();
+  if (await choice.isVisible()) await choice.click();
+  await newConnection;
+  const instanceId = await secondary.getByRole("tab").locator("..").getAttribute("data-workbench-tab");
+  const workspaceResponse = await page.request.get(`${origin}/v1/workspaces?project_id=${projectId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(workspaceResponse.ok()).toBe(true);
+  const [workspace] = (await workspaceResponse.json()) as { id: string }[];
+  const draftUri = `pstdio://extension-resource/session-draft/${crypto.randomUUID()}`;
+  await page.goto(`${origin}/projects/${projectId}/session?resource=${encodeURIComponent(draftUri)}`);
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Sessions");
+  const resourceUri = `pstdio://extension-resource/workspace/${encodeURIComponent(workspace!.id)}`;
+  await page.goto(`${origin}/projects/${projectId}/workspace?resource=${encodeURIComponent(resourceUri)}`);
+  await expect(page.getByRole("region", { name: "Files", exact: true })).toBeVisible();
+  await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/lab`);
+  const restored = page.locator('[data-workbench-panel="secondary"]').locator(`[data-workbench-tab="${instanceId}"]`);
+  await expect(restored).toBeVisible();
+  await page.reload();
+  await expect(restored).toBeVisible();
 };

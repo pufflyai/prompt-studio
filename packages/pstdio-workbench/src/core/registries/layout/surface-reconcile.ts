@@ -44,10 +44,12 @@ export const reconcileAnchors = ({ layout, primary, isInScope }: ReconcileAnchor
     // widget parked in a side anchor is not a scoped resource and is left untouched.
     for (const placement of layout.regions[region].widgets) {
       if (!placement.resource) continue;
-      // A moved Location and its owned Sub Panels retain their owner lifecycle.
-      // Sharing a region with derived content cannot change that ownership.
+      // Explicit owners control membership. Sharing a derived or detached region
+      // cannot give primary-resource cleanup ownership of those placements.
       const retained =
-        placement.role === "location" || (placement.role === "sub-panel" && Boolean(placement.ownerResourceKey));
+        Boolean(placement.placementIdentity) ||
+        placement.role === "location" ||
+        (placement.role === "sub-panel" && Boolean(placement.ownerResourceKey));
       const keep = retained || (surface.persistence !== "derived" && isInScope(placement.resource, primary));
       actions.push({ region, widgetId: placement.widgetId, action: keep ? "keep" : "clear" });
     }

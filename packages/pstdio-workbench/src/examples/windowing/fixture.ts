@@ -4,21 +4,13 @@ import { createKilnWorkbench } from "../showcases/kiln";
 import { createWindowingPersistence } from "./adapters";
 import { registerContextNavigation } from "./context-navigation";
 import { createWindowingLifecycleProbe } from "./lifecycle-probe";
-import { registerWindowingModule } from "./module";
+import { registerWindowingModule, type WindowingModuleOptions } from "./module";
 import { registerAvailabilityPages } from "./page-modes";
 import { createWindowingResources, windowingPages } from "./resources";
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
 
-export const createWindowingFixture = (
-  mode: WindowingMode = "windowing",
-  options: {
-    pagePanels?: boolean;
-    mainView?: "files" | "webview";
-    pageModes?: boolean;
-    contextNavigation?: boolean;
-  } = {},
-) => {
+export const createWindowingFixture = (mode: WindowingMode = "windowing", options: WindowingModuleOptions = {}) => {
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
   const probe = createWindowingLifecycleProbe();

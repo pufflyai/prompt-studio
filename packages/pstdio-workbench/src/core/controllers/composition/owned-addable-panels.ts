@@ -1,7 +1,6 @@
 import type { NavigationTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout, WorkbenchPanelRegion } from "../../registries/layout/layout-model";
-import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchOwnedPlacementItem } from "../../registries/placements/owned-placement-lifecycle";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
@@ -9,6 +8,7 @@ import { modePlacementContributionId, pagePlacementContributionId } from "../../
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { runUserAction } from "../../shared/run-user-action";
 import type { WorkbenchCore } from "../../workbench-core";
+import { openWorkbenchPanel } from "../navigation/panel-navigation";
 import type { WorkbenchCompositionAddablePanel } from "./composition-controller";
 import { panelDestinations } from "./panel-destinations";
 
@@ -22,23 +22,6 @@ const ownsPlacement = (
     .some((region) =>
       region.widgets.some((placement) => placement.placementIdentity && matches(placement.placementIdentity)),
     );
-export const activateModePlacementInstance = (
-  core: WorkbenchCore,
-  identity: PlacementIdentity,
-  region?: WorkbenchPanelRegion,
-) => {
-  const instance = Object.values(core.layout.getLayout().regions)
-    .flatMap((region) => region.widgets)
-    .find(
-      (candidate) =>
-        candidate.placementIdentity &&
-        placementIdentityKey(candidate.placementIdentity) === placementIdentityKey(identity),
-    );
-  if (instance) {
-    if (region) core.movePanel(instance.widgetId, region);
-    else core.layout.activatePanel(instance.widgetId);
-  }
-};
 interface AddablePanelInput {
   layout: WorkbenchLayout;
   modeId?: string;
@@ -95,11 +78,15 @@ const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddP
           input.region,
         );
       }
-      const identity = core.shellPlacements.openPlacement({
-        placementId: placement.id,
-        ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
-      });
-      activateModePlacementInstance(core, identity, input.region);
+      openWorkbenchPanel(
+        core,
+        {
+          kind: "panel",
+          panel: { kind: "shell-placement", id: placement.id },
+          ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
+        },
+        input.region,
+      );
     });
   }
 };
@@ -123,11 +110,15 @@ const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
           input.region,
         );
       }
-      const identity = core.modePlacements.openPlacement({
-        panel: placement.ref,
-        ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
-      });
-      activateModePlacementInstance(core, identity, input.region);
+      openWorkbenchPanel(
+        core,
+        {
+          kind: "panel",
+          panel: placement.ref,
+          ...(placement.item.kind === "binding" && resource ? { resource, open: "pin" } : {}),
+        },
+        input.region,
+      );
     });
   }
 };
@@ -155,20 +146,16 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
           input.region,
         );
       }
-      core.pages.openSlot({
-        pageId: page.id,
-        slotId: slot.id,
-        ...(slot.item.kind === "binding" && resource ? { resource } : {}),
-        ...(multiple ? { open: "pin" } : {}),
-      });
-      const opened = Object.values(core.layout.getLayout().regions)
-        .flatMap((region) => region.widgets)
-        .find(
-          (p) =>
-            p.widgetId === core.layout.getLayout().activeWidgetId &&
-            p.contributionId === pagePlacementContributionId(page.id, slot.id),
-        );
-      if (opened) core.movePanel(opened.widgetId, input.region);
+      openWorkbenchPanel(
+        core,
+        {
+          kind: "panel",
+          panel: { kind: "page-slot", page: page.ref, id: slot.id },
+          ...(slot.item.kind === "binding" && resource ? { resource } : {}),
+          ...(multiple ? { open: "pin" } : {}),
+        },
+        input.region,
+      );
     });
   }
 };

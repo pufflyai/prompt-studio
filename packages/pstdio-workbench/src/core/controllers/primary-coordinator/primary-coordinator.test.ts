@@ -36,6 +36,53 @@ const setup = (isInScope: (resource: ResourceRef) => boolean) => {
 const hostsActive = (layout: ReturnType<typeof createLayoutModel>, region: "secondary" | "side") =>
   layout.getLayout().regions[region].widgets.length > 0;
 describe("createPrimaryCoordinator", () => {
+  test.each([
+    { kind: "mode", modeId: "project", placementId: "terminal", instanceKey: "one" },
+    { kind: "shell", placementId: "terminal", instanceKey: "one" },
+  ] as const)("keeps a restored $kind terminal when the primary changes", (placementIdentity) => {
+    const { layout } = setup(() => false);
+    const saved = layout.getLayout();
+    const original = saved.regions.secondary.widgets[0]!;
+    layout.restoreLayout({
+      ...saved,
+      regions: {
+        ...saved.regions,
+        secondary: {
+          ...saved.regions.secondary,
+          widgets: [{ ...original, role: "sub-panel", placementIdentity }],
+        },
+      },
+    });
+    layout.openWidget("workspace", { resource: workspaceB });
+    expect(layout.getLayout().regions.secondary.widgets).toContainEqual(
+      expect.objectContaining({ widgetId: original.widgetId, resource: terminal, placementIdentity }),
+    );
+  });
+  test("keeps a mode-owned Side resource outside the new primary's scope", () => {
+    const { layout } = setup(() => false);
+    const saved = layout.getLayout();
+    const original = saved.regions.side.widgets[0]!;
+    layout.restoreLayout({
+      ...saved,
+      regions: {
+        ...saved.regions,
+        side: {
+          ...saved.regions.side,
+          widgets: [
+            {
+              ...original,
+              role: "sub-panel",
+              placementIdentity: { kind: "mode", modeId: "project", placementId: "session", instanceKey: "one" },
+            },
+          ],
+        },
+      },
+    });
+    layout.openWidget("workspace", { resource: workspaceB });
+    expect(layout.getLayout().regions.side.widgets).toContainEqual(
+      expect.objectContaining({ widgetId: original.widgetId, resource: session }),
+    );
+  });
   test("keeps the derived anchor restored with a persistence scope", () => {
     const layouts = new Map<
       string | undefined,

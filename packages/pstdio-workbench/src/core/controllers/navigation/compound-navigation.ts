@@ -5,13 +5,31 @@ import type { NavigationTargetPage, NavigationTargetPanel } from "../../registri
 import { resolvePageMode } from "../../registries/pages/page-availability";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import { pageStateKey } from "../../registries/pages/page-state-key";
 import type { OwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
-import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
+import {
+  getOwnedPlacementPreparation,
+  type OwnedPlacementLocationContext,
+} from "../../registries/placements/owned-placement-preparation";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
+
+const hasStagedModeState = (
+  core: WorkbenchCore,
+  modeId: string,
+  current: OwnedPlacementState,
+  original: OwnedPlacementState,
+) =>
+  core.modePlacements
+    .listPlacements(modeId)
+    .some(
+      (placement) =>
+        current.staticOverrides.get(placement.id) !== original.staticOverrides.get(placement.id) ||
+        current.resourceInstances.get(placement.id) !== original.resourceInstances.get(placement.id),
+    );
 
 const placementContext = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) =>
   state.activeModeId
@@ -26,9 +44,21 @@ const requirePanelPage = (state: WorkbenchPageRegistryStoreState<WorkbenchWidget
   const page = Object.values(state.pages).find(
     (page) => page.ref.extensionId === panel.page.extensionId && page.ref.id === panel.page.id,
   );
+
   if (!page || page.id !== state.activePageId)
     throw new Error(`Page panel "${panel.id}" is not owned by the proposed page`);
   return page;
+};
+
+const restoreProposedMode = (
+  core: WorkbenchCore,
+  context: OwnedPlacementLocationContext,
+  previous: OwnedPlacementLocationContext | undefined,
+  current: OwnedPlacementState,
+  original: OwnedPlacementState,
+) => {
+  if (hasStagedModeState(core, context.modeId, current, original)) return current;
+  return getOwnedPlacementPreparation(core.modePlacements).restore?.(context, current, previous) ?? current;
 };
 const prepareSharedPanel = (
   core: WorkbenchCore,
@@ -72,6 +102,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   let modeState = originalMode;
   let shellState = originalShell;
   let proposed = original;
+  const stages: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[] = [];
   const activate = new Map<WorkbenchRegion, PlacementIdentity>();
   const owned = (modeId = proposed.activeModeId) => ({
     shell: shell.resolve(undefined, shellState),
@@ -83,6 +114,8 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
       if (!proposed.projectId) throw new Error("Cannot navigate before a project is active");
       const resolved = locations.resolve(target, proposed.activeModeId);
       const page = proposed.pages[resolved.pageId]!;
+      const stateKey = pageStateKey(page, resolved.location, pages.resources);
+      const stagedPage = proposed.pageStates[stateKey] !== original.pageStates[stateKey];
       const modeId = resolvePageMode(page, resolved.location.mode, proposed.activeModeId);
       shellState =
         shell.restore?.(
@@ -90,11 +123,13 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           shellState,
           placementContext(proposed),
         ) ?? shellState;
-      modeState =
-        mode.restore?.(
-          { modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
-          modeState,
-        ) ?? modeState;
+      modeState = restoreProposedMode(
+        core,
+        { modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
+        placementContext(proposed),
+        modeState,
+        originalMode,
+      );
       proposed = pages.prepare.location(
         {
           pageId: page.id,
@@ -103,6 +138,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           resource: resolved.location.resource,
           section: resolved.location.section,
           open: resolved.open,
+          ...(stagedPage ? { pageStates: proposed.pageStates } : {}),
           action: "preparePageNavigation",
         },
         proposed,
@@ -132,6 +168,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
     }
+    stages.push(proposed);
     for (const placement of proposed.reconciliation.activate) activate.set(placement.region, placement.identity);
   }
   const present = new Set(proposed.placements.map((placement) => placementIdentityKey(placement.identity)));
@@ -156,8 +193,11 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           return pages.publish(final, "navigateCompoundTarget");
         };
         const result = final.location ? locations.commit(final, applyOwners) : publishWithoutLocation();
-        if (modeState !== originalMode) mode.publish();
-        if (shellState !== originalShell) shell.publish();
+        // Persist inactive owners after scope rotation saves the outgoing live layout.
+        pages.persistPreparedOwners(stages);
+        // The page transaction already applied the owned layout and activation.
+        if (modeState !== originalMode) mode.notifySubscribers();
+        if (shellState !== originalShell) shell.notifySubscribers();
         return result;
       }),
   };

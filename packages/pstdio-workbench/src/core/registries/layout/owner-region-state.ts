@@ -27,7 +27,14 @@ export const ownerRegionSelection = (
 export const restorePageGeometry = (layout: WorkbenchLayout, geometry?: WorkbenchLayout) => {
   if (!geometry) return layout;
   const regions = { ...layout.regions };
-  for (const id of ["main", "bottom", "main-left-menu", "main-right-menu"] as const) {
+  for (const id of [
+    "main",
+    "bottom",
+    "main-left-menu",
+    "main-right-menu",
+    "bottom-left-menu",
+    "bottom-right-menu",
+  ] as const) {
     regions[id] = { ...regions[id], size: geometry.regions[id].size };
   }
   return { ...layout, regions };

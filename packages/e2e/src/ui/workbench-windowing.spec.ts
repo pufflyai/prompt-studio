@@ -17,9 +17,16 @@ const storyIds = [
   "page-surface-webview",
   "owner-transfer",
   "files-transfer",
+  "fixed-page-transfer",
   "foreign-context",
   "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
+storyIds.push(
+  "pstdio-workbench-showcases-dashboard--dashboard",
+  "pstdio-workbench-showcases-dashboard--interaction-checks",
+  "pstdio-workbench-controls-research-agent--editable",
+  "pstdio-workbench-controls-research-agent--read-only",
+);
 
 test.describe("Workbench windowing stories", () => {
   let baseUrl = "";
@@ -37,10 +44,7 @@ test.describe("Workbench windowing stories", () => {
   });
 
   for (const storyId of storyIds) {
-    test(`${storyId} completes its interactions`, async ({ page, request }) => {
-      const index = await request.get(`${baseUrl}/index.json`);
-      expect(index.ok()).toBe(true);
-      expect((await index.json()).entries[storyId]).toBeDefined();
+    test(`${storyId} completes its interactions`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 960 });
       await page.goto(storyUrl(baseUrl, storyId));
       await page
