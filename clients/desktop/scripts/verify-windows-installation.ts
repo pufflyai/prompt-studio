@@ -201,7 +201,10 @@ try {
   const project = await active.page.evaluate(async (path) => {
     const response = await fetch("/v1/projects", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+      },
       body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path } } }),
     });
     if (!response.ok) throw new Error(`Project creation failed: ${response.status}`);
@@ -223,7 +226,13 @@ try {
   writeFileSync(join(evidence, "update.txt"), await run(updater, ["--update", feedUrl]));
   const updated = await verifyInstalled(candidate.version, "updated");
   active = await launchInstalled(candidate.version);
-  const projects = (await active.page.evaluate(async () => (await fetch("/v1/projects")).json())) as Array<{
+  const projects = (await active.page.evaluate(async () =>
+    (
+      await fetch("/v1/projects", {
+        headers: { authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}` },
+      })
+    ).json(),
+  )) as Array<{
     id: string;
     name: string;
   }>;
