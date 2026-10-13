@@ -47,8 +47,8 @@ test("opens the Session tab context menu while normal clicks only select", async
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText(ticket.content, { exact: true }).click();
 
-  const nav = page.locator('[data-workbench-region="nav"]');
-  await nav.getByRole("button", { name: "Show Sidebar" }).click();
+  const status = page.locator('[data-workbench-region="status"]');
+  await status.getByRole("button", { name: "Show Sidebar" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
     .getByRole("menu", { name: "Add panel" })
