@@ -3610,6 +3610,11 @@ export declare const workbenchSlots: {
     kind: "settings-panel";
     id: string;
   };
+  extensionSettings: {
+    extensionId: string;
+    kind: "settings-panel";
+    id: string;
+  };
   statusBarLeading: {
     extensionId: string;
     kind: "status-bar-item";
