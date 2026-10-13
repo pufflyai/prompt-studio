@@ -73,6 +73,7 @@ test("the packaged Codex harness preserves protocol loss and independent provide
       ["provider failure", "failed"],
     ]) {
       rmSync(releasePath, { force: true });
+      rmSync(pidPath, { force: true });
       const session = await request("/sessions", "POST", {
         project_id: project.id,
         title: prompt,
