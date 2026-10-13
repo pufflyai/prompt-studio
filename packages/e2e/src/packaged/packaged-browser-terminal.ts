@@ -24,7 +24,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   await terminalInput.press("Enter");
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
-  await expect(mainHeader.getByRole("tab")).toHaveCount(0);
+  await expect(mainHeader.getByRole("tab")).toHaveCount(1);
   const terminalTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab");
   const start = (await terminalTab.boundingBox())!;
   const end = (await iframe.boundingBox())!;

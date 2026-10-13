@@ -18,7 +18,7 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   const main = page.getByRole("region", { name: "Main", exact: true });
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
-  await expect(mainHeader.getByRole("tab")).toHaveCount(0);
+  await expect(mainHeader.getByRole("tab")).toHaveCount(1);
   await mainHeader.getByRole("button", { name: "main header options", exact: true }).click();
   await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   await expect(mainHeader).not.toBeVisible();
