@@ -135,7 +135,7 @@ export const RemovedOwnerForbiddenReopen: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Delete Workspace 1" }));
     await userEvent.click(canvas.getByRole("button", { name: "Forbid Sidebar" }));
     await userEvent.click(canvas.getByRole("button", { name: "Reopen Session 2" }));
-    await expect(canvas.getByLabelText("Removal result")).toHaveTextContent("cannot open");
+    await expect(canvas.getByLabelText("Removal result")).toHaveTextContent("Panel is not provided: side");
     await expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument();
     await running(canvasElement);
   },

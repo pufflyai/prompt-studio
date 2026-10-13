@@ -36,8 +36,8 @@ export const WindowingRemovalControls = (props: { fixture: WindowingFixture }) =
         variant="outline"
         onClick={() => {
           const mode = workbench.modes.getMode("windowing");
-          if (mode) mode.panels = ["main", "secondary"];
           workbench.sidePanel.setMode("closed");
+          if (mode) mode.panels = ["main", "secondary"];
         }}
       >
         Forbid Sidebar
