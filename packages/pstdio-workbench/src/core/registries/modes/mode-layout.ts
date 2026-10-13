@@ -4,9 +4,11 @@ import {
   type WorkbenchLayout,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
+  type WorkbenchRegionSettings,
   type WorkbenchWidgetPlacement,
   workbenchModePanelRegions,
 } from "../layout/layout-model";
+import { clampPanelSizes } from "../layout/panel-size-policy";
 import type { WorkbenchModeActivationContext, WorkbenchModeContribution } from "./mode-registry-types";
 
 const modePanelRegions = {
@@ -57,7 +59,13 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
   );
   const regionsNeedClearing = regionIds.some((regionId) => {
     const region = layout.regions[regionId];
-    return region.widgets.length > 0 || region.activeWidgetId !== undefined || region.visible;
+    return (
+      region.widgets.length > 0 ||
+      region.activeWidgetId !== undefined ||
+      region.visible ||
+      region.visibility !== undefined ||
+      region.headerVisible !== undefined
+    );
   });
   const selectionsNeedClearing = Object.values(layout.locationSubPanelSelections ?? {}).some((selections) =>
     Object.keys(selections).some((panel) => clearedPanels.has(panel as keyof typeof modePanelRegions)),
@@ -66,7 +74,14 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
 
   const regions = { ...layout.regions };
   for (const regionId of regionIds) {
-    regions[regionId] = { ...regions[regionId], widgets: [], activeWidgetId: undefined, visible: false };
+    regions[regionId] = {
+      ...regions[regionId],
+      widgets: [],
+      activeWidgetId: undefined,
+      visible: false,
+      visibility: undefined,
+      headerVisible: undefined,
+    };
   }
   const locationSubPanelSelections = Object.fromEntries(
     Object.entries(layout.locationSubPanelSelections ?? {}).map(([resourceKey, selections]) => [
@@ -140,6 +155,11 @@ export const disposeReverse = (disposables: readonly Disposable[]) => {
   }
 };
 
-export const restoreModeLayout = (context: WorkbenchModeActivationContext, layout: WorkbenchLayout) => {
+export const restoreModeLayout = (
+  context: WorkbenchModeActivationContext,
+  layout: WorkbenchLayout,
+  getSettings: (region: WorkbenchRegion) => WorkbenchRegionSettings | undefined,
+) => {
+  layout = clampPanelSizes(layout, getSettings);
   if (layout !== context.layout.getLayout()) context.layout.restoreLayout(layout);
 };

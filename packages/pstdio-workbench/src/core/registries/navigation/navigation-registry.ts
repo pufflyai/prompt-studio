@@ -10,6 +10,7 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { WorkbenchCommandExecutionContext } from "../commands/command-registry";
 
 /** Core-only panel ref for host-owned shell placements. Extensions cannot address them. */
 export interface ShellPlacementRef {
@@ -67,12 +68,17 @@ export type RegisteredNavigationParser = Omit<NavigationParser, "priority"> & Re
 // Minimal presenter surface the navigation dispatcher needs; resolved through a
 // closure to break the otherwise-circular core ↔ navigation dep.
 export interface NavigationDispatcherContext {
+  runNavigation?<T>(action: () => T): T;
   canOpenPanel?(target: NavigationTargetPanel): boolean;
   canExecuteCommand?(commandId: string): boolean;
   prepareNavigation?(targets: readonly (NavigationTargetPage | NavigationTargetPanel)[]): { commit(): unknown };
   openPanelTarget?(target: NavigationTargetPanel): unknown;
   openPageTarget?(target: NavigationTargetPage): unknown;
-  executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
+  executeCommand(
+    commandId: string,
+    args?: unknown,
+    context?: WorkbenchCommandExecutionContext,
+  ): Promise<unknown> | unknown;
   openHref?(href: string): Promise<unknown> | unknown;
 }
 
@@ -88,13 +94,28 @@ export interface NavigationRegistry {
   registerParser(parser: NavigationParser, metadata?: ContributionMetadata): Disposable;
   listParsers(): RegisteredNavigationParser[];
   resolveLocation(location: string): NavigationTarget;
-  openTarget(target: NavigationTarget): Promise<readonly unknown[]>;
+  openTarget(target: NavigationTarget, execution?: NavigationExecutionContext): Promise<readonly unknown[]>;
   /** Opens a page location through the shared executor. */
   openPage(target: Omit<NavigationTargetPage, "kind">): Promise<readonly unknown[]>;
   /** Opens or activates an owned panel through the shared executor. */
   openPanel(target: DistributiveOmit<NavigationTargetPanel, "kind">): Promise<readonly unknown[]>;
   navigate(location: string): Promise<readonly unknown[]>;
 }
+
+/** Carries a synchronous publication scope across asynchronous command work. */
+export interface NavigationExecutionContext {
+  run<T>(action: () => T): T;
+}
+
+export type CommandNavigation = Pick<NavigationRegistry, "openTarget" | "openPage" | "openPanel" | "navigate">;
+
+const scopedNavigation = (registry: NavigationRegistry, execution: NavigationExecutionContext) =>
+  ({
+    openTarget: (target) => registry.openTarget(target, execution),
+    openPage: (target) => registry.openTarget({ ...target, kind: "page" }, execution),
+    openPanel: (target) => registry.openTarget({ ...target, kind: "panel" } as NavigationTargetPanel, execution),
+    navigate: (location) => registry.openTarget(registry.resolveLocation(location), execution),
+  }) satisfies CommandNavigation;
 
 export interface CreateNavigationRegistryInput {
   // Returns the presenters the dispatcher should call. Lazy so `createWorkbench`
@@ -106,7 +127,11 @@ const noDispatcher = (): NavigationDispatcherContext => {
   throw new Error("navigation.openTarget: no dispatcher available (configure resolveDispatcher)");
 };
 
-const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+const dispatchItem = async (
+  target: NavigationTargetItem,
+  dispatcher: NavigationDispatcherContext,
+  context?: WorkbenchCommandExecutionContext,
+) => {
   if (target.kind === "page") {
     if (!dispatcher.openPageTarget) throw new Error("navigation.openTarget: page target dispatcher is not configured");
     return dispatcher.openPageTarget(target);
@@ -120,7 +145,7 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
     if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
     return dispatcher.openHref(target.href);
   }
-  return dispatcher.executeCommand(target.commandId, target.args);
+  return dispatcher.executeCommand(target.commandId, target.args, context);
 };
 
 const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
@@ -183,8 +208,9 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
       return parser.parse(location);
     },
 
-    async openTarget(target) {
+    async openTarget(target, execution) {
       const dispatcher = resolveDispatcher();
+      const run = execution?.run ?? dispatcher.runNavigation ?? ((action) => action());
       const items = toItems(target);
       const results: unknown[] = [];
 
@@ -196,9 +222,13 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
         if (!dispatcher.prepareNavigation)
           throw new Error("navigation.openTarget: navigation preparation is not configured");
         const prepared = dispatcher.prepareNavigation(target.targets);
-        return [prepared.commit()];
+        return [run(() => prepared.commit())];
       }
-      for (const item of items) results.push(await dispatchItem(item, dispatcher));
+      const context = execution ? { navigation: scopedNavigation(registry, execution) } : undefined;
+      for (const item of items) {
+        const dispatch = () => dispatchItem(item, dispatcher, context);
+        results.push(await (item.kind === "command" && execution ? dispatch() : run(dispatch)));
+      }
       return results;
     },
 

@@ -6,7 +6,6 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../registries/layout/layout-types";
 import { placementIdentityKey, type ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
-import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import { resolvePageMode } from "../../registries/pages/page-availability";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
@@ -97,11 +96,13 @@ export const prepareEditorActivation = (
     (resolved
       ? resolvePageMode(current.pages[resolved.pageId]!, resolved.location.mode, current.activeModeId)
       : current.activeModeId);
-  const mode = modeId ? core.modes.getMode(modeId) : undefined;
-  if (
-    (editor.region === "side" || editor.region === "secondary") &&
-    !isWorkbenchModePanelAvailable(mode, editor.region)
-  )
+  const policy = core.shell.getPanelPolicy(editor.region, {
+    modeId,
+    pageId: resolved?.pageId ?? current.activePageId,
+    projectId: current.projectId,
+    resource: resolved ? resolved.location.resource : current.location?.resource,
+  });
+  if (!policy.provided || (!policy.open && !policy.canOpen))
     throw new Error(`Editor destination cannot open: ${editor.region}`);
   if (!core.views.getView(editor.tab.viewId ?? "") || !core.layout.getWidget(editor.tab.contributionId))
     throw new Error(`Editor destination is unavailable: ${editor.tab.widgetId}`);

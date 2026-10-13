@@ -11,7 +11,14 @@ export const restoreOwnerRegion = (
   const region = layout.regions[regionId];
   const shared = !isPageRegion(regionId) ? modeLayout?.regions[regionId] : undefined;
   if (!shared) return region;
-  return { ...region, size: shared.size, visible: shared.visible, presentation: shared.presentation };
+  return {
+    ...region,
+    size: shared.size,
+    visible: shared.visible,
+    visibility: shared.visibility,
+    headerVisible: shared.headerVisible,
+    presentation: shared.presentation,
+  };
 };
 
 export const ownerRegionSelection = (

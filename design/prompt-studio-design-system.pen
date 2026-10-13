@@ -186206,6 +186206,285 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "wLz2G",
+      "x": 49982,
+      "y": 0,
+      "name": "Workbench · Panel rules and header choices",
+      "clip": true,
+      "width": 1100,
+      "height": 460,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "cS4md",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Panel rules · header choices",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "W1VbvD",
+          "name": "Shared behavior",
+          "fill": "$ds-fg-muted",
+          "content": "A header choice never grants opening, closing, resizing, movement, or tab permission.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "vHIBU",
+          "name": "Panel states",
+          "width": "fill_container",
+          "height": 280,
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "w7pJH",
+              "name": "Hidden header · top edge",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YnHMB",
+                  "name": "Hidden header · top edge label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Hidden header · top edge",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "LRWFl",
+                  "name": "Hidden header · top edge panel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$ds-panel",
+                  "cornerRadius": 4,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jCwgo",
+                      "name": "Top edge · context menu / Shift+F10 / touch long press",
+                      "context": "Invisible 8px focusable hit area at rest. Show the edge on hover or focus. Open the shared Show header menu on right click, Shift+F10, or touch long press.",
+                      "width": "fill_container",
+                      "height": 8,
+                      "fill": "$ds-surface-hover"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JxqxI",
+                      "name": "Header context menu",
+                      "width": 240,
+                      "fill": "$ds-bg",
+                      "cornerRadius": 4,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "id": "poSuS",
+                          "type": "ref",
+                          "ref": "sgbRV",
+                          "name": "Show header",
+                          "width": "fill_container",
+                          "descendants": {
+                            "UEgTp": {
+                              "icon": "panel-top"
+                            },
+                            "UTbhN": {
+                              "content": "Show header"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "jegHs",
+                      "name": "Timeline body",
+                      "fill": "$ds-fg",
+                      "content": "Timeline",
+                      "fontFamily": "$font-label",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "k9Avc",
+              "name": "Visible header · locked tab",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "g1xYP",
+                  "name": "Visible header · locked tab label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Visible header · locked tab",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "gP8Hl",
+                  "name": "Visible header · locked tab panel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$ds-panel",
+                  "cornerRadius": 4,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "eihhR",
+                      "name": "Header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "ErNLE",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Timeline · locked",
+                          "theme": {
+                            "size": "sm",
+                            "tab": "active"
+                          },
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "lock"
+                            },
+                            "k9XlqC": {
+                              "content": "Timeline"
+                            },
+                            "g1LJJh": {
+                              "enabled": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "wTzJx",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Hide header",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "panel-top"
+                        },
+                        "UTbhN": {
+                          "content": "Hide header"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "IaJjC",
+              "name": "Explicitly opened · empty",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "scLCB",
+                  "name": "Explicitly opened · empty label",
+                  "fill": "$ds-fg-muted",
+                  "content": "Explicitly opened · empty",
+                  "fontFamily": "$font-label",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "o0jrN",
+                  "name": "Explicitly opened · empty panel",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$ds-panel",
+                  "cornerRadius": 4,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "f3Ce0",
+                      "name": "Header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uLNyK",
+                          "name": "Empty panel title",
+                          "fill": "$ds-fg",
+                          "content": "Side Panel",
+                          "fontFamily": "$font-label",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "EgPSZ",
+                      "name": "Drop surface label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Drop a tab here",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

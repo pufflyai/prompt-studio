@@ -91,8 +91,8 @@ test("tree file menus rename and delete files while workspace menus delete the c
     await expectResourceMenuItems(page, ["Rename", "Delete"]);
     await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.getByRole("textbox").fill("summary");
+    const dialog = page.getByRole("dialog", { name: "Rename", exact: true });
+    await dialog.getByRole("textbox", { name: "File name", exact: true }).fill("summary");
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
     const renamedRow = sidenav.getByRole("option", { name: "summary.md" });
     await expect(renamedRow).toBeVisible();
@@ -179,7 +179,7 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await page.keyboard.press("ContextMenu");
   await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
   await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
+    page.locator('[data-workbench-panel="side"]:visible').getByRole("tab", { name: /Session B/ }),
   ).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(sessionUrl);
 
@@ -200,7 +200,7 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await page.screenshot({ path: testInfo.outputPath("workspace-session-menu.png"), animations: "disabled" });
   await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
   await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
+    page.locator('[data-workbench-panel="side"]:visible').getByRole("tab", { name: /Session B/ }),
   ).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(workspaceUrl);
 
@@ -219,7 +219,7 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
   await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
   await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
+    page.locator('[data-workbench-panel="side"]:visible').getByRole("tab", { name: /Session B/ }),
   ).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(ticketUrl);
   await row("Search").click({ button: "right" });

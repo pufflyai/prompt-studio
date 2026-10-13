@@ -86,7 +86,7 @@ test("reuses a dashboard session tab selected again from a planner ticket", asyn
   await expect(sessionRow).toBeVisible();
   await sessionRow.click();
 
-  const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const sideHeader = page.locator('[data-workbench-panel="side"]:visible');
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "Session", exact: true }).click();
   await sessionRow.click();
@@ -144,6 +144,7 @@ test("restores an attached session Side Panel and its session across refresh", a
   await expect(sessionRow).toBeVisible();
   await sessionRow.click();
 
+  await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
   const attachedPanel = page.getByTestId("workbench-side-panel-attached");
   await expect(attachedPanel).toBeVisible();
   await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']:visible")).toBeVisible();

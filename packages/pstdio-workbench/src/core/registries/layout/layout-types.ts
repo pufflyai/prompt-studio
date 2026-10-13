@@ -26,7 +26,7 @@ export interface WorkbenchRegionSize {
 }
 
 /** Region-level layout policy owned by the active mode or the host, never by a placement. */
-export type WorkbenchRegionSettings = ModeRegionSettings;
+export type WorkbenchRegionSettings = Omit<ModeRegionSettings, "defaultTab"> & { defaultTab?: NavigationTarget };
 
 export type WidgetReusePolicy = "resource" | "none";
 
@@ -244,6 +244,9 @@ export type WorkbenchSidePanelMode = "floating" | "closed" | "attached";
 export interface WorkbenchRegionState {
   id: WorkbenchRegion;
   visible: boolean;
+  /** Owner intent. `visible` is the legacy layout projection, not another user choice. */
+  visibility?: "auto" | "open" | "closed";
+  headerVisible?: boolean;
   size?: number;
   widgets: WorkbenchWidgetPlacement[];
   /** Page snapshots retain mixed-owner order without storing shared mode content. Consumed on restore. */

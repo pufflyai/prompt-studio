@@ -46,6 +46,7 @@ export interface CreateLayoutModelInput {
   persistence?: LayoutPersistenceAdapter;
   /** Region policy for the active context; the layout asks on every query. */
   getRegionSettings?(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
+  resolveLayout?(layout: WorkbenchLayout): WorkbenchLayout;
 }
 
 export interface LayoutModel {

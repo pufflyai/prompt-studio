@@ -21,8 +21,24 @@ export const createKilnWorkbench = () => {
     chrome: { nav: "kiln.nav", sidenav: false, activity: false, status: "kiln.status" },
     resourceKinds: ["kiln.object"],
     regionSettings: {
-      side: { size: { defaultPx: 340, minPx: 300, maxPx: 440 }, collapsible: false, alwaysShowTabs: false },
-      secondary: { size: { defaultPx: 188, minPx: 188, maxPx: 188 }, collapsible: false },
+      side: {
+        size: { defaultPx: 340, minPx: 300, maxPx: 440 },
+        canOpen: false,
+        canClose: false,
+        acceptsTabs: false,
+        movable: false,
+        resizable: true,
+        floatable: false,
+      },
+      secondary: {
+        size: { defaultPx: 188, minPx: 188, maxPx: 188 },
+        canOpen: false,
+        canClose: false,
+        acceptsTabs: false,
+        resizable: false,
+        movable: false,
+        showHeader: false,
+      },
     },
     activate: () => undefined,
   });
@@ -56,6 +72,7 @@ export const createKilnWorkbench = () => {
     ref: { extensionId: "storybook.showcases", kind: "placement", id: "kiln.timeline" },
     modeId: "kiln",
     region: "secondary",
+    movableTo: ["secondary"],
     item: {
       kind: "view",
       presence: "fixed",

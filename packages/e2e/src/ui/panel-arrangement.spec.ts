@@ -19,6 +19,9 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(0);
+  await mainHeader.getByRole("button", { name: "main header options", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
+  await expect(mainHeader).not.toBeVisible();
   await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
   const secondary = page.locator('[data-workbench-panel-header="secondary"]');
   await secondary.getByRole("button", { name: "Add panel", exact: true }).click();
@@ -41,6 +44,10 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2, { steps: 3 });
   await page.mouse.move(target.x + target.width / 2, target.y + 4, { steps: 12 });
   await page.mouse.up();
+  await expect(mainHeader).not.toBeVisible();
+  await page.getByLabel("main header edge", { exact: true }).focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
   await expect(mainHeader.getByRole("tab")).toHaveCount(2);
   const moved = mainHeader.locator(`[data-workbench-tab="${instanceId}"]`).getByRole("tab");
   await expect(moved).toHaveAttribute("aria-selected", "true");

@@ -21,6 +21,7 @@ import {
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
+import { EmptyPanel } from "./empty-panel";
 import { ModeChromeView, useModeChrome } from "./mode-chrome";
 import { usePanelViewSlot } from "./panel-view-hosts";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
@@ -65,6 +66,8 @@ const horizontalContentProps = {
 
 const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?: string) =>
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
+const regionIsOccupied = (placement: WorkbenchWidgetPlacement | undefined, chrome: string | false | undefined) =>
+  Boolean(placement || chrome);
 
 export const resolveRenderedRegionPlacements = (
   widgets: WorkbenchWidgetPlacement[],
@@ -234,6 +237,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       {/* The region owns scrolling: overflowing widget content scrolls here
           with the same narrow overlay scrollbar used across the workbench. */}
       <ModeChromeView workbench={workbench} region={region} viewId={chrome || undefined} />
+      <EmptyPanel workbench={workbench} region={region} occupied={regionIsOccupied(placement, chrome)} />
       <ScrollArea
         display={chrome ? "none" : "flex"}
         flex="1"

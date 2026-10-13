@@ -5,11 +5,22 @@ import { createWorkbench, headerTrailingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPanelWorkbench = (
-  options: { changes?: boolean; collapsed?: boolean; action?: boolean; panelResource?: boolean } = {},
+  options: {
+    changes?: boolean;
+    collapsed?: boolean;
+    action?: boolean;
+    panelResource?: boolean;
+    showHeader?: boolean;
+  } = {},
 ) => {
   const page = { kind: "page", extensionId: "storybook", id: "panel-header" } as const;
   const workbench = createWorkbench({ startPage: page });
-  workbench.modes.registerMode({ id: "panel-header", label: "Panel header", activate: () => undefined });
+  workbench.modes.registerMode({
+    id: "panel-header",
+    label: "Panel header",
+    regionSettings: { main: { showHeader: options.showHeader } },
+    activate: () => undefined,
+  });
   for (const [id, title] of [
     ["files", "Files"],
     ["changes", "Changes"],
@@ -77,7 +88,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SingleAvailableFixedPanel: Story = {
-  args: { workbench: createPanelWorkbench() },
+  args: { workbench: createPanelWorkbench({ showHeader: false }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("Files content")).toBeVisible();

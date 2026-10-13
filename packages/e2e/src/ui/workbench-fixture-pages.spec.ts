@@ -91,7 +91,7 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await page.getByRole("option", { name: "Tickets", exact: true }).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
-  await expect(page.getByRole("tab", { name: "Tickets", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Tickets", exact: true })).toBeVisible();
 
   // The project button stays on a root-level page such as Tickets, so history leads back to Start.
   await page.goBack();
@@ -121,7 +121,9 @@ test("Lab replaces an active session page in main", async ({ page, request }) =>
   await expect(page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveCount(0);
+  await expect(
+    page.locator('[data-workbench-panel="main"]').getByRole("tab", { name: "Lab", exact: true }),
+  ).toBeVisible();
   await expect(
     page.locator('[data-workbench-region="main"]').getByText(sessionTitle).filter({ visible: true }),
   ).toHaveCount(0);

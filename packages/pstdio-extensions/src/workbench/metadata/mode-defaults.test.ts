@@ -30,8 +30,20 @@ test("publishes qualified mode theme and chrome references through the metadata 
     regions: ["main"],
     defaultTheme: theme.ref,
     floatingPanels: "hidden",
+    floatingBubble: false,
+    floating: { defaultTab: { kind: "command", target: { command: { kind: "command", id: "new-session" } } } },
     chrome: { sidenav: view.ref, nav: false, activity: false },
-    regionSettings: { sidenav: { size: { defaultPx: 240 }, collapsible: false } },
+    regionSettings: {
+      sidenav: { size: { defaultPx: 240 }, collapsible: false },
+      main: {
+        canOpen: true,
+        canClose: false,
+        acceptsTabs: true,
+        resizable: false,
+        movable: false,
+        defaultTab: { kind: "command", target: { command: { kind: "command", id: "new-tab" } } },
+      },
+    },
   });
   const source: LoadedExtensionSource = {
     packagePath,
@@ -52,6 +64,13 @@ test("publishes qualified mode theme and chrome references through the metadata 
   const metadata = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
   await rm(packagePath, { recursive: true, force: true });
   expect(metadata.modes[0]).toMatchObject({
+    floatingBubble: false,
+    floating: {
+      defaultTab: {
+        kind: "command",
+        target: { command: { kind: "command", extensionId: "example.notes", id: "new-session" } },
+      },
+    },
     floatingPanels: "hidden",
     defaultTheme: { extensionId: "example.notes", kind: "theme", id: "paper" },
     chrome: { sidenav: { extensionId: "example.notes", kind: "view", id: "navigation" }, nav: false, activity: false },

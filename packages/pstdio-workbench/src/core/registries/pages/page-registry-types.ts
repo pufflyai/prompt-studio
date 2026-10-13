@@ -14,6 +14,7 @@ import type {
   ResourceRef,
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
+import type { WorkbenchRegionSettings } from "../layout/layout-types";
 import type { OwnedPlacementReconciliation, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import type { WorkbenchPlacementPresentation } from "../views/view-placement";
 
@@ -43,7 +44,7 @@ export interface WorkbenchPageContribution {
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
   panelMenus?: PageContribution["panelMenus"];
-  regionSettings?: PageContribution["regionSettings"];
+  regionSettings?: { bottom?: WorkbenchRegionSettings };
 }
 
 export interface WorkbenchPageResourceCodec {

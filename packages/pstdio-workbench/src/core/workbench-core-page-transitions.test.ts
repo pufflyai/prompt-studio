@@ -62,7 +62,7 @@ describe("workbench core page-owned panel transitions", () => {
       resource: { type: "artifact", id: "artifact-1", label: "Artifact" },
       open: "preview",
     });
-    expect(workbench.sidePanel.getMode()).toBe("attached");
+    expect(workbench.sidePanel.getMode()).toBe("floating");
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
       expect.objectContaining({
         contributionId: "workbench.page-placement.test.lab.detail",

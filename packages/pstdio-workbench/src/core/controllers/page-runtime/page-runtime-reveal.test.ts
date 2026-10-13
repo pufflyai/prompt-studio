@@ -56,7 +56,7 @@ test("selecting a resource reveals its page follower in a closed side panel", ()
   workbench.pageLocations.switchProject("test-project");
   workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "issue", id: "1" } });
   expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
-  expect(workbench.sidePanel.getMode()).toBe("attached");
+  expect(workbench.sidePanel.getMode()).toBe("floating");
   workbench.sidePanel.setMode("closed");
   workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "issue", id: "2" } });
   expect(workbench.sidePanel.getMode()).toBe("attached");

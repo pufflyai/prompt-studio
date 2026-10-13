@@ -253,7 +253,7 @@ test("new editors cannot open an unavailable destination", async () => {
   const layout = w.layout.getLayout();
   const target = { kind: "panel", panel, resource: resource("b"), open: "pin" } as const;
   for (const operation of [target, { kind: "compound", targets: [navigate("beta"), target] }] as const) {
-    await expect(w.navigation.openTarget(operation)).rejects.toThrow("cannot open");
+    await expect(w.navigation.openTarget(operation)).rejects.toThrow("Panel is not provided: side");
     expect(w.pages.store.getState()).toBe(state);
     expect(w.layout.getLayout()).toBe(layout);
   }
