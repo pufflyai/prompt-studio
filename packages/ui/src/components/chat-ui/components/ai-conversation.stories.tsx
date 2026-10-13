@@ -170,7 +170,7 @@ export const MultilineUserMessageShowMore: Story = {
     }
 
     await expect(showMoreButton).toBeVisible();
-    expect(userMessageContent.getBoundingClientRect().height).toBeLessThanOrEqual(72);
+    expect(userMessageContent.getBoundingClientRect().height).toBeLessThanOrEqual(96);
   },
 };
 

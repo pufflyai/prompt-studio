@@ -1,4 +1,4 @@
-import { Box, Button, Flex } from "@chakra-ui/react";
+import { Box, Button, Flex, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { ChatMessage } from "./ai-message";
 import { messageFadeInProps } from "./chat-message-animation";
@@ -58,24 +58,11 @@ interface StickyMessageToggleProps {
 
 export const StickyMessageToggle = (props: StickyMessageToggleProps) => {
   const { label, onClick, actionPanel } = props;
+  const recipe = useSlotRecipe({ key: "stickyUserMessage" });
+  const styles = recipe();
 
   return (
-    <Flex
-      position="absolute"
-      bottom="0"
-      left="0"
-      right="0"
-      justifyContent={actionPanel ? "space-between" : "flex-end"}
-      alignItems="flex-end"
-      px="xs"
-      pb="xs"
-      pt="lg"
-      bgGradient="to-t"
-      gradientFrom="bg.subtle"
-      gradientTo="transparent"
-      borderBottomRadius="xs"
-      pointerEvents="none"
-    >
+    <Flex css={styles.footer}>
       {actionPanel}
       <Button size="2xs" variant="outline" pointerEvents="auto" onClick={onClick}>
         {label}
