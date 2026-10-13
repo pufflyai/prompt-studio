@@ -20,9 +20,11 @@ const storyIds = [
   "note-reuse",
   "note-neighbor",
   "inactive-owner-reload",
+  "inactive-main-document",
   "workspace-catalog",
   "workspace-catalog-close",
   "collection-catalog",
+  "fixed-page-transfer",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 
 test.describe("Workbench windowing stories", () => {

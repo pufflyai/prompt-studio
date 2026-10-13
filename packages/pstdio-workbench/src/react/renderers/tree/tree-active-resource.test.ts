@@ -16,7 +16,7 @@ test("collection selection stays with the page when its editor moves to the mode
   expect(resolveTreeActiveResource(w.layout.getLayout(), page)).toEqual(resource("first"));
   const file = w.layout.getLayout().regions.main.widgets[0]!;
   w.movePanel(file.widgetId, "secondary");
-  expect(resolveTreeActiveResource(w.layout.getLayout(), page)).toBeUndefined();
+  expect(resolveTreeActiveResource(w.layout.getLayout(), page)).toEqual(navigate("alpha").resource);
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
-  expect(resolveTreeActiveResource(w.layout.getLayout(), page)).toBeUndefined();
+  expect(resolveTreeActiveResource(w.layout.getLayout(), page)).toEqual(navigate("alpha").resource);
 });

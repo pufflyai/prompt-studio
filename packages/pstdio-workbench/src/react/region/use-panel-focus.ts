@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
+import { hasWorkbenchOverlayFocus } from "../focus/workbench-overlay-focus";
 
 export const usePanelFocus = (workbench: WorkbenchCore, instanceId: string) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -24,6 +25,8 @@ export const usePanelFocus = (workbench: WorkbenchCore, instanceId: string) => {
       frame = requestAnimationFrame(() => {
         const element = ref.current;
         if (!isRequested() || !element || element.inert || element.getClientRects().length === 0) return;
+        // A menu or dialog opened after navigation owns the person's current focus.
+        if (hasWorkbenchOverlayFocus(element)) return;
         const previous = lastFocused.current;
         const target =
           previous && element.contains(previous)

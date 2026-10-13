@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { modePlacementContributionId } from "../../registries/views/view-placement";
 import type { WorkbenchSnapshot } from "../../workbench-core-types";
-import { harness, navigate, openFile, panel, resource } from "../composition/placement-lifecycle-test-support";
+import { harness, navigate, openFile, page, panel, resource } from "../composition/placement-lifecycle-test-support";
 
 const uniqueWorkbench = (saved = new Map(), input?: Parameters<typeof harness>[1]) => {
   const w = harness(saved, input);
@@ -128,6 +128,84 @@ test("one compound open creates one editor across multiple destinations", async 
     targets: [openFile("a"), { kind: "panel", panel, resource: resource("a"), open: "pin" }],
   });
   expect(tabs(w).filter((t) => t.resource?.id === "a")).toHaveLength(1);
+  expect(w.layout.getLayout().regions.main.widgets.filter((tab) => tab.resource?.id === "a")).toHaveLength(1);
+});
+
+test.each([
+  undefined,
+  "multiple",
+  "per-resource",
+] as const)("compound preview replacement uses the latest prepared owner with policy %s", async (policy) => {
+  const w = harness();
+  w.views.getView("editor")!.instancePolicy = policy;
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(openFile("a"));
+  await w.navigation.openTarget({ kind: "compound", targets: [openFile("b"), openFile("a")] });
+  expect(
+    w.layout
+      .getLayout()
+      .regions.main.widgets.filter((tab) => tab.viewId === "editor")
+      .map((tab) => tab.resource?.id),
+  ).toEqual(["a"]);
+});
+
+test.each(["page", "mode"] as const)("compound opens retain an earlier pin in the %s owner", async (owner) => {
+  const w = uniqueWorkbench();
+  await w.navigation.openTarget(navigate("alpha"));
+  const target =
+    owner === "page"
+      ? openFile("a")
+      : { kind: "panel" as const, panel, resource: resource("a"), open: "preview" as const };
+  await w.navigation.openTarget(target);
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      { ...target, open: "pin" },
+      { ...target, resource: resource("b") },
+    ],
+  });
+  const region = w.layout.getLayout().regions[owner === "page" ? "main" : "side"];
+  expect(region.widgets.find((tab) => tab.resource?.id === "a")?.pinned).toBe(true);
+  expect(region.widgets.find((tab) => tab.widgetId === region.activeWidgetId)?.resource?.id).toBe("b");
+});
+
+test("compound opens reuse editors staged in an earlier page owner", async () => {
+  const w = uniqueWorkbench();
+  await w.navigation.openTarget(navigate("gamma"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [navigate("alpha"), { ...openFile("a"), open: "pin" }, navigate("beta"), openFile("a")],
+  });
+  expect(w.pages.store.getState().location?.resource?.id).toBe("alpha");
+  const editor = w.layout.getLayout().regions.main.widgets.find((tab) => tab.resource?.id === "a")!;
+  expect(editor).toBeDefined();
+  await w.navigation.openTarget(navigate("beta"));
+  await w.navigation.openTarget(openFile("a"));
+  expect(w.pages.store.getState().location?.resource?.id).toBe("alpha");
+  expect(w.layout.getLayout().activeWidgetId).toBe(editor.widgetId);
+});
+
+test("staged mode editors activate their owner page without an unbound home page", async () => {
+  const w = uniqueWorkbench();
+  w.modes.registerMode({ id: "review", activate() {} });
+  w.pages.registerPage({
+    id: "review",
+    ref: page("review"),
+    path: "review",
+    modeId: "review",
+    main: { kind: "view", view: { kind: "view", id: "empty" }, cardinality: "one" },
+    slots: [],
+  });
+  await w.navigation.openTarget(navigate("gamma"));
+  const editor = { kind: "panel", panel, resource: resource("a"), open: "pin" } as const;
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [navigate("alpha"), editor, { kind: "page", page: page("review") }, editor],
+  });
+  expect(w.pages.store.getState().activeModeId).toBe("edit");
+  expect(w.pages.store.getState().location?.resource?.id).toBe("alpha");
+  expect(w.focus.getActiveRegion()).toBe("side");
+  expect(w.layout.getLayout().regions.side.widgets.filter((tab) => tab.resource?.id === "a")).toHaveLength(1);
 });
 
 test("compound reuse preserves other opens and validates every target before commit", async () => {
@@ -151,6 +229,19 @@ test("compound reuse preserves other opens and validates every target before com
   ).rejects.toThrow("Unknown page");
   expect(w.pages.store.getState()).toBe(state);
   expect(w.layout.getLayout()).toBe(layout);
+});
+
+test.each(["new", "reused"] as const)("a compound open focuses its final %s editor across regions", async (last) => {
+  const w = uniqueWorkbench();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({ ...openFile("a"), open: "pin" });
+  const side = { kind: "panel", panel, resource: resource("b"), open: "pin" } as const;
+  const targets = last === "new" ? [openFile("a"), side] : [side, openFile("a")];
+  await w.navigation.openTarget({ kind: "compound", targets });
+  const final = tabs(w).find((tab) => tab.resource?.id === (last === "new" ? "b" : "a"))!;
+  expect(w.layout.getLayout().activeWidgetId).toBe(final.widgetId);
+  expect(w.focus.getActiveRegion()).toBe(last === "new" ? "side" : "main");
+  expect(w.layout.getLayout().regions.side.widgets).toHaveLength(1);
 });
 
 test("new editors cannot open an unavailable destination", async () => {

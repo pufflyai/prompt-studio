@@ -4,11 +4,17 @@ import { registerWindowingPagePanels } from "./page-panels";
 import { type WindowingResources, windowingExtensionId, windowingPages } from "./resources";
 import { WindowingDraftView, WindowingResourceList, WindowingTerminalView, WindowingWebview } from "./views";
 
+export interface WindowingModuleOptions {
+  pagePanels?: boolean;
+  mainView?: "files" | "webview";
+  changesPresence?: "open" | "fixed";
+}
+
 export const registerWindowingModule = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
-  options: { pagePanels?: boolean; mainView?: "files" | "webview" } = {},
+  options: WindowingModuleOptions = {},
 ) => {
   workbench.modes.registerMode({ id: "windowing", label: "Windowing", activate() {} });
   for (const [id, label, items, page] of [
@@ -164,7 +170,11 @@ export const registerWindowingModule = (
         id: "changes",
         ...(options.pagePanels ? { tab: { getSnapshot: () => ({ label: "Changes", icon: "GitCompare" }) } } : {}),
         region: options.pagePanels ? "main" : "secondary",
-        item: { kind: "view", view: { kind: "view", id: "windowing.changes" }, presence: "open" },
+        item: {
+          kind: "view",
+          view: { kind: "view", id: "windowing.changes" },
+          presence: options.changesPresence ?? "open",
+        },
       },
       {
         id: "terminal",

@@ -1,11 +1,21 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
+import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { modeLayoutScope } from "./owner-layout-scope";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
 type LayoutCache = ReturnType<typeof createWorkbenchLayoutCache>;
 const caches = new WeakMap<WorkbenchCore, LayoutCache>();
+
+export const pinSavedTransferredEditor = (core: WorkbenchCore, tab: WorkbenchWidgetPlacement) => {
+  if (!tab.declarationIdentity) return;
+  caches
+    .get(core)
+    ?.updateTransferredPlacement(tab.declarationIdentity, (placement) =>
+      placement.widgetId === tab.widgetId ? { ...placement, pinned: true, tabRetention: "persistent" } : placement,
+    );
+};
 
 export const saveOpenOwnerLayouts = (core: WorkbenchCore) => {
   const state = core.pages.store.getState();

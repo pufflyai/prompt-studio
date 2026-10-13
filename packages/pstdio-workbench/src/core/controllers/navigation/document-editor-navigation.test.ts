@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import { harness, page, resource } from "../composition/placement-lifecycle-test-support";
+import { harness, navigate, page, resource } from "../composition/placement-lifecycle-test-support";
 
-const create = () => {
+const create = (cardinality: "one" | "many" = "many") => {
   const w = harness();
   w.views.getView("editor")!.instancePolicy = "per-resource";
   w.pages.registerPage({
@@ -19,11 +19,16 @@ const create = () => {
     modeId: "edit",
     parentId: "collection",
     resource: { kinds: [{ kind: "resource-kind", id: "file" }] },
-    main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "many" },
+    main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality },
     slots: [],
   });
   const open = (id: string) =>
-    w.pageLocations.navigate({ kind: "page", page: page("documents"), resource: resource(id), open: "pin" });
+    w.pageLocations.navigate({
+      kind: "page",
+      page: page("documents"),
+      resource: resource(id),
+      ...(cardinality === "many" ? { open: "pin" as const } : {}),
+    });
   return { w, open };
 };
 
@@ -87,6 +92,28 @@ test("selecting an existing Main document updates the page location", () => {
   open("a");
   expect(w.pages.store.getState().location?.resource?.id).toBe("a");
   expect(w.layout.getLayout().regions.main.widgets).toHaveLength(2);
+});
+
+test("reopening a Main document in an inactive owner publishes that document location", async () => {
+  const { w, open } = create();
+  open("a");
+  open("b");
+  const a = w.layout.getLayout().regions.main.widgets.find((tab) => tab.resource?.id === "a")!;
+  await w.navigation.openTarget(navigate("alpha"));
+  expect(open("a").ok).toBe(true);
+  expect(w.layout.getLayout().activeWidgetId).toBe(a.widgetId);
+  expect(w.pages.store.getState().location?.resource?.id).toBe("a");
+});
+
+test("low-level reuse returns the live single-resource editor after rebinding", () => {
+  const { w, open } = create("one");
+  open("a");
+  open("b");
+  const contributionId = w.layout.getLayout().regions.main.widgets[0]!.contributionId;
+  const opened = w.layout.openPanel(contributionId, { resource: resource("a") });
+  expect(opened.resource?.id).toBe("a");
+  expect(opened.instanceId).toBe(w.layout.getLayout().regions.main.activeWidgetId!);
+  expect(w.pages.store.getState().location?.resource?.id).toBe("a");
 });
 
 test.each(["main", "side"] as const)("reopening a preview document in %s can pin its existing editor", (region) => {

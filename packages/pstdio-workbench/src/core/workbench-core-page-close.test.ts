@@ -165,8 +165,11 @@ describe("closing page resource panels", () => {
     expect(workbench.pageLocations.closePlacement(tools.identity).ok).toBe(true);
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([]);
     workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "two" } });
+    expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(2);
+    expect(workbench.layout.getLayout().regions.side.widgets.every((item) => item.resource?.id === "two")).toBe(true);
+    workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id: "one" } });
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
-      expect.objectContaining({ resource: expect.objectContaining({ id: "two" }) }),
+      expect.objectContaining({ viewId: "reader", resource: expect.objectContaining({ id: "one" }) }),
     ]);
   });
 });

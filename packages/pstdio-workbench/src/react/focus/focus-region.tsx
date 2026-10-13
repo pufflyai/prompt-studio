@@ -2,6 +2,7 @@ import { Box, type BoxProps } from "@chakra-ui/react";
 import { type ReactNode, useEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchFocusRegionId } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { hasWorkbenchOverlayFocus } from "./workbench-overlay-focus";
 
 interface WorkbenchFocusRegionProps extends BoxProps {
   workbench: WorkbenchCore;
@@ -18,6 +19,7 @@ export const WorkbenchFocusRegion = (props: WorkbenchFocusRegionProps) => {
     const element = ref.current;
     if (!element || activeRegion !== region) return;
     if (element.contains(document.activeElement)) return;
+    if (hasWorkbenchOverlayFocus(element)) return;
     element.focus({ preventScroll: true });
   }, [activeRegion, region]);
 

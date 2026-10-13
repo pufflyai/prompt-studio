@@ -7,12 +7,26 @@ import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 
+export const activateNavigationPlacement = (core: WorkbenchCore, identity: PlacementIdentity) => {
+  const key = placementIdentityKey(identity);
+  for (const region of Object.values(core.layout.getLayout().regions)) {
+    const tab = region.widgets.find(
+      (tab) => tab.placementIdentity && placementIdentityKey(tab.placementIdentity) === key,
+    );
+    if (tab) {
+      revealPanelRegion(core, region.id);
+      core.layout.activatePanel(tab.widgetId);
+      return;
+    }
+  }
+};
+
 export const commitPreparedNavigation = (input: {
   core: WorkbenchCore;
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
   applyOwners(): void;
   publishOwners(): void;
-  activateEditors(): void;
+  activateTargets(): void;
 }) =>
   batchWorkbenchChanges(() => {
     const { core, state } = input;
@@ -25,20 +39,7 @@ export const commitPreparedNavigation = (input: {
     const result = state.location ? locations.commit(state, input.applyOwners) : withoutLocation();
     input.publishOwners();
     // Owner publication reconciles saved selection; the explicit open chooses the final selection.
-    for (const placement of state.reconciliation.activate) {
-      const key = placementIdentityKey(placement.identity);
-      for (const region of Object.values(core.layout.getLayout().regions)) {
-        const tab = region.widgets.find(
-          (tab) => tab.placementIdentity && placementIdentityKey(tab.placementIdentity) === key,
-        );
-        if (tab) {
-          revealPanelRegion(core, region.id);
-          core.layout.activatePanel(tab.widgetId);
-          break;
-        }
-      }
-    }
-    input.activateEditors();
+    input.activateTargets();
     const layout = core.layout.getLayout();
     const region = Object.values(layout.regions).find((region) =>
       region.widgets.some((tab) => tab.widgetId === layout.activeWidgetId),
@@ -48,3 +49,5 @@ export const commitPreparedNavigation = (input: {
     if (layout.activeWidgetId) core.focus.requestPanelFocus(layout.activeWidgetId);
     return result;
   });
+
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";

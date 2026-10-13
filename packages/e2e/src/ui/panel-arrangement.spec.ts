@@ -13,7 +13,7 @@ test("dragging a terminal into single-view Main retains its live view and shell 
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
-  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await expect(page.getByText("Project home", { exact: true }).filter({ visible: true })).toBeVisible();
   const originalUrl = page.url();
   const main = page.getByRole("region", { name: "Main", exact: true });
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
@@ -59,5 +59,5 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(0);
-  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await expect(page.getByText("Project home", { exact: true }).filter({ visible: true })).toBeVisible();
 });

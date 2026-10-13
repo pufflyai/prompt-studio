@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { toPanelInstance } from "../../registries/layout/panel-api";
-import { harness, navigate, openFile, panel, resource } from "./placement-lifecycle-test-support";
+import { harness, navigate, openFile, page, panel, resource } from "./placement-lifecycle-test-support";
 
 test("a closed transferred tab can reopen through its original declaration", async () => {
   const w = harness();
@@ -25,7 +25,8 @@ test("opening a transferred declaration selects the existing tab in its actual d
   expect(w.layout.getLayout().activeWidgetId).toBe(file.widgetId);
   expect(w.layout.getLayout().regions.side.activeWidgetId).toBe(file.widgetId);
   expect(w.sidePanel.getMode()).toBe("attached");
-  expect(w.layout.getLayout().regions.main.widgets).toHaveLength(0);
+  expect(w.layout.getLayout().regions.main.widgets.map((tab) => tab.viewId)).toEqual(["empty"]);
+  expect(w.layout.getLayout().regions.main.widgets[0]?.resource).toEqual(navigate("alpha").resource);
 });
 
 test("transferred tabs rehydrate live tab callbacks after serialization", async () => {
@@ -75,4 +76,127 @@ test("a transferred tab cannot return after its contribution is unregistered", a
   registration.dispose();
   await w.navigation.openTarget(navigate("alpha"));
   expect(w.layout.getLayout().regions.main.widgets.some((p) => p.widgetId === tab.widgetId)).toBe(false);
+});
+
+test("a compound navigation opens a new tab while entering a page with a saved layout", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(navigate("beta"));
+  await w.navigation.openTarget({ kind: "compound", targets: [navigate("alpha"), openFile("new")] });
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "new")).toBe(true);
+});
+
+test("clearing an inactive page owner in its persistence adapter removes its saved tabs", async () => {
+  const saved = new Map();
+  const w = harness(saved);
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(openFile("file"));
+  await w.navigation.openTarget(navigate("beta"));
+  const scope = [...saved.keys()].find(
+    (key) =>
+      key?.includes("resource/") &&
+      saved.get(key).regions.main.widgets.some((p: { resource?: { id: string } }) => p.resource?.id === "file"),
+  );
+  expect(scope).toBeDefined();
+  saved.delete(scope);
+  await w.navigation.openTarget(navigate("alpha"));
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "file")).toBe(false);
+});
+
+const registerReviewPage = (w: ReturnType<typeof harness>) => {
+  w.modes.registerMode({ id: "review", activate() {} });
+  w.pages.registerPage({
+    id: "review",
+    ref: page("review"),
+    path: "review",
+    modeId: "review",
+    main: { kind: "panels", empty: { kind: "view", id: "empty" } },
+    slots: [],
+  });
+};
+const review = { kind: "page" as const, page: page("review") };
+const modeFile = { kind: "panel" as const, panel, resource: resource("mode-file"), open: "pin" as const };
+
+test("clearing an inactive mode owner in its persistence adapter removes its saved tabs", async () => {
+  const saved = new Map();
+  const w = harness(saved);
+  registerReviewPage(w);
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(modeFile);
+  await w.navigation.openTarget(review);
+  saved.delete("project/project/owner/mode/edit");
+  await w.navigation.openTarget(navigate("alpha"));
+  expect(w.layout.getLayout().regions.side.widgets.some((p) => p.resource?.id === "mode-file")).toBe(false);
+});
+
+test("a compound navigation retains staged page and mode tabs when revisiting their owners", async () => {
+  const w = harness();
+  registerReviewPage(w);
+  await w.navigation.openTarget(navigate("beta"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      navigate("alpha"),
+      { ...openFile("file"), open: "pin" },
+      modeFile,
+      review,
+      navigate("beta"),
+      navigate("alpha"),
+    ],
+  });
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "file")).toBe(true);
+  expect(w.layout.getLayout().regions.side.widgets.some((p) => p.resource?.id === "mode-file")).toBe(true);
+});
+
+test("a compound section jump keeps staged tabs in the same resource owner", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      openFile("stage"),
+      { ...navigate("alpha"), section: { anchors: [{ id: "summary", heading: "Summary" }] } },
+    ],
+  });
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "stage")).toBe(true);
+  expect(w.pages.store.getState().location?.section).toEqual({ anchors: [{ id: "summary", heading: "Summary" }] });
+});
+
+test("a compound navigation saves tabs opened in an owner before ending in another owner", async () => {
+  const w = harness();
+  registerReviewPage(w);
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(navigate("beta"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [navigate("alpha"), { ...openFile("stage"), open: "pin" }, modeFile, review],
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "stage")).toBe(true);
+  expect(w.layout.getLayout().regions.side.widgets.some((p) => p.resource?.id === "mode-file")).toBe(true);
+});
+
+test("a compound navigation preserves a staged tab in the live originating page", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [{ ...openFile("stage"), open: "pin" }, navigate("beta")],
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.resource?.id === "stage")).toBe(true);
+});
+
+test("a staged page owner keeps only its replacement preview after multiple visits", async () => {
+  const w = harness();
+  registerReviewPage(w);
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(openFile("old-preview"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [openFile("new-preview"), navigate("beta"), navigate("alpha"), review],
+  });
+  await w.navigation.openTarget(navigate("alpha"));
+  const previews = w.layout.getLayout().regions.main.widgets.filter((p) => p.tabRetention === "preview");
+  expect(previews.map((p) => p.resource?.id)).toEqual(["new-preview"]);
 });

@@ -75,6 +75,27 @@ export const InactiveOwnerReload: Story = {
   },
 };
 
+export const InactiveMainDocument: Story = {
+  args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getAllByRole("button", { name: "Note A" })[0]);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Notes draft" }), "A keeps its owner");
+    const mount = visibleWindowingLabel(canvasElement, "Notes mount").textContent;
+    await userEvent.click(canvas.getAllByRole("button", { name: "Note B" })[0]);
+    await userEvent.click(canvas.getAllByRole("button", { name: "Workspace 2" })[0]);
+    await userEvent.click(canvas.getAllByRole("button", { name: "Note A" })[0]);
+    await expect(within(mainHeader(canvasElement)).getByRole("tab", { name: "Note A", selected: true })).toBeVisible();
+    await expect(
+      within(canvas.getByRole("navigation", { name: "breadcrumb" })).getByText("Note A", { exact: true }),
+    ).toBeVisible();
+    const main = panel(canvasElement, "main");
+    await expect(within(main).getByRole("textbox", { name: "Notes draft" })).toHaveValue("A keeps its owner");
+    await expect(visibleWindowingLabel(main, "Notes mount")).toHaveTextContent(mount!);
+    await waitFor(() => expect(within(main).getByRole("textbox", { name: "Notes draft" })).toHaveFocus());
+  },
+};
+
 export const WorkspaceCatalog: Story = {
   args,
   play: async ({ canvasElement }) => {

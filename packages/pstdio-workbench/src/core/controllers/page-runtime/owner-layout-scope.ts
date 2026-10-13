@@ -1,4 +1,5 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { pageOwnerResource } from "../../registries/pages/page-main";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 
 export interface OwnerLayoutContext {
@@ -6,16 +7,13 @@ export interface OwnerLayoutContext {
   modeId?: string;
   pageId?: string;
   resource?: ResourceRef;
-  page?: WorkbenchPageContribution;
 }
 
-export const pageLayoutScope = (context: OwnerLayoutContext) => {
+export const pageLayoutScope = (context: OwnerLayoutContext, page?: WorkbenchPageContribution) => {
   if (!context.projectId) return undefined;
   if (!context.pageId) return `project/${context.projectId}`;
   const owner = `project/${context.projectId}/owner/page/${encodeURIComponent(context.pageId)}`;
-  // A many-document Main selects resources within one page owner, like its page runtime state.
-  const resource =
-    context.page?.main.kind === "view" && context.page.main.cardinality === "many" ? undefined : context.resource;
+  const resource = pageOwnerResource(page, context.resource);
   return `${owner}/${resource ? `resource/${encodeURIComponent(resourceKey(resource))}` : "unbound"}`;
 };
 

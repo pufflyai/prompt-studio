@@ -12,14 +12,15 @@ import {
   isStaticPlacementOpen,
   placementItemViewId,
   staticPlacementClosable,
-  updateResourcePlacementInstance,
   validateOwnedPlacementItem,
   type WorkbenchOwnedPlacementItem,
 } from "../placements/owned-placement-lifecycle";
 import type { OwnedPlacementLocationContext } from "../placements/owned-placement-preparation";
 import {
   type OwnedPlacementPreparation,
+  type OwnedPlacementUpdateInput,
   prepareOwnedPlacement,
+  prepareOwnedPlacementUpdate,
   setOwnedPlacementPreparation,
 } from "../placements/owned-placement-preparation";
 import { restoreOwnedPlacementState } from "../placements/owned-placement-restoration";
@@ -112,11 +113,12 @@ const copyPlacement = (placement: WorkbenchModePlacementContribution) => ({
 
 export const createWorkbenchModePlacementRegistry = (input: {
   views: WorkbenchViewRegistry;
-  getProjectId?(): string | undefined;
+  getContext?(): { projectId?: string; modeId?: string } | undefined;
   loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   viewMenus?: WorkbenchViewMenuRegistry;
   getPanel(panelId: string): RegisteredWidgetContribution | undefined;
   registerPanel: Parameters<typeof registerWorkbenchViewPlacement>[0];
+  updateTransferredPlacement?(identity: PlacementIdentity, update: OwnedPlacementUpdateInput): boolean;
 }): WorkbenchModePlacementRegistry => {
   const placements = new Map<string, WorkbenchModePlacementContribution>();
   const refs = new Map<string, WorkbenchModePlacementContribution>();
@@ -130,10 +132,13 @@ export const createWorkbenchModePlacementRegistry = (input: {
       .sort((left, right) => left.id.localeCompare(right.id));
 
   let runtime: (() => void) | undefined;
-  const emitChange = () => {
-    runtime?.();
+  const notifySubscribers = () => {
     for (const listener of listeners)
       notifyWorkbenchChange(listener, () => runWorkbenchEffect("mode placement subscriber", listener));
+  };
+  const emitChange = () => {
+    runtime?.();
+    notifySubscribers();
   };
 
   const resolve = (
@@ -154,18 +159,14 @@ export const createWorkbenchModePlacementRegistry = (input: {
       identity,
       region: placement.region,
       order: placement.order ?? 0,
-      value: createPlacement(
-        `workbench.mode.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
-        panel,
-        {
-          viewId: placementItemViewId(placement.item),
-          role: placement.region === "main" ? "location" : "sub-panel",
-          closable: staticPlacementClosable(placement.item),
-          ...(resource ? { resource } : {}),
-          ...(title ? { title } : {}),
-          ...tabState(open),
-        },
-      ),
+      value: createPlacement(`workbench.mode.${crypto.randomUUID()}`, panel, {
+        viewId: placementItemViewId(placement.item),
+        role: placement.region === "main" ? "location" : "sub-panel",
+        closable: staticPlacementClosable(placement.item),
+        ...(resource ? { resource } : {}),
+        ...(title ? { title } : {}),
+        ...tabState(open),
+      }),
     };
   };
 
@@ -177,11 +178,22 @@ export const createWorkbenchModePlacementRegistry = (input: {
       });
     },
     getState: () => state,
-    restore(context, current = state) {
-      if (input.getProjectId && context.projectId !== input.getProjectId()) current = createOwnedPlacementState();
+    restore(context, current = state, previousContext) {
+      const previous = previousContext ?? input.getContext?.();
+      if (input.getContext && context.projectId !== previous?.projectId) current = createOwnedPlacementState();
+      if (!input.loadLayout) return current;
+      const enteringOwner = context.projectId !== previous?.projectId || context.modeId !== previous?.modeId;
+      const owned = listPlacements(context.modeId);
+      if (enteringOwner) {
+        current = {
+          staticOverrides: new Map(current.staticOverrides),
+          resourceInstances: new Map(current.resourceInstances),
+        };
+        for (const declaration of owned) clearOwnedPlacementState(current, declaration.id);
+      }
       const saved = input.loadLayout?.(context);
       if (!saved) return current;
-      const declarations = listPlacements(context.modeId).filter((placement) =>
+      const declarations = owned.filter((placement) =>
         placement.item.kind === "view"
           ? !current.staticOverrides.has(placement.id)
           : !current.resourceInstances.has(placement.id),
@@ -217,6 +229,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
       state = next;
     },
     publish: emitChange,
+    notifySubscribers,
     resolve(modeId, current = state) {
       if (!modeId) return [];
       return listPlacements(modeId).flatMap((placement) => {
@@ -292,14 +305,19 @@ export const createWorkbenchModePlacementRegistry = (input: {
       if (identity.kind !== "mode") throw new Error("Mode placement registry updates only mode-owned placements");
       const placement = placements.get(identity.placementId);
       if (!placement) return;
-      updateResourcePlacementInstance({
+      const prepared = prepareOwnedPlacementUpdate({
         label,
         id: placement.id,
         item: placement.item,
-        state,
-        instanceKey: identity.instanceKey,
-        ...update,
+        current: state,
+        identity,
+        update,
       });
+      if (placement.item.kind === "binding" && input.updateTransferredPlacement?.(identity, update)) {
+        notifySubscribers();
+        return;
+      }
+      state = prepared;
       emitChange();
     },
 

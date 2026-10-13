@@ -12,7 +12,6 @@ import {
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
 import { restorePageGeometry } from "../../registries/layout/owner-region-state";
-import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
@@ -36,12 +35,14 @@ import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
 import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
+import { pageWidgetId, reuseSingleResourceWidgets } from "./page-widget-id";
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
-  existingEditor?(placement: WorkbenchWidgetPlacement): string | undefined;
+  existingEditor?: Parameters<typeof resolveOwnerPlacements>[0]["existingEditor"];
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadPageGeometry?(projectId: string, pageId: string): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
+  persistPreparedOwners?(states: readonly WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[]): void;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
@@ -82,8 +83,25 @@ const prepareRuntimeLayout = (
   latest: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   activation: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["placements"],
   enteringPage: boolean,
+  liveLayout: WorkbenchLayout,
 ) => {
-  const modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
+  let modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
+  if (modeLayout && !enteringPage) {
+    // Membership comes from the saved mode owner. Within the same page, keep
+    // live selection and geometry while batched persistence catches up.
+    const regions = { ...modeLayout.regions };
+    for (const region of Object.values(regions)) {
+      const live = input.layout.getLayout().regions[region.id];
+      regions[region.id] = {
+        ...region,
+        activeWidgetId: live.activeWidgetId,
+        visible: live.visible,
+        size: live.size,
+        presentation: live.presentation,
+      };
+    }
+    modeLayout = { ...modeLayout, regions };
+  }
   const ownerManaged = Boolean(input.loadPageLayout && latest.activePageId);
   const placements =
     ownerManaged && input.loadPageLayout
@@ -94,6 +112,7 @@ const prepareRuntimeLayout = (
           modeLayout,
           enteringPage,
           currentLayout: input.layout.getLayout(),
+          liveLayout,
           getWidget: input.layout.getWidget,
           hasDeclaration: input.hasDeclaration,
           existingEditor: input.existingEditor,
@@ -101,7 +120,7 @@ const prepareRuntimeLayout = (
       : bindPlacementsToActivePageLocation(latest);
   return {
     ownerManaged,
-    layout: input.layout.getLayout(),
+    layout: ownerManaged ? reuseSingleResourceWidgets(input.layout.getLayout(), placements) : input.layout.getLayout(),
     modeLayout,
     placements,
     activate: ownerLayoutActivation(activation, placements).map((p) => p.identity),
@@ -125,6 +144,7 @@ const applyPageState = (
   storeBeforeTransition = input.registry.store.getState(),
 ) => {
   const previousScope = input.layout.getPersistenceScope();
+  const liveLayout = input.layout.getLayout();
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
     if (source === "transition") input.beforeApply?.(state);
@@ -136,7 +156,7 @@ const applyPageState = (
     const activation =
       latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
     const enteringPage = input.layout.getPersistenceScope() !== previousScope;
-    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(input, latest, activation, enteringPage);
+    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(input, latest, activation, enteringPage, liveLayout);
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
     // A restored cache needs the complete owned set; a delta belongs to the previous scope.
     if (ownerManaged || source === "scope-restore" || enteringPage) {
@@ -165,7 +185,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     } finally {
       applyingTransition = false;
     }
-  });
+  }, input.persistPreparedOwners);
   const scope = input.layout.onDidChangePersistenceScope(() => {
     if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
   });
@@ -195,23 +215,20 @@ const toWidgetPlacement = (
   const panel = layout.getWidget(panelId);
   if (!panel) throw new Error(`Workbench page placement is not registered: ${input.pageId}.${input.slotId}`);
   return {
-    ...createPlacement(
-      `workbench.page.${encodeURIComponent(input.ownerInstanceKey ?? "")}.${encodeURIComponent(placementIdentityKey(input.identity))}`,
-      panel,
-      {
-        viewId: input.viewId,
-        title: resource?.label ?? view.title ?? panel.title,
-        role: placementRole(input.role),
-        closable: input.closable,
-        ...(resource ? { resource } : {}),
-        ...toTabState(input.open),
-      },
-    ),
+    ...createPlacement(pageWidgetId(input, layout), panel, {
+      viewId: input.viewId,
+      title: resource?.label ?? view.title ?? panel.title,
+      role: placementRole(input.role),
+      closable: input.closable,
+      ...(resource ? { resource } : {}),
+      ...toTabState(input.open),
+    }),
     ...(input.section ? { section: input.section } : {}),
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
   existingEditor?: ConnectWorkbenchPageRuntimeInput["existingEditor"];
+  persistPreparedOwners?: ConnectWorkbenchPageRuntimeInput["persistPreparedOwners"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadPageGeometry?: ConnectWorkbenchPageRuntimeInput["loadPageGeometry"];
@@ -271,6 +288,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
         { pages: registry, modePlacements: input.modePlacements, shellPlacements: input.shellPlacements },
         identity,
       ),
+    persistPreparedOwners: input.persistPreparedOwners,
     loadModeLayout: input.loadModeLayout,
     loadPageLayout: input.loadPageLayout,
     loadPageGeometry: input.loadPageGeometry,
