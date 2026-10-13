@@ -130,7 +130,7 @@ test("main shortcuts navigate and open creation forms", async ({ page, request }
   for (const [key, label, destination] of [
     ["S", "Sessions", /\/sessions$/],
     ["W", "Workspaces", /\/workspaces$/],
-    ["O", "Notes", /\/notes$/],
+    ["O", "Notes", /\/notes(?:\?mode=project)?$/],
     ["P", "Tickets", /\/tickets$/],
   ] as const) {
     await page.goto(`/projects/${project.id}/tickets`);

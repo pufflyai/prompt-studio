@@ -1,4 +1,4 @@
-import { defaultPageResourceCodec, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import { registerArrangementCommands } from "./controllers/composition/arrangement-commands";
@@ -44,6 +44,7 @@ import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-re
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
+import { createAvailablePageResourceCodec } from "./registries/resources/available-page-resource-codec";
 import { createResourceRegistry } from "./registries/resources/resource-registry";
 import { createSettingsRegistry } from "./registries/settings/settings-registry";
 import { createStatusRegistry } from "./registries/statuses/status-registry";
@@ -57,6 +58,7 @@ import {
   createCoreCompositionController,
   primaryWorkbenchResource,
 } from "./workbench-core-connections";
+import { navigateCoreMode } from "./workbench-core-modes";
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
 import { createCoreRenderers } from "./workbench-core-renderers";
@@ -87,6 +89,7 @@ const createPageLocations = (
         {
           kind: "page",
           page: location.page,
+          mode: location.mode,
           resource: location.resource,
           section: location.section,
           position: location.position,
@@ -142,15 +145,9 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const { views, viewMenus, statusBar } = createCoreViews(input, renderers);
-  const pageResourceCodec = input.pageResources ?? defaultPageResourceCodec;
-  const pageResources = {
-    ...pageResourceCodec,
-    normalize: (resource: Parameters<typeof pageResourceCodec.normalize>[0]) => {
-      const normalized = pageResourceCodec.normalize(resource);
-      if (resources.isRemoved(normalized)) throw new Error(`Resource was deleted: ${normalized.type}/${normalized.id}`);
-      return normalized;
-    },
-  };
+  const pageResources = createAvailablePageResourceCodec(input.pageResources, (resource) =>
+    resources.isRemoved(resource),
+  );
 
   const updateTransferredPlacement = createTransferredPlacementUpdater(layout, layoutCache);
 
@@ -182,7 +179,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
 
-  const navigationTrees = createWorkbenchNavigationTrees(renderers);
+  const navigationTrees = createWorkbenchNavigationTrees(renderers, () => core);
 
   const overlays = createWorkbenchOverlayRegistry({ layout, views, viewMenus });
   const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });
@@ -204,6 +201,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
 
   const modes = createWorkbenchModeRegistry({
+    navigateMode: (modeId) => navigateCoreMode(core, modeId),
     establishLocation,
     layout,
     resolveContext: () => core,

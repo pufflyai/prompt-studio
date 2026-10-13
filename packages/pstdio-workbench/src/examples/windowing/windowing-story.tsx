@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useWorkbenchStore, useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { boomboxTheme, kilnTheme } from "../showcases/themes";
 import { createWindowingFixture, type WindowingFixture, type WindowingMode } from "./fixture";
+import { WindowingModeControls } from "./page-mode-controls";
 import { WindowingRemovalControls } from "./removal-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
 
@@ -27,45 +28,61 @@ const WindowingControls = (props: ControlsProps) => {
       borderBottomWidth="1px"
       borderColor="border.subtle"
     >
-      {resources.workspaces.map((resource) => (
+      {fixture.removalControls && <WindowingRemovalControls fixture={fixture} />}
+      {fixture.pageModes && <WindowingModeControls workbench={workbench} />}
+      {fixture.contextNavigation && (
         <Button
-          key={resource.id}
-          size="xs"
-          variant="outline"
-          onClick={() => workbench.pageLocations.navigate({ kind: "page", page: windowingPages.workspace, resource })}
-        >
-          {resource.label}
-        </Button>
-      ))}
-      {resources.notes.map((resource) => (
-        <Button
-          key={resource.id}
           size="xs"
           variant="outline"
           onClick={() =>
-            workbench.pageLocations.navigate({ kind: "page", page: windowingPages.notes, resource, open: "pin" })
+            resources.updateSessionContext("session-2", { type: "project", id: "windowing-project", label: "Project" })
           }
         >
-          {resource.label}
+          Use project session context
         </Button>
-      ))}
-      {resources.sessions.map((resource) => (
-        <Button
-          key={resource.id}
-          size="xs"
-          variant="outline"
-          onClick={() =>
-            void workbench.navigation.openTarget({
-              kind: "panel",
-              panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
-              resource,
-              open: "pin",
-            })
-          }
-        >
-          {resource.label}
-        </Button>
-      ))}
+      )}
+      {!fixture.pageModes &&
+        resources.workspaces.map((resource) => (
+          <Button
+            key={resource.id}
+            size="xs"
+            variant="outline"
+            onClick={() => workbench.pageLocations.navigate({ kind: "page", page: windowingPages.workspace, resource })}
+          >
+            {resource.label}
+          </Button>
+        ))}
+      {!fixture.pageModes &&
+        resources.notes.map((resource) => (
+          <Button
+            key={resource.id}
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              workbench.pageLocations.navigate({ kind: "page", page: windowingPages.notes, resource, open: "pin" })
+            }
+          >
+            {resource.label}
+          </Button>
+        ))}
+      {!fixture.pageModes &&
+        resources.sessions.map((resource) => (
+          <Button
+            key={resource.id}
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              void workbench.navigation.openTarget({
+                kind: "panel",
+                panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
+                resource,
+                open: "pin",
+              })
+            }
+          >
+            {resource.label}
+          </Button>
+        ))}
       <Button
         size="xs"
         variant="outline"
@@ -152,7 +169,6 @@ export const WindowingStory = (props: WindowingStoryProps) => {
         ) : (
           <ShowcaseControls fixture={fixture} reload={reload} />
         )}
-        {fixture.removalControls && <WindowingRemovalControls fixture={fixture} />}
         {error && (
           <Text role="alert" color="fg.error">
             {error}

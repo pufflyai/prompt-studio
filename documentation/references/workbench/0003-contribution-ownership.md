@@ -69,7 +69,7 @@ Deleting a resource makes its page inaccessible. Cleanup removes the page instan
 
 A valid foreign session or terminal keeps its resource binding and execution when its containing page is deleted. A later explicit open uses that existing resource and the normal destination policy. A matching forbidden destination fails; navigation does not silently choose another panel or create another runtime. The reopened view may be a new instance. Closed-view drafts and mount state are not a recovery contract.
 
-Contribution unregistration uses the registered disposables and normal navigation failure/fallback rules. There is no separate preservation or recovery state for removed pages, modes, or panels. Unregistration never stops a valid bound session. Ordinary page navigation, mode changes, and Hide preserve owners and tabs.
+Contribution unregistration uses the registered disposables and normal navigation failure/fallback rules. It clears saved layouts for the removed owner. Editor lookup uses registered owners and widget contributions, so a closed foreign view cannot prevent explicit reopening. There is no separate preservation or recovery state for removed pages, modes, or panels. Unregistration never stops a valid bound session. Ordinary page navigation, mode changes, and Hide preserve owners and tabs.
 
 Reset restores missing declared tools and layout settings. Open or moved instances stay unique, including foreign sessions dropped into a page. A closed terminal preset reuses its valid resource runtime when reopened. Reset cannot bring back a deleted page or seed its tabs into an orphan owner.
 

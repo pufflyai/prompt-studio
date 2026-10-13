@@ -4,6 +4,49 @@ import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-cont
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
+test("refreshes canonical resource context without moving or rebinding the tab", async () => {
+  let refresh!: (event: { id: string }) => void;
+  let context: import("@pstdio/sdk/extensions").ResourceContext = { type: "workspace", id: "w2", label: "Workspace 2" };
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench: createWorkbench(),
+      projectId: "p1",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: () => ({ context }),
+      subscribeRefreshEvents: (listener) => {
+        refresh = listener;
+        return { dispose() {} };
+      },
+    },
+    {
+      extensionId: "test",
+      placementId: "session",
+      queryHandlerId: "session.context",
+      refreshEventIds: ["test.changed"],
+    },
+  );
+  const instance: WorkbenchPanelInstance = {
+    instanceId: "s1",
+    panelId: "session",
+    closable: true,
+    resource: { type: "session", id: "s1" },
+  };
+  let notified = Promise.withResolvers<void>();
+  const subscription = tab.subscribe!(() => notified.resolve());
+  tab.getSnapshot(instance);
+  await notified.promise;
+  expect(tab.getSnapshot(instance).context).toEqual(context);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  context = { type: "project", id: "p1", label: "Project" };
+  notified = Promise.withResolvers<void>();
+  refresh({ id: "test.changed" });
+  await notified.promise;
+  expect(tab.getSnapshot(instance).context).toEqual(context);
+  expect(instance.resource).toEqual({ type: "session", id: "s1" });
+  if (typeof subscription === "function") subscription();
+  else subscription.dispose();
+});
+
 test("keeps the loaded tab title and actions while an autosave refresh is pending", async () => {
   const requests: Array<ReturnType<typeof Promise.withResolvers<unknown>>> = [];
   let refresh!: (event: { id: string }) => void;

@@ -8,6 +8,7 @@ import type {
 import { placementIdentityKey, type ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
+import { resolvePageMode } from "../../registries/pages/page-availability";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
@@ -17,15 +18,18 @@ import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
-import { openOwnerLayouts, pageOwnerLocation, pinSavedTransferredEditor } from "../page-runtime/open-owner-layouts";
+import { openOwnerLayouts, pinSavedTransferredEditor } from "../page-runtime/open-owner-layouts";
 import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
 import { pageOwnerScope } from "../page-runtime/prepared-owner-states";
 import { findPreparedResourceEditor, hasPreparedEditorOwner } from "./prepared-resource-editor";
+import { resourceEditorOwnerTarget } from "./resource-editor-owner-target";
 
 export const findOpenEditor = (core: WorkbenchCore, matches: (tab: WorkbenchWidgetPlacement) => boolean) =>
   openOwnerLayouts(core).flatMap((owner) =>
     Object.values(owner.layout.regions).flatMap((region) =>
-      region.widgets.filter(matches).map((tab) => ({ ...owner, region: region.id, tab })),
+      region.widgets
+        .filter((tab) => core.layout.getWidget(tab.contributionId) && matches(tab))
+        .map((tab) => ({ ...owner, region: region.id, tab })),
     ),
   )[0];
 
@@ -95,74 +99,6 @@ const liveEditorPlacement = (core: WorkbenchCore, editor: OpenResourceEditor) =>
           resourceKey(tab.resource) === resourceKey(editor.tab.resource)),
     );
 
-const ownerTarget = (
-  core: WorkbenchCore,
-  editor: OpenResourceEditor,
-  targets: readonly (NavigationTargetPage | NavigationTargetPanel)[],
-  current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
-) => {
-  const owner = editor.tab.placementIdentity;
-  const explicit = targets
-    .filter((t): t is NavigationTargetPage => t.kind === "page")
-    .filter((t) => {
-      const match = resourceEditorTarget(core, t);
-      return (
-        !match || match.viewId !== editor.tab.viewId || resourceKey(match.resource) !== resourceKey(editor.tab.resource)
-      );
-    })
-    .at(-1);
-  if (owner?.kind === "page") {
-    const ownerPage = core.pages.getPage(owner.pageId);
-    if (
-      editor.region === "main" &&
-      editor.tab.role === "location" &&
-      ownerPage?.resource &&
-      ownerPage.main.kind === "view"
-    )
-      return { kind: "page" as const, page: ownerPage.ref, resource: editor.tab.resource };
-    const page = current.activePageId ? current.pages[current.activePageId] : undefined;
-    if (
-      editor.scope ===
-      pageLayoutScope(
-        {
-          projectId: current.projectId,
-          pageId: current.activePageId,
-          resource: current.location?.resource,
-        },
-        page,
-      )
-    ) {
-      return undefined;
-    }
-    return editor.scope ? pageOwnerLocation(core, editor.scope) : undefined;
-  }
-  if (owner?.kind !== "mode" || owner.modeId === current.activeModeId) return explicit;
-  const layouts = openOwnerLayouts(core);
-  const mainId = layouts.find((entry) => entry.scope === editor.scope)?.layout.activeLocationWidgetId;
-  const lastPage = layouts.find(
-    (entry) =>
-      entry.scope?.includes("/owner/page/") &&
-      Object.values(entry.layout.regions).some((region) => region.widgets.some((tab) => tab.widgetId === mainId)),
-  );
-  const home = core.pages.listPages().find((page) => page.modeId === owner.modeId && !page.resource && !page.parentId);
-  const candidates = [
-    explicit,
-    lastPage?.scope ? pageOwnerLocation(core, lastPage.scope) : undefined,
-    ...(home ? [{ kind: "page" as const, page: home.ref }] : []),
-  ];
-  return (
-    candidates.find(
-      (target) =>
-        target &&
-        core.pages.listPages().find((p) => contributionRefId(p.ref) === contributionRefId(target.page))?.modeId ===
-          owner.modeId,
-    ) ??
-    (() => {
-      throw new Error(`Editor owner has no available page: ${owner.modeId}`);
-    })()
-  );
-};
-
 export const prepareEditorActivation = (
   core: WorkbenchCore,
   editor: OpenResourceEditor,
@@ -172,10 +108,14 @@ export const prepareEditorActivation = (
 ) => {
   const pages = getWorkbenchPageRegistryInternals(core.pages);
   const locations = getPageLocationPreparation<WorkbenchWidgetPlacement>(core.pageLocations);
-  const target = ownerTarget(core, editor, targets, current);
-  const resolved = target ? locations.resolve(target) : undefined;
+  const target = resourceEditorOwnerTarget(core, editor, targets, current);
+  const resolved = target ? locations.resolve(target, current.activeModeId) : undefined;
   const ownerMode = editor.tab.placementIdentity?.kind === "mode" ? editor.tab.placementIdentity.modeId : undefined;
-  const modeId = ownerMode ?? (resolved ? current.pages[resolved.pageId]?.modeId : current.activeModeId);
+  const modeId =
+    ownerMode ??
+    (resolved
+      ? resolvePageMode(current.pages[resolved.pageId]!, resolved.location.mode, current.activeModeId)
+      : current.activeModeId);
   const mode = modeId ? core.modes.getMode(modeId) : undefined;
   if (
     (editor.region === "side" || editor.region === "secondary") &&

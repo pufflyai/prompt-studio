@@ -11,6 +11,7 @@ import type {
   HarnessProvider,
   KeybindingContribution,
   ModeContribution,
+  ModeRef,
   NavigationItemContribution,
   NavigationTreeContribution,
   PageContribution,
@@ -123,7 +124,11 @@ type PagePanelRefs<Slots extends readonly PageSlot[]> = {
   readonly [Id in Slots[number]["id"]]: PageSlotRef;
 };
 
-type PageDefinition = Omit<PageContribution, "ref" | "panels">;
+type PageDefinition = Omit<PageContribution, "ref" | "panels" | "mode" | "modes"> &
+  (
+    | { readonly mode: ModeRef; readonly modes?: readonly ModeRef[] }
+    | { readonly mode?: ModeRef; readonly modes: readonly ModeRef[] }
+  );
 type RequiredPageParent<Definition extends PageDefinition> = Definition extends {
   resource: unknown;
   main: { kind: "view" };
@@ -142,14 +147,20 @@ const createPage = (definition: PageDefinition) => {
   const panels = Object.fromEntries(
     definition.slots.map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),
   );
-  return { ...definition, ref, panels };
+  const mode = definition.mode ?? definition.modes?.[0];
+  if (!mode) throw new Error("A page requires mode or a non-empty modes list");
+  return { ...definition, mode, ref, panels };
 };
 
 export const definePage = createPage as <const Definition extends PageDefinition>(
   definition: NoExtraFields<Definition, PageDefinition> &
     RequiredPageParent<Definition> &
     RequiredPageResource<Definition>,
-) => Definition & ContributionDefinition<"page"> & { readonly panels: PagePanelRefs<Definition["slots"]> };
+) => Definition &
+  ContributionDefinition<"page"> & {
+    readonly mode: ModeRef;
+    readonly panels: PagePanelRefs<Definition["slots"]>;
+  };
 
 export const defineStatusBarItem = defineContribution("status-bar-item") as <
   Definition extends Omit<StatusBarItemContribution, "ref">,

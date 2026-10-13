@@ -7,7 +7,7 @@ import type {
 } from "./page-location-types";
 
 interface PageLocationPreparation<Value> {
-  resolve(target: NavigationTargetPage): ResolvedPageLocation;
+  resolve(target: NavigationTargetPage, activeModeId?: string): ResolvedPageLocation;
   commit(
     state: WorkbenchPageRegistryStoreState<Value>,
     beforePublish?: () => void,

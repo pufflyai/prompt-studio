@@ -55,6 +55,11 @@ export const WindowingDraftView = (props: DraftViewProps) => {
         Mount {mount}
       </Text>
       {(label === "Files" || label === "Changes") && <WindowingFileTree label={label} />}
+      {resource?.context && (
+        <Text aria-label={`${label} context`} color="fg.muted">
+          {resource.context.label ?? "Project"}
+        </Text>
+      )}
       <Input aria-label={`${label} draft`} size="sm" value={draft} onChange={(event) => setDraft(event.target.value)} />
     </Stack>
   );

@@ -1,7 +1,10 @@
 import type { WorkbenchCore } from "../../core";
 import type { WindowingLifecycleProbe } from "./lifecycle-probe";
+import { availabilityPages } from "./page-modes";
 import { registerWindowingPagePanels } from "./page-panels";
 import { type WindowingResources, windowingExtensionId, windowingPages } from "./resources";
+import { WindowingSessionView } from "./session-view";
+
 import { WindowingDraftView, WindowingResourceList, WindowingTerminalView, WindowingWebview } from "./views";
 
 export interface WindowingModuleOptions {
@@ -9,15 +12,16 @@ export interface WindowingModuleOptions {
   mainView?: "files" | "webview";
   changesPresence?: "open" | "fixed";
   removalControls?: boolean;
+  pageModes?: boolean;
+  contextNavigation?: boolean;
 }
 
-export const registerWindowingModule = (
+const registerWindowingViews = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
-  options: WindowingModuleOptions = {},
+  options: WindowingModuleOptions,
 ) => {
-  const modeRegistration = workbench.modes.registerMode({ id: "windowing", label: "Windowing", activate() {} });
   for (const [id, label, items, page] of [
     ["workspaces", "Workspaces", resources.workspaces, windowingPages.workspace],
     ["notes-list", "Notes", resources.notes, windowingPages.notes],
@@ -72,7 +76,12 @@ export const registerWindowingModule = (
       instancePolicy: "per-resource",
       body: {
         kind: "react",
-        render: ({ instance }) => <WindowingDraftView label={label} resource={instance.resource} probe={probe} />,
+        render: ({ instance }) =>
+          id === "session" ? (
+            <WindowingSessionView resource={instance.resource} resources={resources} probe={probe} />
+          ) : (
+            <WindowingDraftView label={label} resource={instance.resource} probe={probe} />
+          ),
       },
     });
   }
@@ -98,6 +107,12 @@ export const registerWindowingModule = (
     ref: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
     modeId: "windowing",
     region: "side",
+    tab: {
+      getSnapshot: (instance) => ({
+        context: resources.sessions.find((session) => session.id === instance.resource?.id)?.context,
+      }),
+      subscribe: resources.subscribeContext,
+    },
     item: {
       kind: "binding",
       binding: {
@@ -125,6 +140,22 @@ export const registerWindowingModule = (
     main: { kind: "view", view: { kind: "view", id: "windowing.notes-list" }, cardinality: "one" },
     slots: [],
   });
+  return panelRegistration;
+};
+
+export const registerWindowingModule = (
+  workbench: WorkbenchCore,
+  resources: WindowingResources,
+  probe: WindowingLifecycleProbe,
+  options: WindowingModuleOptions = {},
+) => {
+  const modeRegistration = workbench.modes.registerMode({
+    id: "windowing",
+    label: options.pageModes ? "Project" : "Windowing",
+    ...(options.pageModes ? { basePage: availabilityPages.overview } : {}),
+    activate() {},
+  });
+  const panelRegistration = registerWindowingViews(workbench, resources, probe, options);
   const workspaceRegistration = workbench.pages.registerPage({
     id: "windowing.workspace",
     ref: windowingPages.workspace,

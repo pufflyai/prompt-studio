@@ -11,12 +11,12 @@ export const createPageResourceRemover =
   <Value>(input: {
     getState(): WorkbenchPageRegistryStoreState<Value>;
     resources: WorkbenchPageResourceCodec;
-    forgetRootLevel(resource: ResourceRef): void;
+    forgetLocations: readonly ((resource: ResourceRef) => void)[];
     start(): ResolvedPageLocation;
     commit(projectId: string, location: ResolvedPageLocation, history: "replace" | "none", action: string): unknown;
   }) =>
   (resource: ResourceRef, retained: readonly PlacementIdentity[]) => {
-    input.forgetRootLevel(resource);
+    for (const forget of input.forgetLocations) forget(resource);
     const current = input.getState();
     if (!current.projectId || !current.location) return;
     const next = removePageResource(current, resource, input.resources, retained);

@@ -215,3 +215,27 @@ test("unqualified deletion clears qualified mode bindings across later navigatio
   ).toBe(true);
   expect(tabs(fixture).some((tab) => tab.resource?.id === resources.sessions[1]!.id)).toBe(false);
 });
+
+test.each([
+  "active",
+  "inactive",
+])("a foreign session can reopen after its %s page contribution unregisters", async (owner) => {
+  const { fixture, workbench, probe, session, tab } = await setup();
+  if (owner === "inactive") workbench.pageLocations.navigate({ kind: "page", page: windowingPages.workspaces });
+  fixture.removeContribution("workspace");
+  const savedTabs = fixture.persistence.layout.listScopes!("windowing-project").flatMap((scope) =>
+    Object.values(fixture.persistence.layout.getLayout(scope)?.regions ?? {}).flatMap((region) => region.widgets),
+  );
+  expect(savedTabs.some((saved) => saved.widgetId === tab.widgetId)).toBe(false);
+  await workbench.navigation.openTarget({
+    kind: "panel",
+    panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
+    resource: session,
+    open: "pin",
+  });
+  expect(tabs(fixture).filter((tab) => tab.resource?.id === session.id)).toHaveLength(1);
+  expect(
+    workbench.layout.getLayout().regions.side.widgets.find((tab) => tab.resource?.id === session.id)?.resource,
+  ).toEqual(session);
+  expect(probe.store.getState().sessions[resourceKey(session)]).toEqual({ starts: 1, stops: 0, running: true });
+});

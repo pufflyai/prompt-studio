@@ -7,6 +7,7 @@ import {
   type OwnedPlacementReconciliation,
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
+import { validatePageModes } from "./page-availability";
 import { validateWorkbenchPage } from "./page-placement-resolver";
 import type {
   CreateWorkbenchPageRegistryInput,
@@ -33,6 +34,7 @@ export const registerWorkbenchPage = <Value>(input: {
 }) => {
   const { page, store } = input;
   validateWorkbenchPage(page);
+  validatePageModes(page);
   const current = store.getState();
   if (current.pages[page.id]) throw new Error(`Page already registered: ${page.id}`);
   if (

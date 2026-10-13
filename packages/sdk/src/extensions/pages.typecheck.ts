@@ -25,6 +25,19 @@ const page = definePage({
   slots: [{ id: "inspector", region: "side", item: { kind: "view", view: view.ref, presence: "closed" } }],
 });
 void page.panels.inspector;
+const shared = definePage({
+  id: "shared",
+  title: "Shared",
+  path: "shared",
+  modes: [workbenchModes.project],
+  main: { kind: "view", view: view.ref, cardinality: "one" },
+  slots: [],
+});
+// Host-provided and builder-output types keep the legacy field readable during migration.
+const legacyMode: import("./index").ModeRef = shared.mode;
+const contribution: import("./index").PageContribution = shared;
+void legacyMode;
+void contribution;
 // @ts-expect-error Generated references contain only declared slot names.
 void page.panels.unknown;
 definePage({ ...base, resource: { kinds: [ticket.ref] }, main: { kind: "panels", empty: view.ref }, slots: [] });

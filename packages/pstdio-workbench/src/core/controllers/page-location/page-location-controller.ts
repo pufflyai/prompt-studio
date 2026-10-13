@@ -1,32 +1,36 @@
-import type { PageLocation } from "@pstdio/sdk/extensions";
-import { isWorkbenchProjectUrl, parseWorkbenchPageUrl } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { createPageEditorCommit, createPreparedPageCommit } from "./page-editor-commit";
 import { createPageLocationControllerActions } from "./page-location-actions";
 import { createPageHistoryEntry, createPageLocationFailureHandler } from "./page-location-history-entry";
 import {
-  normalizeDirectWorkbenchPageLocation,
   normalizeWorkbenchPageLocation,
   normalizeWorkbenchPageTarget,
-  workbenchPageLocationRouteKey,
   workbenchPageLocationsEqual,
 } from "./page-location-normalization";
 import { setPageLocationPreparation } from "./page-location-preparation";
 import { createPageLocationPublisher } from "./page-location-publish";
+import { createPageLocationRestorer, isPageHistoryState as isHistoryState } from "./page-location-restoration";
 import { createRootLevelLocationTracker } from "./page-location-root-level";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
   WorkbenchPageBrowserEntry,
-  WorkbenchPageHistoryState,
   WorkbenchPageLocationController,
   WorkbenchPageLocationHistoryState,
-  WorkbenchPageNavigationResult,
 } from "./page-location-types";
+import { createPageLocationUrlResolver } from "./page-location-url";
+import {
+  createPageModeMemory,
+  resolveLocationMode,
+  resolvePageTargetMode,
+  resolveStartPageLocation,
+} from "./page-mode-locations";
 import { connectPageOwnerRemoval } from "./page-owner-removal";
 import { createPagePlacementCloser } from "./page-placement-closer";
 import { createPageResourceRemover } from "./page-resource-remover";
+import { createProjectPageResourceKey } from "./project-page-resource-key";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,
@@ -41,23 +45,21 @@ export type {
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
 
-const isHistoryState = (value: unknown): value is WorkbenchPageHistoryState => {
-  if (!value || typeof value !== "object") return false;
-  const state = value as Partial<WorkbenchPageHistoryState>;
-  return (
-    state.kind === "pstdio.page-location" &&
-    typeof state.index === "number" &&
-    typeof state.projectId === "string" &&
-    typeof state.routeKey === "string" &&
-    Boolean(state.location && typeof state.location === "object")
-  );
-};
-
 export const createWorkbenchPageLocationController = <Value>(
   input: CreateWorkbenchPageLocationControllerInput<Value>,
 ): WorkbenchPageLocationController => {
   const internals = getWorkbenchPageRegistryInternals(input.registry);
   const pages = input.registry.listPages;
+  const resourceKey = createProjectPageResourceKey(
+    internals.resources,
+    () => input.registry.store.getState().projectId,
+  );
+  const modeMemory = createPageModeMemory({
+    pages,
+    modes: input.modes,
+    resourceKey,
+  });
+  const activeModeId = () => input.registry.store.getState().activeModeId;
   let historyIndex = 0;
   let maxHistoryIndex = 0;
   const historyStore = createWorkbenchStore<WorkbenchPageLocationHistoryState>({
@@ -82,13 +84,7 @@ export const createWorkbenchPageLocationController = <Value>(
     levels: input,
     pages,
     normalize: (location) => normalizeStored(location),
-    resourceKey: (resource) =>
-      internals.resources.toUri(
-        internals.resources.normalize({
-          ...resource,
-          projectId: resource.projectId ?? input.registry.store.getState().projectId,
-        }),
-      ),
+    resourceKey,
     start: () => start(),
   });
 
@@ -101,6 +97,7 @@ export const createWorkbenchPageLocationController = <Value>(
     entry: historyEntry,
     publish: publishHistory,
     rememberRootLevel: rootLevel.remember,
+    rememberMode: modeMemory.remember,
   });
   const commitExistingEditor = createPageEditorCommit(input, publish, internals.resources);
   const commit = (
@@ -108,8 +105,9 @@ export const createWorkbenchPageLocationController = <Value>(
     resolved: ResolvedPageLocation,
     history: "push" | "replace" | "none",
     action: string,
+    beforePublish?: () => void,
   ) => {
-    const existing = commitExistingEditor(projectId, resolved, history, action);
+    const existing = commitExistingEditor(projectId, resolved, history, action, beforePublish);
     if (existing) return existing;
     const state = internals.prepare.location(
       {
@@ -124,85 +122,72 @@ export const createWorkbenchPageLocationController = <Value>(
       },
       input.registry.store.getState(),
     );
-    return publish(projectId, state, history, action);
+    return publish(projectId, state, history, action, beforePublish);
   };
 
   const normalizeStored = (location: PageLocation): ResolvedPageLocation =>
-    normalizeWorkbenchPageLocation({ location, pages: pages(), resources: internals.resources });
+    resolveLocationMode(
+      normalizeWorkbenchPageLocation({ location, pages: pages(), resources: internals.resources }),
+      pages(),
+      activeModeId(),
+    );
 
-  const start = (): ResolvedPageLocation =>
-    normalizeWorkbenchPageTarget({
-      target: { kind: "page", page: input.startPage },
-      pages: pages(),
-      resources: internals.resources,
-    });
+  const start = () => resolveStartPageLocation(input.startPage, pages(), internals.resources, activeModeId());
 
-  const resolveUrl = (projectId: string, entry: WorkbenchPageBrowserEntry) => {
-    const parsed = parseWorkbenchPageUrl({
-      url: entry.url,
-      projectId,
-      pages: pages(),
-      resources: internals.resources,
-    });
-    if (!parsed) return undefined;
-    const direct = normalizeDirectWorkbenchPageLocation({
-      ...parsed,
-      pages: pages(),
-      resources: internals.resources,
-    });
-    if (!isHistoryState(entry.state) || entry.state.projectId !== projectId) return direct;
-    const contextual = normalizeStored(entry.state.location);
-    const directKey = workbenchPageLocationRouteKey(direct.location, internals.resources, pages());
-    const contextualKey = workbenchPageLocationRouteKey(contextual.location, internals.resources, pages());
-    if (entry.state.routeKey !== directKey || contextualKey !== directKey) return direct;
-    return contextual;
-  };
+  const normalizeTarget = (target: NavigationTargetPage, modeId = activeModeId()) =>
+    resolveLocationMode(
+      normalizeWorkbenchPageTarget({
+        target: resolvePageTargetMode(target, pages(), modeId),
+        pages: pages(),
+        resources: internals.resources,
+        active: input.registry.store.getState().location,
+      }),
+      pages(),
+      modeId,
+    );
 
-  const restore = (
-    projectId: string,
-    source: "boot" | "project-switch",
-    useCurrentUrl: boolean,
-  ): WorkbenchPageNavigationResult => {
-    try {
-      const browserEntry = input.browser.current();
-      if (isHistoryState(browserEntry.state) && browserEntry.state.projectId === projectId) {
-        historyIndex = browserEntry.state.index;
+  const resolveUrl = createPageLocationUrlResolver({
+    pages,
+    resources: internals.resources,
+    normalizeStored,
+    activeModeId,
+  });
+
+  const restore = createPageLocationRestorer({
+    browser: input.browser,
+    persistence: input.persistence,
+    resolveUrl,
+    normalizeStored,
+    start,
+    commit,
+    fail,
+    restoreRoot: rootLevel.restore,
+    restoreModes: modeMemory.restore,
+    modeTarget: modeMemory.target,
+    restoreHistory(entry, projectId) {
+      if (isHistoryState(entry.state) && entry.state.projectId === projectId) {
+        historyIndex = entry.state.index;
         maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
       } else {
         historyIndex = 0;
         maxHistoryIndex = 0;
       }
-      const hasProjectUrl = useCurrentUrl && isWorkbenchProjectUrl(browserEntry.url, projectId);
-      const fromUrl = hasProjectUrl ? resolveUrl(projectId, browserEntry) : undefined;
-      if (hasProjectUrl && !fromUrl) throw new Error(`Cannot resolve page URL: ${browserEntry.url}`);
-      // A URL wins over the saved location, but the saved root level still names the way out of a level.
-      const persisted = input.persistence.load(projectId);
-      rootLevel.restore(persisted?.rootLevel);
-      const saved = hasProjectUrl ? undefined : persisted?.location;
-      const resolved = fromUrl ?? (saved ? normalizeStored(saved) : start());
-      return commit(projectId, resolved, "replace", source === "boot" ? "bootPageLocation" : "switchPageProject");
-    } catch (error) {
-      fail(source, error);
-      try {
-        return commit(projectId, start(), "replace", `${source}StartFallback`);
-      } catch (fallbackError) {
-        return fail(source, fallbackError);
-      }
-    }
-  };
+    },
+  });
 
   const onPopState = (entry: WorkbenchPageBrowserEntry) => {
     const projectId = input.registry.store.getState().projectId;
     if (!projectId) return;
     try {
-      if (isHistoryState(entry.state) && entry.state.projectId === projectId) {
-        historyIndex = entry.state.index;
-        maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
-        publishHistory();
-      }
       const resolved = resolveUrl(projectId, entry);
       if (!resolved) throw new Error(`Cannot resolve page URL: ${entry.url}`);
-      commit(projectId, resolved, "none", "replayPageHistory");
+      commit(projectId, resolved, "none", "replayPageHistory", () => {
+        if (isHistoryState(entry.state) && entry.state.projectId === projectId) {
+          historyIndex = entry.state.index;
+          maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
+          publishHistory();
+        }
+      });
     } catch (error) {
       fail("history", error);
     }
@@ -239,20 +224,16 @@ export const createWorkbenchPageLocationController = <Value>(
     clearProject(projectId) {
       // The remembered root level belongs to the project the user is leaving.
       rootLevel.restore(undefined);
+      modeMemory.restore();
       internals.clearProject(projectId);
     },
     resetHistory,
     rootLevelTarget: rootLevel.target,
     restore,
     resolveUrl,
-    normalizeTarget: (target) =>
-      normalizeWorkbenchPageTarget({
-        target,
-        pages: pages(),
-        resources: internals.resources,
-        active: input.registry.store.getState().location,
-      }),
+    normalizeTarget,
     normalizeStored,
+    modeTarget: modeMemory.target,
     locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources, pages()),
     commit,
     fail,
@@ -260,7 +241,7 @@ export const createWorkbenchPageLocationController = <Value>(
     removeResource: createPageResourceRemover({
       getState: input.registry.store.getState,
       resources: internals.resources,
-      forgetRootLevel: rootLevel.forget,
+      forgetLocations: [rootLevel.forget, modeMemory.forget],
       start,
       commit,
     }),
@@ -272,13 +253,7 @@ export const createWorkbenchPageLocationController = <Value>(
     },
   });
   setPageLocationPreparation<Value>(controller, {
-    resolve: (target) =>
-      normalizeWorkbenchPageTarget({
-        target,
-        pages: pages(),
-        resources: internals.resources,
-        active: input.registry.store.getState().location,
-      }),
+    resolve: normalizeTarget,
     commit: createPreparedPageCommit(input, publish, internals.resources),
   });
   return controller;

@@ -21,7 +21,7 @@ export const registerToolResources = (ctx: WorkbenchModuleContext) => {
     kind: "tool",
     list: () =>
       ctx.pages
-        .listPages()
+        .listAvailablePages(ctx.modes.getActiveModeId())
         .filter(isToolPage)
         .map((page) => ({ page, title: toolTitle(page) }))
         .sort((a, b) => a.title.localeCompare(b.title))

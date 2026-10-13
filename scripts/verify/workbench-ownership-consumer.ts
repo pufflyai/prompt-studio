@@ -6,11 +6,12 @@ const workbench = createWorkbench({ startPage: packagePage("collection") });
 workbench.modes.registerMode({ id: "package-test", activate() {} });
 workbench.views.registerView({ id: "empty", title: "Empty", body: { kind: "react", render: () => null } });
 workbench.views.registerView({ id: "session", title: "Session", instancePolicy: "per-resource", body: { kind: "react", render: () => null } });
-for (const id of ["collection", "workspace"]) workbench.pages.registerPage({
+const pageRegistrations = new Map<string, { dispose(): void }>();
+for (const id of ["collection", "workspace"]) pageRegistrations.set(id, workbench.pages.registerPage({
   id, ref: packagePage(id), path: id, modeId: "package-test",
   ...(id === "workspace" ? { parentId: "collection", resource: { kinds: [{ kind: "resource-kind" as const, id: "workspace" }] } } : {}),
   main: { kind: "panels", empty: { kind: "view", id: "empty" } }, slots: [],
-});
+}));
 const sessionPanel = { kind: "placement" as const, extensionId: "package-test", id: "sessions" };
 workbench.modePlacements.registerPlacement({
   id: "sessions", ref: sessionPanel, modeId: "package-test", region: "side",
@@ -34,5 +35,11 @@ await workbench.navigation.openTarget(openSession);
 workbench.resetLayout();
 const reopened = allTabs().filter((tab) => tab.resource?.id === session.id);
 assertOwner(reopened.length === 1 && reopened[0]?.resource?.metadata?.workspaceId === "valid", "Reset lost or duplicated the foreign session binding");
+workbench.pageLocations.navigate({ kind: "page", page: packagePage("workspace"), resource: { ...workspace, id: "valid" } });
+const moved = allTabs().find((tab) => tab.resource?.id === session.id)!;
+workbench.movePanel(moved.widgetId, "main");
+pageRegistrations.get("workspace")!.dispose();
+await workbench.navigation.openTarget(openSession);
+assertOwner(allTabs().filter((tab) => tab.resource?.id === session.id).length === 1, "An unregistered owner claimed the foreign editor");
 await workbench.dispose();
 `;

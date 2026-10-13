@@ -14,7 +14,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const move = async (element: HTMLElement, name: string, destination: string) => {
-  within(element).getByRole("tab", { name }).focus();
+  within(element)
+    .getByRole("tab", { name: new RegExp(`^${name}(?: ·|$)`) })
+    .focus();
   await userEvent.keyboard("{Shift>}{F10}{/Shift}");
   await userEvent.click(await within(document.body).findByRole("menuitem", { name: `Move to ${destination}` }));
 };
@@ -46,8 +48,8 @@ export const RemovedWorkspaceResource: Story = {
     await sessionInPage(canvasElement);
     const removedView = canvas.getByRole("group", { name: "Session view" });
     await userEvent.click(canvas.getByRole("button", { name: "Delete Workspace 1" }));
-    await waitFor(() => expect(canvas.queryByRole("tab", { name: "Session 2" })).not.toBeInTheDocument());
-    await expect(canvas.queryByRole("tab", { name: "Terminal" })).not.toBeInTheDocument();
+    await waitFor(() => expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument());
+    await expect(canvas.queryByRole("tab", { name: /^Terminal(?: ·|$)/ })).not.toBeInTheDocument();
     await expect(removedView).not.toBeInTheDocument();
     await running(canvasElement);
     await running(canvasElement, "Terminal 2");
@@ -55,14 +57,14 @@ export const RemovedWorkspaceResource: Story = {
     await expect(canvas.getByLabelText("Removal result")).toHaveTextContent("Resource was deleted");
     await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
     await waitFor(() => expect(canvas.getByRole("heading", { name: "Workspaces" })).toBeVisible());
-    await expect(canvas.queryByRole("tab", { name: "Session 2" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument();
     await userEvent.click(workspaceButton("Workspace 2"));
     await userEvent.click(canvas.getByRole("button", { name: "Reopen Session 2" }));
-    await expect(within(panel(canvasElement, "side")).getByRole("tab", { name: "Session 2" })).toBeVisible();
+    await expect(within(panel(canvasElement, "side")).getByRole("tab", { name: /^Session 2(?: ·|$)/ })).toBeVisible();
     await running(canvasElement);
     await move(panel(canvasElement, "side"), "Session 2", "Page bottom");
     await userEvent.click(canvas.getByRole("button", { name: "Reset layout" }));
-    await expect(canvas.getAllByRole("tab", { name: "Session 2" })).toHaveLength(1);
+    await expect(canvas.getAllByRole("tab", { name: /^Session 2(?: ·|$)/ })).toHaveLength(1);
     await running(canvasElement);
   },
 };
@@ -73,12 +75,16 @@ export const RemovedWorkspaceContribution: Story = {
     await sessionInPage(canvasElement);
     const removedView = canvas.getByRole("group", { name: "Session view" });
     await userEvent.click(canvas.getByRole("button", { name: "Remove workspace contribution" }));
-    await waitFor(() => expect(canvas.queryByRole("tab", { name: "Session 2" })).not.toBeInTheDocument());
+    await waitFor(() => expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument());
     await expect(removedView).not.toBeInTheDocument();
     await expect(canvas.getByRole("heading", { name: "Workspaces" })).toBeVisible();
     await running(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Try Workspace 1" }));
     await expect(canvas.getByLabelText("Removal result")).toHaveTextContent("Unknown page");
+    await userEvent.click(canvas.getByRole("button", { name: "Reopen Session 2" }));
+    await expect(canvas.getAllByRole("tab", { name: /^Session 2(?: ·|$)/ })).toHaveLength(1);
+    await expect(within(panel(canvasElement, "side")).getByRole("tab", { name: /^Session 2(?: ·|$)/ })).toBeVisible();
+    await running(canvasElement);
   },
 };
 
@@ -88,7 +94,7 @@ export const RemovedPanelContribution: Story = {
     await sessionInPage(canvasElement);
     const removedView = canvas.getByRole("group", { name: "Session view" });
     await userEvent.click(canvas.getByRole("button", { name: "Remove panel contribution" }));
-    await waitFor(() => expect(canvas.queryByRole("tab", { name: "Session 2" })).not.toBeInTheDocument());
+    await waitFor(() => expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument());
     await expect(removedView).not.toBeInTheDocument();
     await running(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Reopen Session 2" }));
@@ -113,12 +119,12 @@ export const RemovedSessionResource: Story = {
     await sessionInPage(canvasElement);
     const removedView = canvas.getByRole("group", { name: "Session view" });
     await userEvent.click(canvas.getByRole("button", { name: "Delete Session 2" }));
-    await waitFor(() => expect(canvas.queryByRole("tab", { name: "Session 2" })).not.toBeInTheDocument());
+    await waitFor(() => expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument());
     await expect(removedView).not.toBeInTheDocument();
     await expect(visibleWindowingLabel(canvasElement, "Inspector binding")).toHaveTextContent("Workspace 1");
     await running(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Reset layout" }));
-    await expect(canvas.queryByRole("tab", { name: "Session 2" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument();
   },
 };
 
@@ -130,7 +136,7 @@ export const RemovedOwnerForbiddenReopen: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Forbid Sidebar" }));
     await userEvent.click(canvas.getByRole("button", { name: "Reopen Session 2" }));
     await expect(canvas.getByLabelText("Removal result")).toHaveTextContent("cannot open");
-    await expect(canvas.queryByRole("tab", { name: "Session 2" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /^Session 2(?: ·|$)/ })).not.toBeInTheDocument();
     await running(canvasElement);
   },
 };

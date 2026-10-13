@@ -71,6 +71,26 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     return persist(layout, scope);
   };
   return {
+    removeOwner(kind: "page" | "mode", id: string, projectId?: string) {
+      const owner = `/owner/${kind}/${encodeURIComponent(id)}`;
+      const matches = (scope?: string) => Boolean(scope && (scope.endsWith(owner) || scope.includes(`${owner}/`)));
+      const known = new Set([...scopes, ...(projectId ? (adapter?.listScopes?.(projectId) ?? []) : [])]);
+      const projects = new Set(projectId ? [projectId] : []);
+      for (const scope of known) {
+        if (!matches(scope)) continue;
+        const layout = read(scope);
+        if (layout)
+          persist(
+            removeLayoutPlacements(layout, () => true),
+            scope,
+          );
+        if (scope) projects.add(scope.split("/")[1]!);
+        memory.delete(scope);
+        scopes.delete(scope);
+      }
+      for (const project of projects)
+        adapter?.transformLayouts?.(project, (layout, scope) => (matches(scope) ? undefined : layout));
+    },
     listLayouts(projectId: string) {
       const known = new Set([...scopes, ...(adapter?.listScopes?.(projectId) ?? [])]);
       return [...known].flatMap((scope) => {

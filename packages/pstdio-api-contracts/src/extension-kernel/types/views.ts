@@ -10,6 +10,7 @@ import type { JsonObject, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { RendererEventReference } from "./renderer-base";
 import type { ResourceBinding } from "./resource-binding";
+import type { ResourceContext } from "./resources";
 import type { TreeRendererContribution } from "./tree-renderer";
 
 type NativeViewBody<Kind extends string, Definition> = {
@@ -93,6 +94,8 @@ export interface PlacementTabMenuGroup {
 }
 
 export interface PlacementTabSnapshot extends Struct {
+  /** Current resource relationship, refreshed by the owner without changing tab placement. */
+  readonly context?: ResourceContext;
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly indicator?: {
