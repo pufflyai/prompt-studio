@@ -248,11 +248,12 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     }
     proposed = locatePreparedPageState(proposed, [...stages, proposed]);
     stages.push(proposed);
+    const destination = target.kind === "panel" ? target.destination : undefined;
     for (const placement of proposed.reconciliation.activate) {
       activations.delete(placement.region);
-      activations.set(target.kind === "panel" ? (target.destination ?? placement.region) : placement.region, {
+      activations.set(destination ?? placement.region, {
         identity: placement.identity,
-        destination: target.kind === "panel" ? target.destination : undefined,
+        destination,
       });
     }
   }
