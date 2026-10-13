@@ -297,7 +297,7 @@ jobs:
   # Runs only after a nightly published with every asset.
   nightly_prune:
     needs: [plan, publish]
-    if: needs.plan.outputs.channel == 'nightly' && needs.publish.result == 'success'
+    if: ${{ !cancelled() && needs.plan.outputs.channel == 'nightly' && needs.publish.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
