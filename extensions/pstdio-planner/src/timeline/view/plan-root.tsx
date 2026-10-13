@@ -83,6 +83,7 @@ function PlanContent(props: PlanContentProps) {
         actions={
           <AutoBuildButton
             enabled={autoBuild.mode?.enabled ?? false}
+            completed={autoBuild.mode?.completed}
             supervisor={autoBuild.mode?.supervisor}
             sessions={autoBuild.mode?.sessions ?? []}
             running={autoBuild.mode?.capacity.running ?? 0}

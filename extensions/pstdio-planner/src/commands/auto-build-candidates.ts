@@ -47,6 +47,13 @@ const scopeTickets = (tickets: StoredTicket[], eligible: Set<string>, ignored: S
     )
     .map(({ id, shorthand, title, tagIds, dependsOn }) => ({ id, ticket: shorthand, title, tagIds, dependsOn }));
 
+const completedScope = (tickets: StoredTicket[], scope: string[] | null, completed: string[]) => {
+  const completedIds = new Set(
+    tickets.filter((ticket) => completed.includes(ticket.statusId ?? "")).map((ticket) => ticket.id),
+  );
+  return scope?.every((id) => completedIds.has(id)) ?? false;
+};
+
 export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBuildMode) {
   const [plan, attempts, tickets, resumptions, capacity, assignments, requests] = await Promise.all([
     readPlanCommand.run(ctx, {}),
@@ -162,6 +169,7 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
     blockedTickets,
     configurationError,
     observations: work.observations,
+    completed: completedScope(scoped, mode.scopeTicketIds, workflow.completedStatusIds),
     scopeUnresolved: mode.scopeTicketIds === null,
     scopeOptions:
       mode.scopeTicketIds === null && !configurationError

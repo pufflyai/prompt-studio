@@ -1,14 +1,15 @@
-import { eventRef, sessionEvents, type ViewFilterGroup } from "@pstdio/sdk/extensions";
+import { eventRef, type ViewFilterGroup, viewDataEvents } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { autoBuildChanged } from "../../data/auto-build-mode";
+import { plannerTicketsChanged } from "../../events";
 import { useLiveValue } from "./use-live-value";
 import type { PlanClient } from "./use-plan";
 
 const readMode = (client: PlanClient) => client.commands["auto-build.read"]();
 const modeEvents = [
   autoBuildChanged,
-  sessionEvents.started,
-  sessionEvents.completed,
+  plannerTicketsChanged,
+  viewDataEvents.sessionsChanged,
   eventRef({ extensionId: "pstdio.pstdio-planner", id: "automation-run-changed" }),
 ];
 

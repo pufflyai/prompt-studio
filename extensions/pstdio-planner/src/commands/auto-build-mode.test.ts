@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { defaultAutoBuildIgnore } from "../data/auto-build-mode";
+import { putTicket } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 
@@ -55,4 +56,51 @@ test("starting rejects incomplete eligible filters and leaves the run stopped", 
     }),
   ).rejects.toThrow("eligible");
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
+});
+
+test("Auto Build succeeds when its selected tickets are completed", async () => {
+  const { ctx, ticket, storage } = await fixture();
+  const first = await ticket("Calculator addition");
+  const second = await ticket("Calculator subtraction");
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
+  await putTicket(storage, { ...first, statusId: "done" });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
+  await putTicket(storage, { ...second, statusId: "done" });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: true, stuck: false });
+  await putTicket(storage, { ...second, statusId: "ready" });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
+});
+
+test("Auto Build does not report success before resolving ticket scope or after stopping", async () => {
+  const { ctx, ticket, storage } = await fixture();
+  const selected = await ticket("Calculator addition");
+  await putTicket(storage, { ...selected, statusId: "done" });
+  await configureAutoBuildCommand.run(ctx, { enabled: false });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, scopeTicketIds: null });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: false });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, scopeTicketIds: [] });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: true });
+});
+
+test("completed ticket work clears an old supervisor automation error", async () => {
+  const { ctx, ticket, storage } = await fixture();
+  const selected = await ticket("Calculator addition");
+  ctx.automation.list = async () =>
+    [
+      {
+        commandId: `${ctx.extensionId}.command.auto-build`,
+        createdAt: "2026-10-13T00:00:00Z",
+        status: "failed",
+        error: { message: "Supervisor failed earlier" },
+      },
+    ] as never;
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
+    completed: false,
+    error: "Supervisor failed earlier",
+  });
+  await putTicket(storage, { ...selected, statusId: "done" });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: true, error: undefined });
+  await configureAutoBuildCommand.run(ctx, { enabled: true, scopeTicketIds: [selected.id, selected.id] });
+  expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ completed: true });
 });

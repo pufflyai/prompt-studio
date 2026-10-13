@@ -19,6 +19,13 @@ const meta: Meta<typeof AutoBuildButton> = {
 export default meta;
 type Story = StoryObj<typeof AutoBuildButton>;
 export const Off: Story = {};
+export const StoppedWithLiveSessions: Story = {
+  args: {
+    enabled: false,
+    running: 1,
+    supervisor: { id: "supervisor", title: "Finish PocketCoder 1.0", status: "in_progress" },
+  },
+};
 export const Waiting: Story = { args: { enabled: true } };
 export const Running: Story = {
   args: {
@@ -33,6 +40,25 @@ export const Running: Story = {
 };
 export const Sleeping: Story = {
   args: { enabled: true, supervisor: { id: "supervisor", title: "Auto Build supervisor", status: "completed" } },
+};
+export const Completed: Story = {
+  args: {
+    enabled: true,
+    completed: true,
+    supervisor: { id: "supervisor", title: "Finish PocketCoder 1.0", status: "completed" },
+  },
+};
+export const Queued: Story = {
+  args: { enabled: true, supervisor: { id: "supervisor", title: "Finish PocketCoder 1.0", status: "queued" } },
+};
+export const SessionStatuses: Story = {
+  args: {
+    enabled: true,
+    supervisor: { id: "supervisor", title: "Finish PocketCoder 1.0", status: "in_progress" },
+    sessions: ["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"].map(
+      (status) => ({ id: status, title: `Ticket · ${status.replaceAll("_", " ")}`, status }),
+    ),
+  },
 };
 export const Failed: Story = {
   args: {

@@ -39,13 +39,17 @@ export const readAutoBuildCommand = defineCommand({
       .filter(({ commandId }) => commandId === `${ctx.extensionId}.command.auto-build`)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
     const ticketSessions = sessions.filter(({ id }) => id !== state.sessionId);
+    const work = await readAutoBuildCandidates(ctx, mode);
+    const completed = mode.enabled && work.completed;
     let stuck =
-      mode.enabled && ticketSessions.length > 0 && ticketSessions.every(({ status }) => status === "awaiting_input");
+      mode.enabled &&
+      !completed &&
+      ticketSessions.length > 0 &&
+      ticketSessions.every(({ status }) => status === "awaiting_input");
     if (mode.enabled && capacity.running === 0 && !isLiveSession(supervisor)) {
-      const { candidates, blockedTickets } = await readAutoBuildCandidates(ctx, mode);
+      const { candidates, blockedTickets } = work;
       stuck ||= candidates.length === 0 && blockedTickets.length > 0;
     }
-    const work = await readAutoBuildCandidates(ctx, mode);
     return {
       ...mode,
       observations: work.observations,
@@ -53,9 +57,10 @@ export const readAutoBuildCommand = defineCommand({
       supervisor,
       sessions: ticketSessions,
       capacity,
+      completed,
       stuck,
       running: latest?.status === "queued" || latest?.status === "running",
-      error: latest?.error?.message,
+      error: completed ? undefined : latest?.error?.message,
     };
   },
 });

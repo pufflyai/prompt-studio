@@ -58,6 +58,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({
     enabled: false,
+    completed: false,
     eligible: { conjunction: "and", rules: [] },
   });
   const statuses = (await execute("ticket-status.read", {})).statuses;
@@ -98,6 +99,7 @@ export async function expectPackagedPlannerTimeline(input: {
     prompt: "Choose valid tasks.",
     blockOnReview: false,
     stuck: false,
+    completed: true,
   });
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
@@ -142,6 +144,16 @@ export async function expectPackagedPlannerTimeline(input: {
     expect.objectContaining({ id: blocked.ticket.id, state: "blocked", flags: expect.arrayContaining(["blocked"]) }),
   );
   await execute("update-ticket", { id: result.ticket.id, status: "Done" });
+  await execute("auto-build.configure", { enabled: true, scopeTicketIds: [result.ticket.id] });
+  expect(await execute("auto-build.read", {})).toMatchObject({ completed: true });
+  await execute("update-ticket", {
+    id: result.ticket.id,
+    status: "Todo",
+    blockedReason: "Hold dispatch during completion validation",
+  });
+  expect(await execute("auto-build.read", {})).toMatchObject({ completed: false });
+  await execute("auto-build.configure", { enabled: false });
+  await execute("update-ticket", { id: result.ticket.id, status: "Done", blockedReason: "" });
   const availablePlan = await execute("timeline.plan.read", {});
   const available = availablePlan.sections.flatMap(
     (section: { rows: { id: string; flags: string[] }[] }) => section.rows,

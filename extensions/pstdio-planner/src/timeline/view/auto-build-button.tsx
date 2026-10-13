@@ -1,13 +1,15 @@
-import { Button, Icon, Popover, Portal, Separator, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Button, Popover, Portal, Separator, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
 import { psTheme } from "@pstdio/ui/theme";
-import { CircleDot, Pause, Play } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 import { useState } from "react";
 import { AutoBuildForm, type AutoBuildFormProps } from "./auto-build-form";
+import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
 import { type AutoBuildSession, AutoBuildSessionRow } from "./auto-build-session-row";
 
 interface AutoBuildButtonProps {
   enabled: boolean;
+  completed?: boolean;
   supervisor?: AutoBuildSession | null;
   sessions: AutoBuildSession[];
   running: number;
@@ -24,6 +26,7 @@ interface AutoBuildButtonProps {
 export function AutoBuildButton(props: AutoBuildButtonProps) {
   const {
     enabled,
+    completed,
     supervisor,
     sessions,
     running,
@@ -38,7 +41,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
   } = props;
   const [content, setContent] = useState<"configuration" | "sessions" | null>(null);
   const panel = useSlotRecipe({ recipe: psTheme.getSlotRecipe("popover") })({ variant: "panel" });
-  const failed = supervisor?.status === "failed" || Boolean(error);
+  const failed = (!completed && supervisor?.status === "failed") || Boolean(error);
   const inspectable = enabled || failed;
   const changeOpen = (open: boolean) => {
     if (disabled) return;
@@ -48,14 +51,15 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
     }
     setContent(inspectable ? "sessions" : "configuration");
   };
-  let activity = "waiting";
-  let color = stuck ? "fg.warning" : "fg.muted";
-  if (failed) {
-    activity = "error";
-    color = "fg.error";
-  } else if (running > 0) {
-    activity = "running";
-  }
+  const status = resolveAutoBuildIndicatorStatus({
+    enabled,
+    completed,
+    failed,
+    stuck,
+    supervisorStatus: supervisor?.status,
+    running,
+  });
+  const activity = status?.replaceAll("_", " ") ?? "off";
   const stop = async () => {
     if (await onTurnOff()) setContent(null);
   };
@@ -71,23 +75,11 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
         <Button
           aria-label={t("timeline.autoBuild.start", "Auto Build")}
           aria-description={enabled || failed ? `Auto Build ${activity}` : undefined}
-          size="sm"
+          size="xs"
           variant="outline"
           disabled={disabled}
         >
-          {enabled || failed ? (
-            <Icon
-              as={CircleDot}
-              role="img"
-              aria-label={`Auto Build ${activity}`}
-              data-activity={activity}
-              boxSize="icon-sm"
-              color={color}
-              flexShrink="0"
-            />
-          ) : (
-            <Play />
-          )}
+          <AutoBuildIndicator status={status} label={`Auto Build ${activity}`} />
           {t("timeline.autoBuild.start", "Auto Build")}
         </Button>
       </Popover.Trigger>
@@ -133,6 +125,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
                 <Popover.Body css={panel.body}>
                   <AutoBuildSessions
                     enabled={enabled}
+                    completed={completed}
                     supervisor={supervisor}
                     sessions={sessions}
                     failed={failed}
@@ -159,16 +152,25 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
 interface AutoBuildSessionsProps
   extends Pick<
     AutoBuildButtonProps,
-    "enabled" | "supervisor" | "sessions" | "running" | "capacity" | "error" | "stuck" | "onOpenSession" | "t"
+    | "enabled"
+    | "completed"
+    | "supervisor"
+    | "sessions"
+    | "running"
+    | "capacity"
+    | "error"
+    | "stuck"
+    | "onOpenSession"
+    | "t"
   > {
   failed: boolean;
 }
 function AutoBuildSessions(props: AutoBuildSessionsProps) {
-  const { enabled, supervisor, sessions, running, capacity, failed, error, stuck, onOpenSession, t } = props;
+  const { enabled, completed, supervisor, sessions, running, capacity, failed, error, stuck, onOpenSession, t } = props;
   const supervisorActive = ["queued", "in_progress", "awaiting_input"].includes(supervisor?.status ?? "");
   return (
     <Stack gap="md">
-      {failed || stuck || supervisor?.status === "awaiting_input" ? (
+      {failed || (!completed && (stuck || supervisor?.status === "awaiting_input")) ? (
         <AlertMessage
           role="alert"
           status={failed ? "error" : "warning"}
@@ -190,10 +192,7 @@ function AutoBuildSessions(props: AutoBuildSessionsProps) {
         {supervisor ? (
           <AutoBuildSessionRow
             session={supervisor}
-            label={t("timeline.autoBuild.supervisor", "Supervisor")}
-            statusLabel={
-              enabled && !supervisorActive && !failed ? t("timeline.autoBuild.sleeping", "Sleeping") : undefined
-            }
+            sleeping={enabled && !completed && !supervisorActive && !failed}
             onOpen={onOpenSession}
           />
         ) : (
@@ -210,12 +209,7 @@ function AutoBuildSessions(props: AutoBuildSessionsProps) {
       </Text>
       <Stack gap="2xs">
         {sessions.map((session) => (
-          <AutoBuildSessionRow
-            key={session.id}
-            session={session}
-            label={t("timeline.autoBuild.ticketSession", "Ticket session")}
-            onOpen={onOpenSession}
-          />
+          <AutoBuildSessionRow key={session.id} session={session} onOpen={onOpenSession} />
         ))}
         {sessions.length === 0 ? (
           <Text textStyle="label/XS" color="fg.muted">

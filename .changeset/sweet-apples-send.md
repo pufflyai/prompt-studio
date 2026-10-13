@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Configure Auto Build in a popover with editable ticket filters, use native workflow settings with status icons and colors, and reuse owned workspaces for corrections.
+Configure Auto Build with ticket filters, show colored status indicators and completion, use native workflow settings, and reuse owned workspaces for corrections.

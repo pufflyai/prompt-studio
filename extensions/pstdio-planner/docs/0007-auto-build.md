@@ -8,6 +8,8 @@ Open **Project Timeline → Auto Build**. Enter a prompt, then set **Eligible ti
 
 Choose completed, blocked, active, and optional merge-destination statuses in **Settings → Extensions → Prompt Studio Planner → Settings**. Each choice saves immediately through the native parameter editor. Auto Build reads that shared configuration. No label or default column assigns workflow meaning. Empty optional selections disable only their status convenience.
 
+The Auto Build button uses a colored status indicator. Running work uses the session spinner, sleeping uses a blue moon, and completed work uses a green check. Auto Build shows success when every ticket in the resolved scope has a configured completed status. Reopening one of those tickets clears success. Session rows use their normal status icons and colors, without repeated role subtitles or status tags.
+
 The supervisor resolves your prompt to explicit ticket IDs once. Changing the prompt or either ticket filter clears that scope so the supervisor resolves it again. Prerequisites provide context but do not grant permission to dispatch outside the scope. Changing scope, prompt, filters, or policy changes the mode revision and invalidates old dispatch requests.
 
 **Require merged dependencies** waits for prerequisite commits verified in the selected target base, including verified squash merges. Otherwise, selected or unambiguous submitted dependency commits can supply a stack. Independent branches need validated integration before implementing the child. Ticket-specific prerequisite and branch instructions remain binding.
