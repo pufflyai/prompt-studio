@@ -20,7 +20,7 @@ import type {
   WorkbenchPageLocationController,
   WorkbenchPageLocationHistoryState,
 } from "./page-location-types";
-import { createPageLocationUrlResolver } from "./page-location-url";
+import { resolvePageLocationUrl } from "./page-location-url";
 import {
   createPageModeMemory,
   resolveLocationMode,
@@ -134,8 +134,9 @@ export const createWorkbenchPageLocationController = <Value>(
 
   const start = () => resolveStartPageLocation(input.startPage, pages(), internals.resources, activeModeId());
 
-  const normalizeTarget = (target: NavigationTargetPage, modeId = activeModeId()) =>
-    resolveLocationMode(
+  const normalizeTarget = (target: NavigationTargetPage, modeId = activeModeId()) => ({
+    requested: target,
+    ...resolveLocationMode(
       normalizeWorkbenchPageTarget({
         target: resolvePageTargetMode(target, pages(), modeId),
         pages: pages(),
@@ -144,14 +145,18 @@ export const createWorkbenchPageLocationController = <Value>(
       }),
       pages(),
       modeId,
-    );
-
-  const resolveUrl = createPageLocationUrlResolver({
-    pages,
-    resources: internals.resources,
-    normalizeStored,
-    activeModeId,
+    ),
   });
+
+  const resolveUrl = (projectId: string, entry: WorkbenchPageBrowserEntry) =>
+    resolvePageLocationUrl({
+      projectId,
+      entry,
+      pages: pages(),
+      resources: internals.resources,
+      activeModeId: activeModeId(),
+      normalizeStored,
+    });
 
   const restore = createPageLocationRestorer({
     browser: input.browser,
@@ -216,6 +221,7 @@ export const createWorkbenchPageLocationController = <Value>(
       }),
     normalizeStored,
     resolveClosePlacement: internals.resolveClosePlacement,
+    resolvePlacementLocation: input.resolvePlacementLocation,
   });
 
   const controller = createPageLocationControllerActions({

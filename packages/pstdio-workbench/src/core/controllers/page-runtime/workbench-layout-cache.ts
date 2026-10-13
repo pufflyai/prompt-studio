@@ -1,4 +1,5 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutPersistenceAdapter } from "../../registries/layout/layout-model-types";
 import { removeLayoutPlacements } from "../../registries/layout/layout-removal";
 import {
@@ -31,6 +32,39 @@ const selectPlacements = (layout: WorkbenchLayout, include: (placement: Workbenc
   }
   return { ...layout, regions };
 };
+interface SavedPlacementUpdate {
+  scopes: Iterable<string | undefined>;
+  read(scope?: string): WorkbenchLayout | undefined;
+  persist(layout: WorkbenchLayout, scope?: string): unknown;
+  matches(placement: WorkbenchWidgetPlacement, scope?: string): boolean;
+  update(placement: WorkbenchWidgetPlacement): WorkbenchWidgetPlacement;
+}
+
+const updateSavedPlacements = (input: SavedPlacementUpdate) => {
+  let changed = false;
+  for (const scope of input.scopes) {
+    const layout = input.read(scope);
+    if (!layout) continue;
+    const regions = { ...layout.regions };
+    let updated = false;
+    for (const region of Object.values(regions)) {
+      regions[region.id] = {
+        ...region,
+        widgets: region.widgets.map((placement) => {
+          if (!input.matches(placement, scope)) return placement;
+          updated = true;
+          return input.update(placement);
+        }),
+      };
+    }
+    if (updated) {
+      input.persist({ ...layout, regions }, scope);
+      changed = true;
+    }
+  }
+  return changed;
+};
+
 /** Page caches hold page and shell placements. Shared mode choices have one project/mode owner. */
 export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
   // Keep visited scopes available even when a persistence adapter cannot list them.
@@ -104,29 +138,38 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
       update: (placement: WorkbenchWidgetPlacement) => WorkbenchWidgetPlacement,
     ) {
       const key = placementIdentityKey(identity);
-      let changed = false;
-      for (const scope of scopes) {
-        const layout = read(scope);
-        if (!layout) continue;
-        const regions = { ...layout.regions };
-        let updated = false;
-        for (const region of Object.values(regions)) {
-          regions[region.id] = {
-            ...region,
-            widgets: region.widgets.map((placement) => {
-              if (!placement.declarationIdentity || placementIdentityKey(placement.declarationIdentity) !== key)
-                return placement;
-              updated = true;
-              return update(placement);
-            }),
-          };
-        }
-        if (updated) {
-          persist({ ...layout, regions }, scope);
-          changed = true;
-        }
-      }
-      return changed;
+      return updateSavedPlacements({
+        scopes,
+        read,
+        persist,
+        update,
+        matches: (placement) =>
+          Boolean(placement.declarationIdentity && placementIdentityKey(placement.declarationIdentity) === key),
+      });
+    },
+    updateEditorPlacement(
+      projectId: string | undefined,
+      ownerScope: string | undefined,
+      tab: WorkbenchWidgetPlacement,
+      update: (placement: WorkbenchWidgetPlacement) => WorkbenchWidgetPlacement,
+    ) {
+      return updateSavedPlacements({
+        scopes,
+        read,
+        persist,
+        update,
+        matches: (placement, scope) =>
+          Boolean(
+            projectId &&
+              scope?.startsWith(`project/${projectId}/owner/`) &&
+              (placement.widgetId === tab.widgetId ||
+                (scope === ownerScope &&
+                  placement.placementIdentity &&
+                  tab.placementIdentity &&
+                  placementIdentityKey(placement.placementIdentity) === placementIdentityKey(tab.placementIdentity))) &&
+              resourceKey(placement.resource) === resourceKey(tab.resource),
+          ),
+      });
     },
     removeResource(resource: ResourceRef, projectId: string, pages: readonly WorkbenchPageContribution[]) {
       const removedOwners = new Set(

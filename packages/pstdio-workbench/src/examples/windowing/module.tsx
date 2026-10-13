@@ -2,7 +2,12 @@ import type { WorkbenchCore } from "../../core";
 import type { WindowingLifecycleProbe } from "./lifecycle-probe";
 import { availabilityPages } from "./page-modes";
 import { registerWindowingPagePanels } from "./page-panels";
-import { type WindowingResources, windowingExtensionId, windowingPages } from "./resources";
+import {
+  registerWindowingResourceProviders,
+  type WindowingResources,
+  windowingExtensionId,
+  windowingPages,
+} from "./resources";
 import { WindowingSessionView } from "./session-view";
 
 import { WindowingDraftView, WindowingResourceList, WindowingTerminalView, WindowingWebview } from "./views";
@@ -20,7 +25,7 @@ const registerWindowingViews = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
-  options: WindowingModuleOptions,
+  options: WindowingModuleOptions = {},
 ) => {
   for (const [id, label, items, page] of [
     ["workspaces", "Workspaces", resources.workspaces, windowingPages.workspace],
@@ -245,22 +250,6 @@ export const registerWindowingModule = (
     main: { kind: "view", view: { kind: "view", id: "windowing.webview" }, cardinality: "one" },
     slots: [],
   });
-  for (const [label, items] of [
-    ["Workspace", resources.workspaces],
-    ["Note", resources.notes],
-    ["Session", resources.sessions],
-    ["Terminal", resources.terminals],
-  ] as const) {
-    const kind = items[0]!.type;
-    workbench.resources.registerKind({ kind, label });
-    workbench.resources.registerProvider({
-      id: kind,
-      kind,
-      list: (query) =>
-        items
-          .filter((item) => item.label?.toLowerCase().includes(query.toLowerCase()))
-          .map((resource) => ({ resource })),
-    });
-  }
+  registerWindowingResourceProviders(workbench, resources);
   return { mode: modeRegistration, workspace: workspaceRegistration, panel: panelRegistration };
 };

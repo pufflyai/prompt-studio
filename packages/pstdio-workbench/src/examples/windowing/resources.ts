@@ -1,4 +1,5 @@
 import type { PageRef, ResourceContext, ResourceRef } from "@pstdio/sdk/extensions";
+import type { WorkbenchCore } from "../../core";
 
 export const windowingExtensionId = "storybook.windowing";
 export const windowingPages = {
@@ -62,3 +63,23 @@ export const createWindowingResources = () => {
 };
 
 export type WindowingResources = ReturnType<typeof createWindowingResources>;
+
+export const registerWindowingResourceProviders = (workbench: WorkbenchCore, resources: WindowingResources) => {
+  for (const [label, items] of [
+    ["Workspace", resources.workspaces],
+    ["Note", resources.notes],
+    ["Session", resources.sessions],
+    ["Terminal", resources.terminals],
+  ] as const) {
+    const kind = items[0]!.type;
+    workbench.resources.registerKind({ kind, label });
+    workbench.resources.registerProvider({
+      id: kind,
+      kind,
+      list: (query) =>
+        items
+          .filter((item) => item.label?.toLowerCase().includes(query.toLowerCase()))
+          .map((resource) => ({ resource })),
+    });
+  }
+};

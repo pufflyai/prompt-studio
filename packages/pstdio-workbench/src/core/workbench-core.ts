@@ -20,6 +20,8 @@ import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
+import { pageLocationTarget } from "./controllers/page-location/page-location-target";
+import { mainPagePlacementLocation } from "./controllers/page-runtime/main-page-placement-location";
 import { connectOpenOwnerLayouts } from "./controllers/page-runtime/open-owner-layouts";
 import { createOwnerLayoutAccess } from "./controllers/page-runtime/owner-layout-access";
 import { createOwnerLayoutScopeHandler } from "./controllers/page-runtime/owner-layout-scope-handler";
@@ -35,6 +37,7 @@ import { createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
 import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
+import type { WorkbenchRegion } from "./registries/layout/layout-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -84,17 +87,10 @@ const createPageLocations = (
     modes,
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,
-    resolveExistingEditor: ({ location, open }) =>
+    resolvePlacementLocation: (target) => mainPagePlacementLocation(resolveCore(), target),
+    resolveExistingEditor: ({ location, open, requested }) =>
       prepareExistingResourceEditor(resolveCore(), [
-        {
-          kind: "page",
-          page: location.page,
-          mode: location.mode,
-          resource: location.resource,
-          section: location.section,
-          position: location.position,
-          open,
-        },
+        requested ? { ...requested, resource: location.resource } : { ...pageLocationTarget(location), open },
       ]),
   });
 
@@ -102,6 +98,20 @@ const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefi
   // Save pending writes before the adapter releases its resources.
   persistence?.flush?.();
   persistence?.dispose?.();
+};
+
+const resolveRegionSettings = (
+  input: createWorkbenchInput,
+  core: WorkbenchCore | undefined,
+  regionId: WorkbenchRegion,
+) => {
+  if (regionId === "bottom") {
+    const pageId = core?.pages.store.getState().activePageId;
+    return pageId ? core?.pages.getPage(pageId)?.regionSettings?.bottom : undefined;
+  }
+  const activeModeId = core?.modes.getActiveModeId();
+  const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
+  return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
 };
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
@@ -120,15 +130,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     },
     // The active mode owns region policy; the host input is the fallback. Resolved
     // lazily because the mode registry is created after the layout model.
-    getRegionSettings: (regionId) => {
-      if (regionId === "bottom") {
-        const pageId = core?.pages.store.getState().activePageId;
-        return pageId ? core?.pages.getPage(pageId)?.regionSettings?.bottom : undefined;
-      }
-      const activeModeId = core?.modes.getActiveModeId();
-      const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
-      return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
-    },
+    getRegionSettings: (regionId) => resolveRegionSettings(input, core, regionId),
     persistence: layoutCache.layout,
   });
 

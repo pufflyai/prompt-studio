@@ -134,11 +134,21 @@ const restoreDeclaration = (
   liveWidgetId: string | undefined,
 ) => {
   const widgetId = liveWidgetId ?? previous?.value.widgetId ?? placement.value.widgetId;
+  const saved = previous?.value.resourceKey === placement.value.resourceKey ? previous?.value : undefined;
+  const locatedMain =
+    placement.identity.kind === "page" && placement.identity.slotId === "$main" && placement.value.pageContext;
+  const hasSource = placement.value.section !== undefined || placement.value.position !== undefined;
+  const source = locatedMain || hasSource ? placement.value : (saved ?? placement.value);
   return {
     ...placement,
     region: previous?.region ?? placement.region,
     value: {
       ...placement.value,
+      pageContext:
+        placement.value.pageContext ??
+        (previous?.value.resourceKey === placement.value.resourceKey ? previous?.value.pageContext : undefined),
+      section: source.section,
+      position: source.position,
       widgetId,
     },
   };

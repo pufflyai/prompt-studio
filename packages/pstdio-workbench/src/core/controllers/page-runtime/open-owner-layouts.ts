@@ -1,20 +1,30 @@
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import { buildUpdatedPlacement } from "../../registries/layout/layout-operations";
+import type { OpenWidgetInput, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { pageLocationTarget } from "../page-location/page-location-target";
 import { modeLayoutScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
 type LayoutCache = ReturnType<typeof createWorkbenchLayoutCache>;
 const caches = new WeakMap<WorkbenchCore, LayoutCache>();
 
-export const pinSavedTransferredEditor = (core: WorkbenchCore, tab: WorkbenchWidgetPlacement) => {
-  if (!tab.declarationIdentity) return;
-  caches
-    .get(core)
-    ?.updateTransferredPlacement(tab.declarationIdentity, (placement) =>
-      placement.widgetId === tab.widgetId ? { ...placement, pinned: true, tabRetention: "persistent" } : placement,
-    );
+export const updateSavedResourceEditor = (
+  core: WorkbenchCore,
+  tab: WorkbenchWidgetPlacement,
+  ownerScope: string | undefined,
+  changes: OpenWidgetInput & Pick<WorkbenchWidgetPlacement, "section" | "position">,
+) => {
+  const projectId = core.pages.store.getState().projectId;
+  const identity = tab.placementIdentity;
+  const scope = identity?.kind === "mode" ? modeLayoutScope(projectId, identity.modeId) : ownerScope;
+  caches.get(core)?.updateEditorPlacement(projectId, scope, tab, (placement) => ({
+    ...buildUpdatedPlacement(placement, core.layout.getWidget(placement.contributionId)!, changes),
+    ...(changes.section !== undefined || changes.position !== undefined
+      ? { section: changes.section, position: changes.position }
+      : {}),
+  }));
 };
 
 export const saveOpenOwnerLayouts = (core: WorkbenchCore) => {
@@ -69,12 +79,24 @@ export const pageOwnerLocation = (core: WorkbenchCore, scope: string) => {
     ? { type, id, ...(extensionId ? { extensionId } : {}), ...(projectId ? { projectId } : {}) }
     : undefined;
   const layout = openOwnerLayouts(core).find((entry) => entry.scope === scope)?.layout;
-  const selected = layout?.regions.main.widgets.find((tab) => tab.widgetId === layout.regions.main.activeWidgetId);
+  const selected =
+    layout?.regions.main.widgets.find((tab) => tab.widgetId === layout.activeLocationWidgetId) ??
+    layout?.regions.main.widgets.find((tab) => tab.widgetId === layout.regions.main.activeWidgetId);
   const resource =
     Object.values(layout?.regions ?? {})
       .flatMap((region) => region.widgets)
       .find((tab) => key && resourceKey(tab.resource) === key)?.resource ??
     identity ??
     (page.resource ? selected?.resource : undefined);
-  return { kind: "page" as const, page: page.ref, ...(resource ? { resource } : {}) };
+  const context = selected?.pageContext;
+  return {
+    kind: "page" as const,
+    page: page.ref,
+    ...(resource ? { resource } : {}),
+    mode: context?.mode,
+    ...(resourceKey(selected?.resource) === resourceKey(resource)
+      ? { section: selected?.section, position: selected?.position }
+      : {}),
+    ...(context?.parent ? { parent: pageLocationTarget(context.parent) } : {}),
+  } satisfies NavigationTargetPage;
 };

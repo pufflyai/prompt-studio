@@ -14,8 +14,9 @@ import {
 } from "../../registries/placements/owned-placement-preparation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
+import { locatePreparedPageState } from "../page-runtime/page-placement-location";
 import { activateNavigationPlacement, commitPreparedNavigation } from "./navigation-commit";
-import { prepareEditorRetention } from "./prepared-editor-retention";
+import { prepareEditorOpen } from "./prepared-editor-open";
 import { prepareExistingResourceEditor } from "./resource-editor-resolver";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
@@ -152,7 +153,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   let shellState = originalShell;
   let proposed = original;
   const stages: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[] = [];
-  const retentions: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>[] = [];
+  const updates: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>[] = [];
   const activations = new Map<
     WorkbenchRegion,
     { identity: PlacementIdentity } | { editor: NonNullable<ReturnType<typeof prepareExistingResourceEditor>> }
@@ -198,13 +199,22 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     );
   };
 
-  const retainExisting = (
+  const prepareExistingOpen = (
     existing: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>,
-    open: NavigationOperation["open"],
+    target: NavigationOperation,
   ) => {
-    if (open !== "pin") return;
-    if (existing.tab.declarationIdentity) retentions.push(existing);
-    const retained = prepareEditorRetention(core, existing.tab, proposed, modeState, shellState);
+    const identity = existing.tab.placementIdentity;
+    // Main source addresses already belong to the prepared page stages.
+    if (existing.tab.declarationIdentity || identity?.kind !== "page" || identity.slotId !== "$main")
+      updates.push(existing);
+    const retained = prepareEditorOpen(
+      core,
+      existing.tab,
+      { open: target.open, resource: existing.resource, title: existing.intent.title },
+      proposed,
+      modeState,
+      shellState,
+    );
     proposed = retained.state;
     modeState = retained.modeState;
     shellState = retained.shellState;
@@ -216,9 +226,10 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     const existing = prepareExistingResourceEditor(core, [target], proposed, stages);
     if (existing) {
       if (existing.target) preparePage(existing.target);
-      retainExisting(existing, target.open);
+      prepareExistingOpen(existing, target);
       activations.delete(existing.region);
       activations.set(existing.region, { editor: existing });
+      proposed = locatePreparedPageState(proposed, [...stages, proposed]);
       stages.push(proposed);
       continue;
     }
@@ -232,6 +243,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
     }
+    proposed = locatePreparedPageState(proposed, [...stages, proposed]);
     stages.push(proposed);
     for (const placement of proposed.reconciliation.activate) {
       activations.delete(placement.region);
@@ -239,17 +251,20 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     }
   }
   const present = new Set(proposed.placements.map((placement) => placementIdentityKey(placement.identity)));
-  const final = pages.prepare.compose(
-    original,
-    {
-      ...proposed,
-      activate: [...activations.values()].flatMap((activation) => {
-        const identity = "identity" in activation ? activation.identity : activation.editor.identity;
-        return identity && present.has(placementIdentityKey(identity)) ? [identity] : [];
-      }),
-      action: "prepareCompoundNavigation",
-    },
-    owned(),
+  const final = locatePreparedPageState(
+    pages.prepare.compose(
+      original,
+      {
+        ...proposed,
+        activate: [...activations.values()].flatMap((activation) => {
+          const identity = "identity" in activation ? activation.identity : activation.editor.identity;
+          return identity && present.has(placementIdentityKey(identity)) ? [identity] : [];
+        }),
+        action: "prepareCompoundNavigation",
+      },
+      owned(),
+    ),
+    stages,
   );
   return {
     commit: () =>
@@ -266,7 +281,10 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           if (shellState !== originalShell) shell.notifySubscribers();
         },
         activateTargets: () => {
-          for (const editor of retentions) editor.retain();
+          for (const editor of updates) {
+            if (editor.tab.declarationIdentity) editor.applyIntent();
+            else editor.applySourceTarget();
+          }
           for (const activation of activations.values()) {
             if ("editor" in activation) {
               if (activation.editor.isInOwner(final)) activation.editor.activate();

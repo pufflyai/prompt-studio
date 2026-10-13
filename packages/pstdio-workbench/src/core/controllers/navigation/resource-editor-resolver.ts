@@ -1,4 +1,4 @@
-import type { PageOpenIntent, ResourceRef } from "@pstdio/sdk/extensions";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
 import type {
   OpenWidgetInput,
@@ -13,16 +13,25 @@ import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/pag
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import { modePlacementContributionId, pagePlacementContributionId } from "../../registries/views/view-placement";
-import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
-import { openOwnerLayouts, pinSavedTransferredEditor } from "../page-runtime/open-owner-layouts";
-import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
+import { openOwnerLayouts } from "../page-runtime/open-owner-layouts";
 import { pageOwnerScope } from "../page-runtime/prepared-owner-states";
-import { findPreparedResourceEditor, hasPreparedEditorOwner } from "./prepared-resource-editor";
+import {
+  findPreparedResourceEditor,
+  hasPreparedEditorOwner,
+  isResourceEditorInOwner,
+} from "./prepared-resource-editor";
+import {
+  applyResourceEditorIntent,
+  applyResourceEditorSourceTarget,
+  type ResourceEditorIntent,
+  resourceEditorIntent,
+} from "./resource-editor-intent";
 import { resourceEditorOwnerTarget } from "./resource-editor-owner-target";
+import { resourceEditorTarget } from "./resource-editor-target";
 
 export const findOpenEditor = (core: WorkbenchCore, matches: (tab: WorkbenchWidgetPlacement) => boolean) =>
   openOwnerLayouts(core).flatMap((owner) =>
@@ -54,34 +63,6 @@ export const findOtherOwnedResourceEditor = (
   return found.tab.widgetId;
 };
 
-const panelTargetItem = (core: WorkbenchCore, target: NavigationTargetPanel) => {
-  const panel = target.panel;
-  if (panel.kind === "placement") return core.modePlacements.getPlacement(panel)?.item;
-  if (panel.kind === "shell-placement") return core.shellPlacements.getPlacement(panel.id)?.item;
-  return core.pages
-    .listPages()
-    .find((p) => contributionRefId(p.ref) === contributionRefId(panel.page))
-    ?.slots.find((s) => s.id === panel.id)?.item;
-};
-
-export const resourceEditorTarget = (core: WorkbenchCore, target: NavigationTargetPage | NavigationTargetPanel) => {
-  if (!target.resource) return undefined;
-  if (target.kind === "page") {
-    const page = core.pages.listPages().find((p) => contributionRefId(p.ref) === contributionRefId(target.page));
-    if (!page?.resource || !resourceMatchesConstraint(page.resource, target.resource))
-      throw new Error(`Page does not accept resource kind: ${target.resource.type}`);
-    return page?.main.kind === "view"
-      ? { viewId: contributionRefId(page.main.view), resource: target.resource }
-      : undefined;
-  }
-  const item = panelTargetItem(core, target);
-  if (item?.kind === "binding" && !resourceMatchesConstraint(item.binding, target.resource))
-    throw new Error(`Panel does not accept resource kind: ${target.resource.type}`);
-  return item?.kind === "binding"
-    ? { viewId: contributionRefId(item.binding.view), resource: target.resource }
-    : undefined;
-};
-
 export type OpenResourceEditor = Pick<
   NonNullable<ReturnType<typeof findOpenResourceEditor>>,
   "scope" | "region" | "tab"
@@ -92,11 +73,11 @@ const liveEditorPlacement = (core: WorkbenchCore, editor: OpenResourceEditor) =>
     .flatMap((region) => region.widgets)
     .find(
       (tab) =>
-        tab.widgetId === editor.tab.widgetId ||
-        (tab.placementIdentity &&
-          editor.tab.placementIdentity &&
-          placementIdentityKey(tab.placementIdentity) === placementIdentityKey(editor.tab.placementIdentity) &&
-          resourceKey(tab.resource) === resourceKey(editor.tab.resource)),
+        resourceKey(tab.resource) === resourceKey(editor.tab.resource) &&
+        (tab.widgetId === editor.tab.widgetId ||
+          (tab.placementIdentity &&
+            editor.tab.placementIdentity &&
+            placementIdentityKey(tab.placementIdentity) === placementIdentityKey(editor.tab.placementIdentity))),
     );
 
 export const prepareEditorActivation = (
@@ -104,11 +85,13 @@ export const prepareEditorActivation = (
   editor: OpenResourceEditor,
   targets: readonly (NavigationTargetPage | NavigationTargetPanel)[] = [],
   current = core.pages.store.getState(),
-  open: PageOpenIntent | undefined = targets.at(-1)?.open,
+  intent: ResourceEditorIntent = resourceEditorIntent(targets.at(-1)),
 ) => {
   const pages = getWorkbenchPageRegistryInternals(core.pages);
   const locations = getPageLocationPreparation<WorkbenchWidgetPlacement>(core.pageLocations);
-  const target = resourceEditorOwnerTarget(core, editor, targets, current);
+  const resource = intent.resource ? pages.resources.normalize(intent.resource) : undefined;
+  const requestedEditor = resource ? { ...editor, tab: { ...editor.tab, resource } } : editor;
+  const target = resourceEditorOwnerTarget(core, requestedEditor, targets, current);
   const resolved = target ? locations.resolve(target, current.activeModeId) : undefined;
   const ownerMode = editor.tab.placementIdentity?.kind === "mode" ? editor.tab.placementIdentity.modeId : undefined;
   const modeId =
@@ -137,55 +120,28 @@ export const prepareEditorActivation = (
           current,
         )
       : current;
-  const requested = targets.at(-1);
   return {
     state,
     target,
     region: editor.region,
     identity: editor.tab.placementIdentity,
     tab: editor.tab,
-    retain() {
-      if (open !== "pin") return;
-      const tab = liveEditorPlacement(core, editor);
-      if (tab?.placementIdentity) core.pinPlacement(tab.placementIdentity);
-      else pinSavedTransferredEditor(core, editor.tab);
-    },
+    resource,
+    intent,
+    applyIntent: () =>
+      applyResourceEditorIntent(core, editor.tab, editor.scope, liveEditorPlacement(core, editor), {
+        ...intent,
+        resource,
+      }),
+    applySourceTarget: () =>
+      applyResourceEditorSourceTarget(core, editor.tab, editor.scope, liveEditorPlacement(core, editor), intent),
     isInOwner(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) {
-      const owner = editor.tab.placementIdentity;
-      if (owner?.kind === "mode") return owner.modeId === state.activeModeId;
-      if (owner?.kind !== "page") return true;
-      const page = state.activePageId ? state.pages[state.activePageId] : undefined;
-      return (
-        editor.scope ===
-        pageLayoutScope(
-          {
-            projectId: state.projectId,
-            pageId: state.activePageId,
-            resource: state.location?.resource,
-          },
-          page,
-        )
-      );
+      return isResourceEditorInOwner(editor, state);
     },
     activate() {
       const tab = liveEditorPlacement(core, editor);
       if (!tab) throw new Error(`Editor is no longer open: ${editor.tab.widgetId}`);
-      if (open === "pin" && tab.placementIdentity) core.pinPlacement(tab.placementIdentity);
-      if (requested?.kind === "page" && (requested.section || requested.position)) {
-        const layout = core.layout.getLayout();
-        core.layout.restoreLayout({
-          ...layout,
-          regions: {
-            ...layout.regions,
-            [editor.region]: {
-              ...layout.regions[editor.region],
-              widgets: layout.regions[editor.region].widgets.map((p) =>
-                p.widgetId === tab.widgetId ? { ...p, section: requested.section, position: requested.position } : p,
-              ),
-            },
-          },
-        });
-      }
+      applyResourceEditorIntent(core, editor.tab, editor.scope, tab, { ...intent, resource });
       revealPanelRegion(core, editor.region);
       core.layout.activatePanel(tab.widgetId);
       core.focus.setActiveRegion(
@@ -234,11 +190,12 @@ const legacyDeclaredEditor = (
   core: WorkbenchCore,
   target: NavigationTargetPage | NavigationTargetPanel,
   match: ReturnType<typeof resourceEditorTarget>,
+  current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   states: readonly WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[],
 ) => {
   if (target.kind !== "panel" || !match) return undefined;
   const editor = findCurrentDeclaredEditor(core, target, match.resource);
-  if (editor && hasPreparedEditorOwner(editor, states)) return undefined;
+  if (editor && (!isResourceEditorInOwner(editor, current) || hasPreparedEditorOwner(editor, states))) return undefined;
   return editor;
 };
 
@@ -255,7 +212,7 @@ export const prepareExistingResourceEditor = (
     const unique = live && !hasPreparedEditorOwner(live, states) ? live : undefined;
     const pending =
       match && states.length ? findPreparedResourceEditor(core, match.viewId, match.resource, states) : undefined;
-    const legacy = legacyDeclaredEditor(core, target, match, states);
+    const legacy = legacyDeclaredEditor(core, target, match, current, states);
     const editor = unique ?? pending?.editor ?? legacy;
     if (editor) {
       const ownerTargets = !unique && pending?.owner ? [pending.owner, ...targets] : targets;
@@ -273,6 +230,10 @@ export const createCoreWidgetResolver =
     const editor = findOpenResourceEditor(core, input.viewId ?? widget.rendererId, input.resource);
     if (!editor) return undefined;
     const intent = input.pinned || input.tabRetention === "persistent" ? "pin" : undefined;
-    prepareEditorActivation(core, editor, [], undefined, intent).commit();
+    prepareEditorActivation(core, editor, [], undefined, {
+      open: intent,
+      resource: input.resource,
+      title: input.title,
+    }).commit();
     return liveEditorPlacement(core, editor)!;
   };

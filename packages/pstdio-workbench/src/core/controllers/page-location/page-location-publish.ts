@@ -4,6 +4,7 @@ import type { WorkbenchPageRegistryInternals } from "../../registries/pages/page
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createPageHistoryEntry } from "./page-location-history-entry";
+import { isPageHistoryState } from "./page-location-restoration";
 import type { CreateWorkbenchPageLocationControllerInput } from "./page-location-types";
 
 export const createPageLocationPublisher = <Value>(
@@ -28,7 +29,12 @@ export const createPageLocationPublisher = <Value>(
     batchWorkbenchChanges(() => {
       const location = state.location;
       if (!location) throw new Error("Prepared page navigation has no location");
-      const nextIndex = history === "push" ? hooks.getIndex() + 1 : hooks.getIndex();
+      const current = input.browser.current();
+      const replacingIndex =
+        history === "replace" && isPageHistoryState(current.state) && current.state.projectId === projectId
+          ? current.state.index
+          : hooks.getIndex();
+      const nextIndex = history === "push" ? hooks.getIndex() + 1 : replacingIndex;
       // Browser history is the commit boundary. Serialization and the browser write
       // can fail, so both precede changes to stores, placement owners, and caches.
       if (history !== "none") input.browser[history](hooks.entry(projectId, location, nextIndex));

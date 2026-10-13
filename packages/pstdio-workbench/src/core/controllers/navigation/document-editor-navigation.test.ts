@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { harness, navigate, page, resource } from "../composition/placement-lifecycle-test-support";
+import { harness, navigate, page, panel, resource } from "../composition/placement-lifecycle-test-support";
 
 const create = (cardinality: "one" | "many" = "many") => {
   const w = harness();
@@ -31,6 +31,14 @@ const create = (cardinality: "one" | "many" = "many") => {
     });
   return { w, open };
 };
+
+test("reopening a legacy document page keeps its implicit mode", () => {
+  const { w, open } = create();
+  open("a");
+  open("b");
+  open("a");
+  expect(w.pages.store.getState().location?.mode).toBeUndefined();
+});
 
 test("moving the only document returns to the collection and direct page opens focus it", () => {
   const { w, open } = create();
@@ -103,6 +111,95 @@ test("reopening a Main document in an inactive owner publishes that document loc
   expect(open("a").ok).toBe(true);
   expect(w.layout.getLayout().activeWidgetId).toBe(a.widgetId);
   expect(w.pages.store.getState().location?.resource?.id).toBe("a");
+});
+
+test.each([false, true])("reopening a document retains its requested position through history: %s", (history) => {
+  const { w } = create();
+  w.pages.getPage("documents")!.document = { metadataKey: "path" };
+  const open = (id: string, line: number) =>
+    w.pageLocations.navigate({
+      kind: "page",
+      page: page("documents"),
+      resource: { ...resource(id), metadata: { path: `${id}.ts` } },
+      position: { line, column: 1 },
+      open: "pin",
+    });
+  open("a", 10);
+  open("b", 1);
+  open("a", 20);
+  if (history) {
+    w.pageLocations.goBack();
+    w.pageLocations.goBack();
+    w.pageLocations.goForward();
+    w.pageLocations.goForward();
+  }
+  expect(w.pages.store.getState().location?.position).toEqual({ line: 20, column: 1 });
+  expect(
+    w.layout.getLayout().regions.main.widgets.find((tab) => tab.widgetId === w.layout.getLayout().activeWidgetId)
+      ?.resource?.id,
+  ).toBe("a");
+});
+
+test.each([false, true])("reopening a document preserves its requested contextual parent: %s", (history) => {
+  const { w } = create();
+  const target = (parent: string) => ({
+    kind: "page" as const,
+    page: page("documents"),
+    resource: resource("a"),
+    open: "pin" as const,
+    parent: navigate(parent),
+  });
+  expect(w.pageLocations.navigate(target("alpha")).ok).toBe(true);
+  const id = w.layout.getLayout().activeWidgetId;
+  expect(w.pageLocations.navigate(target("beta")).ok).toBe(true);
+  if (history) {
+    w.pageLocations.goBack();
+    w.pageLocations.goForward();
+  }
+  expect(w.pages.store.getState().location?.parent?.resource?.id).toBe("beta");
+  expect(w.layout.getLayout().activeWidgetId).toBe(id);
+});
+
+test("a compound panel reopen retains the staged Main editor's contextual parent", async () => {
+  const { w } = create();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      { kind: "page", page: page("documents"), resource: resource("a"), open: "pin", parent: navigate("beta") },
+      navigate("alpha"),
+      { kind: "panel", panel, resource: resource("a"), open: "pin" },
+    ],
+  });
+  expect(w.pages.store.getState().activePageId).toBe("documents");
+  expect(w.pages.store.getState().location?.parent?.resource?.id).toBe("beta");
+});
+
+test.each([
+  undefined,
+  "per-resource",
+] as const)("replaying a document keeps refreshed resource details with policy %s", (policy) => {
+  const { w } = create();
+  w.views.getView("editor")!.instancePolicy = policy;
+  w.pages.getPage("documents")!.document = { metadataKey: "path" };
+  w.pageLocations.navigate({
+    kind: "page",
+    page: page("documents"),
+    resource: { ...resource("a"), label: "Old name", metadata: { path: "a.ts" } },
+    open: "pin",
+  });
+  const widgetId = w.layout.getLayout().regions.main.activeWidgetId;
+  const location = w.pages.store.getState().location!;
+  expect(
+    w.pageLocations.replay({
+      ...location,
+      resource: { ...location.resource!, label: "New name", metadata: { path: "renamed.ts" } },
+    }).ok,
+  ).toBe(true);
+  expect(w.pages.store.getState().location?.resource?.metadata?.path).toBe("renamed.ts");
+  expect(w.layout.getLayout().regions.main.widgets.find((tab) => tab.widgetId === widgetId)?.resource?.label).toBe(
+    "New name",
+  );
 });
 
 test("low-level reuse returns the live single-resource editor after rebinding", () => {

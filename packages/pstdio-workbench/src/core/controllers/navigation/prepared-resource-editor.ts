@@ -4,8 +4,19 @@ import { placementIdentityKey } from "../../registries/layout/placement-reconcil
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { pageLocationTarget } from "../page-location/page-location-target";
 import { modeLayoutScope } from "../page-runtime/owner-layout-scope";
 import { pageOwnerScope, preparedOwnerStates } from "../page-runtime/prepared-owner-states";
+
+export const isResourceEditorInOwner = (
+  editor: { scope?: string; tab: WorkbenchWidgetPlacement },
+  state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+) => {
+  const identity = editor.tab.placementIdentity;
+  if (identity?.kind === "mode") return identity.modeId === state.activeModeId;
+  if (identity?.kind === "page" || identity?.kind === "shell") return editor.scope === pageOwnerScope(state);
+  return true;
+};
 
 export const hasPreparedEditorOwner = (
   editor: { scope?: string; tab: WorkbenchWidgetPlacement },
@@ -14,16 +25,11 @@ export const hasPreparedEditorOwner = (
   const identity = editor.tab.placementIdentity;
   if (!identity) return false;
   const key = placementIdentityKey(identity);
-  return states.some((state) => {
-    const owns =
-      identity.kind === "mode"
-        ? state.activeModeId === identity.modeId
-        : identity.kind === "shell" || pageOwnerScope(state) === editor.scope;
-    return (
-      owns &&
-      [...state.placements, ...state.reconciliation.remove].some((p) => placementIdentityKey(p.identity) === key)
-    );
-  });
+  return states.some(
+    (state) =>
+      isResourceEditorInOwner(editor, state) &&
+      [...state.placements, ...state.reconciliation.remove].some((p) => placementIdentityKey(p.identity) === key),
+  );
 };
 
 export const findPreparedResourceEditor = (
@@ -52,6 +58,16 @@ export const findPreparedResourceEditor = (
   );
   if (!found) return undefined;
   const { state, placement } = found;
+  const location =
+    state.location && placement.identity.kind === "page" && placement.identity.slotId === "$main"
+      ? {
+          ...state.location,
+          ...placement.value.pageContext,
+          resource: placement.value.resource,
+          section: placement.value.section,
+          position: placement.value.position,
+        }
+      : state.location;
   return {
     editor: {
       scope:
@@ -61,8 +77,6 @@ export const findPreparedResourceEditor = (
       region: placement.region,
       tab: { ...placement.value, placementIdentity: placement.identity },
     },
-    owner: state.location
-      ? { kind: "page" as const, page: state.location.page, resource: state.location.resource }
-      : undefined,
+    owner: location ? pageLocationTarget(location) : undefined,
   };
 };

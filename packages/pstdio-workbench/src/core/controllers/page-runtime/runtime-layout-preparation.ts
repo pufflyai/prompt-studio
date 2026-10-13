@@ -3,6 +3,7 @@ import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries
 import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
+import { locatePagePlacements } from "./page-placement-location";
 import type { ConnectWorkbenchPageRuntimeInput } from "./page-runtime";
 import { reuseSingleResourceWidgets } from "./page-widget-id";
 
@@ -21,10 +22,11 @@ export const prepareRuntimeLayout = (
   activation: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["placements"],
   enteringPage: boolean,
   liveLayout: WorkbenchLayout,
+  previousModeId: string | undefined,
   adoptedModePlacements?: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
 ) => {
   let modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
-  if (modeLayout && !enteringPage) {
+  if (modeLayout && !enteringPage && latest.activeModeId === previousModeId) {
     // Membership comes from the saved mode owner. Within the same page, keep
     // live selection and geometry while batched persistence catches up.
     const regions = { ...modeLayout.regions };
@@ -57,11 +59,12 @@ export const prepareRuntimeLayout = (
           existingEditor: input.existingEditor,
         })
       : bindPlacementsToActivePageLocation(latest);
+  const located = locatePagePlacements(latest, placements);
   return {
     ownerManaged,
     layout: ownerManaged ? reuseSingleResourceWidgets(input.layout.getLayout(), placements) : input.layout.getLayout(),
     modeLayout,
-    placements,
-    activate: ownerLayoutActivation(activation, placements).map((p) => p.identity),
+    placements: located,
+    activate: ownerLayoutActivation(activation, located).map((p) => p.identity),
   };
 };

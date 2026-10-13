@@ -33,8 +33,8 @@ import type { WorkbenchViewRegistry } from "../../registries/views/view-registry
 import { createDisposable } from "../../shared/disposable";
 import { ownerLayoutActivation, type resolveOwnerPlacements } from "./owner-layout-resolution";
 import { pageWidgetId } from "./page-widget-id";
-import { prepareRuntimeLayout } from "./prepare-runtime-layout";
 import { reuseSingleMainView } from "./reuse-single-main-view";
+import { prepareRuntimeLayout } from "./runtime-layout-preparation";
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
   existingEditor?: Parameters<typeof resolveOwnerPlacements>[0]["existingEditor"];
@@ -106,6 +106,7 @@ const applyPageState = (
       activation,
       enteringPage,
       liveLayout,
+      storeBeforeTransition.activeModeId,
       adopted,
     );
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;

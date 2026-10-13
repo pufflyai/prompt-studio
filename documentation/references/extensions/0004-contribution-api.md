@@ -218,6 +218,8 @@ See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes
 
 Set `defineView({ instancePolicy: "per-resource", ... })` for one editor per resource. Explicit navigation searches every open page and mode owner in the current project and workbench client. It activates the existing editor where it lives, reveals its panel when allowed, and focuses it. Moving the editor does not change its identity or resource. Closing it allows a later open to create an editor at the normal destination.
 
+Reopening an inactive editor restores its captured breadcrumb ancestry. Panel opens restore the owner mode; direct page opens keep the current allowed mode when no mode is requested. Explicit page parents and history replay replace captured context. Source section and position requests apply even when a later compound target receives focus.
+
 Identity combines the fully qualified view reference with the canonical resource reference. Labels and panel positions do not change it. Different views may show the same resource. Separate projects and clients keep their own instances.
 
 `instancePolicy: "multiple"` permits independent instances across owners. Omitting the field preserves existing placement behavior. Binding `cardinality` keeps its meaning: `"many"` can retain different resources, and `"one"` can rebind one slot. A per-resource policy does not turn a many-resource binding into a single-resource binding.
