@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { type ComponentProps, useLayoutEffect, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { FolderPickerDialog } from "./folder-picker-dialog";
 
@@ -48,6 +49,44 @@ export const Folders: Story = {
 };
 export const Empty: Story = { args: { entries: [] } };
 export const Loading: Story = { args: { isLoading: true } };
+
+const DelayedDirectoryList = (props: ComponentProps<typeof FolderPickerDialog>) => {
+  const [listing, setListing] = useState({ currentPath: "", isLoading: true });
+  useLayoutEffect(() => {
+    const completeListing = () => setListing({ currentPath: "/Users/alex/Documents", isLoading: false });
+    document.addEventListener("folder-picker-list-loaded", completeListing, { once: true });
+    return () => document.removeEventListener("folder-picker-list-loaded", completeListing);
+  }, []);
+  return <FolderPickerDialog {...props} {...listing} />;
+};
+
+export const TypedPathAfterLoading: Story = {
+  tags: ["!manifest", "folder-path-regression"],
+  render: (args) => <DelayedDirectoryList {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    const input = canvas.getByRole("textbox", { name: "Folder path" }) as HTMLInputElement;
+    await expect(input).toBeDisabled();
+    const enabled = Promise.withResolvers<string>();
+    const observer = new MutationObserver(() => {
+      if (input.disabled) return;
+      observer.disconnect();
+      enabled.resolve(input.value);
+    });
+    observer.observe(input, { attributes: true, attributeFilter: ["disabled"] });
+    try {
+      canvasElement.ownerDocument.dispatchEvent(new Event("folder-picker-list-loaded"));
+      const pathAtEnable = await enabled.promise;
+      const typedPath = "/Users/alex/研究/new tool";
+      await userEvent.clear(input);
+      await userEvent.type(input, typedPath, { delay: null });
+      await expect(input).toHaveValue(typedPath);
+      await expect(pathAtEnable).toBe("/Users/alex/Documents");
+    } finally {
+      observer.disconnect();
+    }
+  },
+};
 export const Opening: Story = { args: { isOpening: true } };
 export const CreationCollision: Story = { args: { error: "A folder with that name already exists." } };
 export const PermissionError: Story = { args: { error: "Permission denied while opening this folder." } };

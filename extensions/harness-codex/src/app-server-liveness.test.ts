@@ -30,7 +30,7 @@ const appServerDeps = (env: Record<string, string>): SpawnDeps => ({
 const scenarios = [
   { name: "quiet work", env: {}, status: "completed" },
   { name: "stderr backpressure", env: { LIVENESS_STDERR: "1" }, status: "completed" },
-  { name: "process failure", env: { LIVENESS_EXIT_CODE: "1" }, status: "failed" },
+  { name: "process failure", env: { LIVENESS_EXIT_CODE: "1" }, status: "disconnected" },
 ] as const;
 
 let runtime: ReturnType<typeof createCodexRuntime> | undefined;

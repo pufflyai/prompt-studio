@@ -1,60 +1,101 @@
+import { createAppServerTransport, serverEnvironment } from "./app-server-transport";
 import { createCodexWorker } from "./app-server-worker";
-import { defaultSpawnProcess, type SpawnDeps } from "./codex-process";
+import { defaultSpawnProcess, resolveCodexCommand, type SpawnDeps } from "./codex-process";
+import { nativeThreadMessages } from "./native-history";
+import type { Turn } from "./protocol/v2/Turn";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
+
 export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpawnProcess }) => {
-  const workers = new Map<string, ReturnType<typeof createCodexWorker>>();
-  const readers = new Map<ReturnType<typeof createCodexWorker>, string | undefined>();
-  const disposeMatching = async (matches: (key: string) => boolean) => {
-    const selected = [...workers.entries()].filter(([key]) => matches(key));
-    for (const [key] of selected) workers.delete(key);
-    const transient = [...readers.entries()].filter(([, projectId]) => matches(JSON.stringify([projectId])));
-    for (const [reader] of transient) readers.delete(reader);
-    await Promise.all([
-      ...selected.map(([, owned]) => owned.dispose()),
-      ...transient.map(([reader]) => reader.dispose()),
-    ]);
+  const servers = new Map<string, ReturnType<typeof createAppServerTransport>>();
+  const workers = new Map<string, { projectId?: string; worker: ReturnType<typeof createCodexWorker> }>();
+  const readers = new Map<AbortController, { projectId?: string; done: Promise<void> }>();
+  const disposeReaders = async (projectId?: string, all = false) => {
+    const selected = [...readers.entries()].filter(([, value]) => all || value.projectId === projectId);
+    for (const [controller] of selected) controller.abort(new Error("Codex history scope disposed."));
+    await Promise.all(selected.map(([, value]) => value.done));
   };
+  const serverKey = (env?: Record<string, string>) =>
+    JSON.stringify([
+      resolveCodexCommand({ which: (name) => Bun.which(name, { PATH: env?.PATH ?? process.env.PATH }) }),
+      Object.entries(serverEnvironment(env)).sort(([a], [b]) => a.localeCompare(b)),
+    ]);
+  const server = (env?: Record<string, string>) => {
+    const key = serverKey(env);
+    let transport = servers.get(key);
+    if (!transport || transport.isClosed()) {
+      transport = createAppServerTransport(serverEnvironment(env), deps);
+      servers.set(key, transport);
+    }
+    return transport;
+  };
+  const identity = (input: Pick<StartSpawnInput & Partial<ResumeSpawnInput>, "env" | "agentSessionId">) =>
+    JSON.stringify([input.env?.PSTDIO_PROJECT_ID, input.env?.PSTDIO_SESSION_ID ?? input.agentSessionId]);
   const keyOf = (input: Pick<StartSpawnInput & Partial<ResumeSpawnInput>, "env" | "agentSessionId" | "cwd">) =>
-    JSON.stringify([input.env?.PSTDIO_PROJECT_ID, input.env?.PSTDIO_SESSION_ID ?? input.agentSessionId, input.cwd]);
+    JSON.stringify([serverKey(input.env), identity(input)]);
   const worker = (input: StartSpawnInput & Partial<ResumeSpawnInput>) => {
     input.signal?.throwIfAborted();
     const key = keyOf(input);
-    let owned = workers.get(key);
+    let owned = workers.get(key)?.worker;
     if (!owned || owned.isClosed()) {
-      owned = createCodexWorker(input, deps);
-      workers.set(key, owned);
+      owned = createCodexWorker(input, server(input.env), identity(input));
+      workers.set(key, { projectId: input.env?.PSTDIO_PROJECT_ID, worker: owned });
     }
     return owned;
   };
   return {
     worker,
-    prepareGoalUpdate: (input: Parameters<typeof keyOf>[0]) => workers.get(keyOf(input))?.prepareGoalUpdate(),
+    prepareGoalUpdate: (input: Parameters<typeof keyOf>[0]) => workers.get(keyOf(input))?.worker.prepareGoalUpdate(),
     readMessages: async (input: { agentSessionId: string; cwd?: string; env?: Record<string, string> }) => {
-      const live = [...workers.entries()].find(
-        ([key, owned]) =>
-          JSON.parse(key)[0] === (input.env?.PSTDIO_PROJECT_ID ?? null) &&
-          JSON.parse(key)[2] === (input.cwd ?? null) &&
-          !owned.isClosed() &&
-          owned.threadId() === input.agentSessionId,
-      )?.[1];
-      if (live) return live.readMessages(input.agentSessionId);
-      const reader = createCodexWorker(
-        { ...input, prompt: "", events: { getMessages: () => [], push: () => {} } },
-        deps,
-      );
-      readers.set(reader, input.env?.PSTDIO_PROJECT_ID);
+      const transport = server(input.env);
+      const reader = { receive: () => {}, disconnect: () => {} };
+      const controller = new AbortController();
+      const completion = Promise.withResolvers<void>();
+      readers.set(controller, { projectId: input.env?.PSTDIO_PROJECT_ID, done: completion.promise });
+      transport.retain(reader);
       try {
-        return await reader.readMessages(input.agentSessionId);
+        await transport.ready;
+        const result = (await transport.request(
+          "thread/read",
+          {
+            threadId: input.agentSessionId,
+            includeTurns: true,
+          },
+          undefined,
+          controller.signal,
+        )) as { thread: { turns: Turn[] } };
+        return nativeThreadMessages(result.thread.turns);
       } finally {
-        readers.delete(reader);
-        await reader.dispose();
+        try {
+          await transport.release(reader);
+        } finally {
+          readers.delete(controller);
+          completion.resolve();
+        }
       }
     },
     run: (
       input: StartSpawnInput & Partial<ResumeSpawnInput>,
       command?: { method: string; params: Record<string, unknown>; goal?: boolean },
     ) => worker(input).run(input, command),
-    dispose: () => disposeMatching(() => true),
-    disposeScope: (projectId?: string) => disposeMatching((key) => JSON.parse(key)[0] === (projectId ?? null)),
+    dispose: async () => {
+      // Shutdown ends the entire provider generation, including any unanswered native requests.
+      const owned = [...workers.values()];
+      workers.clear();
+      for (const { worker } of owned) worker.shutdown();
+      await Promise.all([...servers.values()].map((transport) => transport.dispose()));
+      await disposeReaders(undefined, true);
+      await Promise.all(owned.map(({ worker }) => worker.dispose()));
+      servers.clear();
+    },
+    disposeScope: async (projectId?: string) => {
+      const selected = [...workers.entries()].filter(([, value]) => value.projectId === projectId);
+      await disposeReaders(projectId);
+      await Promise.all(
+        selected.map(async ([key, value]) => {
+          await value.worker.dispose();
+          if (workers.get(key) === value) workers.delete(key);
+        }),
+      );
+    },
   };
 };

@@ -86,6 +86,12 @@ When a pull request leaves the queue, a build or check failed on the merged resu
 
 Pushes to `main` run every job. Tests no longer block merging, so a regression shows up on the `main` commit that caused it. Fix it in a follow-up pull request, or link the failure to the flaky-test ticket that owns it before re-running.
 
+Before using **Re-run failed jobs** on a release or nightly, record the failure on a ticket or link it to the ticket that owns it. Keep the job link, failed step or test, and first-attempt evidence. A passing rerun does not close the bug.
+
+The **Weekly CI failure report** workflow collects every attempt of Test and Build and Release Packages from the last seven days. Its job summary groups failed tests and steps, lists affected branches, counts main and release failures, and shows later same-commit passes. Jobs copied into later attempts are counted once. The main first-attempt rate uses completed push runs and includes failures that later passed.
+
+Run it locally with GitHub CLI authentication: `bun scripts/ci/report-ci-failures.ts --since 2026-10-12T00:00:00Z --until 2026-10-13T00:00:00Z`. Optional `--repository owner/repo` and `--output directory` select the source and output folder. The default folder is `test-results/ci-failures`; it contains `runs.json`, `jobs.json`, `summary.json`, and `summary.md`. Failed logs are parsed in memory; unavailable logs are reported beside their job links. The weekly artifact keeps this report data for inspection.
+
 The full stage adds:
 
 - `lint_and_test` and `database_tests` for every package, and the published extension, harness CLI, and license checks.
@@ -99,6 +105,8 @@ The full stage adds:
 ## Published extension dependencies
 
 Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
+
+Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
 
 On a pull request, the CI job runs for extension, SDK, UI, and API contract changes, and for changes outside the workspace packages. It always runs in the full stage. The merge queue skips it because it reads the npm registry. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 

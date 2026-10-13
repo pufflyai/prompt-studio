@@ -27985,7 +27985,6 @@
                           "width": "fill_container",
                           "fill": "$ds-bg-subtle",
                           "stroke": "$ds-border-subtle",
-                          "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "layout": "vertical",
                           "gap": 4,
@@ -188348,6 +188347,132 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "hxPDr",
+      "x": 48802,
+      "y": 0,
+      "name": "Chat user message · collapsed preview",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 600,
+      "height": 160,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "padding": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "KcmLn",
+          "name": "Collapsed · 128px · solid footer",
+          "clip": true,
+          "width": 568,
+          "height": 128,
+          "fill": "$ds-bg-subtle",
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "fb85Y",
+              "x": 0,
+              "y": 0,
+              "name": "Clipped text · 96px · no bottom gap",
+              "clip": true,
+              "width": 568,
+              "height": 96,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "B4I0uY",
+                  "x": 8,
+                  "y": 8,
+                  "name": "Long prompt",
+                  "fill": "$ds-fg",
+                  "textGrowth": "fixed-width",
+                  "width": 552,
+                  "content": "Please review the release checklist and explain each remaining risk. Include the current status, the responsible owner, the next action, and the validation evidence for every item. Keep the summary useful for someone who has not read the source code.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "rectangle",
+                  "id": "EOaw5",
+                  "x": 0,
+                  "y": 48,
+                  "name": "Fade · fully opaque before the footer",
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "rotation": 180,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#0E101600",
+                        "position": 0
+                      },
+                      {
+                        "color": "$ds-bg-subtle",
+                        "position": 0.75
+                      },
+                      {
+                        "color": "$ds-bg-subtle",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 568,
+                  "height": 48
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "q8OiJB",
+              "x": 0,
+              "y": 96,
+              "name": "Solid footer · 32px · no top gap",
+              "width": 568,
+              "height": 32,
+              "fill": "$ds-bg-subtle",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "a0tHc1",
+                  "x": 490,
+                  "y": 4,
+                  "name": "Show more",
+                  "fill": "$ds-fg",
+                  "content": "Show more",
+                  "fontFamily": "$font-body",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "MSP47",
+                  "x": 8,
+                  "y": 6,
+                  "name": "Copy",
+                  "width": 12,
+                  "height": 12,
+                  "icon": "copy",
+                  "library": "lucide",
+                  "fill": "$ds-fg-muted"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
@@ -197698,6 +197823,10 @@
     "chat-content-max": {
       "type": "number",
       "value": 832
+    },
+    "chat-user-preview-height": {
+      "type": "number",
+      "value": 128
     }
   },
   "fileToken": "5daee32e-f2e6-4f1b-a902-d5068ac252c1"

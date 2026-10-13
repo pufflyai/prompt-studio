@@ -54,7 +54,7 @@ const spawnDetachedServe = (port: number, storagePath: string, dbPath: string) =
 const startServe = async (port: number, storagePath: string, dbPath = ":memory:") => {
   const child = spawnServe(port, storagePath, dbPath);
 
-  await waitForReady(`http://localhost:${port}`);
+  await waitForReady(`http://localhost:${port}`, child);
   return child;
 };
 
@@ -110,7 +110,7 @@ describe("pstdio serve", () => {
       const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-e2e-concurrent-serve-"));
       const dbPath = join(tempRoot, "pstdio.db");
       child = spawnServe(firstPort, join(tempRoot, "first-storage"), dbPath, "desktop");
-      await waitForReady(`http://localhost:${firstPort}`);
+      await waitForReady(`http://localhost:${firstPort}`, child);
 
       const original = JSON.parse(readFileSync(join(SHARED_PSTDIO_HOME, "runtime.json"), "utf8")) as {
         instanceId: string;
@@ -128,7 +128,7 @@ describe("pstdio serve", () => {
         pid: number;
       };
       expect(promoted).toEqual({ ...original, ownerType: "persistent" });
-      expect(promoted.pid).toBe(child.pid);
+      expect(child.pid).toBe(promoted.pid);
 
       const health = await fetch(`http://localhost:${firstPort}/healthz`);
       expect(health.ok).toBe(true);
