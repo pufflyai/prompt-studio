@@ -64,5 +64,5 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
   await expect(mainHeader).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(1);
-  await expect(page.getByText("Project home", { exact: true })).toBeVisible();
+  await expect(page.getByText("Project home", { exact: true }).filter({ visible: true })).toBeVisible();
 });
