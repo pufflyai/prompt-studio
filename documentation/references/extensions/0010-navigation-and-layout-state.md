@@ -8,7 +8,7 @@ A saved location keeps the resource as it was when the page opened, and a URL ca
 
 A page declares its routed resource constraint with `resource: { kinds }`. It chooses Main presentation separately. A Main view declares `cardinality`; multiple instances require a routed resource. A Main panel collection declares an `empty` view and shows peer editor panels from its slots. The route keeps workspace context while a file panel becomes active.
 
-Page slots and mode placements share static-view and resource-binding items. Both retain Main, Side, and Secondary. Page slots also accept aside and bottom, inside Main; every page has both page panels. Static presence is fixed, open, or closed. A binding has kinds, view, cardinality, and optional add navigation. Generated refs such as `page.panels.inspector` identify page panels.
+Page slots and mode placements share static-view and resource-binding items. Both retain Main, Side, and Secondary. Page slots also accept aside and bottom, inside Main; every page has both page panels. Only Main contains a page side and page secondary panel. Other panels support menus without nested page panels. Static presence is fixed, open, or closed. A binding has kinds, view, cardinality, and optional add navigation. Generated refs such as `page.panels.inspector` identify page panels.
 
 Page menus always read the routed page resource, even when a different resource tab has focus. Page navigation rebinds the menus, aside slots, and bottom slots together. Each page panel keeps its own tabs and selection; it never uses the mode panels' tab lists. Main's breadcrumb sits above the page frame. Menus sit beside the editor tab row.
 

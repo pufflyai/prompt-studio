@@ -35,6 +35,8 @@ Resource identity forms the instance key for a resource-bound slot. The same res
 
 ## Page surfaces
 
+Only Main contains a page side panel and a page secondary panel (`bottom`). Side, Secondary, and the two page panels can have left and right menus, but cannot contain another pair of page panels. All five panels support menus.
+
 Main contains the page breadcrumb and a page frame. Below the breadcrumb, the page side (`aside`) runs the full height beside the editor and page bottom. The page bottom spans only the editor column. The mode's Side and Secondary surround the whole page. Every page has both page panels, even without slots or region settings. Empty automatic panels start closed; an explicitly opened empty panel keeps its drop surface.
 
 Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus sit beside the editor tab row and span the full editor height. They have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.

@@ -12,7 +12,7 @@ Pages declare `resource: { kinds }` separately from `main`. A Main view renders 
 
 ## Regions and targets
 
-Main, Side, and Secondary remain shared panel regions. Every page also has `"aside"` and `"bottom"`: separate tab panels inside Main that belong to the page. Existing page Side and Secondary slots retain their behavior.
+Main, Side, and Secondary remain shared panel regions. Every page also has `"aside"` and `"bottom"`: separate tab panels inside Main that belong to the page. Only Main contains these page side and page secondary panels. Other panels can have menus but do not contain nested page panels. All panels support left and right menus. Existing page Side and Secondary slots retain their behavior.
 
 Use page targets to change location and panel targets for auxiliary content. A panel target opens one instance without changing the page location. Generated refs such as `page.panels.inspector` keep the page as the panel's owner. A compound page-and-panel target enters an owner before opening its dependent panel, and commits only when all steps resolve.
 
