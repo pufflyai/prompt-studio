@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { buildBinary, runPackaged } from "./packaged-helpers";
 import {
   ACTIVE_CONFLICTS,
@@ -32,6 +33,9 @@ import {
   startPackagedServe,
   stopProcess,
 } from "./packaged-serve-helpers";
+
+test.afterEach(stopPendingTestProcesses);
+test.afterAll(stopPendingTestProcesses);
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
 const browserTest = existsSync(chromium.executablePath()) || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;

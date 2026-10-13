@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 const RUNTIME_BUNDLE_SUFFIX = ".pstdio-runtime-bundle.mjs";
 const sourceFilePattern = /\.(?:[cm]js|[jt]sx?)$/;
 const javascriptLoaders = new Set<Bun.JavaScriptLoader>(["js", "jsx", "ts", "tsx"]);
+const pendingBundles = new Map<string, Promise<string>>();
 
 const isInside = (root: string, path: string) => {
   const rel = relative(root, path);
@@ -55,8 +56,7 @@ const preserveImportMetaUrlPlugin = (packagePath: string) => {
 // Bundling gives development and compiled hosts the same dependency resolution. Host source
 // conditions must not select files omitted from published packages, and compiled Bun cannot
 // resolve an externally imported module's node_modules. Dependencies are treated uniformly.
-export const bundleEntry = async (entryPath: string, packagePath: string, outDir: string) => {
-  const bundlePath = join(outDir, `${basename(entryPath, extname(entryPath))}${RUNTIME_BUNDLE_SUFFIX}`);
+const buildEntry = async (entryPath: string, packagePath: string, outDir: string, bundlePath: string) => {
   if (await Bun.file(bundlePath).exists()) return bundlePath;
 
   const result = await Bun.build({
@@ -75,4 +75,18 @@ export const bundleEntry = async (entryPath: string, packagePath: string, outDir
   }
 
   return bundlePath;
+};
+
+export const bundleEntry = (entryPath: string, packagePath: string, outDir: string) => {
+  const bundlePath = join(outDir, `${basename(entryPath, extname(entryPath))}${RUNTIME_BUNDLE_SUFFIX}`);
+  const pending = pendingBundles.get(bundlePath);
+  if (pending) return pending;
+
+  // A build can expose its output before it finishes. Join the pending build before checking
+  // the cache, so another loader cannot import an unfinished bundle.
+  const build = buildEntry(entryPath, packagePath, outDir, bundlePath).finally(() => {
+    pendingBundles.delete(bundlePath);
+  });
+  pendingBundles.set(bundlePath, build);
+  return build;
 };

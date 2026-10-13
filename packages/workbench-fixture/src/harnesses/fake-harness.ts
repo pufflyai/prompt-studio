@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type {
   HarnessAttachment,
   HarnessEventSink,
@@ -20,6 +22,9 @@ import {
 
 const EXIT_DELAY_MS = 50;
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
+const HOLD_PROMPT_TRIGGER = "__fake_hold__";
+// Tests end a held run by writing this file into the session folder.
+const HOLD_RELEASE_FILE = ".fake-hold-release";
 
 const createQuestionToolPart = () => {
   const part = {
@@ -136,6 +141,10 @@ const pushMessages = (events: HarnessEventSink, startIndex: number, messages: Se
 
 const delay = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
+const waitForRelease = async (cwd: string | undefined, signal: AbortSignal) => {
+  while (!signal.aborted && !(cwd && existsSync(join(cwd, HOLD_RELEASE_FILE)))) await delay(EXIT_DELAY_MS);
+};
+
 // The session runs until its work finishes, or until it is stopped.
 const createSession = (
   agentSessionId: string,
@@ -200,6 +209,8 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
 
       if (input.prompt.includes("__fake_async_questions__"))
         return createAsyncQuestionSession(agentSessionId, input, messages);
+      if (input.prompt.includes(HOLD_PROMPT_TRIGGER))
+        return createSession(agentSessionId, (signal) => waitForRelease(input.cwd, signal));
       return createSession(agentSessionId);
     },
 

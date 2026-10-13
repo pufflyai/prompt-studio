@@ -174,6 +174,8 @@ over saved row selection and automatic page or resource matching. A contextual p
 tree's declared document selection does not override the open workspace.
 Rows without a resource or navigation target keep their declared selection.
 
+Set `tooltip` to show text while the pointer rests on a row or the row has keyboard focus, such as the full path of a file whose row shows only its name. `iconTooltip` shows text only over the row icon. Use one of the two on a row, not both.
+
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.

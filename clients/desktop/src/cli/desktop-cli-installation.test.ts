@@ -1,6 +1,15 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { DesktopCliInstallation } from "./desktop-cli-installation";
@@ -13,11 +22,16 @@ afterEach(() => {
   }
 });
 
-const fixture = (
-  authorize: (script: string) => Promise<void> = async () => {
-    throw new Error("Unexpected authorization");
-  },
-) => {
+interface FixtureOptions {
+  confirm?: () => Promise<boolean>;
+  authorize?: (script: string) => Promise<boolean>;
+}
+
+const unexpected = async (): Promise<boolean> => {
+  throw new Error("Unexpected prompt");
+};
+
+const fixture = ({ confirm = unexpected, authorize = unexpected }: FixtureOptions = {}) => {
   const root = mkdtempSync(join(tmpdir(), "desktop-cli-"));
   roots.push(root);
   const binary = join(root, "Prompt Studio.app", "pstdio");
@@ -29,18 +43,19 @@ const fixture = (
     binary,
     command,
     receiptPath: join(root, "user-data", "cli-setup-attempted"),
+    confirm,
     authorize,
   });
   return { root, binary, command, installation };
 };
 
 test.skipIf(process.platform === "win32")(
-  "makes pst executable on first launch and keeps existing setup on later launches",
+  "makes pst executable on the first offer and keeps existing setup on later offers",
   async () => {
     const { installation, command } = fixture();
-    expect(await installation.onFirstLaunch()).toBe("installed");
+    expect(await installation.offerOnce()).toBe("installed");
     expect(spawnSync(command, ["--version"]).status).toBe(0);
-    expect(await installation.onFirstLaunch()).toBeNull();
+    expect(await installation.offerOnce()).toBeNull();
     expect(await installation.install()).toBe("installed");
   },
 );
@@ -48,7 +63,7 @@ test.skipIf(process.platform === "win32")(
 test.skipIf(process.platform === "win32")("preserves an independently installed command", async () => {
   const { installation, command } = fixture();
   writeFileSync(command, "independent CLI");
-  expect(await installation.onFirstLaunch()).toBe("conflict");
+  expect(await installation.offerOnce()).toBe("conflict");
   expect(readFileSync(command, "utf8")).toBe("independent CLI");
 });
 
@@ -65,47 +80,91 @@ test.skipIf(process.platform === "win32")(
       binary: process.execPath,
       command,
       receiptPath: join(root, "attempted"),
-      authorize: async () => {
-        throw new Error("Unexpected authorization");
+      confirm: unexpected,
+      authorize: unexpected,
+    });
+    expect(await installation.install()).toBe("installed");
+    expect(spawnSync(command, ["--version"]).status).toBe(0);
+  },
+);
+
+// A read-only command folder stands in for /usr/local/bin, which needs the person's password.
+const runScript = (command: string) => async (script: string) => {
+  chmodSync(dirname(command), 0o755);
+  expect(spawnSync("/bin/sh", ["-c", script], { encoding: "utf8" }).status).toBe(0);
+  return true;
+};
+
+test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "asks before the password prompt and does nothing when the person says not now",
+  async () => {
+    const asked: string[] = [];
+    const { installation, command } = fixture({
+      confirm: async () => {
+        asked.push("confirm");
+        return false;
       },
     });
-    expect(await installation.install()).toBe("installed");
+    chmodSync(dirname(command), 0o555);
+
+    expect(await installation.offerOnce()).toBe("declined");
+    expect(asked).toEqual(["confirm"]);
+    expect(existsSync(command)).toBe(false);
+  },
+);
+
+test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "asks for the password only after the person agrees",
+  async () => {
+    const asked: string[] = [];
+    const { installation, command } = fixture({
+      confirm: async () => {
+        asked.push("confirm");
+        return true;
+      },
+      authorize: async (script) => {
+        asked.push("authorize");
+        return runScript(command)(script);
+      },
+    });
+    chmodSync(dirname(command), 0o555);
+
+    expect(await installation.offerOnce()).toBe("installed");
+    expect(asked).toEqual(["confirm", "authorize"]);
     expect(spawnSync(command, ["--version"]).status).toBe(0);
   },
 );
 
 test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
-  "does not repeat a cancelled authorization prompt and allows an explicit retry",
+  "does not offer again after a decline, and installs from the menu",
   async () => {
-    let attempts = 0;
-    const { installation, command } = fixture(async (script) => {
-      attempts++;
-      if (attempts === 1) throw new Error("Authorization cancelled");
-      chmodSync(dirname(command), 0o755);
-      const result = spawnSync("/bin/sh", ["-c", script], { encoding: "utf8" });
-      expect(result.status).toBe(0);
+    const answers = [false, true];
+    let passwordPrompts = 0;
+    const { installation, command } = fixture({
+      confirm: async () => answers.shift()!,
+      authorize: async (script) => {
+        passwordPrompts++;
+        return runScript(command)(script);
+      },
     });
     chmodSync(dirname(command), 0o555);
-    await expect(installation.onFirstLaunch()).rejects.toThrow("Authorization cancelled");
-    expect(await installation.onFirstLaunch()).toBeNull();
-    expect(attempts).toBe(1);
+
+    expect(await installation.offerOnce()).toBe("declined");
+    expect(await installation.offerOnce()).toBeNull();
+    expect(passwordPrompts).toBe(0);
     expect(await installation.install()).toBe("installed");
-    expect(spawnSync(command, ["--version"]).status).toBe(0);
-    expect(attempts).toBe(2);
+    expect(passwordPrompts).toBe(1);
   },
 );
 
 test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
-  "does not prompt again after cancelling menu setup during startup",
+  "treats a cancelled password prompt as a decline",
   async () => {
-    let attempts = 0;
-    const { installation, command } = fixture(async () => {
-      attempts++;
-      throw new Error("Authorization cancelled");
-    });
+    const { installation, command } = fixture({ confirm: async () => true, authorize: async () => false });
     chmodSync(dirname(command), 0o555);
-    await expect(installation.install()).rejects.toThrow("Authorization cancelled");
-    expect(await installation.onFirstLaunch()).toBeNull();
-    expect(attempts).toBe(1);
+
+    expect(await installation.install()).toBe("declined");
+    expect(existsSync(command)).toBe(false);
+    expect(await installation.offerOnce()).toBeNull();
   },
 );

@@ -1,5 +1,13 @@
 # @pstdio/desktop
 
+## 0.43.1
+
+_2026-10-13_
+
+### Patch Changes
+
+- 94ce006: Explain the macOS password prompt before installing the pst command, offer Not Now, and let agents in Prompt Studio run pst even when the command is not installed in Terminal.
+
 ## 0.43.0
 
 _2026-10-12_

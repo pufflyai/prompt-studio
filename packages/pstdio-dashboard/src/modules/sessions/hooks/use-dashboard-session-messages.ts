@@ -68,6 +68,6 @@ export const useDashboardSessionMessages = (input: WorkbenchPanelRenderInput, se
   return {
     ...(result.sessionId === sessionId ? result.state : { ...emptyState, loading: Boolean(sessionId) }),
     reconnect: () => controller.current?.connect(),
-    refreshQueue: () => controller.current?.refreshQueue(),
+    refreshQueue: () => controller.current?.refreshQueue() ?? Promise.resolve(undefined),
   };
 };

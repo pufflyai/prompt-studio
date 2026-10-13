@@ -1,7 +1,5 @@
-import { relative, sep } from "node:path";
 import type { HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
-import { canonicalSourcePath } from "../extensions/project-extension-runtime-sources";
 
 type Entry = { record: RuntimeHarnessRecord; handle: HarnessHandle };
 type Scope = { entries: Map<string, Entry>; cleanup: Promise<void> };
@@ -16,11 +14,6 @@ const sameProvider = (left: RuntimeHarnessRecord, right: RuntimeHarnessRecord) =
     keys.every((key) => leftDefinition[key] === rightDefinition[key]) &&
     JSON.stringify(leftParams) === JSON.stringify(rightParams)
   );
-};
-
-const belongsToSource = (record: RuntimeHarnessRecord, sourcePath: string) => {
-  const path = relative(canonicalSourcePath(sourcePath), canonicalSourcePath(record.sourcePath));
-  return path === "" || (path !== ".." && !path.startsWith(`..${sep}`) && !path.startsWith(sep));
 };
 
 // Handles, rather than catalog snapshots, own workers. Rebuilding view metadata
@@ -98,17 +91,6 @@ export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRe
           await scope.cleanup;
         },
       };
-    },
-    invalidate: (input: { projectId?: string; sourcePath?: string }) => {
-      for (const [projectId, scope] of scopes) {
-        if (input.projectId !== undefined && input.projectId !== projectId) continue;
-        retire(
-          scope,
-          [...scope.entries.values()].filter(
-            ({ record }) => !input.sourcePath || belongsToSource(record, input.sourcePath),
-          ),
-        );
-      }
     },
     dispose: () => {
       closed = true;
