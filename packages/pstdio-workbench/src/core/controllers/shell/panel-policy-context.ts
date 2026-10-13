@@ -2,6 +2,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchRegion } from "../../registries/layout/layout-types";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import { pageHasBottom } from "../../registries/pages/page-panel-menus";
+import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { createWorkbenchInput, WorkbenchCore } from "../../workbench-core-types";
 import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
 import type { createWorkbenchLayoutCache } from "../page-runtime/workbench-layout-cache";
@@ -18,7 +19,8 @@ interface PolicyContextInput {
 }
 
 const ownerContext = (input: PolicyContextInput) => {
-  const current = input.core?.pages.store.getState();
+  // Layout reconciliation runs before the destination page is published.
+  const current = input.core ? getWorkbenchPageRegistryInternals(input.core.pages).getPublishingState() : undefined;
   const context = input.context ?? {
     modeId: input.modes.getActiveModeId(),
     pageId: current?.activePageId,
@@ -43,7 +45,11 @@ const ownerLayout = (input: PolicyContextInput, owner: ReturnType<typeof ownerCo
       : layout.store.getInitialState().layout;
   }
   if ((region === "bottom" || region === "main") && !owner.samePage)
-    return cache.layout.getLayout(pageLayoutScope(context)) ?? layout.store.getInitialState().layout;
+    return (
+      cache.layout.getLayout(
+        pageLayoutScope(context, context.pageId ? input.core?.pages.getPage(context.pageId) : undefined),
+      ) ?? layout.store.getInitialState().layout
+    );
   return layout.getLayout();
 };
 
@@ -60,6 +66,7 @@ export const panelPolicyInput = (input: PolicyContextInput) => {
     settings = { ...host.regionSettings?.[region], ...mode?.regionSettings?.[region] };
     if (region === "bottom") settings = page?.regionSettings?.bottom;
   }
+  if (region === "main") settings = { ...settings, ...page?.regionSettings?.main };
   const tabPanel = isTabPanel(region);
   let provided = !tabPanel || region === "main" || isWorkbenchModePanelAvailable(mode, region as "side" | "secondary");
   if (region === "bottom") provided = pageHasBottom(page);

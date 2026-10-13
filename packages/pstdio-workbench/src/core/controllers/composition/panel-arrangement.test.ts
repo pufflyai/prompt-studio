@@ -111,7 +111,7 @@ test("moving a preview changes its owner while preserving content identity and t
   });
 });
 
-test("moving the page view keeps its primary anchor and selection in Side", async () => {
+test("moving the page view returns Main to its parent and selects the moved editor", async () => {
   const w = harness();
   const pageRef = { kind: "page", extensionId: "test", id: "page-view" } as const;
   w.pages.registerPage({
@@ -124,15 +124,22 @@ test("moving the page view keeps its primary anchor and selection in Side", asyn
     main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "one" },
     slots: [],
   });
-  await w.navigation.openTarget({ kind: "page", page: pageRef, resource: { type: "workspace", id: "alpha" } });
+  await w.navigation.openTarget({
+    kind: "page",
+    page: pageRef,
+    resource: { type: "workspace", id: "alpha" },
+    parent: navigate("alpha"),
+  });
   const original = w.layout.getLayout().regions.main.widgets[0]!;
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
   w.movePanel(original.widgetId, "side");
   expect(w.layout.getLayout().regions.side.activeWidgetId).toBe(original.widgetId);
-  expect(getActiveLocationPlacement(w.layout.getLayout())?.widgetId).toBe(original.widgetId);
+  expect(w.pages.store.getState().activePageId).toBe("workspace");
+  expect(w.layout.getLayout().regions.main.widgets.map((tab) => tab.viewId)).toEqual(["empty"]);
+  expect(getActiveLocationPlacement(w.layout.getLayout())?.widgetId).not.toBe(original.widgetId);
   expect(w.getPrimaryResource()?.id).toBe("alpha");
   w.layout.setRegionActiveWidget("side", original.widgetId);
-  expect(w.layout.getLayout().activeLocationWidgetId).toBe(original.widgetId);
+  expect(w.layout.getLayout().activeWidgetId).toBe(original.widgetId);
 });
 
 test("moving a page selects it over its remembered auxiliary tab", async () => {
@@ -148,7 +155,12 @@ test("moving a page selects it over its remembered auxiliary tab", async () => {
     main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "one" },
     slots: [],
   });
-  await w.navigation.openTarget({ kind: "page", page: pageRef, resource: { type: "workspace", id: "alpha" } });
+  await w.navigation.openTarget({
+    kind: "page",
+    page: pageRef,
+    resource: { type: "workspace", id: "alpha" },
+    parent: navigate("alpha"),
+  });
   const pageView = w.layout.getLayout().regions.main.widgets[0]!;
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
   const session = w.layout.getLayout().regions.side.widgets[0]!;
@@ -190,8 +202,8 @@ test("Add reuses a single panel from another region and follows move restriction
   const add = w.composition.panelsFor("side").addable.find((p) => p.contribution.title === "editor");
   expect(add).toBeDefined();
   await add?.open?.();
-  expect(w.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(original.widgetId);
-  expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);
+  expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(original.widgetId);
+  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
 });
 
 test("page and shared mode placements restore their chosen regions after navigation and reload", async () => {

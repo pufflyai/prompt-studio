@@ -49,6 +49,7 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
       extensionId: view.extensionId,
       title: view.title,
       icon: view.icon,
+      instancePolicy: view.instancePolicy,
       panelMenus: menus.length > 0 ? menus : undefined,
       ...viewBody(view),
     };

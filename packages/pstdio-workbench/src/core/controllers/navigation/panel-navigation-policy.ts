@@ -1,15 +1,18 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
-import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import type { WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import { modePlacementContributionId, pagePlacementContributionId } from "../../registries/views/view-placement";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { panelDestinations } from "../composition/panel-destinations";
 import { readSavedOwnerPlacements } from "../page-runtime/owner-layout-resolution";
+
+export type PreparedPanelTarget = NavigationTargetPanel & { destination?: WorkbenchPanelRegion };
 
 const panelDeclaration = (
   core: WorkbenchCore,
-  target: NavigationTargetPanel,
+  target: PreparedPanelTarget,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
 ) => {
   const panel = target.panel;
@@ -28,7 +31,7 @@ const panelDeclaration = (
 
 export const validatePanelNavigation = (
   core: WorkbenchCore,
-  target: NavigationTargetPanel,
+  target: PreparedPanelTarget,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
 ) => {
   const declaration = panelDeclaration(core, target, state);
@@ -50,7 +53,9 @@ export const validatePanelNavigation = (
       (target.panel.kind !== "page-slot" || pageInstanceIds.has(tab.widgetId)) &&
       (singleton || !target.resource || tab.resourceKey === resourceKey(target.resource)),
   );
-  const region = existing?.region ?? declaration.region;
+  const region = target.destination ?? existing?.region ?? declaration.region;
+  if (target.destination && !panelDestinations(core, declaration.id).includes(target.destination))
+    throw new Error(`Panel cannot move to ${target.destination}: ${declaration.id}`);
   if (region !== "main" && region !== "secondary" && region !== "side" && region !== "bottom") return;
   const policy = core.shell.getPanelPolicy(region, {
     modeId: state.activeModeId ?? core.modes.getActiveModeId(),

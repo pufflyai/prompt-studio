@@ -2563,6 +2563,7 @@ interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly body: ViewBody;
+  readonly instancePolicy?: "per-resource" | "multiple";
 }
 type NavigationOwnerRef = ModeRef | PageRef;
 type NavigationTreeSlot = "header" | "content" | "footer";
@@ -2709,6 +2710,7 @@ interface PageContribution extends ContributionDefinition<"page"> {
     readonly right?: PanelMenuDeclaration;
   };
   readonly regionSettings?: {
+    readonly main?: Pick<PageRegionSettings, "showHeader">;
     readonly bottom?: PageRegionSettings;
   };
   readonly slots: readonly PageSlot[];

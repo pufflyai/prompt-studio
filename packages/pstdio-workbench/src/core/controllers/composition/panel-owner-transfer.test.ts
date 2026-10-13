@@ -25,7 +25,8 @@ test("opening a transferred declaration selects the existing tab in its actual d
   expect(w.layout.getLayout().activeWidgetId).toBe(file.widgetId);
   expect(w.layout.getLayout().regions.side.activeWidgetId).toBe(file.widgetId);
   expect(w.sidePanel.getMode()).toBe("attached");
-  expect(w.layout.getLayout().regions.main.widgets).toHaveLength(0);
+  expect(w.layout.getLayout().regions.main.widgets.map((tab) => tab.viewId)).toEqual(["empty"]);
+  expect(w.layout.getLayout().regions.main.widgets[0]?.resource).toEqual(navigate("alpha").resource);
 });
 
 test("transferred tabs rehydrate live tab callbacks after serialization", async () => {

@@ -1,4 +1,10 @@
-import type { FileRendererSectionTarget, ModeRegionSettings, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type {
+  FileRendererSectionTarget,
+  FileSourcePosition,
+  ModeRegionSettings,
+  PageLocation,
+  PlacementIdentity,
+} from "@pstdio/sdk/extensions";
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -197,8 +203,11 @@ export interface WorkbenchWidgetPlacement {
   source?: ContributionSource;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   resourceKey?: string;
   ownerResourceKey?: string;
+  /** Captured page ancestry; resource and source position remain on this tab. */
+  pageContext?: Pick<PageLocation, "mode" | "parent">;
   title?: string;
   pinned?: boolean;
   closable?: boolean;
@@ -218,6 +227,7 @@ export interface WorkbenchPanelInstance {
   source?: ContributionSource;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
   resourceKey?: string;
   ownerResourceKey?: string;
   title?: string;

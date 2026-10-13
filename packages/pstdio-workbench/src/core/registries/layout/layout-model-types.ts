@@ -38,6 +38,10 @@ export interface LayoutPersistenceAdapter {
 }
 
 export interface CreateLayoutModelInput {
+  resolveExistingWidget?(
+    widget: RegisteredWidgetContribution,
+    input: OpenWidgetInput,
+  ): WorkbenchWidgetPlacement | undefined;
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
   /** Region policy for the active context; the layout asks on every query. */

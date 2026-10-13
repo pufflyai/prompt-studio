@@ -32,7 +32,7 @@ test("a direct mode open on another page creates a separate tab from the transfe
   expect(w.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(reopened.widgetId);
 });
 
-test("Add uses the requested transferred tab and moves it into the chosen panel", async () => {
+test("Add focuses a transferred declared tool in its current panel", async () => {
   const w = harness();
   w.modePlacements.registerPlacement({
     id: "tools",
@@ -47,9 +47,10 @@ test("Add uses the requested transferred tab and moves it into the chosen panel"
   await w.navigation.openTarget(openFile("other"));
   const add = w.composition.panelsFor("secondary").addable.find((p) => p.panelId === moved.contributionId)!;
   await add.open!();
-  expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(moved.widgetId);
-  expect(w.layout.getLayout().regions.secondary.activeWidgetId).toBe(moved.widgetId);
-  expect(w.layout.getLayout().regions.main.widgets.some((p) => p.widgetId === moved.widgetId)).toBe(false);
+  expect(w.layout.getLayout().regions.main.activeWidgetId).toBe(moved.widgetId);
+  expect(w.layout.getLayout().activeWidgetId).toBe(moved.widgetId);
+  expect(w.focus.getActiveRegion()).toBe("main");
+  expect(w.layout.getLayout().regions.secondary.widgets).toHaveLength(0);
 });
 
 test("a transferred fixed mode tool stays in its page after navigation and reload", async () => {

@@ -139,6 +139,7 @@ export interface WorkbenchSnapshot {
 }
 
 export interface WorkbenchPersistenceAdapter {
+  listScopes?(projectId: string): string[];
   getSnapshot(scope?: string): WorkbenchSnapshot | undefined;
   setSnapshot(snapshot: WorkbenchSnapshot, scope?: string): void;
   flush?(): void;

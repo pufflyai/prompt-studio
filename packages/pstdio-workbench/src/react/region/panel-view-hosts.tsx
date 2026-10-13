@@ -7,6 +7,7 @@ import { resolveResourcePreview } from "../../core/registries/resources/resource
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { movePanelHost } from "./move-panel-host";
 import { isPlacementEligibleForRegion } from "./region-tabs-visibility-hooks";
+import { usePanelFocus } from "./use-panel-focus";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
 
@@ -33,6 +34,7 @@ const PanelViewPortal = (props: {
   active: boolean;
 }) => {
   const { workbench, placement, slot, region, active } = props;
+  const focus = usePanelFocus(workbench, placement.widgetId);
   // The portal target is stable for the life of a view. Only its DOM parent moves.
   const [host] = useState(() => {
     const node = document.createElement("div");
@@ -50,6 +52,8 @@ const PanelViewPortal = (props: {
   };
   return createPortal(
     <Box
+      ref={focus.ref}
+      tabIndex={-1}
       data-workbench-instance={placement.widgetId}
       display={active ? "flex" : "none"}
       inert={!active}
@@ -61,6 +65,7 @@ const PanelViewPortal = (props: {
       onPointerDown={activate}
       onFocusCapture={(event) => {
         if (!event.currentTarget.contains(event.target)) return;
+        focus.remember(event.target);
         activate();
         if (region) workbench.focus.setActiveRegion(region);
       }}

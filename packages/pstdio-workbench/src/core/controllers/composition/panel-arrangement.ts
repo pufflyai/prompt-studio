@@ -1,3 +1,4 @@
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import {
   activateInLayout,
   findPlacementByWidgetId,
@@ -10,7 +11,9 @@ import { workbenchPanelRegions } from "../../registries/layout/layout-types";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { saveOpenOwnerLayouts } from "../page-runtime/open-owner-layouts";
 import { getShellNavigationScope } from "../shell/shell-navigation-scope";
+import { reconcileMainAfterMove } from "./main-document-fallback";
 import { panelDestinations } from "./panel-destinations";
 import { transferPanelOwner } from "./panel-owner-transfer";
 
@@ -32,7 +35,21 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
       throw new Error(`Panel cannot move to ${destination}: ${instanceId}`);
     const source = layout.regions[found.regionId];
     const remaining = source.widgets.filter((t) => t.widgetId !== instanceId);
-    const target = layout.regions[destination];
+    const adjacent =
+      found.regionId === "main" && found.placement.role === "location"
+        ? [...source.widgets.slice(found.index + 1), ...source.widgets.slice(0, found.index).reverse()].find(
+            (tab) => tab.role === "location",
+          )
+        : (remaining[found.index] ?? remaining[found.index - 1]);
+    const pageState = core.pages.store.getState();
+    const page = pageState.activePageId ? pageState.pages[pageState.activePageId] : undefined;
+    const emptyView = page?.main.kind === "panels" ? contributionRefId(page.main.empty) : undefined;
+    const target = {
+      ...layout.regions[destination],
+      widgets: layout.regions[destination].widgets.filter(
+        (tab) => destination !== "main" || !emptyView || tab.viewId !== emptyView,
+      ),
+    };
     const placement = transferPanelOwner(core, found.placement, destination);
     const next = {
       ...removeLocationSubPanelSelection(layout, instanceId),
@@ -41,10 +58,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         [found.regionId]: {
           ...source,
           widgets: remaining,
-          activeWidgetId:
-            source.activeWidgetId === instanceId
-              ? (remaining[found.index] ?? remaining[found.index - 1])?.widgetId
-              : source.activeWidgetId,
+          activeWidgetId: source.activeWidgetId === instanceId ? adjacent?.widgetId : source.activeWidgetId,
         },
         [destination]: {
           ...target,
@@ -53,7 +67,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         },
       },
     };
-    getShellNavigationScope(core.shell).run(() =>
+    getShellNavigationScope(core.shell).run(() => {
       batchWorkbenchChanges(() => {
         // Moving selects the instance directly; navigation owns auxiliary-selection restoration.
         const selected =
@@ -64,11 +78,29 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
           ...selected,
           activeWidgetId: instanceId,
           activeResourceKey: found.placement.resourceKey,
-          activeLocationWidgetId: found.placement.role === "location" ? instanceId : layout.activeLocationWidgetId,
+          activeLocationWidgetId:
+            found.regionId === "main" && destination !== "main" && layout.activeLocationWidgetId === instanceId
+              ? next.regions.main.activeWidgetId
+              : layout.activeLocationWidgetId,
+        });
+        saveOpenOwnerLayouts(core);
+        if (found.regionId === "main" && destination !== "main") reconcileMainAfterMove(core);
+        const final = core.layout.getLayout();
+        core.layout.restoreLayout({
+          ...final,
+          regions: { ...final.regions, [destination]: { ...final.regions[destination], activeWidgetId: instanceId } },
+          activeWidgetId: instanceId,
+          activeResourceKey: found.placement.resourceKey,
+          activeLocationWidgetId:
+            found.regionId === "main" && destination !== "main"
+              ? final.regions.main.activeWidgetId
+              : final.activeLocationWidgetId,
         });
         core.layout.reconcilePanelMenus();
         revealPanelRegion(core, destination);
-      }),
-    );
+        core.focus.setActiveRegion(destination);
+        core.focus.requestPanelFocus(instanceId);
+      });
+    });
   },
 });

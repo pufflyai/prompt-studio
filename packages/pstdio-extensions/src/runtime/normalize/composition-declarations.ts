@@ -86,7 +86,13 @@ export const pageDeclarationSchema = z
     ]),
     slots: z.array(slot),
     panelMenus: z.object({ left: panelMenuSchema.optional(), right: panelMenuSchema.optional() }).strict().optional(),
-    regionSettings: z.object({ bottom: panelSettingsSchema.optional() }).strict().optional(),
+    regionSettings: z
+      .object({
+        main: panelSettingsSchema.pick({ showHeader: true }).optional(),
+        bottom: panelSettingsSchema.optional(),
+      })
+      .strict()
+      .optional(),
     panels: z.record(z.string(), z.unknown()),
   })
   .strict()

@@ -17,6 +17,14 @@ const storyIds = [
   "page-surface-webview",
   "owner-transfer",
   "files-transfer",
+  "note-reuse",
+  "note-neighbor",
+  "inactive-owner-reload",
+  "inactive-main-document",
+  "mixed-document-tabs",
+  "workspace-catalog",
+  "workspace-catalog-close",
+  "collection-catalog",
   "mixed-panel-rules",
   "refused-panel-tabs",
   "panel-header-choices",
@@ -28,6 +36,8 @@ const storyIds = [
   "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 storyIds.push(
+  "pstdio-workbench-showcases--boombox",
+  "pstdio-workbench-showcases--kiln",
   "pstdio-workbench-showcases-dashboard--dashboard",
   "pstdio-workbench-showcases-dashboard--interaction-checks",
   "pstdio-workbench-controls-research-agent--editable",
@@ -76,6 +86,22 @@ test.describe("Workbench windowing stories", () => {
       expect(outcome.result).toMatchObject({ storyId, status: "success" });
       if (storyId.endsWith("--foreign-context") || storyId.endsWith("--page-availability")) {
         await test.info().attach("Page context", { body: await page.screenshot(), contentType: "image/png" });
+      }
+      if (storyId.endsWith("--foreign-context")) {
+        await page.getByRole("button", { name: "Session 2", exact: true }).click();
+        const foreign = page.getByRole("tab", { name: "Session 2 · Outside this workspace · Project", exact: true });
+        const tooltip = page.getByRole("tooltip", { name: "Outside this workspace · Project", exact: true });
+        await page.mouse.move(0, 0);
+        await foreign.hover();
+        await expect(tooltip).toBeVisible();
+        await page.mouse.move(0, 0);
+        await page.getByRole("button", { name: "Grow Secondary", exact: true }).click();
+        await expect(tooltip).not.toBeVisible();
+        await foreign.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Shift+Tab");
+        await expect(foreign).toBeFocused();
+        await expect(tooltip).toBeVisible();
       }
       if (storyId.endsWith("--page-surface")) {
         const main = page.locator('[data-workbench-panel="main"]');

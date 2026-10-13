@@ -1,9 +1,4 @@
-import {
-  contributionRefId,
-  defaultPageResourceCodec,
-  type PlacementIdentity,
-  resourceKey,
-} from "@pstdio/sdk/extensions";
+import { contributionRefId, defaultPageResourceCodec, type PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
 import { createPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
@@ -40,15 +35,16 @@ import { createDisposable } from "../../shared/disposable";
 import {
   connectOwnerPlacementReader,
   ownerLayoutActivation,
-  resolveOwnerPlacements,
+  type resolveOwnerPlacements,
   savedOwnerPlacements,
 } from "./owner-layout-resolution";
-import { pageWidgetId, reuseSingleResourceWidgets } from "./page-widget-id";
+import { pageWidgetId } from "./page-widget-id";
 import { reuseSingleMainView } from "./reuse-single-main-view";
+import { prepareRuntimeLayout } from "./runtime-layout-preparation";
 import { syncOwnedPanelMenus } from "./runtime-panel-menus";
-
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
+  existingEditor?: Parameters<typeof resolveOwnerPlacements>[0]["existingEditor"];
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadPageGeometry?(projectId: string, pageId: string): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
@@ -61,65 +57,6 @@ export interface ConnectWorkbenchPageRuntimeInput {
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
 }
-const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
-  const ownerResourceKey = resourceKey(state.location?.resource);
-  if (!ownerResourceKey) return state.placements;
-  return state.placements.map((placement) =>
-    placement.value.role === "sub-panel" && placement.identity.kind === "page"
-      ? { ...placement, value: { ...placement.value, ownerResourceKey } }
-      : placement,
-  );
-};
-const prepareRuntimeLayout = (
-  input: ConnectWorkbenchPageRuntimeInput,
-  latest: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
-  activation: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["placements"],
-  enteringPage: boolean,
-  liveLayout: WorkbenchLayout,
-  adoptedModePlacements?: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
-) => {
-  let modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
-  if (modeLayout && !enteringPage) {
-    // Membership comes from the saved mode owner. Within the same page, keep
-    // live selection and geometry while batched persistence catches up.
-    const regions = { ...modeLayout.regions };
-    for (const region of Object.values(regions)) {
-      const live = input.layout.getLayout().regions[region.id];
-      regions[region.id] = {
-        ...region,
-        activeWidgetId: live.activeWidgetId,
-        visible: live.visible,
-        size: live.size,
-        presentation: live.presentation,
-      };
-    }
-    modeLayout = { ...modeLayout, regions };
-  }
-  const ownerManaged = Boolean(input.loadPageLayout && latest.activePageId);
-  const placements =
-    ownerManaged && input.loadPageLayout
-      ? resolveOwnerPlacements({
-          state: latest,
-          pageLayout:
-            enteringPage && !input.layout.enteredWithPersistedLayout() ? undefined : input.loadPageLayout(latest),
-          modeLayout,
-          enteringPage,
-          currentLayout: input.layout.getLayout(),
-          liveLayout,
-          adoptedModePlacements,
-          getWidget: input.layout.getWidget,
-          hasDeclaration: input.hasDeclaration,
-        })
-      : bindPlacementsToActivePageLocation(latest);
-  return {
-    ownerManaged,
-    layout: ownerManaged ? reuseSingleResourceWidgets(input.layout.getLayout(), placements) : input.layout.getLayout(),
-    modeLayout,
-    placements,
-    activate: ownerLayoutActivation(activation, placements).map((p) => p.identity),
-  };
-};
-
 const restoreRuntimeGeometry = (
   input: ConnectWorkbenchPageRuntimeInput,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
@@ -159,6 +96,7 @@ const applyPageState = (
       activation,
       enteringPage,
       liveLayout,
+      storeBeforeTransition.activeModeId,
       adopted,
     );
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
@@ -252,6 +190,7 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  existingEditor?: ConnectWorkbenchPageRuntimeInput["existingEditor"];
   persistPreparedOwners?: ConnectWorkbenchPageRuntimeInput["persistPreparedOwners"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
@@ -306,6 +245,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    existingEditor: input.existingEditor,
     hasDeclaration: (identity) =>
       hasPlacementDeclaration(
         { pages: registry, modePlacements: input.modePlacements, shellPlacements: input.shellPlacements },

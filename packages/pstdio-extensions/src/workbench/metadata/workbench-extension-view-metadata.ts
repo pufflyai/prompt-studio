@@ -159,6 +159,7 @@ export const toViewRecord = (
     extensionId: view.extensionId,
     title: view.contribution.title,
     icon: view.contribution.icon,
+    instancePolicy: view.contribution.instancePolicy,
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };

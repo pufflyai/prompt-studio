@@ -29,19 +29,10 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
     });
 
   const trigger = (
-    <IconButton
-      ref={panels.length > 1 ? triggerRef : undefined}
-      size={PANEL_HEADER_CONTROL_SIZE}
-      variant="ghost"
-      aria-label={label}
-      flexShrink={0}
-      onClick={panels.length === 1 ? () => openPanel(panels[0]) : undefined}
-    >
+    <IconButton ref={triggerRef} size={PANEL_HEADER_CONTROL_SIZE} variant="ghost" aria-label={label} flexShrink={0}>
       <WorkbenchIcon name="plus" size={13} />
     </IconButton>
   );
-
-  if (panels.length === 1) return <Tooltip content={label}>{trigger}</Tooltip>;
 
   return (
     <Menu.Root positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}>

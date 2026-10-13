@@ -1,0 +1,92 @@
+import type {
+  FileRendererSectionTarget,
+  FileSourcePosition,
+  PageOpenIntent,
+  ResourceRef,
+} from "@pstdio/sdk/extensions";
+import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
+import type { WorkbenchCore } from "../../workbench-core-types";
+import { updateSavedResourceEditor } from "../page-runtime/open-owner-layouts";
+
+export interface ResourceEditorIntent {
+  resource?: ResourceRef;
+  open?: PageOpenIntent;
+  title?: string;
+  section?: FileRendererSectionTarget;
+  position?: FileSourcePosition;
+}
+
+export const resourceEditorIntent = (target: NavigationTargetPage | NavigationTargetPanel | undefined) => ({
+  resource: target?.resource,
+  open: target?.open,
+  ...(target?.kind === "page" ? { section: target.section, position: target.position } : {}),
+  ...(target && "title" in target ? { title: target.title } : {}),
+});
+
+const applyEditorSourceTarget = (core: WorkbenchCore, widgetId: string, intent: ResourceEditorIntent) => {
+  if (intent.section === undefined && intent.position === undefined) return;
+  const layout = core.layout.getLayout();
+  const regions = { ...layout.regions };
+  for (const region of Object.values(regions)) {
+    regions[region.id] = {
+      ...region,
+      widgets: region.widgets.map((value) =>
+        value.widgetId === widgetId ? { ...value, section: intent.section, position: intent.position } : value,
+      ),
+    };
+  }
+  core.layout.restoreLayout({ ...layout, regions });
+};
+
+export const applyResourceEditorSourceTarget = (
+  core: WorkbenchCore,
+  previous: WorkbenchWidgetPlacement,
+  ownerScope: string | undefined,
+  tab: WorkbenchWidgetPlacement | undefined,
+  intent: Pick<ResourceEditorIntent, "section" | "position">,
+) => {
+  if (intent.section === undefined && intent.position === undefined) return;
+  if (tab) applyEditorSourceTarget(core, tab.widgetId, intent);
+  else updateSavedResourceEditor(core, previous, ownerScope, intent);
+};
+
+const updateLiveResourceEditor = (core: WorkbenchCore, tab: WorkbenchWidgetPlacement, intent: ResourceEditorIntent) => {
+  const identity = tab.placementIdentity;
+  const resourceChanged = intent.resource && intent.resource !== tab.resource;
+  const titleChanged = intent.title !== undefined && intent.title !== tab.title;
+  if (resourceChanged || titleChanged) {
+    if (tab.declarationIdentity || (identity?.kind === "page" && identity.slotId === "$main"))
+      core.layout.updateWidgetPlacement(tab.widgetId, { resource: intent.resource, title: intent.title });
+    else if (identity?.kind === "page" && identity.slotId !== "$main") {
+      core.pages.openSlot({ pageId: identity.pageId, slotId: identity.slotId, resource: intent.resource });
+      if (titleChanged) core.layout.updateWidgetPlacement(tab.widgetId, { title: intent.title });
+    } else if (identity?.kind === "mode")
+      core.modePlacements.updatePlacement(identity, { resource: intent.resource, title: intent.title });
+    else if (identity?.kind === "shell")
+      core.shellPlacements.updatePlacement(identity, { resource: intent.resource, title: intent.title });
+  }
+};
+
+export const applyResourceEditorIntent = (
+  core: WorkbenchCore,
+  previous: WorkbenchWidgetPlacement,
+  ownerScope: string | undefined,
+  tab: WorkbenchWidgetPlacement | undefined,
+  intent: ResourceEditorIntent,
+) => {
+  if (!tab) {
+    updateSavedResourceEditor(core, previous, ownerScope, {
+      resource: intent.resource,
+      title: intent.title,
+      section: intent.section,
+      position: intent.position,
+      ...(intent.open === "pin" ? { pinned: true, tabRetention: "persistent" } : {}),
+    });
+    return;
+  }
+  const identity = tab.placementIdentity;
+  if (intent.open === "pin" && identity) core.pinPlacement(identity);
+  updateLiveResourceEditor(core, tab, intent);
+  applyEditorSourceTarget(core, tab.widgetId, intent);
+};

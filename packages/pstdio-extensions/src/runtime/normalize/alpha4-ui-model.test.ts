@@ -36,6 +36,7 @@ const alpha4Definition = () => {
   const view = defineView({
     id: "tickets",
     title: "Tickets",
+    instancePolicy: "per-resource",
     body: { kind: "webview", entry: packageAsset("./views/tickets.tsx", "file:///fake/lab/") },
   });
   const resourceKind = defineResourceKind({ id: "ticket" });
@@ -99,7 +100,7 @@ describe("alpha.4 UI normalization", () => {
     expect(runtime.views[0]).toMatchObject({
       id: "pstdio.lab.view.tickets",
       localId: "tickets",
-      contribution: { ref: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
+      contribution: { ref: { extensionId: "pstdio.lab", kind: "view", id: "tickets" }, instancePolicy: "per-resource" },
     });
     expect(runtime.placements).toHaveLength(2);
     expect(runtime.placements[1]?.contribution.item).toMatchObject({

@@ -82,12 +82,19 @@ const FileRendererHeader = (props: { file: LoadedFile }) => {
   ) : null;
 };
 
+const getPlacementSectionNavigation = (placement?: WorkbenchPanelInstance) => {
+  const anchor = placement?.section?.anchors.at(-1);
+  return anchor && placement?.section ? { anchors: placement.section.anchors, targetId: anchor.id } : undefined;
+};
+
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
-  const position = useFilePosition(workbench, resource);
+  const locationPosition = useFilePosition(workbench, resource);
+  const position = props.placement?.position ?? locationPosition;
   const sectionNavigation = getFileSectionNavigation(resource);
-  const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
+  const editorSectionNavigation =
+    getPlacementSectionNavigation(props.placement) ?? getEditorSectionNavigation(workbench, sectionNavigation);
   const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
   const [error, setError] = useState<{

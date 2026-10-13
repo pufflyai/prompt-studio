@@ -5,6 +5,7 @@ export const createWindowingPersistence = () => {
   const layouts = new Map<string, WorkbenchLayout>();
   const locations = new Map<string, PersistedWorkbenchPageLocation>();
   const layout: LayoutPersistenceAdapter = {
+    listScopes: (projectId) => [...layouts.keys()].filter((scope) => scope.startsWith(`project/${projectId}/`)),
     getLayout: (scope = "__global__") => {
       const saved = layouts.get(scope);
       return saved && structuredClone(saved);

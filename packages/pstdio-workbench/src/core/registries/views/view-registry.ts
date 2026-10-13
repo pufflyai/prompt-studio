@@ -35,6 +35,7 @@ export interface WorkbenchViewContribution {
   title: string;
   icon?: string;
   body: WorkbenchViewBody;
+  instancePolicy?: "per-resource" | "multiple";
 }
 
 export type RegisteredWorkbenchView = WorkbenchViewContribution & RegisteredContributionMetadata;

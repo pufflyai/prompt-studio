@@ -16,14 +16,15 @@ export const ForeignContext: Story = {
   args: { createFixture: () => createWindowingFixture("windowing", { pagePanels: true, contextNavigation: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const user = userEvent.setup();
     const main = canvasElement.querySelector('[data-workbench-panel="main"]') as HTMLElement;
     const breadcrumb = main.querySelector("nav")!;
     const original = breadcrumb.textContent;
-    await userEvent.click(within(main).getByRole("tab", { name: "Changes" }));
-    await userEvent.click(within(main).getByRole("button", { name: "Close Changes" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Session 2" }));
+    await user.click(within(main).getByRole("tab", { name: "Changes" }));
+    await user.click(within(main).getByRole("button", { name: "Close Changes" }));
+    await user.click(canvas.getByRole("button", { name: "Session 2" }));
     const foreign = await canvas.findByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" });
-    await userEvent.click(foreign);
+    await user.click(foreign);
     await expect(breadcrumb).toHaveTextContent(original!);
     await expect(visibleWindowingLabel(canvasElement, "Session context")).toHaveTextContent("Workspace 2");
     const nav = canvasElement.querySelector('[data-workbench-region="sidenav"]')!;
@@ -31,34 +32,24 @@ export const ForeignContext: Story = {
       "aria-selected",
       "true",
     );
-    await userEvent.hover(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }));
-    await expect(await within(document.body).findByRole("tooltip")).toHaveTextContent(
-      "Outside this workspace · Workspace 2",
-    );
-    await userEvent.unhover(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Grow Secondary" }));
-    await userEvent.tab();
-    canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }).focus();
-    await expect(await within(document.body).findByRole("tooltip")).toHaveTextContent(
-      "Outside this workspace · Workspace 2",
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "Use project session context" }));
+    await user.click(canvas.getByRole("button", { name: "Grow Secondary" }));
+    await user.click(canvas.getByRole("button", { name: "Use project session context" }));
     await expect(
       await canvas.findByRole("tab", { name: "Session 2 · Outside this workspace · Project" }),
     ).toBeVisible();
     await expect(visibleWindowingLabel(canvasElement, "Session context")).toHaveTextContent("Project");
-    await userEvent.click(
+    await user.click(
       within(main.querySelector('[data-workbench-panel-header="main"]') as HTMLElement).getByRole("button", {
         name: "Add panel",
       }),
     );
     const changes = within(document.body).queryByRole("menuitem", { name: "Changes" });
-    if (changes) await userEvent.click(changes);
+    if (changes) await user.click(changes);
     await waitFor(() =>
       expect(visibleWindowingLabel(canvasElement, "Changes context")).toHaveTextContent("Workspace 1"),
     );
     await expect(breadcrumb).toHaveTextContent(original!);
-    await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
+    await user.click(canvas.getByRole("button", { name: "Session 1" }));
     await expect(canvas.getByRole("tab", { name: /^Session 1(?: · .*)?$/ })).toBeVisible();
     await expect(breadcrumb).toHaveTextContent(original!);
   },

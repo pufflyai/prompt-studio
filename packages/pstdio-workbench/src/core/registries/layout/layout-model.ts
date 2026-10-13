@@ -158,7 +158,12 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const panelRegistrations = createPanelRegistrations({
     registerWidget: contributionRegistrations.registerWidget,
   });
-  const widgetOpeners = createWidgetOpeners({ getLayout, requireWidget, applyAndActivate });
+  const widgetOpeners = createWidgetOpeners({
+    getLayout,
+    requireWidget,
+    applyAndActivate,
+    resolveExistingWidget: input.resolveExistingWidget,
+  });
   const placementMethods = createLayoutPlacementMethods({
     getLayout,
     requireWidget,

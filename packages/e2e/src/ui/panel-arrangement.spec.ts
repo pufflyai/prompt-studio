@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
-test("dragging a terminal into headerless Main retains its live view and shell state", async ({ page, request }) => {
+test("dragging a terminal into single-view Main retains its live view and shell state", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Arrange a live terminal" }),
   });
@@ -17,6 +17,8 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   const originalUrl = page.url();
   const main = page.getByRole("region", { name: "Main", exact: true });
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+  await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
+  await expect(mainHeader.getByRole("tab")).toHaveCount(1);
   await mainHeader.getByRole("button", { name: "main header options", exact: true }).click();
   await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   await expect(mainHeader).not.toBeVisible();
@@ -62,7 +64,7 @@ test("dragging a terminal into headerless Main retains its live view and shell s
   await expect(secondary.getByRole("tab")).toHaveCount(0);
   await moved.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
-  await expect(mainHeader).toBeVisible();
+  await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(1);
   await expect(page.getByText("Project home", { exact: true }).filter({ visible: true })).toBeVisible();
 });

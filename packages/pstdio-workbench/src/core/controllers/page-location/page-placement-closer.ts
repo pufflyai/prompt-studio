@@ -1,4 +1,5 @@
 import type { PageLocation, PageRef, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { WorkbenchPageOpenInput } from "../../registries/pages/page-registry";
 import type { WorkbenchPageCloseResolution } from "../../registries/pages/page-registry-internals";
 import type { ResolvedPageLocation, WorkbenchPageNavigationResult } from "./page-location-types";
 
@@ -14,6 +15,7 @@ interface PagePlacementCloserInput {
   getPageRef(pageId: string): PageRef | undefined;
   normalizePage(page: PageRef): ResolvedPageLocation;
   normalizeStored(location: PageLocation): ResolvedPageLocation;
+  resolvePlacementLocation?(target: WorkbenchPageOpenInput): PageLocation | undefined;
   resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
 }
 
@@ -42,12 +44,15 @@ export const createPagePlacementCloser = (input: PagePlacementCloserInput) => {
   ) => {
     const page = input.getPageRef(resolution.target.pageId);
     if (!page) throw new Error(`Unknown page: ${resolution.target.pageId}`);
-    const resolved = input.normalizeStored({
-      page,
-      ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
-      ...(resolution.target.section ? { section: resolution.target.section } : {}),
-      ...(location.parent ? { parent: location.parent } : {}),
-    });
+    const resolved = input.normalizeStored(
+      input.resolvePlacementLocation?.(resolution.target) ?? {
+        page,
+        mode: location.mode,
+        ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
+        ...(resolution.target.section ? { section: resolution.target.section } : {}),
+        ...(location.parent ? { parent: location.parent } : {}),
+      },
+    );
     return input.commit(
       projectId,
       {

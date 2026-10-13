@@ -41,6 +41,7 @@ export interface InternalWorkbenchExtensionPanel {
   extensionId: string;
   title: MetadataView["title"];
   icon?: string;
+  instancePolicy?: MetadataView["instancePolicy"];
   webview?: MetadataWebview;
   renderer?: { kind: MetadataRendererKind; id: string };
   panelMenus?: InternalWorkbenchExtensionPanelMenu[];

@@ -30,8 +30,10 @@ export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
   if (!policy.open && !policy.canOpen) throw new Error(`Panel cannot open: ${region}`);
 
   if (open) {
-    await open(resource);
-  } else if (widget.openCommand) {
+    await runUserAction(workbench, widget.title, () => open(resource));
+    return;
+  }
+  if (widget.openCommand) {
     await runUserAction(workbench, widget.title, async () => {
       await workbench.commands.executeCommand(widget.openCommand!.commandId, widget.openCommand!.args, {
         source: "panel-add",

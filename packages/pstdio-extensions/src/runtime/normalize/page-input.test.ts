@@ -42,7 +42,7 @@ describe("page input validation", () => {
       mode: mode.ref,
       main: { kind: "panels", empty: pageView.ref },
       panelMenus: { left: undefined, right: { view: pageView.ref, size: { defaultPx: 200 }, collapsible: false } },
-      regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
+      regionSettings: { main: { showHeader: false }, bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
       slots: [{ id: "tools", region: "bottom", item: { kind: "view", view: pageView.ref, presence: "open" } }],
     });
     const runtime = normalizeExtensionSources([
@@ -55,6 +55,7 @@ describe("page input validation", () => {
       id: "page",
     });
     expect(runtime.pages[0]?.contribution.slots[0]?.region).toBe("bottom");
+    expect(runtime.pages[0]?.contribution.regionSettings?.main).toEqual({ showHeader: false });
   });
   test("reports a missing view in a page menu", () => {
     const page = definePage({

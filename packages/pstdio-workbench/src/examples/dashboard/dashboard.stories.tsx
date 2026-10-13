@@ -81,9 +81,11 @@ export const InteractionChecks: Story = {
     const side = within(canvasElement.querySelector('[data-workbench-panel="side"]') as HTMLElement);
     await expect(await secondary.findByRole("tab", { name: "Terminal 1" })).toBeVisible();
     await userEvent.click(secondary.getByRole("button", { name: "Add panel" }));
+    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Terminal" }));
     await expect(await secondary.findByRole("tab", { name: "Terminal 2" })).toBeVisible();
     await expect(secondary.getByRole("tab", { name: "Terminal 1" })).toBeVisible();
     await userEvent.click(side.getByRole("button", { name: "Add panel" }));
+    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Terminal" }));
     await expect(await side.findByRole("tab", { name: "Terminal 3" })).toBeVisible();
     await expect(canvas.getByRole("tab", { name: "Changes" })).toBeVisible();
     await userEvent.click(await nav.findByRole("option", { name: "Design system" }));

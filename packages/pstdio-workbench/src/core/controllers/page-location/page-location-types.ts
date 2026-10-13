@@ -6,7 +6,12 @@ import type {
   ResourceRef,
 } from "@pstdio/sdk/extensions";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
-import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
+import type {
+  WorkbenchPageOpenInput,
+  WorkbenchPageRegistry,
+  WorkbenchPageRegistryStoreState,
+  WorkbenchPageRuntimeState,
+} from "../../registries/pages/page-registry";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { NavigationLevelModes } from "./navigation-level";
 
@@ -62,6 +67,13 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   modes: NavigationLevelModes;
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
+  resolvePlacementLocation?(target: WorkbenchPageOpenInput): PageLocation | undefined;
+  resolveExistingEditor?(target: ResolvedPageLocation):
+    | {
+        state: WorkbenchPageRegistryStoreState<Value>;
+        activate(): void;
+      }
+    | undefined;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
 }
 
@@ -92,6 +104,8 @@ export interface WorkbenchPageLocationHistoryState {
 }
 
 export interface ResolvedPageLocation {
+  /** Original explicit navigation context, before declared parents are filled in. */
+  requested?: NavigationTargetPage;
   pageId: string;
   location: PageLocation;
   open?: NavigationTargetPage["open"];

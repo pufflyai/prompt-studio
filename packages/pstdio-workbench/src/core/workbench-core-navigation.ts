@@ -1,6 +1,4 @@
 import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
-import { openWorkbenchPanel } from "./controllers/navigation/panel-navigation";
-import { validatePanelNavigation } from "./controllers/navigation/panel-navigation-policy";
 import { getShellNavigationScope } from "./controllers/shell/shell-navigation-scope";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { createNavigationRegistry, type NavigationTargetPanel } from "./registries/navigation/navigation-registry";
@@ -33,10 +31,7 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
         prepareNavigation: (targets) => prepareWorkbenchNavigation(core, targets),
         canOpenPanel: (target) => canOpenCorePanel(core, target),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
-        openPanelTarget: (target) => {
-          validatePanelNavigation(core, target, core.pages.store.getState());
-          openWorkbenchPanel(core, target);
-        },
+        openPanelTarget: (target) => prepareWorkbenchNavigation(core, [target]).commit(),
         openPageTarget: (target) => {
           const result = core.pageLocations.navigate(target);
           if (!result.ok) throw new Error(result.diagnostic.message);
