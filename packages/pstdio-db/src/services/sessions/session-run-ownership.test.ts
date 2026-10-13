@@ -115,31 +115,3 @@ test("cancelling ordinary queued work retains an uncertain native delivery for r
     steering_delivery_json: { id: "delivery" },
   });
 });
-
-test("an automatic follow-up cannot resume or queue after the observed run is stopped", async () => {
-  const session = await sessions.create({ project_id: projectId, title: "Automatic continuation", agent: "test" });
-  const observed = await sessions.updateStatus(session.id, "completed");
-  const expectedRun = {
-    status: observed!.status,
-    startedAt: observed!.last_request_started,
-    endedAt: observed!.last_request_ended,
-  };
-  await sessions.updateStatus(session.id, "cancelled");
-  expect(
-    await sessions.updateStatus(session.id, "in_progress", {
-      expectedStatus: expectedRun.status,
-      expectedLastRequestStarted: expectedRun.startedAt,
-      expectedLastRequestEnded: expectedRun.endedAt,
-    }),
-  ).toBeNull();
-  expect(
-    await sessions.queueExistingWithEntry({
-      id: session.id,
-      prompt: "Automatic",
-      request_kind: "follow_up",
-      expectedRun,
-    }),
-  ).toEqual({ session: null, entry: null });
-  expect(await queue.listPendingBySession(session.id)).toHaveLength(0);
-  expect((await sessions.get(session.id))?.status).toBe("cancelled");
-});

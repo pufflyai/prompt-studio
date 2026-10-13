@@ -35,7 +35,6 @@ type CreateSessionOptions = {
 };
 
 type ResumeSessionOptions = {
-  expectedRun?: { status: SessionStatus; startedAt: string | null; endedAt: string | null };
   emitResumedHook?: boolean;
   /** Refuse the resume unless the session still holds this status. */
   expectedStatus?: SessionStatus;
@@ -125,7 +124,6 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     if (owner && owner !== entry) return null;
     const updated = await transitionStatus(id, "cancelled", {
       expectedLastRequestStarted: existing?.last_request_started ?? null,
-      exitCause: "user_stop",
     });
     if (updated) {
       entry?.eventStore.push({ op: "replace", path: "/status", value: "cancelled" });
@@ -266,14 +264,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
   };
 
   const resume = async (id: string, options: ResumeSessionOptions = {}) => {
-    let guards: Parameters<typeof raw.updateStatus>[2];
-    if (options.expectedRun)
-      guards = {
-        expectedStatus: options.expectedRun.status,
-        expectedLastRequestStarted: options.expectedRun.startedAt,
-        expectedLastRequestEnded: options.expectedRun.endedAt,
-      };
-    else if (options.expectedStatus) guards = { expectedStatus: options.expectedStatus };
+    const guards = options.expectedStatus ? { expectedStatus: options.expectedStatus } : undefined;
     const updated = await raw.updateStatus(id, "in_progress", guards);
     if (!updated) {
       logNoOpSet("resume", id);

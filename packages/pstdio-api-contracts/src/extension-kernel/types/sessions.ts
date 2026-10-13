@@ -9,27 +9,6 @@ import type {
 import type { SessionAttachmentRef, SessionStatus } from "../../sessions";
 import type { ResourceAnchor, ResourceRef } from "./resources";
 
-export type SessionExitCause =
-  | "completed"
-  | "user_stop"
-  | "request_aborted"
-  | "worker_lost"
-  | "host_shutdown"
-  | "timeout"
-  | "failed"
-  | "unknown";
-export interface SessionRunSnapshot {
-  status: string;
-  startedAt: string | null;
-  endedAt: string | null;
-}
-
-export interface SessionExit {
-  cause: SessionExitCause;
-  startedAt: string | null;
-  endedAt: string;
-}
-
 export interface ExtensionSessionUsage {
   input_tokens: number;
   output_tokens: number;
@@ -106,8 +85,6 @@ export interface ExtensionSessionsApi {
     id: string;
     title: string;
     status?: string;
-    /** Exact latest execution exit. Null for historical runs without evidence. */
-    last_exit?: SessionExit | null;
     original_session_id?: string | null;
     cwd?: string | null;
     updated_at?: string | null;
@@ -161,13 +138,7 @@ export interface ExtensionSessionsApi {
     originalSessionId?: string;
   }): Promise<ExtensionSessionResource>;
 
-  followup(input: {
-    sessionId: string;
-    prompt?: string;
-    attachments?: SessionAttachmentRef[];
-    /** Refuse automatic continuation if execution changed. */
-    expectedRun?: SessionRunSnapshot;
-  }): Promise<void>;
+  followup(input: { sessionId: string; prompt?: string; attachments?: SessionAttachmentRef[] }): Promise<void>;
 
   addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
   removeAnchors(sessionId: string, refs: ResourceRef[]): Promise<void>;

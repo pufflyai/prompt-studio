@@ -132,9 +132,6 @@ export type {
   ExtensionSessionSummary,
   ExtensionSessionsApi,
   ExtensionSessionUsage,
-  SessionExit,
-  SessionExitCause,
-  SessionRunSnapshot,
 } from "./sessions";
 
 export interface ExtensionEventsApi {

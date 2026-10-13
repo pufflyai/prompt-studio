@@ -1,7 +1,6 @@
 import type { ExtensionProjectContext } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
-import { readSessionExit } from "../../../services/session-exit";
 import { emitActivityEvent } from "../../activity/activity-events";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
 import { resolveHarnessRunParams } from "../../sessions/harness-params";
@@ -85,10 +84,7 @@ export const createSessionsApi = (
         const session = await getProjectSession(id);
         if (!session) return null;
         const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
-        return {
-          ...toExtensionSession(session, workspace?.project_id === input.projectId ? workspace.id : null),
-          last_exit: await readSessionExit(deps.activityEventsService, { ...session, project_id: input.projectId }),
-        };
+        return toExtensionSession(session, workspace?.project_id === input.projectId ? workspace.id : null);
       }),
     query: async (query = {}) => {
       const workspace = query.workspaceId ? await requireProjectWorkspace(query.workspaceId) : null;
@@ -184,18 +180,10 @@ export const createSessionsApi = (
     followup: async (followupInput) => {
       input.signal?.throwIfAborted();
       const session = await read(() => requireProjectSession(followupInput.sessionId));
-      if (
-        followupInput.expectedRun &&
-        (session.status !== followupInput.expectedRun.status ||
-          session.last_request_started !== followupInput.expectedRun.startedAt ||
-          session.last_request_ended !== followupInput.expectedRun.endedAt)
-      )
-        throw new Error("Session execution changed before continuation.");
       const prompt = resolveExtensionPrompt(followupInput);
       const attachments = await resolveSessionAttachments(deps, input.projectId, followupInput.attachments);
       await createSessionScheduler(deps).startOrQueueExisting({
         session,
-        ...(followupInput.expectedRun ? { expectedRun: { ...followupInput.expectedRun, status: session.status } } : {}),
         prompt,
         cwd: session.cwd ?? undefined,
         respectCapacity: true,

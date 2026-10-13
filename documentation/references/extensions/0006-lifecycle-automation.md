@@ -35,11 +35,3 @@ Never put credentials or connection secrets in logs.
 ## Examples
 
 The [automation cookbook](../../guides/extensions/0003-automation.md) has complete middleware and hook examples. The [command API](0003-command-and-process-api.md) describes contexts and outcomes.
-
-## Execution exit evidence
-
-`ctx.sessions.get(id)` exposes optional `last_exit` evidence for the latest stopped execution. It includes `cause`, `startedAt`, and `endedAt`. Core writes this evidence with terminal status in the existing activity history. A resumed execution cannot inherit an earlier run's exit.
-
-Causes include successful completion, explicit user stop, request abort, worker loss, timeout, failure, and unknown historical intent. A missing value is unknown evidence, not permission to restart a cancellation. Extensions own their recovery policy; core owns execution and stop intent.
-
-Automatic continuation can supply `expectedRun` to `ctx.sessions.followup`. Pass the observed `status`, `startedAt`, and `endedAt`. The host compares them when it reserves execution or inserts queued work. A changed execution, including a user stop, rejects the continuation. Explicit follow-ups may omit this guard.

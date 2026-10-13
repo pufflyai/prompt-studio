@@ -144,17 +144,6 @@ const startScheduledSession = async (
   }
 };
 
-const assertObservedRun = (input: StartExistingInput, fresh: ExistingSession) => {
-  const expected = input.expectedRun;
-  if (
-    expected &&
-    (fresh.status !== expected.status ||
-      fresh.last_request_started !== expected.startedAt ||
-      fresh.last_request_ended !== expected.endedAt)
-  )
-    throw new Error("Session execution changed before continuation.");
-};
-
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   const drainQueue = createSessionQueueDrain(deps);
 
@@ -249,7 +238,6 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     // Re-read session status inside the lock so we don't race a terminal transition that landed
     // between endpoint entry and lock acquisition.
     const fresh = (await deps.sessionService.get(input.session.id)) ?? input.session;
-    assertObservedRun(input, fresh);
     const context = resolveDispatchContext(input, fresh);
     const status = fresh.status;
 

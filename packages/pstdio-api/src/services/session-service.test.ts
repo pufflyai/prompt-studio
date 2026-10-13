@@ -177,10 +177,7 @@ describe("SessionService", () => {
       const result = await service.cancel("s1");
 
       expect(stop).toHaveBeenCalledTimes(1);
-      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled", {
-        expectedLastRequestStarted: null,
-        exitCause: "user_stop",
-      });
+      expect(mocks.updateStatus).toHaveBeenCalledWith("s1", "cancelled", { expectedLastRequestStarted: null });
       expect(result).toMatchObject({ id: "s1", status: "cancelled" });
     });
   });
