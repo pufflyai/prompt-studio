@@ -32,6 +32,7 @@ import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
 import { ticketStatuses } from "./ticket-status-provider";
 import { planChanged } from "./timeline/contracts";
+import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
 
 export { ticketResourceKind } from "./resource-kinds";
 
@@ -86,9 +87,10 @@ export const createPlannerUi = (baseUrl: string) => {
     id: "workflow-settings",
     title: "Planner workflow",
     body: {
-      kind: "webview",
-      entry: packageAsset("./src/views/workflow-settings-panel.tsx", baseUrl),
-      capabilities: ["commands.execute"],
+      kind: "controls",
+      query: queryWorkflowSettings,
+      onApply: (ctx, input) => saveWorkflowSettings(ctx, input.values),
+      refreshEvents: [plannerTicketsChanged],
     },
   });
   const requests = defineView({

@@ -402,9 +402,9 @@ test(
         metadata,
       });
       expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
-      expect(
-        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings-panel.tsx")),
-      ).toBe(true);
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings.ts"))).toBe(
+        true,
+      );
       const packagedImplementationSkill = Bun.file(
         join(tempRoot, "extensions", "pstdio-planner", "skills", "implement-ticket", "SKILL.md"),
       );

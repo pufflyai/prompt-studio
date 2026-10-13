@@ -16,19 +16,6 @@ export function useAutoBuild(client: PlanClient) {
   const { value: mode, setValue: setMode, error: readError } = useLiveValue(client, readMode, modeEvents);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
-  const refresh = async () => {
-    setSaving(true);
-    setError(undefined);
-    try {
-      setMode(await readMode(client));
-      return true;
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
   const configure = async (
     enabled: boolean,
     prompt?: string,
@@ -39,14 +26,16 @@ export function useAutoBuild(client: PlanClient) {
     setSaving(true);
     setError(undefined);
     try {
-      await client.commands["auto-build.configure"]({
+      const saved = await client.commands["auto-build.configure"]({
         enabled,
         prompt,
         ignore,
         requireMergedDependencies,
         eligible,
       });
-      setMode(await readMode(client));
+      // The saved configuration is authoritative. Live reads own session details
+      // and their errors must not make a successful Start or Stop retryable.
+      setMode((current) => (current ? { ...current, ...saved } : current));
       return true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -55,5 +44,5 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  return { mode, saving, error: error ?? readError ?? mode?.error, configure, refresh };
+  return { mode, saving, error: error ?? readError ?? mode?.error, configure };
 }

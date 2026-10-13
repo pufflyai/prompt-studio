@@ -11,7 +11,6 @@ import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useState } from "react";
 import { stepReview } from "../model/review";
 import { AutoBuildButton } from "./auto-build-button";
-import { AutoBuildDialog } from "./auto-build-dialog";
 import { BackgroundMenu } from "./background-menu";
 import { Details } from "./details";
 import { PlanEditor } from "./plan-editor";
@@ -54,7 +53,6 @@ function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource, error } = props;
   const [search, setSearch] = useState("");
   const autoBuild = useAutoBuild(client);
-  const [autoBuildOpen, setAutoBuildOpen] = useState(false);
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
@@ -90,7 +88,7 @@ function PlanContent(props: PlanContentProps) {
             running={autoBuild.mode?.capacity.running ?? 0}
             capacity={autoBuild.mode?.capacity.limit ?? 0}
             stuck={autoBuild.mode?.stuck}
-            error={autoBuild.mode?.error}
+            error={autoBuild.error}
             onOpenSession={(session) =>
               void host.call("navigation.open", {
                 target: {
@@ -102,17 +100,27 @@ function PlanContent(props: PlanContentProps) {
               })
             }
             disabled={!autoBuild.mode || autoBuild.saving}
-            onConfigure={() => {
-              void autoBuild.refresh().then((success) => {
-                if (success) setAutoBuildOpen(true);
-              });
-            }}
+            configuration={
+              autoBuild.mode
+                ? {
+                    prompt: autoBuild.mode.prompt,
+                    ignore: autoBuild.mode.ignore,
+                    requireMergedDependencies: autoBuild.mode.requireMergedDependencies,
+                    eligible: autoBuild.mode.eligible,
+                    data: queryData,
+                    saving: autoBuild.saving,
+                    error: autoBuild.error,
+                    onEnable: (prompt, ignore, requireMergedDependencies, eligible) =>
+                      autoBuild.configure(true, prompt, ignore, requireMergedDependencies, eligible),
+                  }
+                : undefined
+            }
             onTurnOff={() => autoBuild.configure(false)}
             t={t}
           />
         }
       />
-      {[error, actionError, autoBuildOpen ? undefined : autoBuild.error].filter(Boolean).map((message) => (
+      {[error, actionError, autoBuild.mode ? undefined : autoBuild.error].filter(Boolean).map((message) => (
         <Text key={message} role="alert" color="fg.error" px="md" pt="sm" flexShrink="0">
           {message}
         </Text>
@@ -151,22 +159,6 @@ function PlanContent(props: PlanContentProps) {
           client={client}
           plan={plan}
           onDone={done}
-        />
-      ) : null}
-      {autoBuildOpen ? (
-        <AutoBuildDialog
-          prompt={autoBuild.mode!.prompt}
-          ignore={autoBuild.mode!.ignore}
-          requireMergedDependencies={autoBuild.mode!.requireMergedDependencies}
-          eligible={autoBuild.mode!.eligible}
-          data={queryData}
-          saving={autoBuild.saving}
-          error={autoBuild.error}
-          onEnable={(prompt, ignore, requireMergedDependencies, eligible) =>
-            autoBuild.configure(true, prompt, ignore, requireMergedDependencies, eligible)
-          }
-          onClose={() => setAutoBuildOpen(false)}
-          t={t}
         />
       ) : null}
       {context ? (
