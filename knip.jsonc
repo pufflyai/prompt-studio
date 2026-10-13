@@ -79,8 +79,14 @@
       "entry": ["package.json", "src/index.ts", "src/server.ts", "src/**/*.test.ts", "src/**/*.fixture.ts"],
       "project": ["src/**/*.ts"],
       "ignore": ["dist/**"],
-      // Tests install these core extensions from source. Declared so CI treats their changes as API changes.
-      "ignoreDependencies": ["extension-lab", "pstdio-planner", "pstdio-skills"]
+      // Tests install these extensions and fixtures from source. Declared so CI treats their changes as API changes.
+      "ignoreDependencies": [
+        "extension-lab",
+        "pstdio-base-themes",
+        "pstdio-planner",
+        "pstdio-skills",
+        "workbench-fixture"
+      ]
     },
     "packages/pstdio-db": {
       "entry": ["drizzle.config.ts", "scripts/**/*.ts", "src/index.ts", "src/**/*.test.ts"],
@@ -108,7 +114,9 @@
         "src/lib/fixtures/**/extension.ts"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**"]
+      "ignore": ["dist/**"],
+      // Tests load these extensions from source. Declared so CI treats their changes as testbench changes.
+      "ignoreDependencies": ["pstdio-base-themes", "pstdio-planner"]
     },
     "packages/pstdio-extensions": {
       "entry": [
@@ -120,7 +128,9 @@
         "src/**/*.fixture.ts"
       ],
       "project": ["scripts/**/*.ts", "src/**/*.{ts,tsx}"],
-      "ignore": ["dist/**"]
+      "ignore": ["dist/**"],
+      // Tests load the documented examples from source. Declared so CI treats their changes as extension runtime changes.
+      "ignoreDependencies": ["extension-lab"]
     },
     "packages/sdk": {
       "entry": [
