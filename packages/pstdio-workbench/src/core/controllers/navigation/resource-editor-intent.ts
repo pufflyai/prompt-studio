@@ -51,6 +51,23 @@ export const applyResourceEditorSourceTarget = (
   else updateSavedResourceEditor(core, previous, ownerScope, intent);
 };
 
+const updateLiveResourceEditor = (core: WorkbenchCore, tab: WorkbenchWidgetPlacement, intent: ResourceEditorIntent) => {
+  const identity = tab.placementIdentity;
+  const resourceChanged = intent.resource && intent.resource !== tab.resource;
+  const titleChanged = intent.title !== undefined && intent.title !== tab.title;
+  if (resourceChanged || titleChanged) {
+    if (tab.declarationIdentity || (identity?.kind === "page" && identity.slotId === "$main"))
+      core.layout.updateWidgetPlacement(tab.widgetId, { resource: intent.resource, title: intent.title });
+    else if (identity?.kind === "page" && identity.slotId !== "$main") {
+      core.pages.openSlot({ pageId: identity.pageId, slotId: identity.slotId, resource: intent.resource });
+      if (titleChanged) core.layout.updateWidgetPlacement(tab.widgetId, { title: intent.title });
+    } else if (identity?.kind === "mode")
+      core.modePlacements.updatePlacement(identity, { resource: intent.resource, title: intent.title });
+    else if (identity?.kind === "shell")
+      core.shellPlacements.updatePlacement(identity, { resource: intent.resource, title: intent.title });
+  }
+};
+
 export const applyResourceEditorIntent = (
   core: WorkbenchCore,
   previous: WorkbenchWidgetPlacement,
@@ -69,18 +86,7 @@ export const applyResourceEditorIntent = (
     return;
   }
   const identity = tab.placementIdentity;
-  const resourceChanged = intent.resource && intent.resource !== tab.resource;
-  const titleChanged = intent.title !== undefined && intent.title !== tab.title;
-  if (resourceChanged || titleChanged) {
-    if (tab.declarationIdentity)
-      core.layout.updateWidgetPlacement(tab.widgetId, { resource: intent.resource, title: intent.title });
-    else if (identity?.kind === "page" && identity.slotId !== "$main")
-      core.pages.openSlot({ pageId: identity.pageId, slotId: identity.slotId, resource: intent.resource });
-    else if (identity?.kind === "mode")
-      core.modePlacements.updatePlacement(identity, { resource: intent.resource, title: intent.title });
-    else if (identity?.kind === "shell")
-      core.shellPlacements.updatePlacement(identity, { resource: intent.resource, title: intent.title });
-  }
-  applyEditorSourceTarget(core, tab.widgetId, intent);
   if (intent.open === "pin" && identity) core.pinPlacement(identity);
+  updateLiveResourceEditor(core, tab, intent);
+  applyEditorSourceTarget(core, tab.widgetId, intent);
 };

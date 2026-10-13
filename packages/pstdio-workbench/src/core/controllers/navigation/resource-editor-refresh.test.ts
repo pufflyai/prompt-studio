@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
-import { harness, navigate, openFile, panel, resource } from "../composition/placement-lifecycle-test-support";
+import { harness, navigate, openFile, page, panel, resource } from "../composition/placement-lifecycle-test-support";
 
 test("a low-level reopen refreshes the title when resource normalization preserves its reference", async () => {
   const w = harness(undefined, { pageResources: { ...defaultPageResourceCodec, normalize: (resource) => resource } });
@@ -98,3 +98,63 @@ test("a compound reopen refreshes a transferred editor even when its owner becom
   await w.navigation.openTarget(navigate("alpha"));
   expect(w.layout.getLayout().regions.side.widgets.find((p) => p.widgetId === tabId)?.resource?.label).toBe("New name");
 });
+
+for (const policy of [undefined, "per-resource"] as const) {
+  for (const initialOpen of ["pin", "preview"] as const) {
+    test(`a persistent Main reopen preserves its instance and requested title from ${initialOpen} with policy ${policy ?? "omitted"}`, async () => {
+      const w = harness();
+      w.views.getView("editor")!.instancePolicy = policy;
+      w.pages.registerPage({
+        id: "documents",
+        ref: page("documents"),
+        path: "documents",
+        modeId: "edit",
+        parentId: "workspace",
+        resource: { kinds: [{ kind: "resource-kind", id: "file" }] },
+        main: { kind: "view", view: { kind: "view", id: "editor" }, cardinality: "many" },
+        slots: [],
+      });
+      await w.navigation.openTarget({
+        kind: "page",
+        page: page("documents"),
+        parent: navigate("alpha"),
+        resource: { ...resource("a"), label: "Old name" },
+        open: initialOpen,
+      });
+      const tab = w.layout.getActivePanel()!;
+      const updatedResource = { ...resource("a"), label: "New name", metadata: { path: "new.ts" } };
+      const reopened = w.layout.openPanel(tab.panelId, {
+        resource: updatedResource,
+        title: "New title",
+        strategy: { kind: "persistent" },
+      });
+      expect(reopened.instanceId).toBe(tab.instanceId);
+      expect(reopened.resource).toEqual(updatedResource);
+      expect(reopened.title).toBe("New title");
+      expect(w.layout.getActivePanel()?.title).toBe("New title");
+      if (policy === "per-resource") expect(w.pages.store.getState().location?.resource).toEqual(updatedResource);
+    });
+  }
+}
+
+for (const policy of [undefined, "per-resource"] as const) {
+  for (const initialOpen of ["preview", "pin"] as const) {
+    test(`a persistent page slot reopen keeps its explicit title from ${initialOpen} with policy ${policy ?? "omitted"}`, async () => {
+      const w = harness();
+      w.views.getView("editor")!.instancePolicy = policy;
+      await w.navigation.openTarget(navigate("alpha"));
+      await w.navigation.openTarget({ ...openFile("a"), open: initialOpen });
+      const tab = w.layout.getActivePanel()!;
+      const updatedResource = { ...tab.resource!, label: "New name" };
+      const reopened = w.layout.openPanel(tab.panelId, {
+        resource: updatedResource,
+        title: "New title",
+        strategy: { kind: "persistent" },
+      });
+      expect(reopened.instanceId).toBe(tab.instanceId);
+      expect(reopened.resource).toEqual(updatedResource);
+      expect(reopened.title).toBe("New title");
+      expect(w.layout.getActivePanel()?.title).toBe("New title");
+    });
+  }
+}
