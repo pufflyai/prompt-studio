@@ -21,7 +21,12 @@ import { openOwnerLayouts } from "../page-runtime/open-owner-layouts";
 import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
 import { pageOwnerScope } from "../page-runtime/prepared-owner-states";
 import { findPreparedResourceEditor, hasPreparedEditorOwner } from "./prepared-resource-editor";
-import { applyResourceEditorIntent, type ResourceEditorIntent, resourceEditorIntent } from "./resource-editor-intent";
+import {
+  applyResourceEditorIntent,
+  applyResourceEditorSourceTarget,
+  type ResourceEditorIntent,
+  resourceEditorIntent,
+} from "./resource-editor-intent";
 import { resourceEditorOwnerTarget } from "./resource-editor-owner-target";
 import { resourceEditorTarget } from "./resource-editor-target";
 
@@ -63,11 +68,11 @@ const liveEditorPlacement = (core: WorkbenchCore, editor: OpenResourceEditor) =>
     .flatMap((region) => region.widgets)
     .find(
       (tab) =>
-        tab.widgetId === editor.tab.widgetId ||
-        (tab.placementIdentity &&
-          editor.tab.placementIdentity &&
-          placementIdentityKey(tab.placementIdentity) === placementIdentityKey(editor.tab.placementIdentity) &&
-          resourceKey(tab.resource) === resourceKey(editor.tab.resource)),
+        resourceKey(tab.resource) === resourceKey(editor.tab.resource) &&
+        (tab.widgetId === editor.tab.widgetId ||
+          (tab.placementIdentity &&
+            editor.tab.placementIdentity &&
+            placementIdentityKey(tab.placementIdentity) === placementIdentityKey(editor.tab.placementIdentity))),
     );
 
 export const prepareEditorActivation = (
@@ -119,7 +124,12 @@ export const prepareEditorActivation = (
     resource,
     intent,
     applyIntent: () =>
-      applyResourceEditorIntent(core, editor.tab, liveEditorPlacement(core, editor), { ...intent, resource }),
+      applyResourceEditorIntent(core, editor.tab, editor.scope, liveEditorPlacement(core, editor), {
+        ...intent,
+        resource,
+      }),
+    applySourceTarget: () =>
+      applyResourceEditorSourceTarget(core, editor.tab, editor.scope, liveEditorPlacement(core, editor), intent),
     isInOwner(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) {
       const owner = editor.tab.placementIdentity;
       if (owner?.kind === "mode") return owner.modeId === state.activeModeId;
@@ -140,7 +150,7 @@ export const prepareEditorActivation = (
     activate() {
       const tab = liveEditorPlacement(core, editor);
       if (!tab) throw new Error(`Editor is no longer open: ${editor.tab.widgetId}`);
-      applyResourceEditorIntent(core, editor.tab, tab, { ...intent, resource });
+      applyResourceEditorIntent(core, editor.tab, editor.scope, tab, { ...intent, resource });
       revealPanelRegion(core, editor.region);
       core.layout.activatePanel(tab.widgetId);
       core.focus.setActiveRegion(

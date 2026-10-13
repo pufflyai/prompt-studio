@@ -203,7 +203,10 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     existing: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>,
     target: NavigationOperation,
   ) => {
-    if (existing.tab.declarationIdentity) updates.push(existing);
+    const identity = existing.tab.placementIdentity;
+    // Main source addresses already belong to the prepared page stages.
+    if (existing.tab.declarationIdentity || identity?.kind !== "page" || identity.slotId !== "$main")
+      updates.push(existing);
     const retained = prepareEditorOpen(
       core,
       existing.tab,
@@ -277,7 +280,10 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           if (shellState !== originalShell) shell.notifySubscribers();
         },
         activateTargets: () => {
-          for (const editor of updates) editor.applyIntent();
+          for (const editor of updates) {
+            if (editor.tab.declarationIdentity) editor.applyIntent();
+            else editor.applySourceTarget();
+          }
           for (const activation of activations.values()) {
             if ("editor" in activation) {
               if (activation.editor.isInOwner(final)) activation.editor.activate();

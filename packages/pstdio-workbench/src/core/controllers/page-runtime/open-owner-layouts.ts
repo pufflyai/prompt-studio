@@ -10,22 +10,21 @@ import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 type LayoutCache = ReturnType<typeof createWorkbenchLayoutCache>;
 const caches = new WeakMap<WorkbenchCore, LayoutCache>();
 
-export const updateSavedTransferredEditor = (
+export const updateSavedResourceEditor = (
   core: WorkbenchCore,
   tab: WorkbenchWidgetPlacement,
+  ownerScope: string | undefined,
   changes: OpenWidgetInput & Pick<WorkbenchWidgetPlacement, "section" | "position">,
 ) => {
-  if (!tab.declarationIdentity) return;
-  caches.get(core)?.updateTransferredPlacement(tab.declarationIdentity, (placement) =>
-    placement.widgetId === tab.widgetId
-      ? {
-          ...buildUpdatedPlacement(placement, core.layout.getWidget(placement.contributionId)!, changes),
-          ...(changes.section !== undefined || changes.position !== undefined
-            ? { section: changes.section, position: changes.position }
-            : {}),
-        }
-      : placement,
-  );
+  const projectId = core.pages.store.getState().projectId;
+  const identity = tab.placementIdentity;
+  const scope = identity?.kind === "mode" ? modeLayoutScope(projectId, identity.modeId) : ownerScope;
+  caches.get(core)?.updateEditorPlacement(projectId, scope, tab, (placement) => ({
+    ...buildUpdatedPlacement(placement, core.layout.getWidget(placement.contributionId)!, changes),
+    ...(changes.section !== undefined || changes.position !== undefined
+      ? { section: changes.section, position: changes.position }
+      : {}),
+  }));
 };
 
 export const saveOpenOwnerLayouts = (core: WorkbenchCore) => {

@@ -7,7 +7,7 @@ import type {
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "../../workbench-core-types";
-import { updateSavedTransferredEditor } from "../page-runtime/open-owner-layouts";
+import { updateSavedResourceEditor } from "../page-runtime/open-owner-layouts";
 
 export interface ResourceEditorIntent {
   resource?: ResourceRef;
@@ -39,14 +39,27 @@ const applyEditorSourceTarget = (core: WorkbenchCore, widgetId: string, intent: 
   core.layout.restoreLayout({ ...layout, regions });
 };
 
+export const applyResourceEditorSourceTarget = (
+  core: WorkbenchCore,
+  previous: WorkbenchWidgetPlacement,
+  ownerScope: string | undefined,
+  tab: WorkbenchWidgetPlacement | undefined,
+  intent: Pick<ResourceEditorIntent, "section" | "position">,
+) => {
+  if (intent.section === undefined && intent.position === undefined) return;
+  if (tab) applyEditorSourceTarget(core, tab.widgetId, intent);
+  else updateSavedResourceEditor(core, previous, ownerScope, intent);
+};
+
 export const applyResourceEditorIntent = (
   core: WorkbenchCore,
   previous: WorkbenchWidgetPlacement,
+  ownerScope: string | undefined,
   tab: WorkbenchWidgetPlacement | undefined,
   intent: ResourceEditorIntent,
 ) => {
   if (!tab) {
-    updateSavedTransferredEditor(core, previous, {
+    updateSavedResourceEditor(core, previous, ownerScope, {
       resource: intent.resource,
       title: intent.title,
       section: intent.section,
