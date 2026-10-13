@@ -19,6 +19,7 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Streaming chunks retain earlier DOM and settle without running animations.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
+import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
@@ -59,6 +60,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
@@ -80,7 +82,9 @@ beforeAll(() => {
   }
 }, BUILD_TIMEOUT);
 
+registerSharedCodexSmokeTests();
 registerExtensionInstallSmokeTests();
+registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
 registerConnectionStatusSmokeTests();
 

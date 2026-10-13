@@ -1,8 +1,8 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { setTimeout as sleep } from "node:timers/promises";
 import type { Page } from "@playwright/test";
+import { waitForProcessReady } from "../scripts/process-readiness";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 export type RuntimeDescriptor = {
@@ -36,44 +36,26 @@ export const signInBrowser = async (page: Page, descriptor: RuntimeDescriptor) =
   if (!runtime.ok()) throw new Error(`Browser authentication failed with HTTP ${runtime.status()}`);
 };
 
-const waitForReady = async (descriptorPath: string, child: ChildProcess, timeoutMs = 10_000) => {
-  const deadline = Date.now() + timeoutMs;
-
-  while (Date.now() < deadline) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1_000);
-
-    try {
-      if (!existsSync(descriptorPath)) throw new Error("descriptor not published");
-      const descriptor = JSON.parse(readFileSync(descriptorPath, "utf8")) as RuntimeDescriptor;
-      const res = await fetch(`${descriptor.origin}/runtime/ready`, {
-        headers: { authorization: `Bearer ${descriptor.token}` },
-        signal: controller.signal,
-      });
-      const ready = res.ok ? ((await res.json()) as { instanceId: string; protocolVersion: number }) : null;
-      if (
-        descriptor.pid === child.pid &&
-        descriptor.ownerType === "persistent" &&
-        descriptor.origin.startsWith("http://127.0.0.1:") &&
-        ready?.instanceId === descriptor.instanceId &&
-        ready.protocolVersion === descriptor.protocolVersion
-      ) {
-        return descriptor;
-      }
-    } catch {
-      // The server is not ready yet.
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    await sleep(200);
-  }
-
-  throw new Error(`Packaged runtime did not become ready within ${timeoutMs}ms`);
-};
+export const waitForPackagedReady = async (descriptorPath: string, child: ChildProcess) =>
+  waitForProcessReady(child, "Packaged runtime", async (signal) => {
+    if (!existsSync(descriptorPath)) return;
+    const descriptor = JSON.parse(readFileSync(descriptorPath, "utf8")) as RuntimeDescriptor;
+    const res = await fetch(`${descriptor.origin}/runtime/ready`, {
+      headers: runtimeAuthorization(descriptor),
+      signal,
+    });
+    const ready = res.ok ? ((await res.json()) as { instanceId: string; protocolVersion: number }) : null;
+    if (
+      descriptor.pid === child.pid &&
+      descriptor.ownerType === "persistent" &&
+      descriptor.origin.startsWith("http://127.0.0.1:") &&
+      ready?.instanceId === descriptor.instanceId &&
+      ready.protocolVersion === descriptor.protocolVersion
+    )
+      return descriptor;
+  });
 
 export const startPackagedServe = async (tempRoot: string, env: Record<string, string> = {}) => {
-  const startedAt = performance.now();
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
     PSTDIO_EXTENSION_SOURCE_ROOT: _sourceRoot,
@@ -98,24 +80,17 @@ export const startPackagedServe = async (tempRoot: string, env: Record<string, s
       stdio: "pipe",
     },
   );
-  let output = "";
-  const captureOutput = (chunk: Buffer | string) => {
-    output = `${output}[${Math.round(performance.now() - startedAt)}ms] ${chunk.toString()}`.slice(-32_000);
-  };
-  child.stdout?.on("data", captureOutput);
-  child.stderr?.on("data", captureOutput);
-
   try {
-    const descriptor = await waitForReady(descriptorPath, child);
+    const descriptor = await waitForPackagedReady(descriptorPath, child);
     return { child, baseUrl: descriptor.origin, descriptor };
   } catch (error) {
     await stopProcess(child);
-    throw new Error(`${error instanceof Error ? error.message : String(error)}\n${output}`.trim());
+    throw error;
   }
 };
 
 export const stopProcess = async (child: ChildProcess) => {
-  if (child.exitCode === null && child.signalCode === null) {
+  if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) {
     child.kill();
     await new Promise((resolve) => child.once("exit", resolve));
   }

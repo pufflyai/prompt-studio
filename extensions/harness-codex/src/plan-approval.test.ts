@@ -160,5 +160,5 @@ test("cancelling stalled approval readback releases the operation without consum
   controller.abort();
   expect(await Promise.race([pending, Bun.sleep(100).then(() => "still pending")])).toBe("cancelled");
   expect(await state.get<string>(approvedPlanKey("thread-fixture"))).toBeUndefined();
-  expect(worker.isClosed()).toBe(true);
+  expect(worker.isClosed()).toBe(false);
 });

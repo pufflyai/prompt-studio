@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { stopChildProcess } from "../scripts/child-process";
-import { SETUP_TIMEOUT } from "./timeouts";
+import { waitForProcessReady } from "../scripts/process-readiness";
 
 export const getFreePort = () =>
   new Promise<number>((resolve, reject) => {
@@ -23,22 +23,12 @@ export const getFreePort = () =>
     });
   });
 
-export const waitForReady = async (url: string, timeoutMs = SETUP_TIMEOUT) => {
-  const deadline = performance.now() + timeoutMs;
-  while (performance.now() < deadline) {
-    try {
-      const res = await fetch(`${url}/healthz`, {
-        signal: AbortSignal.timeout(Math.max(1, Math.ceil(deadline - performance.now()))),
-      });
-      await res.body?.cancel();
-      if (res.ok) return;
-    } catch {
-      // not ready yet
-    }
-    await Bun.sleep(Math.max(0, Math.min(200, deadline - performance.now())));
-  }
-  throw new Error(`API did not become ready within ${timeoutMs}ms`);
-};
+export const waitForReady = async (url: string, child: ChildProcess) =>
+  waitForProcessReady(child, "API", async (signal) => {
+    const response = await fetch(`${url}/healthz`, { signal });
+    await response.body?.cancel();
+    if (response.ok) return true;
+  });
 
 export type ApiInstance = {
   url: string;
@@ -77,23 +67,19 @@ export const startApi = async (options: StartApiOptions = {}) => {
       HOME: homePath,
       ...options.env,
     },
-    stdio: ["ignore", "ignore", "pipe"],
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
-  let stderr = "";
-  child.stderr?.on("data", (chunk: Buffer) => {
-    stderr = (stderr + chunk.toString()).slice(-16_384);
-  });
   const stop = async () => {
     await stopChildProcess(child);
     rmSync(homePath, { recursive: true, force: true });
   };
   const url = `http://127.0.0.1:${port}`;
   try {
-    await waitForReady(url);
+    await waitForReady(url, child);
   } catch (error) {
     await stop();
-    throw new Error(`${error instanceof Error ? error.message : String(error)}\n${stderr}`.trim());
+    throw error;
   }
 
   return {

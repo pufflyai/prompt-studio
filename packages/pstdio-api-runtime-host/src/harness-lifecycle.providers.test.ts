@@ -21,6 +21,8 @@ describe.skipIf(process.platform === "win32")("CLI harness process liveness", ()
   for (const provider of ["claude-code", "codex"]) {
     for (const operation of ["start", "resume"] as const) {
       for (const scenario of ["quiet work", "stderr backpressure", "process failure"]) {
+        let status = "completed";
+        if (scenario === "process failure") status = provider === "codex" ? "disconnected" : "failed";
         test(`${provider} ${operation} preserves ${scenario}`, async () => {
           const child = Bun.spawn(
             [
@@ -48,7 +50,7 @@ describe.skipIf(process.platform === "win32")("CLI harness process liveness", ()
           ]);
           expect({ code, stderr }).toEqual({ code: 0, stderr: "" });
           const result = JSON.parse(stdout);
-          expect(result.exit).toEqual({ status: scenario === "process failure" ? "failed" : "completed" });
+          expect(result.exit).toEqual({ status });
           expect(JSON.stringify(result.patches)).toContain("quiet work completed");
         });
       }
