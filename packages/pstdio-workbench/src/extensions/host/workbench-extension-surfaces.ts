@@ -65,11 +65,10 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
         body: {
           kind: "react",
           render: (renderInput) => {
-            const slotKind = input.metadata.settingsPanels.some(
+            const settingsPanel = input.metadata.settingsPanels.find(
               (settingsPanel) => settingsPanel.id === renderInput.instance.panelId && settingsPanel.viewId === panel.id,
-            )
-              ? "settings"
-              : "panel";
+            );
+            const slotKind = settingsPanel ? "settings" : "panel";
             return (
               input.renderWebview?.(renderInput) ??
               renderBridgeWebviewFrame({
@@ -86,6 +85,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
                 ownerId: panel.extensionId,
                 title: text(panel.title, panel.id),
                 webview,
+                layout: settingsPanel?.slotId === "extension.settings" ? "content" : "fill",
               })
             );
           },

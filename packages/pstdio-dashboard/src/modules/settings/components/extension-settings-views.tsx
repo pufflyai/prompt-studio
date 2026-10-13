@@ -13,7 +13,7 @@ export function ExtensionSettingsViews(props: ExtensionSettingsViewsProps) {
   return (
     <Stack gap="lg">
       {panels.map((panel) => (
-        <Box key={panel.id} h="96" minH="0" display="flex">
+        <Box key={panel.id} minH="0" display="flex">
           <WorkbenchWidgetHost
             workbench={input.workbench}
             placement={{

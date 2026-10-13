@@ -1,6 +1,7 @@
 import { guest } from "rimless";
 import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
+import { observeContentHeight } from "./content-height";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
 import { createViewLifecycle } from "./view-lifecycle";
 
@@ -116,13 +117,22 @@ const start = async () => {
     return await view.mount(ensureMount(), host, propsStore);
   });
   let keyboardForwarderInstalled = false;
+  let stopContentResize: (() => void) | undefined;
 
   const connection = await guest.connect({
     init: async (message: InitMessage) => {
       try {
+        document.documentElement.dataset.pstdioLayout = message.layout ?? "fill";
         applyTheme(message.theme, message.themeVariables);
         propsStore.set(message.props);
+        const mount = ensureMount();
+        mount.style.height = message.layout === "content" ? "auto" : "100%";
         await viewLifecycle.initialize(message);
+        stopContentResize?.();
+        stopContentResize =
+          message.layout === "content"
+            ? observeContentHeight(mount, (height) => connection.remote.contentResize?.({ height }))
+            : undefined;
 
         if (!keyboardForwarderInstalled) {
           keyboardForwarderInstalled = true;
@@ -170,6 +180,7 @@ const start = async () => {
   connection.remote.ready({});
 
   window.addEventListener("beforeunload", () => {
+    stopContentResize?.();
     viewLifecycle.dispose();
   });
 };

@@ -26,6 +26,17 @@ const renderRuntimeHostDocument = (scriptTag: string) => `<!doctype html>
         display: block;
         min-height: 0;
       }
+      html[data-pstdio-layout="content"],
+      html[data-pstdio-layout="content"] body,
+      html[data-pstdio-layout="content"] #${MOUNT_ID} {
+        height: auto;
+      }
+      html[data-pstdio-layout="content"] body {
+        overflow-y: hidden !important;
+      }
+      html[data-pstdio-layout="content"] #${MOUNT_ID} {
+        display: flow-root;
+      }
     </style>
   </head>
   <body>
