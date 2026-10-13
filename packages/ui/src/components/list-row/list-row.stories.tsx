@@ -309,11 +309,10 @@ export const Interactions: Story = {
         />
       </Stack>
       <Stack gap="2xs">
-        <SectionLabel>Resource actions (right-click) with a tooltip</SectionLabel>
+        <SectionLabel>Resource actions (right-click)</SectionLabel>
         <ListRow
           {...{
             ...baseItem,
-            tooltip: "docs/overview.md",
             contextMenuItems: [
               { id: "rename", label: "Rename" },
               { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
