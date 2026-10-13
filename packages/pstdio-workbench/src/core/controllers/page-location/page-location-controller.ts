@@ -1,15 +1,12 @@
 import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
-import { parseWorkbenchPageUrl } from "@pstdio/sdk/extensions";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { createPageEditorCommit, createPreparedPageCommit } from "./page-editor-commit";
 import { createPageLocationControllerActions } from "./page-location-actions";
 import { createPageHistoryEntry, createPageLocationFailureHandler } from "./page-location-history-entry";
 import {
-  normalizeDirectWorkbenchPageLocation,
   normalizeWorkbenchPageLocation,
   normalizeWorkbenchPageTarget,
-  workbenchPageLocationRouteKey,
   workbenchPageLocationsEqual,
 } from "./page-location-normalization";
 import { setPageLocationPreparation } from "./page-location-preparation";
@@ -23,6 +20,7 @@ import type {
   WorkbenchPageLocationController,
   WorkbenchPageLocationHistoryState,
 } from "./page-location-types";
+import { resolvePageLocationUrl } from "./page-location-url";
 import {
   createPageModeMemory,
   resolveLocationMode,
@@ -131,8 +129,9 @@ export const createWorkbenchPageLocationController = <Value>(
 
   const start = () => resolveStartPageLocation(input.startPage, pages(), internals.resources, activeModeId());
 
-  const normalizeTarget = (target: NavigationTargetPage, modeId = activeModeId()) =>
-    resolveLocationMode(
+  const normalizeTarget = (target: NavigationTargetPage, modeId = activeModeId()) => ({
+    requested: target,
+    ...resolveLocationMode(
       normalizeWorkbenchPageTarget({
         target: resolvePageTargetMode(target, pages(), modeId),
         pages: pages(),
@@ -141,32 +140,18 @@ export const createWorkbenchPageLocationController = <Value>(
       }),
       pages(),
       modeId,
-    );
+    ),
+  });
 
-  const resolveUrl = (projectId: string, entry: WorkbenchPageBrowserEntry) => {
-    const parsed = parseWorkbenchPageUrl({
-      url: entry.url,
+  const resolveUrl = (projectId: string, entry: WorkbenchPageBrowserEntry) =>
+    resolvePageLocationUrl({
       projectId,
+      entry,
       pages: pages(),
       resources: internals.resources,
+      activeModeId: activeModeId(),
+      normalizeStored,
     });
-    if (!parsed) return undefined;
-    const direct = resolveLocationMode(
-      normalizeDirectWorkbenchPageLocation({
-        ...parsed,
-        pages: pages(),
-        resources: internals.resources,
-      }),
-      pages(),
-      activeModeId(),
-    );
-    if (!isHistoryState(entry.state) || entry.state.projectId !== projectId) return direct;
-    const contextual = normalizeStored(entry.state.location);
-    const directKey = workbenchPageLocationRouteKey(direct.location, internals.resources, pages());
-    const contextualKey = workbenchPageLocationRouteKey(contextual.location, internals.resources, pages());
-    if (entry.state.routeKey !== directKey || contextualKey !== directKey) return direct;
-    return contextual;
-  };
 
   const restore = createPageLocationRestorer({
     browser: input.browser,
@@ -231,6 +216,7 @@ export const createWorkbenchPageLocationController = <Value>(
       }),
     normalizeStored,
     resolveClosePlacement: internals.resolveClosePlacement,
+    resolvePlacementLocation: input.resolvePlacementLocation,
   });
 
   const controller = createPageLocationControllerActions({

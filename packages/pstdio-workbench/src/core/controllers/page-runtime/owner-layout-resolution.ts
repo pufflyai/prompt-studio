@@ -139,6 +139,8 @@ const restoreDeclaration = (
     region: previous?.region ?? placement.region,
     value: {
       ...placement.value,
+      pageContext:
+        previous?.value.resourceKey === placement.value.resourceKey ? previous?.value.pageContext : undefined,
       position:
         placement.value.position ??
         (previous?.value.resourceKey === placement.value.resourceKey ? previous?.value.position : undefined),

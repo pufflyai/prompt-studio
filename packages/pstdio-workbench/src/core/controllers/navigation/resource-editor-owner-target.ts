@@ -5,6 +5,7 @@ import { pageAllowsMode } from "../../registries/pages/page-availability";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { pageLocationTarget } from "../page-location/page-location-target";
 import { locationModeRef } from "../page-location/page-mode-locations";
 import { openOwnerLayouts, pageOwnerLocation } from "../page-runtime/open-owner-layouts";
 import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
@@ -34,12 +35,16 @@ const mainEditorOwnerTarget = (
       .at(-1);
     if (context) requested = { ...context, resource: editor.tab.resource };
   }
+  const context = editor.tab.pageContext;
   return resourceEditorPageTarget(core, page.ref, editor.tab.resource, {
     ...(requested?.kind === "page" ? requested : {}),
     kind: "page",
     page: page.ref,
     resource: requested?.resource ?? editor.tab.resource,
-    mode: pageOwnerMode(page, requested?.kind === "page" ? requested.mode : undefined, activeModeId),
+    parent:
+      (requested?.kind === "page" ? requested.parent : undefined) ??
+      (context?.parent ? pageLocationTarget(context.parent) : undefined),
+    mode: pageOwnerMode(page, requested?.kind === "page" ? requested.mode : context?.mode, activeModeId),
   });
 };
 
@@ -84,7 +89,7 @@ export const resourceEditorOwnerTarget = (
     }
     const target = editor.scope ? pageOwnerLocation(core, editor.scope) : undefined;
     if (!target || !ownerPage) return target;
-    return { ...target, mode: pageOwnerMode(ownerPage, undefined, current.activeModeId) };
+    return { ...target, mode: pageOwnerMode(ownerPage, target.mode, current.activeModeId) };
   }
   if (owner?.kind !== "mode" || owner.modeId === current.activeModeId) return explicit;
   const layouts = openOwnerLayouts(core);

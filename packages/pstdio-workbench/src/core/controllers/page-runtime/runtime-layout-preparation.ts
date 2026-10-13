@@ -59,15 +59,17 @@ export const prepareRuntimeLayout = (
         })
       : bindPlacementsToActivePageLocation(latest);
   const located = placements.map((placement) => {
-    if (
-      placement.identity.kind !== "page" ||
-      placement.identity.slotId !== "$main" ||
-      placement.value.resourceKey !== resourceKey(latest.location?.resource)
-    )
-      return placement;
+    if (placement.identity.kind !== "page" || !latest.location) return placement;
+    const isMainResource =
+      placement.identity.slotId === "$main" && placement.value.resourceKey === resourceKey(latest.location.resource);
+    if (!isMainResource && placement.identity.slotId === "$main") return placement;
     return {
       ...placement,
-      value: { ...placement.value, section: latest.location?.section, position: latest.location?.position },
+      value: {
+        ...placement.value,
+        pageContext: { mode: latest.location.mode, parent: latest.location.parent },
+        ...(isMainResource ? { section: latest.location.section, position: latest.location.position } : {}),
+      },
     };
   });
   return {

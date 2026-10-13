@@ -2,6 +2,7 @@ import type {
   FileRendererSectionTarget,
   FileSourcePosition,
   ModeRegionSettings,
+  PageLocation,
   PlacementIdentity,
 } from "@pstdio/sdk/extensions";
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
@@ -205,6 +206,8 @@ export interface WorkbenchWidgetPlacement {
   position?: FileSourcePosition;
   resourceKey?: string;
   ownerResourceKey?: string;
+  /** Captured page ancestry; resource and source position remain on this tab. */
+  pageContext?: Pick<PageLocation, "mode" | "parent">;
   title?: string;
   pinned?: boolean;
   closable?: boolean;

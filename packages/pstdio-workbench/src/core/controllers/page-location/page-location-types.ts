@@ -7,6 +7,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
 import type {
+  WorkbenchPageOpenInput,
   WorkbenchPageRegistry,
   WorkbenchPageRegistryStoreState,
   WorkbenchPageRuntimeState,
@@ -66,6 +67,7 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   modes: NavigationLevelModes;
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
+  resolvePlacementLocation?(target: WorkbenchPageOpenInput): PageLocation | undefined;
   resolveExistingEditor?(target: ResolvedPageLocation):
     | {
         state: WorkbenchPageRegistryStoreState<Value>;
@@ -102,6 +104,8 @@ export interface WorkbenchPageLocationHistoryState {
 }
 
 export interface ResolvedPageLocation {
+  /** Original explicit navigation context, before declared parents are filled in. */
+  requested?: NavigationTargetPage;
   pageId: string;
   location: PageLocation;
   open?: NavigationTargetPage["open"];

@@ -4,6 +4,7 @@ import { pageStateKey } from "../../registries/pages/page-state-key";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { pageLocationTarget } from "../page-location/page-location-target";
+import { mainPagePlacementLocation } from "../page-runtime/main-page-placement-location";
 import { pageStateFromLayout } from "../page-runtime/page-state-restoration";
 
 /** Rebuild the source from its remaining tabs; a moved editor is not Main's location. */
@@ -43,7 +44,14 @@ export const reconcileMainAfterMove = (core: WorkbenchCore) => {
         internals.resources.toUri(remaining.resource) === internals.resources.toUri(current.location.resource!);
       let target = pageLocationTarget(current.location);
       if (!unchanged)
-        target = { ...target, resource: remaining.resource, section: remaining.section, position: remaining.position };
+        target = pageLocationTarget(
+          mainPagePlacementLocation(core, { pageId: page.id, resource: remaining.resource }) ?? {
+            ...current.location,
+            resource: remaining.resource,
+            section: remaining.section,
+            position: remaining.position,
+          },
+        );
       const result = replace(target);
       if (!result.ok) throw new Error(result.diagnostic.message);
       return;

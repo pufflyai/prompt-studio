@@ -110,7 +110,6 @@ export const prepareEditorActivation = (
           current,
         )
       : current;
-  const requested = targets.at(-1);
   return {
     state,
     target,
@@ -142,21 +141,6 @@ export const prepareEditorActivation = (
       const tab = liveEditorPlacement(core, editor);
       if (!tab) throw new Error(`Editor is no longer open: ${editor.tab.widgetId}`);
       applyResourceEditorIntent(core, editor.tab, tab, { ...intent, resource });
-      if (requested?.kind === "page" && (requested.section || requested.position)) {
-        const layout = core.layout.getLayout();
-        core.layout.restoreLayout({
-          ...layout,
-          regions: {
-            ...layout.regions,
-            [editor.region]: {
-              ...layout.regions[editor.region],
-              widgets: layout.regions[editor.region].widgets.map((p) =>
-                p.widgetId === tab.widgetId ? { ...p, section: requested.section, position: requested.position } : p,
-              ),
-            },
-          },
-        });
-      }
       revealPanelRegion(core, editor.region);
       core.layout.activatePanel(tab.widgetId);
       core.focus.setActiveRegion(

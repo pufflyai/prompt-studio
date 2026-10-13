@@ -1,8 +1,9 @@
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { buildUpdatedPlacement } from "../../registries/layout/layout-operations";
 import type { OpenWidgetInput, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { pageLocationTarget } from "../page-location/page-location-target";
 import { modeLayoutScope } from "./owner-layout-scope";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
@@ -12,16 +13,19 @@ const caches = new WeakMap<WorkbenchCore, LayoutCache>();
 export const updateSavedTransferredEditor = (
   core: WorkbenchCore,
   tab: WorkbenchWidgetPlacement,
-  changes: OpenWidgetInput,
+  changes: OpenWidgetInput & Pick<WorkbenchWidgetPlacement, "section" | "position">,
 ) => {
   if (!tab.declarationIdentity) return;
-  caches
-    .get(core)
-    ?.updateTransferredPlacement(tab.declarationIdentity, (placement) =>
-      placement.widgetId === tab.widgetId
-        ? buildUpdatedPlacement(placement, core.layout.getWidget(placement.contributionId)!, changes)
-        : placement,
-    );
+  caches.get(core)?.updateTransferredPlacement(tab.declarationIdentity, (placement) =>
+    placement.widgetId === tab.widgetId
+      ? {
+          ...buildUpdatedPlacement(placement, core.layout.getWidget(placement.contributionId)!, changes),
+          ...(changes.section !== undefined || changes.position !== undefined
+            ? { section: changes.section, position: changes.position }
+            : {}),
+        }
+      : placement,
+  );
 };
 
 export const saveOpenOwnerLayouts = (core: WorkbenchCore) => {
@@ -64,5 +68,12 @@ export const pageOwnerLocation = (core: WorkbenchCore, scope: string) => {
       .find((tab) => key && resourceKey(tab.resource) === key)?.resource ??
     identity ??
     (page.resource ? selected?.resource : undefined);
-  return { kind: "page" as const, page: page.ref, ...(resource ? { resource } : {}) };
+  const context = selected?.pageContext;
+  return {
+    kind: "page" as const,
+    page: page.ref,
+    ...(resource ? { resource } : {}),
+    mode: context?.mode,
+    ...(context?.parent ? { parent: pageLocationTarget(context.parent) } : {}),
+  } satisfies NavigationTargetPage;
 };

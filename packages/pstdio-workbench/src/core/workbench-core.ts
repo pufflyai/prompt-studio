@@ -21,6 +21,7 @@ import {
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
 import { pageLocationTarget } from "./controllers/page-location/page-location-target";
+import { mainPagePlacementLocation } from "./controllers/page-runtime/main-page-placement-location";
 import { connectOpenOwnerLayouts } from "./controllers/page-runtime/open-owner-layouts";
 import { createOwnerLayoutAccess } from "./controllers/page-runtime/owner-layout-access";
 import { createOwnerLayoutScopeHandler } from "./controllers/page-runtime/owner-layout-scope-handler";
@@ -84,8 +85,11 @@ const createPageLocations = (
     modes,
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,
-    resolveExistingEditor: ({ location, open }) =>
-      prepareExistingResourceEditor(resolveCore(), [{ ...pageLocationTarget(location), open }]),
+    resolvePlacementLocation: (target) => mainPagePlacementLocation(resolveCore(), target),
+    resolveExistingEditor: ({ location, open, requested }) =>
+      prepareExistingResourceEditor(resolveCore(), [
+        requested ? { ...requested, resource: location.resource } : { ...pageLocationTarget(location), open },
+      ]),
   });
 
 const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefined) => {
