@@ -2,6 +2,8 @@
 
 Saved views belong to a project and a collection. The boards API includes extension views of kind `kanban` (a board or list) or `dataTable`, and the built-in Workspaces table. Workspaces uses the stable board ID `dashboard-workbench.workspaces` and has `extensionId: null`. Everyone sees the same saved views and collection default. Local storage keeps only the active selection, unsaved edits, and expanded or collapsed groups, scoped to the collection's context such as its project.
 
+Drag saved-view tabs in Kanban boards, lists, or data tables to change their order. With a tab focused, use Alt+Left or Alt+Right to move it one place. The order saves for the project and reaches other clients through live sync. Reordering keeps the selected view and its unsaved edits.
+
 A view has three parts:
 
 - `filter`: normal rules join with `and`. Optional `groups` hold one level of advanced rules, each with its own `and` or `or` conjunction. Normal rules and advanced groups combine using `and`. Existing whole-view `or` filters remain supported and appear as an Advanced filter bubble.

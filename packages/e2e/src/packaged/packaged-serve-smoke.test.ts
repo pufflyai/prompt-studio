@@ -18,6 +18,8 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Wrapped user prompts collapse by rendered height and retain borderless expand/collapse controls.
 // Streaming chunks retain earlier DOM and settle without running animations.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+// Shared Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
@@ -85,6 +87,7 @@ registerSharedCodexSmokeTests();
 registerExtensionInstallSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
+registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.

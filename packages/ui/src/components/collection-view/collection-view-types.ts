@@ -36,4 +36,6 @@ export interface CollectionViewsSource<TSettings> {
   onUpdateView: (id: string, input: Partial<CollectionViewState<TSettings>> & { title?: string }) => Promise<void>;
   onDeleteView: (id: string) => Promise<void>;
   onSetDefaultView: (id: string | null) => Promise<void>;
+  /** Saves the complete view order. Omit when the source does not support reordering. */
+  onReorderViews?: (ids: string[]) => Promise<void>;
 }
