@@ -177,7 +177,7 @@ These tests simulate different inherited environments. Real Explorer/login PATH 
 
 The npm `cmd-shim@7.0.0` batch wrapper assigns its installation directory without quotes. A prefix containing `&` truncates that directory and fails even when the wrapper runs directly under `cmd.exe`. A native regression checks this failure outside the process API and confirms the API reports the failure too. The healthy npm fixtures use spaces and Unicode; a separate controlled wrapper checks our launcher with `&` in its directory.
 
-Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. The Windows job runs package test suites one at a time to avoid competing database startups; the API suite still uses two file workers.
+Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. The Windows job runs package test suites one at a time to avoid competing database startups. The API suite uses two file workers, then runs `process-discovery.test.ts` alone so PowerShell startup does not compete with a PGlite cold start. The runner logs when that file starts alone. The separate Windows npm shim check still runs it too.
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 
