@@ -17,9 +17,7 @@ export const hasPreparedEditorOwner = (
   const key = placementIdentityKey(identity);
   return states.some((state) => {
     const owns =
-      identity.kind === "mode"
-        ? state.activeModeId === identity.modeId
-        : identity.kind === "shell" || pageOwnerScope(state) === editor.scope;
+      identity.kind === "mode" ? state.activeModeId === identity.modeId : pageOwnerScope(state) === editor.scope;
     return (
       owns &&
       [...state.placements, ...state.reconciliation.remove].some((p) => placementIdentityKey(p.identity) === key)

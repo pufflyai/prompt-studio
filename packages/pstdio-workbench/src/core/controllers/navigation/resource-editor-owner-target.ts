@@ -8,7 +8,7 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { pageLocationTarget } from "../page-location/page-location-target";
 import { locationModeRef } from "../page-location/page-mode-locations";
 import { openOwnerLayouts, pageOwnerLocation } from "../page-runtime/open-owner-layouts";
-import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
+import { pageLayoutScope, pageOwnerFromLayoutScope } from "../page-runtime/owner-layout-scope";
 import { resourceEditorPageTarget } from "./resource-editor-page-target";
 import type { OpenResourceEditor } from "./resource-editor-resolver";
 import { resourceEditorTarget } from "./resource-editor-target";
@@ -65,6 +65,53 @@ const mainEditorOwnerTarget = (
   });
 };
 
+const pageScopedEditorOwnerTarget = (
+  core: WorkbenchCore,
+  editor: OpenResourceEditor,
+  targets: readonly (NavigationTargetPage | NavigationTargetPanel)[],
+  current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+) => {
+  const owner = editor.tab.placementIdentity;
+  const pageId = owner?.kind === "page" ? owner.pageId : pageOwnerFromLayoutScope(editor.scope)?.pageId;
+  const ownerPage = pageId ? core.pages.getPage(pageId) : undefined;
+  if (
+    editor.region === "main" &&
+    editor.tab.role === "location" &&
+    ownerPage?.resource &&
+    ownerPage.main.kind === "view"
+  )
+    return mainEditorOwnerTarget(core, editor, targets, ownerPage, current.activeModeId);
+  const page = current.activePageId ? current.pages[current.activePageId] : undefined;
+  if (
+    editor.scope ===
+    pageLayoutScope(
+      {
+        projectId: current.projectId,
+        pageId: current.activePageId,
+        resource: current.location?.resource,
+      },
+      page,
+    )
+  ) {
+    return undefined;
+  }
+  const proposedOwner = targets
+    .filter((target): target is NavigationTargetPage => target.kind === "page")
+    .filter(
+      (target) =>
+        ownerPage &&
+        contributionRefId(target.page) === contributionRefId(ownerPage.ref) &&
+        pageLayoutScope(
+          { projectId: current.projectId, pageId: ownerPage.id, resource: target.resource },
+          ownerPage,
+        ) === editor.scope,
+    )
+    .at(-1);
+  const target = proposedOwner ?? (editor.scope ? pageOwnerLocation(core, editor.scope) : undefined);
+  if (!target || !ownerPage) return target;
+  return { ...target, mode: pageOwnerMode(ownerPage, target.mode, current.activeModeId) };
+};
+
 export const resourceEditorOwnerTarget = (
   core: WorkbenchCore,
   editor: OpenResourceEditor,
@@ -81,33 +128,8 @@ export const resourceEditorOwnerTarget = (
       );
     })
     .at(-1);
-  if (owner?.kind === "page") {
-    const ownerPage = core.pages.getPage(owner.pageId);
-    if (
-      editor.region === "main" &&
-      editor.tab.role === "location" &&
-      ownerPage?.resource &&
-      ownerPage.main.kind === "view"
-    )
-      return mainEditorOwnerTarget(core, editor, targets, ownerPage, current.activeModeId);
-    const page = current.activePageId ? current.pages[current.activePageId] : undefined;
-    if (
-      editor.scope ===
-      pageLayoutScope(
-        {
-          projectId: current.projectId,
-          pageId: current.activePageId,
-          resource: current.location?.resource,
-        },
-        page,
-      )
-    ) {
-      return undefined;
-    }
-    const target = editor.scope ? pageOwnerLocation(core, editor.scope) : undefined;
-    if (!target || !ownerPage) return target;
-    return { ...target, mode: pageOwnerMode(ownerPage, target.mode, current.activeModeId) };
-  }
+  if (owner?.kind === "page" || owner?.kind === "shell")
+    return pageScopedEditorOwnerTarget(core, editor, targets, current);
   if (owner?.kind !== "mode" || owner.modeId === current.activeModeId) return explicit;
   const layouts = openOwnerLayouts(core);
   const mainId = layouts.find((entry) => entry.scope === editor.scope)?.layout.activeLocationWidgetId;

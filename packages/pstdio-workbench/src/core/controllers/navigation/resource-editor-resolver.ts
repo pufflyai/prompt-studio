@@ -133,7 +133,7 @@ export const prepareEditorActivation = (
     isInOwner(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) {
       const owner = editor.tab.placementIdentity;
       if (owner?.kind === "mode") return owner.modeId === state.activeModeId;
-      if (owner?.kind !== "page") return true;
+      if (owner?.kind !== "page" && owner?.kind !== "shell") return true;
       const page = state.activePageId ? state.pages[state.activePageId] : undefined;
       return (
         editor.scope ===
