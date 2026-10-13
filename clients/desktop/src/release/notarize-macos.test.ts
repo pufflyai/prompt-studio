@@ -45,7 +45,7 @@ test("rejected notarization reports service diagnostics without stapling", async
 test("native command execution retains numeric failure status and both output streams", async () => {
   const result = await runMacCommand(process.execPath, [
     "-e",
-    "console.log('stdout'); console.error('stderr'); process.exit(68)",
+    "process.stdout.write('stdout\\n'); process.stderr.write('stderr\\n'); process.exit(68)",
   ]);
   expect(result).toEqual({ code: 68, stdout: "stdout\n", stderr: "stderr\n" });
 });
