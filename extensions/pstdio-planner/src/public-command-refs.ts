@@ -16,6 +16,8 @@ export interface PlannerStatus {
   id: string;
   name: string;
   sortOrder: number;
+  icon?: string | null;
+  color?: string | null;
 }
 
 export interface PlannerTagOption {

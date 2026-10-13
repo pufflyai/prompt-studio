@@ -63,7 +63,7 @@ export const readMergeDestination = async (ctx: WorkflowContext) => {
   if (!selections.mergeTargetStatusId || missingStatusIds.includes(selections.mergeTargetStatusId))
     return {
       status: null,
-      reason: "Choose a current completed status as Status after merge in Planner workflow settings.",
+      reason: "Choose a current completed status as Status after merge in the Planner extension's Settings tab.",
     };
   return { status: statuses.find(({ id }) => id === selections.mergeTargetStatusId)!, reason: null };
 };

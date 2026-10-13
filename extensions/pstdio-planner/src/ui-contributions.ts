@@ -230,7 +230,7 @@ export const createPlannerUi = (baseUrl: string) => {
       defineSettingsPanel({
         id: "workflow-settings",
         view: workflowSettings.ref,
-        slot: workbenchSlots.projectSettings,
+        slot: workbenchSlots.extensionSettings,
       }),
       defineSettingsPanel({
         id: "ticket-tags",

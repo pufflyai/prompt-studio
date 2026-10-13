@@ -47,7 +47,7 @@ export default defineExtension({
         scope: "project",
         default: { completedStatusIds: [], blockedStatusIds: [], activeStatusIds: [], mergeTargetStatusId: null },
         title: "Workflow status selections",
-        description: "Choose statuses in Planner workflow settings. Labels do not define behavior.",
+        description: "Choose workflow statuses in this extension's Settings tab. Labels do not define behavior.",
       },
       "tickets.deleteLinkedWorkspaces": {
         type: "boolean",

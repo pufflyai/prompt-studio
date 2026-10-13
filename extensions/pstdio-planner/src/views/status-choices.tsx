@@ -19,7 +19,12 @@ export function StatusChoices(props: StatusChoicesProps) {
   if (Array.isArray(value)) selected = value;
   else if (value) selected = [value];
   const options = [
-    ...statuses.map((status) => ({ id: status.id, name: status.name })),
+    ...statuses.map((status) => ({
+      id: status.id,
+      name: status.name,
+      icon: status.icon ?? "circle",
+      color: status.color ?? undefined,
+    })),
     ...selected
       .filter((id) => !statuses.some((status) => status.id === id))
       .map((id) => ({ id, name: `Missing status: ${id}` })),

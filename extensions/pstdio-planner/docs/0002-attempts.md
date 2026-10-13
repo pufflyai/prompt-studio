@@ -30,7 +30,7 @@ A review records its owner, reviewed SHA, verdict, report, and findings. Submiss
 
 ## Progress and dependencies
 
-Configure completed, blocked, active, and optional merge-destination statuses in **Settings → Project → Planner workflow**. Selections use IDs and survive renaming or reordering. Missing selections remain visible and require repair. Empty selections disable only the corresponding status convenience.
+Configure completed, blocked, active, and optional merge-destination statuses in **Settings → Extensions → Prompt Studio Planner → Settings**. Selections use IDs and survive renaming or reordering. Missing selections remain visible and require repair. Empty selections disable only the corresponding status convenience.
 
 The responsible agent uses `pst statuses list` and `implementation-policy`, then updates ticket status when starting, blocking, resuming, handing off, and meeting the actual delivery requirements. Users can override progress. Finishing a variant or opening a draft PR does not satisfy a task that requires merge or acceptance.
 

@@ -13,9 +13,9 @@ const meta: Meta<typeof WorkflowSettingsForm> = {
   args: {
     selections,
     statuses: [
-      { id: "shipped", name: "Delivered", sortOrder: 2 },
-      { id: "waiting", name: "Needs a decision", sortOrder: 1 },
-      { id: "building", name: "Building", sortOrder: 0 },
+      { id: "shipped", name: "Delivered", sortOrder: 2, icon: "status-done", color: "green" },
+      { id: "waiting", name: "Needs a decision", sortOrder: 1, icon: "status-canceled", color: "orange" },
+      { id: "building", name: "Building", sortOrder: 0, icon: "status-progress", color: "blue" },
     ],
     onSave: async () => {},
   },
@@ -31,9 +31,9 @@ export const EmptyChoices: Story = {
 export const Renamed: Story = {
   args: {
     statuses: [
-      { id: "shipped", name: "Shipped", sortOrder: 2 },
-      { id: "waiting", name: "Paused", sortOrder: 1 },
-      { id: "building", name: "Underway", sortOrder: 0 },
+      { id: "shipped", name: "Shipped", sortOrder: 2, icon: "status-done", color: "green" },
+      { id: "waiting", name: "Paused", sortOrder: 1, icon: "status-canceled", color: "orange" },
+      { id: "building", name: "Underway", sortOrder: 0, icon: "status-progress", color: "blue" },
     ],
   },
 };
