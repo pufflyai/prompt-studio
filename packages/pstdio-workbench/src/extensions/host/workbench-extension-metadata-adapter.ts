@@ -4,6 +4,7 @@ import type { ParamObjectSchema } from "pstdio-api-contracts";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import { toWorkbenchWhenExpression } from "./workbench-extension-metadata-ref";
 import { toInternalWorkbenchPages } from "./workbench-extension-page-metadata";
+import { adaptFloatingDefaults, adaptPanelSettings } from "./workbench-extension-panel-settings";
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
 type MetadataView = WorkbenchExtensionMetadata["views"][number];
@@ -174,7 +175,9 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     label: mode.label,
     icon: mode.icon,
     panelRegions: mode.regions,
-    regionSettings: mode.regionSettings,
+    regionSettings: adaptPanelSettings(mode.regionSettings, mode.extensionId),
+    floatingBubble: mode.floatingBubble,
+    floating: adaptFloatingDefaults(mode.floating, mode.extensionId),
     floatingPanels: mode.floatingPanels,
     ...(mode.defaultTheme ? { defaultTheme: contributionRefId(mode.defaultTheme) } : {}),
     ...(mode.chrome

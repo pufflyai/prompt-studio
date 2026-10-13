@@ -15,6 +15,7 @@ import {
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -75,6 +76,7 @@ export const useWorkbenchRegionTabsState = (
     return () => subscription.dispose();
   }, [workbench, storageKey]);
   const regionState = layoutState.layout.regions[region];
+  const policy = usePanelPolicy(workbench, region);
   const subPanelPlacements = regionState.widgets.filter(
     (placement) =>
       placement.role === "sub-panel" &&
@@ -99,14 +101,16 @@ export const useWorkbenchRegionTabsState = (
   const hasMovedPlacement = visiblePlacements.some(
     (placement) => layoutState.widgets[placement.contributionId]?.region !== region,
   );
-  const showTabs =
+  const legacyShowTabs =
     !suppressesSidenavTabStrip(region, visiblePlacements) &&
     ((hasPanelMenuOpeners && visiblePlacements.length > 0) ||
       hasMovedPlacement ||
       shouldShowRegionTabs(visiblePlacements, {
         alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
       }));
-  const hasActions = leadingItems.length > 0 || eligibleSubPanels.length > 0;
+  const showTabs = policy.legacyHeaders ? legacyShowTabs : policy.showHeader && visiblePlacements.length > 0;
+  const hasActions =
+    leadingItems.length > 0 || (eligibleSubPanels.length > 0 && (visiblePlacements.length === 0 || showTabs));
   const hasTrailingActions =
     region === "main" &&
     listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {
@@ -141,10 +145,12 @@ export const useWorkbenchPanelRegionTabsState = (
 };
 
 export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
+  const policy = usePanelPolicy(workbench, region);
   const { showTabs, hasActions, hasTrailingActions, hasPanelMenus } = useWorkbenchPanelRegionTabsState(
     workbench,
     region,
   );
+  if (!policy.legacyHeaders) return policy.showHeader;
   return shouldShowPanelHeader({
     hasTabs: showTabs,
     hasHeaderActions: hasActions || hasTrailingActions,

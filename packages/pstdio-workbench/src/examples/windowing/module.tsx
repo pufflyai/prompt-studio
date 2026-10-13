@@ -1,4 +1,5 @@
 import type { WorkbenchCore } from "../../core";
+import type { WindowingFixtureOptions } from "./fixture-options";
 import type { WindowingLifecycleProbe } from "./lifecycle-probe";
 import { availabilityPages } from "./page-modes";
 import { registerWindowingPagePanels } from "./page-panels";
@@ -12,20 +13,22 @@ import { WindowingSessionView } from "./session-view";
 
 import { WindowingDraftView, WindowingResourceList, WindowingTerminalView, WindowingWebview } from "./views";
 
-export interface WindowingModuleOptions {
-  pagePanels?: boolean;
-  mainView?: "files" | "webview";
-  changesPresence?: "open" | "fixed";
-  removalControls?: boolean;
-  pageModes?: boolean;
-  contextNavigation?: boolean;
-}
+const registerWindowingMode = (workbench: WorkbenchCore, options: WindowingFixtureOptions) => {
+  if (options.registerMode) return options.registerMode(workbench);
+  return workbench.modes.registerMode({
+    id: "windowing",
+    label: options.pageModes ? "Project" : "Windowing",
+    ...(options.pageModes ? { basePage: availabilityPages.overview } : {}),
+    regionSettings: options.regionSettings,
+    activate() {},
+  });
+};
 
 const registerWindowingViews = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
-  options: WindowingModuleOptions = {},
+  options: WindowingFixtureOptions = {},
 ) => {
   for (const [id, label, items, page] of [
     ["workspaces", "Workspaces", resources.workspaces, windowingPages.workspace],
@@ -152,14 +155,9 @@ export const registerWindowingModule = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
-  options: WindowingModuleOptions = {},
+  options: WindowingFixtureOptions = {},
 ) => {
-  const modeRegistration = workbench.modes.registerMode({
-    id: "windowing",
-    label: options.pageModes ? "Project" : "Windowing",
-    ...(options.pageModes ? { basePage: availabilityPages.overview } : {}),
-    activate() {},
-  });
+  const modeRegistration = registerWindowingMode(workbench, options);
   const panelRegistration = registerWindowingViews(workbench, resources, probe, options);
   const workspaceRegistration = workbench.pages.registerPage({
     id: "windowing.workspace",

@@ -112,8 +112,8 @@ test("Reset preserves a reopened foreign session once without restoring its dele
 test("a forbidden matching session destination rejects explicit reopening after owner cleanup", async () => {
   const { fixture, workbench, resources, session, probe } = await setup();
   workbench.resources.removed(resources.workspaces[0]!);
-  workbench.modes.getMode("windowing")!.panels = ["main", "secondary"];
   workbench.sidePanel.setMode("closed");
+  workbench.modes.getMode("windowing")!.panels = ["main", "secondary"];
   const layout = workbench.layout.getLayout();
   await expect(
     workbench.navigation.openTarget({
@@ -122,7 +122,7 @@ test("a forbidden matching session destination rejects explicit reopening after 
       resource: session,
       open: "pin",
     }),
-  ).rejects.toThrow("cannot open");
+  ).rejects.toThrow("Panel is not provided: side");
   expect(workbench.layout.getLayout()).toBe(layout);
   expect(tabs(fixture).some((tab) => tab.resource?.id === session.id)).toBe(false);
   expect(probe.store.getState().sessions[resourceKey(session)]).toEqual({ starts: 1, stops: 0, running: true });

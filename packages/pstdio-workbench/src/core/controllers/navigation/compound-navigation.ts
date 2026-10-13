@@ -16,6 +16,7 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { locatePreparedPageState } from "../page-runtime/page-placement-location";
 import { activateNavigationPlacement, commitPreparedNavigation } from "./navigation-commit";
+import { validatePanelNavigation } from "./panel-navigation-policy";
 import { prepareEditorOpen } from "./prepared-editor-open";
 import { prepareExistingResourceEditor } from "./resource-editor-resolver";
 
@@ -236,6 +237,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     if (target.kind === "page") {
       preparePage(target);
     } else if (target.kind === "panel") {
+      validatePanelNavigation(core, target, proposed);
       const prepared = preparePanelNavigation(core, target, proposed, modeState, shellState);
       proposed = prepared.state;
       modeState = prepared.modeState;

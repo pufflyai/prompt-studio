@@ -15,6 +15,7 @@ export const createCoreCompositionController = (resolveCore: () => WorkbenchCore
     getLayout: () => resolveCore().layout.getLayout(),
     getResource: () => resolveCore().getPrimaryResource(),
     listWidgets: () => resolveCore().layout.listWidgets(),
+    getPanelPolicy: (region) => resolveCore().shell.getPanelPolicy(region),
     listOwnedAddablePanels: ({ layout, mode, region, resource }) => {
       const core = resolveCore();
       return createOwnedAddablePanels(core, { layout, modeId: mode?.id, region, resource });

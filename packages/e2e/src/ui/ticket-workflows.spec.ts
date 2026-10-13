@@ -142,10 +142,11 @@ for (const action of ["Delete workspace"]) {
   });
 }
 
-test("opens ticket action sessions and hides the lone Sessions page tab", async ({ page, fixture }) => {
+test("opens ticket action sessions and shows the fixed Sessions page tab", async ({ page, fixture }) => {
   await openTicket(page, fixture.project.id);
   const ticketUrl = page.url();
   let sessionId = "";
+  let sessionTitle = "";
   for (const action of ["Refine ticket", "Break into sub-tickets"]) {
     await page
       .getByRole("button", { name: `Actions for ${fixture.ticket.shorthand} Ticket workflow`, exact: true })
@@ -162,7 +163,8 @@ test("opens ticket action sessions and hides the lone Sessions page tab", async 
     const outcome = (await (await response).json()).outcome;
     expect(outcome.ok).toBe(true);
     sessionId = outcome.value.id;
-    const sidePanel = page.getByTestId("workbench-side-panel-attached");
+    sessionTitle = outcome.value.title;
+    const sidePanel = page.locator('[data-workbench-panel="side"]:visible');
     await expect(sidePanel).toBeVisible();
     await expect(sidePanel.getByRole("tab")).toHaveCount(1);
     await expect(sidePanel.getByRole("tab", { name: outcome.value.title, exact: true })).toHaveAttribute(
@@ -176,8 +178,9 @@ test("opens ticket action sessions and hides the lone Sessions page tab", async 
   await page.getByRole("option", { name: "Sessions", exact: true }).first().click();
   await page.getByRole("option", { name: /Break into sub-tickets:/ }).click();
   await expect(page).toHaveURL(new RegExp(`/session\\?resource=.*${sessionId}`));
-  await expect(page.getByRole("tab", { name: "Session", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Close Session", exact: true })).toHaveCount(0);
+  const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+  await expect(mainHeader.getByRole("tab", { name: sessionTitle, exact: true })).toBeVisible();
+  await expect(mainHeader.getByRole("button", { name: `Close ${sessionTitle}`, exact: true })).toHaveCount(0);
 });
 
 test("Run attempt starts from the chosen base branch", async ({ page, fixture }) => {

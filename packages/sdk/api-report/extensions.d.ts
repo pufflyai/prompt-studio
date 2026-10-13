@@ -1651,8 +1651,16 @@ interface ActivityItemContribution<TParams extends Struct = Struct> extends Cont
 interface ModeRegionSettings {
   readonly showHeader?: boolean;
   readonly size?: RegionSize;
+  /** @deprecated */
   readonly collapsible?: boolean;
   readonly alwaysShowTabs?: boolean;
+  readonly canOpen?: boolean;
+  readonly canClose?: boolean;
+  readonly acceptsTabs?: boolean;
+  readonly resizable?: boolean;
+  readonly movable?: boolean;
+  readonly floatable?: boolean;
+  readonly defaultTab?: NavigationTarget;
 }
 interface ModeContribution extends ContributionDefinition<"mode"> {
   label: Localizable<string>;
@@ -1660,7 +1668,12 @@ interface ModeContribution extends ContributionDefinition<"mode"> {
   icon?: string;
   regions: readonly ExtensionPanelRegion[];
   defaultTheme?: ThemeRef;
+  /** @deprecated */
   floatingPanels?: "visible" | "hidden";
+  floatingBubble?: boolean;
+  floating?: {
+    readonly defaultTab?: NavigationTarget;
+  };
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", ViewRef | false>>;
   regionSettings?: Readonly<Partial<Record<DockedWorkbenchRegion, ModeRegionSettings>>>;
 }

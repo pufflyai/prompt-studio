@@ -67,11 +67,7 @@ export const createOwnerLayoutScopeHandler =
     const adopted = saveOutgoingMode(input, state, previous);
     const firstModeGeometry = adopted ? input.layout.getLayout() : undefined;
     const scope = pageLayoutScope(
-      {
-        projectId: state.projectId,
-        pageId: state.activePageId,
-        resource: state.location?.resource,
-      },
+      { projectId: state.projectId, pageId: state.activePageId, resource: state.location?.resource },
       state.activePageId ? state.pages[state.activePageId] : undefined,
     );
     const initialLayout =

@@ -3,14 +3,15 @@ import { createBoomboxWorkbench } from "../showcases/boombox";
 import { createKilnWorkbench } from "../showcases/kiln";
 import { createWindowingPersistence } from "./adapters";
 import { registerContextNavigation } from "./context-navigation";
+import type { WindowingFixtureOptions } from "./fixture-options";
 import { createWindowingLifecycleProbe } from "./lifecycle-probe";
-import { registerWindowingModule, type WindowingModuleOptions } from "./module";
+import { registerWindowingModule } from "./module";
 import { registerAvailabilityPages } from "./page-modes";
 import { createWindowingResources, windowingPages } from "./resources";
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
 
-export const createWindowingFixture = (mode: WindowingMode = "windowing", options: WindowingModuleOptions = {}) => {
+export const createWindowingFixture = (mode: WindowingMode = "windowing", options: WindowingFixtureOptions = {}) => {
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
   const probe = createWindowingLifecycleProbe();

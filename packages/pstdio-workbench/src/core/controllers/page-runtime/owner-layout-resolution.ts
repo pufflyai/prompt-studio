@@ -5,8 +5,27 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../registries/layout/layout-types";
 import { placementIdentityKey, type ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
-import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
+import type { WorkbenchPageRegistry, WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
+
+type OwnerState = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
+const ownerReaders = new WeakMap<
+  WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
+  (state: OwnerState) => ReturnType<typeof savedOwnerPlacements>
+>();
+
+export const connectOwnerPlacementReader = (
+  registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
+  read: (state: OwnerState) => ReturnType<typeof savedOwnerPlacements>,
+) => {
+  ownerReaders.set(registry, read);
+  return () => ownerReaders.delete(registry);
+};
+
+export const readSavedOwnerPlacements = (
+  registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
+  state: OwnerState,
+) => ownerReaders.get(registry)?.(state);
 
 const records = (layout?: WorkbenchLayout) =>
   Object.values(layout?.regions ?? {}).flatMap((region) =>
@@ -57,6 +76,17 @@ const savedModeRecords = (
   }
   return [...modeRecords.values()];
 };
+
+export const savedOwnerPlacements = (input: {
+  modeId?: string;
+  pageLayout?: WorkbenchLayout;
+  modeLayout?: WorkbenchLayout;
+  currentLayout?: WorkbenchLayout;
+  adoptedModePlacements?: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
+}) => [
+  ...records(input.pageLayout).filter((p) => p.identity.kind !== "mode"),
+  ...savedModeRecords(input.modeId, input.modeLayout, input.currentLayout, input.adoptedModePlacements),
+];
 
 const canSeedDeclaration = (
   placement: ResolvedOwnedPlacement<WorkbenchWidgetPlacement>,
@@ -198,8 +228,7 @@ export const resolveOwnerPlacements = (input: {
 }) => {
   const { state } = input;
   const page = records(input.pageLayout).filter((p) => p.identity.kind !== "mode");
-  const mode = savedModeRecords(state.activeModeId, input.modeLayout, input.currentLayout, input.adoptedModePlacements);
-  const saved = [...page, ...mode];
+  const saved = savedOwnerPlacements({ ...input, modeId: state.activeModeId });
   const transferredDeclarations = new Set(
     saved.flatMap((p) => (p.value.declarationIdentity ? [placementIdentityKey(p.value.declarationIdentity)] : [])),
   );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { navigationTargetSchema } from "./navigation-target-metadata";
 
 export const workbenchPlacementPresentationSchema = z.object({
   mountStrategy: z.enum(["active", "keep-mounted"]).optional(),
@@ -27,4 +28,11 @@ export const regionSettingsSchema = z.object({
   size: regionSizeSchema.optional(),
   collapsible: z.boolean().optional(),
   alwaysShowTabs: z.boolean().optional(),
+  canOpen: z.boolean().optional(),
+  canClose: z.boolean().optional(),
+  acceptsTabs: z.boolean().optional(),
+  resizable: z.boolean().optional(),
+  movable: z.boolean().optional(),
+  floatable: z.boolean().optional(),
+  defaultTab: navigationTargetSchema.optional(),
 });

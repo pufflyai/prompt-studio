@@ -12,6 +12,7 @@ import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { saveOpenOwnerLayouts } from "../page-runtime/open-owner-layouts";
+import { getShellNavigationScope } from "../shell/shell-navigation-scope";
 import { reconcileMainAfterMove } from "./main-document-fallback";
 import { panelDestinations } from "./panel-destinations";
 import { transferPanelOwner } from "./panel-owner-transfer";
@@ -66,38 +67,40 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         },
       },
     };
-    batchWorkbenchChanges(() => {
-      // Moving selects the instance directly; navigation owns auxiliary-selection restoration.
-      const selected =
-        found.placement.role === "location"
-          ? (selectRegionActiveWidget(next, destination, instanceId) ?? next)
-          : activateInLayout(next, destination, placement);
-      core.layout.restoreLayout({
-        ...selected,
-        activeWidgetId: instanceId,
-        activeResourceKey: found.placement.resourceKey,
-        activeLocationWidgetId:
-          found.regionId === "main" && destination !== "main" && layout.activeLocationWidgetId === instanceId
-            ? next.regions.main.activeWidgetId
-            : layout.activeLocationWidgetId,
+    getShellNavigationScope(core.shell).run(() => {
+      batchWorkbenchChanges(() => {
+        // Moving selects the instance directly; navigation owns auxiliary-selection restoration.
+        const selected =
+          found.placement.role === "location"
+            ? (selectRegionActiveWidget(next, destination, instanceId) ?? next)
+            : activateInLayout(next, destination, placement);
+        core.layout.restoreLayout({
+          ...selected,
+          activeWidgetId: instanceId,
+          activeResourceKey: found.placement.resourceKey,
+          activeLocationWidgetId:
+            found.regionId === "main" && destination !== "main" && layout.activeLocationWidgetId === instanceId
+              ? next.regions.main.activeWidgetId
+              : layout.activeLocationWidgetId,
+        });
+        saveOpenOwnerLayouts(core);
+        if (found.regionId === "main" && destination !== "main") reconcileMainAfterMove(core);
+        const final = core.layout.getLayout();
+        core.layout.restoreLayout({
+          ...final,
+          regions: { ...final.regions, [destination]: { ...final.regions[destination], activeWidgetId: instanceId } },
+          activeWidgetId: instanceId,
+          activeResourceKey: found.placement.resourceKey,
+          activeLocationWidgetId:
+            found.regionId === "main" && destination !== "main"
+              ? final.regions.main.activeWidgetId
+              : final.activeLocationWidgetId,
+        });
+        core.layout.reconcilePanelMenus();
+        revealPanelRegion(core, destination);
+        core.focus.setActiveRegion(destination);
+        core.focus.requestPanelFocus(instanceId);
       });
-      saveOpenOwnerLayouts(core);
-      if (found.regionId === "main" && destination !== "main") reconcileMainAfterMove(core);
-      const final = core.layout.getLayout();
-      core.layout.restoreLayout({
-        ...final,
-        regions: { ...final.regions, [destination]: { ...final.regions[destination], activeWidgetId: instanceId } },
-        activeWidgetId: instanceId,
-        activeResourceKey: found.placement.resourceKey,
-        activeLocationWidgetId:
-          found.regionId === "main" && destination !== "main"
-            ? final.regions.main.activeWidgetId
-            : final.activeLocationWidgetId,
-      });
-      core.layout.reconcilePanelMenus();
-      revealPanelRegion(core, destination);
-      core.focus.setActiveRegion(destination);
-      core.focus.requestPanelFocus(instanceId);
     });
   },
 });
