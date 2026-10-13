@@ -8,7 +8,7 @@ export const stickyUserMessageRecipe = defineSlotRecipe({
     actions: { px: "xs", pb: "xs" },
     root: { position: "relative", padding: "0", gap: "0", overflow: "hidden" },
     viewport: { maxHeight: previewContentHeight, overflowY: "hidden", minHeight: "0" },
-    body: { display: "flex", flexDirection: "column", gap: "sm", padding: "xs" },
+    body: { display: "flex", flexDirection: "column", gap: "sm", padding: "xs", paddingBottom: "0" },
     // Measure the space for text, excluding the footer, using the same theme sizes as the viewport.
     preview: {
       position: "absolute",
@@ -25,6 +25,7 @@ export const stickyUserMessageRecipe = defineSlotRecipe({
       justifyContent: "space-between",
       alignItems: "center",
       padding: "xs",
+      paddingTop: "0",
       background: "var(--chat-message-bg)",
       _before: {
         content: '""',

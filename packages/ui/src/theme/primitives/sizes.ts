@@ -48,7 +48,7 @@ export const spacing = {
 
 export const sizes = {
   "chat-user-preview": { value: sp[1600] },
-  "chat-user-footer": { value: sp[500] },
+  "chat-user-footer": { value: sp[400] },
   "chat-user-expanded": { value: "min(70dvh, calc(100dvh - 12rem), 22rem)" },
   "scrollbar-thin": { value: sp[25] },
   "chat-content": { value: "52rem" },

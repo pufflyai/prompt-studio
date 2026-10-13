@@ -55,7 +55,10 @@ export const WrappedPrompt: Story = {
     const footer = bubble.lastElementChild!;
     const footerStyle = getComputedStyle(footer);
     await expect(footerStyle.backgroundColor).toBe(getComputedStyle(bubble).backgroundColor);
+    await expect(footerStyle.paddingTop).toBe("0px");
     const viewport = bubble.querySelector<HTMLElement>("[data-sticky-user-message-content]")!;
+    const body = viewport.querySelector('[data-part="content"]')!.firstElementChild!;
+    await expect(getComputedStyle(body).paddingBottom).toBe("0px");
     await expect(viewport.getBoundingClientRect().bottom).toBeLessThanOrEqual(footer.getBoundingClientRect().top);
     await expect(getComputedStyle(footer, "::before").height).toBe("24px");
     await expect(getComputedStyle(footer, "::before").backgroundImage).toContain(
