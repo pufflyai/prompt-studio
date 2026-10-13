@@ -128,7 +128,7 @@ test("resizes, drag-closes, and restores the live Secondary Panel", async ({ pag
   await expect(separator).toHaveAttribute("aria-valuenow", "320");
   expect(await terminalNode!.evaluate((element) => element.isConnected)).toBe(true);
 
-  await dragPanelToRawSize(page, separator, 73);
+  await dragPanelToRawSize(page, separator, 64);
   await expect(separator).toBeVisible();
   await expect(separator).toHaveAttribute("aria-valuenow", "128");
   expect(await terminalNode!.evaluate((element) => element.isConnected)).toBe(true);
@@ -136,7 +136,7 @@ test("resizes, drag-closes, and restores the live Secondary Panel", async ({ pag
   await dragPanelToRawSize(page, separator, 320);
   await expect(separator).toHaveAttribute("aria-valuenow", "320");
   expect(await terminalNode!.evaluate((element) => element.isConnected)).toBe(true);
-  await dragPanelToRawSize(page, separator, 72);
+  await dragPanelToRawSize(page, separator, 63);
 
   await expect(separator).not.toBeVisible();
   await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
