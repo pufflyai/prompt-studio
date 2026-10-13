@@ -1,10 +1,10 @@
 # PRD: Page and mode panel rules
 
-Product rules for PS-542's page and mode panels, accepted through PS-606 before workbench story implementation.
+Product rules for PS-542's page and mode panels, accepted through PS-606 and updated by PS-699.
 
 ## Status
 
-Proposed implementation, 2026-10-11. The product owner accepted the six rules below in this session. Runtime implementation and the PS-581 story gate remain pending.
+Proposed implementation. The product owner accepted the initial rules on 2026-10-11 and the page panel and control decisions on 2026-10-13. The newer decisions take precedence. Runtime implementation and the PS-581 story gate remain pending.
 
 | Decision | Accepted answer | Implementation |
 | --- | --- | --- |
@@ -13,11 +13,22 @@ Proposed implementation, 2026-10-11. The product owner accepted the six rules be
 | Reset | Restore declared tools and layout | PS-617 |
 | Permissions | Set each permission separately | PS-610 |
 | Owner/resource removal | Closing a tab does not end its session; deleting a resource closes all tabs on its inaccessible page | PS-618 |
-| Boombox Up next | Locked Sidebar tab | PS-610; PS-619 |
+| Boombox Up next (2026-10-11; superseded) | Replaced by the no-locks rule accepted on 2026-10-13 | PS-610; PS-702 |
+| Page panels and layout (2026-10-13) | Every page has side and bottom panels; page layout repeats mode layout | PS-700 |
+| Panel menus (2026-10-13) | Page-owned menus sit beside the editor's tab row | PS-700 |
+| Page header and project segment (2026-10-13) | Page controls and project-first breadcrumb on both hosts | PS-701 |
+| Mode toggles (2026-10-13) | Host chrome, ordered by placement; Navigation uses `list-tree` | PS-701 |
+| Page expansion (2026-10-13) | Page `expandable` defaults to allowed | PS-701; PS-616 |
+| Tabs and declared tools (2026-10-13) | Every tab can close and move; declarations provide reopen and reset | PS-702; PS-610; PS-617 |
+| Panel closing and keyboard resize (2026-10-13) | Drag the resize edge to close; keys move the separator in their direction | PS-704 |
+| Floating Side bubble (2026-10-13) | Visible while open; click toggles floating Side | PS-614 |
+| Tab menus and drop labels (2026-10-13) | Group destinations by page or mode owner | PS-613 |
+| Inner page edge drops (2026-10-13) | Open a closed page panel and move the tab together | PS-700; PS-613 |
+| Boombox and Kiln examples (2026-10-13) | Boombox hides tab headers; Kiln mixes a togglable sessions Side with a fixed Timeline panel | PS-610 |
 
-The feature branch is `feature/new-workbench-panels`. Each child has a separate PR against it. PS-606 comes first; PS-607 through PS-619 follow in dependency order. PS-581 completes only after PS-619 passes. Dashboard and extension migration remain later work.
+The integration branch is `feature/workbench-panels-integration`. Each child has a separate PR against it. PS-606 records the initial decisions; PS-699 records the updates for PS-700, PS-701, PS-702, and PS-704 alongside PS-607 through PS-619. Children follow dependency order. PS-581 completes only after PS-619 passes. Dashboard and extension migration remain later work.
 
-Ticket support files are stored by Planner and excluded from Git. This document records the accepted rules for PR review. The same rules are saved in PS-542's support files with `pst tickets save --id PS-542`.
+Ticket support files are stored by Planner and excluded from Git. This document records the accepted rules for PR review. The [Planner record: page panels and controls](/projects/0f3e0b9e-236d-4b54-a77c-4b1d4e4ae9ce/extensions/pstdio.pstdio-planner/ticket?resource=pstdio%3A%2F%2Fextension-resource%2Fticket%2F2d6bf607-5ea2-4b3c-a020-539fbfb12753%3FextensionId%3Dpstdio.pstdio-planner%26projectId%3D0f3e0b9e-236d-4b54-a77c-4b1d4e4ae9ce&document=f051a647-1f7c-45b2-8fb2-a68ff9114569) opens in Prompt Studio and holds decisions 1 through 13, API impact, and ticket mapping. Read its local copy with `pst tickets files --id PS-542`; update and save it with `pst tickets save --id PS-542` when an accepted rule changes.
 
 ## Mission fit
 
@@ -35,7 +46,7 @@ The fullscreen controller owns only temporary presentation. The owning panel's o
 | Explicitly open an empty overlay, then close its default tab, exit | Side remains open and empty because direct Open recorded keep-open intent. |
 | Reload while expanded | Normal presentation returns; accepted saved panel intent remains. |
 | Change mode while expanded | Fullscreen exits; destination mode policy and saved layout apply. |
-| Navigate within the same mode | Fullscreen remains active; page-local panels change normally. |
+| Navigate within the same mode | Fullscreen remains active if the destination page allows expansion; page-local panels change normally. |
 | Enter or exit without a direct panel action | Saved visibility, attachment, geometry, and tab identity do not change. |
 
 Fixed-visible panels still obey their policy. Fullscreen may hide Secondary or a non-floatable Side temporarily. Showing a header never changes those permissions.
@@ -80,19 +91,19 @@ Closing a session or terminal tab removes its UI placement. It does not end or d
 
 Use the following public names. Fields are optional additive declarations; old declarations retain their behavior until the coordinated removal release. This table describes the new contract, not a silent change to existing defaults.
 
-| Rule | Mode Side | Mode Secondary | Page bottom |
-| --- | --- | --- | --- |
-| Provided | Membership in mode `regions` | Membership in mode `regions` | Page declares `bottom` |
-| Can open | `canOpen` | `canOpen` | `canOpen` |
-| Can close | `canClose` | `canClose` | `canClose` |
-| Accepts new/moved tabs | `acceptsTabs` | `acceptsTabs` | `acceptsTabs` |
-| Resizable | `resizable` | `resizable` | `resizable` |
-| Fixed size | `size.minPx === size.maxPx` | Same | Same |
-| Whole-panel movement | `movable` | `movable` | `movable` |
-| Floatable | `floatable` | Unsupported | Unsupported |
-| Floating bubble | Mode `floatingBubble` | Unsupported | Unsupported |
-| Header visible | `showHeader` | `showHeader` | `showHeader` |
-| Explicit-empty-open default | `defaultTab` | `defaultTab` | `defaultTab` |
+| Rule | Mode Side | Mode Secondary | Page side | Page bottom |
+| --- | --- | --- | --- | --- |
+| Provided | Membership in mode `regions` | Membership in mode `regions` | Every page | Every page |
+| Can open | `canOpen` | `canOpen` | `canOpen` | `canOpen` |
+| Can close | `canClose` | `canClose` | `canClose` | `canClose` |
+| Accepts new/moved tabs | `acceptsTabs` | `acceptsTabs` | `acceptsTabs` | `acceptsTabs` |
+| Resizable | `resizable` | `resizable` | `resizable` | `resizable` |
+| Fixed size | `size.minPx === size.maxPx` | Same | Same | Same |
+| Whole-panel movement | `movable` | `movable` | `movable` | `movable` |
+| Floatable | `floatable` | Unsupported | Unsupported | Unsupported |
+| Floating bubble | Mode `floatingBubble` | Unsupported | Unsupported | Unsupported |
+| Header visible | `showHeader` | `showHeader` | `showHeader` | `showHeader` |
+| Explicit-empty-open default | `defaultTab` | `defaultTab` | `defaultTab` | `defaultTab` |
 
 `floating.defaultTab` supplies the floating-open default; retained tabs take precedence. Creation targets are serializable declarations, not executable manifest callbacks. Bubble availability does not grant opening or floating permission.
 
@@ -100,11 +111,11 @@ For the new contract, boolean permissions default to allowed for a provided pane
 
 Opening and closing are separate permissions. Toggle requires both. One-way Open or Close controls appear only when applicable and permitted. Fixed size and resize permission are independent declarations; equal minimum and maximum leave no adjustable range.
 
-`movable: false` locks geometry, not tab movement. A locked Secondary also forbids moving Main in a way that swaps Secondary. Tab locks remain explicit and independent of resource binding.
+`movable: false` fixes panel geometry. A fixed Secondary also forbids moving Main in a way that swaps Secondary. No tab is locked: every tab can close and move. Panel policy controls permitted destinations, independently of resource binding.
 
 Deprecate `collapsible` in favor of the new open/close policy. Its old contract permits explicit hide/show and must remain intact for old declarations until removal. New declarations must not be inferred from `collapsible: false` as though it meant forbidden explicit visibility actions.
 
-Retain `showHeader`, but preserve old declaration behavior during migration. The new panel contract makes it authoritative: a visible header shows the default tab, including a single locked tab; false hides the header until an owner-scoped override restores it. Reset removes the override.
+Retain `showHeader`, but preserve old declaration behavior during migration. The new panel contract makes it authoritative: a visible header shows the default tab, including a single tab; false hides the header until an owner-scoped override restores it. Reset removes the override.
 
 The release boundary is explicit: authoritative header behavior applies to the new workbench host contract and its stories first. Extension declarations retain their existing header/tab behavior through host adaptation during the additive release, even when new optional policy fields are present. The coordinated breaking release changes the extension contract's `showHeader` semantics. This contract does not introduce another manifest flag or silently redefine `alwaysShowTabs`. PS-610 must prove legacy adaptation as well as the new host stories before publishing additive support.
 
@@ -140,15 +151,71 @@ The existing owner cache remains authoritative. Do not add a recovery table, dup
 
 ## 6. Boombox Up next
 
-Up next is a locked mode-owned Side tab, following the user within Boombox. Player stays fixed at the bottom in Secondary. Boombox provides no navigation panel or floating bubble. The package showcase and later Extension Lab migration must declare the same rules.
+Up next is an ordinary mode-declared Side tool, following the user within Boombox. The Player panel stays fixed at the bottom in Secondary; its tab can close and move. Boombox hides every tab header it shows by default: Up next, Player, and the playlist editor. The page breadcrumb header stays visible, and a person can show a tab header from its top edge. The playlist declares `expandable: false` so Player stays visible. Boombox provides no navigation panel or floating bubble. The package showcase and later Extension Lab migration must declare the same rules.
 
 ## 7. Movable workspace tools
 
-PS-542's contradictory “Workspace panels are locked except the terminal” scenario has been removed. Changes and Files may move and close; their internal file trees and workspace binding remain with the view. Only explicit structural locks forbid movement.
+Every tab can close and move, including Files, Changes, terminals, ticket proposals, playlists, Viewport, Up next, Player, and Timeline. Internal file trees, resource bindings, and view state stay with the view. Panel placement policy never fixes an individual tab in place.
 
-This correction is already specified by PS-606 and does not require choosing one of the open alternatives.
+The 2026-10-13 no-locks decision replaces the earlier exceptions. Declared tools supply reopen actions and reset behavior.
 
-## 8. Later product decisions
+## 8. Page side and bottom panels
+
+Every page owns a side panel and a bottom panel without opting in. Both start closed unless the page declares a tool there. Any tool can use either panel; neither is tied to terminals. The page side region is `"aside"`, used by `slots[].region` and `regionSettings.aside`. Existing page `"side"` still means the mode's Side until the coordinated breaking release.
+
+The page repeats the mode layout. Its side panel spans the full page height beside a column containing the editor and page bottom. The page bottom is only as wide as the editor, visibly narrower than the mode's bottom when the page side is open. The page side moves left or right; the page bottom moves above or below the editor. Both resize inside the page. Geometry is saved per page type, and page reset restores it. In tight space, the page side shrinks before the editor column.
+
+## 9. Panel menus beside the editor
+
+Page-owned `panelMenus.left` and `panelMenus.right` sit left and right of the editor's tab row at full editor height. They belong to the page, not a tab. They have no header, tabs, add action, or drop target. The declaration supplies the menu; layout stores its visibility, never a fake tab. The ticket Inspector and Notes notebook list are menus.
+
+## 10. Page header controls
+
+The page header is the breadcrumb row inside the page frame. It shows Back and Forward, the project segment, and the breadcrumb. On the right, a button labelled `<Page title> panels` lists Bottom panel and Side panel as checkboxes on every page, then each declared menu (such as Inspector), then Reset layout. Expand view follows when the page allows it. The editor's tab row contains only tabs and its + button.
+
+## 11. Mode panel toggles
+
+Navigation, Secondary, and Side toggles live at the right end of the workbench status bar on web, and in the top application header next to project tabs on desktop. Buttons follow panel placement from left to right: Navigation is outermost, Side is on its current side, and Secondary is in the middle. Moving a panel reorders them. Only permitted toggles appear; a mode with none has no widget. Navigation uses lucide `list-tree`; Side and Secondary icons follow their current edge. Pressed state shows visibility.
+
+Expanded view hides the status bar and other mode chrome. Its page header shows the floating Side toggle before Exit expanded view, subject to the fullscreen policy.
+
+## 12. Project segment
+
+The breadcrumb starts with the project avatar and name on both hosts. On web, this segment is a project switcher with chevrons-up-down and a projects menu. Desktop shows the same avatar and name without a switcher because application-header project tabs switch projects. In tight space, the page segment shortens and the project segment stays.
+
+## 13. Page expansion
+
+Pages declare `expandable?: boolean`; omission allows expansion. When false, Expand view is absent and the enter command refuses with a clear result. Navigating to that page, including Back and Forward, leaves expanded view. The Boombox playlist disallows expansion to keep Player visible.
+
+## 14. Declared tools replace tab locks
+
+Empty panels offer a reopen button for each closed tool declared for that panel. Each panel's + menu offers its declared tools; the editor's + menu offers every tool the page declares. Reopening a moved tool focuses its existing instance where it is, without duplication. Reset restores declared tools under section 3's identity rules. Panel permissions remain independent and govern panels and destinations, never individual tabs.
+
+The planned `slots[].locked` and placement `locked` fields were never published and are dropped. The new host contract and first-party stories also remove fixed main-view behavior and tab restrictions from placement `presence: "fixed"` and `movableTo`. Those two published fields are deprecated first, with declared tools and panel rules as replacements. Old extension declarations retain their behavior through host adaptation until the coordinated breaking release, including the host-fixed page main view.
+
+## 15. Drag to close panels
+
+Panel headers have no close or hide button. A panel closes when its resize edge is dragged past half its minimum size and released. It fades while the drag would close it and reopens at its previous size. A panel that cannot close has no resize-to-close. Mode toggles, the page panels menu, and the same workbench commands provide keyboard and agent actions.
+
+Floating Side has no resize edge to drag. Its bubble stays visible while open: click opens floating Side, and another click closes it. The global Side control continues to open Side attached.
+
+## 16. Owner-grouped tab menus and drop labels
+
+The tab menu groups destinations as `Stays with <page title>` (Editor, Bottom panel, Side panel) and `Follows you in <mode>` (Sidebar, the mode's bottom panel). It omits the current panel and forbidden destinations. Drop labels use the same words.
+
+## 17. Inner page edge drops
+
+While a tab is dragged, a band inside the page frame previews a closed page side or bottom panel at its current edge. Dropping opens it and moves the existing tab together, without creating a default tab. The outer window edge still targets closed mode Side or Secondary. Where the edges meet, the outer edge wins, and the inner band remains wide enough to reach. The artifact's 48px band is prototype geometry, not a public setting. Opening and tab acceptance must pass the same panel policy as commands.
+
+## 18. Kiln's mixed panel rules
+
+Kiln's mode Side holds sessions, can toggle, and creates a new session when explicitly opened empty. Retained tabs take precedence. Its Timeline panel stays fixed at the bottom and starts with a hidden header; the Timeline tab can still close and move. Showing the header grants no panel movement, visibility, resize, or add permissions.
+
+## 19. Keyboard resize direction
+
+Arrow keys move the separator in their direction. Right grows a panel on the left; Down grows a panel on top. `ResizableSplitLayout` already uses each axis's `deltaDirection` for this behavior. Keep it covered by stories.
+
+## 20. Later product decisions
 
 - `[MISSING INFORMATION]` Webview user-action detection for `navigation.open`. The later bridge migration owns the rule; fixture stories separate creation from explicit navigation and do not decide bridge heuristics.
 - `[MISSING INFORMATION]` Whether workspace navigation opens its latest session. The later dashboard migration owns the decision, separately from agent session creation.
@@ -156,7 +223,7 @@ This correction is already specified by PS-606 and does not require choosing one
 
 ## Validation and release boundaries
 
-PS-606 changes documentation only. Check Markdown formatting, relative links, source paths, policy consistency, and the decision cases. Do not run application tests or add a changeset for this document.
+PS-606 and PS-699 change documentation only. Check Markdown formatting, relative links, source paths, policy consistency, and decisions 1 through 13 in the Planner record. Run `bun run format:check` for PS-699 to guard accidental edits elsewhere. Do not run application tests or add a changeset for this document.
 
 PS-607 adds the fresh story fixture and runnable Playwright story check. Later children add focused failing behavior tests before controller changes and story play functions for UI. PS-619 saves the integrated pass/fail/gap matrix and browser evidence. Passing the standalone HTML mock is not production evidence.
 
@@ -164,7 +231,7 @@ Follow [extension API versioning](../../references/extensions/0014-api-versionin
 
 ## References
 
-- Planner tickets PS-542, PS-581, and PS-606 through PS-619.
+- Planner tickets PS-542, PS-581, PS-606 through PS-619, PS-699 through PS-702, and PS-704.
 - Planner report RP-374 (`ps-542-adversarial-review`).
 - [Mission](../../../MISSION.md).
 - [Contribution ownership](../../references/workbench/0003-contribution-ownership.md).
