@@ -8,7 +8,7 @@ export interface AutoBuildMode {
   ignore: ViewFilterGroup;
   /** @deprecated Use requireMergedDependencies. Review evidence is optional. */
   blockOnReview: boolean;
-  eligibleStatusIds: string[];
+  eligible: ViewFilterGroup;
   scopeTicketIds: string[] | null;
   requireMergedDependencies: boolean;
 }
@@ -24,11 +24,11 @@ export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage
   const mode = await ctx.storage.get<AutoBuildMode>("auto-build");
   return {
     revision: mode?.revision ?? "",
-    enabled: Boolean(mode?.enabled && mode.prompt && mode.eligibleStatusIds?.length),
+    enabled: Boolean(mode?.enabled && mode.prompt && mode.eligible),
     prompt: mode?.prompt ?? "",
     ignore: mode?.ignore ?? (await defaultAutoBuildIgnore(ctx)),
     blockOnReview: mode?.blockOnReview ?? false,
-    eligibleStatusIds: mode?.eligibleStatusIds ?? [],
+    eligible: mode?.eligible ?? { conjunction: "and" as const, rules: [] },
     scopeTicketIds: mode?.scopeTicketIds ?? null,
     requireMergedDependencies: mode?.requireMergedDependencies ?? false,
   };

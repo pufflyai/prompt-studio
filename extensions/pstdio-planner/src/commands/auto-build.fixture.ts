@@ -66,7 +66,10 @@ export async function fixture(limit = 2) {
   await storage.set("auto-build", {
     revision: "test",
     enabled: true,
-    eligibleStatusIds: ["ready", "in-progress"],
+    eligible: {
+      conjunction: "and",
+      rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready", "in-progress"] }],
+    },
     scopeTicketIds: [],
     prompt: "Implement relevant tickets.",
     ignore: {

@@ -26,9 +26,6 @@ export const saveWorkflowStatusesCommand = defineCommand({
       const selected = [...parsed.completedStatusIds, ...parsed.blockedStatusIds, ...parsed.activeStatusIds];
       if (selected.some((id) => !known.has(id)))
         throw new Error("Remove or replace missing status choices before saving.");
-      const mode = await ctx.storage.get<{ eligibleStatusIds?: string[] }>("auto-build");
-      if (parsed.completedStatusIds.some((id) => mode?.eligibleStatusIds?.includes(id)))
-        throw new Error("Completed statuses cannot also be eligible for Auto Build. Update Auto Build choices first.");
       await ctx.settings.set("workflow.statuses", parsed);
       await ctx.events.emit(plannerTicketsChanged, {});
       return readWorkflowStatuses(ctx);

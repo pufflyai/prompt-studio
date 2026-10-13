@@ -1,14 +1,14 @@
 # Auto Build
 
-Auto Build assigns and resumes authorized ticket work within your chosen scope, statuses, prerequisite policy, and execution limit.
+Auto Build assigns and resumes authorized ticket work within your chosen scope, ticket filters, prerequisite policy, and execution limit.
 
 ## Configure the run
 
-Open **Project Timeline → Auto Build**. Describe the work to include and choose **Eligible statuses** for new work. Ignore filters apply in addition. Empty eligibility prevents starting. Status choices use IDs, so renaming or reordering a column preserves behavior. A deleted choice must be removed or replaced. Completed statuses cannot also be eligible.
+Open **Project Timeline → Auto Build**. Enter a prompt, then set **Eligible tickets** and **Ignore tickets** with the same filters used on the ticket board. Filters can use status, title, and other ticket properties, including advanced And/Or groups. Empty eligibility includes all otherwise valid unfinished tickets. Ignore filters take precedence. Completed tickets are always excluded. Status options keep their icons, colors, and IDs across renames.
 
 Choose completed, blocked, active, and optional merge-destination statuses in **Settings → Extensions → Prompt Studio Planner → Settings**. Auto Build reads that shared configuration. No label or default column assigns workflow meaning. Empty optional selections disable only their status convenience.
 
-The supervisor resolves your prompt to explicit ticket IDs once. Prerequisites provide context but do not grant permission to dispatch outside that scope. Changing scope, prompt, eligibility, filters, or policy changes the mode revision and invalidates old dispatch requests.
+The supervisor resolves your prompt to explicit ticket IDs once. Changing the prompt or either ticket filter clears that scope so the supervisor resolves it again. Prerequisites provide context but do not grant permission to dispatch outside the scope. Changing scope, prompt, filters, or policy changes the mode revision and invalidates old dispatch requests.
 
 **Require merged dependencies** waits for prerequisite commits verified in the selected target base, including verified squash merges. Otherwise, selected or unambiguous submitted dependency commits can supply a stack. Independent branches need validated integration before implementing the child. Ticket-specific prerequisite and branch instructions remain binding.
 
@@ -16,7 +16,7 @@ The supervisor resolves your prompt to explicit ticket IDs once. Prerequisites p
 
 The responsible implementation agent updates ticket status using current project columns. It implements, validates, performs the configured adversarial review, repairs, records revisions, and follows the task's PR and CI requirements. Submission and review do not move tickets or request another mandatory reviewer.
 
-Eligible statuses govern new dispatch. Assigned work can finish and resume after its agent changes status. Recovery and repair reuse the current workspace and conversation. Additional workspaces are optional alternatives. Planner never transfers a live branch to a competing writer because a follow-up was queued.
+Eligibility filters govern new dispatch and initial scope discovery. Assigned work can finish and resume after its agent changes ticket properties. Incomplete eligibility or removed filter fields block new dispatch until corrected. Recovery and repair reuse the current workspace and conversation. Additional workspaces are optional alternatives. Planner never transfers a live branch to a competing writer because a follow-up was queued.
 
 Capacity counts live implementation execution, including CI work after a submitted revision. The supervisor and optional reviews are separate. Ordinary live sessions prevent conflicting assignment to their ticket.
 
@@ -34,7 +34,7 @@ Answer implementation [review requests](0006-review-requests.md) to resume affec
 
 The Auto Build popover lists the supervisor and running ticket sessions. Open a conversation to inspect its work. CLI candidate observations explain the current owner, blocker, evidence, and next action.
 
-**Stop Auto Build** prevents new prompts and dispatches. Running sessions continue. Restart preserves prompt, eligible statuses, scope, filters, and policy. Legacy runs without eligible statuses stay stopped until configured. Auto Build does not approve, merge, or publish work.
+**Stop Auto Build** prevents new prompts and dispatches. Running sessions continue. Restart preserves prompt, scope, ticket filters, and policy. Legacy runs without eligibility configuration stay stopped until configured. Auto Build does not approve, merge, or publish work.
 
 ## Agent commands
 

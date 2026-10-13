@@ -8,8 +8,7 @@ const meta: Meta<typeof AutoBuildDialog> = {
   args: {
     saving: false,
     requireMergedDependencies: false,
-    eligibleStatusIds: ["ready"],
-    statuses: DEFAULT_STATUSES,
+    eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
     prompt: "Choose small independent tickets first.",
     ignore: {
       conjunction: "and",
@@ -42,11 +41,10 @@ const meta: Meta<typeof AutoBuildDialog> = {
 };
 export default meta;
 type Story = StoryObj<typeof AutoBuildDialog>;
-export const PromptAndIgnoreFilters: Story = {};
+export const PromptAndTicketFilters: Story = {};
 export const EmptyPrompt: Story = { args: { prompt: "" } };
 export const StackDuringReview: Story = { args: { requireMergedDependencies: false } };
 export const Saving: Story = { args: { saving: true } };
 export const Failure: Story = { args: { error: "Agent unavailable" } };
 
-export const NoEligibleStatuses: Story = { args: { eligibleStatusIds: [] } };
-export const MissingStatus: Story = { args: { eligibleStatusIds: ["deleted-status"] } };
+export const AllEligibleTickets: Story = { args: { eligible: { conjunction: "and", rules: [] } } };

@@ -34,7 +34,7 @@ export function useAutoBuild(client: PlanClient) {
     prompt?: string,
     ignore?: ViewFilterGroup,
     requireMergedDependencies?: boolean,
-    eligibleStatusIds?: string[],
+    eligible?: ViewFilterGroup,
   ) => {
     setSaving(true);
     setError(undefined);
@@ -44,7 +44,7 @@ export function useAutoBuild(client: PlanClient) {
         prompt,
         ignore,
         requireMergedDependencies,
-        eligibleStatusIds,
+        eligible,
       });
       setMode(await readMode(client));
       return true;

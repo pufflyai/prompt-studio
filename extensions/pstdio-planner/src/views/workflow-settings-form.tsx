@@ -1,5 +1,5 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, ScrollArea, TagEditorHeading, TagEditorSaveBar } from "@pstdio/ui";
+import { AlertMessage, TagEditorHeading, TagEditorSaveBar } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkflowStatusSelections } from "../data/workflow-statuses";
 import type { PlannerStatus } from "../public-command-refs";
@@ -46,7 +46,7 @@ export function WorkflowSettingsForm(props: WorkflowSettingsFormProps) {
     },
   ] as const;
   return (
-    <Stack h="full" minH="0" gap="0" bg="bg" color="fg">
+    <Stack gap="0" bg="bg" color="fg">
       <Flex layerStyle="settingsHeader" flexShrink="0" gap="sm" justifyContent="space-between" alignItems="flex-start">
         <Box>
           <TagEditorHeading hasChanges={changed}>Planner workflow</TagEditorHeading>
@@ -66,37 +66,35 @@ export function WorkflowSettingsForm(props: WorkflowSettingsFormProps) {
           }}
         />
       </Flex>
-      <ScrollArea flex="1" minH="0" contentProps={{ p: "lg", spaceY: "lg" }}>
-        <Stack gap="md">
-          {fields.map(({ key, label, description }) => (
-            <StatusChoices
-              key={key}
-              id={key}
-              label={label}
-              description={description}
-              statuses={statuses}
-              value={draft[key]}
-              multiple
-              disabled={saving}
-              onChange={(value) => setDraft({ ...draft, [key]: value as string[] })}
-            />
-          ))}
+      <Stack gap="md" p="lg">
+        {fields.map(({ key, label, description }) => (
           <StatusChoices
-            id="mergeTargetStatusId"
-            label="Status after merge"
-            description="Optional destination when Mark done on merge is enabled. Choose a completed status."
-            statuses={statuses.filter((status) => draft.completedStatusIds.includes(status.id))}
-            value={draft.mergeTargetStatusId ?? ""}
+            key={key}
+            id={key}
+            label={label}
+            description={description}
+            statuses={statuses}
+            value={draft[key]}
+            multiple
             disabled={saving}
-            onChange={(value) => setDraft({ ...draft, mergeTargetStatusId: (value as string) || null })}
+            onChange={(value) => setDraft({ ...draft, [key]: value as string[] })}
           />
-          {error ? <AlertMessage role="alert" status="error" title={error} /> : null}
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            Empty selections disable only the corresponding status convenience. Agents maintain ticket progress using
-            your current columns.
-          </Text>
-        </Stack>
-      </ScrollArea>
+        ))}
+        <StatusChoices
+          id="mergeTargetStatusId"
+          label="Status after merge"
+          description="Optional destination when Mark done on merge is enabled. Choose a completed status."
+          statuses={statuses.filter((status) => draft.completedStatusIds.includes(status.id))}
+          value={draft.mergeTargetStatusId ?? ""}
+          disabled={saving}
+          onChange={(value) => setDraft({ ...draft, mergeTargetStatusId: (value as string) || null })}
+        />
+        {error ? <AlertMessage role="alert" status="error" title={error} /> : null}
+        <Text textStyle="paragraph/S/regular" color="fg.muted">
+          Empty selections disable only the corresponding status convenience. Agents maintain ticket progress using your
+          current columns.
+        </Text>
+      </Stack>
     </Stack>
   );
 }

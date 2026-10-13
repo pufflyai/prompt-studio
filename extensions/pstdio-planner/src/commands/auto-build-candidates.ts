@@ -1,9 +1,8 @@
 import { type CommandContext, defineCommand } from "@pstdio/sdk/extensions";
-import { filterRowsByView } from "@pstdio/ui/collection-view";
 import { findPendingPrerequisites } from "../data/attempt-readiness";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { listAttempts } from "../data/attempt-storage";
-import { usableAutoBuildIgnore } from "../data/auto-build-ignore";
+import { readAutoBuildTicketFilters } from "../data/auto-build-filter";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { ticketsCollection } from "../data/collections";
 import { resolveImplementationBase } from "../data/implementation-targets";
@@ -36,13 +35,18 @@ const relevantTicketIds = (scope: string[] | null, tickets: StoredTicket[]) => {
   return ids;
 };
 
-const eligibleConfigurationError = (mode: AutoBuildMode, known: Set<string>, completed: string[]) => {
-  if (!mode.eligibleStatusIds.length) return "Choose eligible statuses before dispatching new work.";
-  if (mode.eligibleStatusIds.some((id) => !known.has(id))) return "Remove or replace missing eligible statuses.";
-  if (mode.eligibleStatusIds.some((id) => completed.includes(id)))
-    return "Completed statuses cannot be eligible for Auto Build.";
-  return null;
-};
+const scopeTickets = (tickets: StoredTicket[], eligible: Set<string>, ignored: Set<string>, completed: string[]) =>
+  tickets
+    .filter(
+      (ticket) =>
+        !ticket.archived &&
+        !ticket.draft &&
+        !completed.includes(ticket.statusId ?? "") &&
+        eligible.has(ticket.id) &&
+        !ignored.has(ticket.id),
+    )
+    .map(({ id, shorthand, title, tagIds, dependsOn }) => ({ id, ticket: shorthand, title, tagIds, dependsOn }));
+
 export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBuildMode) {
   const [plan, attempts, tickets, resumptions, capacity, assignments, requests] = await Promise.all([
     readPlanCommand.run(ctx, {}),
@@ -60,16 +64,18 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
     ]),
   );
   const query = timelineQueryData(plan, (_key, fallback) => fallback ?? _key);
-  const ignore = usableAutoBuildIgnore(mode.ignore, query.attributes);
-  const ignored = new Set(ignore ? filterRowsByView(query.rows, ignore, query.attributes).map(({ id }) => id) : []);
+  const { eligible, ignored, configurationError } = readAutoBuildTicketFilters(
+    mode.eligible,
+    mode.ignore,
+    query.rows,
+    query.attributes,
+  );
   const retired = await readRetiredWorkspaceIds(ctx.storage);
   const attempted = new Set(
     attempts.filter(({ workspaceId }) => !retired.has(workspaceId)).map(({ ticketId }) => ticketId),
   );
   const workflowRead = await readWorkflowStatuses(ctx);
   const workflow = usableWorkflowStatuses(workflowRead);
-  const known = new Set(workflowRead.statuses.map(({ id }) => id));
-  const configurationError = eligibleConfigurationError(mode, known, workflowRead.selections.completedStatusIds);
   const candidates: WorkCandidate[] = [];
   const blockedTickets: string[] = [];
   const scoped =
@@ -90,7 +96,7 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
         mode.scopeTicketIds !== null &&
         mode.scopeTicketIds.includes(row.id) &&
         !workflow.completedStatusIds.includes(row.status?.id ?? "") &&
-        (resumptions.has(row.id) || (!configurationError && mode.eligibleStatusIds.includes(row.status?.id ?? ""))) &&
+        (resumptions.has(row.id) || (!configurationError && eligible.has(row.id))) &&
         !tickets.find(({ id }) => id === row.id)?.draft &&
         !assignments.assigned.has(row.id),
     );
@@ -158,12 +164,8 @@ export async function readAutoBuildCandidates(ctx: CommandContext, mode: AutoBui
     observations: work.observations,
     scopeUnresolved: mode.scopeTicketIds === null,
     scopeOptions:
-      mode.scopeTicketIds === null
-        ? tickets
-            .filter(
-              (ticket) => !ticket.archived && !ticket.draft && mode.eligibleStatusIds.includes(ticket.statusId ?? ""),
-            )
-            .map(({ id, shorthand, title, tagIds, dependsOn }) => ({ id, ticket: shorthand, title, tagIds, dependsOn }))
+      mode.scopeTicketIds === null && !configurationError
+        ? scopeTickets(tickets, eligible, ignored, workflow.completedStatusIds)
         : [],
   };
 }

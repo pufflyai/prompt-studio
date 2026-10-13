@@ -53,9 +53,9 @@ const runUpgrade = async (storage: ExtensionStorageApi) => {
         const { state: _state, ...preserved } = record;
         await records.put(record.workspaceId, { ...preserved, schemaVersion: 2 });
       }
-      const mode = await storage.get<{ enabled: boolean; eligibleStatusIds?: string[] }>("auto-build");
-      if (mode && !mode.eligibleStatusIds?.length)
-        await storage.set("auto-build", { ...mode, enabled: false, eligibleStatusIds: [] });
+      const mode = await storage.get<{ enabled: boolean; eligible?: unknown }>("auto-build");
+      if (mode && mode.eligible === undefined)
+        await storage.set("auto-build", { ...mode, enabled: false, eligible: { conjunction: "and", rules: [] } });
       await migrations.put(migrationKey, { complete: true });
       return true;
     },

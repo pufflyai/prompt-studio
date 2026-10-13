@@ -56,7 +56,10 @@ export async function expectPackagedPlannerTimeline(input: {
   const execute = commandRunner(input);
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, eligibleStatusIds: [] });
+  expect(await execute("auto-build.read", {})).toMatchObject({
+    enabled: false,
+    eligible: { conjunction: "and", rules: [] },
+  });
   const statuses = (await execute("ticket-status.read", {})).statuses;
   const selections = {
     completedStatusIds: [statuses.find((status: { name: string }) => status.name === "Done").id],
@@ -67,18 +70,27 @@ export async function expectPackagedPlannerTimeline(input: {
   await execute("workflow-statuses.save", { selections });
   expect(await execute("workflow-statuses.read", {})).toMatchObject({ selections, missingStatusIds: [] });
   expect((await execute("implementation-policy", {})).workflow.selections).toEqual(selections);
-  const eligibleStatusIds = [statuses.find((status: { name: string }) => status.name === "Todo").id];
+  const eligible = {
+    conjunction: "and",
+    rules: [
+      {
+        attributeId: "status",
+        condition: "is-any-of",
+        value: [statuses.find((status: { name: string }) => status.name === "Todo").id],
+      },
+    ],
+  };
   expect(
     await execute("auto-build.configure", {
       enabled: true,
       prompt: "Choose valid tasks.",
-      eligibleStatusIds,
+      eligible,
       scopeTicketIds: [],
       requireMergedDependencies: false,
     }),
   ).toMatchObject({
     enabled: true,
-    eligibleStatusIds,
+    eligible,
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
   expect(await execute("auto-build.read", {})).toMatchObject({

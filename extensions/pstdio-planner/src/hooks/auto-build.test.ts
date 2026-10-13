@@ -42,7 +42,7 @@ test("enabling the project mode queues a background check", async () => {
   await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     prompt: "Choose relevant work.",
-    eligibleStatusIds: ["ready"],
+    eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
   });
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({
     enabled: true,
@@ -56,7 +56,7 @@ test("concurrent events share the active check and later changes can enqueue aga
   await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     prompt: "Choose relevant work.",
-    eligibleStatusIds: ["ready"],
+    eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
   });
   runs[0]!.status = "succeeded";
   await Promise.all([enqueueAutoBuild(ctx), enqueueAutoBuild(ctx), enqueueAutoBuild(ctx)]);
@@ -73,7 +73,7 @@ test("turning off saves the project mode and events no longer queue checks", asy
   await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     prompt: "Choose relevant work.",
-    eligibleStatusIds: ["ready"],
+    eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
   });
   await configureAutoBuildCommand.run(ctx, { enabled: false });
   runs[0]!.status = "succeeded";
@@ -87,7 +87,7 @@ test("shows background launch errors from the host run", async () => {
   await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     prompt: "Choose relevant work.",
-    eligibleStatusIds: ["ready"],
+    eligible: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["ready"] }] },
   });
   runs[0]!.status = "succeeded";
   runs[0]!.error = { code: "supervisor-failed", message: "Agent unavailable", retryable: false };

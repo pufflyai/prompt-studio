@@ -80,7 +80,7 @@ test("concurrent upgrades preserve all variant history, requests, selections, an
   expect(await storage.collection("planner-review-requests").get("request")).toMatchObject({ id: "request" });
   expect(await storage.get("auto-build")).toMatchObject({
     enabled: false,
-    eligibleStatusIds: [],
+    eligible: { conjunction: "and", rules: [] },
     ignore: { rules: [] },
   });
 });
