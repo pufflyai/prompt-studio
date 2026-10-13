@@ -102,6 +102,12 @@ The full stage adds:
 
 `build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
 
+## macOS release checks
+
+Signed macOS builds submit the app with native `notarytool` from Forge's `postPackage` hook. Submission and ticket retrieval are separate operations. After Apple accepts the upload, `stapler staple` gets up to three attempts for Apple network failures: exit code 68 with `NSURLErrorDomain` in the output. The pauses are one and two seconds. Release verification uses the same rule for `stapler validate`.
+
+Every attempt logs its status and output. Other errors fail at once. This retries an external service call; test retries remain disabled. Validate a change to this path with a nightly release run that builds, notarizes, staples, and verifies both macOS targets.
+
 ## Published extension dependencies
 
 Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.

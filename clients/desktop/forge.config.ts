@@ -8,6 +8,7 @@ import { version } from "./package.json";
 import { writeCliInstallScripts } from "./src/packaging/cli-install-scripts";
 import { finalizeWindowsSidecar } from "./src/packaging/finalize-windows-sidecar";
 import { desktopPackageName } from "./src/packaging/package-layout";
+import { notarizeMacApp } from "./src/release/notarize-macos";
 import { resolveDesktopSigning } from "./src/release/release-config";
 import { validateSidecarArtifact } from "./src/runtime/sidecar-artifact";
 
@@ -53,11 +54,16 @@ const config: ForgeConfig = {
       // to the runtime too, so it must skip the whole folder.
       ignore: (filePath) => filePath.includes("/Contents/Resources/bin/"),
     },
-    osxNotarize: signing.osxNotarize,
     windowsSign: signing.windowsSign,
   },
   hooks: {
     postPackage: async (_forgeConfig, result) => {
+      if (result.platform === "darwin" && signing.macosNotarization) {
+        for (const outputPath of result.outputPaths) {
+          await notarizeMacApp(join(outputPath, `${desktopPackageName("darwin")}.app`), signing.macosNotarization);
+        }
+        return;
+      }
       if (result.platform !== "win32" || !signing.windowsSign) return;
       for (const outputPath of result.outputPaths) {
         const resourcesPath = join(outputPath, "resources");
