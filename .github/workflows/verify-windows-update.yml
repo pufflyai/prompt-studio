@@ -21,9 +21,14 @@ on:
         type: string
   workflow_dispatch:
     inputs:
+      diagnosis:
+        description: Compare published and rebuilt 0.43.0 installer shortcuts
+        required: false
+        default: false
+        type: boolean
       candidate-run-id:
         description: Successful signing or release run containing the newer candidate
-        required: true
+        required: false
         type: string
       candidate-ref:
         description: Candidate commit with matching package versions (defaults to the workflow revision)
@@ -31,7 +36,7 @@ on:
         type: string
       previous-tag:
         description: Existing older pstdio release tag to build as the signed baseline
-        required: true
+        required: false
         type: string
       baseline-run-id:
         description: Reuse a windows-signed-baseline artifact from an earlier run instead of rebuilding
@@ -42,8 +47,15 @@ permissions:
   contents: read
 
 jobs:
+  diagnosis:
+    if: inputs.diagnosis == true
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/diagnose-published-windows-install.yml
+
   baseline:
-    if: inputs.baseline-run-id == ''
+    if: inputs.diagnosis != true && inputs.baseline-run-id == ''
     runs-on: windows-2025
     timeout-minutes: 30
     permissions:
@@ -90,7 +102,7 @@ jobs:
 
   installation:
     needs: baseline
-    if: ${{ !cancelled() && (needs.baseline.result == 'success' || needs.baseline.result == 'skipped') }}
+    if: ${{ !cancelled() && inputs.diagnosis != true && (needs.baseline.result == 'success' || needs.baseline.result == 'skipped') }}
     runs-on: windows-2025
     timeout-minutes: 30
     permissions:
