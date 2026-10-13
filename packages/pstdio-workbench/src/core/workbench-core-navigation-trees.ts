@@ -2,11 +2,20 @@ import {
   createNavigationTreeRegistry,
   type NavigationTreeMoveContext,
 } from "./registries/navigation/navigation-tree-registry";
+import { pageTargetAvailable } from "./registries/pages/page-availability";
 import type { TreeNode } from "./registries/renderers/tree-renderer-types";
 import type { createCoreRenderers } from "./workbench-core-renderers";
+import type { WorkbenchCore } from "./workbench-core-types";
 
-export const createWorkbenchNavigationTrees = (renderers: ReturnType<typeof createCoreRenderers>) =>
+export const createWorkbenchNavigationTrees = (
+  renderers: ReturnType<typeof createCoreRenderers>,
+  resolveCore?: () => WorkbenchCore | undefined,
+) =>
   createNavigationTreeRegistry({
+    isTargetAvailable: (target) => {
+      const core = resolveCore?.();
+      return !core || pageTargetAvailable(target, core.pages.listPages(), core.modes.getActiveModeId());
+    },
     subscribeViewRefresh: (viewId, listener) =>
       renderers.onDidRefresh(({ treeId }) => {
         if (treeId === viewId) listener();

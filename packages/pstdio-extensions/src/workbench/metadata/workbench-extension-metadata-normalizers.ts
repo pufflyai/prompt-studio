@@ -31,6 +31,7 @@ export function normalizeTarget(target: NavigationTarget, extensionId: string): 
     return {
       ...target,
       page: normalizedRef(target.page, extensionId),
+      ...(target.mode ? { mode: normalizedRef(target.mode, extensionId) } : {}),
       parent: target.parent ? (normalizeTarget(target.parent, extensionId) as typeof target.parent) : undefined,
     } as MetadataNavigationTarget;
   }

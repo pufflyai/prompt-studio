@@ -74,6 +74,17 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
 
 test("keeps canonical resource identity from owner navigation results", async () => {
   const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.modes.setActiveMode("project");
+  workbench.views.registerView({ id: "slides", title: "Slides", body: { kind: "react", render: () => null } });
+  workbench.pages.registerPage({
+    id: "slides",
+    ref: { kind: "page", extensionId: "pstdio.lab", id: "slides" },
+    path: "slides",
+    modeId: "project",
+    main: { kind: "view", view: { kind: "view", id: "slides" }, cardinality: "one" },
+    slots: [],
+  });
   registerWorkbenchExtensionCommandPaletteResources(
     {
       projectId: "p1",

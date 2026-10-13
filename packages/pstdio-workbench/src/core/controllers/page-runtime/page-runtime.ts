@@ -11,7 +11,9 @@ import {
   applyOwnedWidgetLayoutReconciliation,
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
-import { restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { restoreAdoptedModeGeometry, restorePageGeometry } from "../../registries/layout/owner-region-state";
+import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
+import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
@@ -36,13 +38,16 @@ import type { WorkbenchViewRegistry } from "../../registries/views/view-registry
 import { createDisposable } from "../../shared/disposable";
 import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
 import { pageWidgetId, reuseSingleResourceWidgets } from "./page-widget-id";
+import { reuseSingleMainView } from "./reuse-single-main-view";
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadPageGeometry?(projectId: string, pageId: string): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
   persistPreparedOwners?(states: readonly WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[]): void;
-  beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
+  beforeApply?(
+    state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] | undefined;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
   modes: WorkbenchModeRegistry;
@@ -83,6 +88,7 @@ const prepareRuntimeLayout = (
   activation: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["placements"],
   enteringPage: boolean,
   liveLayout: WorkbenchLayout,
+  adoptedModePlacements?: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
 ) => {
   let modeLayout = latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined;
   if (modeLayout && !enteringPage) {
@@ -112,6 +118,7 @@ const prepareRuntimeLayout = (
           enteringPage,
           currentLayout: input.layout.getLayout(),
           liveLayout,
+          adoptedModePlacements,
           getWidget: input.layout.getWidget,
           hasDeclaration: input.hasDeclaration,
         })
@@ -141,11 +148,12 @@ const applyPageState = (
   source: "transition" | "scope-restore",
   storeBeforeTransition = input.registry.store.getState(),
 ) => {
+  const previousLayout = input.layout.getLayout();
   const previousScope = input.layout.getPersistenceScope();
   const liveLayout = input.layout.getLayout();
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
-    if (source === "transition") input.beforeApply?.(state);
+    const adopted = source === "transition" ? input.beforeApply?.(state) : undefined;
     // Mode listeners may open or close mode/shell placements after the mode is
     // published. Reconcile the latest registry state so this transition cannot
     // overwrite those declarative changes with the snapshot that began it.
@@ -154,7 +162,14 @@ const applyPageState = (
     const activation =
       latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
     const enteringPage = input.layout.getPersistenceScope() !== previousScope;
-    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(input, latest, activation, enteringPage, liveLayout);
+    const { ownerManaged, ...layoutInput } = prepareRuntimeLayout(
+      input,
+      latest,
+      activation,
+      enteringPage,
+      liveLayout,
+      adopted,
+    );
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
     // A restored cache needs the complete owned set; a delta belongs to the previous scope.
     if (ownerManaged || source === "scope-restore" || enteringPage) {
@@ -165,11 +180,23 @@ const applyPageState = (
         remove: latest.reconciliation.remove.map((placement) => placement.identity),
       });
     }
-    input.layout.restoreLayout(restoreRuntimeGeometry(input, latest, layout));
+    const activated = ownerLayoutActivation(activation, layoutInput.placements);
+    const restored = restoreAdoptedModeGeometry(
+      restoreRuntimeGeometry(input, latest, layout),
+      previousLayout,
+      adopted?.map((placement) => placement.region) ?? [],
+      activated.map((placement) => placement.region),
+    );
+    const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
+    const available = mode ? applyModePanelAvailability(restored, panelsForMode(mode)) : restored;
+    input.layout.restoreLayout(
+      storeBeforeTransition.projectId === latest.projectId
+        ? reuseSingleMainView(previousLayout, available, latest.pages)
+        : available,
+    );
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") {
-      for (const placement of ownerLayoutActivation(activation, layoutInput.placements))
-        input.revealRegion?.(placement.region);
+      for (const placement of activated) input.revealRegion?.(placement.region);
     }
   });
 };
@@ -230,7 +257,7 @@ export interface CreateLiveWorkbenchPageRegistryInput {
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadPageGeometry?: ConnectWorkbenchPageRuntimeInput["loadPageGeometry"];
   restorePageState?: CreateWorkbenchPageRegistryInput<WorkbenchWidgetPlacement>["restorePageState"];
-  beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
+  beforeApply?: ConnectWorkbenchPageRuntimeInput["beforeApply"];
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
   modePlacements: WorkbenchModePlacementRegistry;
@@ -289,7 +316,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     loadPageLayout: input.loadPageLayout,
     loadPageGeometry: input.loadPageGeometry,
     beforeApply: (state) => {
-      input.beforeApply?.(state);
+      const adopted = input.beforeApply?.(state);
       const shell = getOwnedPlacementPreparation(input.shellPlacements);
       shell.apply(
         shell.adopt!(
@@ -306,6 +333,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
             state.placements.map((placement) => ({ ...placement.value, placementIdentity: placement.identity })),
           ),
         );
+      return adopted;
     },
     revealRegion: input.revealRegion,
     layout: input.layout,

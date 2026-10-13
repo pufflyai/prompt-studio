@@ -74,7 +74,10 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly path: string;
+  /** @deprecated Use modes for page availability. Without modes, keeps singleton navigation. */
   readonly mode: ModeRef;
+  /** Non-empty, unique list of allowed modes. Authoritative when supplied. */
+  readonly modes?: readonly ModeRef[];
   readonly parent?: PageRef;
   readonly resource?: ResourceConstraint;
   readonly document?: PageDocumentDeclaration;
@@ -94,6 +97,8 @@ export type PlacementIdentity = PlacementOwner & { readonly instanceKey: string 
 
 export interface PageLocation {
   readonly page: PageRef;
+  /** The mode in which this page was opened. */
+  readonly mode?: ModeRef;
   readonly resource?: ResourceRef;
   readonly section?: FileRendererSectionTarget;
   readonly position?: FileSourcePosition;

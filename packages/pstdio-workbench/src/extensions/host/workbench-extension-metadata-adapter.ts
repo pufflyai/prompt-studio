@@ -169,6 +169,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     id: mode.id,
     extensionId: mode.extensionId,
     modeId: mode.id,
+    basePage: mode.basePage,
     label: mode.label,
     icon: mode.icon,
     panelRegions: mode.regions,

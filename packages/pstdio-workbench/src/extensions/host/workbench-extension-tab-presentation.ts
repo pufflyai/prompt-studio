@@ -1,5 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { isNavigationTarget, resourceKey } from "@pstdio/sdk/extensions";
+import { resourceContextSchema } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchPanelTab, WorkbenchTabSnapshot } from "../../core";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
@@ -19,6 +20,7 @@ const navigationAction = (value: unknown, extensionId: string, projectId: string
   isNavigationTarget(value) ? toWorkbenchNavigationTarget(value, { extensionId, projectId }) : undefined;
 const toSnapshot = (value: unknown, extensionId: string, projectId: string): WorkbenchTabSnapshot => {
   if (!isRecord(value)) return {};
+  const context = resourceContextSchema.safeParse(value.context);
   const indicator = isRecord(value.indicator)
     ? {
         icon: String(value.indicator.icon ?? ""),
@@ -52,6 +54,7 @@ const toSnapshot = (value: unknown, extensionId: string, projectId: string): Wor
       })
     : undefined;
   return {
+    context: context.success ? context.data : undefined,
     label: text(value.label as Parameters<typeof text>[0]),
     icon: typeof value.icon === "string" ? value.icon : undefined,
     indicator: indicator?.icon ? indicator : undefined,
