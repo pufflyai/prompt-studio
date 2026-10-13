@@ -1,8 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts";
+import { freshInstallArgs } from "./fresh-install";
 
-export const verifyProviderPackageConsumer = (root: string, sdkArchive: string) => {
+export const verifyProviderPackageConsumer = (root: string, sdkArchive: string, repoRoot: string) => {
   const run = (cwd: string, args: string[]) => {
     const result = Bun.spawnSync(["bun", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
     if (result.exitCode !== 0)
@@ -42,7 +43,7 @@ export const notes = qualifyRef("verify.review-provider", page.ref);
 export const inspector = qualifyRef("verify.review-provider", page.panels.inspector);
 export const saveNote = qualifyRef("verify.review-provider", save.ref);\n`,
   );
-  run(provider, ["install"]);
+  run(provider, freshInstallArgs(repoRoot, provider));
   const archive = join(root, "provider.tgz");
   run(provider, ["pm", "pack", "--filename", archive]);
   writeFileSync(
@@ -79,7 +80,7 @@ if (notes.extensionId !== "verify.review-provider" || inspector.page.extensionId
       include: ["consumer.ts"],
     }),
   );
-  run(consumer, ["install"]);
+  run(consumer, freshInstallArgs(repoRoot, consumer));
   run(consumer, ["node_modules/typescript/bin/tsc", "--noEmit"]);
   run(consumer, ["consumer.ts"]);
   console.log("Verified provider page, panel, and typed command refs through separately installed packages.");
