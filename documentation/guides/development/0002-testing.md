@@ -86,6 +86,12 @@ When a pull request leaves the queue, a build or check failed on the merged resu
 
 Pushes to `main` run every job. Tests no longer block merging, so a regression shows up on the `main` commit that caused it. Fix it in a follow-up pull request, or link the failure to the flaky-test ticket that owns it before re-running.
 
+Before using **Re-run failed jobs** on a release or nightly, record the failure on a ticket or link it to the ticket that owns it. Keep the job link, failed step or test, and first-attempt evidence. A passing rerun does not close the bug.
+
+The **Weekly CI failure report** workflow collects every attempt of Test and Build and Release Packages from the last seven days. Its job summary groups failed tests and steps, lists affected branches, counts main and release failures, and shows later same-commit passes. Jobs copied into later attempts are counted once. The main first-attempt rate uses completed push runs and includes failures that later passed.
+
+Run it locally with GitHub CLI authentication: `bun scripts/ci/report-ci-failures.ts --since 2026-10-12T00:00:00Z --until 2026-10-13T00:00:00Z`. Optional `--repository owner/repo` and `--output directory` select the source and output folder. The default folder is `test-results/ci-failures`; it contains `runs.json`, `jobs.json`, `summary.json`, and `summary.md`. Failed logs are parsed in memory; unavailable logs are reported beside their job links. The weekly artifact keeps this report data for inspection.
+
 The full stage adds:
 
 - `lint_and_test` and `database_tests` for every package, and the published extension, harness CLI, and license checks.
