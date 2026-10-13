@@ -79,7 +79,7 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
           variant="outline"
           disabled={disabled}
         >
-          <AutoBuildIndicator status={status} label={`Auto Build ${activity}`} />
+          {status ? <AutoBuildIndicator status={status} label={`Auto Build ${activity}`} /> : <Play />}
           {t("timeline.autoBuild.start", "Auto Build")}
         </Button>
       </Popover.Trigger>

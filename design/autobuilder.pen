@@ -31690,6 +31690,78 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "wob1H",
+      "x": 3200,
+      "y": 1050,
+      "name": "Auto Build · Off",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 480,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "QxVVK",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Off · sample state",
+          "fontFamily": "$font-label",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "f6Wgi",
+          "name": "Timeline toolbar",
+          "width": "fill_container",
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "CIW2S",
+              "fill": "$ds-fg",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Timeline",
+              "fontFamily": "$font-label",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "id": "YaP4G",
+              "type": "ref",
+              "ref": "c24zV7",
+              "height": 28,
+              "theme": {
+                "btn": "outline",
+                "size": "xs"
+              },
+              "descendants": {
+                "DsEVd": {
+                  "icon": "play",
+                  "fill": "$btn-fg",
+                  "enabled": true,
+                  "width": 14,
+                  "height": 14
+                },
+                "Hf4GT": {
+                  "content": "Auto Build"
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
