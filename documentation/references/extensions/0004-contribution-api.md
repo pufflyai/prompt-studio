@@ -42,7 +42,9 @@ Do not return `metadata.resourceParent` or infer a view from a resource type. Re
 
 ## Settings
 
-`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`. A settings panel without `section` appears in the host's Project group.
+`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`.
+
+Use `workbenchSlots.extensionSettings` for custom controls in the owning extension's Settings tab. The host places these views next to its ordinary setting fields, in a bounded area that the view can scroll. They do not add entries to the project settings navigation. Use `workbenchSlots.projectSettings` for a separate project settings entry, such as a shared status editor. A project settings panel without `section` appears in the host's Project group.
 
 A `string` setting can offer choices in two ways:
 
