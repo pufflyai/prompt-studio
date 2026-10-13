@@ -521,7 +521,13 @@ jobs:
 
       - name: Build unsigned desktop app
         id: desktop
+        env:
+          DEBUG: electron-installer-dmg
         run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
+
+      - name: Record disk images after a failed macOS desktop build
+        if: failure() && matrix.platform == 'darwin' && steps.desktop.outcome == 'failure'
+        run: hdiutil info -plist
 
       # Chromium refuses to start on Linux unless its sandbox helper is owned by root and setuid.
       - name: Configure the Linux Chromium sandboxes
