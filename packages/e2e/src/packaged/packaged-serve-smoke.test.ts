@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -13,11 +13,6 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
-// Also checks inline and display equations with the packaged KaTeX assets.
-// Chat tables wrap by default, hide row numbers, and retain the wrapping control.
-// Wrapped user prompts collapse by rendered height and retain borderless expand/collapse controls.
-// Streaming chunks retain earlier DOM and settle without running animations.
-import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
@@ -31,7 +26,6 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
-import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
@@ -48,6 +42,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
+import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Timeline coverage configures Auto build mode and checks implementation status in both Planner views.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
@@ -68,10 +63,6 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
-import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
-
-// Core extensions install from the host's version tag, or from the main commit a nightly build bakes in.
-const hostReleaseRef = /^(?:pstdio@\d|[0-9a-f]{40}$)/;
 
 const BUILD_TIMEOUT = 180_000;
 
@@ -106,178 +97,7 @@ test("includes extension development, smoke test, browser setup and update comma
   expect(updateResult.stdout).toContain("extensions update [name]");
 });
 
-test(
-  "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
-  async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-    let child: ChildProcess | null = null;
-
-    try {
-      const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
-      });
-      child = started.child;
-
-      const dashboardRes = await fetch(started.baseUrl);
-      expect(dashboardRes.status).toBe(200);
-      expect(dashboardRes.headers.get("content-type")).toContain("text/html");
-      const dashboardHtml = await dashboardRes.text();
-      const moduleScript = dashboardHtml.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/);
-      expect(moduleScript).not.toBeNull();
-      const dashboardScript = await fetch(new URL(moduleScript![1]!, started.baseUrl));
-      expect(dashboardScript.status).toBe(200);
-      expect(dashboardScript.headers.get("content-type")).toMatch(/javascript/);
-
-      const projectsRes = await fetch(`${started.baseUrl}/v1/projects`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(projectsRes.status).toBe(200);
-      expect(await projectsRes.json()).toEqual([]);
-      const renameRes = await fetch(`${started.baseUrl}/v1/sessions/missing/title`, {
-        method: "PATCH",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ title: " " }),
-      });
-      expect(renameRes.status).toBe(400);
-      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
-    } finally {
-      if (child) {
-        await stopProcess(child);
-      }
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  },
-  PACKAGED_TEST_TIMEOUT,
-);
-
-test(
-  "opens an empty folder with project bootstrap artifacts and preserves it after restart",
-  async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-    let child: ChildProcess | null = null;
-
-    try {
-      const started = await startPackagedServe(tempRoot);
-      child = started.child;
-
-      const repoPath = join(tempRoot, "project-folder");
-      mkdirSync(repoPath, { recursive: true });
-      const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify(folderProjectInput({ name: "packaged-serve-project" }, repoPath)),
-      });
-      expect(createRes.status).toBe(201);
-
-      const project = (await createRes.json()) as { id: string };
-      await expectPackagedWorkspaceFileLink({
-        baseUrl: started.baseUrl,
-        projectId: project.id,
-        projectRoot: repoPath,
-        home: tempRoot,
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      const providersRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/workspace-providers`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(providersRes.status).toBe(200);
-      expect(await providersRes.json()).toEqual([]);
-      const invalidWorkspace = await fetch(`${started.baseUrl}/v1/workspaces`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, provider_id: "pstdio.root", params: { typo: true } }),
-      });
-      expect(invalidWorkspace.status).toBe(400);
-      expect((await invalidWorkspace.json()).error).toContain("typo");
-      const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(extensionsRes.status).toBe(200);
-      const extensionCatalog = (await extensionsRes.json()) as {
-        marketplace: Array<{
-          installName: string;
-          origin: { kind: "git"; path: string; ref: string; url: string };
-          publisher?: string;
-        }>;
-      };
-      expect(extensionCatalog.marketplace).toContainEqual(
-        expect.objectContaining({
-          installName: "pstdio-artifacts",
-          installed: false,
-          origin: {
-            kind: "git",
-            path: "extensions/pstdio-artifacts",
-            ref: expect.stringMatching(hostReleaseRef),
-            url: "https://github.com/pufflyai/prompt-studio",
-          },
-          publisher: "pstdio",
-        }),
-      );
-      expect(extensionCatalog.marketplace).toContainEqual(
-        expect.objectContaining({
-          installName: "pstdio-notes",
-          origin: {
-            kind: "git",
-            path: "extensions/pstdio-notes",
-            ref: expect.stringMatching(hostReleaseRef),
-            url: "https://github.com/pufflyai/prompt-studio",
-          },
-          publisher: "pstdio",
-        }),
-      );
-      expect(extensionCatalog.marketplace).toContainEqual(
-        expect.objectContaining({
-          installName: "pstdio-planner",
-          origin: {
-            kind: "git",
-            path: "extensions/pstdio-planner",
-            ref: expect.stringMatching(hostReleaseRef),
-            url: "https://github.com/pufflyai/prompt-studio",
-          },
-          publisher: "pufflyai",
-        }),
-      );
-
-      const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(skillsRes.status).toBe(200);
-
-      const skills = (await skillsRes.json()) as {
-        name: string;
-        files: { path: string; content: string; encoding: "utf8" }[];
-      }[];
-      expect(skills).toEqual([]);
-
-      expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
-
-      await stopProcess(child);
-      const restarted = await startPackagedServe(tempRoot);
-      child = restarted.child;
-      const projectsRes = await fetch(`${restarted.baseUrl}/v1/projects`, {
-        headers: runtimeAuthorization(restarted.descriptor),
-      });
-      expect(projectsRes.status).toBe(200);
-      expect(await projectsRes.json()).toEqual([
-        expect.objectContaining({ id: project.id, name: "packaged-serve-project" }),
-      ]);
-      await expectPackagedFolderOwnership(restarted.baseUrl, runtimeAuthorization(restarted.descriptor), tempRoot);
-      const deleted = await fetch(`${restarted.baseUrl}/v1/projects/${project.id}`, {
-        method: "DELETE",
-        headers: runtimeAuthorization(restarted.descriptor),
-      });
-      expect(deleted.status).toBe(204);
-      expect(existsSync(repoPath)).toBe(true);
-      expect(existsSync(join(repoPath, ".pstdio/config.json"))).toBe(false);
-    } finally {
-      if (child) {
-        await stopProcess(child);
-      }
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  },
-  PACKAGED_TEST_TIMEOUT,
-);
+registerPackagedProjectSetupSmokeTests();
 
 test(
   "loads default extension dependencies, native actions and command-backed workspace choices",
