@@ -1,4 +1,4 @@
-import { closeSync, existsSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
 if (process.argv.includes("--version")) {
@@ -29,6 +29,6 @@ for await (const line of createInterface({ input: process.stdin })) {
       });
       return;
     }
-    closeSync(1);
+    process.exit(1);
   }, 10);
 }
