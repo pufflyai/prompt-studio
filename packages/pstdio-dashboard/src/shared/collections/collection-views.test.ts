@@ -1,52 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
-import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
-import { createSharedCollectionViews } from "./collection-views";
+import { cleanup, ids, row, setup, writer } from "./collection-views.test-support";
 
-const writer = getWriter("board_views")!;
-const row = (id: string, sortOrder: number) => ({
-  id,
-  project_id: "project",
-  extension_instance_id: null,
-  board_id: "table",
-  title: id,
-  settings: {},
-  filter: { conjunction: "and", rules: [] },
-  sorts: [],
-  sort_order: sortOrder,
-  created_at: "2026-10-13",
-});
-const ids = (source: ReturnType<typeof createSharedCollectionViews>) =>
-  source.getSnapshot()!.views.map((view) => view.id);
-const config = Object.getOwnPropertyDescriptor(globalThis, "__PSTDIO_CONFIG__");
-const servers: ReturnType<typeof Bun.serve>[] = [];
-
-afterEach(() => {
-  for (const server of servers) server.stop(true);
-  servers.length = 0;
-  writer.truncateAndWrite([]);
-  if (config) Object.defineProperty(globalThis, "__PSTDIO_CONFIG__", config);
-  else Reflect.deleteProperty(globalThis, "__PSTDIO_CONFIG__");
-});
-
-const setup = (handle: (request: Request) => Promise<Response> | Response) => {
-  const server = Bun.serve({
-    port: 0,
-    fetch: (request) => (request.method === "PUT" ? handle(request) : Response.json({})),
-  });
-  servers.push(server);
-  Object.defineProperty(globalThis, "__PSTDIO_CONFIG__", {
-    configurable: true,
-    value: { apiBaseUrl: server.url.origin },
-  });
-  writer.truncateAndWrite([row("a", 0), row("b", 1), row("c", 2)]);
-  markInitialCollectionsSyncComplete();
-  return createSharedCollectionViews({
-    projectId: "project",
-    extensionInstanceId: null,
-    localId: "table",
-    record: { id: "table" },
-  });
-};
+afterEach(cleanup);
 
 test("saved view order updates immediately and follows sync after saving", async () => {
   const response = Promise.withResolvers<Response>();
@@ -129,6 +84,205 @@ test("partial sync keeps the intended order until every saved position arrives",
   expect(ids(source)).toEqual(order);
   writer.upsert(row("c", 3));
   expect(ids(source)).toEqual(order);
+});
+
+test("a reconnect snapshot supersedes a saved move whose sync events were missed", async () => {
+  const source = setup(() => Response.json({}));
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    await source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    expect(ids(source)).toEqual(["c", "a", "b"]);
+    writer.truncateAndWrite([row("b", 0), row("a", 1), row("c", 2)]);
+    expect(ids(source)).toEqual(["b", "a", "c"]);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("a snapshot during saving keeps the pending move until the save completes", async () => {
+  const response = Promise.withResolvers<Response>();
+  const source = setup(
+    () => response.promise,
+    () => ["c", "a", "b"],
+  );
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    const save = source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    writer.truncateAndWrite([row("a", 0), row("b", 1), row("c", 2)]);
+    expect(ids(source)).toEqual(["c", "a", "b"]);
+    response.resolve(Response.json({}));
+    await save;
+    writer.truncateAndWrite([row("c", 0), row("a", 1), row("b", 2)]);
+    expect(ids(source)).toEqual(["c", "a", "b"]);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("a newer snapshot before the delayed save response is reconciled with current server order", async () => {
+  const response = Promise.withResolvers<Response>();
+  const committed = Promise.withResolvers<void>();
+  const source = setup(
+    () => {
+      committed.resolve();
+      return response.promise;
+    },
+    () => ["b", "a", "c"],
+  );
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    const save = source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    await committed.promise;
+    writer.truncateAndWrite([row("b", 0), row("a", 1), row("c", 2)]);
+    response.resolve(Response.json({}));
+    await save;
+    expect(ids(source)).toEqual(["b", "a", "c"]);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("a failed read after saving keeps the acknowledged move until sync recovers", async () => {
+  const response = Promise.withResolvers<Response>();
+  const source = setup(
+    () => response.promise,
+    () => Response.json({ error: "Read failed" }, { status: 500 }),
+  );
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    const save = source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    writer.truncateAndWrite([row("b", 0), row("a", 1), row("c", 2)]);
+    response.resolve(Response.json({}));
+    await save;
+    expect(ids(source)).toEqual(["c", "a", "b"]);
+    writer.truncateAndWrite([row("b", 0), row("a", 1), row("c", 2)]);
+    expect(ids(source)).toEqual(["b", "a", "c"]);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("a delayed reconciliation read cannot replace a newer local move", async () => {
+  const response = Promise.withResolvers<Response>();
+  const read = Promise.withResolvers<Response>();
+  const reading = Promise.withResolvers<void>();
+  const initialRead = Promise.withResolvers<void>();
+  let holdRead = false;
+  const source = setup(
+    (request) => request.json().then(({ viewIds }) => (viewIds[0] === "c" ? response.promise : Response.json({}))),
+    () => {
+      if (!holdRead) {
+        initialRead.resolve();
+        return ["a", "b", "c"];
+      }
+      reading.resolve();
+      return read.promise;
+    },
+  );
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    await initialRead.promise;
+    const first = source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    writer.truncateAndWrite([row("b", 0), row("a", 1), row("c", 2)]);
+    holdRead = true;
+    response.resolve(Response.json({}));
+    await reading.promise;
+    await source.getSnapshot()!.onReorderViews!(["a", "c", "b"]);
+    read.resolve(Response.json({ views: ["b", "a", "c"].map((id) => ({ id })) }));
+    await first;
+    expect(ids(source)).toEqual(["a", "c", "b"]);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test.each(["order", "title"])("a delayed reconciliation read respects newer synced %s changes", async (change) => {
+  const response = Promise.withResolvers<Response>();
+  const read = Promise.withResolvers<Response>();
+  const reading = Promise.withResolvers<void>();
+  const initialRead = Promise.withResolvers<void>();
+  let holdRead = false;
+  const source = setup(
+    () => response.promise,
+    () => {
+      if (!holdRead) {
+        initialRead.resolve();
+        return ["a", "b", "c"];
+      }
+      reading.resolve();
+      return read.promise;
+    },
+  );
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    await initialRead.promise;
+    const save = source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    writer.truncateAndWrite([row("b", 0), row("a", 1), row("c", 2)]);
+    holdRead = true;
+    response.resolve(Response.json({}));
+    await reading.promise;
+    if (change === "order") {
+      writer.upsert(row("c", 0));
+      writer.upsert(row("b", 1));
+      writer.upsert(row("a", 2));
+    } else writer.upsert({ ...row("a", 1), title: "Renamed" });
+    read.resolve(Response.json({ views: ["b", "a", "c"].map((id) => ({ id })) }));
+    await save;
+    expect(ids(source)).toEqual(change === "order" ? ["c", "b", "a"] : ["b", "a", "c"]);
+    if (change === "title") expect(source.getSnapshot()!.views[1]!.title).toBe("Renamed");
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("partial saved positions during reconciliation keep the intended order", async () => {
+  const response = Promise.withResolvers<Response>();
+  const read = Promise.withResolvers<Response>();
+  const initialRead = Promise.withResolvers<void>();
+  const reading = Promise.withResolvers<void>();
+  let holdRead = false;
+  const source = setup(
+    () => response.promise,
+    () => {
+      if (!holdRead) {
+        initialRead.resolve();
+        return ["a", "b", "c"];
+      }
+      reading.resolve();
+      return read.promise;
+    },
+  );
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    await initialRead.promise;
+    const save = source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    writer.truncateAndWrite([row("a", 0), row("b", 1), row("c", 2)]);
+    holdRead = true;
+    response.resolve(Response.json({}));
+    await reading.promise;
+    writer.upsert(row("c", 0));
+    read.resolve(Response.json({ views: ["c", "a", "b"].map((id) => ({ id })) }));
+    await save;
+    expect(ids(source)).toEqual(["c", "a", "b"]);
+    writer.upsert(row("a", 1));
+    writer.upsert(row("b", 2));
+    expect(ids(source)).toEqual(["c", "a", "b"]);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("another project's view order does not supersede this project's pending move", async () => {
+  const source = setup(() => Response.json({}));
+  writer.upsert({ ...row("other-view", 0), project_id: "other-project" });
+  const unsubscribe = source.subscribe(() => source.getSnapshot());
+  try {
+    await source.getSnapshot()!.onReorderViews!(["c", "a", "b"]);
+    writer.upsert({ ...row("other-view", 1), project_id: "other-project" });
+    expect(ids(source)).toEqual(["c", "a", "b"]);
+  } finally {
+    unsubscribe();
+  }
 });
 
 test.each([

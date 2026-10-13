@@ -38,7 +38,10 @@ export const CollectionViewTab = (props: CollectionViewTabProps) => {
             if (!reorderable || !event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
             event.preventDefault();
             event.stopPropagation();
+            const tab = event.currentTarget;
             onMove(event.key === "ArrowLeft" ? "left" : "right");
+            // The optimistic move renders before the next frame, retaining this node.
+            requestAnimationFrame(() => tab.scrollIntoView({ block: "nearest", inline: "nearest" }));
           }}
         >
           <Text as="span" data-tab-label>

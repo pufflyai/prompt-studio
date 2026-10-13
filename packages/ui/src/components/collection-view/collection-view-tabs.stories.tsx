@@ -41,8 +41,9 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const ReorderableTabs = () => {
-  const [savedViews, setSavedViews] = useState(views.slice(0, 3));
+const ReorderableTabs = (props: { crowded?: boolean }) => {
+  const { crowded } = props;
+  const [savedViews, setSavedViews] = useState(views.slice(0, crowded ? 18 : 3));
   const [activeViewId, setActiveViewId] = useState("0");
   const source = {
     views: savedViews,
@@ -54,19 +55,21 @@ const ReorderableTabs = () => {
     onReorderViews: async (ids: string[]) => setSavedViews(ids.map((id) => savedViews.find((view) => view.id === id)!)),
   };
   return (
-    <HStack>
-      <CollectionViewTabs
-        views={savedViews}
-        viewsSource={source}
-        activeViewId={activeViewId}
-        dirty
-        busy={false}
-        state={savedViews[0]!}
-        onActivate={(view) => setActiveViewId(view.id)}
-        run={(action) => void action()}
-        createView={async () => undefined}
-      />
-    </HStack>
+    <Box width="full" maxW={crowded ? "24rem" : undefined}>
+      <HStack>
+        <CollectionViewTabs
+          views={savedViews}
+          viewsSource={source}
+          activeViewId={activeViewId}
+          dirty
+          busy={false}
+          state={savedViews[0]!}
+          onActivate={(view) => setActiveViewId(view.id)}
+          run={(action) => void action()}
+          createView={async () => undefined}
+        />
+      </HStack>
+    </Box>
   );
 };
 
@@ -95,6 +98,32 @@ export const ReorderViews: Story = {
     await waitFor(() =>
       expect(canvas.getByRole("tab", { name: /^Team view 2/ })).toHaveAttribute("aria-selected", "true"),
     );
+    const focused = canvas.getByRole("tab", { name: /^Team view 2/ });
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    await within(document.body).findByRole("menu");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(focused).toHaveFocus());
+  },
+};
+
+export const CrowdedReordering: Story = {
+  render: () => <ReorderableTabs crowded />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const moved = canvas.getByRole("tab", { name: /^Team view 1 / });
+    moved.focus();
+    for (let index = 1; index <= 10; index++) {
+      await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
+      await waitFor(() => expect(canvas.getAllByRole("tab").indexOf(moved)).toBe(index));
+    }
+    const viewport = canvasElement.querySelector<HTMLElement>('[data-part="viewport"]')!;
+    await waitFor(() => {
+      const tab = moved.getBoundingClientRect();
+      const visible = viewport.getBoundingClientRect();
+      expect(tab.left).toBeGreaterThanOrEqual(visible.left - 1);
+      expect(tab.right).toBeLessThanOrEqual(visible.right + 1);
+    });
+    await expect(moved).toHaveFocus();
   },
 };
 

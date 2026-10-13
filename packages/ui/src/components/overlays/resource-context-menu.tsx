@@ -202,7 +202,8 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
               clientY: bounds.bottom,
             }),
           );
-          keyboardTrigger.current = event.currentTarget;
+          // A context trigger may wrap the control that received the keyboard event.
+          keyboardTrigger.current = event.target as HTMLElement;
         }}
         onContextMenu={(event) => {
           keyboardTrigger.current = null;
