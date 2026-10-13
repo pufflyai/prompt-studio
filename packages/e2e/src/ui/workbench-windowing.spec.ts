@@ -40,6 +40,11 @@ const storyIds = [
   "fixed-page-transfer",
   "foreign-context",
   "page-availability",
+  "drag-close-page-bottom",
+  "drag-close-side",
+  "drag-close-page-side",
+  "drag-close-secondary",
+  "drag-fixed-panel",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 storyIds.push(
   "pstdio-workbench-showcases--boombox",

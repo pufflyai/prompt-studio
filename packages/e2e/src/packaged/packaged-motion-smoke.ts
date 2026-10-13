@@ -14,13 +14,17 @@ const expectResizedPanelReopen = async (page: Page, label: string, openName: str
     });
   const settle = () =>
     expect.poll(() => handle.evaluate((element) => element.parentElement!.getAnimations().length)).toBe(0);
-  const dragBy = async (delta: number) => {
+  const dragBy = async (delta: number, closing = false) => {
     const box = (await handle.boundingBox())!;
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x + delta, y, { steps: 8 });
+    if (closing) {
+      await expect(handle).toHaveAttribute("data-closing", "true");
+      expect((await dimensions()).outer).toBeGreaterThan(0);
+    }
     await page.mouse.up();
   };
   await expect(handle).toBeVisible();
@@ -28,7 +32,7 @@ const expectResizedPanelReopen = async (page: Page, label: string, openName: str
   await dragBy(48 * direction);
   await settle();
   const resized = await dimensions();
-  await dragBy((20 - resized.outer) * direction);
+  await dragBy((20 - resized.outer) * direction, true);
   await expect(handle).toBeHidden();
   await open.click();
   await expect(handle).toBeVisible();

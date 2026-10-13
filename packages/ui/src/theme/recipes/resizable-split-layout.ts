@@ -12,10 +12,20 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
   slots: ["root", "resizablePanel", "panelContent", "contentPanel", "separator"],
   base: {
     root: { display: "flex", width: "full", minWidth: 0, minHeight: 0 },
-    resizablePanel: { minWidth: 0, minHeight: 0, "&[data-collapsed=true]": { display: "none" } },
+    resizablePanel: {
+      minWidth: 0,
+      minHeight: 0,
+      "&[data-collapsed=true]": { display: "none" },
+      "&[data-closing=true]": { opacity: 0.4 },
+    },
     panelContent: { display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, flexShrink: 0 },
     contentPanel: { display: "flex", minWidth: 0, minHeight: 0 },
-    separator: { "&[data-collapsed=true]": { display: "none" } },
+    separator: {
+      "&[data-collapsed=true]": { display: "none" },
+      "& [data-part=bar]": { bg: "fg.info", opacity: 0 },
+      "& [data-part=bar][data-active=true]": { opacity: 1 },
+      "&[data-closing=true] [data-part=bar]": { bg: "fg.warning", opacity: 1 },
+    },
   },
   variants: {
     orientation: {
