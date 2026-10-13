@@ -105,6 +105,60 @@ test("reopening a Main document in an inactive owner publishes that document loc
   expect(w.pages.store.getState().location?.resource?.id).toBe("a");
 });
 
+test.each([false, true])("reopening a document retains its requested position through history: %s", (history) => {
+  const { w } = create();
+  w.pages.getPage("documents")!.document = { metadataKey: "path" };
+  const open = (id: string, line: number) =>
+    w.pageLocations.navigate({
+      kind: "page",
+      page: page("documents"),
+      resource: { ...resource(id), metadata: { path: `${id}.ts` } },
+      position: { line, column: 1 },
+      open: "pin",
+    });
+  open("a", 10);
+  open("b", 1);
+  open("a", 20);
+  if (history) {
+    w.pageLocations.goBack();
+    w.pageLocations.goBack();
+    w.pageLocations.goForward();
+    w.pageLocations.goForward();
+  }
+  expect(w.pages.store.getState().location?.position).toEqual({ line: 20, column: 1 });
+  expect(
+    w.layout.getLayout().regions.main.widgets.find((tab) => tab.widgetId === w.layout.getLayout().activeWidgetId)
+      ?.resource?.id,
+  ).toBe("a");
+});
+
+test.each([
+  undefined,
+  "per-resource",
+] as const)("replaying a document keeps refreshed resource details with policy %s", (policy) => {
+  const { w } = create();
+  w.views.getView("editor")!.instancePolicy = policy;
+  w.pages.getPage("documents")!.document = { metadataKey: "path" };
+  w.pageLocations.navigate({
+    kind: "page",
+    page: page("documents"),
+    resource: { ...resource("a"), label: "Old name", metadata: { path: "a.ts" } },
+    open: "pin",
+  });
+  const widgetId = w.layout.getLayout().regions.main.activeWidgetId;
+  const location = w.pages.store.getState().location!;
+  expect(
+    w.pageLocations.replay({
+      ...location,
+      resource: { ...location.resource!, label: "New name", metadata: { path: "renamed.ts" } },
+    }).ok,
+  ).toBe(true);
+  expect(w.pages.store.getState().location?.resource?.metadata?.path).toBe("renamed.ts");
+  expect(w.layout.getLayout().regions.main.widgets.find((tab) => tab.widgetId === widgetId)?.resource?.label).toBe(
+    "New name",
+  );
+});
+
 test("low-level reuse returns the live single-resource editor after rebinding", () => {
   const { w, open } = create("one");
   open("a");

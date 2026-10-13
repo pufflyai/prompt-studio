@@ -1,6 +1,7 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import { buildUpdatedPlacement } from "../../registries/layout/layout-operations";
+import type { OpenWidgetInput, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { modeLayoutScope } from "./owner-layout-scope";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
@@ -8,12 +9,18 @@ import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 type LayoutCache = ReturnType<typeof createWorkbenchLayoutCache>;
 const caches = new WeakMap<WorkbenchCore, LayoutCache>();
 
-export const pinSavedTransferredEditor = (core: WorkbenchCore, tab: WorkbenchWidgetPlacement) => {
+export const updateSavedTransferredEditor = (
+  core: WorkbenchCore,
+  tab: WorkbenchWidgetPlacement,
+  changes: OpenWidgetInput,
+) => {
   if (!tab.declarationIdentity) return;
   caches
     .get(core)
     ?.updateTransferredPlacement(tab.declarationIdentity, (placement) =>
-      placement.widgetId === tab.widgetId ? { ...placement, pinned: true, tabRetention: "persistent" } : placement,
+      placement.widgetId === tab.widgetId
+        ? buildUpdatedPlacement(placement, core.layout.getWidget(placement.contributionId)!, changes)
+        : placement,
     );
 };
 

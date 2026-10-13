@@ -14,7 +14,7 @@ import {
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { activateNavigationPlacement, commitPreparedNavigation } from "./navigation-commit";
-import { prepareEditorRetention } from "./prepared-editor-retention";
+import { prepareEditorOpen } from "./prepared-editor-open";
 import { prepareExistingResourceEditor } from "./resource-editor-resolver";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
@@ -151,7 +151,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   let shellState = originalShell;
   let proposed = original;
   const stages: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[] = [];
-  const retentions: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>[] = [];
+  const updates: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>[] = [];
   const activations = new Map<
     WorkbenchRegion,
     { identity: PlacementIdentity } | { editor: NonNullable<ReturnType<typeof prepareExistingResourceEditor>> }
@@ -196,13 +196,19 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     );
   };
 
-  const retainExisting = (
+  const prepareExistingOpen = (
     existing: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>,
-    open: NavigationOperation["open"],
+    target: NavigationOperation,
   ) => {
-    if (open !== "pin") return;
-    if (existing.tab.declarationIdentity) retentions.push(existing);
-    const retained = prepareEditorRetention(core, existing.tab, proposed, modeState, shellState);
+    if (existing.tab.declarationIdentity) updates.push(existing);
+    const retained = prepareEditorOpen(
+      core,
+      existing.tab,
+      { open: target.open, resource: existing.resource, title: existing.intent.title },
+      proposed,
+      modeState,
+      shellState,
+    );
     proposed = retained.state;
     modeState = retained.modeState;
     shellState = retained.shellState;
@@ -213,7 +219,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     const existing = prepareExistingResourceEditor(core, [target], proposed, stages);
     if (existing) {
       if (existing.target) preparePage(existing.target);
-      retainExisting(existing, target.open);
+      prepareExistingOpen(existing, target);
       activations.delete(existing.region);
       activations.set(existing.region, { editor: existing });
       stages.push(proposed);
@@ -263,7 +269,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
           if (shellState !== originalShell) shell.notifySubscribers();
         },
         activateTargets: () => {
-          for (const editor of retentions) editor.retain();
+          for (const editor of updates) editor.applyIntent();
           for (const activation of activations.values()) {
             if ("editor" in activation) {
               if (activation.editor.isInOwner(final)) activation.editor.activate();
