@@ -301,46 +301,8 @@ jobs:
         # ADR 0044: retain the existing Windows default and the API runner's own limit.
         run: bunx lerna run test --scope pstdio-db --scope pstdio-api --stream --concurrency=1 -- --timeout=15000
 
-  storybooks:
-    needs: scope
-    if: needs.scope.outputs.stage == 'full'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build Storybook dependencies
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
-      - name: Build shared Storybooks
-        run: bun packages/e2e/src/scripts/build-storybooks.ts
-
-      - name: Share prebuilt Storybooks with UI shards
-        uses: actions/upload-artifact@v4
-        with:
-          name: storybook-static
-          overwrite: true
-          path: |
-            packages/ui/storybook-static
-            packages/pstdio-dashboard/storybook-static
-            packages/pstdio-workbench/storybook-static
-          if-no-files-found: error
-
   e2e:
-    needs: [scope, storybooks]
+    needs: scope
     if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -377,11 +339,8 @@ jobs:
         if: matrix.shard == 1
         run: bun test clients/desktop/src/e2e/desktop-pages.test.ts
 
-      - name: Download prebuilt shared Storybooks
-        uses: actions/download-artifact@v4
-        with:
-          name: storybook-static
-          path: packages
+      - name: Build shared Storybooks
+        run: bun packages/e2e/src/scripts/build-storybooks.ts
 
       - name: Test UI e2e
         run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
@@ -661,7 +620,6 @@ jobs:
       - harness_cli_support
       - windows_test_and_build
       - windows_database_tests
-      - storybooks
       - e2e
       - e2e_cli
       - packaged_and_vite_e2e
