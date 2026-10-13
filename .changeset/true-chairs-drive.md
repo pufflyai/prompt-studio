@@ -5,4 +5,4 @@
 "@pstdio/ui": patch
 ---
 
-Place native extension controls in their Settings tab, preserve status colors, and validate resource links against the enabled extension owner.
+Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.

@@ -4,7 +4,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { ScrollArea } from "@pstdio/ui";
 import { type InputGroup, type Param, ParamEditor, type ParamValue } from "@pstdio/ui/param-editor";
 import { controlValueSchema } from "pstdio-api-contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getWorkbenchRenderers,
   type RegisteredControlsRendererContribution,
@@ -17,6 +17,7 @@ import type { CommandParamFieldRenderer } from "../../command-palette/command-pa
 import { RendererReadNotice } from "../renderer-read-notice";
 import { useRendererRead } from "../use-renderer-read";
 import { mergeControlDraft } from "./control-draft";
+import { createControlSaveQueue } from "./control-save-queue";
 import { HarnessControl } from "./harness-control";
 
 interface WorkbenchControlsViewProps {
@@ -31,7 +32,7 @@ interface ControlsViewState {
   values: ControlValueMap;
   readOnly: boolean;
   loading: boolean;
-  changed: Record<string, true>;
+  changed: Record<string, number>;
   error?: string;
 }
 const initialState: ControlsViewState = {
@@ -51,6 +52,8 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   const resource = placement.resource;
   const [state, setState] = useState<ControlsViewState>(initialState);
   const [pending, setPending] = useState(false);
+  const saves = useRef(createControlSaveQueue());
+  const changes = useRef(0);
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
@@ -83,12 +86,11 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
         previous.values,
         { ...(contribution.defaultValues ?? {}), ...(result.values ?? {}) },
         previous.changed,
-        Boolean(contribution.apply),
       ),
       readOnly: Boolean(result.readOnly),
       loading: false,
     }));
-  }, [read.value, contribution.defaultValues, contribution.apply]);
+  }, [read.value, contribution.defaultValues]);
   const readOnly = pending || state.readOnly || (!contribution.updateValue && !contribution.apply);
   const showFooter =
     Boolean(read.value) &&
@@ -100,14 +102,27 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
     // The command runs outside the setState updater: React may invoke updaters
     // twice (StrictMode), which would double-execute the update command.
     const values = { ...state.values, [id]: value };
+    const revision = ++changes.current;
     if (contribution.updateValue)
       void runUserAction(workbench, "Update value", () =>
-        contribution.updateValue!({ controlId: id, value, values, resource }),
+        saves.current(async () => {
+          try {
+            await contribution.updateValue!({ controlId: id, value, values, resource });
+          } finally {
+            setState((previous) => {
+              if (previous.changed[id] !== revision) return previous;
+              const changed = { ...previous.changed };
+              delete changed[id];
+              return { ...previous, changed };
+            });
+            await read.retry();
+          }
+        }),
       );
     setState((prev) => ({
       ...prev,
       values: { ...prev.values, [id]: value },
-      changed: { ...prev.changed, [id]: true },
+      changed: { ...prev.changed, [id]: revision },
       error: undefined,
     }));
   };

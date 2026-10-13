@@ -42,3 +42,40 @@ const meta: Meta<typeof ApplyControlsPreview> = {
 export default meta;
 type Story = StoryObj<typeof ApplyControlsPreview>;
 export const ApplyResetAndRefresh: Story = {};
+
+function ImmediateControlsPreview() {
+  const [fixture] = useState(() => {
+    const workbench = createWorkbench();
+    const renderers = getWorkbenchRenderers(workbench);
+    let saved: ControlValueMap = {};
+    renderers.registerControlsRenderer({
+      id: "instant",
+      title: "Immediate choices",
+      executeQuery: () => ({
+        params: ["first", "second"].map((id) => ({
+          id,
+          type: "text" as const,
+          name: id,
+          singleLine: true,
+          defaultValue: "",
+        })),
+        values: saved,
+      }),
+      updateValue: async ({ values }) => {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        saved = { ...values };
+        renderers.refreshControlsRenderer("instant");
+      },
+    });
+    return { workbench, contribution: renderers.getControlsRenderer("instant")! };
+  });
+  return (
+    <WorkbenchControlsView
+      workbench={fixture.workbench}
+      contribution={fixture.contribution}
+      placement={{ instanceId: "instant", panelId: "instant", title: "Immediate choices", closable: false }}
+    />
+  );
+}
+
+export const ImmediateChanges: Story = { render: () => <ImmediateControlsPreview /> };
