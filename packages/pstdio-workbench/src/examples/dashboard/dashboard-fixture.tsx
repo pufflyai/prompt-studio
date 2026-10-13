@@ -1,6 +1,6 @@
 import { Stack } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
-import { createWorkbench } from "../../core";
+import { createWorkbench, type ResourceRef } from "../../core";
 import { createWindowingPersistence } from "../windowing/adapters";
 import {
   createDashboardData,
@@ -13,11 +13,13 @@ import {
 } from "./dashboard-data";
 import { DashboardNavigation } from "./dashboard-navigation";
 import { registerDashboardResources } from "./dashboard-resources";
-import { DashboardChanges, DashboardConversation, DashboardTerminal, DashboardWorkspaceList } from "./dashboard-views";
+import { createDashboardTerminalModule } from "./dashboard-terminals";
+import { DashboardChanges, DashboardConversation, DashboardWorkspaceList } from "./dashboard-views";
 
 export const createDashboardFixture = () => {
   const data = createDashboardData();
   const persistence = createWindowingPersistence();
+  const openedTerminalWorkspaces = new Set<string>();
   const create = () => {
     const saved = persistence.pageLocation.load("dashboard-demo");
     const workbench = createWorkbench({
@@ -27,6 +29,7 @@ export const createDashboardFixture = () => {
       layoutPersistence: persistence.layout,
       pageLocationPersistence: persistence.pageLocation,
     });
+    workbench.registerModule(createDashboardTerminalModule(openedTerminalWorkspaces));
     workbench.modes.registerMode({
       id: "dashboard",
       label: "Project",
@@ -34,7 +37,7 @@ export const createDashboardFixture = () => {
       regionSettings: {
         sidenav: { size: { defaultPx: 250, minPx: 200 } },
         side: { size: { defaultPx: 400, minPx: 260 }, alwaysShowTabs: true },
-        secondary: { size: { defaultPx: 160 }, alwaysShowTabs: true },
+        secondary: { size: { defaultPx: 240, minPx: 128 }, alwaysShowTabs: true },
       },
       activate() {},
     });
@@ -43,30 +46,23 @@ export const createDashboardFixture = () => {
       title: "Project navigation",
       body: { kind: "react", render: () => <DashboardNavigation workbench={workbench} /> },
     });
-    workbench.views.registerView({
-      id: "dashboard.file",
-      title: "File",
-      body: {
-        kind: "file",
-        load: (resource) => {
-          const file = dashboardFileIdentity(resource!);
-          return { fileName: file.path, filePath: file.path, content: data.files.get(file.key)!, editable: true };
-        },
-        save: (resource, content) => {
-          data.files.set(dashboardFileIdentity(resource!).key, content);
-        },
+    const fileBody = {
+      kind: "file" as const,
+      load: (resource: ResourceRef | undefined) => {
+        const file = dashboardFileIdentity(resource!);
+        return { fileName: file.path, filePath: file.path, content: data.files.get(file.key)!, editable: true };
       },
-    });
+      save: (resource: ResourceRef | undefined, content: string) => {
+        data.files.set(dashboardFileIdentity(resource!).key, content);
+      },
+    };
+    workbench.views.registerView({ id: "dashboard.file", title: "File", body: fileBody });
     workbench.views.registerView({
       id: "dashboard.changes",
       title: "Changes",
       body: { kind: "react", render: ({ instance }) => <DashboardChanges resource={instance.resource!} /> },
     });
-    workbench.views.registerView({
-      id: "dashboard.terminal",
-      title: "Terminal",
-      body: { kind: "react", render: ({ instance }) => <DashboardTerminal resource={instance.resource!} /> },
-    });
+    workbench.views.registerView({ id: "dashboard.files", title: "Files", body: fileBody });
     workbench.views.registerView({
       id: "dashboard.session",
       title: "Session",
@@ -133,42 +129,25 @@ export const createDashboardFixture = () => {
     workbench.pages.registerPage({
       id: "dashboard.workspace",
       ref: dashboardPages.workspace,
+      document: { metadataKey: "workspaceFilePath" },
       title: "Workspace",
       path: "workspaces/resource",
       parentId: "dashboard.workspaces",
       modeId: "dashboard",
       resource: { kinds: [{ kind: "resource-kind", id: "demo.workspace" }] },
-      main: {
-        kind: "view",
-        view: { kind: "view", id: "dashboard.file" },
-        cardinality: "one",
-        tab: { getSnapshot: () => ({ label: "README.md", icon: "FileText" }) },
-      },
-      regionSettings: { bottom: { size: { defaultPx: 180 }, alwaysShowTabs: true } },
+      main: { kind: "panels", empty: { kind: "view", id: "dashboard.workspaces" } },
       slots: [
-        {
-          id: "files",
-          region: "main",
-          item: {
-            kind: "binding",
-            binding: {
-              kinds: [{ kind: "resource-kind", id: "demo.file" }],
-              view: { kind: "view", id: "dashboard.file" },
-              cardinality: "many",
-            },
-          },
-        },
         {
           id: "changes",
           region: "main",
           tab: { getSnapshot: () => ({ label: "Changes", icon: "GitCompare" }) },
-          item: { kind: "view", view: { kind: "view", id: "dashboard.changes" }, presence: "open" },
+          item: { kind: "view", view: { kind: "view", id: "dashboard.changes" }, presence: "fixed" },
         },
         {
-          id: "terminal",
-          region: "bottom",
-          tab: { getSnapshot: () => ({ label: "Terminal", icon: "Terminal" }) },
-          item: { kind: "view", view: { kind: "view", id: "dashboard.terminal" }, presence: "open" },
+          id: "files",
+          region: "main",
+          tab: { getSnapshot: () => ({ label: "Files", icon: "Files" }) },
+          item: { kind: "view", view: { kind: "view", id: "dashboard.files" }, presence: "fixed" },
         },
       ],
     });
@@ -206,8 +185,8 @@ export const createDashboardFixture = () => {
         resource: dashboardSessions[0],
         open: "pin",
       });
-      const main = workbench.layout.getLayout().regions.main.widgets[0];
-      if (main) workbench.layout.activatePanel(main.widgetId);
+      const files = workbench.layout.listPanelInstances("main").find((tab) => tab.viewId === "dashboard.files");
+      if (files) workbench.layout.activatePanel(files.instanceId);
     }
     return workbench;
   };

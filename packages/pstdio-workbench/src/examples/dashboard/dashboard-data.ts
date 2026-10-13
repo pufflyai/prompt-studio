@@ -11,8 +11,18 @@ export const dashboardPages = {
 } as const satisfies Record<string, PageRef>;
 
 export const dashboardWorkspaces = [
-  { type: "demo.workspace", id: "website", label: "Website" },
-  { type: "demo.workspace", id: "design-system", label: "Design system" },
+  {
+    type: "demo.workspace",
+    id: "website",
+    label: "Website",
+    metadata: { workspaceId: "website", workspacePath: "/projects/website" },
+  },
+  {
+    type: "demo.workspace",
+    id: "design-system",
+    label: "Design system",
+    metadata: { workspaceId: "design-system", workspacePath: "/projects/design-system" },
+  },
 ] satisfies ResourceRef[];
 export const dashboardNote: ResourceRef = { type: "demo.note", id: "checklist", label: "Launch checklist" };
 export const dashboardSessions = dashboardWorkspaces.map((workspace) => ({
@@ -23,10 +33,8 @@ export const dashboardSessions = dashboardWorkspaces.map((workspace) => ({
 }));
 export const dashboardFilePaths = ["README.md", "src/app.ts", "package.json"];
 export const dashboardFileResource = (workspace: ResourceRef, path: string): ResourceRef => ({
-  type: "demo.file",
-  id: `${workspace.id}/${path}`,
-  label: path.split("/").at(-1),
-  metadata: { workspaceId: workspace.id, path },
+  ...workspace,
+  metadata: { ...workspace.metadata, workspaceView: "files", workspaceFilePath: path },
 });
 
 export const createDashboardData = () => {
@@ -75,6 +83,9 @@ export type DashboardData = ReturnType<typeof createDashboardData>;
 
 export const dashboardFileIdentity = (resource: ResourceRef) => {
   if (resource.type === "demo.note") return { key: resource.id, path: "Launch checklist.md" };
-  if (resource.type === "demo.workspace") return { key: `${resource.id}/README.md`, path: "README.md" };
+  if (resource.type === "demo.workspace") {
+    const path = String(resource.metadata?.workspaceFilePath ?? "README.md");
+    return { key: `${resource.id}/${path}`, path };
+  }
   return { key: resource.id, path: String(resource.metadata?.path) };
 };

@@ -1,7 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { TreeList } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
-import { revealPanelRegion } from "../../core/workbench-core-navigation";
 import { useWorkbenchStore, WorkbenchIcon } from "../../react";
 import {
   dashboardFilePaths,
@@ -21,7 +20,8 @@ export const DashboardNavigation = (props: { workbench: WorkbenchCore }) => {
     .flatMap((region) => region.widgets)
     .find((tab) => tab.resourceKey === active)?.resource;
   let activeNodeId = activeFile?.id ?? location?.resource?.id;
-  if (activeFile?.type === "demo.workspace") activeNodeId = `${activeFile.id}/README.md`;
+  if (activeFile?.type === "demo.workspace")
+    activeNodeId = `${activeFile.id}/${activeFile.metadata?.workspaceFilePath ?? "README.md"}`;
   if (activeFile?.type === "demo.session") activeNodeId = `session-${activeFile.id}`;
   const sections = [
     {
@@ -45,27 +45,20 @@ export const DashboardNavigation = (props: { workbench: WorkbenchCore }) => {
               label: path,
               icon: <WorkbenchIcon name="FileText" />,
               isNavigable: true,
-              onActivate: () => {
-                if (path === "README.md") {
-                  for (const region of Object.values(workbench.layout.getLayout().regions)) {
-                    const primary = region.widgets.find(
-                      (tab) =>
-                        tab.viewId === "dashboard.file" &&
-                        tab.resource?.type === "demo.workspace" &&
-                        tab.resource.id === workspace.id,
-                    );
-                    if (!primary) continue;
-                    workbench.layout.setRegionActiveWidget(region.id, primary.widgetId);
-                    revealPanelRegion(workbench, region.id);
-                    break;
-                  }
-                } else
-                  void workbench.navigation.openTarget({
-                    kind: "panel",
-                    panel: { kind: "page-slot", page: dashboardPages.workspace, id: "files" },
-                    resource: dashboardFileResource(workspace, path),
-                    open: "pin",
-                  });
+              onActivate: async () => {
+                const resource = dashboardFileResource(workspace, path);
+                workbench.pageLocations.navigate({
+                  kind: "page",
+                  page: dashboardPages.workspace,
+                  resource,
+                });
+                await workbench.navigation.openTarget({
+                  kind: "panel",
+                  panel: { kind: "page-slot", page: dashboardPages.workspace, id: "files" },
+                });
+                const files = workbench.layout.getActivePanel();
+                if (files?.viewId === "dashboard.files")
+                  workbench.layout.updatePanel(files.instanceId, { resource, viewId: "dashboard.files" });
               },
             })),
           },

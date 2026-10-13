@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
@@ -50,59 +50,6 @@ export const DashboardConversation = (props: { resource: ResourceRef; data: Dash
           }}
         />
       </Box>
-    </Stack>
-  );
-};
-
-export const DashboardTerminal = (props: { resource: ResourceRef }) => {
-  const { resource } = props;
-  const [command, setCommand] = useState("");
-  const [lines, setLines] = useState([`Sample shell · ${resource.label}`, "$ pwd", `/projects/${resource.id}`]);
-  const submit = () => {
-    const input = command.trim();
-    if (!input) return;
-    const outputs: Record<string, string> = {
-      pwd: `/projects/${resource.id}`,
-      ls: "README.md   src/   package.json",
-      help: "Sample commands: pwd, ls, clear, help. Commands run only inside this demo.",
-    };
-    setLines(input === "clear" ? [] : [...lines, `$ ${input}`, outputs[input] ?? "Try pwd, ls, clear, or help."]);
-    setCommand("");
-  };
-  return (
-    <Stack h="full" p="sm" gap="sm">
-      <Box flex="1" minH="0" overflowY="auto">
-        <Text
-          as="pre"
-          fontFamily="mono"
-          textStyle="paragraph/S/regular"
-          whiteSpace="pre-wrap"
-          aria-label="Terminal output"
-          role="log"
-        >
-          {lines.join("\n")}
-        </Text>
-      </Box>
-      <HStack asChild>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit();
-          }}
-        >
-          <Text color="fg.muted">$</Text>
-          <Input
-            size="xs"
-            aria-label="Terminal command"
-            placeholder="Try ls or help"
-            value={command}
-            onChange={(event) => setCommand(event.target.value)}
-          />
-          <Button size="xs" variant="outline" type="submit">
-            Run
-          </Button>
-        </form>
-      </HStack>
     </Stack>
   );
 };

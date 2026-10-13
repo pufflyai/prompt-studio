@@ -25,6 +25,8 @@ type PlacementIdentity =
 
 Each tab has one layout owner. Main and page bottom belong to the page instance. Side and Secondary belong to the mode within the project. Dropping a tab across that edge transfers it to the destination owner in the same layout change. Moving between Main and bottom, or between Side and Secondary, changes only its position.
 
+Page-owned subpanels follow their page's Location binding. A mode-owned tab keeps its own resource without acquiring a page binding when the user visits another page. Primary-resource cleanup only removes unowned host placements; page, mode, and shell owners control their own membership. Explicit contribution eligibility rules still apply.
+
 The tab's `widgetId` stays stable across transfers. Its owner identity changes while its resource, section, preview or pinned retention, draft, and mounted content stay with the tab. The original declaration remains available for opening the tool. Opening that declaration selects a matching transferred tab in the current owner at its actual destination. If the tab belongs to an inactive page, opening the declaration creates a separate tab in its declared owner. Closing a transferred tab allows a later explicit open to create it at the declaration's default destination.
 
 Legacy page slots in Side or Secondary, mode placements in Main, and shell placements still load at their declared defaults. An explicit move applies destination ownership to these tabs too. Panel menus remain with their page or view; they do not become tab destinations.
