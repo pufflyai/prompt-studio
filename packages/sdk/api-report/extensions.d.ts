@@ -2472,6 +2472,7 @@ interface TreeNode {
   icon?: string;
   iconColor?: string;
   iconTooltip?: string;
+  tooltip?: string;
   resource?: TreeRendererResourceRef;
   target?: TreeNodeTarget;
   rowVariant?: TreeNodeRowVariant;
@@ -2710,7 +2711,7 @@ interface StatusBarItemContribution extends ContributionDefinition<"status-bar-i
   readonly order?: number;
   readonly when?: WhenExpression;
 }
-export declare const EXTENSION_API_VERSION = "0.1.3";
+export declare const EXTENSION_API_VERSION = "0.1.4";
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Record<string, never>;
 interface WorkspaceProviderRef {
   version: number;
