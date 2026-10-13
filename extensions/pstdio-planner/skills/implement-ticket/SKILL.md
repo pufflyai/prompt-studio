@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.16
+  version: 0.0.17
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
@@ -12,11 +12,14 @@ Implement Planner tickets in a Prompt Studio workspace. Produce a committed revi
 Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
 
 - If you run inside a workspace from `pst pstdio-planner run-attempt`, work there.
-- When asked to implement tickets in a worktree, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters.
+- Before creating a workspace, read the ticket's linked workspaces with `pst tickets workspaces --id <ticket>` and their implementation owners with `pst pstdio-planner list-variants`.
+- For a linked workspace without a managed variant, list its conversations with `pst sessions list --workspace-id <workspace-id>`. Read the relevant conversation and ticket to find the existing implementation session. Reuse that session for corrections. If ownership is unclear, clarify it before starting another writer.
+- Corrections, review fixes, dependency repairs, and resumed work continue in the existing implementation conversation and workspace, including after submission or a passing review. The user does not need to request reuse. If another implementation session owns the workspace, send the task to that session with `pst sessions follow-up` instead of starting a competing writer. A queued follow-up does not transfer ownership.
+- When a new workspace is needed, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters.
 - For several tickets in one workspace, create one workspace and link every ticket to it.
 - For one workspace per ticket, create and link a workspace for each ticket.
 
-Reuse a suitable linked workspace and conversation by default. Create another workspace only for a useful implementation alternative or an explicit request. Workspaces identify variants; they do not own ticket progress. The responsible implementation agent coordinates variant evidence and updates the ticket. Reviewers and variant agents report evidence to it.
+Create another workspace only when no suitable linked workspace exists, for a useful implementation alternative, or for an explicit request. Workspaces identify variants; they do not own ticket progress. The responsible implementation agent coordinates variant evidence and updates the ticket. Reviewers and variant agents report evidence to it.
 
 Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed variant. In any other workspace, skip revision submission in step 5 and include the workspace ID, commit SHA, and report ID in the handoff.
 
