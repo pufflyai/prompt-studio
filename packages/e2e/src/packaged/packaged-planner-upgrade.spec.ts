@@ -16,13 +16,13 @@ import { type Browser, chromium, expect, type Page, test } from "@playwright/tes
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary, runPackaged } from "./packaged-helpers";
+import { preparePlannerSource } from "./packaged-planner-source";
 import {
   ACTIVE_CONFLICTS,
   ARCHIVED_CONFLICTS,
   type Execute,
   plannerCommands,
   seedTrackProject,
-  timelinePlannerSource,
   writePreTimelinePlanner,
 } from "./packaged-planner-upgrade-fixture";
 import {
@@ -159,6 +159,7 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     expect(await plannerWebview(host, valid.id, "timeline")).toBeUndefined();
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
+    const timelinePlannerSource = await preparePlannerSource(join(home, "fixtures", "planner-current"));
     installPlanner(host, conflicting.folder, timelinePlannerSource, true);
 
     // A valid Track cannot hide a missing module behind a schema error.
