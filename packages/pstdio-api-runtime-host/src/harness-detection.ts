@@ -1,36 +1,47 @@
+import { randomUUID } from "node:crypto";
 import type { HarnessContext, HarnessProvider, ProcessRunInput } from "pstdio-api-contracts/extension-kernel";
+import { traceDetectionPhase } from "./harness-detection-phase";
 
 // Detection is a short availability probe, not a model request or a session.
 const DETECTION_TIMEOUT_MS = 3_000;
 
 export const detectHarness = async (provider: HarnessProvider, context: HarnessContext) => {
   if (!provider.detect) return { available: true };
+  const started = performance.now();
+  const identity = { harness_id: provider.id, detection_id: randomUUID() };
   const deadline = Date.now() + DETECTION_TIMEOUT_MS;
+  const deadlineError = new Error("Harness detection deadline reached.");
   let finished = false;
   const bounded = (input: ProcessRunInput) => {
     const remaining = deadline - Date.now();
-    if (finished || remaining <= 0) throw new Error("Harness detection deadline reached.");
+    if (finished || remaining <= 0) throw deadlineError;
     return { ...input, timeoutMs: Math.min(input.timeoutMs ?? remaining, remaining) };
   };
   const ctx: HarnessContext = {
     ...context,
     process: {
       ...context.process,
-      run: (input) => context.process.run(bounded(input)),
-      runOrThrow: (input) => context.process.runOrThrow(bounded(input)),
+      run: (input) => traceDetectionPhase(context, identity, "process.run", () => context.process.run(bounded(input))),
+      runOrThrow: (input) =>
+        traceDetectionPhase(context, identity, "process.runOrThrow", () => context.process.runOrThrow(bounded(input))),
     },
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      Promise.resolve().then(() => provider.detect!(ctx)),
+      traceDetectionPhase(context, identity, "provider", () => Promise.resolve().then(() => provider.detect!(ctx))),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("Harness detection deadline reached.")), DETECTION_TIMEOUT_MS);
+        timer = setTimeout(() => reject(deadlineError), DETECTION_TIMEOUT_MS);
       }),
     ]);
-  } catch {
+  } catch (error) {
     // Do not log raw provider output: it can include credentials or other host data.
-    context.logger.warn(`Harness ${provider.id} detection failed or exceeded ${DETECTION_TIMEOUT_MS} ms.`);
+    context.logger.warn(`Harness ${provider.id} detection failed or exceeded ${DETECTION_TIMEOUT_MS} ms.`, {
+      ...identity,
+      event: "harness.detection.failed",
+      failure: error === deadlineError ? "deadline" : "provider_error",
+      duration_ms: performance.now() - started,
+    });
     return {
       available: false,
       reason: `The availability check failed or took longer than ${DETECTION_TIMEOUT_MS / 1000} seconds. Run pst logs for details.`,

@@ -44,6 +44,7 @@ for (const shell of environments) {
     let app: PackagedApp | null = null;
     try {
       app = await launchPackagedApp(home, {
+        PSTDIO_LOG_LEVEL: "info",
         PATH:
           process.platform === "win32"
             ? `${toolsPath}${delimiter}${process.env.PATH}`
