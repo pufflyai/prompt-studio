@@ -50,8 +50,8 @@ export const UndeclaredPagePanels: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Show Side panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Sessions panels" }));
+    await userEvent.click(await within(document.body).findByRole("menuitemcheckbox", { name: "Side panel" }));
     await expect(panel(canvasElement, "aside")).toBeVisible();
     await expect(within(panel(canvasElement, "aside")).getByText("Drop a tab here")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));

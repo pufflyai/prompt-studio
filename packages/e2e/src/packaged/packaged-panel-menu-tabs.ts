@@ -12,13 +12,15 @@ export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, pr
   await expect(tab).toBeVisible();
   await expect(header.getByRole("tab")).toHaveCount(1);
   await expect(tab.getByRole("button", { name: "Close Cams", exact: true })).toHaveCount(0);
-  await header.getByRole("button", { name: "Open Main left menu", exact: true }).click();
+  const pagePanels = page.locator('[data-workbench-region="nav"]').getByRole("button", { name: / panels$/ });
+  await pagePanels.click();
+  await page.getByRole("menuitemcheckbox", { name: "Cameras", exact: true }).click();
   await expect(attachedMenu).toBeVisible();
   await expect(header.getByRole("tab")).toHaveCount(1);
   await expect(header.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await page.setViewportSize({ width: 500, height: 720 });
   await expect(tab).toBeVisible();
-  await expect(header.getByRole("button", { name: "Open Main left menu", exact: true })).toBeVisible();
+  await expect(pagePanels).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("separator", { name: "Resize Main left menu", exact: true }).dblclick();
   await expect(tab).toBeVisible();

@@ -88,7 +88,7 @@ test("workspace navigation owns selection while keeping ticket document context"
     await expect(page.locator('[data-workbench-panel="side"]:visible')).toBeVisible();
     await expect(rootRow).toHaveAttribute("aria-selected", "true");
     await expect(body).toHaveAttribute("aria-selected", "false");
-    await page.getByRole("button", { name: "Hide Side Panel" }).click();
+    await page.getByRole("button", { name: "Hide Sidebar" }).click();
     await linkedRow.click();
     await expect(linkedRow).toHaveAttribute("aria-selected", "true");
     await expect(rootRow).toHaveAttribute("aria-selected", "false");

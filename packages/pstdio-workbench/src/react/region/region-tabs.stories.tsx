@@ -200,7 +200,7 @@ export const UnavailableMenuPanel: Story = {
   args: { workbench: createUnavailableMenuWorkbench() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.queryByRole("button", { name: /(?:Show|Hide) Side Panel/ })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: /(?:Show|Hide) Sidebar/ })).toBeNull();
     await expect(canvas.queryByText("side.second content")).not.toBeVisible();
   },
 };
@@ -231,7 +231,7 @@ export const SingleResourceWithMenu: Story = {
     await expect(header).not.toBeVisible();
     const menu = args.workbench.layout.getLayout().regions["main-right-menu"].widgets[0]!;
     args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, false);
-    await expect(await canvas.findByRole("button", { name: "Open Main right menu" })).toBeVisible();
+    await expect(await canvas.findByRole("button", { name: "Panel tabs panels" })).toBeVisible();
     args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, true);
     await expect(header).not.toBeVisible();
   },

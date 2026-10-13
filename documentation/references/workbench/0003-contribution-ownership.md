@@ -43,7 +43,7 @@ Page `panelMenus` bind directly to the routed page resource. Selecting an auxili
 
 Page side and bottom slots use normal page placement identities. Moving a tab among Main, aside, and bottom preserves its view and resource. Both page panels accept tabs unless their `acceptsTabs` policy forbids it. The legacy page slot `side` still places its initial view in the mode Side.
 
-The Page panels menu lives in Main's tab row. It shows or hides collapsible page menus, opens page-bottom tools, and shows or hides both page panels when their policy permits it. PS-701 moves these controls to the breadcrumb row.
+The page header contains the project segment, breadcrumb, and a "<Page title> panels" button. Its menu lists Bottom panel and Side panel checkboxes, each declared page menu, and Reset layout. Panel policy controls whether a visibility checkbox is enabled. Tools open through each panel's + menu. Mode panel toggles live in the web status bar or the desktop title bar, outside the page.
 
 ## Saved layouts
 

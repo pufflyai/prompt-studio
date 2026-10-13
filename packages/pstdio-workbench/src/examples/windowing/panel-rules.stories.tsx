@@ -32,13 +32,13 @@ export const MixedPanelRules: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("textbox", { name: "Files draft" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Hide Side Panel" })).toBeNull();
-    await expect(canvas.queryByRole("button", { name: "Show Side Panel" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Hide Sidebar" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Show Sidebar" })).toBeNull();
     await expect(canvas.getByRole("separator", { name: "Resize Side Panel" })).toBeVisible();
     await expect(mixed.workbench.commands.executeCommand("workbench.closeSidePanel")).rejects.toThrow("disabled");
     await expect(mixed.workbench.commands.executeCommand("workbench.toggleSidePanel")).rejects.toThrow("disabled");
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Secondary Panel" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Show Secondary Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Bottom panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Show Bottom panel" }));
     await expect(canvasElement.querySelector('[data-workbench-panel="secondary"]')).toBeVisible();
     await expect(mixed.workbench.layout.getLayout().regions.secondary.visibility).toBe("open");
     const terminal = mixed.workbench.layout.listPanelInstances("bottom")[0]!;
@@ -50,8 +50,8 @@ export const MixedPanelRules: Story = {
         }),
       ).toBeVisible(),
     );
-    await expect(canvas.queryByRole("button", { name: "Hide Side Panel" })).toBeNull();
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Secondary Panel" }));
+    await expect(canvas.queryByRole("button", { name: "Hide Sidebar" })).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Bottom panel" }));
     await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel="secondary"]')).not.toBeVisible());
   },
 };
@@ -73,7 +73,7 @@ export const RefusedPanelTabs: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("textbox", { name: "Files draft" })).toBeVisible();
     await expect(canvas.queryByRole("separator", { name: "Resize Secondary Panel" })).toBeNull();
-    await expect(canvas.queryByRole("button", { name: "Hide Secondary Panel" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Hide Bottom panel" })).toBeNull();
     const tab = refused.workbench.layout.listPanelInstances("bottom")[0]!;
     await expect(() => refused.workbench.movePanel(tab.instanceId, "side")).toThrow("cannot move");
     await expect(
@@ -133,7 +133,7 @@ export const PanelHeaderChoices: Story = {
     await userEvent.keyboard("{Shift>}{F10}{/Shift}");
     await userEvent.click(within(document.body).getByRole("menuitem", { name: "Show header" }));
     await expect(await canvas.findByRole("tab", { name: "Timeline" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Hide Secondary Panel" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Hide Bottom panel" })).toBeNull();
     await expect(canvas.queryByRole("separator", { name: "Resize Secondary Panel" })).toBeNull();
     await expect(headers.workbench.commands.executeCommand("workbench.closeSecondaryPanel")).rejects.toThrow(
       "disabled",

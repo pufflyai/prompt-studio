@@ -1,5 +1,6 @@
 import { Box, IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, ResourceActionMenu, ResourceContextMenu } from "@pstdio/ui";
+import type { ReactElement } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
@@ -8,6 +9,19 @@ interface PanelHeaderMenuProps {
   workbench: WorkbenchCore;
   region: WorkbenchPanelRegion;
 }
+
+export const PanelHeaderContextMenu = (props: PanelHeaderMenuProps & { children: ReactElement }) => {
+  const { workbench, region, children } = props;
+  return (
+    <ResourceContextMenu
+      actions={[
+        { key: "hide-header", label: "Hide header", onClick: () => workbench.shell.setHeaderVisible(region, false) },
+      ]}
+    >
+      {children}
+    </ResourceContextMenu>
+  );
+};
 
 export const PanelHeaderMenu = (props: PanelHeaderMenuProps) => {
   const { workbench, region } = props;

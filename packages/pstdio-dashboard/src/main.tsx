@@ -100,6 +100,7 @@ const renderDashboard = async () => {
             <Workbench
               workbench={dashboardWorkbench}
               themeStorage={storage}
+              panelTogglesInHost={Boolean(projectTabs)}
               titleBar={
                 <>
                   {projectTabs && <DesktopProjectTabs workbench={dashboardWorkbench} {...projectTabs} />}

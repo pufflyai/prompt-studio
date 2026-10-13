@@ -5,6 +5,7 @@ import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 import { WorkbenchStatusBarItems } from "./workbench-status-bar-items";
 
 interface WorkbenchSidenavProps {
@@ -70,7 +71,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   );
 };
 
-export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
+export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps & { panelTogglesInHost?: boolean }) => {
   const { workbench } = props;
   const chrome = useModeChrome(workbench, "status");
 
@@ -79,7 +80,7 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       workbench={workbench}
       region="status"
       data-workbench-region="status"
-      display={props.visible === false ? "none" : "block"}
+      display={props.visible === false ? "none" : "flex"}
       as="footer"
       flexShrink={0}
       h={WORKBENCH_STATUS_BAR_HEIGHT}
@@ -87,23 +88,30 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
-      <Box
-        display={chrome ? "none" : "flex"}
-        alignItems="stretch"
-        justifyContent="space-between"
-        px="sm"
-        h="full"
-        minW="0"
-        w="full"
-      >
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
-        </Box>
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+      <Box display="flex" flex="1" minW="0" h="full" alignItems="center">
+        <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
+        <Box
+          display={chrome !== undefined ? "none" : "flex"}
+          alignItems="stretch"
+          justifyContent="space-between"
+          px="sm"
+          h="full"
+          minW="0"
+          w="full"
+        >
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+          </Box>
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+          </Box>
         </Box>
       </Box>
+      {!props.panelTogglesInHost && (
+        <Box display="flex" alignItems="center" pr="sm">
+          <WorkbenchPanelToggles workbench={workbench} />
+        </Box>
+      )}
     </WorkbenchFocusRegion>
   );
 };

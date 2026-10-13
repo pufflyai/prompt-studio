@@ -15329,7 +15329,7 @@
                       "type": "frame",
                       "id": "Uke3B",
                       "name": "cmp/WorkbenchNavChrome",
-                      "context": "Owns history, breadcrumbs, resource actions, and closed-Panel recovery. Sidenav, Secondary Panel, and Side Panel recovery controls use the compact 2xs icon-button size shared by Kanban Filter and Display controls.",
+                      "context": "Page header: history, project segment, breadcrumbs, resource actions, page panels and trailing Expand view slot. Mode toggles belong to the host.",
                       "reusable": true,
                       "width": "fill_container",
                       "height": 40,
@@ -15514,10 +15514,10 @@
                           "height": 1
                         },
                         {
-                          "id": "kUCSG",
+                          "id": "xf4g3",
                           "type": "ref",
                           "ref": "nvvgg",
-                          "name": "Sidenav control",
+                          "name": "Workspace panels",
                           "theme": {
                             "btn": "ghost",
                             "size": "2xs"
@@ -15526,49 +15526,18 @@
                           "height": 24,
                           "descendants": {
                             "k7mgm": {
-                              "icon": "panel-left",
-                              "width": 12,
-                              "height": 12
+                              "icon": "panels-right-bottom",
+                              "width": 14,
+                              "height": 14
                             }
                           }
                         },
                         {
-                          "id": "q7B3uG",
-                          "type": "ref",
-                          "ref": "nvvgg",
-                          "name": "Secondary Panel control",
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          },
+                          "type": "frame",
+                          "id": "L1Fa8",
+                          "name": "Expand view slot · PS-616",
                           "width": 24,
-                          "height": 24,
-                          "descendants": {
-                            "k7mgm": {
-                              "icon": "panel-bottom",
-                              "width": 12,
-                              "height": 12
-                            }
-                          }
-                        },
-                        {
-                          "id": "ups0z",
-                          "type": "ref",
-                          "ref": "nvvgg",
-                          "name": "Side Panel control",
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          },
-                          "width": 24,
-                          "height": 24,
-                          "descendants": {
-                            "k7mgm": {
-                              "icon": "panel-right",
-                              "width": 12,
-                              "height": 12
-                            }
-                          }
+                          "height": 24
                         }
                       ]
                     },
@@ -31000,6 +30969,78 @@
                               "height": 14
                             }
                           }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QIArM",
+                          "name": "Host panel toggles",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "fkg1G",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "list-tree toggle",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "fill": "$ds-bg-active",
+                              "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "list-tree",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "xUHhB",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "panel-bottom toggle",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "fill": "$ds-bg-active",
+                              "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "panel-bottom",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "TOuVz",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "panel-right toggle",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "fill": "$ds-bg-active",
+                              "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "panel-right",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     }
@@ -67138,24 +67179,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -69811,24 +69834,6 @@
                         "btn": "ghost",
                         "size": "xs"
                       }
-                    },
-                    "kUCSG": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
-                    },
-                    "q7B3uG": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
-                    },
-                    "ups0z": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
                     }
                   }
                 },
@@ -70058,24 +70063,6 @@
                             "btn": "ghost",
                             "size": "xs"
                           }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
                         }
                       }
                     },
@@ -70214,29 +70201,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "width": 1,
-                          "height": 1,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "enabled": true,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "enabled": true,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         }
                       }
@@ -74688,30 +74652,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "height": 22,
-                              "width": 22,
-                              "name": "Side Panel control",
-                              "context": "Closed-state recovery control for the Side Panel."
                             }
                           }
                         },
@@ -75023,27 +74963,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -75478,27 +75397,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -78077,27 +77975,6 @@
                             "btn": "ghost",
                             "size": "xs"
                           }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
                         }
                       }
                     },
@@ -78261,27 +78138,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -78932,27 +78788,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -79671,27 +79506,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -79997,27 +79811,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -80303,27 +80096,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -80608,27 +80380,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -80928,27 +80679,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -81254,27 +80984,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -81601,27 +81310,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -81927,27 +81615,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -82171,15 +81838,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
                               "enabled": false
                             }
                           }
@@ -82433,15 +82091,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
                               "enabled": false
                             }
                           }
@@ -82721,15 +82370,6 @@
                             },
                             "saN8L": {
                               "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
-                              "enabled": false
                             }
                           }
                         },
@@ -82939,15 +82579,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
                               "enabled": false
                             }
                           }
@@ -83650,24 +83281,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 }
                               }
@@ -85264,24 +84877,6 @@
                                     "btn": "ghost",
                                     "size": "xs"
                                   }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
                                 }
                               }
                             },
@@ -86873,24 +86468,6 @@
                                     "btn": "ghost",
                                     "size": "xs"
                                   }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
                                 }
                               }
                             },
@@ -87370,24 +86947,6 @@
                                     "btn": "ghost",
                                     "size": "xs"
                                   }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
                                 }
                               }
                             },
@@ -87767,24 +87326,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 }
                               }
@@ -107405,24 +106946,6 @@
                             "btn": "ghost",
                             "size": "xs"
                           }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
                         }
                       }
                     },
@@ -110144,24 +109667,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         }
                       }
@@ -143066,24 +142571,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -187244,6 +186731,505 @@
                   "fontWeight": "normal"
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "SJpjO",
+      "x": 52702,
+      "y": 0,
+      "name": "PS-701 · Page and host panel controls",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1100,
+      "height": 640,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "id": "Q0I2CB",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Page header · project and workspace",
+          "width": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "wFQqB",
+          "name": "Default placement",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "g2aJsK",
+              "name": "Default placement label",
+              "fill": "$ds-fg-muted",
+              "content": "Default placement",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "wxP2K",
+              "name": "Status content and mode chrome",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "bxiVO",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "Bqb3p",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "Ds7RQ",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "M4k4s",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "PdDQH",
+          "name": "Side on the left",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "XRqfj",
+              "name": "Side on the left label",
+              "fill": "$ds-fg-muted",
+              "content": "Side on the left",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "bDeMM",
+              "name": "Status content and mode chrome",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "ZIFQz",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "y5ni2s",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "YJUJK",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-left · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-left",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "N6pWI",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "vSyzZ",
+          "name": "Navigation on the right",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "sXELR",
+              "name": "Navigation on the right label",
+              "fill": "$ds-fg-muted",
+              "content": "Navigation on the right",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "ar6d0",
+              "name": "Status content and mode chrome",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "t1MaNU",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "glJ2M",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "txF1j",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "LDDxt",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "K3y7O",
+          "type": "ref",
+          "ref": "SUg7j",
+          "name": "Desktop · controls beside project tabs",
+          "width": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "mPQ86",
+          "name": "Workspace panels menu",
+          "width": 260,
+          "fill": "$ds-panel",
+          "cornerRadius": 4,
+          "layout": "vertical",
+          "gap": 4,
+          "padding": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "VpGdz",
+              "name": "Bottom panel checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "fill": "$ds-menu-selected",
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "OaTN5",
+                  "name": "Bottom panel visibility",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "wpK6x",
+                  "name": "Bottom panel",
+                  "fill": "$ds-fg",
+                  "content": "Bottom panel",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hSa0d",
+              "name": "Side panel checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "FhNdn",
+                  "name": "Side panel visibility",
+                  "opacity": 0,
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "jD8nv",
+                  "name": "Side panel",
+                  "fill": "$ds-fg",
+                  "content": "Side panel",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "m2OOqm",
+              "name": "Workspace tools checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "fill": "$ds-menu-selected",
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "mTDQI",
+                  "name": "Workspace tools visibility",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "EzOIh",
+                  "name": "Workspace tools",
+                  "fill": "$ds-fg",
+                  "content": "Workspace tools",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "o8s2ao",
+              "name": "Inspector checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "fill": "$ds-menu-selected",
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "x5h6h",
+                  "name": "Inspector visibility",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "W49gw7",
+                  "name": "Inspector",
+                  "fill": "$ds-fg",
+                  "content": "Inspector",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "afBQH",
+              "name": "Reset layout",
+              "fill": "$ds-fg",
+              "content": "Reset layout",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         }

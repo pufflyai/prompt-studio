@@ -18,8 +18,8 @@ export const Smoke: Story = {
     await expect(visibleWindowingLabel(canvasElement, "Files mount")).toHaveTextContent("Mount 1");
     await userEvent.type(draft, "Keep this draft while hiding a panel");
     const mount = visibleWindowingLabel(canvasElement, "Files mount").textContent;
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Secondary Panel" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Show Secondary Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Bottom panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Show Bottom panel" }));
     await expect(draft).toHaveValue("Keep this draft while hiding a panel");
     await expect(visibleWindowingLabel(canvasElement, "Files mount")).toHaveTextContent(mount!);
     await expect(visibleWindowingLabel(canvasElement, "Terminal lifecycle")).toHaveTextContent("Starts 1 · Stops 0");

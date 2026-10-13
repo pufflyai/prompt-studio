@@ -7,6 +7,7 @@ import type { WindowingFixtureOptions } from "./fixture-options";
 import { createWindowingLifecycleProbe } from "./lifecycle-probe";
 import { registerWindowingModule } from "./module";
 import { registerAvailabilityPages } from "./page-modes";
+import { registerWindowingProjectHeader } from "./project-header";
 import { createWindowingResources, windowingPages } from "./resources";
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
@@ -27,6 +28,7 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
       pageLocationPersistence: persistence.pageLocation,
     });
     registerWindowingModule(workbench, resources, probe, options);
+    registerWindowingProjectHeader(workbench);
     if (options.pageModes) registerAvailabilityPages(workbench);
     if (options.contextNavigation) registerContextNavigation(workbench, resources);
     workbench.pageLocations.switchProject("windowing-project");

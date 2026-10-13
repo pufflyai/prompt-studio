@@ -122,7 +122,7 @@ export const InteractionChecks: Story = {
     canvas.getByRole("tab", { name: "Files" }).focus();
     await userEvent.keyboard("{Shift>}{F10}{/Shift}");
     await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Move to Side" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
     await userEvent.click(
       within(canvas.getByRole("region", { name: "Sidenav" })).getByRole("option", { name: "package.json" }),
     );

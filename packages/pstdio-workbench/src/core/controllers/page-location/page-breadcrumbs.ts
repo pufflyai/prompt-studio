@@ -15,7 +15,7 @@ import { pageLocationTarget } from "./page-location-target";
 const pageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:${ref.id}`;
 const locationsFromRoot = (location: PageLocation): PageLocation[] =>
   location.parent ? [...locationsFromRoot(location.parent), location] : [location];
-const pageTitle = (page: WorkbenchPageContribution) => {
+export const pageTitle = (page: WorkbenchPageContribution) => {
   if (page.title === undefined) return page.ref.id;
   if (!isLocalizedString(page.title)) return page.title;
   return page.title.default ?? page.title.$l10n;

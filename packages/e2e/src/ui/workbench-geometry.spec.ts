@@ -75,7 +75,7 @@ const expectCanonicalFrame = async (
   expect(sideBox).not.toBeNull();
 
   const contentHeight = options.statusBar === "visible" ? 688 : 720;
-  const panelHeight = contentHeight - 2 * PANEL_GAP_PX;
+  const panelHeight = contentHeight - PANEL_GAP_PX - (options.statusBar === "visible" ? 0 : PANEL_GAP_PX);
   const sidenavWidth = options.sidenav === "visible" ? 250 : 0;
   const sideX = 1280 - PANEL_GAP_PX - 420;
   const mainColumnX = PANEL_GAP_PX + sidenavWidth + (options.sidenav === "visible" ? PANEL_GAP_PX : 0);
@@ -128,12 +128,11 @@ test("aligns Main and attached Side frames with the breadcrumb inside Main", asy
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText("Canonical geometry", { exact: true }).click();
-  const nav = page.locator('[data-workbench-region="nav"]');
-  await nav.getByRole("button", { name: "Show Side Panel" }).click();
+  await page.locator('[data-workbench-region="status"]').getByRole("button", { name: "Show Sidebar" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "Session", exact: true }).click();
 
-  await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "hidden" });
+  await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "visible" });
 });
 
 test("reopens the Main right menu from a single-resource page", async ({ page, request }) => {
@@ -162,7 +161,11 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   await page.getByRole("separator", { name: "Resize Main right menu" }).press("Home");
   await expect(rightMenu).toBeHidden();
   await expect(mainPanelHeader).toBeVisible();
-  await mainPanelHeader.getByRole("button", { name: "Open Main right menu" }).click();
+  await page
+    .locator('[data-workbench-region="nav"]')
+    .getByRole("button", { name: / panels$/ })
+    .click();
+  await page.getByRole("menuitemcheckbox", { name: "Properties", exact: true }).click();
 
   await expect(rightMenu).toBeVisible();
   await expect(page.getByRole("menu", { name: "Main right menu controls" })).toHaveCount(0);

@@ -65,9 +65,9 @@ test("keeps mode panel state across page navigation and reload", async ({ page, 
     await workspacesNavigation.click();
 
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
-    const hideSecondary = page.getByRole("button", { name: "Hide Secondary Panel", exact: true });
+    const hideSecondary = page.getByRole("button", { name: "Hide Bottom panel", exact: true });
     if (await hideSecondary.isVisible()) await hideSecondary.click();
-    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+    await page.getByRole("button", { name: "Show Bottom panel" }).click();
     const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
     await separator.press("ArrowUp");
     await separator.press("ArrowUp");

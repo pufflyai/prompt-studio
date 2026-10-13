@@ -19,10 +19,11 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(1);
-  await mainHeader.getByRole("button", { name: "main header options", exact: true }).click();
+  await mainHeader.focus();
+  await mainHeader.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   await expect(mainHeader).not.toBeVisible();
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom panel", exact: true }).click();
   const secondary = page.locator('[data-workbench-panel-header="secondary"]');
   await secondary.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();

@@ -40,7 +40,7 @@ definePage({
 });
 ```
 
-Menus render beside the editor tab row and span the full editor height, below the breadcrumb. They have no header, tabs, add action, or tab-drop target. The page bottom has its own tab header and remains separate from the mode's Secondary panel. Main's Page panels menu controls collapsible menus and both page panels and opens bottom tools.
+Menus render beside the editor tab row and span the full editor height, below the breadcrumb. They have no header, tabs, add action, or tab-drop target. The page bottom has its own tab header and remains separate from the mode's Secondary panel. The page header's "<Page title> panels" menu contains visibility checkboxes for both page panels and declared menus, followed by Reset layout. Each panel's + menu opens tools. Mode panel toggles sit in the web status bar or desktop application header, ordered by the current panel placement.
 
 `viewMenus`, `ViewMenuContribution`, and `defineViewMenu` are deprecated in favor of page `panelMenus`. Existing view-owned menus keep their behavior during the deprecation period.
 
