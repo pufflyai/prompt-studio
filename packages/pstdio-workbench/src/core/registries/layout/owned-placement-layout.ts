@@ -9,6 +9,7 @@ import {
   type WorkbenchLayout,
   type WorkbenchRegion,
   type WorkbenchWidgetPlacement,
+  workbenchPanelRegions,
   workbenchRegions,
 } from "./layout-types";
 import { isPageRegion, ownerRegionSelection, restoreOwnerRegion } from "./owner-region-state";
@@ -35,7 +36,7 @@ interface RenderedOwnedPlacement {
 }
 
 const bindsToLocation = (placement: WorkbenchOwnedWidgetPlacement) =>
-  placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey));
+  placement.value.role === "sub-panel" && placement.identity.kind === "page";
 
 const resolveOwnerResourceKey = (
   desired: WorkbenchOwnedWidgetPlacement,
@@ -44,7 +45,7 @@ const resolveOwnerResourceKey = (
 ) =>
   bindsToLocation(desired)
     ? (desired.value.ownerResourceKey ?? exact?.ownerResourceKey ?? transfer?.ownerResourceKey)
-    : desired.value.ownerResourceKey;
+    : undefined;
 
 const indexCurrentOwnedPlacements = (layout: WorkbenchLayout) => {
   const indexed = new Map<string, { region: WorkbenchRegion; placement: WorkbenchWidgetPlacement }>();
@@ -160,11 +161,12 @@ const renderDesiredPlacements = (
     if (desiredWidgetIds.has(widgetId)) throw new Error(`Duplicate desired widget ID: ${widgetId}`);
     desiredWidgetIds.add(widgetId);
     const ownerResourceKey = resolveOwnerResourceKey(desired, exact?.placement, transfer?.[1].placement);
+    const { ownerResourceKey: _previousOwnerResourceKey, ...value } = desired.value;
     rendered.push({
       identity: desired.identity,
       region: exact?.region ?? desired.region,
       placement: {
-        ...desired.value,
+        ...value,
         widgetId,
         placementIdentity: desired.identity,
         ...(ownerResourceKey ? { ownerResourceKey } : {}),
@@ -234,7 +236,10 @@ const reconcileRegions = (
       widgets,
       savedWidgetOrder: undefined,
       activeWidgetId,
-      ...(docked.has(regionId) && !shared ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
+      ...(docked.has(regionId) &&
+      (!shared || (workbenchPanelRegions.some((id) => id === regionId) && !shared.widgets.length))
+        ? { visible: region.visible || opensPreviouslyEmptyRegion }
+        : {}),
     };
   }
   return { ...layout, regions };
@@ -285,7 +290,7 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
           if (placement.role !== "sub-panel" || !placement.placementIdentity) return placement;
           const desiredPlacement = desiredByKey.get(placementIdentityKey(placement.placementIdentity));
           if (!desiredPlacement) return placement;
-          if (desiredPlacement.identity.kind !== "page" && !desiredPlacement.placement.resourceKey) return placement;
+          if (desiredPlacement.identity.kind !== "page") return placement;
           return { ...placement, ownerResourceKey };
         }),
       },

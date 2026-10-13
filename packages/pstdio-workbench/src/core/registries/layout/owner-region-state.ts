@@ -34,8 +34,37 @@ export const ownerRegionSelection = (
 export const restorePageGeometry = (layout: WorkbenchLayout, geometry?: WorkbenchLayout) => {
   if (!geometry) return layout;
   const regions = { ...layout.regions };
-  for (const id of ["main", "bottom", "main-left-menu", "main-right-menu"] as const) {
+  for (const id of [
+    "main",
+    "bottom",
+    "main-left-menu",
+    "main-right-menu",
+    "bottom-left-menu",
+    "bottom-right-menu",
+  ] as const) {
     regions[id] = { ...regions[id], size: geometry.regions[id].size };
+  }
+  return { ...layout, regions };
+};
+
+export const restoreAdoptedModeGeometry = (
+  layout: WorkbenchLayout,
+  previous: WorkbenchLayout,
+  adoptedRegions: readonly WorkbenchRegion[],
+  activatedRegions: readonly WorkbenchRegion[],
+) => {
+  if (!adoptedRegions.length) return layout;
+  const regions = { ...layout.regions };
+  for (const id of new Set(adoptedRegions)) {
+    const region = restoreOwnerRegion(layout, id, previous);
+    const selected = previous.regions[id].activeWidgetId;
+    regions[id] = {
+      ...region,
+      activeWidgetId:
+        !activatedRegions.includes(id) && region.widgets.some((p) => p.widgetId === selected)
+          ? selected
+          : region.activeWidgetId,
+    };
   }
   return { ...layout, regions };
 };

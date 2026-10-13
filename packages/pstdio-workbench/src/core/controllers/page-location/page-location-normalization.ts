@@ -1,12 +1,14 @@
 import type {
   FileRendererSectionTarget,
   FileSourcePosition,
+  ModeRef,
   NavigationTargetPage,
   PageLocation,
   PageRef,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
-import { isFileSourcePosition } from "@pstdio/sdk/extensions";
+import { contributionRefId, isFileSourcePosition } from "@pstdio/sdk/extensions";
+import { pageAllowsMode } from "../../registries/pages/page-availability";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 
 export const workbenchPageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;
@@ -45,6 +47,7 @@ const canonicalResource = (resource: ResourceRef | undefined, resources: Workben
     ...(normalized.label ? { label: normalized.label } : {}),
     ...(normalized.icon ? { icon: normalized.icon } : {}),
     ...(normalized.extensionId ? { extensionId: normalized.extensionId } : {}),
+    ...(normalized.context ? { context: { ...normalized.context } } : {}),
     ...(normalized.metadata ? { metadata: cloneMetadata(normalized.metadata) } : {}),
   };
   return Object.freeze(canonical) as ResourceRef;
@@ -61,6 +64,7 @@ const resourceKey = (location: PageLocation, resources: WorkbenchPageResourceCod
 // Same page and resource identity. The section is a position inside that resource.
 const sharesPageResource = (left: PageLocation, right: PageLocation, resources: WorkbenchPageResourceCodec) =>
   workbenchPageRefKey(left.page) === workbenchPageRefKey(right.page) &&
+  (left.mode ? contributionRefId(left.mode) : undefined) === (right.mode ? contributionRefId(right.mode) : undefined) &&
   resourceKey(left, resources) === resourceKey(right, resources);
 
 export const workbenchPageLocationRouteKey = (
@@ -72,6 +76,7 @@ export const workbenchPageLocationRouteKey = (
   const document = declaration ? location.resource?.metadata?.[declaration.metadataKey] : undefined;
   return JSON.stringify([
     workbenchPageRefKey(location.page),
+    location.mode ? contributionRefId(location.mode) : null,
     resourceKey(location, resources),
     document ?? null,
     location.position
@@ -117,6 +122,7 @@ const canonicalPosition = (position: FileSourcePosition) =>
 
 const createLocation = (input: {
   page: WorkbenchPageContribution;
+  mode?: ModeRef;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
@@ -131,6 +137,7 @@ const createLocation = (input: {
     throw new Error("Page location has an invalid source position");
   return Object.freeze({
     page: canonicalPageRef(input.page),
+    ...(input.mode ? { mode: Object.freeze({ ...input.mode }) } : {}),
     ...(input.resource ? { resource: canonicalResource(input.resource, input.resources) } : {}),
     ...(input.section ? { section: canonicalSection(input.section) } : {}),
     ...(input.position
@@ -144,6 +151,7 @@ const createLocation = (input: {
 
 const declaredParent = (input: {
   page: WorkbenchPageContribution;
+  mode?: ModeRef;
   pages: readonly WorkbenchPageContribution[];
   resources: WorkbenchPageResourceCodec;
   seen: Set<string>;
@@ -151,8 +159,14 @@ const declaredParent = (input: {
   if (!input.page.parentId) return undefined;
   const parent = pageForId(input.pages, input.page.parentId);
   if (!parent) throw new Error(`Unknown parent page: ${input.page.parentId}`);
+  let mode: ModeRef | undefined;
+  if (parent.modeIds) {
+    mode = { kind: "mode", extensionId: "pstdio", id: parent.modeId };
+    if (input.mode && pageAllowsMode(parent, contributionRefId(input.mode))) mode = input.mode;
+  }
   return normalizeResolvedLocation({
     page: parent,
+    mode,
     pages: input.pages,
     resources: input.resources,
     seen: input.seen,
@@ -161,6 +175,7 @@ const declaredParent = (input: {
 
 const normalizeResolvedLocation = (input: {
   page: WorkbenchPageContribution;
+  mode?: ModeRef;
   pages: readonly WorkbenchPageContribution[];
   resources: WorkbenchPageResourceCodec;
   seen: Set<string>;
@@ -171,6 +186,7 @@ const normalizeResolvedLocation = (input: {
 }): PageLocation => {
   const candidate = createLocation({
     page: input.page,
+    mode: input.mode,
     resources: input.resources,
     ...(input.resource ? { resource: input.resource } : {}),
     ...(input.section ? { section: input.section } : {}),
@@ -180,9 +196,11 @@ const normalizeResolvedLocation = (input: {
   if (input.seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${input.page.id}`);
   const seen = new Set(input.seen).add(routeKey);
   const parent =
-    input.parent ?? declaredParent({ page: input.page, pages: input.pages, resources: input.resources, seen });
+    input.parent ??
+    declaredParent({ page: input.page, mode: input.mode, pages: input.pages, resources: input.resources, seen });
   return createLocation({
     page: input.page,
+    mode: input.mode,
     resources: input.resources,
     ...(candidate.resource ? { resource: candidate.resource } : {}),
     ...(candidate.section ? { section: candidate.section } : {}),
@@ -210,6 +228,7 @@ const normalizePageTarget = (input: {
   if (!page) throw new Error(`Unknown page: ${workbenchPageRefKey(input.target.page)}`);
   const candidate = createLocation({
     page,
+    mode: input.target.mode,
     resources: input.resources,
     ...(input.target.resource ? { resource: input.target.resource } : {}),
     ...(input.target.section ? { section: input.target.section } : {}),
@@ -224,6 +243,7 @@ const normalizePageTarget = (input: {
     : inheritedParent(candidate, input.active, input.resources);
   const location = normalizeResolvedLocation({
     page,
+    mode: candidate.mode,
     pages: input.pages,
     resources: input.resources,
     seen: input.seen,
@@ -252,6 +272,7 @@ export const normalizeWorkbenchPageLocation = (input: {
     if (!page) throw new Error(`Unknown page: ${workbenchPageRefKey(location.page)}`);
     const candidate = createLocation({
       page,
+      mode: location.mode,
       resources: input.resources,
       ...(location.resource ? { resource: location.resource } : {}),
       ...(location.section ? { section: location.section } : {}),
@@ -265,6 +286,7 @@ export const normalizeWorkbenchPageLocation = (input: {
       pageId: page.id,
       location: normalizeResolvedLocation({
         page,
+        mode: candidate.mode,
         pages: input.pages,
         resources: input.resources,
         seen,
@@ -280,6 +302,7 @@ export const normalizeWorkbenchPageLocation = (input: {
 
 export const normalizeDirectWorkbenchPageLocation = (input: {
   pageId: string;
+  mode?: ModeRef;
   pages: readonly WorkbenchPageContribution[];
   resources: WorkbenchPageResourceCodec;
   resource?: ResourceRef;
@@ -292,6 +315,7 @@ export const normalizeDirectWorkbenchPageLocation = (input: {
     pageId: page.id,
     location: normalizeResolvedLocation({
       page,
+      mode: input.mode,
       pages: input.pages,
       resources: input.resources,
       seen: new Set(),

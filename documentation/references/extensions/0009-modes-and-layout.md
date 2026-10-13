@@ -2,7 +2,34 @@
 
 A mode is a workbench context with its own docked regions, chrome, and theme. This page covers modes, mode placements, chrome, and region settings.
 
-A page declares its base mode, so opening a page always selects the correct mode.
+A page declares its allowed modes. An explicit mode and page open commits them together.
+
+## Page availability
+
+Declare `modes: readonly ModeRef[]` on `definePage`. The list must be non-empty and unique. Page search lists pages allowed in the active mode. Navigation actions that request another mode are checked in that requested mode. A direct open without a mode keeps the active mode; it fails if that mode does not allow the page. Use `navigation.open({ kind: "page", page: page.ref, mode: mode.ref })` to request another mode. An unavailable pair fails before the page, mode, layout, or history changes.
+
+A mode can declare `basePage: PageRef`. It must name a page available in that mode. Switching modes restores that mode's last allowed page in the project, or its base page. Saved pages are checked again against current declarations. Removing a resource clears remembered locations that use it, including parent locations. Reselecting a mode does not add a history entry. History and copied page links retain the mode in which the page was shown.
+
+```ts
+const music = defineMode({
+  id: "music",
+  label: "Music",
+  regions: ["main"],
+  basePage: { kind: "page", id: "library" },
+});
+const library = definePage({
+  id: "library",
+  title: "Library",
+  path: "library",
+  modes: [workbenchModes.project, music.ref],
+  main: { kind: "view", view: libraryView.ref, cardinality: "one" },
+  slots: [],
+});
+```
+
+Migration: `mode` is deprecated in favor of `modes`. Existing mode-only declarations still navigate to their singleton mode. When both fields are supplied, `modes` is authoritative and must include `mode`. The builder accepts modes-only input and supplies a required legacy `mode` in its result for existing callers and host metadata. During this additive release, omission of `modes` keeps singleton behavior; it does not mean all modes. Removal of `mode` and universal omission behavior wait for the coordinated breaking release.
+
+## Mode placements
 
 Use `definePlacement` only for content that should remain across pages in that mode:
 
@@ -17,7 +44,7 @@ definePlacement({
 
 A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `fixed` (always open, not closable), `open` (open until the user closes it), or `closed` (opened from the Add panel). A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order` and `movableTo`. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
 
-Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target activates the page and its declared mode as one transaction.
+Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target validates and activates the mode/page pair as one transaction.
 
 Mode and page placements are additive. If both use `side`, both appear. Leaving the page removes only the page placement. User open state is stored against the complete owner identity and cannot leak into another page or mode.
 

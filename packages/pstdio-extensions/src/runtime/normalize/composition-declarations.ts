@@ -66,6 +66,7 @@ export const pageDeclarationSchema = z
     icon: z.string().optional(),
     path: z.string(),
     mode: localRefSchema("mode"),
+    modes: z.array(localRefSchema("mode")).min(1).optional(),
     parent: localRefSchema("page").optional(),
     resource: resource.optional(),
     document: z
@@ -114,6 +115,7 @@ export const modeDeclarationSchema = z
     id: z.string(),
     ref: localRefSchema("mode"),
     label: localizableStringSchema,
+    basePage: localRefSchema("page").optional(),
     icon: z.string().optional(),
     regions: z.array(region),
     floatingPanels: z.enum(["visible", "hidden"]).optional(),

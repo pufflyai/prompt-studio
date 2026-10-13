@@ -4,7 +4,7 @@ import { createStartModule } from "./module";
 
 const registerExtensionPage = (
   workbench: ReturnType<typeof createWorkbench>,
-  input: { id: string; title: string; resourceKind?: string },
+  input: { id: string; title: string; resourceKind?: string; modeId?: string; modeIds?: readonly string[] },
 ) => {
   workbench.views.registerView({
     id: `lab.view.${input.id}`,
@@ -17,7 +17,8 @@ const registerExtensionPage = (
     title: input.title,
     icon: "pencil",
     path: input.id,
-    modeId: "project",
+    modeId: input.modeId ?? "project",
+    ...(input.modeIds ? { modeIds: input.modeIds } : {}),
     ...(input.resourceKind
       ? {
           parentId: "lab.page.scribble",
@@ -36,9 +37,33 @@ describe("tool resources", () => {
     workbench.registerModule(createStartModule());
     registerExtensionPage(workbench, { id: "scribble", title: "Scribble" });
     registerExtensionPage(workbench, { id: "note", title: "Note", resourceKind: "note" });
+    workbench.pageLocations.switchProject("project-1");
 
     const tools = workbench.resources.listResources("").filter((entry) => entry.group === "Tools");
 
     expect(tools.map((entry) => entry.resource.label)).toEqual(["Scribble"]);
+  });
+
+  test("filters tools by the active mode and keeps shared pages available", () => {
+    const workbench = createWorkbench();
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.modes.registerMode({
+      id: "boombox",
+      basePage: { kind: "page", extensionId: "lab", id: "overview" },
+      activate: () => undefined,
+    });
+    workbench.registerModule(createStartModule());
+    registerExtensionPage(workbench, { id: "scribble", title: "Scribble" });
+    registerExtensionPage(workbench, { id: "overview", title: "Overview", modeIds: ["project", "boombox"] });
+    registerExtensionPage(workbench, { id: "music", title: "Music", modeId: "boombox", modeIds: ["boombox"] });
+    workbench.pageLocations.switchProject("project-1");
+    const tools = () =>
+      workbench.resources
+        .listResources("")
+        .filter((entry) => entry.group === "Tools")
+        .map((entry) => entry.resource.label);
+    expect(tools()).toEqual(["Overview", "Scribble"]);
+    workbench.modes.setActiveMode("boombox");
+    expect(tools()).toEqual(["Music", "Overview"]);
   });
 });

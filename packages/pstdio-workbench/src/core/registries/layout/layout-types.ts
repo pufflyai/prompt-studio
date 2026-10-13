@@ -73,6 +73,7 @@ export interface WorkbenchTabMenuGroup {
 }
 
 export interface WorkbenchTabSnapshot {
+  context?: ResourceRef["context"];
   label?: string;
   icon?: string;
   indicator?: { icon: string; color?: string; label?: string };

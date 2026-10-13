@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useWorkbenchStore, useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { boomboxTheme, kilnTheme } from "../showcases/themes";
 import { createWindowingFixture, type WindowingFixture, type WindowingMode } from "./fixture";
+import { WindowingModeControls } from "./page-mode-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
 
 interface ControlsProps {
@@ -18,45 +19,60 @@ const WindowingControls = (props: ControlsProps) => {
   const size = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
   return (
     <HStack p="sm" gap="sm" flexWrap="wrap" borderBottomWidth="1px" borderColor="border.subtle">
-      {resources.workspaces.map((resource) => (
+      {fixture.pageModes && <WindowingModeControls workbench={workbench} />}
+      {fixture.contextNavigation && (
         <Button
-          key={resource.id}
-          size="xs"
-          variant="outline"
-          onClick={() => workbench.pageLocations.navigate({ kind: "page", page: windowingPages.workspace, resource })}
-        >
-          {resource.label}
-        </Button>
-      ))}
-      {resources.notes.map((resource) => (
-        <Button
-          key={resource.id}
           size="xs"
           variant="outline"
           onClick={() =>
-            workbench.pageLocations.navigate({ kind: "page", page: windowingPages.notes, resource, open: "pin" })
+            resources.updateSessionContext("session-2", { type: "project", id: "windowing-project", label: "Project" })
           }
         >
-          {resource.label}
+          Use project session context
         </Button>
-      ))}
-      {resources.sessions.map((resource) => (
-        <Button
-          key={resource.id}
-          size="xs"
-          variant="outline"
-          onClick={() =>
-            void workbench.navigation.openTarget({
-              kind: "panel",
-              panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
-              resource,
-              open: "pin",
-            })
-          }
-        >
-          {resource.label}
-        </Button>
-      ))}
+      )}
+      {!fixture.pageModes &&
+        resources.workspaces.map((resource) => (
+          <Button
+            key={resource.id}
+            size="xs"
+            variant="outline"
+            onClick={() => workbench.pageLocations.navigate({ kind: "page", page: windowingPages.workspace, resource })}
+          >
+            {resource.label}
+          </Button>
+        ))}
+      {!fixture.pageModes &&
+        resources.notes.map((resource) => (
+          <Button
+            key={resource.id}
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              workbench.pageLocations.navigate({ kind: "page", page: windowingPages.notes, resource, open: "pin" })
+            }
+          >
+            {resource.label}
+          </Button>
+        ))}
+      {!fixture.pageModes &&
+        resources.sessions.map((resource) => (
+          <Button
+            key={resource.id}
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              void workbench.navigation.openTarget({
+                kind: "panel",
+                panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
+                resource,
+                open: "pin",
+              })
+            }
+          >
+            {resource.label}
+          </Button>
+        ))}
       <Button
         size="xs"
         variant="outline"

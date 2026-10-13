@@ -188,6 +188,7 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
     input.workbench.modes.registerMode({
       id: mode.modeId,
       label: text(mode.label, mode.modeId),
+      basePage: mode.basePage,
       panels: mode.panelRegions,
       regionSettings: mode.regionSettings,
       panelHeaders: "legacy",

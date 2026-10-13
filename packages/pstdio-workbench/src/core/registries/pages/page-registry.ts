@@ -1,6 +1,7 @@
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
+import { pageAllowsMode } from "./page-availability";
 import { resolvePagePlacementClose } from "./page-placement-close";
 import { pinPagePlacement } from "./page-placement-pin";
 import { createPagePreparation } from "./page-preparation";
@@ -44,6 +45,7 @@ export const createWorkbenchPageRegistry = <Value>(
     input.resources.toUri(normalizeResource(resource));
   const store = createPageRegistryStore(input);
   let runtime: ((state: WorkbenchPageRegistryStoreState<Value>) => void) | undefined;
+  let persistOwners: ((states: readonly WorkbenchPageRegistryStoreState<Value>[]) => void) | undefined;
   let publishingState: WorkbenchPageRegistryStoreState<Value> | undefined;
 
   const publishState = (state: WorkbenchPageRegistryStoreState<Value>, action: string) =>
@@ -94,6 +96,9 @@ export const createWorkbenchPageRegistry = <Value>(
     listPages() {
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
     },
+    listAvailablePages(modeId) {
+      return Object.values(store.getState().pages).filter((page) => pageAllowsMode(page, modeId));
+    },
 
     pinPlacement(identity, open) {
       commit({ ...pinPagePlacement(store.getState(), identity, input.resources, open), action: "pinPagePlacement" });
@@ -110,9 +115,11 @@ export const createWorkbenchPageRegistry = <Value>(
     publish: publishState,
     onDidCommit: (listener) => createDisposable(store.api.subscribe(listener)),
     getPublishingState: () => publishingState ?? store.getState(),
-    connectRuntime(apply) {
+    persistPreparedOwners: (states) => persistOwners?.(states),
+    connectRuntime(apply, saveOwners) {
       if (runtime) throw new Error("Workbench page registry already has a runtime");
       runtime = apply;
+      persistOwners = saveOwners;
       try {
         apply(store.getState());
       } catch (error) {
@@ -120,7 +127,10 @@ export const createWorkbenchPageRegistry = <Value>(
         throw error;
       }
       return createDisposable(() => {
-        if (runtime === apply) runtime = undefined;
+        if (runtime === apply) {
+          runtime = undefined;
+          persistOwners = undefined;
+        }
       });
     },
     refreshModePlacements() {

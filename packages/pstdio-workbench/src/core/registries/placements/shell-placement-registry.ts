@@ -22,14 +22,15 @@ import {
   isStaticPlacementOpen,
   placementItemViewId,
   staticPlacementClosable,
-  updateResourcePlacementInstance,
   validateOwnedPlacementItem,
   type WorkbenchOwnedPlacementItem,
 } from "./owned-placement-lifecycle";
 import {
   type OwnedPlacementLocationContext,
   type OwnedPlacementPreparation,
+  type OwnedPlacementUpdateInput,
   prepareOwnedPlacement,
+  prepareOwnedPlacementUpdate,
   setOwnedPlacementPreparation,
 } from "./owned-placement-preparation";
 import { restoreOwnedPlacementState } from "./owned-placement-restoration";
@@ -86,6 +87,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
   viewMenus?: WorkbenchViewMenuRegistry;
   getPanel(panelId: string): RegisteredWidgetContribution | undefined;
   registerPanel: Parameters<typeof registerWorkbenchViewPlacement>[0];
+  updateTransferredPlacement?(identity: PlacementIdentity, update: OwnedPlacementUpdateInput): boolean;
   activatePanel(instanceId: string): unknown;
   getLayout(): WorkbenchLayout;
   getScope?(): string | undefined;
@@ -99,10 +101,13 @@ export const createWorkbenchShellPlacementRegistry = (input: {
   const listeners = new Set<() => void>();
   const label = "Shell placement";
   let runtime: (() => void) | undefined;
-  const emitChange = () => {
-    runtime?.();
+  const notifySubscribers = () => {
     for (const listener of listeners)
       notifyWorkbenchChange(listener, () => runWorkbenchEffect("shell placement subscriber", listener));
+  };
+  const emitChange = () => {
+    runtime?.();
+    notifySubscribers();
   };
   // A restored layout snapshot is the user's saved choice: placements present in
   // it are open, optional placements missing from it are closed. A scope without
@@ -197,6 +202,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       state = next;
     },
     publish: emitChange,
+    notifySubscribers,
     resolve(_modeId, current = state) {
       return [...placements.values()].flatMap((placement) => {
         if (placement.item.kind === "view") {
@@ -269,14 +275,19 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       if (identity.kind !== "shell") throw new Error("Shell placement registry updates only shell-owned placements");
       const placement = placements.get(identity.placementId);
       if (!placement) return;
-      updateResourcePlacementInstance({
+      const prepared = prepareOwnedPlacementUpdate({
         label,
         id: placement.id,
         item: placement.item,
-        state,
-        instanceKey: identity.instanceKey,
-        ...update,
+        current: state,
+        identity,
+        update,
       });
+      if (placement.item.kind === "binding" && input.updateTransferredPlacement?.(identity, update)) {
+        notifySubscribers();
+        return;
+      }
+      state = prepared;
       emitChange();
     },
     resolvePlacements: (context) => preparation.resolve(undefined, context ? preparation.restore!(context) : state),

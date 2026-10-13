@@ -130,6 +130,7 @@ const workbenchExtensionModeRecordSchema = z.object({
   label: localizableStringSchema,
   icon: z.string().optional(),
   regions: z.array(z.enum(extensionPanelRegions)),
+  basePage: pageRefSchema.optional(),
   floatingPanels: z.enum(["visible", "hidden"]).optional(),
   floatingBubble: z.boolean().optional(),
   floating: z.object({ defaultTab: navigationTargetSchema.optional() }).optional(),

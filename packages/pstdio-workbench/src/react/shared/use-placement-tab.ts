@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchTabSnapshot, WorkbenchWidgetPlacement } from "../../core";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
+import { resourceContextIndicator } from "../../core/registries/resources/resource-context-indicator";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchStore } from "./use-workbench-store";
 
@@ -24,7 +25,18 @@ export const usePlacementTab = (placement: WorkbenchWidgetPlacement | undefined,
   }, [placement]);
   const snapshot = state.placement === placement ? state.snapshot : readPlacementTab(placement);
   const resource = placement?.resource;
+  const owner = useWorkbenchStore(workbench.pages.store, (state) => state.location?.resource);
   const projected = resource ? resolveResourcePreview(resource, changes) : undefined;
   const changed = projected && projected !== resource;
-  return changed ? { ...snapshot, label: projected.label } : snapshot;
+  const current = projected && snapshot.context ? { ...projected, context: snapshot.context } : projected;
+  const workspace = placement?.placementIdentity?.kind === "shell" ? undefined : owner;
+  const contextIndicator = resourceContextIndicator(workspace, current);
+  const label =
+    (changed ? projected.label : snapshot.label) ?? resource?.label ?? placement?.title ?? placement?.contributionId;
+  return {
+    ...snapshot,
+    label,
+    indicator: contextIndicator ?? snapshot.indicator,
+    ariaLabel: contextIndicator ? `${label} · ${contextIndicator.label}` : label,
+  };
 };

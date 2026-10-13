@@ -1,3 +1,4 @@
+import type { PageRef } from "@pstdio/sdk/extensions";
 import type { Disposable } from "../../shared/disposable";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
@@ -29,6 +30,7 @@ export interface WorkbenchModeAddablePanelContext {
 export interface WorkbenchModeContribution {
   id: string;
   label?: string;
+  basePage?: PageRef;
   defaultTheme?: string;
   floatingPanels?: "visible" | "hidden";
   floatingBubble?: boolean;
@@ -80,6 +82,8 @@ export interface WorkbenchModeRegistry {
 
 export interface CreateWorkbenchModeRegistryInput {
   regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
+  /** Commit page-aware switches through the location owner. Returns true when handled. */
+  navigateMode?(modeId: string): boolean;
   establishLocation?(instanceId: string): void;
   layout: Pick<WorkbenchCoreContributionContext["layout"], "onDidChangePersistenceScope">;
   resolveContext(): WorkbenchModeActivationContext;

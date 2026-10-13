@@ -35,19 +35,28 @@ const panelMenuSchema = z
   })
   .strict();
 
-export const workbenchExtensionPageRecordSchema = z.object({
-  id: z.string(),
-  localId: z.string(),
-  extensionId: z.string(),
-  title: localizableStringSchema,
-  icon: z.string().optional(),
-  path: z.string(),
-  document: z.object({ metadataKey: z.string().refine((key) => key.trim().length > 0) }).optional(),
-  mode: modeRefSchema,
-  parent: pageRefSchema.optional(),
-  resource: resourceConstraintSchema.optional(),
-  main: mainSchema,
-  panelMenus: z.object({ left: panelMenuSchema.optional(), right: panelMenuSchema.optional() }).strict().optional(),
-  regionSettings: z.object({ bottom: regionSettingsSchema.strict().optional() }).strict().optional(),
-  slots: z.array(slotSchema),
-});
+export const workbenchExtensionPageRecordSchema = z
+  .object({
+    id: z.string(),
+    localId: z.string(),
+    extensionId: z.string(),
+    title: localizableStringSchema,
+    icon: z.string().optional(),
+    path: z.string(),
+    document: z.object({ metadataKey: z.string().refine((key) => key.trim().length > 0) }).optional(),
+    mode: modeRefSchema,
+    modes: z.array(modeRefSchema).min(1).optional(),
+    parent: pageRefSchema.optional(),
+    resource: resourceConstraintSchema.optional(),
+    main: mainSchema,
+    panelMenus: z.object({ left: panelMenuSchema.optional(), right: panelMenuSchema.optional() }).strict().optional(),
+    regionSettings: z.object({ bottom: regionSettingsSchema.strict().optional() }).strict().optional(),
+    slots: z.array(slotSchema),
+  })
+  .superRefine((page, ctx) => {
+    if (!page.modes) return;
+    const key = (ref: typeof page.mode) => `${ref.extensionId}:${ref.id}`;
+    const modes = page.modes.map(key);
+    if (new Set(modes).size !== modes.length || !modes.includes(key(page.mode)))
+      ctx.addIssue({ code: "custom", path: ["modes"], message: "Modes must be unique and include mode" });
+  });

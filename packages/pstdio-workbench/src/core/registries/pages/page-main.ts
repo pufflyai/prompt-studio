@@ -1,7 +1,11 @@
-import type { ResourceBinding } from "@pstdio/sdk/extensions";
+import type { ResourceBinding, ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageContribution, WorkbenchPageSlot } from "./page-registry-types";
 
 export const PAGE_MAIN_SLOT_ID = "$main";
+
+// A many-resource Main owns one collection. Its route selects a tab in that owner.
+export const pageOwnerResource = (page: WorkbenchPageContribution | undefined, resource?: ResourceRef) =>
+  page?.main.kind === "view" && page.main.cardinality === "many" ? undefined : resource;
 
 export interface ResolvedPageSlot extends WorkbenchPageSlot {
   readonly role: "primary" | "auxiliary";

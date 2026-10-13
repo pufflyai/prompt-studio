@@ -4,6 +4,7 @@ import {
   type ResolvedOwnedPlacement,
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
+import { resolvePageMode } from "./page-availability";
 import { pageFollowerIdentities, pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
 import type { WorkbenchPageLocationCommitInput } from "./page-registry-internals";
 import { type PageRegistryCommitInput, resolveModePlacementSet } from "./page-registry-state";
@@ -108,13 +109,26 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
   ) => {
     const pageStates = target.pageStates ?? current.pageStates;
     const page = requirePage(current, target.pageId);
+    const modeId = resolvePageMode(page, target.location.mode, current.activeModeId);
     const normalizedTarget = {
       ...target,
       ...(target.resource ? { resource: normalizeResource(target.resource) } : {}),
     };
     const stateKey = pageStateKey(page, target.location, input.resources);
+    const activePage = current.activePageId ? current.pages[current.activePageId] : undefined;
+    const enteringOwner =
+      current.projectId !== target.projectId ||
+      !activePage ||
+      pageStateKey(activePage, current.location, input.resources) !== stateKey;
+    const restored =
+      !target.pageStates && enteringOwner
+        ? input.restorePageState?.(page, target.location, target.projectId)
+        : undefined;
     const currentPageState =
-      pageStates[stateKey] ?? input.restorePageState?.(page, target.location, target.projectId) ?? emptyPageState(page);
+      restored ??
+      pageStates[stateKey] ??
+      input.restorePageState?.(page, target.location, target.projectId) ??
+      emptyPageState(page);
     const primaryState = selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
     const openFollowers =
       !target.pageStates ||
@@ -134,7 +148,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         projectId: target.projectId,
         location: target.location,
         activePageId: page.id,
-        activeModeId: page.modeId,
+        activeModeId: modeId,
         activate: [
           ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
           ...followers,

@@ -1,4 +1,4 @@
-import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutPersistenceAdapter } from "../../registries/layout/layout-model-types";
 import {
   mergeWithDefaultRegions,
@@ -7,9 +7,11 @@ import {
   workbenchRegions,
 } from "../../registries/layout/layout-types";
 import { isPageRegion, restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput } from "../../workbench-core-types";
 import { modeLayoutScope, pageGeometryScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
+import { retireSingleResourceAliases } from "./owner-layout-widgets";
 
 const selectPlacements = (layout: WorkbenchLayout, include: (placement: WorkbenchWidgetPlacement) => boolean) => {
   const regions = { ...layout.regions };
@@ -53,16 +55,59 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     : input.layoutPersistence;
   const read = (scope?: string) => {
     scopes.add(scope);
-    const saved = runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter?.getLayout(scope));
-    const snapshot = memory.get(scope) ?? saved;
+    const snapshot = adapter
+      ? runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope))
+      : memory.get(scope);
     return snapshot ? mergeWithDefaultRegions(snapshot, input.defaultPanelOpenByRegionId) : undefined;
   };
-  const write = (layout: WorkbenchLayout, scope?: string) => {
+  const persist = (layout: WorkbenchLayout, scope?: string) => {
     scopes.add(scope);
-    memory.set(scope, layout);
+    if (!adapter) memory.set(scope, layout);
     return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => adapter?.setLayout(layout, scope));
   };
+  const write = (layout: WorkbenchLayout, scope?: string) => {
+    const ownedWidgetIds = new Set(
+      Object.values(layout.regions).flatMap((region) => region.widgets.map((p) => p.widgetId)),
+    );
+    for (const previousScope of scopes) {
+      if (previousScope === scope) continue;
+      const previous = read(previousScope);
+      if (!previous) continue;
+      const next = retireSingleResourceAliases(previous, ownedWidgetIds);
+      if (next !== previous) persist(next, previousScope);
+    }
+    return persist(layout, scope);
+  };
   return {
+    updateTransferredPlacement(
+      identity: PlacementIdentity,
+      update: (placement: WorkbenchWidgetPlacement) => WorkbenchWidgetPlacement,
+    ) {
+      const key = placementIdentityKey(identity);
+      let changed = false;
+      for (const scope of scopes) {
+        const layout = read(scope);
+        if (!layout) continue;
+        const regions = { ...layout.regions };
+        let updated = false;
+        for (const region of Object.values(regions)) {
+          regions[region.id] = {
+            ...region,
+            widgets: region.widgets.map((placement) => {
+              if (!placement.declarationIdentity || placementIdentityKey(placement.declarationIdentity) !== key)
+                return placement;
+              updated = true;
+              return update(placement);
+            }),
+          };
+        }
+        if (updated) {
+          persist({ ...layout, regions }, scope);
+          changed = true;
+        }
+      }
+      return changed;
+    },
     removeResource(resource: ResourceRef) {
       for (const scope of scopes) {
         const layout = read(scope);

@@ -3,7 +3,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
-import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
+import { resolvePageBreadcrumbPlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { WorkbenchIcon } from "../shared/icon";
 import { placementMenuActions } from "../shared/placement-menu-actions";
@@ -63,7 +63,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
     state.activePageId ? state.pages[state.activePageId] : undefined,
   );
   const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageActivePlacement(state.layout, page),
+    resolvePageBreadcrumbPlacement(state.layout, page),
   );
   const snapshot = usePlacementTab(placement, workbench);
   if (items.length === 0) return null;

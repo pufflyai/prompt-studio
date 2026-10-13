@@ -27,5 +27,10 @@ export const transferPanelOwner = (
         placementId: placement.contributionId,
         instanceKey: placement.widgetId,
       };
-  return { ...placement, placementIdentity: owner, declarationIdentity: placement.declarationIdentity ?? identity };
+  return {
+    ...placement,
+    placementIdentity: owner,
+    declarationIdentity: placement.declarationIdentity ?? identity,
+    ownerResourceKey: pageDestination ? placement.ownerResourceKey : undefined,
+  };
 };
