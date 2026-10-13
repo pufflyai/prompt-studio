@@ -1,5 +1,19 @@
 # pstdio
 
+## 0.43.1
+
+_2026-10-13_
+
+### Patch Changes
+
+- bf808e2: Keep running Codex turns alive when extensions refresh, a workspace is deleted, or an unchanged extension is reloaded.
+- 18bc9e9: Use extra-thin shared scrollbars in view tabs, filter rows, and filter menus.
+- 3bd11d0: Keep a queued follow-up visible after sending it, and stream every queue change to open chats.
+- 3d58da9: First launch writes a smaller starter database, recovers on Retry if it stopped while unpacking it, and logs how long each startup step took.
+- 265612a: Open new sessions in the Side Panel from its add button and chat bubble while a Sessions page is open.
+- 44c59ca: Focus the chat composer when it unlocks after a send, autofocus, or queued request selection, without taking focus from another text field.
+- ca8b132: Center chat content at a maximum width and keep the scrollbar at the pane edge.
+
 ## 0.43.0
 
 _2026-10-12_
