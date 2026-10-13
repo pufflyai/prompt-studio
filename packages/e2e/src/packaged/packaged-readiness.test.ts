@@ -9,9 +9,8 @@ test("packaged readiness reports an early child exit and its output", async () =
   const root = mkdtempSync(join(tmpdir(), "runtime-readiness-"));
   const child = spawn("bun", ["-e", "console.error('migration failed'); process.exit(7)"], { stdio: "pipe" });
   try {
-    await expect(waitForPackagedReady(join(root, "runtime.json"), child)).rejects.toThrow(
-      /exited.*7[\s\S]*migration failed/,
-    );
+    const failure = await waitForPackagedReady(join(root, "runtime.json"), child).catch((error: unknown) => error);
+    expect(failure).toMatchObject({ message: expect.stringMatching(/exited.*7[\s\S]*migration failed/) });
   } finally {
     child.kill();
     rmSync(root, { recursive: true, force: true });

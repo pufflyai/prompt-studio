@@ -46,3 +46,17 @@ test("workbench readiness returns a newly opened page at the runtime origin", as
     await server.stop(true);
   }
 });
+
+test("workbench readiness reports a new failure after the previous recovery element detaches", async () => {
+  await lifecycle.setContent("<section><h1>Prompt Studio needs attention</h1><p>Previous failure</p></section>");
+  const previous = await lifecycle.getByRole("heading", { name: "Prompt Studio needs attention" }).elementHandle();
+  await lifecycle.evaluate(() => {
+    document.querySelector("section")?.remove();
+    const current = document.createElement("section");
+    current.innerHTML = "<h1>Prompt Studio needs attention</h1><p>New startup failed</p>";
+    document.body.append(current);
+  });
+  await previous!.waitForElementState("hidden");
+  const failure = await waitForWorkbenchPage(lifecycle, "http://127.0.0.1:1").catch((error: unknown) => error);
+  expect(failure).toMatchObject({ message: expect.stringContaining("New startup failed") });
+});

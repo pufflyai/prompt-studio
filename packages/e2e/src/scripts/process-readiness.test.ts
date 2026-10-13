@@ -28,7 +28,8 @@ for (const operation of ["readiness", "command"] as const) {
       } else {
         result = runTestCommand(process.execPath, args, {});
       }
-      await expect(result).rejects.toThrow(/code 7[\s\S]*parent failed/);
+      const failure = await result.catch((error: unknown) => error);
+      expect(failure).toMatchObject({ message: expect.stringMatching(/code 7[\s\S]*parent failed/) });
       pid = Number(readFileSync(pidPath, "utf8"));
       expect(() => process.kill(pid!, 0)).not.toThrow();
     } finally {

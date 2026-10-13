@@ -27,7 +27,8 @@ test("runner cleanup cancels pending readiness and reaps the process", async () 
 test("failed process launch can be cleaned up without waiting for an exit", async () => {
   const child = spawn("/missing-pstdio-readiness-executable", [], { stdio: "pipe" });
   try {
-    await expect(waitForProcessReady(child, "Fixture", async () => undefined)).rejects.toThrow("failed to start");
+    const failure = await waitForProcessReady(child, "Fixture", async () => undefined).catch((error: unknown) => error);
+    expect(failure).toMatchObject({ message: expect.stringContaining("failed to start") });
     await stopChildProcess(child);
     expect(child.pid).toBeUndefined();
   } finally {
