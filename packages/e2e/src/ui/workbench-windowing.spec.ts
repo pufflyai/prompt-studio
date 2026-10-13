@@ -1,5 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
+import { checkFloatingBubblePointer } from "./floating-bubble-interactions";
 import {
   STORY_RENDER_TIMEOUT_MS,
   startStorybook,
@@ -30,6 +31,9 @@ const storyIds = [
   "panel-header-choices",
   "floating-panel-headers",
   "empty-floating-panel-headers",
+  "attached-and-floating",
+  "bubble-keyboard",
+  "bubble-pointer",
   "legacy-panel-headers",
   "fixed-page-transfer",
   "foreign-context",
@@ -84,6 +88,7 @@ test.describe("Workbench windowing stories", () => {
       });
       expect(outcome.errors).toEqual([]);
       expect(outcome.result).toMatchObject({ storyId, status: "success" });
+      await checkFloatingBubblePointer(page, storyId);
       if (storyId.endsWith("--foreign-context") || storyId.endsWith("--page-availability")) {
         await test.info().attach("Page context", { body: await page.screenshot(), contentType: "image/png" });
       }

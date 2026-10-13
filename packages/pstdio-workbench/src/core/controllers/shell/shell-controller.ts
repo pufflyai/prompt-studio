@@ -25,7 +25,11 @@ export interface WorkbenchShellRegionState {
 export interface WorkbenchShellController {
   getRegionState(region: WorkbenchRegion): WorkbenchShellRegionState;
   getPanelPolicy(region: WorkbenchRegion, context?: WorkbenchPanelPolicyContext): WorkbenchPanelPolicy;
-  setRegionOpen(region: WorkbenchShellOpenRegion, open: boolean): void | Promise<void>;
+  setRegionOpen(
+    region: WorkbenchShellOpenRegion,
+    open: boolean,
+    presentation?: "attached" | "floating",
+  ): void | Promise<void>;
   revealRegion(region: WorkbenchShellOpenRegion): void;
   setHeaderVisible(region: WorkbenchRegion, visible: boolean): void;
   setRegionSize(region: WorkbenchRegion, size: number): void;
@@ -80,13 +84,19 @@ export const createWorkbenchShellController = (input: {
       },
     });
   };
+  const resolvePresentation = (presentation: WorkbenchSidePanelMode | undefined, policy: WorkbenchPanelPolicy) => {
+    if (presentation === "floating" && input.layout.getRegionSettings("side")?.floatable === false)
+      throw new Error("Panel cannot float: side");
+    return presentation === "floating" && !policy.floatable ? "attached" : presentation;
+  };
   const open = (region: WorkbenchShellOpenRegion, presentation?: WorkbenchSidePanelMode) => {
     const policy = requireAction(region, "open");
+    const effectivePresentation = resolvePresentation(presentation, policy);
     const empty = input.layout.getLayout().regions[region].widgets.length === 0;
     const target = input.getDefaultTarget?.(region, presentation) ?? policy.defaultTab;
     if (empty && target && !policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
     writeIntent(region, "open");
-    if (region === "side") input.layout.setSidePanelMode(presentation ?? "attached");
+    if (region === "side") input.layout.setSidePanelMode(effectivePresentation ?? "attached");
     if (!empty) return;
     const key = ownerKey(region);
     const pending = opening.get(key);
@@ -120,8 +130,9 @@ export const createWorkbenchShellController = (input: {
       return { open: input.getPolicy(region).open, size: state.size };
     },
 
-    setRegionOpen(region, isOpen) {
-      if (isOpen) return open(region);
+    setRegionOpen(region, isOpen, presentation) {
+      if (presentation && region !== "side") throw new Error("Only Side supports a presentation request");
+      if (isOpen) return open(region, presentation);
       requireAction(region, "close");
       writeIntent(region, "closed");
     },
@@ -158,15 +169,15 @@ export const createWorkbenchShellController = (input: {
     getSidePanelPresentation: input.sidePanel.getMode,
     setSidePanelPresentation(presentation) {
       const policy = input.getPolicy("side");
-      if (presentation === "floating" && input.layout.getRegionSettings("side")?.floatable === false)
-        throw new Error("Panel cannot float: side");
+      const effectivePresentation = resolvePresentation(presentation, policy);
       if (presentation === "closed") {
         requireAction("side", "close");
         writeIntent("side", "closed");
         return;
       }
-      if (!policy.open) return open("side", presentation);
-      input.layout.setSidePanelMode(presentation === "floating" && !policy.floatable ? "attached" : presentation);
+      if (!policy.open || (policy.canOpen && !input.layout.getLayout().regions.side.widgets.length))
+        return open("side", presentation);
+      input.layout.setSidePanelMode(effectivePresentation!);
     },
 
     onDidChange(listener) {

@@ -1,15 +1,28 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
+import { createSessionsModule } from "../module";
 import { createSessionBubbleModule } from "./module";
-import { openDashboardSidePanel } from "./open-side-panel";
+
+const create = () =>
+  createWorkbench({
+    initialSidePanelMode: "closed",
+    floating: {
+      defaultTab: {
+        kind: "command",
+        commandId: dashboardCommandIds.createSession,
+        args: { region: "side" },
+      },
+    },
+  });
 
 test("opens an empty chat panel with a workspace session draft and reuses it on reopen", async () => {
-  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  const workbench = create();
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionBubbleModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
@@ -18,7 +31,7 @@ test("opens an empty chat panel with a workspace session draft and reuses it on 
   const location = workbench.pages.store.getState().location;
   expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
 
-  await openDashboardSidePanel(workbench);
+  await workbench.shell.setRegionOpen("side", true, "floating");
   const panels = workbench.layout.listPanelInstances("side");
   expect(panels).toHaveLength(1);
   expect(panels[0]).toMatchObject({
@@ -29,8 +42,24 @@ test("opens an empty chat panel with a workspace session draft and reuses it on 
   expect(workbench.pages.store.getState().location).toEqual(location);
 
   workbench.sidePanel.setMode("closed");
-  await openDashboardSidePanel(workbench);
+  await workbench.shell.setRegionOpen("side", true, "floating");
   expect(workbench.layout.listPanelInstances("side")).toEqual(panels);
   expect(workbench.sidePanel.getMode()).toBe("floating");
   expect(workbench.pages.store.getState().location).toEqual(location);
+});
+
+test("floating default creates a Side draft while the Sessions page stays selected", async () => {
+  const core = create();
+  core.registerModule(createWorkspacesModule());
+  core.registerModule(createSessionsModule());
+  core.registerModule(createSessionBubbleModule());
+  selectDashboardProject(core, { id: "floating-project", name: "Floating" });
+  await openSessionsPage(core);
+  const location = core.pages.store.getState().location;
+  await core.shell.setRegionOpen("side", true, "floating");
+  expect(core.layout.listPanelInstances("side")).toHaveLength(1);
+  expect(core.layout.listPanelInstances("side")[0]?.resource?.type).toBe("session-draft");
+  expect(core.pages.store.getState().location).toEqual(location);
+  expect(core.sidePanel.getMode()).toBe("floating");
+  await core.dispose();
 });

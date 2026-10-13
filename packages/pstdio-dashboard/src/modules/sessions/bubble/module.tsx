@@ -117,6 +117,7 @@ const openNewSessionDraft = (
     workspace?: ResourceRef;
     tabRetention?: WorkbenchTabRetention;
     replacePanel?: PlacementIdentity;
+    region?: "side";
   } = {},
 ) => {
   const workspace = input.workspace ?? getPrimaryWorkspaceResource(ctx) ?? createDefaultWorkspaceResource(ctx);
@@ -124,7 +125,7 @@ const openNewSessionDraft = (
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
   const pageId = ctx.pages.store.getState().activePageId;
-  if (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id) {
+  if (!input.region && (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id)) {
     return openSessionsPage(ctx, draftResource);
   }
   const identity = input.replacePanel;
@@ -196,14 +197,16 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "PenBox" },
     {
       execute: async (args, context) => {
-        const { workspace, replacePanel } = (args ?? {}) as {
+        const { workspace, replacePanel, region } = (args ?? {}) as {
           workspace?: ResourceRef;
           replacePanel?: PlacementIdentity;
+          region?: "side";
         };
         // The tab tray's + asks for a new tab; a tab menu replaces its own placement.
         const isNewTab = context?.source === "panel-add";
         await openNewSessionDraft(ctx, {
           workspace,
+          region,
           replacePanel: isNewTab ? undefined : replacePanel,
           tabRetention: isNewTab ? "persistent" : undefined,
         });

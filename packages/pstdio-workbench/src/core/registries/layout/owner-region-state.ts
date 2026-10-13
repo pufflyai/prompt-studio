@@ -18,6 +18,7 @@ export const restoreOwnerRegion = (
     visibility: shared.visibility,
     headerVisible: shared.headerVisible,
     presentation: shared.presentation,
+    bubblePosition: shared.bubblePosition,
   };
 };
 

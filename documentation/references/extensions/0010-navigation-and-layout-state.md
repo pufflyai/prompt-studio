@@ -12,7 +12,7 @@ Page slots and mode placements share static-view and resource-binding items. Bot
 
 Page menus always read the routed page resource, even when a different resource tab has focus. Page navigation rebinds the menus and bottom slots together. The bottom keeps its own tabs, selection, and size; it never uses Secondary's tab list. Main's breadcrumb sits above its tab row, and both rows sit above the page menus.
 
-Workspace Changes and Files use fixed static slots. They receive the page's workspace resource and remain available while switching workspaces. The dashboard's chat bubble opens a New session tab when Side is empty and preserves existing tabs on reopen. Hosts can supply this launcher action through Workbench's `onOpenSidePanel` prop.
+Workspace Changes and Files use static slots. They receive the page's workspace resource and remain available while switching workspaces. The dashboard's floating bubble opens a New session tab when Side is empty and preserves existing tabs on reopen. Hosts supply its creation target through `createWorkbench({ floating: { defaultTab } })`; a mode can override it with `floating.defaultTab`. Explicit floating opens share the panel controller's one-time default path.
 
 A page target changes location and selects an allowed mode. Its optional `mode` requests a mode explicitly; see [page availability](0009-modes-and-layout.md#page-availability). A panel target preserves location and requires an active owner. A compound target prepares its page and panel steps against proposed state, then commits once. A failed preparation changes no history, breadcrumbs, page instances, shared placements, selection, or region visibility. Commands and external links are standalone actions.
 

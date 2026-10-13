@@ -27118,7 +27118,7 @@
                       "type": "frame",
                       "id": "C572TP",
                       "name": "cmp/BubbleButton",
-                      "context": "Shown when the session side panel is closed and no floating session panel is open.",
+                      "context": "Floating Side toggle stays visible while open. Move to one of eight content-area anchors. Pressed border uses border.accent.",
                       "theme": {
                         "btn": "outline",
                         "size": "lg",
@@ -186479,6 +186479,207 @@
                       "fontWeight": "normal"
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "T1Ju5",
+      "x": 51162,
+      "y": 0,
+      "name": "Workbench · Floating bubble anchors",
+      "width": 1120,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "GqTye",
+          "fill": "$ds-fg",
+          "content": "Floating Side · eight anchors",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "C2p0U",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Drag shows eight targets. Release snaps to the nearest. Escape cancels. Arrow keys move; Home returns bottom right.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "JUxBi",
+          "width": "fill_container",
+          "height": 720,
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "o9x8w4",
+              "name": "Drag targets · content area",
+              "clip": true,
+              "width": 520,
+              "height": 720,
+              "fill": "$ds-bg-subtle",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "iic0Q",
+                  "x": 24,
+                  "y": 24,
+                  "name": "Anchor · top-left",
+                  "fill": "$ds-accent",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border-accent",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "GDHgf",
+                  "x": 236,
+                  "y": 24,
+                  "name": "Anchor · top",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "c66Hp",
+                  "x": 448,
+                  "y": 24,
+                  "name": "Anchor · top-right",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hsRF5",
+                  "x": 24,
+                  "y": 336,
+                  "name": "Anchor · left",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lIzcV",
+                  "x": 448,
+                  "y": 336,
+                  "name": "Anchor · right",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "hkRga",
+                  "x": 24,
+                  "y": 648,
+                  "name": "Anchor · bottom-left",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "I0Z4X",
+                  "x": 236,
+                  "y": 648,
+                  "name": "Anchor · bottom",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "cUFgx",
+                  "x": 448,
+                  "y": 648,
+                  "name": "Anchor · bottom-right",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "id": "cwma6",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Bubble follows pointer",
+                  "x": 112,
+                  "y": 146
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "D3khw",
+              "name": "Floating Side open · bubble stays visible",
+              "clip": true,
+              "width": 520,
+              "height": 720,
+              "fill": "$ds-bg-subtle",
+              "layout": "none",
+              "children": [
+                {
+                  "id": "K1ypn",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Side Panel · no close button",
+                  "x": 48,
+                  "y": 28,
+                  "descendants": {
+                    "v6zTn": {
+                      "content": "Side Panel"
+                    },
+                    "f3mS6h": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "id": "T6vtd",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Close Side Panel · pressed bubble",
+                  "x": 448,
+                  "y": 648,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "lg",
+                    "bubble": "open"
+                  }
                 }
               ]
             }

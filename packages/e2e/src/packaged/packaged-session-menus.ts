@@ -41,6 +41,38 @@ export const verifyPackagedSessionMenus = async (
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
   await expect(side.getByRole("tab", { name: /Packaged session actions/ })).toBeVisible();
+  if (await page.getByTestId("workbench-side-panel-floating").isVisible()) {
+    await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  }
+  const sessionTab = page.getByRole("tab", { name: /Packaged session actions/ });
+  const instanceId = await sessionTab.locator("..").getAttribute("data-workbench-tab");
+  await side.getByRole("button", { name: "Float Side Panel", exact: true }).click();
+  const bubble = page.getByRole("button", { name: "Close Side Panel", exact: true });
+  await expect(bubble).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
+  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+  await expect(sessionTab.locator("..")).toHaveAttribute("data-workbench-tab", instanceId!);
+  await side.getByRole("button", { name: "Float Side Panel", exact: true }).click();
+  await bubble.click();
+  const open = page.getByRole("button", { name: "Open Side Panel", exact: true });
+  await open.focus();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.locator("[data-bubble-anchor]")).toHaveAttribute("data-bubble-anchor", "bottom");
+  await page.reload();
+  await expect(page.locator("[data-bubble-anchor]")).toHaveAttribute("data-bubble-anchor", "bottom");
+  await open.click();
+  await expect(sessionTab.locator("..")).toHaveAttribute("data-workbench-tab", instanceId!);
+  await page.getByRole("button", { name: /Close Packaged session actions/ }).click();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
+  await bubble.click();
+  await open.click();
+  await expect(page.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
+  await bubble.click();
+  await open.click();
+  await expect(page.getByRole("tab", { name: "New session", exact: true })).toHaveCount(1);
+  await bubble.click();
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
 };

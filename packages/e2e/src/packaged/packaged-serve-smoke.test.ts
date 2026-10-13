@@ -45,6 +45,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Navigation metadata preserves instance policy, page menus, bottom settings, modes/basePage,
 // resource context, page-owned Main headers, independent mode panel permissions, and explicit-open targets.
+// Browser smoke also verifies floating Side defaults, retained tabs, and persisted bubble anchors.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";

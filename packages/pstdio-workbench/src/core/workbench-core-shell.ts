@@ -39,7 +39,7 @@ export const createCoreShell = (
       const modeId = modes.getActiveModeId();
       const mode = modeId ? modes.getMode(modeId) : undefined;
       return presentation === "floating"
-        ? (mode?.floating?.defaultTab ?? getPolicy(region).defaultTab)
+        ? (mode?.floating?.defaultTab ?? input.floating?.defaultTab ?? getPolicy(region).defaultTab)
         : getPolicy(region).defaultTab;
     },
     openDefault: (target, run) => resolve()?.navigation.openTarget(target, { run }),

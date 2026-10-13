@@ -1,3 +1,4 @@
+import { normalizeFloatingBubblePosition } from "../../controllers/side-panel/floating-bubble-position";
 import { type WorkbenchRegion, workbenchRegions } from "./layout-regions";
 import type { WorkbenchLayout, WorkbenchRegionState, WorkbenchWidgetPlacement } from "./layout-types";
 import { resolveUniqueWidgetId } from "./widget-id";
@@ -62,7 +63,14 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
       return widgetId === placement.widgetId ? placement : { ...placement, widgetId };
     });
     const normalizedActiveWidgetId = activeIndex >= 0 ? widgets[activeIndex]?.widgetId : originalActiveWidgetId;
-    regions[id] = { ...region, widgets, activeWidgetId: normalizedActiveWidgetId };
+    regions[id] = {
+      ...region,
+      widgets,
+      activeWidgetId: normalizedActiveWidgetId,
+      ...(id === "side" && region.bubblePosition
+        ? { bubblePosition: normalizeFloatingBubblePosition(region.bubblePosition) }
+        : {}),
+    };
 
     if (originalActiveWidgetId && layout.activeWidgetId === originalActiveWidgetId && activeIndex >= 0) {
       activeWidgetId = normalizedActiveWidgetId;

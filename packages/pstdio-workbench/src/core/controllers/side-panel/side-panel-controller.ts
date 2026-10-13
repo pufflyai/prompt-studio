@@ -2,6 +2,11 @@ import type { LayoutModel } from "../../registries/layout/layout-model";
 import type { WorkbenchSidePanelMode } from "../../registries/layout/layout-types";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { WorkbenchPanelPolicy } from "../shell/panel-policy";
+import {
+  type FloatingBubblePosition,
+  normalizeFloatingBubblePosition,
+  requireFloatingBubblePosition,
+} from "./floating-bubble-position";
 
 export type { WorkbenchSidePanelMode };
 
@@ -11,11 +16,13 @@ export interface WorkbenchSidePanelController {
   canFloat(): boolean;
   getMode(): WorkbenchSidePanelMode;
   setMode(mode: WorkbenchSidePanelMode): void;
+  getBubblePosition(): FloatingBubblePosition;
+  setBubblePosition(position: FloatingBubblePosition): void;
   onDidChange(listener: WorkbenchSidePanelChangeListener): Disposable;
 }
 
 export interface CreateWorkbenchSidePanelControllerInput {
-  layout: Pick<LayoutModel, "getLayout" | "setSidePanelMode" | "store">;
+  layout: Pick<LayoutModel, "getLayout" | "restoreLayout" | "setSidePanelMode" | "store">;
   getFloatingPanels?(): "visible" | "hidden";
   onDidChangePolicy?(listener: () => void): Disposable;
   initialMode?: WorkbenchSidePanelMode;
@@ -39,6 +46,15 @@ export const createWorkbenchSidePanelController = (input: CreateWorkbenchSidePan
   return {
     canFloat,
     getMode,
+    getBubblePosition: () => normalizeFloatingBubblePosition(input.layout.getLayout().regions.side.bubblePosition),
+    setBubblePosition: (value: FloatingBubblePosition) => {
+      const bubblePosition = requireFloatingBubblePosition(value);
+      const layout = input.layout.getLayout();
+      input.layout.restoreLayout({
+        ...layout,
+        regions: { ...layout.regions, side: { ...layout.regions.side, bubblePosition } },
+      });
+    },
     setMode: (mode: WorkbenchSidePanelMode) => {
       if (input.setPresentation) return input.setPresentation(mode);
       const policy = input.getPolicy?.();

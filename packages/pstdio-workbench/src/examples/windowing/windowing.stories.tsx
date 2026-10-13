@@ -60,6 +60,7 @@ export const Boombox: Story = {
   args: { mode: "boombox" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(canvas.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
     await userEvent.click(await canvas.findByRole("button", { name: "Like current track" }));
     await expect(canvas.getByRole("button", { name: "Unlike current track" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "New fixture" }));
@@ -71,6 +72,7 @@ export const Kiln: Story = {
   args: { mode: "kiln" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(canvas.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
     const position = await canvas.findByRole("spinbutton", { name: "Cube position X" });
     const initialValue = (position as HTMLInputElement).valueAsNumber;
     await userEvent.clear(position);
