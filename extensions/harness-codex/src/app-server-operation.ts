@@ -22,6 +22,7 @@ export const createAppServerOperation = (
     write: (message: RpcMessage) => void;
     onFinish: () => void;
     onProtocolError: (error: unknown) => void;
+    beforeStop?: () => Promise<unknown>;
   },
 ) => {
   const completion = Promise.withResolvers<HarnessExit>();
@@ -107,7 +108,7 @@ export const createAppServerOperation = (
       });
     const statuses = { interrupted: "cancelled", completed: "completed" } as const;
     const status = statuses[turn.status as keyof typeof statuses] ?? "failed";
-    if (status !== "completed" || (!goalActive && !goalUpdates)) finish({ status });
+    if (status !== "completed" || (!goalActive && !goalUpdates)) finish({ status: stopping ? "cancelled" : status });
     else {
       turnId = undefined;
       idleExit = { status };
@@ -204,6 +205,8 @@ export const createAppServerOperation = (
       if (finished) return;
       stopping = true;
       if (goalActive) await request("thread/goal/set", { threadId, status: "paused" });
+      await options.beforeStop?.();
+      if (finished) return;
       if (turnId) await request("turn/interrupt", { threadId, turnId });
       else finish({ status: "cancelled" });
     },
