@@ -35,6 +35,7 @@ const INTEL_MAC_ESSENTIAL_TESTS = [
   "src/packaged/runtime-lifecycle.test.ts",
   "src/packaged/npm-entrypoint.test.ts",
   "src/packaged/harness-npm-detection.test.ts",
+  "src/packaged/codex-transport.test.ts",
   "src/packaged/extension-smoke.test.ts",
   "src/packaged/extension-browser-install.test.ts",
   "src/packaged/extension-dependency-loading.test.ts",
@@ -45,7 +46,11 @@ export const resolvePackagedRuntimeTestArgs = (platformPackage: PlatformPackage)
     return ["test", ...INTEL_MAC_ESSENTIAL_TESTS, "--timeout", "60000", "--silent"];
   if (!platformPackage.pkg.startsWith("cli-win-")) return ["run", "test:packaged"];
 
-  const tests = ["src/packaged/runtime-lifecycle.test.ts", "src/packaged/harness-npm-detection.test.ts"];
+  const tests = [
+    "src/packaged/runtime-lifecycle.test.ts",
+    "src/packaged/harness-npm-detection.test.ts",
+    "src/packaged/codex-transport.test.ts",
+  ];
   if (platformPackage.pkg === "cli-win-x64") tests.push("src/packaged/extension-browser-install.test.ts");
   return ["test", ...tests, "--timeout", "30000", "--silent"];
 };
