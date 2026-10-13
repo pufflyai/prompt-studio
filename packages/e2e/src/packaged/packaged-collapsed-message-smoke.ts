@@ -25,12 +25,16 @@ export const expectPackagedCollapsedMessage = async (page: Page, editor: Locator
       contentBottom: content.getBoundingClientRect().bottom,
       bodyBottomPadding: getComputedStyle(body).paddingBottom,
       footerTopPadding: getComputedStyle(footer).paddingTop,
+      fadeHeight: getComputedStyle(footer, "::before").height,
+      fadeBackground: getComputedStyle(footer, "::before").backgroundImage,
     };
   });
   expect(collapsedGeometry.footerColor).toBe(collapsedGeometry.bubbleColor);
   expect(collapsedGeometry.contentBottom).toBeLessThanOrEqual(collapsedGeometry.footerTop);
   expect(collapsedGeometry.bodyBottomPadding).toBe("0px");
   expect(collapsedGeometry.footerTopPadding).toBe("0px");
+  expect(collapsedGeometry.fadeHeight).toBe("48px");
+  expect(collapsedGeometry.fadeBackground).toContain("75%");
   await more.click();
   const less = page.getByRole("button", { name: "Show less", exact: true }).last();
   await expect(less).toBeVisible();

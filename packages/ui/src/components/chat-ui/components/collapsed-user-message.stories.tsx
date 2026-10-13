@@ -60,7 +60,8 @@ export const WrappedPrompt: Story = {
     const body = viewport.querySelector('[data-part="content"]')!.firstElementChild!;
     await expect(getComputedStyle(body).paddingBottom).toBe("0px");
     await expect(viewport.getBoundingClientRect().bottom).toBeLessThanOrEqual(footer.getBoundingClientRect().top);
-    await expect(getComputedStyle(footer, "::before").height).toBe("24px");
+    await expect(getComputedStyle(footer, "::before").height).toBe("48px");
+    await expect(getComputedStyle(footer, "::before").backgroundImage).toContain("75%");
     await expect(getComputedStyle(footer, "::before").backgroundImage).toContain(
       getComputedStyle(bubble).backgroundColor,
     );

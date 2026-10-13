@@ -188403,8 +188403,8 @@
                   "type": "rectangle",
                   "id": "EOaw5",
                   "x": 0,
-                  "y": 72,
-                  "name": "Fade above the solid footer",
+                  "y": 48,
+                  "name": "Fade · fully opaque before the footer",
                   "fill": {
                     "type": "gradient",
                     "gradientType": "linear",
@@ -188420,12 +188420,16 @@
                       },
                       {
                         "color": "$ds-bg-subtle",
+                        "position": 0.75
+                      },
+                      {
+                        "color": "$ds-bg-subtle",
                         "position": 1
                       }
                     ]
                   },
                   "width": 568,
-                  "height": 24
+                  "height": 48
                 }
               ]
             },
