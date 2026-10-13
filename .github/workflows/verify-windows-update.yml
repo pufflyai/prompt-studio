@@ -15,10 +15,6 @@ on:
         description: Published pstdio release tag to install as the signed baseline
         required: true
         type: string
-      baseline-run-id:
-        description: Run containing an existing signed baseline
-        required: false
-        type: string
   workflow_dispatch:
     inputs:
       candidate-run-id:
@@ -33,17 +29,12 @@ on:
         description: Published older pstdio release tag to install as the signed baseline
         required: true
         type: string
-      baseline-run-id:
-        description: Reuse a published windows-signed-baseline artifact from an earlier verification
-        required: false
-        type: string
 
 permissions:
   contents: read
 
 jobs:
   baseline:
-    if: inputs.baseline-run-id == ''
     runs-on: windows-2025
     timeout-minutes: 30
     permissions:
@@ -68,7 +59,7 @@ jobs:
 
   installation:
     needs: baseline
-    if: ${{ !cancelled() && (needs.baseline.result == 'success' || needs.baseline.result == 'skipped') }}
+    if: ${{ !cancelled() && needs.baseline.result == 'success' }}
     runs-on: windows-2025
     timeout-minutes: 30
     permissions:
@@ -90,7 +81,7 @@ jobs:
         with:
           name: windows-signed-baseline
           path: windows-baseline
-          run-id: ${{ inputs.baseline-run-id || github.run_id }}
+          run-id: ${{ github.run_id }}
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@v4
         with:
