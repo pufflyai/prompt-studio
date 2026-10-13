@@ -20,12 +20,22 @@ folder. Drag the app onto Applications. Finder copies it. It may show a
 progress window, and it shows its own replace prompt or error when needed. The
 window itself does not change after the
 drop. When the copy finishes, open Applications and launch Prompt Studio from
-there, not from the DMG. On the first launch from
-Applications, the app links `/usr/local/bin/pst` to its bundled runtime. macOS asks
-for an administrator password if the directory requires it. Cancelling leaves
-the app usable and does not repeat the prompt on later launches. Choose
-**Prompt Studio → Install pst Command…** to retry or restore a removed link.
+there, not from the DMG. After the person creates their first project in the app
+launched from Applications, the app links `/usr/local/bin/pst` to its bundled
+runtime. The first launch asks for nothing. When the directory needs an
+administrator password, the app first explains why, then asks **Install** or
+**Not Now**. Only **Install** opens the macOS password window, which
+shows the app's reason under the title "osascript wants to make changes." Choosing
+**Not Now** or cancelling the password window leaves the app usable and does not
+ask again. Choose **Prompt Studio → Install pst Command…** to
+install later or restore a removed link.
 Apps running from the DMG or another unpacked folder do not install the command.
+
+The app's `bin` folder holds the runtime and a `pst` link to it on macOS and Linux.
+The desktop app puts that folder first on the runtime's `PATH`, and agents inherit
+it, so they can run `pst` even when the terminal command is missing. Agents run
+commands in login shells. On macOS, a login shell moves `/usr/local/bin` ahead of
+the app's folder, so a different `pst` installed there takes priority.
 
 The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
 The Windows Setup installer creates a `pst.cmd` launcher in the installation's

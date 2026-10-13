@@ -185757,6 +185757,2597 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "K7tQ8",
+      "x": 21027,
+      "y": 19839,
+      "name": "Desktop · pst command setup · PS-679",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 1500,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 48,
+      "padding": 72,
+      "children": [
+        {
+          "type": "frame",
+          "id": "Khfn8",
+          "name": "Frame Header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "children": [
+            {
+              "type": "text",
+              "id": "gLPDm",
+              "name": "Kicker",
+              "fill": "$ds-fg-subtle",
+              "content": "PRODUCTION · DESKTOP · MACOS · PST COMMAND",
+              "fontFamily": "$font-heading",
+              "fontSize": 12,
+              "fontWeight": "600",
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "text",
+              "id": "xFmO1",
+              "name": "Title",
+              "fill": "$ds-fg",
+              "content": "Installing the pst command",
+              "lineHeight": 1.05,
+              "fontFamily": "$font-display",
+              "fontSize": 44,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "GDpUK",
+              "name": "Sub",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "After the person creates their first project, Prompt Studio offers to add pst at /usr/local/bin. The first launch asks for nothing. That folder needs an administrator password, so the app asks first and says a password is needed. Not Now and Cancel are a choice, not an error: the app does not ask again, and Prompt Studio → Install pst Command… installs it later. Agents in Prompt Studio can still run pst, because they inherit the runtime's PATH, which includes the app's own bin folder.",
+              "lineHeight": 1.5,
+              "fontFamily": "$font-body",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "J8d28N",
+          "name": "Divider 1",
+          "fill": "$ds-border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "mYq1n",
+          "name": "01 · After the first project",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "g4zco",
+              "name": "Section header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nVrsm",
+                  "name": "Section title",
+                  "fill": "$ds-fg",
+                  "content": "01 · After the first project",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "gqJgj",
+                  "name": "Section note",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Shown once, after the person creates their first project, when /usr/local/bin needs a password. The first launch asks for nothing, and an app opened from the DMG or a source build never asks. The app records the attempt before it asks, so a decline is never repeated.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ujokH",
+              "name": "Steps",
+              "width": "fill_container",
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wgPpp",
+                  "name": "A · Prompt Studio explains first",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xyQo0",
+                      "name": "Caption",
+                      "width": "fill_container",
+                      "height": 73,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "qEhOC",
+                          "name": "Caption title",
+                          "fill": "$ds-fg",
+                          "content": "A · Prompt Studio explains first",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "KDsND",
+                          "name": "Caption note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The app asks before macOS does. It says what pst is, that a password is needed, and where to install later. Not Now ends the flow with no other message.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f2cFSF",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 380,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 10,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 32,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "f41xta",
+                          "name": "Alert · Install the pst command?",
+                          "width": 260,
+                          "fill": "#323235",
+                          "cornerRadius": 12,
+                          "stroke": "#FFFFFF24",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 12
+                            },
+                            "blur": 32
+                          },
+                          "layout": "vertical",
+                          "gap": 10,
+                          "padding": [
+                            20,
+                            16,
+                            16,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "l3o9BV",
+                              "name": "App icon",
+                              "width": 64,
+                              "height": 64,
+                              "fill": {
+                                "type": "image",
+                                "enabled": true,
+                                "url": "../clients/desktop/assets/icon.png",
+                                "mode": "contain"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "A8Atg",
+                              "name": "Message",
+                              "fill": "#FFFFFF",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Install the pst command?",
+                              "lineHeight": 1.3,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "fcWB4",
+                              "name": "Informative text",
+                              "fill": "#DDDDE1",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "This command lets you and agents use Prompt Studio from the Terminal by calling pst.\n\nYou will need to provide your password to complete the installation.\n\nYou can also do this later from Prompt Studio → Install pst Command…",
+                              "lineHeight": 1.35,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "W6ovAo",
+                              "name": "Buttons",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                6,
+                                0,
+                                0,
+                                0
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Ugveg",
+                                  "name": "Button · Not Now",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "fill": "#5C5C61",
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "aGT5h",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Not Now",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "qxOiA",
+                                  "name": "Button · Install",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "fill": "#0A84FF",
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "qa4ea",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Install",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qpYjq",
+                  "name": "B · macOS asks for the password",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DltSx",
+                      "name": "Caption",
+                      "width": "fill_container",
+                      "height": 73,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zc8i4",
+                          "name": "Caption title",
+                          "fill": "$ds-fg",
+                          "content": "B · macOS asks for the password",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "zDcDd",
+                          "name": "Caption note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Only Install opens it. macOS draws this window and its title. Prompt Studio sets the reason line. Cancel counts as Not Now: no error, and the app does not ask again.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x1ffJ3",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 380,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 10,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 32,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "M3DcY",
+                          "name": "System window · osascript wants to make changes",
+                          "width": 260,
+                          "fill": "#323235",
+                          "cornerRadius": 12,
+                          "stroke": "#FFFFFF24",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 12
+                            },
+                            "blur": 32
+                          },
+                          "layout": "vertical",
+                          "gap": 10,
+                          "padding": [
+                            20,
+                            16,
+                            16,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "IRw0g",
+                              "name": "Lock icon",
+                              "width": 64,
+                              "height": 64,
+                              "fill": "#48484C",
+                              "cornerRadius": 14,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "Rbthl",
+                                  "name": "Lock",
+                                  "width": 34,
+                                  "height": 34,
+                                  "icon": "lock",
+                                  "library": "lucide",
+                                  "fill": "#E5E5EA"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "CPGj8",
+                              "name": "Message",
+                              "fill": "#FFFFFF",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "osascript wants to make changes.",
+                              "lineHeight": 1.3,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TomVV",
+                              "name": "Informative text",
+                              "fill": "#DDDDE1",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Prompt Studio needs your password to add the pst command to /usr/local/bin.",
+                              "lineHeight": 1.35,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "aPecq",
+                              "name": "Fields",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "padding": [
+                                4,
+                                0,
+                                0,
+                                0
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "L7isUu",
+                                  "name": "User Name",
+                                  "width": "fill_container",
+                                  "fill": "#1E1E20",
+                                  "cornerRadius": 5,
+                                  "stroke": "#FFFFFF2E",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    4,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "r5BRxJ",
+                                      "name": "Value",
+                                      "fill": "#FFFFFF",
+                                      "content": "Alex",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "FgeFP",
+                                  "name": "Password",
+                                  "width": "fill_container",
+                                  "fill": "#1E1E20",
+                                  "cornerRadius": 5,
+                                  "stroke": "#FFFFFF2E",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "padding": [
+                                    4,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "PfIFi",
+                                      "name": "Value",
+                                      "fill": "#8E8E93",
+                                      "content": "Password",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "cxK9W",
+                              "name": "Buttons",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                6,
+                                0,
+                                0,
+                                0
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "TCgSI",
+                                  "name": "Button · Cancel",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "fill": "#5C5C61",
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "dbpGO",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Cancel",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "myrQe",
+                                  "name": "Button · OK",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "fill": "#0A84FF",
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "f2rFT",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "OK",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "odedJ",
+                  "name": "C · The command is ready",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Y5AyY",
+                      "name": "Caption",
+                      "width": "fill_container",
+                      "height": 73,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zHJmL",
+                          "name": "Caption title",
+                          "fill": "$ds-fg",
+                          "content": "C · The command is ready",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "WqfIg",
+                          "name": "Caption note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Shown after a successful install. When /usr/local/bin needs no password, the app installs at once and shows only this.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m9ovr",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 380,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 10,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 32,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Y0XWo",
+                          "name": "Alert · The pst command is ready",
+                          "width": 260,
+                          "fill": "#323235",
+                          "cornerRadius": 12,
+                          "stroke": "#FFFFFF24",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 12
+                            },
+                            "blur": 32
+                          },
+                          "layout": "vertical",
+                          "gap": 10,
+                          "padding": [
+                            20,
+                            16,
+                            16,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hRsNp",
+                              "name": "App icon",
+                              "width": 64,
+                              "height": 64,
+                              "fill": {
+                                "type": "image",
+                                "enabled": true,
+                                "url": "../clients/desktop/assets/icon.png",
+                                "mode": "contain"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "JdHi2",
+                              "name": "Message",
+                              "fill": "#FFFFFF",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "The pst command is ready.",
+                              "lineHeight": 1.3,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wSBcZ",
+                              "name": "Informative text",
+                              "fill": "#DDDDE1",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Open a new Terminal window and run pst --version to check it.",
+                              "lineHeight": 1.35,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HjaHZ",
+                              "name": "Buttons",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                6,
+                                0,
+                                0,
+                                0
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "bsphR",
+                                  "name": "Button · OK",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "fill": "#0A84FF",
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "l6cwA5",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "OK",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "ToM6i",
+          "name": "Divider 2",
+          "fill": "$ds-border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "pFWkR",
+          "name": "02 · Install later, or when it fails",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FPrMd",
+              "name": "Section header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W8XZaw",
+                  "name": "Section title",
+                  "fill": "$ds-fg",
+                  "content": "02 · Install later, or when it fails",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "hNRd7",
+                  "name": "Section note",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Not Now and a cancelled password window lead to the menu item. It shows A, then B, then C, like the first offer. A real failure is the only error, and it names the same menu item.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rOFQB",
+              "name": "States",
+              "width": "fill_container",
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "d00tV",
+                  "name": "D · Prompt Studio → Install pst Command…",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "XiyZq",
+                      "name": "Caption",
+                      "width": "fill_container",
+                      "height": 56,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KEFJV",
+                          "name": "Caption title",
+                          "fill": "$ds-fg",
+                          "content": "D · Prompt Studio → Install pst Command…",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "l2oyho",
+                          "name": "Caption note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The way back after Not Now or Cancel, and after removing the link. It is in the app menu next to Check for Updates.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MZaGV",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 338,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 10,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 32,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DPU9p",
+                          "name": "Menu bar and menu",
+                          "width": 300,
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "quTaz",
+                              "name": "Menu bar",
+                              "width": "fill_container",
+                              "fill": "#1C1C1EE6",
+                              "cornerRadius": [
+                                6,
+                                6,
+                                0,
+                                0
+                              ],
+                              "gap": 4,
+                              "padding": [
+                                3,
+                                6
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "epk3t",
+                                  "name": "Menu bar item · Prompt Studio",
+                                  "fill": "#FFFFFF2E",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    2,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "DHPOF",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Prompt Studio",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "700"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "vHVrw",
+                                  "name": "Menu bar item · Edit",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    2,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ibD5Z",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Edit",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "yomF6",
+                                  "name": "Menu bar item · View",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    2,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "IJhC5",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "View",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "TujMx",
+                                  "name": "Menu bar item · Window",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    2,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "jBp8p",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Window",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "E8Nzfj",
+                              "name": "Prompt Studio menu",
+                              "width": 240,
+                              "fill": "#2C2C2EF2",
+                              "cornerRadius": 8,
+                              "stroke": "#FFFFFF24",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#00000080",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 12
+                                },
+                                "blur": 32
+                              },
+                              "layout": "vertical",
+                              "padding": 5,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "DQfK6",
+                                  "name": "Menu item · About Prompt Studio",
+                                  "width": "fill_container",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "I9KflZ",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "About Prompt Studio",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "nwBeX",
+                                  "name": "Separator",
+                                  "width": "fill_container",
+                                  "padding": [
+                                    5,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "uD8dM",
+                                      "name": "Line",
+                                      "fill": "#FFFFFF1F",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "c388uC",
+                                  "name": "Menu item · Check for Updates…",
+                                  "width": "fill_container",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "NOFl7",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Check for Updates…",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "v3wl4",
+                                  "name": "Menu item · Install pst Command…",
+                                  "width": "fill_container",
+                                  "fill": "#0058D0",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "d7fgh",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Install pst Command…",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lbxsF",
+                                  "name": "Separator",
+                                  "width": "fill_container",
+                                  "padding": [
+                                    5,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "lxxcZ",
+                                      "name": "Line",
+                                      "fill": "#FFFFFF1F",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "umfhx",
+                                  "name": "Menu item · Services",
+                                  "width": "fill_container",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "eSiT5",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Services",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "WZ5Uj",
+                                      "name": "Submenu",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "chevron-right",
+                                      "library": "lucide",
+                                      "fill": "#FFFFFF73"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lz869",
+                                  "name": "Separator",
+                                  "width": "fill_container",
+                                  "padding": [
+                                    5,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "cr8wD",
+                                      "name": "Line",
+                                      "fill": "#FFFFFF1F",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "c8lgg",
+                                  "name": "Menu item · Hide Prompt Studio",
+                                  "width": "fill_container",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "VPVlN",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Hide Prompt Studio",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "VbvLB",
+                                      "name": "Shortcut",
+                                      "fill": "#FFFFFF73",
+                                      "content": "⌘H",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "qQeiU",
+                                  "name": "Menu item · Hide Others",
+                                  "width": "fill_container",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "SDHDG",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Hide Others",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "i7gmq0",
+                                      "name": "Shortcut",
+                                      "fill": "#FFFFFF73",
+                                      "content": "⌥⌘H",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "j5XGO8",
+                                  "name": "Menu item · Show All",
+                                  "width": "fill_container",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "CsYaw",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Show All",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "OhP7K",
+                                  "name": "Separator",
+                                  "width": "fill_container",
+                                  "padding": [
+                                    5,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "id": "PKZeU",
+                                      "name": "Line",
+                                      "fill": "#FFFFFF1F",
+                                      "width": "fill_container",
+                                      "height": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "WyOUZ",
+                                  "name": "Menu item · Quit Prompt Studio",
+                                  "width": "fill_container",
+                                  "cornerRadius": 4,
+                                  "padding": [
+                                    3,
+                                    10
+                                  ],
+                                  "justifyContent": "space_between",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Peasw",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "Quit Prompt Studio",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "tOWFT",
+                                      "name": "Shortcut",
+                                      "fill": "#FFFFFF73",
+                                      "content": "⌘Q",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "O5VwH",
+                  "name": "E · The install failed",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "NQoQy",
+                      "name": "Caption",
+                      "width": "fill_container",
+                      "height": 56,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "R0QEmB",
+                          "name": "Caption title",
+                          "fill": "$ds-fg",
+                          "content": "E · The install failed",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "A1OVuN",
+                          "name": "Caption note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Shown only for a real failure, such as a missing runtime. Never for Not Now or Cancel. The cause goes to the desktop log.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IoBbn",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 338,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 10,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 32,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "WkzML",
+                          "name": "Alert · The pst command was not installed",
+                          "width": 260,
+                          "fill": "#323235",
+                          "cornerRadius": 12,
+                          "stroke": "#FFFFFF24",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 12
+                            },
+                            "blur": 32
+                          },
+                          "layout": "vertical",
+                          "gap": 10,
+                          "padding": [
+                            20,
+                            16,
+                            16,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "sQ80N",
+                              "name": "Caution icon",
+                              "width": 64,
+                              "height": 64,
+                              "layout": "none",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "NfplK",
+                                  "x": 0,
+                                  "y": 0,
+                                  "name": "Caution",
+                                  "width": 64,
+                                  "height": 64,
+                                  "icon": "triangle-alert",
+                                  "library": "lucide",
+                                  "fill": "#FFD60A"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "sQLsS",
+                                  "x": 36,
+                                  "y": 36,
+                                  "name": "App badge",
+                                  "width": 28,
+                                  "height": 28,
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "../clients/desktop/assets/icon.png",
+                                    "mode": "contain"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "j8Z5O",
+                              "name": "Message",
+                              "fill": "#FFFFFF",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "The pst command was not installed.",
+                              "lineHeight": 1.3,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HBTVV",
+                              "name": "Informative text",
+                              "fill": "#DDDDE1",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "You can try again from Prompt Studio → Install pst Command…",
+                              "lineHeight": 1.35,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xT0WG",
+                              "name": "Buttons",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                6,
+                                0,
+                                0,
+                                0
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ALWgw",
+                                  "name": "Button · OK",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "fill": "#0A84FF",
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "N7g3i",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "OK",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hp9M2",
+                  "name": "F · Another pst is already there",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "S3uiR",
+                      "name": "Caption",
+                      "width": "fill_container",
+                      "height": 56,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MZD3U",
+                          "name": "Caption title",
+                          "fill": "$ds-fg",
+                          "content": "F · Another pst is already there",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "k5Y7v",
+                          "name": "Caption note",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Only from the menu. When the app offers pst after the first project, it keeps another pst at /usr/local/bin and says nothing.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J1a3a",
+                      "name": "Stage",
+                      "width": "fill_container",
+                      "height": 338,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 10,
+                      "stroke": "$ds-border-subtle",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "padding": 32,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "n3EnZ",
+                          "name": "Alert · A pst command is already installed",
+                          "width": 260,
+                          "fill": "#323235",
+                          "cornerRadius": 12,
+                          "stroke": "#FFFFFF24",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 12
+                            },
+                            "blur": 32
+                          },
+                          "layout": "vertical",
+                          "gap": 10,
+                          "padding": [
+                            20,
+                            16,
+                            16,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "X5FWqj",
+                              "name": "App icon",
+                              "width": 64,
+                              "height": 64,
+                              "fill": {
+                                "type": "image",
+                                "enabled": true,
+                                "url": "../clients/desktop/assets/icon.png",
+                                "mode": "contain"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "xS4XP",
+                              "name": "Message",
+                              "fill": "#FFFFFF",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "A pst command is already installed.",
+                              "lineHeight": 1.3,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "uFoXL",
+                              "name": "Informative text",
+                              "fill": "#DDDDE1",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Prompt Studio kept /usr/local/bin/pst. Remove the other CLI installation first, then try again.",
+                              "lineHeight": 1.35,
+                              "textAlign": "center",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "H7Qd8",
+                              "name": "Buttons",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "padding": [
+                                6,
+                                0,
+                                0,
+                                0
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "r0QjH",
+                                  "name": "Button · OK",
+                                  "width": "fill_container",
+                                  "height": 28,
+                                  "fill": "#0A84FF",
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "P5GCR",
+                                      "name": "Label",
+                                      "fill": "#FFFFFF",
+                                      "content": "OK",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "Ciq7O",
+          "name": "Divider 3",
+          "fill": "$ds-border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "W2d39t",
+          "name": "03 · Outcomes",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "xB6RT",
+              "name": "Section header",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hDMcE",
+                  "name": "Section title",
+                  "fill": "$ds-fg",
+                  "content": "03 · Outcomes",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "gXLU1",
+                  "name": "Section note",
+                  "fill": "$ds-fg-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Every path leaves the app usable, and agents can run pst on every path. They inherit the runtime's PATH, which includes Contents/Resources/bin, and that folder holds a pst link to the bundled runtime. Agents use login shells, which put /usr/local/bin first on macOS, so another pst installed there wins over the app's.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "IqITR",
+              "name": "Outcome table",
+              "clip": true,
+              "width": "fill_container",
+              "cornerRadius": 8,
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "a93Np",
+                  "name": "Header row",
+                  "width": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i8Chd",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jrHB1",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Situation",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "moDwh",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ZJTTs",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "What the person sees",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qrCLG",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sTWJi",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Later launches",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-heading",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QeQ1U",
+                  "name": "Row · First launch",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P48Efy",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mQ25i",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "First launch, before any project",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Na38R",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FSDjy",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Nothing",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dJUJx",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WFJUw",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Asks after the first project.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ENke5",
+                  "name": "Row · Install, then the password",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "CHHUk",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KowD8",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Install, then the password",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lVhQf",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hepkV",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A, B, then C",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "wZ1XP",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "s1u6A",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "No prompt. pst works in Terminal.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PKSTB",
+                  "name": "Row · /usr/local/bin needs no password",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "L9pea2",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "d4R9c7",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "/usr/local/bin needs no password",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oThHX",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "e0fdjN",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "C only",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Wh3Fc",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KKFah",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "No prompt. pst works in Terminal.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u48Zwy",
+                  "name": "Row · Not Now",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "GYaQc",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uIwox",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Not Now",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RDDyC",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "djrPA",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A, then nothing",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lpExC",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "D3i9yS",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "No prompt. Install later with D.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iNGiB",
+                  "name": "Row · Cancel in the password window",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DI4Ag",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tHrpl",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Cancel in the password window",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZMeGD",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "TlwqP",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A, B, then nothing",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "j295v",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "uAVUP",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "No prompt. Install later with D.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Vkmqb",
+                  "name": "Row · The install fails",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "v75yR",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Nz2wQ",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "The install fails",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "V89xtM",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "GNJlv",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "A, B, then E",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FV85i",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CARjm",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "No prompt. Try again with D.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "q1IEv",
+                  "name": "Row · Another pst at /usr/local/bin",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "PAJ0b",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g6qyJc",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Another pst at /usr/local/bin",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "aawYy",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Q945w",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Nothing after the first project. F from the menu.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lmS2C",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "G5wtj",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "No prompt. The other pst keeps working.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Balz8",
+                  "name": "Row · App opened from the DMG",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QX8Fc",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "y5205B",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "App opened from the DMG",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ud1Np",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Q4n3y",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Nothing",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yPVvE",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FB2Fn",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Asks after the first project in the app from Applications.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
