@@ -8,6 +8,16 @@ import { pageLocationTarget } from "../page-location/page-location-target";
 import { modeLayoutScope } from "../page-runtime/owner-layout-scope";
 import { pageOwnerScope, preparedOwnerStates } from "../page-runtime/prepared-owner-states";
 
+export const isResourceEditorInOwner = (
+  editor: { scope?: string; tab: WorkbenchWidgetPlacement },
+  state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+) => {
+  const identity = editor.tab.placementIdentity;
+  if (identity?.kind === "mode") return identity.modeId === state.activeModeId;
+  if (identity?.kind === "page" || identity?.kind === "shell") return editor.scope === pageOwnerScope(state);
+  return true;
+};
+
 export const hasPreparedEditorOwner = (
   editor: { scope?: string; tab: WorkbenchWidgetPlacement },
   states: readonly WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[],
@@ -15,14 +25,11 @@ export const hasPreparedEditorOwner = (
   const identity = editor.tab.placementIdentity;
   if (!identity) return false;
   const key = placementIdentityKey(identity);
-  return states.some((state) => {
-    const owns =
-      identity.kind === "mode" ? state.activeModeId === identity.modeId : pageOwnerScope(state) === editor.scope;
-    return (
-      owns &&
-      [...state.placements, ...state.reconciliation.remove].some((p) => placementIdentityKey(p.identity) === key)
-    );
-  });
+  return states.some(
+    (state) =>
+      isResourceEditorInOwner(editor, state) &&
+      [...state.placements, ...state.reconciliation.remove].some((p) => placementIdentityKey(p.identity) === key),
+  );
 };
 
 export const findPreparedResourceEditor = (

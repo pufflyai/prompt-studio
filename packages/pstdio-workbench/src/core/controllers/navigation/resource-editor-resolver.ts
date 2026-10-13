@@ -18,9 +18,12 @@ import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { openOwnerLayouts } from "../page-runtime/open-owner-layouts";
-import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
 import { pageOwnerScope } from "../page-runtime/prepared-owner-states";
-import { findPreparedResourceEditor, hasPreparedEditorOwner } from "./prepared-resource-editor";
+import {
+  findPreparedResourceEditor,
+  hasPreparedEditorOwner,
+  isResourceEditorInOwner,
+} from "./prepared-resource-editor";
 import {
   applyResourceEditorIntent,
   applyResourceEditorSourceTarget,
@@ -131,21 +134,7 @@ export const prepareEditorActivation = (
     applySourceTarget: () =>
       applyResourceEditorSourceTarget(core, editor.tab, editor.scope, liveEditorPlacement(core, editor), intent),
     isInOwner(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) {
-      const owner = editor.tab.placementIdentity;
-      if (owner?.kind === "mode") return owner.modeId === state.activeModeId;
-      if (owner?.kind !== "page" && owner?.kind !== "shell") return true;
-      const page = state.activePageId ? state.pages[state.activePageId] : undefined;
-      return (
-        editor.scope ===
-        pageLayoutScope(
-          {
-            projectId: state.projectId,
-            pageId: state.activePageId,
-            resource: state.location?.resource,
-          },
-          page,
-        )
-      );
+      return isResourceEditorInOwner(editor, state);
     },
     activate() {
       const tab = liveEditorPlacement(core, editor);
@@ -199,11 +188,12 @@ const legacyDeclaredEditor = (
   core: WorkbenchCore,
   target: NavigationTargetPage | NavigationTargetPanel,
   match: ReturnType<typeof resourceEditorTarget>,
+  current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   states: readonly WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>[],
 ) => {
   if (target.kind !== "panel" || !match) return undefined;
   const editor = findCurrentDeclaredEditor(core, target, match.resource);
-  if (editor && hasPreparedEditorOwner(editor, states)) return undefined;
+  if (editor && (!isResourceEditorInOwner(editor, current) || hasPreparedEditorOwner(editor, states))) return undefined;
   return editor;
 };
 
@@ -220,7 +210,7 @@ export const prepareExistingResourceEditor = (
     const unique = live && !hasPreparedEditorOwner(live, states) ? live : undefined;
     const pending =
       match && states.length ? findPreparedResourceEditor(core, match.viewId, match.resource, states) : undefined;
-    const legacy = legacyDeclaredEditor(core, target, match, states);
+    const legacy = legacyDeclaredEditor(core, target, match, current, states);
     const editor = unique ?? pending?.editor ?? legacy;
     if (editor) {
       const ownerTargets = !unique && pending?.owner ? [pending.owner, ...targets] : targets;

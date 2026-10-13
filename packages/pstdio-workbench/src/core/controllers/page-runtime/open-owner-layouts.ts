@@ -60,7 +60,9 @@ export const pageOwnerLocation = (core: WorkbenchCore, scope: string) => {
     ? { type, id, ...(extensionId ? { extensionId } : {}), ...(projectId ? { projectId } : {}) }
     : undefined;
   const layout = openOwnerLayouts(core).find((entry) => entry.scope === scope)?.layout;
-  const selected = layout?.regions.main.widgets.find((tab) => tab.widgetId === layout.regions.main.activeWidgetId);
+  const selected =
+    layout?.regions.main.widgets.find((tab) => tab.widgetId === layout.activeLocationWidgetId) ??
+    layout?.regions.main.widgets.find((tab) => tab.widgetId === layout.regions.main.activeWidgetId);
   const resource =
     Object.values(layout?.regions ?? {})
       .flatMap((region) => region.widgets)
@@ -73,6 +75,9 @@ export const pageOwnerLocation = (core: WorkbenchCore, scope: string) => {
     page: page.ref,
     ...(resource ? { resource } : {}),
     mode: context?.mode,
+    ...(resourceKey(selected?.resource) === resourceKey(resource)
+      ? { section: selected?.section, position: selected?.position }
+      : {}),
     ...(context?.parent ? { parent: pageLocationTarget(context.parent) } : {}),
   } satisfies NavigationTargetPage;
 };
