@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { harness, navigate, page, resource } from "../composition/placement-lifecycle-test-support";
+import { harness, navigate, page, panel, resource } from "../composition/placement-lifecycle-test-support";
 
 const create = (cardinality: "one" | "many" = "many") => {
   const w = harness();
@@ -31,6 +31,14 @@ const create = (cardinality: "one" | "many" = "many") => {
     });
   return { w, open };
 };
+
+test("reopening a legacy document page keeps its implicit mode", () => {
+  const { w, open } = create();
+  open("a");
+  open("b");
+  open("a");
+  expect(w.pages.store.getState().location?.mode).toBeUndefined();
+});
 
 test("moving the only document returns to the collection and direct page opens focus it", () => {
   const { w, open } = create();
@@ -130,6 +138,41 @@ test.each([false, true])("reopening a document retains its requested position th
     w.layout.getLayout().regions.main.widgets.find((tab) => tab.widgetId === w.layout.getLayout().activeWidgetId)
       ?.resource?.id,
   ).toBe("a");
+});
+
+test.each([false, true])("reopening a document preserves its requested contextual parent: %s", (history) => {
+  const { w } = create();
+  const target = (parent: string) => ({
+    kind: "page" as const,
+    page: page("documents"),
+    resource: resource("a"),
+    open: "pin" as const,
+    parent: navigate(parent),
+  });
+  expect(w.pageLocations.navigate(target("alpha")).ok).toBe(true);
+  const id = w.layout.getLayout().activeWidgetId;
+  expect(w.pageLocations.navigate(target("beta")).ok).toBe(true);
+  if (history) {
+    w.pageLocations.goBack();
+    w.pageLocations.goForward();
+  }
+  expect(w.pages.store.getState().location?.parent?.resource?.id).toBe("beta");
+  expect(w.layout.getLayout().activeWidgetId).toBe(id);
+});
+
+test("a compound panel reopen retains the staged Main editor's contextual parent", async () => {
+  const { w } = create();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget({
+    kind: "compound",
+    targets: [
+      { kind: "page", page: page("documents"), resource: resource("a"), open: "pin", parent: navigate("beta") },
+      navigate("alpha"),
+      { kind: "panel", panel, resource: resource("a"), open: "pin" },
+    ],
+  });
+  expect(w.pages.store.getState().activePageId).toBe("documents");
+  expect(w.pages.store.getState().location?.parent?.resource?.id).toBe("beta");
 });
 
 test.each([

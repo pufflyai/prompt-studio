@@ -44,13 +44,14 @@ const savedModeRecords = (
   modeId: string | undefined,
   modeLayout?: WorkbenchLayout,
   currentLayout?: WorkbenchLayout,
+  adopted: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] = [],
 ) => {
   const modeRecords = new Map(
     records(modeLayout)
       .filter((p) => p.identity.kind === "mode")
       .map((p) => [placementIdentityKey(p.identity), p]),
   );
-  for (const placement of records(currentLayout)) {
+  for (const placement of [...records(currentLayout), ...adopted]) {
     if (placement.identity.kind === "mode" && placement.identity.modeId === modeId)
       modeRecords.set(placementIdentityKey(placement.identity), placement);
   }
@@ -138,6 +139,9 @@ const restoreDeclaration = (
     region: previous?.region ?? placement.region,
     value: {
       ...placement.value,
+      position:
+        placement.value.position ??
+        (previous?.value.resourceKey === placement.value.resourceKey ? previous?.value.position : undefined),
       widgetId,
     },
   };
@@ -176,6 +180,7 @@ export const resolveOwnerPlacements = (input: {
   modeLayout?: WorkbenchLayout;
   currentLayout?: WorkbenchLayout;
   liveLayout?: WorkbenchLayout;
+  adoptedModePlacements?: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   enteringPage: boolean;
   getWidget?(id: string): RegisteredWidgetContribution | undefined;
   hasDeclaration?(identity: PlacementIdentity): boolean;
@@ -186,7 +191,7 @@ export const resolveOwnerPlacements = (input: {
 }) => {
   const { state } = input;
   const page = records(input.pageLayout).filter((p) => p.identity.kind !== "mode");
-  const mode = savedModeRecords(state.activeModeId, input.modeLayout, input.currentLayout);
+  const mode = savedModeRecords(state.activeModeId, input.modeLayout, input.currentLayout, input.adoptedModePlacements);
   const saved = [...page, ...mode];
   const transferredDeclarations = new Set(
     saved.flatMap((p) => (p.value.declarationIdentity ? [placementIdentityKey(p.value.declarationIdentity)] : [])),

@@ -20,6 +20,7 @@ import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
+import { pageLocationTarget } from "./controllers/page-location/page-location-target";
 import { connectOpenOwnerLayouts } from "./controllers/page-runtime/open-owner-layouts";
 import { createOwnerLayoutAccess } from "./controllers/page-runtime/owner-layout-access";
 import { createOwnerLayoutScopeHandler } from "./controllers/page-runtime/owner-layout-scope-handler";
@@ -57,6 +58,7 @@ import {
   createCoreCompositionController,
   primaryWorkbenchResource,
 } from "./workbench-core-connections";
+import { navigateCoreMode } from "./workbench-core-modes";
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
 import { createCoreRenderers } from "./workbench-core-renderers";
@@ -83,16 +85,7 @@ const createPageLocations = (
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,
     resolveExistingEditor: ({ location, open }) =>
-      prepareExistingResourceEditor(resolveCore(), [
-        {
-          kind: "page",
-          page: location.page,
-          resource: location.resource,
-          section: location.section,
-          position: location.position,
-          open,
-        },
-      ]),
+      prepareExistingResourceEditor(resolveCore(), [{ ...pageLocationTarget(location), open }]),
   });
 
 const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefined) => {
@@ -174,7 +167,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
 
-  const navigationTrees = createWorkbenchNavigationTrees(renderers);
+  const navigationTrees = createWorkbenchNavigationTrees(renderers, () => core);
 
   const overlays = createWorkbenchOverlayRegistry({ layout, views, viewMenus });
   const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });
@@ -195,6 +188,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
 
   const modes = createWorkbenchModeRegistry({
+    navigateMode: (modeId) => navigateCoreMode(core, modeId),
     establishLocation,
     layout,
     resolveContext: () => core,

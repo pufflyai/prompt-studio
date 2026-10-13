@@ -4,6 +4,7 @@ import { placementIdentityKey } from "../../registries/layout/placement-reconcil
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { pageLocationTarget } from "../page-location/page-location-target";
 import { modeLayoutScope } from "../page-runtime/owner-layout-scope";
 import { pageOwnerScope, preparedOwnerStates } from "../page-runtime/prepared-owner-states";
 
@@ -61,8 +62,6 @@ export const findPreparedResourceEditor = (
       region: placement.region,
       tab: { ...placement.value, placementIdentity: placement.identity },
     },
-    owner: state.location
-      ? { kind: "page" as const, page: state.location.page, resource: state.location.resource }
-      : undefined,
+    owner: state.location ? pageLocationTarget(state.location) : undefined,
   };
 };

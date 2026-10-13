@@ -1,4 +1,5 @@
-import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
+import type { PageRef, ResourceContext, ResourceRef } from "@pstdio/sdk/extensions";
+import type { WorkbenchCore } from "../../core";
 
 export const windowingExtensionId = "storybook.windowing";
 export const windowingPages = {
@@ -11,11 +12,13 @@ export const windowingPages = {
 } as const satisfies Record<string, PageRef>;
 
 export const createWindowingResources = () => {
+  const contextListeners = new Set<() => void>();
   const workspaces: ResourceRef[] = [1, 2].map((number) => ({
     type: "windowing.workspace",
     id: `workspace-${number}`,
     label: `Workspace ${number}`,
     extensionId: windowingExtensionId,
+    context: { type: "workspace", id: `workspace-${number}`, label: `Workspace ${number}` },
   }));
   const sessions = workspaces.map((workspace, index) => ({
     type: "windowing.session",
@@ -23,6 +26,7 @@ export const createWindowingResources = () => {
     label: `Session ${index + 1}`,
     extensionId: windowingExtensionId,
     metadata: { workspaceId: workspace.id },
+    context: { type: "workspace", id: workspace.id, label: workspace.label } as ResourceContext,
   }));
   const terminals = workspaces.map((workspace, index) => ({
     type: "windowing.terminal",
@@ -30,6 +34,7 @@ export const createWindowingResources = () => {
     label: `Terminal ${index + 1}`,
     extensionId: windowingExtensionId,
     metadata: { workspaceId: workspace.id },
+    context: { type: "workspace" as const, id: workspace.id, label: workspace.label },
   }));
   const notes: ResourceRef[] = ["A", "B"].map((letter) => ({
     type: "windowing.note",
@@ -37,7 +42,44 @@ export const createWindowingResources = () => {
     label: `Note ${letter}`,
     extensionId: windowingExtensionId,
   }));
-  return { workspaces, sessions, terminals, notes };
+  return {
+    workspaces,
+    sessions,
+    terminals,
+    notes,
+    subscribeContext(listener: () => void) {
+      contextListeners.add(listener);
+      return () => {
+        contextListeners.delete(listener);
+      };
+    },
+    updateSessionContext(id: string, context: ResourceContext) {
+      const session = sessions.find((session) => session.id === id);
+      if (!session) throw new Error(`Unknown session: ${id}`);
+      session.context = context;
+      for (const listener of contextListeners) listener();
+    },
+  };
 };
 
 export type WindowingResources = ReturnType<typeof createWindowingResources>;
+
+export const registerWindowingResourceProviders = (workbench: WorkbenchCore, resources: WindowingResources) => {
+  for (const [label, items] of [
+    ["Workspace", resources.workspaces],
+    ["Note", resources.notes],
+    ["Session", resources.sessions],
+    ["Terminal", resources.terminals],
+  ] as const) {
+    const kind = items[0]!.type;
+    workbench.resources.registerKind({ kind, label });
+    workbench.resources.registerProvider({
+      id: kind,
+      kind,
+      list: (query) =>
+        items
+          .filter((item) => item.label?.toLowerCase().includes(query.toLowerCase()))
+          .map((resource) => ({ resource })),
+    });
+  }
+};

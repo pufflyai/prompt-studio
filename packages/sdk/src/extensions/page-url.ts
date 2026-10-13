@@ -1,12 +1,14 @@
 import type {
   FileRendererSectionTarget,
   FileSourcePosition,
+  ModeRef,
   PageDocumentDeclaration,
   PageLocation,
   PageRef,
   ResourceRef,
 } from "pstdio-api-contracts/extension-kernel";
 import { isFileSourcePosition } from "pstdio-api-contracts/extension-kernel";
+import { contributionRefId } from "./contribution-reference";
 import { defaultPageResourceCodec } from "./page-resource-codec";
 
 export interface PageUrlDefinition {
@@ -95,6 +97,7 @@ export const serializeWorkbenchPageUrl = (input: {
   const page = pageForRef(input.pages, input.location.page);
   if (!page) throw new Error(`Unknown page ref: ${pageRefKey(input.location.page)}`);
   const query = new URLSearchParams();
+  if (input.location.mode) query.set("mode", contributionRefId(input.location.mode));
   if (input.location.resource) {
     query.set("resource", input.resources.toUri(input.resources.normalize(input.location.resource)));
   }
@@ -180,6 +183,7 @@ const parseSourcePosition = (
 
 export interface ParsedWorkbenchPageUrl {
   pageId: string;
+  mode?: ModeRef;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
@@ -197,6 +201,11 @@ const pageForUrl = (url: URL, projectId: string, pages: readonly PageUrlDefiniti
   return page;
 };
 
+const validPageQuery = (url: URL) => {
+  const keys = ["mode", "resource", "document", "section", "line", "column", "endLine", "endColumn"];
+  return keys.every((key) => url.searchParams.getAll(key).length <= 1) && url.searchParams.get("mode") !== "";
+};
+
 export const parseWorkbenchPageUrl = (input: {
   url: string;
   projectId: string;
@@ -212,9 +221,8 @@ export const parseWorkbenchPageUrl = (input: {
   const page = pageForUrl(url, input.projectId, input.pages);
   if (!page) return undefined;
 
-  for (const key of ["resource", "document", "section", "line", "column", "endLine", "endColumn"]) {
-    if (url.searchParams.getAll(key).length > 1) return undefined;
-  }
+  if (!validPageQuery(url)) return undefined;
+  const modeId = url.searchParams.get("mode");
   const resourceValue = url.searchParams.get("resource");
   let resource = resourceValue ? parseResource(resourceValue, input.resources) : undefined;
   if (resourceValue !== null && !resource) return undefined;
@@ -230,6 +238,7 @@ export const parseWorkbenchPageUrl = (input: {
   if (position === false) return undefined;
   return {
     pageId: page.id,
+    ...(modeId ? { mode: { kind: "mode" as const, extensionId: "pstdio", id: modeId } } : {}),
     ...(resource ? { resource } : {}),
     ...(section ? { section } : {}),
     ...(position ? { position } : {}),
@@ -240,12 +249,13 @@ export const parseWorkbenchPageUrl = (input: {
 export const serializePageUrl = (input: {
   projectId: string;
   page: PageUrlDefinition;
+  mode?: ModeRef;
   resource?: ResourceRef;
   position?: FileSourcePosition;
 }) =>
   serializeWorkbenchPageUrl({
     projectId: input.projectId,
-    location: { page: input.page.ref, resource: input.resource, position: input.position },
+    location: { page: input.page.ref, mode: input.mode, resource: input.resource, position: input.position },
     pages: [input.page],
     resources: defaultPageResourceCodec,
   });

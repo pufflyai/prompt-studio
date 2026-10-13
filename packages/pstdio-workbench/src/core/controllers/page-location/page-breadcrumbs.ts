@@ -10,17 +10,11 @@ import { createDisposable } from "../../shared/disposable";
 import type { WorkbenchBreadcrumbController, WorkbenchBreadcrumbItem } from "../breadcrumbs/breadcrumb-registry";
 import { leavesProjectNavigation, type NavigationLevelModes } from "./navigation-level";
 import type { WorkbenchPageLocationController } from "./page-location-controller";
+import { pageLocationTarget } from "./page-location-target";
 
 const pageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:${ref.id}`;
 const locationsFromRoot = (location: PageLocation): PageLocation[] =>
   location.parent ? [...locationsFromRoot(location.parent), location] : [location];
-const targetFromLocation = (location: PageLocation): NavigationTargetPage => ({
-  kind: "page",
-  page: location.page,
-  ...(location.resource ? { resource: location.resource } : {}),
-  ...(location.section ? { section: location.section } : {}),
-  ...(location.parent ? { parent: targetFromLocation(location.parent) } : {}),
-});
 const pageTitle = (page: WorkbenchPageContribution) => {
   if (page.title === undefined) return page.ref.id;
   if (!isLocalizedString(page.title)) return page.title;
@@ -54,7 +48,7 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
         : undefined;
     if (index < locations.length - 1 || (landingPanel && input.openPanel)) {
       item.onClick = () => {
-        input.navigate(targetFromLocation(location));
+        input.navigate(pageLocationTarget(location));
         if (page && landingPanel) input.openPanel?.(page.id, landingPanel.id);
       };
     }

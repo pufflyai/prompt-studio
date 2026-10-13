@@ -34,6 +34,12 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
       throw new Error(`Panel cannot move to ${destination}: ${instanceId}`);
     const source = layout.regions[found.regionId];
     const remaining = source.widgets.filter((t) => t.widgetId !== instanceId);
+    const adjacent =
+      found.regionId === "main" && found.placement.role === "location"
+        ? [...source.widgets.slice(found.index + 1), ...source.widgets.slice(0, found.index).reverse()].find(
+            (tab) => tab.role === "location",
+          )
+        : (remaining[found.index] ?? remaining[found.index - 1]);
     const pageState = core.pages.store.getState();
     const page = pageState.activePageId ? pageState.pages[pageState.activePageId] : undefined;
     const emptyView = page?.main.kind === "panels" ? contributionRefId(page.main.empty) : undefined;
@@ -51,10 +57,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         [found.regionId]: {
           ...source,
           widgets: remaining,
-          activeWidgetId:
-            source.activeWidgetId === instanceId
-              ? (remaining[found.index] ?? remaining[found.index - 1])?.widgetId
-              : source.activeWidgetId,
+          activeWidgetId: source.activeWidgetId === instanceId ? adjacent?.widgetId : source.activeWidgetId,
         },
         [destination]: {
           ...target,

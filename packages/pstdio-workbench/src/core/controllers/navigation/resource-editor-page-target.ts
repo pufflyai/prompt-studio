@@ -14,5 +14,7 @@ export const resourceEditorPageTarget = (
   resource: requested?.resource
     ? getWorkbenchPageRegistryInternals(core.pages).resources.normalize(requested.resource)
     : resource,
-  ...(requested?.kind === "page" ? { section: requested.section, position: requested.position } : {}),
+  ...(requested?.kind === "page"
+    ? { mode: requested.mode, section: requested.section, position: requested.position, parent: requested.parent }
+    : {}),
 });

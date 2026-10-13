@@ -3,6 +3,7 @@ import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../../registries
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
+import { resolvePageMode } from "../../registries/pages/page-availability";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { pageStateKey } from "../../registries/pages/page-state-key";
@@ -163,19 +164,20 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
 
   const preparePage = (target: NavigationTargetPage) => {
     if (!proposed.projectId) throw new Error("Cannot navigate before a project is active");
-    const resolved = locations.resolve(target);
+    const resolved = locations.resolve(target, proposed.activeModeId);
     const page = proposed.pages[resolved.pageId]!;
+    const modeId = resolvePageMode(page, resolved.location.mode, proposed.activeModeId);
     const stateKey = pageStateKey(page, resolved.location, pages.resources);
     const stagedPage = proposed.pageStates[stateKey] !== original.pageStates[stateKey];
     shellState =
       shell.restore?.(
-        { modeId: page.modeId, pageId: page.id, projectId: proposed.projectId, location: resolved.location },
+        { modeId, pageId: page.id, projectId: proposed.projectId, location: resolved.location },
         shellState,
         placementContext(proposed),
       ) ?? shellState;
     modeState = restoreProposedMode(
       core,
-      { modeId: page.modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
+      { modeId, pageId: page.id, location: resolved.location, projectId: proposed.projectId },
       placementContext(proposed),
       modeState,
       originalMode,
@@ -192,7 +194,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
         action: "preparePageNavigation",
       },
       proposed,
-      owned(page.modeId),
+      owned(modeId),
     );
   };
 
@@ -215,7 +217,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   };
 
   for (const target of targets) {
-    if (target.kind === "page") locations.resolve(target);
+    if (target.kind === "page") locations.resolve(target, proposed.activeModeId);
     const existing = prepareExistingResourceEditor(core, [target], proposed, stages);
     if (existing) {
       if (existing.target) preparePage(existing.target);

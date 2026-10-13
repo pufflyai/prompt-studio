@@ -21,10 +21,13 @@ const storyIds = [
   "note-neighbor",
   "inactive-owner-reload",
   "inactive-main-document",
+  "mixed-document-tabs",
   "workspace-catalog",
   "workspace-catalog-close",
   "collection-catalog",
   "fixed-page-transfer",
+  "foreign-context",
+  "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 
 test.describe("Workbench windowing stories", () => {
@@ -70,6 +73,9 @@ test.describe("Workbench windowing stories", () => {
       });
       expect(outcome.errors).toEqual([]);
       expect(outcome.result).toMatchObject({ storyId, status: "success" });
+      if (storyId.endsWith("--foreign-context") || storyId.endsWith("--page-availability")) {
+        await test.info().attach("Page context", { body: await page.screenshot(), contentType: "image/png" });
+      }
       if (storyId.endsWith("--page-surface")) {
         const main = page.locator('[data-workbench-panel="main"]');
         const bottom = main.locator('[data-workbench-panel="bottom"]');
@@ -97,9 +103,7 @@ test.describe("Workbench windowing stories", () => {
         ).toBeVisible();
         await expect(draft).toHaveValue("Keep the draft when moving into page bottom");
         await page.getByRole("button", { name: "Session 1", exact: true }).click();
-        const sessionTab = page
-          .locator('[data-workbench-panel="side"]')
-          .getByRole("tab", { name: "Session 1", exact: true });
+        const sessionTab = page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: /^Session 1/ });
         await sessionTab.focus();
         await page.keyboard.press("Shift+F10");
         await page.getByRole("menuitem", { name: "Move to Page bottom", exact: true }).click();

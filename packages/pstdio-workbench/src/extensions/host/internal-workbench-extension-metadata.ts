@@ -56,6 +56,7 @@ export interface InternalWorkbenchExtensionMetadata {
     id: string;
     extensionId: string;
     modeId: string;
+    basePage?: import("@pstdio/sdk/extensions").PageRef;
     label: WorkbenchExtensionMetadata["modes"][number]["label"];
     icon?: string;
     defaultTheme?: string;

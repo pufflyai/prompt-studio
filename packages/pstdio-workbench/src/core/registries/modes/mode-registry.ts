@@ -236,6 +236,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
         if (mode && id !== deferredSeedModeId) reconcileScope(mode);
         return;
       }
+      if (id && !setActiveInput.deferSeed && input.navigateMode?.(id)) return;
       transitioning = true;
       deferredSeedModeId = setActiveInput.deferSeed ? id : undefined;
       try {

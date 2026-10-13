@@ -33,7 +33,13 @@ export const createPageEditorCommit =
     publish: ReturnType<typeof createPageLocationPublisher<Value>>,
     resources: WorkbenchPageResourceCodec,
   ) =>
-  (projectId: string, resolved: ResolvedPageLocation, history: "push" | "replace" | "none", action: string) => {
+  (
+    projectId: string,
+    resolved: ResolvedPageLocation,
+    history: "push" | "replace" | "none",
+    action: string,
+    beforePublish?: () => void,
+  ) => {
     const existing = input.resolveExistingEditor?.(resolved);
     if (!existing) return undefined;
     const pages = input.registry.listPages();
@@ -49,7 +55,7 @@ export const createPageEditorCommit =
     )
       finalHistory = "replace";
     return batchWorkbenchChanges(() => {
-      const result = publish(projectId, existing.state, finalHistory, action);
+      const result = publish(projectId, existing.state, finalHistory, action, beforePublish);
       existing.activate();
       return result;
     });

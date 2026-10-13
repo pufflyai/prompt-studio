@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
+import { buildExtensionWebview } from "./extension-webview-builder";
 
 const writeExtension = (root: string) => {
   mkdirSync(join(root, "src"), { recursive: true });
@@ -32,6 +33,52 @@ const writeExtension = (root: string) => {
 };
 
 describe("createExtensionWebviewBuildManager source identity", () => {
+  test.each([
+    false,
+    true,
+  ])("an in-flight failure follows current declaration ownership with removed view %p", async (removed) => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-reload-ownership-"));
+    const sourcePath = join(root, "font-editor");
+    writeExtension(sourcePath);
+    let row = { id: "installed", install_name: "font-editor", source_hash: "old", source_path: sourcePath };
+    const started = Promise.withResolvers<void>();
+    const released = Promise.withResolvers<void>();
+    const failures: { sourceHash?: string | null; sourcePath: string }[] = [];
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [row],
+      reportBuildFailure: async (_id, _view, _error, expected) => {
+        failures.push(expected);
+      },
+      reportBuildSuccess: async () => {},
+      buildWebview: async (input) => {
+        const result = await buildExtensionWebview(input);
+        if (!result.success) {
+          started.resolve();
+          await released.promise;
+        }
+        return result;
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+    try {
+      await manager.ensure(row.id);
+      writeFileSync(join(sourcePath, "src", "main.tsx"), "export const broken = ;");
+      const watching = manager.refresh(sourcePath);
+      await started.promise;
+      if (removed) writeFileSync(join(sourcePath, "extension.ts"), "export default { views: [] };");
+      row = { ...row, source_hash: "new" };
+      await manager.refresh(sourcePath);
+      released.resolve();
+      await watching;
+      await manager.ensure(row.id);
+      expect(failures).toEqual(removed ? [] : [{ sourceHash: "new", sourcePath }]);
+    } finally {
+      released.resolve();
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("keeps separate builds for installed sources that share an install name", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-source-identity-"));
     const cacheRoot = join(root, "cache");

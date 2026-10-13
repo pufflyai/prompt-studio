@@ -41,6 +41,7 @@ export const toInternalWorkbenchPages = (
     panelMenus: page.panelMenus,
     regionSettings: page.regionSettings,
     modeId: contributionRefId(page.mode),
+    ...(page.modes ? { modeIds: page.modes.map((mode) => contributionRefId(mode)) } : {}),
     resource: page.resource,
     main: pageMain(page.main, { extensionId: page.extensionId, placementId: `${page.id}.$main`, createTab }),
     slots: page.slots.map((slot) =>

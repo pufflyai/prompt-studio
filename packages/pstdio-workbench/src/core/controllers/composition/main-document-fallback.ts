@@ -3,6 +3,7 @@ import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-r
 import { pageStateKey } from "../../registries/pages/page-state-key";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
+import { pageLocationTarget } from "../page-location/page-location-target";
 import { pageStateFromLayout } from "../page-runtime/page-state-restoration";
 
 /** Rebuild the source from its remaining tabs; a moved editor is not Main's location. */
@@ -38,16 +39,17 @@ export const reconcileMainAfterMove = (core: WorkbenchCore) => {
   if (page.main.kind === "view" && page.resource) {
     const remaining = main.widgets.find((tab) => tab.widgetId === main.activeWidgetId && tab.role === "location");
     if (remaining?.resource) {
-      const result = replace({ kind: "page", page: page.ref, resource: remaining.resource });
+      const unchanged =
+        internals.resources.toUri(remaining.resource) === internals.resources.toUri(current.location.resource!);
+      let target = pageLocationTarget(current.location);
+      if (!unchanged)
+        target = { ...target, resource: remaining.resource, section: remaining.section, position: remaining.position };
+      const result = replace(target);
       if (!result.ok) throw new Error(result.diagnostic.message);
       return;
     }
     if (!main.widgets.some((tab) => tab.role === "location") && current.location.parent) {
-      const result = replace({
-        kind: "page",
-        page: current.location.parent.page,
-        resource: current.location.parent.resource,
-      });
+      const result = replace(pageLocationTarget(current.location.parent));
       if (!result.ok) throw new Error(result.diagnostic.message);
       return;
     }

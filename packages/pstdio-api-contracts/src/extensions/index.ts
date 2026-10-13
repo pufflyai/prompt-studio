@@ -19,6 +19,7 @@ export * from "./keybindings";
 export { navigationTargetSchema } from "./navigation-target-metadata";
 export * from "./placement-metadata";
 export * from "./renderers";
+export { resourceContextSchema } from "./resource-ref";
 export * from "./settings";
 export * from "./targets";
 export * from "./workbench-metadata";
