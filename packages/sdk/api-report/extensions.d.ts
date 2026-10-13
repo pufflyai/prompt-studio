@@ -2564,6 +2564,9 @@ interface ViewContribution extends ContributionDefinition<"view"> {
   readonly icon?: string;
   readonly body: ViewBody;
   readonly instancePolicy?: "per-resource" | "multiple";
+  readonly background?: "active" | "keep-mounted";
+  readonly reveal?: "always" | "explicit";
+  readonly defaultPanel?: "side" | "secondary";
 }
 type NavigationOwnerRef = ModeRef | PageRef;
 type NavigationTreeSlot = "header" | "content" | "footer";
@@ -2622,6 +2625,7 @@ interface PlacementTabPresentation {
   readonly refreshEvents?: readonly RendererEventReference[];
 }
 interface PlacementPresentation {
+  /** @deprecated */
   readonly mountStrategy?: PlacementMountStrategy;
   readonly hiddenByDefault?: boolean;
   readonly headerBorderBottom?: boolean;

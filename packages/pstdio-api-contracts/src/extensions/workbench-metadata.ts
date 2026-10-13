@@ -122,6 +122,9 @@ export const workbenchExtensionViewRecordSchema = z.object({
   icon: z.string().optional(),
   body: workbenchExtensionViewBodySchema,
   instancePolicy: z.enum(["per-resource", "multiple"]).optional(),
+  background: z.enum(["active", "keep-mounted"]).optional(),
+  reveal: z.enum(["always", "explicit"]).optional(),
+  defaultPanel: z.enum(["side", "secondary"]).optional(),
 });
 
 const workbenchExtensionModeRecordSchema = z.object({

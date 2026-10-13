@@ -9,6 +9,15 @@ import {
 } from "./mermaid-renderer-storybook";
 
 const storyIds = [
+  "session-start-empty",
+  "session-start-closed",
+  "session-start-visible",
+  "session-start-fixed",
+  "session-start-inactive",
+  "view-background-active",
+  "view-background-mounted",
+  "view-background-legacy-mounted",
+  "view-background-legacy-active",
   "smoke",
   "webview",
   "boombox",
@@ -84,7 +93,17 @@ test.describe("Workbench windowing stories", () => {
       });
       expect(outcome.errors).toEqual([]);
       expect(outcome.result).toMatchObject({ storyId, status: "success" });
-      if (storyId.endsWith("--foreign-context") || storyId.endsWith("--page-availability")) {
+      if (
+        [
+          "--foreign-context",
+          "--page-availability",
+          "--session-start-empty",
+          "--session-start-closed",
+          "--session-start-visible",
+          "--session-start-fixed",
+          "--session-start-inactive",
+        ].some((name) => storyId.endsWith(name))
+      ) {
         await test.info().attach("Page context", { body: await page.screenshot(), contentType: "image/png" });
       }
       if (storyId.endsWith("--foreign-context")) {

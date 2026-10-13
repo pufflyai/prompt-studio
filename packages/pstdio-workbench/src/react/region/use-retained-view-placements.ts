@@ -8,7 +8,13 @@ import { retainViewPlacements } from "./retained-view-placements";
 export const useRetainedViewPlacements = (workbench: WorkbenchCore, current: WorkbenchWidgetPlacement[]) => {
   const views = useWorkbenchStore(workbench.views.store, (state) => state.views);
   const [previous, setPrevious] = useState(current);
-  const placements = retainViewPlacements(previous, current, new Set(Object.keys(views)));
+  const placements = retainViewPlacements(
+    previous,
+    current,
+    new Set(Object.keys(views)),
+    (placement) =>
+      views[placement.viewId ?? ""]?.background === undefined || placement.mountStrategy === "keep-mounted",
+  );
   if (previous !== placements) setPrevious(placements);
   return placements;
 };

@@ -5,6 +5,7 @@ import { boomboxTheme, kilnTheme } from "../showcases/themes";
 import { createWindowingFixture, type WindowingFixture, type WindowingMode } from "./fixture";
 import { WindowingModeControls } from "./page-mode-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
+import { WindowingSessionStartControls } from "./session-start-controls";
 
 interface ControlsProps {
   fixture: WindowingFixture;
@@ -19,6 +20,7 @@ const WindowingControls = (props: ControlsProps) => {
   const size = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
   return (
     <HStack p="sm" gap="sm" flexWrap="wrap" borderBottomWidth="1px" borderColor="border.subtle">
+      {fixture.sessionStarts && <WindowingSessionStartControls fixture={fixture} />}
       {fixture.pageModes && <WindowingModeControls workbench={workbench} />}
       {fixture.contextNavigation && (
         <Button

@@ -13,9 +13,17 @@ test.each([
     ref: { kind: "view", id: "editor" },
     title: "Editor",
     instancePolicy,
+    background: "keep-mounted",
+    reveal: "explicit",
+    defaultPanel: "secondary",
     body,
   };
   expect(viewDeclarationSchema.parse(view).instancePolicy).toBe(instancePolicy);
+  expect(viewDeclarationSchema.parse(view)).toMatchObject({
+    background: "keep-mounted",
+    reveal: "explicit",
+    defaultPanel: "secondary",
+  });
   expect(
     workbenchExtensionViewRecordSchema.parse({
       id: "example.view.editor",
@@ -23,6 +31,9 @@ test.each([
       extensionId: "example",
       title: "Editor",
       instancePolicy,
+      background: "keep-mounted",
+      reveal: "explicit",
+      defaultPanel: "secondary",
       body: { kind: "file", loadHandlerId: "load" },
     }).instancePolicy,
   ).toBe(instancePolicy);

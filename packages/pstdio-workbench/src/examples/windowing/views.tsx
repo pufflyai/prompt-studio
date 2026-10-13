@@ -1,6 +1,6 @@
 import { Box, Button, Input, Stack, Text } from "@chakra-ui/react";
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useShowcaseStore } from "../showcases/showcase-store";
 import { WindowingFileTree } from "./file-tree";
 import type { WindowingLifecycleProbe } from "./lifecycle-probe";
@@ -9,16 +9,23 @@ interface ResourceListProps {
   label: string;
   resources: readonly ResourceRef[];
   onOpen(resource: ResourceRef): void;
+  subscribe?(listener: () => void): () => void;
+  read?(): readonly ResourceRef[];
 }
 
 export const WindowingResourceList = (props: ResourceListProps) => {
-  const { label, resources, onOpen } = props;
+  const { label, resources, onOpen, subscribe, read } = props;
+  const items = useSyncExternalStore(
+    subscribe ?? (() => () => {}),
+    read ?? (() => resources),
+    read ?? (() => resources),
+  );
   return (
     <Stack p="md" gap="sm">
       <Text as="h2" textStyle="heading/S/semibold">
         {label}
       </Text>
-      {resources.map((resource) => (
+      {items.map((resource) => (
         <Button key={resource.id} size="sm" variant="outline" onClick={() => onOpen(resource)}>
           {resource.label}
           {resource.metadata?.workspaceId ? ` · ${resource.metadata.workspaceId}` : ""}

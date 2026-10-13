@@ -61,6 +61,8 @@ export const registerWindowingModule = (
         <WindowingResourceList
           label="Sessions"
           resources={resources.sessions}
+          subscribe={resources.subscribeContext}
+          read={() => resources.sessions}
           onOpen={(resource) => {
             void workbench.navigation.openTarget({
               kind: "panel",
@@ -83,6 +85,13 @@ export const registerWindowingModule = (
       id: `windowing.${id}`,
       title: label,
       instancePolicy: "per-resource",
+      ...(id === "session"
+        ? {
+            background: options.sessionBackground ?? "keep-mounted",
+            reveal: "always" as const,
+            defaultPanel: "side" as const,
+          }
+        : {}),
       body: {
         kind: "react",
         render: ({ instance }) =>
@@ -113,6 +122,7 @@ export const registerWindowingModule = (
   if (options.pagePanels) registerWindowingPagePanels(workbench);
   workbench.modePlacements.registerPlacement({
     id: "windowing.sessions",
+    mountStrategy: options.sessionMountStrategy,
     ref: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
     modeId: "windowing",
     region: "side",

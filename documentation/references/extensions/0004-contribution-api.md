@@ -216,6 +216,14 @@ See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes
 
 ## View instances
 
+Creating or starting a session publishes its resource to Sessions. It does not call `ctx.navigation.open`, create a hidden or visible UI tab, select a tab, reveal a panel, move focus, change fullscreen, or add a panel badge. This also applies when the view declares `reveal: "always"`. A later explicit Open passes that same resource to the normal page or panel target and follows the current destination permissions.
+
+Views accept `background: "active" | "keep-mounted"`, `reveal: "always" | "explicit"`, and `defaultPanel: "side" | "secondary"`. Keep-mounted preserves opened view content when its tab, page, or mode becomes inactive. Active mounts content only while selected in its owner. Omitted fields retain existing behavior. Explicit reveal leaves a directly closed panel closed during automatic placement activation; explicit navigation can reveal it when permitted. An empty automatic panel still derives visibility from its tabs. These fields do not turn resource creation into navigation.
+
+Host view-open commands use an existing per-resource editor first, then a matching binding in the current page, then a declared binding in the view's mode default panel. A missing or forbidden destination fails before changing the UI. There is no fallback to another panel. Extensions keep their existing page, panel, and compound navigation target shapes.
+
+Placement `mountStrategy` is deprecated in favor of view `background`. Existing placement-specific values take precedence over view defaults. `hiddenByDefault` remains supported: it controls legacy layout population and is not equivalent to the new view reveal policy. Its deprecation waits for a compatible replacement.
+
 Set `defineView({ instancePolicy: "per-resource", ... })` for one editor per resource. Explicit navigation searches every open page and mode owner in the current project and workbench client. It activates the existing editor where it lives, reveals its panel when allowed, and focuses it. Moving the editor does not change its identity or resource. Closing it allows a later open to create an editor at the normal destination.
 
 Reopening an inactive editor restores its captured breadcrumb ancestry. Panel opens restore the owner mode; direct page opens keep the current allowed mode when no mode is requested. Explicit page parents and history replay replace captured context. Source section and position requests apply even when a later compound target receives focus.
