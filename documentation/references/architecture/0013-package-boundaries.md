@@ -99,7 +99,9 @@ layer-map change.
   `package.json`.
 - Extensions consume host APIs only through `@pstdio/sdk` and `@pstdio/ui`. Additional workspace dependencies must be listed explicitly in the layer map.
 - The private `motion-lab` extension reads studies from `design/motion/studies` as project content. Its shared scene kit and Remotion Player belong to the extension. Runtime scenes reuse the preview’s React, Chakra, Remotion and shared UI modules. Production UI and host packages do not depend on Motion Lab or Remotion.
+  Its TypeScript paths resolve study imports through Motion Lab's installed dependencies, so type checking uses the same published UI as the preview.
 - Extensions pin `@pstdio/ui` to an exact published version. The pin does not have to match an unreleased workspace version; extension dependency updates ship after the public package release.
+- Extensions resolve `@pstdio/sdk` and `@pstdio/ui` from npm, including development dependencies. `bunfig.toml` disables automatic workspace links for plain version ranges; explicit `workspace:` links in core packages still work. `verify:boundaries` checks `bun.lock` for registry entries under every extension in `extensions/`, `.pstdio/extensions/`, and `infra/local/extensions/`. A matching local version must never hide an unreleased API.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.
 - E2E tests use package exports and declare every workspace dependency they
   import.
