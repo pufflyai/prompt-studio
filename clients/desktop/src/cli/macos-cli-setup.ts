@@ -23,8 +23,8 @@ export const createMacOSCliSetup = (logError: (error: Error) => void) => {
         title: "Prompt Studio",
         message: "Install the pst command?",
         detail: [
-          "The pst command lets you use Prompt Studio from Terminal. Agents in Prompt Studio can use pst either way.",
-          `To add it to ${dirname(COMMAND)}, macOS asks for your password in a window that says "osascript wants to make changes."`,
+          "This command lets you and agents use Prompt Studio from the Terminal by calling pst.",
+          "You will need to provide your password to complete the installation.",
           `You can also do this later from ${MENU_ITEM}`,
         ].join("\n\n"),
         buttons: ["Install", "Not Now"],
