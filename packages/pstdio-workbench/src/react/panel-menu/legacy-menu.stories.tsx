@@ -63,12 +63,13 @@ export const LegacyWithoutPage: Story = {
     await waitFor(() => expect(canvas.getByText("Legacy tools")).not.toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "Editor panels" }));
     await userEvent.click(await within(document.body).findByRole("menuitemcheckbox", { name: "Tools" }));
-    await expect(await within(document.body).findByRole("menu", { name: "Main right menu controls" })).toBeVisible();
+    const floating = await within(document.body).findByRole("menu", { name: "Main right menu controls" });
+    await waitFor(() => expect(floating).toBeVisible());
     frame.style.width = "900px";
     await waitFor(() =>
       expect(within(document.body).queryByRole("menu", { name: "Main right menu controls" })).toBeNull(),
     );
-    await expect(canvas.getByText("Legacy tools")).toBeVisible();
+    await waitFor(() => expect(canvas.getByText("Legacy tools")).toBeVisible());
     frame.style.width = "400px";
     await waitFor(() => expect(canvas.getByText("Legacy tools")).not.toBeVisible());
     await expect(within(document.body).queryByRole("menu", { name: "Main right menu controls" })).toBeNull();
