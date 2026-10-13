@@ -17,7 +17,7 @@ Download the app from [prompt.studio](https://prompt.studio). The site offers th
 
 The app includes the `pst` command. You do not need Bun, Node.js, or a separate CLI download.
 
-- On macOS, drag the app to Applications and open it from there. On the first launch, the app offers to add the `pst` command at `/usr/local/bin/pst`. If you choose **Install**, macOS asks for your password in a window that says "osascript wants to make changes." If you choose **Not Now** or cancel the password window, the app does not ask again. Choose **Prompt Studio → Install pst Command…** when you want `pst` in Terminal.
+- On macOS, drag the app to Applications and open it from there. After you create your first project, the app offers to add the `pst` command at `/usr/local/bin/pst`. If you choose **Install**, macOS asks for your password in a window that says "osascript wants to make changes." If you choose **Not Now** or cancel the password window, the app does not ask again. Choose **Prompt Studio → Install pst Command…** when you want `pst` in Terminal.
 - On Linux, the `.deb` package installs the app and `/usr/bin/pst`. For the portable `.zip`, extract it to a folder whose path has no spaces, then run `prompt-studio` from that folder. The portable build does not add `pst` to your terminal.
 
 Agents in Prompt Studio can still run `pst` when your terminal cannot.

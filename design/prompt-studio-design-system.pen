@@ -185811,7 +185811,7 @@
               "fill": "$ds-fg-muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "On the first launch from Applications, Prompt Studio offers to add pst at /usr/local/bin. That folder needs an administrator password, so the app asks first and says a password is needed. Not Now and Cancel are a choice, not an error: the app does not ask again, and Prompt Studio → Install pst Command… installs it later. Agents in Prompt Studio can still run pst, because they inherit the runtime's PATH, which includes the app's own bin folder.",
+              "content": "After the person creates their first project, Prompt Studio offers to add pst at /usr/local/bin. The first launch asks for nothing. That folder needs an administrator password, so the app asks first and says a password is needed. Not Now and Cancel are a choice, not an error: the app does not ask again, and Prompt Studio → Install pst Command… installs it later. Agents in Prompt Studio can still run pst, because they inherit the runtime's PATH, which includes the app's own bin folder.",
               "lineHeight": 1.5,
               "fontFamily": "$font-body",
               "fontSize": 15,
@@ -185830,7 +185830,7 @@
         {
           "type": "frame",
           "id": "mYq1n",
-          "name": "01 · First launch",
+          "name": "01 · After the first project",
           "width": "fill_container",
           "layout": "vertical",
           "gap": 24,
@@ -185848,7 +185848,7 @@
                   "id": "nVrsm",
                   "name": "Section title",
                   "fill": "$ds-fg",
-                  "content": "01 · First launch",
+                  "content": "01 · After the first project",
                   "fontFamily": "$font-heading",
                   "fontSize": 20,
                   "fontWeight": "600"
@@ -185860,7 +185860,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Shown once, on the first launch from Applications, when /usr/local/bin needs a password. A DMG or source build never asks. The app records the attempt before it asks, so a decline is never repeated.",
+                  "content": "Shown once, after the person creates their first project, when /usr/local/bin needs a password. The first launch asks for nothing, and an app opened from the DMG or a source build never asks. The app records the attempt before it asks, so a decline is never repeated.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 13,
@@ -186105,7 +186105,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Only Install opens it. macOS draws this window and its title. Prompt Studio sets the reason line. Cancel counts as Not Now: no error, and no prompt on later launches.",
+                          "content": "Only Install opens it. macOS draws this window and its title. Prompt Studio sets the reason line. Cancel counts as Not Now: no error, and the app does not ask again.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -186565,7 +186565,7 @@
                   "fill": "$ds-fg-muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Not Now and a cancelled password window lead to the menu item. It shows A, then B, then C, like the first launch. A real failure is the only error, and it names the same menu item.",
+                  "content": "Not Now and a cancelled password window lead to the menu item. It shows A, then B, then C, like the first offer. A real failure is the only error, and it names the same menu item.",
                   "lineHeight": 1.5,
                   "fontFamily": "$font-body",
                   "fontSize": 13,
@@ -187338,7 +187338,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Only from the menu. On the first launch the app keeps another pst at /usr/local/bin and says nothing.",
+                          "content": "Only from the menu. When the app offers pst after the first project, it keeps another pst at /usr/local/bin and says nothing.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -187626,6 +187626,95 @@
                           "fontFamily": "$font-heading",
                           "fontSize": 12,
                           "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QeQ1U",
+                  "name": "Row · First launch",
+                  "width": "fill_container",
+                  "fill": "$ds-bg",
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "P48Efy",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "mQ25i",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "First launch, before any project",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Na38R",
+                      "name": "Cell",
+                      "width": "fill_container",
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FSDjy",
+                          "name": "Text",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Nothing",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dJUJx",
+                      "name": "Cell",
+                      "width": 380,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WFJUw",
+                          "name": "Text",
+                          "fill": "$ds-fg-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Asks after the first project.",
+                          "lineHeight": 1.45,
+                          "fontFamily": "$font-body",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -188130,7 +188219,7 @@
                           "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Nothing on the first launch. F from the menu.",
+                          "content": "Nothing after the first project. F from the menu.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,
@@ -188244,7 +188333,7 @@
                           "fill": "$ds-fg-muted",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "Asks on the first launch from Applications.",
+                          "content": "Asks after the first project in the app from Applications.",
                           "lineHeight": 1.45,
                           "fontFamily": "$font-body",
                           "fontSize": 12,

@@ -50,12 +50,12 @@ const fixture = ({ confirm = unexpected, authorize = unexpected }: FixtureOption
 };
 
 test.skipIf(process.platform === "win32")(
-  "makes pst executable on first launch and keeps existing setup on later launches",
+  "makes pst executable on the first offer and keeps existing setup on later offers",
   async () => {
     const { installation, command } = fixture();
-    expect(await installation.onFirstLaunch()).toBe("installed");
+    expect(await installation.offerOnce()).toBe("installed");
     expect(spawnSync(command, ["--version"]).status).toBe(0);
-    expect(await installation.onFirstLaunch()).toBeNull();
+    expect(await installation.offerOnce()).toBeNull();
     expect(await installation.install()).toBe("installed");
   },
 );
@@ -63,7 +63,7 @@ test.skipIf(process.platform === "win32")(
 test.skipIf(process.platform === "win32")("preserves an independently installed command", async () => {
   const { installation, command } = fixture();
   writeFileSync(command, "independent CLI");
-  expect(await installation.onFirstLaunch()).toBe("conflict");
+  expect(await installation.offerOnce()).toBe("conflict");
   expect(readFileSync(command, "utf8")).toBe("independent CLI");
 });
 
@@ -107,7 +107,7 @@ test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     });
     chmodSync(dirname(command), 0o555);
 
-    expect(await installation.onFirstLaunch()).toBe("declined");
+    expect(await installation.offerOnce()).toBe("declined");
     expect(asked).toEqual(["confirm"]);
     expect(existsSync(command)).toBe(false);
   },
@@ -129,14 +129,14 @@ test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     });
     chmodSync(dirname(command), 0o555);
 
-    expect(await installation.onFirstLaunch()).toBe("installed");
+    expect(await installation.offerOnce()).toBe("installed");
     expect(asked).toEqual(["confirm", "authorize"]);
     expect(spawnSync(command, ["--version"]).status).toBe(0);
   },
 );
 
 test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
-  "does not ask again on later launches after a decline, and installs from the menu",
+  "does not offer again after a decline, and installs from the menu",
   async () => {
     const answers = [false, true];
     let passwordPrompts = 0;
@@ -149,8 +149,8 @@ test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     });
     chmodSync(dirname(command), 0o555);
 
-    expect(await installation.onFirstLaunch()).toBe("declined");
-    expect(await installation.onFirstLaunch()).toBeNull();
+    expect(await installation.offerOnce()).toBe("declined");
+    expect(await installation.offerOnce()).toBeNull();
     expect(passwordPrompts).toBe(0);
     expect(await installation.install()).toBe("installed");
     expect(passwordPrompts).toBe(1);
@@ -165,6 +165,6 @@ test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
 
     expect(await installation.install()).toBe("declined");
     expect(existsSync(command)).toBe(false);
-    expect(await installation.onFirstLaunch()).toBeNull();
+    expect(await installation.offerOnce()).toBeNull();
   },
 );

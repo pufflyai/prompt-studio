@@ -20,13 +20,14 @@ folder. Drag the app onto Applications. Finder copies it. It may show a
 progress window, and it shows its own replace prompt or error when needed. The
 window itself does not change after the
 drop. When the copy finishes, open Applications and launch Prompt Studio from
-there, not from the DMG. On the first launch from
-Applications, the app links `/usr/local/bin/pst` to its bundled runtime. When the
-directory needs an administrator password, the app first explains why, then asks
-**Install** or **Not Now**. Only **Install** opens the macOS password window, which
+there, not from the DMG. After the person creates their first project in the app
+launched from Applications, the app links `/usr/local/bin/pst` to its bundled
+runtime. The first launch asks for nothing. When the directory needs an
+administrator password, the app first explains why, then asks **Install** or
+**Not Now**. Only **Install** opens the macOS password window, which
 shows the app's reason under the title "osascript wants to make changes." Choosing
 **Not Now** or cancelling the password window leaves the app usable and does not
-ask again on later launches. Choose **Prompt Studio → Install pst Command…** to
+ask again. Choose **Prompt Studio → Install pst Command…** to
 install later or restore a removed link.
 Apps running from the DMG or another unpacked folder do not install the command.
 

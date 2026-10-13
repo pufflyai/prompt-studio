@@ -29,7 +29,7 @@ export class DesktopCliInstallation {
     this.#options = options;
   }
 
-  async onFirstLaunch() {
+  async offerOnce() {
     if (existsSync(this.#options.receiptPath)) return null;
     return this.install();
   }

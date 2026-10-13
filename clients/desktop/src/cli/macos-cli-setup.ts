@@ -71,10 +71,10 @@ export const createMacOSCliSetup = (logError: (error: Error) => void) => {
   };
 
   return {
-    onFirstLaunch: async () => {
+    offerOnce: async () => {
       try {
         // A decline needs no reply, and another pst stays the person's choice.
-        if ((await installation.onFirstLaunch()) === "installed") await showReady();
+        if ((await installation.offerOnce()) === "installed") await showReady();
       } catch (error) {
         await showFailure(error);
       }
