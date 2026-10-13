@@ -335,6 +335,10 @@ jobs:
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
 
+      - name: Test desktop readiness helpers with the shared browser image
+        if: matrix.shard == 1
+        run: bun test clients/desktop/src/e2e/desktop-pages.test.ts
+
       - name: Test UI e2e
         run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
 
