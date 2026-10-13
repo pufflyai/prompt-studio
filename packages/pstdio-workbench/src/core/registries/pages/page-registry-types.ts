@@ -44,7 +44,7 @@ export interface WorkbenchPageContribution {
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
   panelMenus?: PageContribution["panelMenus"];
-  regionSettings?: { bottom?: WorkbenchRegionSettings };
+  regionSettings?: { main?: Pick<WorkbenchRegionSettings, "showHeader">; bottom?: WorkbenchRegionSettings };
 }
 
 export interface WorkbenchPageResourceCodec {

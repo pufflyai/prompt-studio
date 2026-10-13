@@ -5,6 +5,7 @@ import { WorkbenchIcon } from "../../react";
 import { Artwork } from "./boombox-artwork";
 import { type BoomboxTrack, boomboxTracks } from "./boombox-data";
 import { BoomboxNav, BoomboxRail } from "./boombox-navigation";
+import { registerBoomboxPlacements } from "./boombox-placements";
 import { BoomboxQueue } from "./boombox-queue";
 import { getBoomboxStore } from "./boombox-state";
 import { usePrimaryResource, useShowcaseStore } from "./showcase-store";
@@ -195,7 +196,7 @@ export const createBoomboxWorkbench = () => {
     panels: ["main", "side", "secondary"],
     floatingBubble: false,
     regionSettings: {
-      side: { canOpen: true, canClose: true, floatable: false, acceptsTabs: false },
+      side: { canOpen: true, canClose: true, floatable: false, acceptsTabs: false, showHeader: false },
       secondary: {
         size: { defaultPx: 88, minPx: 88, maxPx: 88 },
         canOpen: false,
@@ -233,29 +234,7 @@ export const createBoomboxWorkbench = () => {
     title: "Up next",
     body: { kind: "react", render: (input) => <BoomboxQueue workbench={input.workbench} /> },
   });
-  workbench.modePlacements.registerPlacement({
-    id: "boombox.up-next",
-    ref: { extensionId: "storybook.showcases", kind: "placement", id: "boombox.up-next" },
-    modeId: "boombox",
-    region: "side",
-    movableTo: ["side"],
-    item: { kind: "view", presence: "fixed", view: { kind: "view", id: "boombox.up-next" } },
-  });
-  workbench.modePlacements.registerPlacement({
-    id: "boombox.player",
-    ref: { extensionId: "storybook.showcases", kind: "placement", id: "boombox.player" },
-    modeId: "boombox",
-    region: "secondary",
-    movableTo: ["secondary"],
-    item: {
-      kind: "view",
-      presence: "fixed",
-      view: {
-        kind: "view",
-        id: "boombox.player",
-      },
-    },
-  });
+  registerBoomboxPlacements(workbench);
   workbench.pages.registerPage({
     id: "boombox.home",
     ref: homePage,
@@ -270,6 +249,7 @@ export const createBoomboxWorkbench = () => {
       },
       cardinality: "one",
     },
+    regionSettings: { main: { showHeader: false } },
     slots: [],
   });
   workbench.pages.registerPage({
@@ -295,6 +275,7 @@ export const createBoomboxWorkbench = () => {
       },
       cardinality: "one",
     },
+    regionSettings: { main: { showHeader: false } },
     slots: [],
   });
   workbench.pageLocations.switchProject("storybook-boombox");

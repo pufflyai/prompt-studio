@@ -23,7 +23,10 @@ test("preserves page bottom and headerless menu declarations in host metadata", 
       { id: "tools", region: "bottom" as const, item: { kind: "view" as const, view, presence: "open" as const } },
     ],
     panelMenus: { right: { view, size: { defaultPx: 240 }, collapsible: false, hiddenByDefault: false } },
-    regionSettings: { bottom: { size: { defaultPx: 160 }, showHeader: true, alwaysShowTabs: true } },
+    regionSettings: {
+      main: { showHeader: false },
+      bottom: { size: { defaultPx: 160 }, showHeader: true, alwaysShowTabs: true },
+    },
   };
   const parsed = workbenchExtensionPageRecordSchema.parse(declaration);
   expect(parsed.slots).toEqual(declaration.slots);

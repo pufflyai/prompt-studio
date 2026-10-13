@@ -3,13 +3,5 @@ import type { NavigationTargetPanel } from "../../registries/navigation/navigati
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { prepareWorkbenchNavigation } from "./compound-navigation";
 
-export const openWorkbenchPanel = (
-  core: WorkbenchCore,
-  target: NavigationTargetPanel,
-  region?: WorkbenchPanelRegion,
-) => {
-  const result = prepareWorkbenchNavigation(core, [target]).commit();
-  const active = core.layout.getActivePanel();
-  if (region && active) core.movePanel(active.instanceId, region);
-  return result;
-};
+export const openWorkbenchPanel = (core: WorkbenchCore, target: NavigationTargetPanel, region?: WorkbenchPanelRegion) =>
+  prepareWorkbenchNavigation(core, [{ ...target, destination: region }]).commit();

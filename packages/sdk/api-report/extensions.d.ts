@@ -2710,6 +2710,7 @@ interface PageContribution extends ContributionDefinition<"page"> {
     readonly right?: PanelMenuDeclaration;
   };
   readonly regionSettings?: {
+    readonly main?: Pick<PageRegionSettings, "showHeader">;
     readonly bottom?: PageRegionSettings;
   };
   readonly slots: readonly PageSlot[];

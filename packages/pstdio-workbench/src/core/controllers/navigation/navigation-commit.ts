@@ -1,4 +1,4 @@
-import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import type { WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
@@ -7,13 +7,21 @@ import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 
-export const activateNavigationPlacement = (core: WorkbenchCore, identity: PlacementIdentity) => {
+export const activateNavigationPlacement = (
+  core: WorkbenchCore,
+  identity: PlacementIdentity,
+  destination?: WorkbenchPanelRegion,
+) => {
   const key = placementIdentityKey(identity);
   for (const region of Object.values(core.layout.getLayout().regions)) {
     const tab = region.widgets.find(
       (tab) => tab.placementIdentity && placementIdentityKey(tab.placementIdentity) === key,
     );
     if (tab) {
+      if (destination) {
+        core.movePanel(tab.widgetId, destination);
+        return;
+      }
       revealPanelRegion(core, region.id);
       core.layout.activatePanel(tab.widgetId);
       return;

@@ -36,6 +36,8 @@ const storyIds = [
   "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 storyIds.push(
+  "pstdio-workbench-showcases--boombox",
+  "pstdio-workbench-showcases--kiln",
   "pstdio-workbench-showcases-dashboard--dashboard",
   "pstdio-workbench-showcases-dashboard--interaction-checks",
   "pstdio-workbench-controls-research-agent--editable",

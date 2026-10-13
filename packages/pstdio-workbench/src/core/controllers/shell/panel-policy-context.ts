@@ -66,6 +66,7 @@ export const panelPolicyInput = (input: PolicyContextInput) => {
     settings = { ...host.regionSettings?.[region], ...mode?.regionSettings?.[region] };
     if (region === "bottom") settings = page?.regionSettings?.bottom;
   }
+  if (region === "main") settings = { ...settings, ...page?.regionSettings?.main };
   const tabPanel = isTabPanel(region);
   let provided = !tabPanel || region === "main" || isWorkbenchModePanelAvailable(mode, region as "side" | "secondary");
   if (region === "bottom") provided = pageHasBottom(page);
