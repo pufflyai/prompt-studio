@@ -1,21 +1,26 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
 import { type AttemptReadinessTicket, resolveAttemptReadiness } from "../data/attempt-readiness";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { readTicketReviewRequests } from "../data/review-request-storage";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
+import { readPullRequestEvidence } from "./pull-request-evidence";
 
 type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage">;
 
 interface ReadinessParams {
   base?: string;
+  requireMergedDependencies?: boolean;
   dependencyReview?: "approved" | "submitted";
 }
 
 export async function readImplementationCapacity(ctx: Pick<ReadinessContext, "storage" | "sessions" | "settings">) {
   const attempts = await listAttempts(ctx.storage);
   const active = attempts.filter(
-    (attempt) => attempt.state === "implementing" || attempt.state === "changes_requested",
+    (attempt, index) =>
+      attempts.findIndex((other) => other.implementationSessionId === attempt.implementationSessionId) === index,
   );
   const sessions = await Promise.all(active.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)));
   const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
@@ -40,7 +45,7 @@ export const loadAttemptReadiness = async (
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
-    statusesCollection(ctx.storage).list(),
+    readWorkflowStatuses(ctx),
     ctx.workspaces.getDefault(),
     ctx.workspaces.listProviders(),
     readTicketReviewRequests(ctx.storage),
@@ -71,10 +76,49 @@ export const loadAttemptReadiness = async (
     "--end-of-options",
     `${commandParams.base ?? "HEAD"}^{commit}`,
   ]);
-  const doneStatusIds = new Set(
-    statuses.filter((status) => status.name.trim().toLowerCase() === "done").map((status) => status.id),
+  const doneStatusIds = new Set(usableWorkflowStatuses(statuses).completedStatusIds);
+  const live = await Promise.all(
+    attempts.map(async (attempt) => ({
+      attempt,
+      sessions: [
+        await ctx.sessions.get(attempt.implementationSessionId),
+        ...(await ctx.sessions.listByWorkspace(attempt.workspaceId)),
+      ],
+    })),
   );
+  const activeWorkspaceIds = new Set(
+    live
+      .filter(({ sessions }) =>
+        sessions.some((session) => ["queued", "in_progress", "awaiting_input"].includes(session?.status ?? "")),
+      )
+      .map(({ attempt }) => attempt.workspaceId),
+  );
+  const retiredWorkspaceIds = await readRetiredWorkspaceIds(ctx.storage);
 
+  const mergedTicketIds = new Set<string>();
+  if (commandParams.requireMergedDependencies) {
+    for (const ticket of storedTickets) {
+      const selected = selections.find((selection) => selection.ticketId === ticket.id);
+      const variants = attempts.filter(
+        (attempt) =>
+          attempt.ticketId === ticket.id &&
+          attempt.revisions.length &&
+          !retiredWorkspaceIds.has(attempt.workspaceId) &&
+          (!selected || selected.workspaceId === attempt.workspaceId),
+      );
+      if (variants.length !== 1) continue;
+      const head = variants[0]!.revisions.at(-1)!.headSha;
+      const pr = await readPullRequestEvidence(ctx as CommandContext, ticket, head);
+      const mergedHead =
+        pr && !("error" in pr) && pr.state === "MERGED" && pr.headRefOid === head
+          ? (pr.mergeCommit?.oid ?? head)
+          : head;
+      const contains = await ctx.process.run({
+        command: ["git", "-C", rootPath, "merge-base", "--is-ancestor", mergedHead, mainHeadSha],
+      });
+      if (contains.exitCode === 0) mergedTicketIds.add(ticket.id);
+    }
+  }
   const readiness = await resolveAttemptReadiness({
     requests,
     target: target.id,
@@ -82,7 +126,11 @@ export const loadAttemptReadiness = async (
     attempts,
     selections,
     dependencyReview: commandParams.dependencyReview,
+    requireMergedDependencies: commandParams.requireMergedDependencies,
+    mergedTicketIds,
     doneStatusIds,
+    activeWorkspaceIds,
+    retiredWorkspaceIds,
     mainHeadSha,
     activeImplementationCount: capacity.running,
     maxInProgress: capacity.limit,

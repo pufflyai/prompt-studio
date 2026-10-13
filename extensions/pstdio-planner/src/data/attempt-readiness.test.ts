@@ -3,13 +3,13 @@ import { resolveAttemptReadiness } from "./attempt-readiness";
 import type { AttemptRecord, TicketAttemptSelection } from "./attempt-types";
 
 const attempt = (ticketId: string, workspaceId: string, headSha: string): AttemptRecord => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   workspaceId,
   workspaceShorthand: `${ticketId}_A1`,
   ticketId,
   ticketShorthand: ticketId,
   implementationSessionId: `session-${workspaceId}`,
-  state: "approved",
+
   base: { workspaceId: null, headSha: "main" },
   revisions: [
     {
@@ -123,6 +123,11 @@ describe("attempt readiness", () => {
     ).resolves.toEqual({
       decision: "wait",
       reason: "divergent-dependency-attempts",
+      baseHeadSha: "main",
+      integrationHeads: [
+        { workspaceId: "workspace-1", headSha: "head-1" },
+        { workspaceId: "workspace-2", headSha: "head-2" },
+      ],
       dependencyIds: ["PS-1", "PS-2"],
     });
   });

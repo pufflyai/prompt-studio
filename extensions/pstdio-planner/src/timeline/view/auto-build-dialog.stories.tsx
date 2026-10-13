@@ -7,7 +7,9 @@ const meta: Meta<typeof AutoBuildDialog> = {
   component: AutoBuildDialog,
   args: {
     saving: false,
-    blockOnReview: true,
+    requireMergedDependencies: false,
+    eligibleStatusIds: ["ready"],
+    statuses: DEFAULT_STATUSES,
     prompt: "Choose small independent tickets first.",
     ignore: {
       conjunction: "and",
@@ -42,6 +44,9 @@ export default meta;
 type Story = StoryObj<typeof AutoBuildDialog>;
 export const PromptAndIgnoreFilters: Story = {};
 export const EmptyPrompt: Story = { args: { prompt: "" } };
-export const StackDuringReview: Story = { args: { blockOnReview: false } };
+export const StackDuringReview: Story = { args: { requireMergedDependencies: false } };
 export const Saving: Story = { args: { saving: true } };
 export const Failure: Story = { args: { error: "Agent unavailable" } };
+
+export const NoEligibleStatuses: Story = { args: { eligibleStatusIds: [] } };
+export const MissingStatus: Story = { args: { eligibleStatusIds: ["deleted-status"] } };

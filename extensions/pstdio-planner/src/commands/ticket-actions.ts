@@ -9,6 +9,7 @@ import {
   type TemplateParam,
   workbenchPanels,
 } from "@pstdio/sdk/extensions";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
@@ -140,6 +141,7 @@ export const createAnchoredWorkspace = async (
   commandParams: {
     ticket?: string;
     rowId?: string;
+    newVariant?: boolean;
   },
   base: string,
   beforeDispatch?: () => Promise<void>,
@@ -148,13 +150,26 @@ export const createAnchoredWorkspace = async (
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
   const attemptMode = "worktree";
   await beforeDispatch?.();
-  const workspace = await ctx.workspaces.create({
-    project_id: ctx.projectId,
-    shorthand_base: shorthand,
-    anchors: [anchor],
-    provider_id: "pstdio.worktree",
-    params: { base },
-  });
+  const retired = await readRetiredWorkspaceIds(ctx.storage);
+  const linked = commandParams.newVariant
+    ? []
+    : (await ctx.workspaces.list()).filter(
+        (candidate) =>
+          candidate.provider_id === "pstdio.worktree" &&
+          candidate.provider_state === "ready" &&
+          !retired.has(candidate.id) &&
+          candidate.anchors_json?.some((link) => link.type === "ticket" && link.id === ticket.id),
+      );
+  if (linked.length > 1) throw new Error("Choose the linked workspace to resume before launching implementation.");
+  const workspace =
+    linked[0] ??
+    (await ctx.workspaces.create({
+      project_id: ctx.projectId,
+      shorthand_base: shorthand,
+      anchors: [anchor],
+      provider_id: "pstdio.worktree",
+      params: { base },
+    }));
   await requireReadyWorkspace(ctx, workspace);
 
   return { anchor, mode: attemptMode, ticket, workspace };

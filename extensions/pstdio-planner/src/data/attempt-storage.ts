@@ -7,6 +7,7 @@ import type {
   ReviewThread,
   TicketAttemptSelection,
 } from "./attempt-types";
+import { upgradeAttemptStorage } from "./attempt-upgrade";
 
 export const ATTEMPTS_COLLECTION = "planner-attempts";
 export const ATTEMPT_EVENTS_COLLECTION = "planner-attempt-events";
@@ -36,15 +37,6 @@ export const reviewLaunchClaimsCollection = (storage: ExtensionStorageApi) =>
 const isString = (value: unknown): value is string => typeof value === "string";
 const isNullableString = (value: unknown) => value === null || isString(value);
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
-const attemptStates = new Set([
-  "implementing",
-  "review_ready",
-  "reviewing",
-  "approved",
-  "changes_requested",
-  "blocked",
-  "abandoned",
-]);
 const reviewStates = new Set(["started", "submitted", "disconnected", "failed", "dismissed"]);
 const reviewVerdicts = new Set(["passed", "changes_requested"]);
 
@@ -93,13 +85,12 @@ export const isAttemptRecord = (value: unknown): value is AttemptRecord => {
   if (!value || typeof value !== "object") return false;
   const record = value as Partial<AttemptRecord>;
   return (
-    record.schemaVersion === 1 &&
+    record.schemaVersion === 2 &&
     isString(record.workspaceId) &&
     isString(record.workspaceShorthand) &&
     isString(record.ticketId) &&
     isString(record.ticketShorthand) &&
     isString(record.implementationSessionId) &&
-    attemptStates.has(String(record.state)) &&
     Array.isArray(record.revisions) &&
     record.revisions.every(isRevision) &&
     isRecord(record.base) &&
@@ -114,6 +105,7 @@ export const isAttemptRecord = (value: unknown): value is AttemptRecord => {
 };
 
 export const readAttempt = async (storage: ExtensionStorageApi, workspaceId: string) => {
+  await upgradeAttemptStorage(storage);
   const value = await attemptsCollection(storage).get(workspaceId);
   if (value === undefined) return null;
   if (!isAttemptRecord(value)) throw new Error(`Invalid Planner attempt record for workspace "${workspaceId}"`);
@@ -121,6 +113,7 @@ export const readAttempt = async (storage: ExtensionStorageApi, workspaceId: str
 };
 
 export const listAttempts = async (storage: ExtensionStorageApi) => {
+  await upgradeAttemptStorage(storage);
   const values = await attemptsCollection(storage).list();
   for (const value of values) {
     if (!isAttemptRecord(value)) throw new Error("Invalid Planner attempt record");
@@ -130,8 +123,9 @@ export const listAttempts = async (storage: ExtensionStorageApi) => {
 
 export const putAttempt = async (storage: ExtensionStorageApi, attempt: AttemptRecord) => {
   if (!isAttemptRecord(attempt)) throw new Error("Invalid Planner attempt record");
-  await attemptsCollection(storage).put(attempt.workspaceId, attempt);
-  return attempt;
+  const { state: _deprecatedState, ...variant } = attempt as AttemptRecord & { state?: string };
+  await attemptsCollection(storage).put(variant.workspaceId, variant);
+  return variant;
 };
 
 export const appendAttemptEvent = async (

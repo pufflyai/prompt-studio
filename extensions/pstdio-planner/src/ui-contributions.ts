@@ -82,6 +82,15 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
+  const workflowSettings = defineView({
+    id: "workflow-settings",
+    title: "Planner workflow",
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/workflow-settings-panel.tsx", baseUrl),
+      capabilities: ["commands.execute"],
+    },
+  });
   const requests = defineView({
     id: "ticket-requests",
     title: l10n("requests.view.title", "Review requests"),
@@ -187,7 +196,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings, requests],
+    views: [tickets, editor, files, properties, tagSettings, requests, workflowSettings],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({
@@ -218,6 +227,11 @@ export const createPlannerUi = (baseUrl: string) => {
     ],
     // No section: the host lists Ticket tags in its Project group, next to Statuses.
     settingsPanels: [
+      defineSettingsPanel({
+        id: "workflow-settings",
+        view: workflowSettings.ref,
+        slot: workbenchSlots.projectSettings,
+      }),
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,

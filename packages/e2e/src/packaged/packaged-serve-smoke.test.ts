@@ -402,6 +402,12 @@ test(
         metadata,
       });
       expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings-panel.tsx")),
+      ).toBe(true);
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "skills", "implement-ticket", "SKILL.md"))).toBe(
+        true,
+      );
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

@@ -45,6 +45,7 @@ export interface PlannerAttempt {
   ticketId: string;
   ticketShorthand: string;
   implementationSessionId: string;
+  /** @deprecated Use PlannerVariant and listVariants; ticket progress and session execution own workflow. */
   state: "implementing" | "review_ready" | "reviewing" | "approved" | "changes_requested" | "blocked" | "abandoned";
   revisions: Array<{
     revision: number;
@@ -54,6 +55,8 @@ export interface PlannerAttempt {
   createdAt: string;
   updatedAt: string;
 }
+
+export type PlannerVariant = Omit<PlannerAttempt, "state">;
 
 export interface WorkspaceActivity {
   active: boolean;
@@ -90,6 +93,8 @@ export const planner = {
     { workspaceId: string; expectedRevision?: number },
     { review: { id: string }; session: { id: string } }
   >("run-review"),
+  listVariants: plannerCommand<Record<string, never>, PlannerVariant[]>("list-variants"),
+  /** @deprecated Use listVariants. */
   listAttempts: plannerCommand<Record<string, never>, PlannerAttempt[]>("list-attempts"),
   reconcileAttempt: plannerCommand<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
     "reconcile-attempt",

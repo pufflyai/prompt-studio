@@ -56,12 +56,29 @@ export async function expectPackagedPlannerTimeline(input: {
   const execute = commandRunner(input);
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
+  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, eligibleStatusIds: [] });
+  const statuses = (await execute("ticket-status.read", {})).statuses;
+  const selections = {
+    completedStatusIds: [statuses.find((status: { name: string }) => status.name === "Done").id],
+    blockedStatusIds: [statuses.find((status: { name: string }) => status.name === "Blocked").id],
+    activeStatusIds: [statuses.find((status: { name: string }) => status.name === "In Progress").id],
+    mergeTargetStatusId: statuses.find((status: { name: string }) => status.name === "Done").id,
+  };
+  await execute("workflow-statuses.save", { selections });
+  expect(await execute("workflow-statuses.read", {})).toMatchObject({ selections, missingStatusIds: [] });
+  expect((await execute("implementation-policy", {})).workflow.selections).toEqual(selections);
+  const eligibleStatusIds = [statuses.find((status: { name: string }) => status.name === "Todo").id];
   expect(
-    await execute("auto-build.configure", { enabled: true, prompt: "Choose valid tasks.", blockOnReview: false }),
+    await execute("auto-build.configure", {
+      enabled: true,
+      prompt: "Choose valid tasks.",
+      eligibleStatusIds,
+      scopeTicketIds: [],
+      requireMergedDependencies: false,
+    }),
   ).toMatchObject({
     enabled: true,
-    blockOnReview: false,
+    eligibleStatusIds,
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
   expect(await execute("auto-build.read", {})).toMatchObject({
@@ -74,7 +91,7 @@ export async function expectPackagedPlannerTimeline(input: {
     enabled: false,
   });
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  await expectImplementationStatus(execute);
+  await expectAgentOwnedStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
     content: "# Timeline smoke ticket\n\nShared Planner body",
@@ -144,7 +161,7 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 type Execute = ReturnType<typeof commandRunner>;
 const reviewNeeded = "default-human-requested-true";
 
-async function expectImplementationStatus(execute: Execute) {
+async function expectAgentOwnedStatus(execute: Execute) {
   const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });
   await execute("implement-ticket", {
     id: ticket.id,
@@ -152,11 +169,11 @@ async function expectImplementationStatus(execute: Execute) {
   });
   const plan = await execute("timeline.plan.read", {});
   expect(plan.sections.flatMap((section: { rows: unknown[] }) => section.rows)).toContainEqual(
-    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "In Progress" }) }),
+    expect.objectContaining({ id: ticket.id, status: expect.objectContaining({ name: "Todo" }) }),
   );
   const query = await execute("query-tickets", {});
   expect(query.rows).toContainEqual(
-    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: "in-progress" }) }),
+    expect.objectContaining({ id: ticket.id, attributes: expect.objectContaining({ status: ticket.statusId }) }),
   );
 }
 

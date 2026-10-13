@@ -42,6 +42,13 @@ const templateCommandRefs = {
 export default defineExtension({
   settings: {
     properties: {
+      "workflow.statuses": {
+        type: "object",
+        scope: "project",
+        default: { completedStatusIds: [], blockedStatusIds: [], activeStatusIds: [], mergeTargetStatusId: null },
+        title: "Workflow status selections",
+        description: "Choose statuses in Planner workflow settings. Labels do not define behavior.",
+      },
       "tickets.deleteLinkedWorkspaces": {
         type: "boolean",
         scope: "project",
@@ -59,7 +66,7 @@ export default defineExtension({
         title: l10n("settings.tickets.markDoneOnMerge.title", "Mark done on merge"),
         description: l10n(
           "settings.tickets.markDoneOnMerge.description",
-          "Move a ticket to Done when its workspace branch or linked pull request is merged.",
+          "Move a ticket to the selected status after merge when its workspace branch or linked pull request is merged.",
         ),
       },
 

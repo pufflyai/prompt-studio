@@ -18,11 +18,43 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
         readText: async () =>
           "{{ticket}} {{workspaceId}} {{templateName}} {{additionalContext}} {{reviewId}} {{revision}} {{headSha}}",
       },
-      settings: { get: async () => true, all: async () => ({ "automation.maxInProgress": 2 }) },
       logger: { info: () => {}, warn: () => {}, error: () => {} },
       ...input.overrides,
+      settings: {
+        get: async () => true,
+        all: async () => ({
+          "automation.maxInProgress": 2,
+          "workflow.statuses": {
+            completedStatusIds: ["done"],
+            blockedStatusIds: ["blocked"],
+            activeStatusIds: ["in-progress", "in-review"],
+            mergeTargetStatusId: "done",
+          },
+        }),
+        ...input.overrides?.settings,
+      },
+      sessions: {
+        ...makeContext({ ...input, overrides: {} }).sessions,
+        list: async () => [],
+        listByWorkspace: async () => [],
+        ...input.overrides?.sessions,
+      },
       workspaces: {
         ...makeContext(input).workspaces,
+        list: async () => [],
+        get: async (id) => ({
+          id,
+          root_path: defaultProjectRoot,
+          execution_kind: "local",
+          provider_capabilities_json: {
+            files: "write",
+            diff: true,
+            merge: true,
+            rebase: true,
+            archive: true,
+            delete: true,
+          },
+        }),
         getDefault: async () => ({
           id: "default",
           project_id: projectId,

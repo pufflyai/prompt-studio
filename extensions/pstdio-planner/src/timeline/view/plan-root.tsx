@@ -157,11 +157,15 @@ function PlanContent(props: PlanContentProps) {
         <AutoBuildDialog
           prompt={autoBuild.mode!.prompt}
           ignore={autoBuild.mode!.ignore}
-          blockOnReview={autoBuild.mode!.blockOnReview}
+          requireMergedDependencies={autoBuild.mode!.requireMergedDependencies}
+          eligibleStatusIds={autoBuild.mode!.eligibleStatusIds}
+          statuses={plan.statuses}
           data={queryData}
           saving={autoBuild.saving}
           error={autoBuild.error}
-          onEnable={(prompt, ignore, blockOnReview) => autoBuild.configure(true, prompt, ignore, blockOnReview)}
+          onEnable={(prompt, ignore, requireMergedDependencies, eligibleStatusIds) =>
+            autoBuild.configure(true, prompt, ignore, requireMergedDependencies, eligibleStatusIds)
+          }
           onClose={() => setAutoBuildOpen(false)}
           t={t}
         />

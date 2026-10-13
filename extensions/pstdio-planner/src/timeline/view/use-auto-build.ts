@@ -29,11 +29,23 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  const configure = async (enabled: boolean, prompt?: string, ignore?: ViewFilterGroup, blockOnReview?: boolean) => {
+  const configure = async (
+    enabled: boolean,
+    prompt?: string,
+    ignore?: ViewFilterGroup,
+    requireMergedDependencies?: boolean,
+    eligibleStatusIds?: string[],
+  ) => {
     setSaving(true);
     setError(undefined);
     try {
-      await client.commands["auto-build.configure"]({ enabled, prompt, ignore, blockOnReview });
+      await client.commands["auto-build.configure"]({
+        enabled,
+        prompt,
+        ignore,
+        requireMergedDependencies,
+        eligibleStatusIds,
+      });
       setMode(await readMode(client));
       return true;
     } catch (reason) {

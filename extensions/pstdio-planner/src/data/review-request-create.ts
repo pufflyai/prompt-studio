@@ -1,6 +1,5 @@
 // Create a review request with its linked chat session, reusing the attempt's session when it owns the work.
 import type { CommandContext, ResourceAnchor } from "@pstdio/sdk/extensions";
-import { isCompletedTicket } from "../timeline/model/workflow";
 import { actorFromSource } from "./attempt-actors";
 import { readAttempt } from "./attempt-storage";
 import type { AttemptRecord, AttemptState } from "./attempt-types";
@@ -9,7 +8,7 @@ import { keepOwnedRequest, publishRequestChange } from "./review-request-service
 import { listTicketReviewRequests, readReviewRequest, reviewRequestsCollection } from "./review-request-storage";
 import type { HumanRequestReason, ReviewRequest } from "./review-request-types";
 import { parseRequestBody } from "./review-request-validation";
-import { readTicketStatuses } from "./status-operations";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 export interface CreateReviewRequestInput {
   ticket: string;
@@ -17,10 +16,12 @@ export interface CreateReviewRequestInput {
   instructions: string;
   request: unknown;
   reason?: HumanRequestReason;
+  affectedAction?: "implementation" | "merge";
   workspaceId?: string;
   revision?: number;
   sessionId?: string;
   expectedTicketStatusId?: string;
+  /** @deprecated Supply workspace/session/revision identity instead. */
   expectedAttemptState?: AttemptState;
 }
 
@@ -31,10 +32,10 @@ export const handoffRequest = {
 } as const;
 
 const readExpectedAttempt = async (ctx: CommandContext, input: CreateReviewRequestInput, ticketId: string) => {
-  if (!input.workspaceId || !input.expectedAttemptState) return null;
+  if (!input.workspaceId) return null;
   const attempt = await readAttempt(ctx.storage, input.workspaceId);
-  if (!attempt || attempt.ticketId !== ticketId || attempt.state !== input.expectedAttemptState) {
-    throw new Error("Attempt state changed before the handoff.");
+  if (!attempt || attempt.ticketId !== ticketId) {
+    throw new Error("The workspace does not belong to this ticket.");
   }
   if (input.revision !== undefined && attempt.revisions.at(-1)?.revision !== input.revision) {
     throw new Error("Attempt revision changed before the handoff.");
@@ -89,12 +90,15 @@ const sameHandoff = (request: ReviewRequest, input: CreateReviewRequestInput) =>
   request.context.attemptRevision === (input.revision ?? null) &&
   request.context.relatedSessionId === (input.sessionId ?? null);
 
+const assertIncompleteTicket = async (ctx: CommandContext, statusId: string | null | undefined) => {
+  if (usableWorkflowStatuses(await readWorkflowStatuses(ctx)).completedStatusIds.includes(statusId ?? ""))
+    throw new Error("The ticket is complete.");
+};
+
 export const createReviewRequest = async (ctx: CommandContext, input: CreateReviewRequestInput) => {
   const ticket = await findTicket(ctx.storage, input.ticket);
   if (!ticket) throw new Error(`Unknown ticket "${input.ticket}"`);
-  if (isCompletedTicket(ticket, (await readTicketStatuses(ctx.storage)).statuses)) {
-    throw new Error("The ticket is complete.");
-  }
+  await assertIncompleteTicket(ctx, ticket.statusId);
   if (input.expectedTicketStatusId !== undefined && ticket.statusId !== input.expectedTicketStatusId) {
     throw new Error("Ticket status changed before the handoff.");
   }
@@ -156,6 +160,7 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
     requestedBy: actorFromSource(ctx.source, ctx.invocationId),
     context: {
       reason: input.reason ?? null,
+      ...(input.affectedAction ? { affectedAction: input.affectedAction } : {}),
       workspaceId: input.workspaceId ?? null,
       attemptRevision: input.revision ?? null,
       sessionId,

@@ -7,16 +7,25 @@ import { psTheme } from "@pstdio/ui/theme";
 import { ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { CollectionFilter } from "../../../vendor/collection-filter.js";
+import type { PlannerStatus } from "../../public-command-refs";
+import { StatusChoices } from "../../views/status-choices";
 import type { timelineQueryData } from "./timeline-query";
 
 interface AutoBuildDialogProps {
   prompt: string;
   ignore: ViewFilterGroup;
-  blockOnReview: boolean;
+  requireMergedDependencies: boolean;
+  eligibleStatusIds: string[];
+  statuses: PlannerStatus[];
   data: ReturnType<typeof timelineQueryData>;
   saving: boolean;
   error?: string;
-  onEnable: (prompt: string, ignore: ViewFilterGroup, blockOnReview: boolean) => Promise<boolean>;
+  onEnable: (
+    prompt: string,
+    ignore: ViewFilterGroup,
+    requireMergedDependencies: boolean,
+    eligibleStatusIds: string[],
+  ) => Promise<boolean>;
   onClose: () => void;
   t: (key: string, fallback?: string) => string;
 }
@@ -25,7 +34,9 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
   const {
     prompt: initialPrompt,
     ignore: initialIgnore,
-    blockOnReview: initialBlockOnReview,
+    requireMergedDependencies: initialRequireMerged,
+    eligibleStatusIds: initialEligible,
+    statuses,
     data,
     saving,
     error,
@@ -35,11 +46,13 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
   } = props;
   const [prompt, setPrompt] = useState(initialPrompt);
   const [ignore, setIgnore] = useState(initialIgnore);
-  const [blockOnReview, setBlockOnReview] = useState(initialBlockOnReview);
+  const [requireMergedDependencies, setRequireMerged] = useState(initialRequireMerged);
+  const [eligibleStatusIds, setEligible] = useState(initialEligible);
+  const missing = eligibleStatusIds.some((id) => !statuses.some((status) => status.id === id));
   const button = useRecipe({ recipe: psTheme.getRecipe("button") });
   const categories = buildFilterCategories(data.attributes, data.rows);
   const save = async () => {
-    if (await onEnable(prompt, ignore, blockOnReview)) onClose();
+    if (await onEnable(prompt, ignore, requireMergedDependencies, eligibleStatusIds)) onClose();
   };
   return (
     <Dialog.Root
@@ -79,6 +92,23 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                     <Icon as={ArrowUpRight} boxSize="icon-xs" />
                   </Link>
                 </Stack>
+                <StatusChoices
+                  id="eligible-statuses"
+                  label="Eligible statuses"
+                  description="Choose the statuses Auto Build can use for new work. Assigned work can continue after its status changes."
+                  statuses={statuses}
+                  value={eligibleStatusIds}
+                  multiple
+                  disabled={saving}
+                  onChange={(value) => setEligible(value as string[])}
+                />
+                {!eligibleStatusIds.length || missing ? (
+                  <Text role="alert" color="fg.error">
+                    {missing
+                      ? "Remove or replace missing eligible statuses."
+                      : "Choose at least one eligible status to start."}
+                  </Text>
+                ) : null}
                 <LazyMarkdownEditor
                   autoFocus
                   defaultState={prompt}
@@ -103,11 +133,11 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                 </Stack>
                 <Checkbox
                   size="sm"
-                  checked={blockOnReview}
+                  checked={requireMergedDependencies}
                   disabled={saving}
-                  onCheckedChange={({ checked }) => setBlockOnReview(checked === true)}
+                  onCheckedChange={({ checked }) => setRequireMerged(checked === true)}
                 >
-                  {t("timeline.autoBuild.blockOnReview", "Block on review")}
+                  {t("timeline.autoBuild.requireMerged", "Require merged dependencies")}
                 </Checkbox>
                 {error ? (
                   <Text role="alert" color="fg.error">
@@ -125,7 +155,7 @@ export function AutoBuildDialog(props: AutoBuildDialogProps) {
                 css={button({ variant: "primary", size: "sm" })}
                 onClick={() => void save()}
                 loading={saving}
-                disabled={saving || !prompt.trim()}
+                disabled={saving || !prompt.trim() || !eligibleStatusIds.length || missing}
               >
                 {t("timeline.autoBuild.start", "Auto Build")}
               </Button>

@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.15
+  version: 0.0.16
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
@@ -16,20 +16,24 @@ Always work in a Prompt Studio workspace. Never use `git worktree add` or your a
 - For several tickets in one workspace, create one workspace and link every ticket to it.
 - For one workspace per ticket, create and link a workspace for each ticket.
 
-Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. The Planner derives its ticket status from the attempt and review verdicts; do not set that status directly. In any other workspace, skip step 5, update the ticket status after fixing review findings, and give the user the workspace ID, commit SHA, and report ID.
+Reuse a suitable linked workspace and conversation by default. Create another workspace only for a useful implementation alternative or an explicit request. Workspaces identify variants; they do not own ticket progress. The responsible implementation agent coordinates variant evidence and updates the ticket. Reviewers and variant agents report evidence to it.
+
+Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed variant. In any other workspace, skip revision submission in step 5 and include the workspace ID, commit SHA, and report ID in the handoff.
 
 ## Workflow
 
 1. Identify the ticket. Pass its shorthand, such as `PS-12`, to `--id`. If it is missing or ambiguous, ask the user to confirm it.
-   - For "implement the next ticket", list tickets in the project's ready status with `pst tickets list --status <ready-status>`. Use `pst statuses list` to find the status name.
+   - For "implement the next ticket", list tickets in the project's ready status with `pst tickets list --status <ready-status>`. Use `pst statuses list` and the workflow selections in `implementation-policy` to discover current status IDs and labels.
    - Read the full body with `pst tickets panel --id <shorthand>` before changing code.
    - Read the workflow options with `pst pstdio-planner implementation-policy`. `adversarialReview` and `openPr` are enabled by default and can be toggled in the current project's Planner settings. Explicit user instructions for this task take precedence.
+   - Update the ticket by its discovered status ID when starting, blocking, resuming, handing off, and meeting the actual completion criteria. Use `pst tickets update --id <ticket> --status-id <status-id>`. Labels are presentation; do not assume English names or seeded IDs. An unconfigured optional convenience does not require repeated human requests. Clarify an unclear required project workflow through the existing human request mechanism.
 2. Implement only the ticket's scope. Follow the repository's contributor rules.
 3. Run the required validation, follow the adversarial review step below, and commit the finished change in the managed workspace.
 4. Create the change request report described below.
 5. Keep the `reportId` returned by `pst reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
-   - `pst pstdio-planner submit-change-request --workspace-id <workspace-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-attempt-state implementing`
-   - After requested changes, use `changes_requested` as the expected state.
+   - Read the owned implementation session ID with `pst pstdio-planner list-variants`, then run `pst pstdio-planner submit-revision --workspace-id <workspace-id> --implementation-session-id <implementation-session-id> --head-sha <head-sha> --change-request-report-id <report-id>`.
+   - Later corrections append revisions in the same workspace. Previous verdicts remain on their original commits; do not reopen or dismiss them to unlock submission.
+   - Update the appropriate ticket handoff status. A handoff label does not request another managed reviewer. Done requires the task’s actual delivery or acceptance, including latest-head CI and merge when required.
 6. Follow the completion steps below.
 
 ## When stuck
@@ -45,7 +49,7 @@ pst pstdio-planner request-human --ticket PS-12 \
   --request '{"kind":"decision","questions":[{"id":"behavior","label":"Which behavior is required?","required":true,"input":{"kind":"text"}}]}'
 ```
 
-For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. In a managed attempt, also pass `--workspace-id <workspace-id> --expected-attempt-state implementing`, or `changes_requested` after review. Pass `--session-id <implementation-session-id>` when known so Planner can reuse the linked conversation.
+For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. For managed work, also pass `--workspace-id <workspace-id>`. Set the affected ticket status to its appropriate blocked column before pausing, and update it again before resumed implementation. A merge-only request uses `--affected-action merge`; other unresolved decisions block implementation. Pass `--session-id <implementation-session-id>` when known so Planner can reuse the linked conversation.
 
 Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the requested action or decision, then resume. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
 
@@ -53,7 +57,7 @@ Keep the returned request ID. Stop work that depends on the answer. After the pe
 
 Read `pst pstdio-planner implementation-policy` again after implementation and validation. When `adversarialReview` is enabled, run an adversarial review automatically before the final commit and handoff. The setting controls this step; do not ask for confirmation. When disabled, skip the review unless the user explicitly requested it.
 
-Use an independent reviewer when available. Fix the findings before handoff.
+Use an independent reviewer when available. Fix relevant findings before handoff. This is the normal review step. Do not launch `run-review` again merely to finish a Planner phase; use it only for an explicit additional review task. Review evidence never moves ticket progress.
 
 ## Completion
 
