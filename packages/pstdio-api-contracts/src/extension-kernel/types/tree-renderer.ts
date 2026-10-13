@@ -67,6 +67,8 @@ export interface TreeNode {
   icon?: string;
   iconColor?: string;
   iconTooltip?: string;
+  /** Shown while the pointer rests on the row or the row has keyboard focus. `iconTooltip` covers only the icon. */
+  tooltip?: string;
   resource?: TreeRendererResourceRef;
   target?: TreeNodeTarget;
   /** Visual row variant for non-data rows such as placeholders. */
