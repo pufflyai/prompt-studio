@@ -17,6 +17,8 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Chat tables wrap by default, hide row numbers, and retain the wrapping control.
 // Streaming chunks retain earlier DOM and settle without running animations.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+// Shared Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
@@ -80,6 +82,7 @@ beforeAll(() => {
 
 registerExtensionInstallSmokeTests();
 registerExtensionViewsSmokeTests();
+registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.

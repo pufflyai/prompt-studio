@@ -1,7 +1,7 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { CollectionViewTabs } from "./collection-view-tabs";
 import { EMPTY_VIEW_FILTER } from "./collection-view-types";
 
@@ -41,6 +41,63 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+const ReorderableTabs = () => {
+  const [savedViews, setSavedViews] = useState(views.slice(0, 3));
+  const [activeViewId, setActiveViewId] = useState("0");
+  const source = {
+    views: savedViews,
+    defaultViewId: "0",
+    onCreateView: async () => savedViews[0]!,
+    onUpdateView: async () => undefined,
+    onDeleteView: async () => undefined,
+    onSetDefaultView: async () => undefined,
+    onReorderViews: async (ids: string[]) => setSavedViews(ids.map((id) => savedViews.find((view) => view.id === id)!)),
+  };
+  return (
+    <HStack>
+      <CollectionViewTabs
+        views={savedViews}
+        viewsSource={source}
+        activeViewId={activeViewId}
+        dirty
+        busy={false}
+        state={savedViews[0]!}
+        onActivate={(view) => setActiveViewId(view.id)}
+        run={(action) => void action()}
+        createView={async () => undefined}
+      />
+    </HStack>
+  );
+};
+
+export const ReorderViews: Story = {
+  render: () => <ReorderableTabs />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const selected = canvas.getByRole("tab", { name: /^Team view 1/ });
+    selected.focus();
+    await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
+    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Team view 2",
+      "Team view 1",
+      "Team view 3",
+    ]);
+    await expect(selected).toHaveAttribute("aria-selected", "true");
+    await expect(selected).toHaveFocus();
+    await expect(canvas.getByLabelText("Unsaved view changes")).toBeVisible();
+    await userEvent.keyboard("{Alt>}{ArrowLeft}{/Alt}");
+    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Team view 1",
+      "Team view 2",
+      "Team view 3",
+    ]);
+    await userEvent.keyboard("{ArrowRight}");
+    await waitFor(() =>
+      expect(canvas.getByRole("tab", { name: /^Team view 2/ })).toHaveAttribute("aria-selected", "true"),
+    );
+  },
+};
+
 export const ManyViews: Story = {
   render: () => <CrowdedTabs />,
   play: async ({ canvasElement }) => {
@@ -52,7 +109,7 @@ export const ManyViews: Story = {
     const first = canvas.getByRole("tab", { name: "Team view 1", exact: true });
     first.focus();
     await userEvent.keyboard("{End}");
-    await expect(canvas.getByTestId("active-view")).toHaveTextContent("17");
+    await waitFor(() => expect(canvas.getByTestId("active-view")).toHaveTextContent("17"));
     const last = canvas.getByRole("tab", { name: "Team view 18", exact: true }).getBoundingClientRect();
     expect(last.right).toBeLessThanOrEqual(viewport!.getBoundingClientRect().right + 1);
     await expect(canvas.getByRole("button", { name: "Add view" })).toBeVisible();

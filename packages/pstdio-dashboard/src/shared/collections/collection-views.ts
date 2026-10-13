@@ -32,6 +32,12 @@ export const createSharedCollectionViews = <TSettings>(
     `/v1/projects/${encodeURIComponent(projectId)}/board-views/${encodeURIComponent(id)}`;
   let cached: CollectionViewsSource<TSettings> | undefined;
   let version = -1;
+  let pendingOrder: string[] | undefined;
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    version = -1;
+    for (const listener of listeners) listener();
+  };
   const matches = (row: Record<string, unknown>) =>
     row.extension_instance_id === instanceId && row.board_id === localId;
   const actions: Omit<CollectionViewsSource<TSettings>, "views" | "defaultViewId"> = {
@@ -46,6 +52,20 @@ export const createSharedCollectionViews = <TSettings>(
     },
     onSetDefaultView: async (viewId) => {
       await apiRequest(`${path}/default`, { method: "PUT", body: { viewId } });
+    },
+    onReorderViews: async (viewIds) => {
+      const order = [...viewIds];
+      pendingOrder = order;
+      notify();
+      try {
+        await apiRequest(`${path}/order`, { method: "PUT", body: { viewIds } });
+      } catch (error) {
+        if (pendingOrder === order) {
+          pendingOrder = undefined;
+          notify();
+        }
+        throw error;
+      }
     },
   };
   return {
@@ -62,6 +82,17 @@ export const createSharedCollectionViews = <TSettings>(
             a.id.localeCompare(b.id),
         );
       if (!rows.length) return undefined;
+      // Keep the intended order over partial sync events until the stream catches up.
+      // Read view content from sync throughout, so renames and edits remain current.
+      if (pendingOrder) {
+        const positions = new Map(pendingOrder.map((id, index) => [id, index]));
+        const membershipChanged = rows.length !== positions.size || rows.some((row) => !positions.has(row.id));
+        const synced = rows.every((row) => Number(row.sort_order) === positions.get(row.id));
+        // A new set of views supersedes this move. Matching ID order alone is not
+        // enough to finish: old positions can still tie during a partial update.
+        if (membershipChanged || synced) pendingOrder = undefined;
+        else rows.sort((a, b) => positions.get(a.id)! - positions.get(b.id)!);
+      }
       const views = rows.map((row) => ({
         id: row.id,
         title: String(row.title),
@@ -77,6 +108,7 @@ export const createSharedCollectionViews = <TSettings>(
       return cached;
     },
     subscribe: (listener) => {
+      listeners.add(listener);
       const unsubscribe = subscribeCollections((change) => {
         if (!change || change.table === "board_views" || change.table === "board_default_views") listener();
       });
@@ -91,6 +123,7 @@ export const createSharedCollectionViews = <TSettings>(
       const stopReset = subscribeToExtensionEventReset(refresh);
       refresh();
       return () => {
+        listeners.delete(listener);
         stopEvents();
         stopReset();
         controller.abort();
