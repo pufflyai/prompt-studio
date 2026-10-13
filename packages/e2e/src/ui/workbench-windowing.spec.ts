@@ -14,6 +14,12 @@ const storyIds = [
   "boombox",
   "kiln",
   "page-surface",
+  "page-side-ownership",
+  "undeclared-page-panels",
+  "ticket-panel-menu",
+  "page-panel-geometry",
+  "page-panels-left-top",
+  "narrow-page-side",
   "page-surface-webview",
   "owner-transfer",
   "files-transfer",
@@ -43,6 +49,29 @@ storyIds.push(
   "pstdio-workbench-controls-research-agent--editable",
   "pstdio-workbench-controls-research-agent--read-only",
 );
+
+const exercisePageSideDrop = async (page: import("@playwright/test").Page) => {
+  const side = page.locator('[data-workbench-panel="side"]');
+  const aside = page.locator('[data-workbench-panel="aside"]');
+  const tab = side.getByRole("tab", { name: /^Session 2/ });
+  const draft = side.getByRole("textbox", { name: "Session draft" });
+  await draft.fill("Keep this draft in Workspace 1");
+  const mount = await side.getByLabel("Session mount").textContent();
+  const source = (await tab.boundingBox())!;
+  const target = (await aside.boundingBox())!;
+  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
+  await expect(aside.locator("[data-workbench-tab-drop][data-drop-active]")).toBeVisible();
+  await page.mouse.up();
+  await expect(aside.getByRole("tab", { name: /^Session 2/ })).toBeVisible();
+  await expect(aside.getByRole("textbox", { name: "Session draft" })).toHaveValue("Keep this draft in Workspace 1");
+  await expect(aside.getByLabel("Session mount").filter({ visible: true })).toHaveText(mount!);
+  await page.getByRole("button", { name: "Workspace 2", exact: true }).click();
+  await expect(aside).not.toBeVisible();
+  await page.getByRole("button", { name: "Workspace 1", exact: true }).click();
+  await expect(aside.getByRole("tab", { name: /^Session 2/ })).toBeVisible();
+};
 
 test.describe("Workbench windowing stories", () => {
   let baseUrl = "";
@@ -84,7 +113,12 @@ test.describe("Workbench windowing stories", () => {
       });
       expect(outcome.errors).toEqual([]);
       expect(outcome.result).toMatchObject({ storyId, status: "success" });
-      if (storyId.endsWith("--foreign-context") || storyId.endsWith("--page-availability")) {
+      if (storyId.endsWith("--page-side-ownership")) await exercisePageSideDrop(page);
+      if (
+        /--(?:foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page)/.test(
+          storyId,
+        )
+      ) {
         await test.info().attach("Page context", { body: await page.screenshot(), contentType: "image/png" });
       }
       if (storyId.endsWith("--foreign-context")) {

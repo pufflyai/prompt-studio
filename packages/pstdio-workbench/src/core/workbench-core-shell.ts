@@ -32,7 +32,7 @@ export const createCoreShell = (
     getOwnerKey: (region) => {
       const state = resolve()?.pages.store.getState();
       const modeId = modes.getActiveModeId();
-      if (region !== "bottom" && modeId) return modeLayoutScope(state?.projectId, modeId);
+      if (region !== "bottom" && region !== "aside" && modeId) return modeLayoutScope(state?.projectId, modeId);
       return layout.getPersistenceScope() ?? "unscoped";
     },
     getDefaultTarget: (region, presentation) => {

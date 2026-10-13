@@ -1,6 +1,7 @@
 import type { Localizable } from "../l10n";
 import type { ExtensionPanelRegion, RegionSize } from "./composition";
 import type { ContributionDefinition, ModeRef, PageRef, PlacementRef, ViewRef } from "./contribution-identity";
+import type { ModeRegionSettings } from "./contributions";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { ResourceConstraint } from "./resource-binding";
 import type { ResourceRef } from "./resources";
@@ -9,7 +10,7 @@ import type { PlacementItem, PlacementPresentation } from "./views";
 export type PageSlotRole = "primary" | "auxiliary";
 export type PageSlotCardinality = "one" | "many";
 export type PageOpenIntent = "preview" | "pin";
-export type PageSlotRegion = ExtensionPanelRegion | "bottom";
+export type PageSlotRegion = ExtensionPanelRegion | "bottom" | "aside";
 
 /** A headerless menu bound to the page resource, independent of its selected tab. */
 export interface PanelMenuDeclaration {
@@ -19,12 +20,7 @@ export interface PanelMenuDeclaration {
   readonly hiddenByDefault?: boolean;
 }
 
-export interface PageRegionSettings {
-  readonly showHeader?: boolean;
-  readonly size?: RegionSize;
-  readonly collapsible?: boolean;
-  readonly alwaysShowTabs?: boolean;
-}
+export interface PageRegionSettings extends ModeRegionSettings {}
 
 export interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
@@ -42,7 +38,7 @@ export type PageMain = PageMainView | PageMainPanels;
 /** A page-owned panel. Main presentation and routed context belong to the page. */
 export interface PageSlot extends PlacementPresentation {
   readonly id: string;
-  /** @deprecated For Side and Secondary, use mode placements. Page Main and bottom remain supported. */
+  /** @deprecated For Side and Secondary, use mode placements. Page Main, aside, and bottom remain supported. */
   readonly region: PageSlotRegion;
   readonly order?: number;
   readonly item: PlacementItem;
@@ -86,6 +82,7 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly regionSettings?: {
     readonly main?: Pick<PageRegionSettings, "showHeader">;
     readonly bottom?: PageRegionSettings;
+    readonly aside?: PageRegionSettings;
   };
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;

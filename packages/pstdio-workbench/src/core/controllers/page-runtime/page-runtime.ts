@@ -65,8 +65,8 @@ const restoreRuntimeGeometry = (
   const geometry =
     state.projectId && state.activePageId ? input.loadPageGeometry?.(state.projectId, state.activePageId) : undefined;
   const page = state.activePageId ? state.pages[state.activePageId] : undefined;
-  return clampPanelSizes(restorePageGeometry(layout, geometry), (region) =>
-    region === "bottom" ? page?.regionSettings?.bottom : input.layout.getRegionSettings(region),
+  return clampPanelSizes(restorePageGeometry(layout, geometry, page?.regionSettings ?? {}), (region) =>
+    region === "bottom" || region === "aside" ? page?.regionSettings?.[region] : input.layout.getRegionSettings(region),
   );
 };
 

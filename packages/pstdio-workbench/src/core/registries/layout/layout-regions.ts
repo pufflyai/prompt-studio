@@ -6,6 +6,10 @@ export const workbenchRegions = [
   "main-left-menu",
   "main",
   "main-right-menu",
+  "aside-header",
+  "aside-left-menu",
+  "aside",
+  "aside-right-menu",
   "bottom-header",
   "bottom-left-menu",
   "bottom",
@@ -28,6 +32,7 @@ export const workbenchModePanelRegions = ["main", "secondary", "side"] as const 
 export const workbenchPanelRegions = [
   ...workbenchModePanelRegions,
   "bottom",
+  "aside",
 ] as const satisfies readonly WorkbenchRegion[];
 
 export type WorkbenchPanelRegion = (typeof workbenchPanelRegions)[number];
@@ -38,6 +43,7 @@ export const workbenchPanelMenuRegions = {
   main: { left: "main-left-menu", right: "main-right-menu" },
   secondary: { left: "secondary-left-menu", right: "secondary-right-menu" },
   side: { left: "side-left-menu", right: "side-right-menu" },
+  aside: { left: "aside-left-menu", right: "aside-right-menu" },
   bottom: { left: "bottom-left-menu", right: "bottom-right-menu" },
 } as const satisfies Record<WorkbenchPanelRegion, Record<WorkbenchPanelMenuSide, WorkbenchRegion>>;
 
@@ -52,6 +58,8 @@ const workbenchPanelByMenuRegion = {
   "secondary-right-menu": "secondary",
   "side-left-menu": "side",
   "side-right-menu": "side",
+  "aside-left-menu": "aside",
+  "aside-right-menu": "aside",
   "bottom-left-menu": "bottom",
   "bottom-right-menu": "bottom",
 } as const satisfies Record<WorkbenchPanelMenuRegion, WorkbenchPanelRegion>;

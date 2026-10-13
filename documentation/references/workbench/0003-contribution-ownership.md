@@ -23,7 +23,7 @@ type PlacementIdentity =
   | { kind: "shell"; placementId: string; instanceKey: string };
 ```
 
-Each tab has one layout owner. Main and page bottom belong to the page instance. Side and Secondary belong to the mode within the project. Dropping a tab across that edge transfers it to the destination owner in the same layout change. Moving between Main and bottom, or between Side and Secondary, changes only its position.
+Each tab has one layout owner. Main, page side (`aside`), and page bottom belong to the page instance. Side and Secondary belong to the mode within the project. Dropping a tab across that edge transfers it to the destination owner in the same layout change. Moving between Main, aside, and bottom, or between Side and Secondary, changes only its position.
 
 Page-owned subpanels follow their page's Location binding. A mode-owned tab keeps its own resource without acquiring a page binding when the user visits another page. Primary-resource cleanup only removes unowned host placements; page, mode, and shell owners control their own membership. Explicit contribution eligibility rules still apply.
 
@@ -35,13 +35,13 @@ Resource identity forms the instance key for a resource-bound slot. The same res
 
 ## Page surfaces
 
-Main contains the page's breadcrumb row, tab and action row, optional left and right menus, and a separate bottom tab region. The mode's Secondary remains outside Main.
+Main contains the page breadcrumb and a page frame. Below the breadcrumb, the page side (`aside`) runs the full height beside the editor and page bottom. The page bottom spans only the editor column. The mode's Side and Secondary surround the whole page. Every page has both page panels, even without slots or region settings. Empty automatic panels start closed; an explicitly opened empty panel keeps its drop surface.
 
-Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
+Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus sit beside the editor tab row and span the full editor height. They have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
 
-Page bottom slots use normal page placement identities. Moving a tab between Main and bottom preserves its view and resource. Bottom is a destination only while the current page declares it through a slot or `regionSettings.bottom`.
+Page side and bottom slots use normal page placement identities. Moving a tab among Main, aside, and bottom preserves its view and resource. Both page panels accept tabs unless their `acceptsTabs` policy forbids it. The legacy page slot `side` still places its initial view in the mode Side.
 
-The Page panels menu lives in Main's tab row. It shows or hides collapsible page menus and opens tools in the page bottom. It has no page-bottom visibility item.
+The Page panels menu lives in Main's tab row. It shows or hides collapsible page menus, opens page-bottom tools, and shows or hides both page panels when their policy permits it. PS-701 moves these controls to the breadcrumb row.
 
 ## Saved layouts
 
@@ -49,11 +49,11 @@ The workbench owns persistence scope selection. Hosts supply the storage adapter
 
 | Saved data | Owner key |
 | --- | --- |
-| Page sizes | Project and page type |
+| Page sizes and panel edges | Project and page type |
 | Page tabs, selection, and retention | Project, page, and routed resource; an unbound or many-resource page has one instance |
 | Side and Secondary tabs, selection, sizes, visibility, and Side presentation | Project and mode |
 
-Saved owner records are authoritative. Declarations seed new owners. Returning to a saved page does not recreate a tab that moved out. Mode tabs and their bindings remain available across ordinary page navigation. Page bottom and mode Secondary save and restore independently.
+Saved owner records are authoritative. Declarations seed new owners. Returning to a saved page does not recreate a tab that moved out. Mode tabs and their bindings remain available across ordinary page navigation. Page side, page bottom, and mode Secondary save and restore independently.
 
 Mode snapshots store the tabs that still belong to the mode. After a mode tool moves into a page, switching resources restores the remaining mode tabs, including an empty set. It does not replay the mode's default declarations. Returning to the destination page restores the moved tool there. New mode tools can be opened explicitly into an existing saved mode layout.
 

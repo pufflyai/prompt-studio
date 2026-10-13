@@ -185124,7 +185124,7 @@
       "id": "LgbPM",
       "x": 46942,
       "y": 0,
-      "name": "PS-608 · Page surface inside Main",
+      "name": "PS-700 · Page panels · Right and bottom",
       "theme": {
         "mode": "dark"
       },
@@ -185279,266 +185279,354 @@
             },
             {
               "type": "frame",
-              "id": "MzXuF",
-              "name": "Main tab and action row",
-              "width": "fill_container",
-              "height": 40,
-              "gap": 8,
-              "padding": [
-                0,
-                8
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "vlWiT",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Files",
-                  "theme": {
-                    "tab": "active",
-                    "size": "sm"
-                  },
-                  "height": 24,
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "files"
-                    },
-                    "k9XlqC": {
-                      "content": "Files"
-                    }
-                  }
-                },
-                {
-                  "id": "DYcBd",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Changes",
-                  "theme": {
-                    "tab": "default",
-                    "size": "sm"
-                  },
-                  "height": 24,
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "git-compare"
-                    },
-                    "k9XlqC": {
-                      "content": "Changes"
-                    }
-                  }
-                },
-                {
-                  "id": "mfOYj",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Add tab",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "plus",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "LJye1",
-                  "name": "Tab spacer",
-                  "width": "fill_container",
-                  "height": 1
-                },
-                {
-                  "id": "F78JPs",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Page panels",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panels-top-left",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "gxzmI",
-              "name": "Page body below both headers",
+              "id": "B1Hgd",
+              "name": "Page panels below breadcrumb",
               "width": "fill_container",
               "height": "fill_container",
               "gap": 1,
               "children": [
                 {
                   "type": "frame",
-                  "id": "oc0WK",
-                  "name": "Left panel menu",
-                  "width": 200,
-                  "height": "fill_container",
-                  "fill": "$ds-bg-subtle",
-                  "layout": "vertical",
-                  "padding": 16,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "uIQDg",
-                      "name": "Left panel menu content",
-                      "fill": "$ds-fg",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container",
-                      "content": "Workspace tools\n\nWorkspace 1",
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "O1L9e",
-                  "name": "Page content",
+                  "id": "hMg1O",
+                  "name": "Editor and page bottom",
                   "width": "fill_container",
                   "height": "fill_container",
-                  "fill": "$ds-panel",
                   "layout": "vertical",
-                  "padding": 16,
+                  "gap": 1,
                   "children": [
                     {
-                      "type": "text",
-                      "id": "lXr07",
-                      "name": "Page content content",
-                      "fill": "$ds-fg",
-                      "textGrowth": "fixed-width",
+                      "type": "frame",
+                      "id": "gxzmI",
+                      "name": "Editor with full-height menus",
                       "width": "fill_container",
-                      "content": "Files\n\nWorkspace 1\n\nEditable draft",
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "XBG91",
-                  "name": "Right panel menu",
-                  "width": 240,
-                  "height": "fill_container",
-                  "fill": "$ds-bg-subtle",
-                  "layout": "vertical",
-                  "padding": 16,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "j65rm",
-                      "name": "Right panel menu content",
-                      "fill": "$ds-fg",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container",
-                      "content": "Inspector\n\nWorkspace 1",
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "Qbg3L",
-              "name": "Page bottom",
-              "width": "fill_container",
-              "height": 160,
-              "fill": "$ds-bg-subtle",
-              "cornerRadius": 8,
-              "layout": "vertical",
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "n4mOY",
-                  "name": "Page bottom header",
-                  "width": "fill_container",
-                  "height": 40,
-                  "gap": 8,
-                  "padding": [
-                    0,
-                    8
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "id": "yqEym",
-                      "type": "ref",
-                      "ref": "TwCXd",
-                      "name": "Terminal tab",
-                      "height": 24,
-                      "theme": {
-                        "tab": "active",
-                        "size": "sm"
-                      },
-                      "descendants": {
-                        "w7NkD3": {
-                          "icon": "terminal"
+                      "height": "fill_container",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "oc0WK",
+                          "name": "Left panel menu",
+                          "width": 200,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "layout": "vertical",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uIQDg",
+                              "name": "Left panel menu content",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Workspace tools\n\nWorkspace 1",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
-                        "k9XlqC": {
-                          "content": "Terminal"
+                        {
+                          "type": "frame",
+                          "id": "wCBpP",
+                          "name": "Editor with tab row",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "MzXuF",
+                              "name": "Main tab and action row",
+                              "width": "fill_container",
+                              "height": 40,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "vlWiT",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Files",
+                                  "theme": {
+                                    "tab": "active",
+                                    "size": "sm"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "files"
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Files"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "DYcBd",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Changes",
+                                  "theme": {
+                                    "tab": "default",
+                                    "size": "sm"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "git-compare"
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Changes"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "mfOYj",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Add tab",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "plus",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "LJye1",
+                                  "name": "Tab spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "id": "F78JPs",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Page panels",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "panels-top-left",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "O1L9e",
+                              "name": "Page content",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-panel",
+                              "layout": "vertical",
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lXr07",
+                                  "name": "Page content content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Files\n\nWorkspace 1\n\nEditable draft",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
                         },
-                        "g1LJJh": {
-                          "enabled": true
+                        {
+                          "type": "frame",
+                          "id": "XBG91",
+                          "name": "Right panel menu",
+                          "width": 240,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "layout": "vertical",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "j65rm",
+                              "name": "Right panel menu content",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Inspector\n\nWorkspace 1",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
-                      }
+                      ]
                     },
                     {
-                      "id": "vpffM",
-                      "type": "ref",
-                      "ref": "nvvgg",
-                      "name": "Add page tool",
-                      "width": 24,
-                      "height": 24,
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      },
-                      "descendants": {
-                        "k7mgm": {
-                          "icon": "plus",
-                          "width": 12,
-                          "height": 12
+                      "type": "frame",
+                      "id": "Qbg3L",
+                      "name": "Page bottom",
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "n4mOY",
+                          "name": "Page bottom header",
+                          "width": "fill_container",
+                          "height": 40,
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "yqEym",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Terminal tab",
+                              "height": 24,
+                              "theme": {
+                                "tab": "active",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "terminal"
+                                },
+                                "k9XlqC": {
+                                  "content": "Terminal"
+                                },
+                                "g1LJJh": {
+                                  "enabled": true
+                                }
+                              }
+                            },
+                            {
+                              "id": "vpffM",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add page tool",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "kYNuZ",
+                          "name": "Page bottom body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "o6c97K",
+                              "name": "Page bottom content",
+                              "fill": "$ds-fg",
+                              "content": "Workspace 1 terminal",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
-                      }
+                      ]
                     }
                   ]
                 },
                 {
                   "type": "frame",
-                  "id": "kYNuZ",
-                  "name": "Page bottom body",
-                  "width": "fill_container",
+                  "id": "Uav69",
+                  "name": "Page side · 280px · minimum 160px",
+                  "width": 280,
                   "height": "fill_container",
-                  "padding": 16,
+                  "fill": "$ds-bg-subtle",
+                  "layout": "vertical",
                   "children": [
                     {
+                      "type": "frame",
+                      "id": "IpPdC",
+                      "name": "Page side header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "OuGXr",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Session tab",
+                          "height": 24,
+                          "theme": {
+                            "tab": "active",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "messages-square"
+                            },
+                            "k9XlqC": {
+                              "content": "Session"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
                       "type": "text",
-                      "id": "o6c97K",
-                      "name": "Page bottom content",
+                      "id": "abo3c",
+                      "name": "Page side content",
                       "fill": "$ds-fg",
-                      "content": "Workspace 1 terminal",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Workspace 1 session",
                       "fontFamily": "$font-body",
-                      "fontSize": 13,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -185623,7 +185711,7 @@
       "id": "RcMTo",
       "x": 48462,
       "y": 0,
-      "name": "PS-608 · Page surface · Light",
+      "name": "PS-700 · Page panels · Light",
       "theme": {
         "mode": "light"
       },
@@ -185778,266 +185866,354 @@
             },
             {
               "type": "frame",
-              "id": "MgpDB",
-              "name": "Main tab and action row",
-              "width": "fill_container",
-              "height": 40,
-              "gap": 8,
-              "padding": [
-                0,
-                8
-              ],
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "gbLuJ",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Files",
-                  "theme": {
-                    "tab": "active",
-                    "size": "sm"
-                  },
-                  "height": 24,
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "files"
-                    },
-                    "k9XlqC": {
-                      "content": "Files"
-                    }
-                  }
-                },
-                {
-                  "id": "bo3XM",
-                  "type": "ref",
-                  "ref": "TwCXd",
-                  "name": "Changes",
-                  "theme": {
-                    "tab": "default",
-                    "size": "sm"
-                  },
-                  "height": 24,
-                  "descendants": {
-                    "w7NkD3": {
-                      "icon": "git-compare"
-                    },
-                    "k9XlqC": {
-                      "content": "Changes"
-                    }
-                  }
-                },
-                {
-                  "id": "SjBHz",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Add tab",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "plus",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "R9vAVd",
-                  "name": "Tab spacer",
-                  "width": "fill_container",
-                  "height": 1
-                },
-                {
-                  "id": "NqeaR",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Page panels",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panels-top-left",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "dMTgw",
-              "name": "Page body below both headers",
+              "id": "QqoES",
+              "name": "Page panels below breadcrumb",
               "width": "fill_container",
               "height": "fill_container",
               "gap": 1,
               "children": [
                 {
                   "type": "frame",
-                  "id": "vZ0Gh",
-                  "name": "Left panel menu",
-                  "width": 200,
-                  "height": "fill_container",
-                  "fill": "$ds-bg-subtle",
-                  "layout": "vertical",
-                  "padding": 16,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "e9a7xJ",
-                      "name": "Left panel menu content",
-                      "fill": "$ds-fg",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container",
-                      "content": "Workspace tools\n\nWorkspace 1",
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "I4OfW9",
-                  "name": "Page content",
+                  "id": "SU4ol",
+                  "name": "Editor and page bottom",
                   "width": "fill_container",
                   "height": "fill_container",
-                  "fill": "$ds-panel",
                   "layout": "vertical",
-                  "padding": 16,
+                  "gap": 1,
                   "children": [
                     {
-                      "type": "text",
-                      "id": "CakA4",
-                      "name": "Page content content",
-                      "fill": "$ds-fg",
-                      "textGrowth": "fixed-width",
+                      "type": "frame",
+                      "id": "dMTgw",
+                      "name": "Editor with full-height menus",
                       "width": "fill_container",
-                      "content": "Files\n\nWorkspace 1\n\nEditable draft",
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "En3S0",
-                  "name": "Right panel menu",
-                  "width": 240,
-                  "height": "fill_container",
-                  "fill": "$ds-bg-subtle",
-                  "layout": "vertical",
-                  "padding": 16,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "aQT25",
-                      "name": "Right panel menu content",
-                      "fill": "$ds-fg",
-                      "textGrowth": "fixed-width",
-                      "width": "fill_container",
-                      "content": "Inspector\n\nWorkspace 1",
-                      "fontFamily": "$font-body",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "cBsOb",
-              "name": "Page bottom",
-              "width": "fill_container",
-              "height": 160,
-              "fill": "$ds-bg-subtle",
-              "cornerRadius": 8,
-              "layout": "vertical",
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "MMxfN",
-                  "name": "Page bottom header",
-                  "width": "fill_container",
-                  "height": 40,
-                  "gap": 8,
-                  "padding": [
-                    0,
-                    8
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "id": "NOK9L",
-                      "type": "ref",
-                      "ref": "TwCXd",
-                      "name": "Terminal tab",
-                      "height": 24,
-                      "theme": {
-                        "tab": "active",
-                        "size": "sm"
-                      },
-                      "descendants": {
-                        "w7NkD3": {
-                          "icon": "terminal"
+                      "height": "fill_container",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vZ0Gh",
+                          "name": "Left panel menu",
+                          "width": 200,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "layout": "vertical",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "e9a7xJ",
+                              "name": "Left panel menu content",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Workspace tools\n\nWorkspace 1",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
-                        "k9XlqC": {
-                          "content": "Terminal"
+                        {
+                          "type": "frame",
+                          "id": "S8hCXA",
+                          "name": "Editor with tab row",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "MgpDB",
+                              "name": "Main tab and action row",
+                              "width": "fill_container",
+                              "height": 40,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "gbLuJ",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Files",
+                                  "theme": {
+                                    "tab": "active",
+                                    "size": "sm"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "files"
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Files"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "bo3XM",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Changes",
+                                  "theme": {
+                                    "tab": "default",
+                                    "size": "sm"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "git-compare"
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Changes"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "SjBHz",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Add tab",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "plus",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "R9vAVd",
+                                  "name": "Tab spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "id": "NqeaR",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Page panels",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "panels-top-left",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "I4OfW9",
+                              "name": "Page content",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-panel",
+                              "layout": "vertical",
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "CakA4",
+                                  "name": "Page content content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Files\n\nWorkspace 1\n\nEditable draft",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
                         },
-                        "g1LJJh": {
-                          "enabled": true
+                        {
+                          "type": "frame",
+                          "id": "En3S0",
+                          "name": "Right panel menu",
+                          "width": 240,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "layout": "vertical",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "aQT25",
+                              "name": "Right panel menu content",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Inspector\n\nWorkspace 1",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
-                      }
+                      ]
                     },
                     {
-                      "id": "ZuomZ",
-                      "type": "ref",
-                      "ref": "nvvgg",
-                      "name": "Add page tool",
-                      "width": 24,
-                      "height": 24,
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      },
-                      "descendants": {
-                        "k7mgm": {
-                          "icon": "plus",
-                          "width": 12,
-                          "height": 12
+                      "type": "frame",
+                      "id": "cBsOb",
+                      "name": "Page bottom",
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MMxfN",
+                          "name": "Page bottom header",
+                          "width": "fill_container",
+                          "height": 40,
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "NOK9L",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Terminal tab",
+                              "height": 24,
+                              "theme": {
+                                "tab": "active",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "terminal"
+                                },
+                                "k9XlqC": {
+                                  "content": "Terminal"
+                                },
+                                "g1LJJh": {
+                                  "enabled": true
+                                }
+                              }
+                            },
+                            {
+                              "id": "ZuomZ",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add page tool",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "O2znr",
+                          "name": "Page bottom body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "lHjwh",
+                              "name": "Page bottom content",
+                              "fill": "$ds-fg",
+                              "content": "Workspace 1 terminal",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
-                      }
+                      ]
                     }
                   ]
                 },
                 {
                   "type": "frame",
-                  "id": "O2znr",
-                  "name": "Page bottom body",
-                  "width": "fill_container",
+                  "id": "FjL9a",
+                  "name": "Page side · 280px · minimum 160px",
+                  "width": 280,
                   "height": "fill_container",
-                  "padding": 16,
+                  "fill": "$ds-bg-subtle",
+                  "layout": "vertical",
                   "children": [
                     {
+                      "type": "frame",
+                      "id": "PccSd",
+                      "name": "Page side header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "RNXfs",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Session tab",
+                          "height": 24,
+                          "theme": {
+                            "tab": "active",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "messages-square"
+                            },
+                            "k9XlqC": {
+                              "content": "Session"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
                       "type": "text",
-                      "id": "lHjwh",
-                      "name": "Page bottom content",
+                      "id": "kzHPZ",
+                      "name": "Page side content",
                       "fill": "$ds-fg",
-                      "content": "Workspace 1 terminal",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Workspace 1 session",
                       "fontFamily": "$font-body",
-                      "fontSize": 13,
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     }
                   ]
@@ -186479,6 +186655,593 @@
                       "fontWeight": "normal"
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "x67K1",
+      "x": 51162,
+      "y": 0,
+      "name": "PS-700 · Page panels · Left and top",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1440,
+      "height": 960,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "SeR8t",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Page panels · Workspace 1",
+          "fontFamily": "$font-heading",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "kA0vO",
+          "name": "Main page surface",
+          "clip": true,
+          "width": "fill_container",
+          "height": 720,
+          "fill": "$ds-panel",
+          "cornerRadius": 8,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "xoyYx",
+              "name": "Breadcrumb row",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "Dbgqc",
+                  "type": "ref",
+                  "ref": "N3VfvY",
+                  "name": "Project",
+                  "descendants": {
+                    "QAdbs": {
+                      "icon": "folder"
+                    },
+                    "g7l5u": {
+                      "content": "Project"
+                    }
+                  }
+                },
+                {
+                  "id": "fsomN",
+                  "type": "ref",
+                  "ref": "N3VfvY",
+                  "name": "Workspaces",
+                  "descendants": {
+                    "QAdbs": {
+                      "icon": "git-branch"
+                    },
+                    "g7l5u": {
+                      "content": "Workspaces"
+                    }
+                  }
+                },
+                {
+                  "id": "iDLkA",
+                  "type": "ref",
+                  "ref": "N3VfvY",
+                  "name": "Workspace 1",
+                  "descendants": {
+                    "QAdbs": {
+                      "icon": "git-branch"
+                    },
+                    "g7l5u": {
+                      "content": "Workspace 1"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "jLUvD",
+                  "name": "Breadcrumb spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "id": "z2HgrY",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Navigation",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-left",
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "j3Wo3",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Secondary",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                },
+                {
+                  "id": "mqBUs",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "Side",
+                  "width": 24,
+                  "height": 24,
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 12,
+                      "height": 12
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "J66gub",
+              "name": "Page panels below breadcrumb",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 1,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "xqw1a",
+                  "name": "Page side · 280px · minimum 160px",
+                  "width": 280,
+                  "height": "fill_container",
+                  "fill": "$ds-bg-subtle",
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "LopZu",
+                      "name": "Page side header",
+                      "width": "fill_container",
+                      "height": 40,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "I0jqC",
+                          "type": "ref",
+                          "ref": "TwCXd",
+                          "name": "Session tab",
+                          "height": 24,
+                          "theme": {
+                            "tab": "active",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "w7NkD3": {
+                              "icon": "messages-square"
+                            },
+                            "k9XlqC": {
+                              "content": "Session"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "ItfrS",
+                      "name": "Page side content",
+                      "fill": "$ds-fg",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Workspace 1 session",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GPYyL",
+                  "name": "Editor and page bottom",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 1,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "DHlWy",
+                      "name": "Page bottom",
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": "$ds-bg-subtle",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Z62JC",
+                          "name": "Page bottom header",
+                          "width": "fill_container",
+                          "height": 40,
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "s5VL50",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Terminal tab",
+                              "height": 24,
+                              "theme": {
+                                "tab": "active",
+                                "size": "sm"
+                              },
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "terminal"
+                                },
+                                "k9XlqC": {
+                                  "content": "Terminal"
+                                },
+                                "g1LJJh": {
+                                  "enabled": true
+                                }
+                              }
+                            },
+                            {
+                              "id": "J5Qv6",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add page tool",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "zcAlE",
+                          "name": "Page bottom body",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "subfo",
+                              "name": "Page bottom content",
+                              "fill": "$ds-fg",
+                              "content": "Workspace 1 terminal",
+                              "fontFamily": "$font-body",
+                              "fontSize": 13,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OsUtv",
+                      "name": "Editor with full-height menus",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "gap": 1,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wIqkA",
+                          "name": "Left panel menu",
+                          "width": 200,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "layout": "vertical",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "L1fkB",
+                              "name": "Left panel menu content",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Workspace tools\n\nWorkspace 1",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "KLg2A",
+                          "name": "Editor with tab row",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "SqkGw",
+                              "name": "Main tab and action row",
+                              "width": "fill_container",
+                              "height": 40,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                8
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "BtM2s",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Files",
+                                  "theme": {
+                                    "tab": "active",
+                                    "size": "sm"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "files"
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Files"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "iQMrH",
+                                  "type": "ref",
+                                  "ref": "TwCXd",
+                                  "name": "Changes",
+                                  "theme": {
+                                    "tab": "default",
+                                    "size": "sm"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "w7NkD3": {
+                                      "icon": "git-compare"
+                                    },
+                                    "k9XlqC": {
+                                      "content": "Changes"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "wQQbZ",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Add tab",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "plus",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "GmvH2",
+                                  "name": "Tab spacer",
+                                  "width": "fill_container",
+                                  "height": 1
+                                },
+                                {
+                                  "id": "Uy0Zw",
+                                  "type": "ref",
+                                  "ref": "nvvgg",
+                                  "name": "Page panels",
+                                  "width": 24,
+                                  "height": 24,
+                                  "theme": {
+                                    "btn": "ghost",
+                                    "size": "2xs"
+                                  },
+                                  "descendants": {
+                                    "k7mgm": {
+                                      "icon": "panels-top-left",
+                                      "width": 12,
+                                      "height": 12
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GMGH8",
+                              "name": "Page content",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "$ds-panel",
+                              "layout": "vertical",
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "M3hJN",
+                                  "name": "Page content content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Files\n\nWorkspace 1\n\nEditable draft",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OHZyp",
+                          "name": "Right panel menu",
+                          "width": 240,
+                          "height": "fill_container",
+                          "fill": "$ds-bg-subtle",
+                          "layout": "vertical",
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wiLbI",
+                              "name": "Right panel menu content",
+                              "fill": "$ds-fg",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Inspector\n\nWorkspace 1",
+                              "fontFamily": "$font-body",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mNyMO",
+          "name": "Separate mode Secondary",
+          "width": "fill_container",
+          "height": 120,
+          "fill": "$ds-bg-subtle",
+          "cornerRadius": 8,
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "cTQpn",
+              "name": "Separate mode Secondary header",
+              "width": "fill_container",
+              "height": 40,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "pWn0w",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Mode tools tab",
+                  "height": 24,
+                  "theme": {
+                    "tab": "active",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "terminal"
+                    },
+                    "k9XlqC": {
+                      "content": "Mode tools"
+                    },
+                    "g1LJJh": {
+                      "enabled": false
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "sEE7F",
+              "name": "Separate mode Secondary body",
+              "width": "fill_container",
+              "height": "fill_container",
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "KaBLw",
+                  "name": "Separate mode Secondary content",
+                  "fill": "$ds-fg",
+                  "content": "Project tools",
+                  "fontFamily": "$font-body",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
                 }
               ]
             }

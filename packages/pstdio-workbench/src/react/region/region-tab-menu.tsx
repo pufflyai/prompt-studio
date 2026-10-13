@@ -110,7 +110,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
                 />
               ))}
               {placement.closable ? <SharedAction value="close" label="Close tab" icon="x" onActivate={close} /> : null}
-              {currentRegion && ["main", "side", "secondary", "bottom"].includes(currentRegion) ? (
+              {currentRegion && ["main", "side", "secondary", "bottom", "aside"].includes(currentRegion) ? (
                 <SharedAction
                   value="hide-header"
                   label="Hide header"

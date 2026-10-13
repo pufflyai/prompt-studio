@@ -26,7 +26,11 @@ export interface WorkbenchRegionSize {
 }
 
 /** Region-level layout policy owned by the active mode or the host, never by a placement. */
-export type WorkbenchRegionSettings = Omit<ModeRegionSettings, "defaultTab"> & { defaultTab?: NavigationTarget };
+export type WorkbenchRegionSettings = Omit<ModeRegionSettings, "defaultTab"> & {
+  defaultTab?: NavigationTarget;
+  /** Authored page panel edge. Aside uses left/right; bottom uses top/bottom. */
+  edge?: "left" | "right" | "top" | "bottom";
+};
 
 export type WidgetReusePolicy = "resource" | "none";
 
@@ -243,6 +247,7 @@ export type WorkbenchSidePanelMode = "floating" | "closed" | "attached";
 
 export interface WorkbenchRegionState {
   id: WorkbenchRegion;
+  edge?: "left" | "right" | "top" | "bottom";
   visible: boolean;
   /** Owner intent. `visible` is the legacy layout projection, not another user choice. */
   visibility?: "auto" | "open" | "closed";

@@ -2,7 +2,6 @@ import { IconButton, Menu, Portal } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
 import type { WorkbenchCore } from "../../core";
-import { pageHasBottom } from "../../core/registries/pages/page-panel-menus";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
 import { openPanelWidget } from "../region/panel-widget-open";
 import { WorkbenchIcon } from "../shared/icon";
@@ -21,7 +20,8 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
   const panels = useWorkbenchCompositionPanels(workbench).bottom.addable;
   const resource = useWorkbenchLocationResource(workbench);
   const bottom = usePanelPolicy(workbench, "bottom");
-  if (!page?.panelMenus && !pageHasBottom(page)) return null;
+  const aside = usePanelPolicy(workbench, "aside");
+  if (!page) return null;
   return (
     <Menu.Root positioning={{ placement: "bottom-end", getAnchorElement: () => triggerRef.current }}>
       <Tooltip content="Page panels">
@@ -63,6 +63,16 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                 Open {panel.contribution.title}
               </Menu.Item>
             ))}
+            {aside.provided && (aside.open ? aside.canClose : aside.canOpen) ? (
+              <Menu.Item
+                value="aside-visibility"
+                onClick={() => {
+                  void workbench.shell.setRegionOpen("aside", !aside.open);
+                }}
+              >
+                {aside.open ? "Hide" : "Show"} Side panel
+              </Menu.Item>
+            ) : null}
             {bottom.provided && (bottom.open ? bottom.canClose : bottom.canOpen) ? (
               <Menu.Item
                 value="bottom-visibility"

@@ -29,7 +29,9 @@ export const PageSurface: Story = {
     for (const menu of menus) {
       await expect(menu.querySelector('[role="tablist"]')).toBeNull();
       await expect(menu.querySelector("[data-workbench-tab-drop]")).toBeNull();
-      await expect(menu.getBoundingClientRect().top).toBeGreaterThanOrEqual(tabs.getBoundingClientRect().bottom);
+      await expect(Math.abs(menu.getBoundingClientRect().top - tabs.getBoundingClientRect().top)).toBeLessThanOrEqual(
+        1,
+      );
     }
     await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
     const popup = within(document.body);

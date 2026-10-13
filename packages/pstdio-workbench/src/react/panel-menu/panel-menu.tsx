@@ -68,7 +68,11 @@ export const WorkbenchPanelMenuLayout = (props: {
   const contentMinSizePx =
     PANEL_CONTENT_MIN_SIZE_PX +
     (right.has && !right.collapsed ? right.size.minPx + PANEL_MENU_RESIZE_HANDLE_SIZE_PX : 0);
-  return addPanelMenu({ content: withRight, view: left, workbench, contentMinSizePx });
+  return (
+    <Box data-workbench-panel-menu-layout={panel} w="full" h="full" minH="0" minW="0">
+      {addPanelMenu({ content: withRight, view: left, workbench, contentMinSizePx })}
+    </Box>
+  );
 };
 
 interface WorkbenchPanelMenuOpenerProps {

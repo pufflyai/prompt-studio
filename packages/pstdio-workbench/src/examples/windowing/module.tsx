@@ -170,7 +170,7 @@ export const registerWindowingModule = (
             left: { view: { kind: "view" as const, id: "windowing.workspace-menu" }, size: { defaultPx: 180 } },
             right: { view: { kind: "view" as const, id: "windowing.inspector" }, size: { defaultPx: 200 } },
           },
-          regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
+          regionSettings: { bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true }, ...options.pageRegionSettings },
         }
       : {}),
     slots: [

@@ -16,15 +16,17 @@ const page = (main: object) => ({
   slots: [],
 });
 
-test("preserves page bottom and headerless menu declarations in host metadata", () => {
+test("preserves page side, bottom and headerless menu declarations in host metadata", () => {
   const declaration = {
     ...page({ kind: "panels", empty: view }),
     slots: [
+      { id: "session", region: "aside" as const, item: { kind: "view" as const, view, presence: "open" as const } },
       { id: "tools", region: "bottom" as const, item: { kind: "view" as const, view, presence: "open" as const } },
     ],
     panelMenus: { right: { view, size: { defaultPx: 240 }, collapsible: false, hiddenByDefault: false } },
     regionSettings: {
       main: { showHeader: false },
+      aside: { size: { defaultPx: 280, minPx: 160 }, canOpen: true, canClose: true, acceptsTabs: false },
       bottom: { size: { defaultPx: 160 }, showHeader: true, alwaysShowTabs: true },
     },
   };

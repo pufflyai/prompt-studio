@@ -9,7 +9,7 @@ export const transferPanelOwner = (
 ) => {
   const identity = placement.placementIdentity;
   const state = core.pages.store.getState();
-  const pageDestination = destination === "main" || destination === "bottom";
+  const pageDestination = destination === "main" || destination === "bottom" || destination === "aside";
   if (pageDestination && !state.activePageId) return placement;
   if (!pageDestination && !state.activeModeId) return placement;
   if (pageDestination && identity?.kind === "page" && identity.pageId === state.activePageId) return placement;
