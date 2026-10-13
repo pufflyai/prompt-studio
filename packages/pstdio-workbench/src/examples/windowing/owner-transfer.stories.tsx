@@ -94,14 +94,20 @@ export const FilesTransfer: Story = {
     await moveTab(side, "Session 1", "Main");
     await userEvent.click(within(main).getByRole("tab", { name: "Mode tools" }));
     await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
-    await expect(within(main).getByRole("tab", { name: "Session 1" })).toHaveAttribute("aria-selected", "true");
+    await expect(within(main).getByRole("tab", { name: /^Session 1(?: ·|$)/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
-    await expect(within(main).queryByRole("tab", { name: "Session 1" })).not.toBeInTheDocument();
+    await expect(within(main).queryByRole("tab", { name: /^Session 1(?: ·|$)/ })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
-    await expect(within(side).getByRole("tab", { name: "Session 1" })).toHaveAttribute("aria-selected", "true");
+    await expect(within(side).getByRole("tab", { name: /^Session 1(?: ·|$)/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
-    await expect(within(main).getByRole("tab", { name: "Session 1" })).toBeVisible();
-    await expect(within(side).getByRole("tab", { name: "Session 1" })).toBeVisible();
+    await expect(within(main).getByRole("tab", { name: /^Session 1(?: ·|$)/ })).toBeVisible();
+    await expect(within(side).getByRole("tab", { name: /^Session 1(?: ·|$)/ })).toBeVisible();
   },
 };
 
