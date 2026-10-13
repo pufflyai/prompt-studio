@@ -209,6 +209,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   };
 
   for (const target of targets) {
+    if (target.resource) pages.resources.normalize(target.resource);
     if (target.kind === "page") locations.resolve(target);
     const existing = prepareExistingResourceEditor(core, [target], proposed, stages);
     if (existing) {

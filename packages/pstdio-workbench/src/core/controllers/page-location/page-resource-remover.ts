@@ -12,6 +12,7 @@ export const createPageResourceRemover =
     getState(): WorkbenchPageRegistryStoreState<Value>;
     resources: WorkbenchPageResourceCodec;
     forgetRootLevel(resource: ResourceRef): void;
+    start(): ResolvedPageLocation;
     commit(projectId: string, location: ResolvedPageLocation, history: "replace" | "none", action: string): unknown;
   }) =>
   (resource: ResourceRef, retained: readonly PlacementIdentity[]) => {
@@ -19,18 +20,19 @@ export const createPageResourceRemover =
     const current = input.getState();
     if (!current.projectId || !current.location) return;
     const next = removePageResource(current, resource, input.resources, retained);
-    if (!next.location) return;
     const changed = !workbenchPageLocationsEqual(
       current.location,
       next.location,
       input.resources,
       Object.values(current.pages),
     );
-    const resolved = normalizeWorkbenchPageLocation({
-      location: next.location,
-      pages: Object.values(current.pages),
-      resources: input.resources,
-    });
+    const resolved = next.location
+      ? normalizeWorkbenchPageLocation({
+          location: next.location,
+          pages: Object.values(current.pages),
+          resources: input.resources,
+        })
+      : input.start();
     input.commit(
       current.projectId,
       { ...resolved, pageStates: next.pageStates },

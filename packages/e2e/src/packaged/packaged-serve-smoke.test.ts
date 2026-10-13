@@ -69,6 +69,9 @@ import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
+// verify:packages also runs the packed workbench ownership consumer: resource deletion,
+// foreign session reopening, deleted-page rejection, and Reset uniqueness.
+
 // Core extensions install from the host's version tag, or from the main commit a nightly build bakes in.
 const hostReleaseRef = /^(?:pstdio@\d|[0-9a-f]{40}$)/;
 

@@ -25,6 +25,12 @@ const storyIds = [
   "workspace-catalog-close",
   "collection-catalog",
   "fixed-page-transfer",
+  "removed-workspace-resource",
+  "removed-workspace-contribution",
+  "removed-panel-contribution",
+  "removed-mode-contribution",
+  "removed-session-resource",
+  "removed-owner-forbidden-reopen",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 
 test.describe("Workbench windowing stories", () => {

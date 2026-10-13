@@ -82,7 +82,13 @@ export const createWorkbenchPageLocationController = <Value>(
     levels: input,
     pages,
     normalize: (location) => normalizeStored(location),
-    resourceKey: (resource) => internals.resources.toUri(internals.resources.normalize(resource)),
+    resourceKey: (resource) =>
+      internals.resources.toUri(
+        internals.resources.normalize({
+          ...resource,
+          projectId: resource.projectId ?? input.registry.store.getState().projectId,
+        }),
+      ),
     start: () => start(),
   });
 
@@ -255,6 +261,7 @@ export const createWorkbenchPageLocationController = <Value>(
       getState: input.registry.store.getState,
       resources: internals.resources,
       forgetRootLevel: rootLevel.forget,
+      start,
       commit,
     }),
     canGoBack: () => historyIndex > 0,

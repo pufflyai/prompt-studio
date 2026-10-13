@@ -240,7 +240,7 @@ test("preview and pinned tabs can be interleaved without pinning changing their 
   expect(w.layout.getLayout().regions.main.widgets.map((t) => t.resource?.id)).toEqual(["preview", "pinned"]);
 });
 
-test("Add opens an active mode panel in the chosen region and reset restores its declared defaults", async () => {
+test("Add opens a mode panel in the chosen region and Reset preserves that instance once", async () => {
   const w = harness();
   w.modePlacements.registerPlacement({
     id: "notes",
@@ -257,8 +257,8 @@ test("Add opens an active mode panel in the chosen region and reset restores its
   await addable.open?.();
   expect(w.layout.getLayout().regions.side.widgets[0]?.placementIdentity).toEqual(notes.placementIdentity);
   w.resetLayout();
-  expect(w.layout.getLayout().regions.secondary.widgets[0]?.placementIdentity).toEqual(notes.placementIdentity);
-  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
+  expect(w.layout.getLayout().regions.side.widgets[0]?.placementIdentity).toEqual(notes.placementIdentity);
+  expect(w.layout.getLayout().regions.secondary.widgets).toEqual([]);
 });
 
 test("reset changes the active page and shared mode while preserving another page's choices", async () => {
@@ -271,9 +271,10 @@ test("reset changes the active page and shared mode while preserving another pag
   w.movePanel(file.widgetId, "secondary");
   await w.navigation.openTarget(navigate("beta"));
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
+  const session = w.layout.getLayout().regions.side.widgets[0]!;
   w.resetLayout();
-  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
+  expect(w.layout.getLayout().regions.side.widgets.map((tab) => tab.widgetId)).toEqual([session.widgetId]);
   await w.navigation.openTarget(navigate("alpha"));
   expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(file.widgetId);
-  expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
+  expect(w.layout.getLayout().regions.side.widgets.map((tab) => tab.widgetId)).toEqual([session.widgetId]);
 });

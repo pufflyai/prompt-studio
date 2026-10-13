@@ -61,7 +61,17 @@ Configured persistence is the source of saved owner state. Clearing an inactive 
 
 Layout cache version 6 discards older local arrangements. Routed locations, resources, tree state, and independent menu preferences stay valid. This ownership and cache reset follows the decision recorded for PS-609; it is a breaking behavior change and must pass the workbench track's release gate before publishing.
 
-Terminal bindings use the stable tab ID. Changing a page scope or transferring a tab cannot create or stop a terminal session. Resource and title updates reach the tab's current or saved owner without changing its identity or view. An explicit close follows the terminal surface's existing lifecycle contract.
+Terminal bindings use the stable tab ID. Changing a page scope or transferring a tab cannot create or stop a terminal session. Resource and title updates reach the tab's current or saved owner without changing its identity or view. Closing a session or terminal tab closes its view and leaves its runtime running. Explicit runtime stop/delete owns execution lifetime; disposing the host terminal controller still stops its live sessions.
+
+## Resource and view lifetime
+
+Deleting a resource makes its page inaccessible. Cleanup removes the page instance, all its tabs (including tabs bound to another resource), retained view mounts, selection, saved restoration, and navigation through the deleted resource. It also removes views bound to that resource from other page, mode, and shell owners. Deleted editors and inaccessible owners are not retained for recovery. A resource reference without a project names the active project during cleanup.
+
+A valid foreign session or terminal keeps its resource binding and execution when its containing page is deleted. A later explicit open uses that existing resource and the normal destination policy. A matching forbidden destination fails; navigation does not silently choose another panel or create another runtime. The reopened view may be a new instance. Closed-view drafts and mount state are not a recovery contract.
+
+Contribution unregistration uses the registered disposables and normal navigation failure/fallback rules. There is no separate preservation or recovery state for removed pages, modes, or panels. Unregistration never stops a valid bound session. Ordinary page navigation, mode changes, and Hide preserve owners and tabs.
+
+Reset restores missing declared tools and layout settings. Open or moved instances stay unique, including foreign sessions dropped into a page. A closed terminal preset reuses its valid resource runtime when reopened. Reset cannot bring back a deleted page or seed its tabs into an orphan owner.
 
 ## Navigation tree ownership
 

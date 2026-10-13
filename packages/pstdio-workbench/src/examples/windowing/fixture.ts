@@ -12,6 +12,8 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
   const probe = createWindowingLifecycleProbe();
+  const deletedResources: import("@pstdio/sdk/extensions").ResourceRef[] = [];
+  let registrations: ReturnType<typeof registerWindowingModule> | undefined;
   const create = () => {
     if (mode === "boombox") return createBoomboxWorkbench();
     if (mode === "kiln") return createKilnWorkbench();
@@ -23,7 +25,9 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
       layoutPersistence: persistence.layout,
       pageLocationPersistence: persistence.pageLocation,
     });
-    registerWindowingModule(workbench, resources, probe, options);
+    registrations = registerWindowingModule(workbench, resources, probe, options);
+    workbench.pageLocations.setProject("windowing-project");
+    for (const resource of deletedResources) workbench.resources.removed(resource);
     workbench.pageLocations.switchProject("windowing-project");
     if (!savedLocation)
       workbench.pageLocations.navigate({
@@ -39,6 +43,14 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
     resources,
     persistence,
     probe,
+    removalControls: options.removalControls,
+    removeContribution(kind: "mode" | "workspace" | "panel") {
+      registrations?.[kind].dispose();
+    },
+    removeResource(resource: import("@pstdio/sdk/extensions").ResourceRef) {
+      deletedResources.push(resource);
+      workbench.resources.removed(resource);
+    },
     get workbench() {
       return workbench;
     },

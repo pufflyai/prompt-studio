@@ -142,7 +142,15 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const { views, viewMenus, statusBar } = createCoreViews(input, renderers);
-  const pageResources = input.pageResources ?? defaultPageResourceCodec;
+  const pageResourceCodec = input.pageResources ?? defaultPageResourceCodec;
+  const pageResources = {
+    ...pageResourceCodec,
+    normalize: (resource: Parameters<typeof pageResourceCodec.normalize>[0]) => {
+      const normalized = pageResourceCodec.normalize(resource);
+      if (resources.isRemoved(normalized)) throw new Error(`Resource was deleted: ${normalized.type}/${normalized.id}`);
+      return normalized;
+    },
+  };
 
   const updateTransferredPlacement = createTransferredPlacementUpdater(layout, layoutCache);
 
@@ -184,10 +192,11 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    remove: (resource, retained) => {
-      removeWorkbenchResource(core, resource, retained);
-      layoutCache.removeResource(resource);
-    },
+    remove: (resource) =>
+      removeWorkbenchResource(core, resource, () =>
+        layoutCache.removeResource(resource, core.pages.store.getState().projectId!, core.pages.listPages()),
+      ),
+    getProjectId: () => core.pages.store.getState().projectId,
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });

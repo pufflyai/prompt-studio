@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useWorkbenchStore, useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { boomboxTheme, kilnTheme } from "../showcases/themes";
 import { createWindowingFixture, type WindowingFixture, type WindowingMode } from "./fixture";
+import { WindowingRemovalControls } from "./removal-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
 
 interface ControlsProps {
@@ -17,7 +18,15 @@ const WindowingControls = (props: ControlsProps) => {
   const { workbench, resources } = fixture;
   const size = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
   return (
-    <HStack p="sm" gap="sm" flexWrap="wrap" borderBottomWidth="1px" borderColor="border.subtle">
+    <HStack
+      role="group"
+      aria-label="Windowing controls"
+      p="sm"
+      gap="sm"
+      flexWrap="wrap"
+      borderBottomWidth="1px"
+      borderColor="border.subtle"
+    >
       {resources.workspaces.map((resource) => (
         <Button
           key={resource.id}
@@ -143,6 +152,7 @@ export const WindowingStory = (props: WindowingStoryProps) => {
         ) : (
           <ShowcaseControls fixture={fixture} reload={reload} />
         )}
+        {fixture.removalControls && <WindowingRemovalControls fixture={fixture} />}
         {error && (
           <Text role="alert" color="fg.error">
             {error}

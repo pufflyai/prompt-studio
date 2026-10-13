@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
+import { workbenchOwnershipConsumer } from "./workbench-ownership-consumer";
 
 const run = (cwd: string, args: string[]) => {
   const result = Bun.spawnSync(["bun", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -93,6 +94,7 @@ const viewBar = createElement(CollectionViewBar, {
 void [filtered, viewBar];
 `
         : "") +
+      (imports.includes("@pstdio/workbench") ? workbenchOwnershipConsumer : "") +
       (react && imports.includes("@pstdio/workbench/react")
         ? `
 import type { ReactAttributeDescriptor, ReactBoardColumnConfig } from "@pstdio/workbench/react";
