@@ -6,7 +6,7 @@ Auto Build assigns and resumes authorized ticket work within your chosen scope, 
 
 Open **Project Timeline → Auto Build**. Enter a prompt, then set **Eligible tickets** and **Ignore tickets** with the same filters used on the ticket board. Filters can use status, title, and other ticket properties, including advanced And/Or groups. Empty eligibility includes all otherwise valid unfinished tickets. Ignore filters take precedence. Completed tickets are always excluded. Status options keep their icons, colors, and IDs across renames.
 
-Choose completed, blocked, active, and optional merge-destination statuses in **Settings → Extensions → Prompt Studio Planner → Settings**, then apply the native parameter form. Auto Build reads that shared configuration. No label or default column assigns workflow meaning. Empty optional selections disable only their status convenience.
+Choose completed, blocked, active, and optional merge-destination statuses in **Settings → Extensions → Prompt Studio Planner → Settings**. Each choice saves immediately through the native parameter editor. Auto Build reads that shared configuration. No label or default column assigns workflow meaning. Empty optional selections disable only their status convenience.
 
 The supervisor resolves your prompt to explicit ticket IDs once. Changing the prompt or either ticket filter clears that scope so the supervisor resolves it again. Prerequisites provide context but do not grant permission to dispatch outside the scope. Changing scope, prompt, filters, or policy changes the mode revision and invalidates old dispatch requests.
 

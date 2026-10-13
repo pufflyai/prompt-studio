@@ -89,7 +89,7 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "controls",
       query: queryWorkflowSettings,
-      onApply: (ctx, input) => saveWorkflowSettings(ctx, input.values),
+      onValueChange: (ctx, input) => saveWorkflowSettings(ctx, input.values),
       refreshEvents: [plannerTicketsChanged],
     },
   });
