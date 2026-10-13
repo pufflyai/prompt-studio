@@ -10,10 +10,7 @@ import { createWindowingResources, windowingPages } from "./resources";
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
 
-export const createWindowingFixture = (
-  mode: WindowingMode = "windowing",
-  options: WindowingModuleOptions = {},
-) => {
+export const createWindowingFixture = (mode: WindowingMode = "windowing", options: WindowingModuleOptions = {}) => {
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
   const probe = createWindowingLifecycleProbe();
