@@ -2,6 +2,7 @@ import { createWorkbench } from "../../core";
 import { KilnNav, KilnStatus } from "./kiln-chrome";
 import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
 import { KilnInspector } from "./kiln-inspector";
+import { registerKilnSessions } from "./kiln-sessions";
 import { KilnTimeline } from "./kiln-timeline";
 import { KilnViewport } from "./kiln-viewport";
 import { kilnTheme } from "./themes";
@@ -23,9 +24,10 @@ export const createKilnWorkbench = () => {
     regionSettings: {
       side: {
         size: { defaultPx: 340, minPx: 300, maxPx: 440 },
-        canOpen: false,
-        canClose: false,
-        acceptsTabs: false,
+        canOpen: true,
+        canClose: true,
+        acceptsTabs: true,
+        defaultTab: { kind: "command", commandId: "kiln.new-session" },
         movable: false,
         resizable: true,
         floatable: false,
@@ -72,10 +74,9 @@ export const createKilnWorkbench = () => {
     ref: { extensionId: "storybook.showcases", kind: "placement", id: "kiln.timeline" },
     modeId: "kiln",
     region: "secondary",
-    movableTo: ["secondary"],
     item: {
       kind: "view",
-      presence: "fixed",
+      presence: "open",
       view: {
         kind: "view",
         id: "kiln.timeline",
@@ -147,5 +148,6 @@ export const createKilnWorkbench = () => {
   });
   workbench.pageLocations.switchProject("storybook-kiln");
   workbench.pageLocations.navigate({ kind: "page", page: kilnPage, resource: kilnResource(kilnObjects[0]) });
+  registerKilnSessions(workbench);
   return workbench;
 };

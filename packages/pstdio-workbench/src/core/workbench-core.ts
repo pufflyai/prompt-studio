@@ -45,6 +45,7 @@ import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import type { createNavigationTreeRegistry } from "./registries/navigation/navigation-tree-registry";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
 import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
+import { getWorkbenchPageRegistryInternals } from "./registries/pages/page-registry-internals";
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
@@ -106,13 +107,16 @@ const resolveRegionSettings = (
   core: WorkbenchCore | undefined,
   regionId: WorkbenchRegion,
 ) => {
-  if (regionId === "bottom") {
-    const pageId = core?.pages.store.getState().activePageId;
-    return pageId ? core?.pages.getPage(pageId)?.regionSettings?.bottom : undefined;
-  }
+  const pageId = core ? getWorkbenchPageRegistryInternals(core.pages).getPublishingState().activePageId : undefined;
+  const page = pageId ? core?.pages.getPage(pageId) : undefined;
+  if (regionId === "bottom") return page?.regionSettings?.bottom;
   const activeModeId = core?.modes.getActiveModeId();
   const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
-  return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
+  return {
+    ...input.regionSettings?.[regionId],
+    ...activeMode?.regionSettings?.[regionId],
+    ...(regionId === "main" ? page?.regionSettings?.main : undefined),
+  };
 };
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {

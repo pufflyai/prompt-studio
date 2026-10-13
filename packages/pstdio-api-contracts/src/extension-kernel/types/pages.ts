@@ -83,7 +83,10 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly document?: PageDocumentDeclaration;
   readonly main: PageMain;
   readonly panelMenus?: { readonly left?: PanelMenuDeclaration; readonly right?: PanelMenuDeclaration };
-  readonly regionSettings?: { readonly bottom?: PageRegionSettings };
+  readonly regionSettings?: {
+    readonly main?: Pick<PageRegionSettings, "showHeader">;
+    readonly bottom?: PageRegionSettings;
+  };
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;
 }

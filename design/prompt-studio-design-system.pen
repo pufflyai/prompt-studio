@@ -186331,7 +186331,7 @@
             {
               "type": "frame",
               "id": "k9Avc",
-              "name": "Visible header · locked tab",
+              "name": "Visible header · movable tab",
               "width": "fill_container",
               "height": "fill_container",
               "layout": "vertical",
@@ -186340,9 +186340,9 @@
                 {
                   "type": "text",
                   "id": "g1xYP",
-                  "name": "Visible header · locked tab label",
+                  "name": "Visible header · movable tab label",
                   "fill": "$ds-fg-muted",
-                  "content": "Visible header · locked tab",
+                  "content": "Visible header · movable tab",
                   "fontFamily": "$font-label",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -186350,7 +186350,7 @@
                 {
                   "type": "frame",
                   "id": "gP8Hl",
-                  "name": "Visible header · locked tab panel",
+                  "name": "Visible header · movable tab panel",
                   "clip": true,
                   "width": "fill_container",
                   "height": "fill_container",
@@ -186375,20 +186375,20 @@
                           "id": "ErNLE",
                           "type": "ref",
                           "ref": "TwCXd",
-                          "name": "Timeline · locked",
+                          "name": "Timeline · closable and movable",
                           "theme": {
                             "size": "sm",
                             "tab": "active"
                           },
                           "descendants": {
                             "w7NkD3": {
-                              "icon": "lock"
+                              "icon": "list-video"
                             },
                             "k9XlqC": {
                               "content": "Timeline"
                             },
                             "g1LJJh": {
-                              "enabled": false
+                              "enabled": true
                             }
                           }
                         }

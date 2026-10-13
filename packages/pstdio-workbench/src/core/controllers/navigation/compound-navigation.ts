@@ -1,6 +1,6 @@
 import type { PageSlotRef, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
-import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { placementIdentityKey, reconcileOwnedPlacements } from "../../registries/layout/placement-reconciliation";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
 import { resolvePageMode } from "../../registries/pages/page-availability";
@@ -16,11 +16,11 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { locatePreparedPageState } from "../page-runtime/page-placement-location";
 import { activateNavigationPlacement, commitPreparedNavigation } from "./navigation-commit";
-import { validatePanelNavigation } from "./panel-navigation-policy";
+import { type PreparedPanelTarget, validatePanelNavigation } from "./panel-navigation-policy";
 import { prepareEditorOpen } from "./prepared-editor-open";
 import { prepareExistingResourceEditor } from "./resource-editor-resolver";
 
-type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
+type NavigationOperation = NavigationTargetPage | PreparedPanelTarget;
 
 const hasStagedModeState = (
   core: WorkbenchCore,
@@ -102,7 +102,7 @@ const validatePanelDestination = (core: WorkbenchCore, modeId: string | undefine
 };
 const preparePanelNavigation = (
   core: WorkbenchCore,
-  target: NavigationTargetPanel,
+  target: PreparedPanelTarget,
   current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   modeState: OwnedPlacementState,
   shellState: OwnedPlacementState,
@@ -119,7 +119,7 @@ const preparePanelNavigation = (
   if (panel.kind === "page-slot") {
     const page = requirePanelPage(current, panel);
     const slot = page.slots.find((slot) => slot.id === panel.id);
-    if (slot) validatePanelDestination(core, modeId, slot.region);
+    if (slot) validatePanelDestination(core, modeId, target.destination ?? slot.region);
     if (slot?.isAvailable && !slot.isAvailable(current.location?.resource))
       throw new Error(`Panel cannot open: ${panel.id}`);
     const state = pages.prepare.slot(
@@ -131,7 +131,7 @@ const preparePanelNavigation = (
   }
   const declaration =
     panel.kind === "placement" ? core.modePlacements.getPlacement(panel) : core.shellPlacements.getPlacement(panel.id);
-  if (declaration) validatePanelDestination(core, modeId, declaration.region);
+  if (declaration) validatePanelDestination(core, modeId, target.destination ?? declaration.region);
   const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState);
   const state = pages.prepare.compose(
     current,
@@ -157,7 +157,8 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   const updates: NonNullable<ReturnType<typeof prepareExistingResourceEditor>>[] = [];
   const activations = new Map<
     WorkbenchRegion,
-    { identity: PlacementIdentity } | { editor: NonNullable<ReturnType<typeof prepareExistingResourceEditor>> }
+    | { identity: PlacementIdentity; destination?: PreparedPanelTarget["destination"] }
+    | { editor: NonNullable<ReturnType<typeof prepareExistingResourceEditor>> }
   >();
   const owned = (modeId = proposed.activeModeId) => ({
     shell: shell.resolve(undefined, shellState),
@@ -249,11 +250,14 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     stages.push(proposed);
     for (const placement of proposed.reconciliation.activate) {
       activations.delete(placement.region);
-      activations.set(placement.region, { identity: placement.identity });
+      activations.set(target.kind === "panel" ? (target.destination ?? placement.region) : placement.region, {
+        identity: placement.identity,
+        destination: target.kind === "panel" ? target.destination : undefined,
+      });
     }
   }
   const present = new Set(proposed.placements.map((placement) => placementIdentityKey(placement.identity)));
-  const final = locatePreparedPageState(
+  const composed = locatePreparedPageState(
     pages.prepare.compose(
       original,
       {
@@ -268,6 +272,27 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     ),
     stages,
   );
+  const placements = composed.placements.map((placement) => {
+    const activation = [...activations.values()].find(
+      (activation) =>
+        "identity" in activation &&
+        placementIdentityKey(activation.identity) === placementIdentityKey(placement.identity),
+    );
+    return activation && "destination" in activation && activation.destination
+      ? { ...placement, region: activation.destination }
+      : placement;
+  });
+  // Materialize explicit destinations before runtime publication can reveal an authored panel.
+  const final = {
+    ...composed,
+    placements,
+    reconciliation: reconcileOwnedPlacements({
+      current: original.placements,
+      desired: placements,
+      activate: composed.reconciliation.activate.map((placement) => placement.identity),
+      valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
+    }),
+  };
   return {
     commit: () =>
       commitPreparedNavigation({
@@ -291,7 +316,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
             if ("editor" in activation) {
               if (activation.editor.isInOwner(final)) activation.editor.activate();
             } else if (present.has(placementIdentityKey(activation.identity))) {
-              activateNavigationPlacement(core, activation.identity);
+              activateNavigationPlacement(core, activation.identity, activation.destination);
             }
           }
         },

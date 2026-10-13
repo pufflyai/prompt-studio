@@ -118,8 +118,7 @@ export const PanelHeaderChoices: Story = {
         ref: { kind: "placement", extensionId: windowingExtensionId, id: "timeline" },
         modeId: "windowing",
         region: "secondary",
-        movableTo: ["secondary"],
-        item: { kind: "view", presence: "fixed", view: { kind: "view", id: "windowing.timeline" } },
+        item: { kind: "view", presence: "open", view: { kind: "view", id: "windowing.timeline" } },
       });
       const timeline = core.layout.listPanelInstances("secondary").find((tab) => tab.viewId === "windowing.timeline");
       if (timeline) core.layout.activatePanel(timeline.instanceId);
@@ -145,5 +144,12 @@ export const PanelHeaderChoices: Story = {
     await userEvent.click(within(document.body).getByRole("menuitem", { name: "Hide header" }));
     await waitFor(() => expect(canvas.queryByRole("tab", { name: "Timeline" })).toBeNull());
     await expect(headers.workbench.shell.getPanelPolicy("secondary").showHeader).toBe(false);
+    const timeline = headers.workbench.layout
+      .listPanelInstances("secondary")
+      .find((tab) => tab.viewId === "windowing.timeline")!;
+    headers.workbench.movePanel(timeline.instanceId, "side");
+    await userEvent.click(await canvas.findByRole("button", { name: "Close Timeline" }));
+    await expect(canvas.queryByRole("tab", { name: "Timeline" })).toBeNull();
+    await expect(headers.workbench.shell.getRegionState("secondary").open).toBe(true);
   },
 };

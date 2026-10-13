@@ -50,7 +50,13 @@ export const workbenchExtensionPageRecordSchema = z
     resource: resourceConstraintSchema.optional(),
     main: mainSchema,
     panelMenus: z.object({ left: panelMenuSchema.optional(), right: panelMenuSchema.optional() }).strict().optional(),
-    regionSettings: z.object({ bottom: regionSettingsSchema.strict().optional() }).strict().optional(),
+    regionSettings: z
+      .object({
+        main: regionSettingsSchema.pick({ showHeader: true }).strict().optional(),
+        bottom: regionSettingsSchema.strict().optional(),
+      })
+      .strict()
+      .optional(),
     slots: z.array(slotSchema),
   })
   .superRefine((page, ctx) => {
