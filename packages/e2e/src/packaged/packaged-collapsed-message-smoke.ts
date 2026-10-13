@@ -11,10 +11,27 @@ export const expectPackagedCollapsedMessage = async (page: Page, editor: Locator
   await expect(more).toBeVisible();
   const bubble = more.locator("xpath=ancestor::div[contains(@class, 'ai-message__content')]");
   await expect(bubble).toHaveCSS("border-top-width", "0px");
-  await expect.poll(() => bubble.evaluate((node) => node.getBoundingClientRect().height)).toBe(96);
+  await expect.poll(() => bubble.evaluate((node) => node.getBoundingClientRect().height)).toBe(128);
+  const collapsedGeometry = await bubble.evaluate((node) => {
+    const footer = node.lastElementChild!;
+    const content = node.querySelector("[data-sticky-user-message-content]")!;
+    return {
+      bubbleColor: getComputedStyle(node).backgroundColor,
+      footerColor: getComputedStyle(footer).backgroundColor,
+      footerTop: footer.getBoundingClientRect().top,
+      contentBottom: content.getBoundingClientRect().bottom,
+    };
+  });
+  expect(collapsedGeometry.footerColor).toBe(collapsedGeometry.bubbleColor);
+  expect(collapsedGeometry.contentBottom).toBeLessThanOrEqual(collapsedGeometry.footerTop);
   await more.click();
   const less = page.getByRole("button", { name: "Show less", exact: true }).last();
   await expect(less).toBeVisible();
+  const expandedBubble = less.locator("xpath=ancestor::div[contains(@class, 'ai-message__content')]");
+  await expect(expandedBubble.locator('[data-sticky-user-message-content="expanded"]')).toHaveAttribute(
+    "data-scope",
+    "scroll-area",
+  );
   await less.click();
   await expect(more).toBeVisible();
   await page.setViewportSize(viewport);

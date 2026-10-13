@@ -51,15 +51,16 @@ export const StickyMessageResponse = (props: ChatMessageListResponseProps) => {
 };
 
 interface StickyMessageToggleProps {
+  expanded: boolean;
   label: string;
   onClick: () => void;
   actionPanel?: ReactNode;
 }
 
 export const StickyMessageToggle = (props: StickyMessageToggleProps) => {
-  const { label, onClick, actionPanel } = props;
+  const { expanded, label, onClick, actionPanel } = props;
   const recipe = useSlotRecipe({ key: "stickyUserMessage" });
-  const styles = recipe();
+  const styles = recipe({ expanded });
 
   return (
     <Flex css={styles.footer}>

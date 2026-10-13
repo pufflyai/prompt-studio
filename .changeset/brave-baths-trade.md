@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Fix long user message collapsing, increase preview height, match the fade to the bubble background, and remove user message borders.
+Fix long user message collapsing with a taller borderless preview, a solid footer below the fade, and shared scrolling for expanded messages.

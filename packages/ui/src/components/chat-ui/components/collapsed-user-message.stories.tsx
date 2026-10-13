@@ -50,18 +50,24 @@ export const WrappedPrompt: Story = {
     const more = await canvas.findByRole("button", { name: "Show more" });
     await expect(more).toBeVisible();
     const bubble = more.closest(".ai-message__content")!;
-    await expect(bubble.getBoundingClientRect().height).toBe(96);
+    await expect(bubble.getBoundingClientRect().height).toBe(128);
     await expect(getComputedStyle(bubble).borderTopWidth).toBe("0px");
     const footer = bubble.lastElementChild!;
     const footerStyle = getComputedStyle(footer);
-    await expect(footerStyle.backgroundImage).toContain(getComputedStyle(bubble).backgroundColor);
-    await expect(footerStyle.backgroundImage).toContain(footerStyle.paddingTop);
-    await expect(more.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      footer.getBoundingClientRect().top + parseFloat(footerStyle.paddingTop),
+    await expect(footerStyle.backgroundColor).toBe(getComputedStyle(bubble).backgroundColor);
+    const viewport = bubble.querySelector<HTMLElement>("[data-sticky-user-message-content]")!;
+    await expect(viewport.getBoundingClientRect().bottom).toBeLessThanOrEqual(footer.getBoundingClientRect().top);
+    await expect(getComputedStyle(footer, "::before").height).toBe("24px");
+    await expect(getComputedStyle(footer, "::before").backgroundImage).toContain(
+      getComputedStyle(bubble).backgroundColor,
     );
     await userEvent.click(more);
     const less = await canvas.findByRole("button", { name: "Show less" });
     await expect(less).toBeVisible();
+    await expect(viewport.dataset.scope).toBe("scroll-area");
+    await expect(viewport.dataset.part).toBe("viewport");
+    await expect(viewport.getBoundingClientRect().bottom).toBeLessThanOrEqual(footer.getBoundingClientRect().top);
+
     await userEvent.click(less);
     await expect(more).toBeVisible();
   },

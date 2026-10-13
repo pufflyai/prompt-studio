@@ -1,40 +1,48 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 
+const previewContentHeight = "calc({sizes.chat-user-preview} - {sizes.chat-user-footer})";
+
 export const stickyUserMessageRecipe = defineSlotRecipe({
   slots: ["root", "viewport", "body", "preview", "footer", "actions"],
   base: {
     actions: { px: "xs", pb: "xs" },
-    root: { position: "relative", padding: "0", overflow: "hidden" },
-    viewport: { maxHeight: "chat-user-preview", overflow: "hidden", minHeight: "0" },
+    root: { position: "relative", padding: "0", gap: "0", overflow: "hidden" },
+    viewport: { maxHeight: previewContentHeight, overflowY: "hidden", minHeight: "0" },
     body: { display: "flex", flexDirection: "column", gap: "sm", padding: "xs" },
-    // This measures the theme's preview size in pixels without copying it into JavaScript.
+    // Measure the space for text, excluding the footer, using the same theme sizes as the viewport.
     preview: {
       position: "absolute",
-      height: "chat-user-preview",
+      height: previewContentHeight,
       width: "0",
       visibility: "hidden",
       pointerEvents: "none",
     },
     footer: {
-      position: "absolute",
-      bottom: "0",
-      left: "0",
-      right: "0",
+      position: "relative",
+      flexShrink: "0",
+      minHeight: "chat-user-footer",
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "flex-end",
-      px: "xs",
-      pb: "xs",
-      pt: "lg",
-      backgroundImage: "linear-gradient(to bottom, transparent, var(--chat-message-bg) {spacing.lg})",
-      pointerEvents: "none",
+      alignItems: "center",
+      padding: "xs",
+      background: "var(--chat-message-bg)",
+      _before: {
+        content: '""',
+        position: "absolute",
+        bottom: "100%",
+        left: "0",
+        right: "0",
+        height: "{spacing.lg}",
+        backgroundImage: "linear-gradient(to bottom, transparent, var(--chat-message-bg))",
+        pointerEvents: "none",
+      },
     },
   },
   variants: {
     expanded: {
       true: {
-        viewport: { maxHeight: "chat-user-expanded", overflowY: "auto" },
-        body: { paddingBottom: "3xl" },
+        viewport: { maxHeight: "calc({sizes.chat-user-expanded} - {sizes.chat-user-footer})", overflowY: "auto" },
+        footer: { _before: { display: "none" } },
       },
     },
   },
