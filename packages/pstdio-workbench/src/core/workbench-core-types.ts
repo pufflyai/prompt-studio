@@ -97,6 +97,10 @@ export interface WorkbenchCoreContributionContext {
   setActionBarPosition(edge: import("@pstdio/sdk/extensions").PanelEdge): void;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
+  dropPanelOnEdge(
+    instanceId: string,
+    destination: import("./registries/layout/layout-types").WorkbenchPanelRegion,
+  ): void;
   movePanel(
     instanceId: string,
     region: import("./registries/layout/layout-types").WorkbenchPanelRegion,

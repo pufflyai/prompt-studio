@@ -55,6 +55,23 @@ export const registerArrangementCommands = (core: WorkbenchCore) => {
     },
     { execute: () => core.resetLayout() },
   );
+  core.commands.registerCommand<{ instanceId: string; region: WorkbenchPanelRegion }>(
+    {
+      id: "workbench.dropPanelOnEdge",
+      label: "Drop tab on closed panel edge",
+      category: "Workbench",
+      params: {
+        instanceId: { type: "string", label: "Tab instance", required: true },
+        region: {
+          type: "string",
+          label: "Destination",
+          required: true,
+          options: ["side", "secondary", "aside", "bottom"].map((value) => ({ label: value, value })),
+        },
+      },
+    },
+    { execute: (args) => core.dropPanelOnEdge(args.instanceId, args.region) },
+  );
   core.commands.registerCommand<{ instanceId: string; region: WorkbenchPanelRegion; position?: WorkbenchTabPosition }>(
     {
       id: "workbench.movePanel",

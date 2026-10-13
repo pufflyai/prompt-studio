@@ -290,7 +290,7 @@ test("dropping into a closed panel publishes one move without a default tab or k
       const current = w.layout.getLayout();
       seen.push(current.regions[region].widgets.map((t) => t.widgetId));
     });
-    await w.commands.executeCommand("workbench.movePanel", { instanceId: tab.widgetId, region });
+    await w.commands.executeCommand("workbench.dropPanelOnEdge", { instanceId: tab.widgetId, region });
     stop();
     expect(seen).toEqual([[tab.widgetId]]);
     expect(w.shell.getPanelPolicy(region).open).toBe(true);
@@ -309,7 +309,7 @@ test("tab drops cannot open a forbidden closed destination", async () => {
   const tab = w.layout.getLayout().regions.main.widgets[0]!;
   const before = w.layout.getLayout();
   expect(w.getPanelDestinations(tab.widgetId)).not.toContain("secondary");
-  expect(() => w.movePanel(tab.widgetId, "secondary")).toThrow();
+  expect(() => w.dropPanelOnEdge(tab.widgetId, "secondary")).toThrow();
   expect(w.layout.getLayout()).toBe(before);
 });
 
@@ -320,11 +320,11 @@ test("a tab dropped into a naturally empty Side opens attached and preserves ope
   const first = w.layout.getLayout().regions.main.widgets[0]!;
   expect(w.shell.getPanelPolicy("side").open).toBe(false);
   expect(w.layout.getLayout().regions.side.visibility).toBeUndefined();
-  w.movePanel(first.widgetId, "side");
+  w.dropPanelOnEdge(first.widgetId, "side");
   expect(w.sidePanel.getMode()).toBe("attached");
   expect(w.layout.getLayout().regions.side.visibility).toBeUndefined();
   w.sidePanel.setMode("floating");
   await w.navigation.openTarget(openFile("second"));
-  w.movePanel(w.layout.getLayout().regions.main.widgets[0]!.widgetId, "side");
+  w.dropPanelOnEdge(w.layout.getLayout().regions.main.widgets[0]!.widgetId, "side");
   expect(w.sidePanel.getMode()).toBe("floating");
 });

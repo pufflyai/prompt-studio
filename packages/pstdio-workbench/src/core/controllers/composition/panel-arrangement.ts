@@ -17,13 +17,13 @@ import { reconcileMainAfterMove } from "./main-document-fallback";
 import { panelDestinations } from "./panel-destinations";
 import { transferPanelOwner } from "./panel-owner-transfer";
 
-export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
-  getPanelDestinations(instanceId: string) {
-    const core = resolve();
-    const found = findPlacementByWidgetId(core.layout.getLayout(), instanceId);
-    return found ? panelDestinations(core, found.placement.contributionId) : [];
-  },
-  movePanel(instanceId: string, destination: WorkbenchPanelRegion, position: WorkbenchTabPosition = "end") {
+export const createPanelArrangement = (resolve: () => WorkbenchCore) => {
+  const move = (
+    instanceId: string,
+    destination: WorkbenchPanelRegion,
+    position: WorkbenchTabPosition,
+    presentation?: "attached",
+  ) => {
     const core = resolve();
     const layout = core.layout.getLayout();
     const found = findPlacementByWidgetId(layout, instanceId);
@@ -46,9 +46,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
     const emptyView = page?.main.kind === "panels" ? contributionRefId(page.main.empty) : undefined;
     const target = {
       ...layout.regions[destination],
-      ...(destination === "side" && !core.shell.getPanelPolicy("side").open
-        ? { presentation: "attached" as const }
-        : {}),
+      ...(presentation ? { presentation } : {}),
       widgets: layout.regions[destination].widgets.filter(
         (tab) => destination !== "main" || !emptyView || tab.viewId !== emptyView,
       ),
@@ -105,5 +103,20 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         core.focus.requestPanelFocus(instanceId);
       });
     });
-  },
-});
+  };
+  return {
+    getPanelDestinations(instanceId: string) {
+      const core = resolve();
+      const found = findPlacementByWidgetId(core.layout.getLayout(), instanceId);
+      return found ? panelDestinations(core, found.placement.contributionId) : [];
+    },
+    movePanel(instanceId: string, destination: WorkbenchPanelRegion, position: WorkbenchTabPosition = "end") {
+      move(instanceId, destination, position);
+    },
+    dropPanelOnEdge(instanceId: string, destination: WorkbenchPanelRegion) {
+      if (destination === "main") throw new Error("Main has no closed panel edge");
+      const attach = destination === "side" && !resolve().shell.getPanelPolicy("side").open;
+      move(instanceId, destination, "end", attach ? "attached" : undefined);
+    },
+  };
+};

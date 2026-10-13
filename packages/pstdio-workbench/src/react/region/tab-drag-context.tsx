@@ -23,6 +23,7 @@ interface TabDrop {
   position: WorkbenchTabPosition;
   widgetId?: string;
   edge?: "before" | "after";
+  closedEdge?: boolean;
 }
 const TabDragContext = createContext<{
   activeId?: string;
@@ -65,7 +66,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     )
       return undefined;
     const widgetId = data.widgetId as string | undefined;
-    if (!widgetId) return { region: data.region, position: "end" } satisfies TabDrop;
+    if (!widgetId) return { region: data.region, position: "end", closedEdge: data.closedEdge } satisfies TabDrop;
     const rect = event.active.rect.current.translated;
     const before = rect && event.over && rect.left + rect.width / 2 < event.over.rect.left + event.over.rect.width / 2;
     return {
@@ -132,6 +133,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
           const geometry = resolveGeometryDrop(event);
           finish();
           if (geometry) void moveGeometry(workbench, geometry.panel, geometry.edge);
+          else if (target?.closedEdge) workbench.dropPanelOnEdge(String(event.active.id), target.region);
           else if (target) workbench.movePanel(String(event.active.id), target.region, target.position);
         }}
       >
