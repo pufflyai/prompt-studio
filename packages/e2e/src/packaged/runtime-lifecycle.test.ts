@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 const BUILD_TIMEOUT = 180_000;
@@ -46,6 +47,7 @@ const readRuntimeLogs = (home: string) => {
 };
 
 const runBinary = (args: string[], cwd: string, env: NodeJS.ProcessEnv) => {
+  logTestPhase("run packaged runtime command");
   const result = spawnSync(PACKAGED_BINARY_PATH, args, {
     cwd,
     encoding: "utf8",
@@ -59,6 +61,7 @@ const runBinary = (args: string[], cwd: string, env: NodeJS.ProcessEnv) => {
 };
 
 const runBinaryAsync = async (args: string[], cwd: string, env: NodeJS.ProcessEnv) => {
+  logTestPhase("launch packaged runtime command");
   const child = spawn(PACKAGED_BINARY_PATH, args, { cwd, env, stdio: ["ignore", "ignore", "pipe"] });
   let stderr = "";
   child.stderr?.on("data", (chunk: Buffer | string) => {
@@ -89,6 +92,7 @@ const waitForOwner = async (path: string, child: ChildProcess) => {
 };
 
 const assertAuthenticatedReady = async (descriptor: RuntimeDescriptor) => {
+  logTestPhase("query runtime health");
   const response = await fetch(`${descriptor.origin}/runtime/ready`, {
     headers: { authorization: `Bearer ${descriptor.token}` },
   });
@@ -168,6 +172,7 @@ describe("packaged runtime lifecycle", () => {
       const home = createRuntimeHome();
       const env = createRuntimeEnv(home);
       const descriptorPath = join(home, "runtime.json");
+      logTestPhase("launch owned desktop runtime");
       const child = spawn(PACKAGED_BINARY_PATH, ["serve", "--foreground", "--owner", "desktop", "--port", "0"], {
         cwd: home,
         env,
@@ -201,6 +206,7 @@ describe("packaged runtime lifecycle", () => {
       const env = createRuntimeEnv(home);
       const descriptorPath = join(home, "runtime.json");
       const startRuntime = () => {
+        logTestPhase("launch runtime during owner replacement");
         const child = spawn(PACKAGED_BINARY_PATH, ["serve", "--foreground", "--owner", "persistent", "--port", "0"], {
           cwd: home,
           env,
