@@ -7,6 +7,7 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { CommandNavigation } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 
 export interface WorkbenchCommandExecutionError {
@@ -21,6 +22,8 @@ export interface WorkbenchCommandExecutionContext {
   resource?: ResourceRef;
   signal?: AbortSignal;
   source?: "panel-add";
+  /** Use this navigation for work created by this execution, including after awaits. */
+  navigation?: CommandNavigation;
 }
 
 export interface CommandParamOption {

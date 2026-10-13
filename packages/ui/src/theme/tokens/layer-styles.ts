@@ -41,6 +41,19 @@ export const layerStyles = defineLayerStyles({
       borderRadius: "inherit",
     },
   },
+  panelHeaderEdge: {
+    value: {
+      position: "absolute",
+      top: "0",
+      insetInline: "0",
+      height: "2",
+      zIndex: "dropdown",
+      bg: "transparent",
+      outline: "none",
+      _hover: { bg: "bg.subtle" },
+      _focusVisible: { bg: "bg.subtle", outline: "2px solid", outlineColor: "border.accent", outlineOffset: "-2px" },
+    },
+  },
   filterPicker: {
     value: {
       height: "min({sizes.filter-picker-height}, calc(100dvh - {spacing.xl}))",

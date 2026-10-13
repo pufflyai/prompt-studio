@@ -58,6 +58,7 @@ const replaceSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSe
 export const openDashboardSessionPanel = (ctx: WorkbenchModuleContext, input: OpenDashboardSessionPanelInput) => {
   rememberDashboardSessionResource(ctx, input.resource);
   const previousPanelMode = ctx.sidePanel.getMode();
+  const wasExplicitlyClosed = ctx.layout.getLayout().regions.side.visibility === "closed";
   const bubble =
     replaceSessionPanel(ctx, input) ??
     openSessionBubbleWidgets(ctx, {
@@ -66,7 +67,12 @@ export const openDashboardSessionPanel = (ctx: WorkbenchModuleContext, input: Op
       tabRetention: input.tabRetention,
     });
   selectSidenavSessionNode(ctx, input.resource);
-  if (input.preservePanelMode && ctx.sidePanel.getMode() !== previousPanelMode) {
+  // Automatic empty visibility is derived, so preserving it must not create a user's Close choice.
+  if (
+    input.preservePanelMode &&
+    ctx.sidePanel.getMode() !== previousPanelMode &&
+    (previousPanelMode !== "closed" || wasExplicitlyClosed)
+  ) {
     ctx.sidePanel.setMode(previousPanelMode);
   }
   return bubble;

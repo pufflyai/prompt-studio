@@ -1,6 +1,7 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import type { WorkbenchSidePanelMode } from "../../registries/layout/layout-types";
 import { createDisposable, type Disposable } from "../../shared/disposable";
+import type { WorkbenchPanelPolicy } from "../shell/panel-policy";
 
 export type { WorkbenchSidePanelMode };
 
@@ -18,6 +19,8 @@ export interface CreateWorkbenchSidePanelControllerInput {
   getFloatingPanels?(): "visible" | "hidden";
   onDidChangePolicy?(listener: () => void): Disposable;
   initialMode?: WorkbenchSidePanelMode;
+  getPolicy?(): WorkbenchPanelPolicy;
+  setPresentation?(mode: WorkbenchSidePanelMode): void | Promise<void>;
 }
 
 // The layout's side region owns the mode, so it follows layout persistence scopes
@@ -28,13 +31,26 @@ export const createWorkbenchSidePanelController = (input: CreateWorkbenchSidePan
   const defaultPresentation = input.initialMode === "attached" ? "attached" : "floating";
   const getMode = () => {
     const side = input.layout.getLayout().regions.side;
-    return side.visible ? resolveMode(side.presentation ?? defaultPresentation) : "closed";
+    return (input.getPolicy?.().open ?? side.visible)
+      ? resolveMode(side.presentation ?? defaultPresentation)
+      : "closed";
   };
 
   return {
     canFloat,
     getMode,
-    setMode: (mode: WorkbenchSidePanelMode) => input.layout.setSidePanelMode(resolveMode(mode)),
+    setMode: (mode: WorkbenchSidePanelMode) => {
+      if (input.setPresentation) return input.setPresentation(mode);
+      const policy = input.getPolicy?.();
+      if (mode === "closed") {
+        if (policy && !policy.canClose) throw new Error("Panel cannot close: side");
+      } else if (policy && !policy.open) {
+        if (!policy.canOpen) throw new Error("Panel cannot open: side");
+        input.layout.setSidePanelMode(resolveMode(mode));
+        return;
+      }
+      input.layout.setSidePanelMode(resolveMode(mode));
+    },
     onDidChange(listener: WorkbenchSidePanelChangeListener) {
       let current = getMode();
       const notify = () => {

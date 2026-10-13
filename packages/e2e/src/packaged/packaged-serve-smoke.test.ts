@@ -43,7 +43,8 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Navigation metadata also proves page menus, bottom settings, modes/basePage, and resource context survive packaging.
+// Navigation metadata proves page menus, bottom settings, modes/basePage, resource context,
+// independent mode panel permissions, and explicit-open targets survive packaging.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";

@@ -14,6 +14,7 @@ import {
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
+import { validatePanelNavigation } from "./panel-navigation-policy";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
 
@@ -145,6 +146,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
         owned(modeId),
       );
     } else if (target.kind === "panel") {
+      validatePanelNavigation(core, target, proposed);
       const panel = target.panel;
       if (panel.kind === "page-slot") {
         const page = requirePanelPage(proposed, panel);

@@ -1,5 +1,7 @@
 import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
 import { openWorkbenchPanel } from "./controllers/navigation/panel-navigation";
+import { validatePanelNavigation } from "./controllers/navigation/panel-navigation-policy";
+import { getShellNavigationScope } from "./controllers/shell/shell-navigation-scope";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { createNavigationRegistry, type NavigationTargetPanel } from "./registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "./workbench-core-types";
@@ -19,9 +21,7 @@ const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) =>
 };
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
-  if (region === "bottom") core.layout.setRegionVisible("bottom", true);
-  if (region === "secondary") core.shell.setRegionOpen("secondary", true);
-  if (region === "side" && core.sidePanel.getMode() === "closed") core.sidePanel.setMode("attached");
+  if (region === "bottom" || region === "secondary" || region === "side") core.shell.revealRegion(region);
 };
 
 export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =>
@@ -29,16 +29,20 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
     resolveDispatcher: () => {
       const core = resolveCore();
       return {
+        runNavigation: getShellNavigationScope(core.shell).run,
         prepareNavigation: (targets) => prepareWorkbenchNavigation(core, targets),
         canOpenPanel: (target) => canOpenCorePanel(core, target),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
-        openPanelTarget: (target) => openWorkbenchPanel(core, target),
+        openPanelTarget: (target) => {
+          validatePanelNavigation(core, target, core.pages.store.getState());
+          openWorkbenchPanel(core, target);
+        },
         openPageTarget: (target) => {
           const result = core.pageLocations.navigate(target);
           if (!result.ok) throw new Error(result.diagnostic.message);
           return result;
         },
-        executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
+        executeCommand: (commandId, args, context) => core.commands.executeCommand(commandId, args, context),
         openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),
       };
     },

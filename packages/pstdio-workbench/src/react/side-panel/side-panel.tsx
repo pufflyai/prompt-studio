@@ -5,9 +5,10 @@ import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { PanelHeaderEdge, PanelHeaderMenu } from "../region/panel-header-menu";
 import { useWorkbenchRegionTabsVisible } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
-import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
+import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
@@ -45,11 +46,13 @@ const WorkbenchSidePanelHeader = (props: WorkbenchSidePanelHeaderProps) => {
 
 export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
-  const settings = useWorkbenchModeRegionSettings(workbench, "side");
+  const policy = usePanelPolicy(workbench, "side");
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const attached = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode() === "attached");
   const hasTabs = useWorkbenchRegionTabsVisible(workbench, "side");
-  const showHeader = (settings?.showHeader !== false || hasTabs) && Boolean(header || canFloat);
+  const showHeader = policy.legacyHeaders
+    ? (policy.showHeader || hasTabs) && Boolean(header || canFloat)
+    : policy.showHeader;
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -66,6 +69,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
             <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
+              <PanelHeaderMenu workbench={workbench} region="side" />
               {canFloat ? (
                 <Tooltip content="Float Side Panel">
                   <IconButton
@@ -87,6 +91,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
             <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
           </Flex>
         </WorkbenchPanelMenuLayout>
+        <PanelHeaderEdge workbench={workbench} region="side" visible={showHeader} />
         <WorkbenchTabDropTarget region="side" />
       </AttachedPanel>
     </WorkbenchFocusRegion>
@@ -101,11 +106,13 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen, available = true } = props;
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
+  const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && mode === "floating";
+  const showHeader = policy.legacyHeaders || policy.showHeader;
 
   return (
     <>
-      {available && canFloat && mode !== "attached" ? (
+      {available && canFloat && policy.floatingBubble && policy.canOpen && mode !== "attached" ? (
         <BubbleButton
           isOpen={visible}
           aria-label="Open Side Panel"
@@ -122,16 +129,29 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         aria-label="Side Panel"
         testId="workbench-side-panel-floating"
         closeLabel="Close Side Panel"
+        showHeader={showHeader}
         containerProps={{
           "data-workbench-panel": "side",
           bottom: floatingPanelBottom(bottomOffset),
           bg: workbenchBackgrounds.widget,
         }}
         popOutLabel="Reattach Side Panel"
-        onClose={() => workbench.sidePanel.setMode("closed")}
+        onClose={policy.canClose ? () => workbench.sidePanel.setMode("closed") : undefined}
         onPopOut={() => workbench.sidePanel.setMode("attached")}
-        menu={visible ? <WorkbenchSidePanelHeader header={header} /> : undefined}
-        overlay={<WorkbenchTabDropTarget region="side" />}
+        menu={
+          visible ? (
+            <>
+              <WorkbenchSidePanelHeader header={header} />
+              <PanelHeaderMenu workbench={workbench} region="side" />
+            </>
+          ) : undefined
+        }
+        overlay={
+          <>
+            <PanelHeaderEdge workbench={workbench} region="side" visible={showHeader} />
+            <WorkbenchTabDropTarget region="side" />
+          </>
+        }
       >
         <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
       </BubblePanel>

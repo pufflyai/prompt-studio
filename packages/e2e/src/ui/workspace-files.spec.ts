@@ -64,6 +64,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
     await openWorkspace(page, attempt.workspace.workspace_shorthand);
+    await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
 
     const filesTab = page.getByRole("tab", { name: "Files" });
     const changesTab = page.getByRole("tab", { name: "Changes" });

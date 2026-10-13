@@ -31,13 +31,14 @@ export const ForeignContext: Story = {
       "aria-selected",
       "true",
     );
-    await userEvent.hover(foreign);
+    await userEvent.hover(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }));
     await expect(await within(document.body).findByRole("tooltip")).toHaveTextContent(
       "Outside this workspace · Workspace 2",
     );
-    await userEvent.unhover(foreign);
+    await userEvent.unhover(canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }));
     await userEvent.click(canvas.getByRole("button", { name: "Grow Secondary" }));
-    foreign.focus();
+    await userEvent.tab();
+    canvas.getByRole("tab", { name: "Session 2 · Outside this workspace · Workspace 2" }).focus();
     await expect(await within(document.body).findByRole("tooltip")).toHaveTextContent(
       "Outside this workspace · Workspace 2",
     );
@@ -46,7 +47,11 @@ export const ForeignContext: Story = {
       await canvas.findByRole("tab", { name: "Session 2 · Outside this workspace · Project" }),
     ).toBeVisible();
     await expect(visibleWindowingLabel(canvasElement, "Session context")).toHaveTextContent("Project");
-    await userEvent.click(within(main).getByRole("button", { name: "Add panel" }));
+    await userEvent.click(
+      within(main.querySelector('[data-workbench-panel-header="main"]') as HTMLElement).getByRole("button", {
+        name: "Add panel",
+      }),
+    );
     const changes = within(document.body).queryByRole("menuitem", { name: "Changes" });
     if (changes) await userEvent.click(changes);
     await waitFor(() =>
@@ -54,7 +59,7 @@ export const ForeignContext: Story = {
     );
     await expect(breadcrumb).toHaveTextContent(original!);
     await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
-    await expect(canvas.getByRole("tab", { name: "Session 1" })).toBeVisible();
+    await expect(canvas.getByRole("tab", { name: /^Session 1(?: · .*)?$/ })).toBeVisible();
     await expect(breadcrumb).toHaveTextContent(original!);
   },
 };

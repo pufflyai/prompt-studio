@@ -8,6 +8,7 @@ import type {
   WorkbenchRegion,
   WorkbenchRegionSettings,
 } from "../layout/layout-model";
+import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 
 export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
@@ -32,6 +33,10 @@ export interface WorkbenchModeContribution {
   basePage?: PageRef;
   defaultTheme?: string;
   floatingPanels?: "visible" | "hidden";
+  floatingBubble?: boolean;
+  floating?: { defaultTab?: NavigationTarget };
+  /** Host adaptation preserves extension header semantics until the coordinated breaking release. */
+  panelHeaders?: "legacy";
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
   panels?: readonly WorkbenchPanelRegion[];
   /** Region-level layout policy while this mode is active. */
@@ -76,6 +81,7 @@ export interface WorkbenchModeRegistry {
 }
 
 export interface CreateWorkbenchModeRegistryInput {
+  regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
   /** Commit page-aware switches through the location owner. Returns true when handled. */
   navigateMode?(modeId: string): boolean;
   establishLocation?(instanceId: string): void;

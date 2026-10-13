@@ -13,6 +13,7 @@ import {
   type WorkbenchModeContribution,
 } from "../../registries/modes/mode-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
+import type { WorkbenchPanelPolicy } from "../shell/panel-policy";
 import { allowedPanelDestinations } from "./panel-destinations";
 export interface WorkbenchCompositionAddablePanel extends WorkbenchModeAddablePanel {
   contribution: RegisteredWidgetContribution;
@@ -31,6 +32,7 @@ interface CreateWorkbenchCompositionControllerInput {
   getLayout(): WorkbenchLayout;
   getResource(): ResourceRef | undefined;
   listWidgets(): RegisteredWidgetContribution[];
+  getPanelPolicy?(region: WorkbenchPanelRegion): WorkbenchPanelPolicy;
   listOwnedAddablePanels?(input: {
     layout: WorkbenchLayout;
     mode: WorkbenchModeContribution | undefined;
@@ -105,6 +107,9 @@ export const createWorkbenchCompositionController = (
     const location = getActiveLocationPlacement(layout);
     const mode = input.getActiveMode();
     if (!isWorkbenchModePanelAvailable(mode, region)) return { open, addable: [], closable: [] };
+    const policy = input.getPanelPolicy?.(region);
+    if (policy && (!policy.acceptsTabs || (!policy.open && !policy.canOpen)))
+      return { open, addable: [], closable: open.filter((p) => p.closable).map((p) => p.contributionId) };
     const placements = open;
     const widgets = input.listWidgets();
     const modePanels = mode?.listAddablePanels?.({ layout, resource }) ?? [];

@@ -39,5 +39,8 @@ export const panelDestinations = (core: WorkbenchCore, contributionId: string) =
     pageBottom: pageHasBottom(page),
     movableTo: declaration?.movableTo,
     allowedRegions: legacyPanel?.allowedRegions,
+  }).filter((region) => {
+    const policy = core.shell.getPanelPolicy(region);
+    return policy.acceptsTabs && (policy.open || policy.canOpen);
   });
 };

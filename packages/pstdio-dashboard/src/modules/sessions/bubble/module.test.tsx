@@ -210,7 +210,7 @@ describe("createSessionBubbleModule", () => {
         tabRetention: "preview",
       }),
     ]);
-    expect(workbench.sidePanel.getMode()).toBe("attached");
+    expect(workbench.sidePanel.getMode()).toBe("floating");
   });
   test("replaces the preview but retains pinned session tabs", async () => {
     const workbench = createWorkbench();

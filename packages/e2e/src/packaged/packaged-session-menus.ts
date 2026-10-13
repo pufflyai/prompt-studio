@@ -28,10 +28,19 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("menu")).toHaveCount(1);
   await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
   await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
+    page.locator('[data-workbench-panel="side"]').getByRole("tab", {
       name: /Packaged session actions/,
     }),
   ).toBeVisible();
+  const side = page.locator('[data-workbench-panel="side"]:visible');
+  await side.getByRole("button", { name: "side header options", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
+  const edge = side.getByLabel("side header edge", { exact: true });
+  await expect(edge).toBeVisible();
+  await edge.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
+  await expect(side.getByRole("tab", { name: /Packaged session actions/ })).toBeVisible();
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
 };

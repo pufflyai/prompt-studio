@@ -132,6 +132,8 @@ const workbenchExtensionModeRecordSchema = z.object({
   regions: z.array(z.enum(extensionPanelRegions)),
   basePage: pageRefSchema.optional(),
   floatingPanels: z.enum(["visible", "hidden"]).optional(),
+  floatingBubble: z.boolean().optional(),
+  floating: z.object({ defaultTab: navigationTargetSchema.optional() }).optional(),
   regionSettings: z.partialRecord(z.enum(dockedWorkbenchRegions), regionSettingsSchema).optional(),
   defaultTheme: contributionRefSchema("theme").optional(),
   chrome: z

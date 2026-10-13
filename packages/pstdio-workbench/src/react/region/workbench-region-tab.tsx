@@ -5,8 +5,12 @@ import { RegionTabMenu } from "./region-tab-menu";
 import { resolveTabIconName } from "./region-tabs-visibility";
 import { useRegionTab, type WorkbenchRegionTabProps } from "./use-region-tab";
 
-const TabIcon = (props: { indicator?: import("../../core").WorkbenchTabSnapshot["indicator"]; icon?: string }) => {
-  const { indicator, icon } = props;
+const TabIcon = (props: {
+  indicator?: import("../../core").WorkbenchTabSnapshot["indicator"];
+  icon?: string;
+  locked?: boolean;
+}) => {
+  const { indicator, icon, locked } = props;
   if (indicator)
     return (
       <WorkbenchIcon
@@ -17,7 +21,16 @@ const TabIcon = (props: { indicator?: import("../../core").WorkbenchTabSnapshot[
         aria-label={indicator.label}
       />
     );
-  return icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null;
+  const tabIcon = locked ? "Lock" : icon;
+  return tabIcon ? <WorkbenchIcon name={tabIcon} size={12} flexShrink={0} color="fg.muted" /> : null;
+};
+
+const isLockedTab = (props: WorkbenchRegionTabProps) => {
+  const { workbench, placement } = props;
+  const locked =
+    !placement.closable &&
+    workbench.getPanelDestinations(placement.widgetId).every((region) => region === props.region);
+  return locked;
 };
 
 export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
@@ -36,6 +49,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
       placement.resource ? workbench.resources.getKind(placement.resource.type)?.icon : undefined,
     );
   const active = placement.widgetId === activeWidgetId;
+  const locked = isLockedTab(props);
   return (
     <>
       <Box
@@ -71,7 +85,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             onPointerCancel={behavior.onPointerCancel}
             onClickCapture={behavior.onClick}
           >
-            <TabIcon indicator={snapshot.indicator} icon={icon} />
+            <TabIcon indicator={snapshot.indicator} icon={icon} locked={locked} />
             <Text as="span" id={labelId} data-tab-label>
               {label}
             </Text>

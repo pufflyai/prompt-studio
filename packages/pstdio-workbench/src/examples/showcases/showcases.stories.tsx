@@ -60,12 +60,10 @@ export const Boombox: Story = {
   render: BoomboxStory,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const player = canvasElement.querySelector('[data-workbench-region="secondary"]');
-    await userEvent.click(await canvas.findByRole("button", { name: "Hide Secondary Panel" }));
-    await expect(player).not.toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Show Secondary Panel" }));
-    await expect(player).toBeVisible();
-    await expect(canvasElement.querySelector('[data-workbench-region="secondary"]')).toBe(player);
+    await expect(canvasElement.querySelector('[data-workbench-region="secondary"]')).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Hide Secondary Panel" })).toBeNull();
+    await expect(canvasElement.querySelector('[data-workbench-region="sidenav"]')).not.toBeVisible();
+    await expect(await canvas.findByRole("tab", { name: "Up next" })).toBeVisible();
   },
 };
 export const Zipline: Story = {
@@ -89,14 +87,15 @@ export const Kiln: Story = {
     const position = canvas.getByRole("spinbutton", { name: "Cube position X" });
     await userEvent.clear(position);
     await userEvent.type(position, "2.5");
-    for (const panel of ["Side", "Secondary"]) {
-      await userEvent.click(canvas.getByRole("button", { name: `Hide ${panel} Panel` }));
-      await userEvent.click(canvas.getByRole("button", { name: `Show ${panel} Panel` }));
-    }
+    for (const panel of ["Side", "Secondary"])
+      await expect(canvas.queryByRole("button", { name: `Hide ${panel} Panel` })).toBeNull();
     await expect(canvas.getByRole("spinbutton", { name: "Cube position X" })).toHaveValue(2.5);
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
-    for (const region of ["side", "secondary"]) {
-      await expect(canvasElement.querySelector(`[data-workbench-panel-header="${region}"]`)).toBeNull();
-    }
+    await userEvent.keyboard("{Escape}");
+    const edge = canvas.getByLabelText("secondary header edge");
+    edge.focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    await userEvent.click(within(document.body).getByRole("menuitem", { name: "Show header" }));
+    await expect(await canvas.findByRole("tab", { name: "Timeline" })).toBeVisible();
+    await expect(canvas.queryByRole("separator", { name: "Resize Secondary Panel" })).toBeNull();
   },
 };

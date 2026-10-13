@@ -12,6 +12,7 @@ import {
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
 import { restoreAdoptedModeGeometry, restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
@@ -36,9 +37,16 @@ import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
-import { ownerLayoutActivation, resolveOwnerPlacements } from "./owner-layout-resolution";
+import {
+  connectOwnerPlacementReader,
+  ownerLayoutActivation,
+  resolveOwnerPlacements,
+  savedOwnerPlacements,
+} from "./owner-layout-resolution";
 import { pageWidgetId, reuseSingleResourceWidgets } from "./page-widget-id";
 import { reuseSingleMainView } from "./reuse-single-main-view";
+import { syncOwnedPanelMenus } from "./runtime-panel-menus";
+
 export interface ConnectWorkbenchPageRuntimeInput {
   hasDeclaration?(identity: PlacementIdentity): boolean;
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
@@ -53,26 +61,6 @@ export interface ConnectWorkbenchPageRuntimeInput {
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
 }
-const syncOwnedPanelMenus = (layout: LayoutModel) => {
-  const ownedPlacements = Object.values(layout.getLayout().regions)
-    .flatMap((region) => region.widgets)
-    .filter((placement) => Boolean(placement.placementIdentity));
-  for (const placement of ownedPlacements) {
-    const owner = layout.getWidget(placement.contributionId);
-    for (const menuId of owner?.ownedPanelMenuIds ?? []) {
-      const menu = layout.getWidget(menuId);
-      if (!menu) continue;
-      layout.openWidget(menuId, {
-        pinned: true,
-        role: "panel-menu",
-        viewId: menu.rendererId,
-        resource: placement.resource,
-        title: menu.region.endsWith("-left-menu") ? placement.resource?.label : menu.title,
-      });
-    }
-  }
-  layout.reconcilePanelMenus();
-};
 const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
   const ownerResourceKey = resourceKey(state.location?.resource);
   if (!ownerResourceKey) return state.placements;
@@ -139,7 +127,10 @@ const restoreRuntimeGeometry = (
 ) => {
   const geometry =
     state.projectId && state.activePageId ? input.loadPageGeometry?.(state.projectId, state.activePageId) : undefined;
-  return restorePageGeometry(layout, geometry);
+  const page = state.activePageId ? state.pages[state.activePageId] : undefined;
+  return clampPanelSizes(restorePageGeometry(layout, geometry), (region) =>
+    region === "bottom" ? page?.regionSettings?.bottom : input.layout.getRegionSettings(region),
+  );
 };
 
 const applyPageState = (
@@ -201,6 +192,14 @@ const applyPageState = (
   });
 };
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
+  const disconnectReader = connectOwnerPlacementReader(input.registry, (state) =>
+    savedOwnerPlacements({
+      modeId: state.activeModeId,
+      pageLayout: input.loadPageLayout?.(state),
+      modeLayout: state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
+      currentLayout: input.layout.getLayout(),
+    }),
+  );
   let applyingTransition = false;
   const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime((state) => {
     const storeBeforeTransition = input.registry.store.getState();
@@ -215,6 +214,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
   });
   return createDisposable(() => {
+    disconnectReader();
     scope.dispose();
     runtime.dispose();
   });

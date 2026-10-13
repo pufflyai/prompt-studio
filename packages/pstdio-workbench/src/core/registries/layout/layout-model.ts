@@ -125,6 +125,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const requireWidget = (id: string) => requireRegisteredWidget(getWidgets(), id);
 
   const setLayout = (layout: WorkbenchLayout) => {
+    layout = input.resolveLayout?.(layout) ?? layout;
     const snapshot = store.getState();
     if (snapshot.layout === layout) return;
     store.setState({ ...snapshot, layout }, false, "setLayout");

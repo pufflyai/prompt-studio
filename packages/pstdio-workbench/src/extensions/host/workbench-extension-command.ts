@@ -16,6 +16,7 @@ export interface WorkbenchExtensionCommandContext {
   workbench: WorkbenchModuleContext;
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
+  navigation?: WorkbenchCommandExecutionContext["navigation"];
   workspaceId?: string;
   signal?: AbortSignal;
   metadata?: Record<string, unknown>;
@@ -59,7 +60,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   if (outcome?.status === "success") {
     for (const target of outcome.navigationRequests ?? []) {
       try {
-        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target));
+        await (input.navigation ?? context.workbench.navigation).openTarget(toWorkbenchNavigationTarget(target));
       } catch (error) {
         context.workbench.notifications.show({
           level: "warning",
