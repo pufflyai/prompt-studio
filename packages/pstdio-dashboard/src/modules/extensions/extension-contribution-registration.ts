@@ -158,7 +158,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         projectId: input.projectId,
         resolveTreeNodeResource: (resource) =>
           toDashboardExtensionResource(resource, input.projectId, input.metadata.resourceKinds)!,
-        renderWebview: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
+        renderWebview: (renderInput, layout) => createElement(ExtensionViewWidget, { input: renderInput, layout }),
         settingsSectionId: "project",
         settingsSectionTitle: "Project",
         subscribeRefreshEvents: (listener) => {

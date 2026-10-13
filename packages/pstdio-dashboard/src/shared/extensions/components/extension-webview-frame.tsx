@@ -36,6 +36,7 @@ import { notificationStatusRouteVerb } from "./notification-transition-route";
 import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
+  layout?: "fill" | "content";
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;
@@ -280,6 +281,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
 
   return (
     <BridgedWebviewSurface
+      layout={props.layout}
       key={view.id}
       view={view}
       extensionProps={{ projectId, themePreference, locale, lastCommand, resource, pageLocation, translations }}

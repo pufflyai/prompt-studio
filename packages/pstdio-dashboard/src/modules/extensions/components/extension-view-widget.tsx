@@ -31,8 +31,8 @@ export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "ins
   };
 };
 
-export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
+export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput; layout?: "fill" | "content" }) => {
+  const { input, layout = "fill" } = props;
   const placementResource = input.instance.resource;
   const derived = resolveExtensionView(input);
 
@@ -49,9 +49,10 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
   const { extensionInstanceId, installName, projectId, view, webview } = derived;
 
   return (
-    <Box position="relative" w="full" h="full" minH="0">
-      <Box position="absolute" inset="0">
+    <Box position="relative" w="full" h={layout === "content" ? "auto" : "full"} minH="0">
+      <Box position={layout === "content" ? "relative" : "absolute"} inset="0">
         <ExtensionWebviewFrame
+          layout={layout}
           extensionId={view.extensionId}
           extensionInstanceId={extensionInstanceId}
           installName={installName}
