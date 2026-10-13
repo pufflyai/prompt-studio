@@ -1,5 +1,8 @@
+import { stopWindowsProcessTree } from "./windows-process-tree";
+
 interface SignalableChild {
   pid: number;
+  exited: Promise<unknown>;
   kill(signal?: NodeJS.Signals): void;
 }
 
@@ -9,40 +12,11 @@ interface SignalableChild {
  * to catch grandchildren the host never saw. Windows force-stops the tree with taskkill.
  * Falls back to the child alone when the group is already gone or cannot be reached.
  */
-export const signalProcessTree = (child: SignalableChild, signal: NodeJS.Signals) => {
+export const signalProcessTree = async (child: SignalableChild, signal: NodeJS.Signals) => {
   if (process.platform === "win32" && signal === "SIGKILL") {
     // Killing cmd.exe alone leaves the CLI inside an npm wrapper running.
     // /T includes descendants; /F is required for a timed-out console process.
-    const started = performance.now();
-    try {
-      const result = Bun.spawnSync(["taskkill.exe", "/PID", String(child.pid), "/T", "/F"], {
-        stdout: "pipe",
-        stderr: "pipe",
-        windowsHide: true,
-      });
-      console.error(
-        JSON.stringify({
-          event: "process.tree.stop.measurement",
-          pid: child.pid,
-          elapsedMs: performance.now() - started,
-          exitCode: result.exitCode,
-          stdout: result.stdout.toString(),
-          stderr: result.stderr.toString(),
-        }),
-      );
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          event: "process.tree.stop.measurement",
-          pid: child.pid,
-          elapsedMs: performance.now() - started,
-          error: String(error),
-        }),
-      );
-    }
-    try {
-      child.kill(signal);
-    } catch {}
+    await stopWindowsProcessTree(child);
     return;
   }
   try {
