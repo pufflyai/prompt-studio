@@ -82,7 +82,6 @@ export const renderBridgeWebviewFrame = (input: {
   ownerId?: string;
   title: string;
   webview: BridgeWebviewConfig;
-  layout?: "fill" | "content";
 }) => {
   const {
     context,
@@ -92,11 +91,9 @@ export const renderBridgeWebviewFrame = (input: {
     ownerId,
     title,
     webview,
-    layout,
   } = input;
   return (
     <BridgeWebviewFrame
-      layout={layout}
       view={{
         extensionId: ownerId ?? "workbench",
         id: context.webviewId,

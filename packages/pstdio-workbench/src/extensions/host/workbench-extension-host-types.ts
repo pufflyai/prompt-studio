@@ -59,7 +59,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   ): Promise<unknown> | unknown;
   projectId: string;
   resolveTreeNodeResource?: RegisterWorkbenchExtensionTreeRenderersInput["resolveNodeResource"];
-  renderWebview?(input: WorkbenchPanelRenderInput, layout?: "fill" | "content"): unknown;
+  renderWebview?(input: WorkbenchPanelRenderInput): unknown;
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   subscribeRefreshEvents?: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;

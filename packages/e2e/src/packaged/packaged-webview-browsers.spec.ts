@@ -24,7 +24,6 @@ import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
-import { verifyPackagedSettingsSizing } from "./packaged-settings-sizing";
 import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
 import { verifyPackagedViewInitialization } from "./packaged-webview-initialization";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
@@ -182,12 +181,6 @@ test.describe("packaged extension webviews", () => {
           await page.getByText("Settings", { exact: true }).last().click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
-          await verifyPackagedSettingsSizing(page, {
-            baseUrl: started.baseUrl,
-            projectId: project.id,
-            root: tempRoot,
-            headers: runtimeAuthorization(started.descriptor),
-          });
           await page.keyboard.press("Escape");
           await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
           await expect(frame.getByText("1", { exact: true })).toBeVisible();

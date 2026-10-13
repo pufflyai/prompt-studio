@@ -22,11 +22,11 @@ export type WebviewDescriptor = {
 
 const webviewSurfaceBackground = "var(--chakra-colors-vscode-editor-background, var(--chakra-colors-bg))";
 
-const WebviewLoadError = (props: { detail?: string; layout?: "fill" | "content" }) => {
-  const { detail, layout = "fill" } = props;
+const WebviewLoadError = (props: { detail?: string }) => {
+  const { detail } = props;
 
   return (
-    <Center position={layout === "content" ? "relative" : "absolute"} inset="0" px="md" zIndex={1} bg="bg/80">
+    <Center position="absolute" inset="0" px="md" zIndex={1} bg="bg/80">
       <Stack gap="xs" maxW="md" textAlign="center">
         <Text textStyle="paragraph/S/medium" color="fg.error">
           Extension view failed to load.
@@ -77,14 +77,13 @@ export const StaticWebviewSurface = (props: {
 };
 
 export const BridgedWebviewSurface = (props: {
-  layout?: ExtensionFrameProps["layout"];
   capabilities: ExtensionFrameProps["capabilities"];
   extensionProps: unknown;
   hostEvents?: ExtensionFrameProps["hostEvents"];
   theme: "dark" | "light";
   view: ExtensionFrameProps["view"];
 }) => {
-  const { capabilities, extensionProps, hostEvents, theme, view, layout = "fill" } = props;
+  const { capabilities, extensionProps, hostEvents, theme, view } = props;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const diagnostics = createWebviewDiagnostics(view);
@@ -93,20 +92,19 @@ export const BridgedWebviewSurface = (props: {
     <Box
       position="relative"
       width="100%"
-      height={layout === "content" ? "auto" : "100%"}
+      height="100%"
       minH="0"
       bg={webviewSurfaceBackground}
       display="flex"
       flexDirection="column"
     >
-      {error ? <WebviewLoadError detail={error} layout={layout} /> : null}
+      {error ? <WebviewLoadError detail={error} /> : null}
       {!error && !ready ? (
         <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
           <Spinner size="sm" />
         </Center>
       ) : null}
       <ExtensionFrame
-        layout={layout}
         view={view}
         props={extensionProps}
         theme={theme}

@@ -15,7 +15,6 @@ import { extensionIframeAllow } from "./iframe-permissions";
 import { collectChakraThemeVariables, resolveActiveTheme } from "./theme";
 
 export interface ExtensionFrameProps {
-  layout?: "fill" | "content";
   view: ExtensionViewDescriptor;
   props: unknown;
   theme: ThemePreference;
@@ -31,7 +30,6 @@ export interface ExtensionFrameProps {
 
 type GuestRemote = {
   init: (message: {
-    layout?: "fill" | "content";
     moduleUrl: string;
     styles: string[];
     props: unknown;
@@ -65,7 +63,6 @@ export const EXTENSION_IFRAME_SANDBOX = "allow-scripts allow-forms allow-popups"
 
 export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const {
-    layout = "fill",
     view,
     props: extensionProps,
     theme,
@@ -94,7 +91,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // Panel floats). The bump remounts a fresh iframe so a single clean connection
   // owns the new browsing context.
   const [frameEpoch, setFrameEpoch] = useState(0);
-  const [contentHeight, setContentHeight] = useState(0);
 
   propsRef.current = extensionProps;
   themeRef.current = theme;
@@ -147,10 +143,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     reportDiagnostics(createCapabilityGate().diagnostics);
 
     const hostApi = {
-      contentResize: ({ height }: { height: number }) => {
-        if (iframeRef.current === iframe && layout === "content" && Number.isFinite(height) && height >= 0)
-          setContentHeight(Math.ceil(height));
-      },
       ready: () => {
         // no-op; init fires from host.connect().then() below.
       },
@@ -180,7 +172,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
 
           await remote.init({
-            layout,
             moduleUrl: moduleUrlAtConnect,
             styles: stylesAtConnect,
             props: propsRef.current,
@@ -204,7 +195,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     // at iframe load and binds to that connection ID. Closing during React StrictMode's
     // dev-only cleanup would leave the live iframe with no host listener.
     return removeLoadListener;
-  }, [frameEpoch, layout, view.extensionId, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
+  }, [frameEpoch, view.extensionId, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
 
   // Re-renders may hand the frame a fresh publisher (renderers rebuild their
   // capability context per render); route it to the live connection.
@@ -258,10 +249,10 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   }, []);
 
   return (
-    <div style={{ ...frameShellStyle, height: layout === "content" ? contentHeight : "100%" }}>
+    <div style={frameShellStyle}>
       <iframe
         // A new runtime or module needs its own browsing context and bridge handshake.
-        key={`${frameEpoch}\n${layout}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
+        key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
         ref={iframeRef}
         title={title ?? view.label}
         allow={extensionIframeAllow(view.webview.capabilities)}

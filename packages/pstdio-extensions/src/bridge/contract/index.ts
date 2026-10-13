@@ -4,8 +4,6 @@ export const HOST_RUNTIME_ERROR_EVENT = "pstdio.extension.runtime-error";
 export type ThemePreference = "dark" | "light";
 
 export type InitMessage = {
-  /** The host owns sizing. Embedded settings follow their content instead of a region. */
-  layout?: "fill" | "content";
   moduleUrl: string;
   styles: string[];
   props: unknown;
@@ -53,7 +51,6 @@ export type HostApi = {
 };
 
 export type GuestApi = {
-  contentResize?: (payload: { height: number }) => void;
   ready: (payload: ReadyPayload) => void;
   runtimeError: (payload: RuntimeErrorPayload) => void;
   call: (request: HostCapabilityRequest) => Promise<unknown>;
