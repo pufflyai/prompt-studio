@@ -185,8 +185,16 @@ try {
         @{ path = $_.FullName; target = $link.TargetPath; arguments = $link.Arguments }
       }} | ConvertTo-Json -AsArray
   `);
-  assert(shortcuts.includes("Prompt Studio.exe"), "Start menu shortcut must launch the installed app");
   writeFileSync(join(evidence, "shortcuts.json"), `${shortcuts}\n`);
+  const allShortcuts = await powershell(`
+    $shell = New-Object -ComObject WScript.Shell
+    Get-ChildItem ([Environment]::GetFolderPath('Programs')) -Recurse -Filter '*.lnk' |
+      ForEach-Object { $link = $shell.CreateShortcut($_.FullName)
+        @{ path = $_.FullName; target = $link.TargetPath; arguments = $link.Arguments }
+      } | ConvertTo-Json -AsArray
+  `);
+  writeFileSync(join(evidence, "all-shortcuts.json"), `${allShortcuts}\n`);
+  assert(shortcuts.includes("Prompt Studio.exe"), "Start menu shortcut must launch the installed app");
   active = await launchInstalled(baseline.version);
   const projectPath = join(home, "Windows installed project");
   mkdirSync(projectPath);
@@ -278,5 +286,8 @@ try {
     join(process.env.LOCALAPPDATA!, "SquirrelTemp/SquirrelSetup.log"),
   ]) {
     if (existsSync(log)) writeFileSync(join(evidence, `${basename(dirname(log))}-setup.log`), readFileSync(log));
+  }
+  for (const log of new Bun.Glob("Squirrel-*.log").scanSync({ cwd: process.env.LOCALAPPDATA!, absolute: true })) {
+    writeFileSync(join(evidence, basename(log)), readFileSync(log));
   }
 }
