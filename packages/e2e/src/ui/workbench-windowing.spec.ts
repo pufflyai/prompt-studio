@@ -10,6 +10,10 @@ import {
 
 const storyIds = [
   "smoke",
+  "proposal-reopen",
+  "player-reopen",
+  "moved-declared-tool",
+  "legacy-fixed-tool",
   "webview",
   "boombox",
   "kiln",
@@ -42,6 +46,22 @@ const storyIds = [
   "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 storyIds.push(
+  ...[
+    "single-items",
+    "single-resource-page",
+    "close-resource-page",
+    "hidden-single-tabs",
+    "multiple-items",
+    "single-closable-panel",
+    "single-resource-with-menu",
+    "actions-without-tabs",
+  ].map((name) => `pstdio-workbench-reference-core-api-panel-tabs--${name}`),
+  ...[
+    "single-available-fixed-panel",
+    "multiple-available-fixed-panels",
+    "collapsed-menu-with-tab",
+    "header-action-without-tabs",
+  ].map((name) => `pstdio-workbench-reference-core-api-panel-header-visibility--${name}`),
   "pstdio-workbench-showcases--boombox",
   "pstdio-workbench-showcases--kiln",
   "pstdio-workbench-showcases-dashboard--dashboard",

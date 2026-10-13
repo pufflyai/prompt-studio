@@ -41,6 +41,8 @@ export interface WorkbenchPageContribution {
   parentId?: string;
   resource?: ResourceConstraint;
   document?: PageDocumentDeclaration;
+  /** Host adaptation for old extension tab declarations. */
+  tabLocks?: "legacy";
   main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
   panelMenus?: PageContribution["panelMenus"];

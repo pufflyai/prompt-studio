@@ -48,7 +48,7 @@ export const createViewsWorkbench = () => {
         id: "host.guide",
         item: {
           kind: "view",
-          presence: "fixed",
+          presence: "open",
           view: {
             kind: "view",
             id: "host.guide",

@@ -127,7 +127,7 @@ export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution =
       id: kanbanRendererStoryWidgetId,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: kanbanRendererStoryWidgetId,

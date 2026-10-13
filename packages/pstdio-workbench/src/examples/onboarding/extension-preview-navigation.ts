@@ -25,7 +25,7 @@ export const registerPreviewNavigation = (workbench: WorkbenchCore) => {
   );
   workbench.shellPlacements.registerPlacement({
     id,
-    item: { kind: "view", view: { kind: "view", id }, presence: "fixed" },
+    item: { kind: "view", view: { kind: "view", id }, presence: "open" },
     region: "sidenav",
   });
 };

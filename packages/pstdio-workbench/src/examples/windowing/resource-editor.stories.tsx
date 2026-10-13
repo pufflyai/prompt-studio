@@ -153,7 +153,7 @@ export const CollectionCatalog: Story = {
       await userEvent.click(main.getByRole("button", { name: `Close ${name}` }));
     }
     await expect(main.queryByRole("tab", { name: "Files" })).toBeNull();
-    await expect(main.getByRole("heading", { name: "Workspaces" })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Open Files" })).toBeVisible();
     await userEvent.click(within(mainHeader(canvasElement)).getByRole("button", { name: "Add panel" }));
     await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Files" }));
     await expect(main.getByRole("tab", { name: "Files", selected: true })).toBeVisible();

@@ -107,7 +107,7 @@ export const createDataTableRendererStoryModule = (empty = false): WorkbenchModu
       id: rendererId,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: rendererId,

@@ -32,7 +32,7 @@ export const FloatingPanelHeaders: Story = {
         ref: { kind: "placement", extensionId: windowingExtensionId, id: "floating-inspector" },
         modeId: "windowing",
         region: "side",
-        item: { kind: "view", presence: "fixed", view: { kind: "view", id: "floating-inspector" } },
+        item: { kind: "view", presence: "open", view: { kind: "view", id: "floating-inspector" } },
       });
       core.shell.setSidePanelPresentation("floating");
       return fixture;
@@ -49,7 +49,7 @@ export const FloatingPanelHeaders: Story = {
     await userEvent.click(document.getByRole("menuitem", { name: "Show header" }));
     await expect(await panel.findByRole("tab", { name: "Inspector" })).toBeVisible();
     await expect(panel.queryByRole("button", { name: "Close Side Panel" })).toBeNull();
-    await expect(panel.queryByRole("button", { name: "Add panel" })).toBeNull();
+    await expect(panel.getByRole("button", { name: "Add panel" })).toBeVisible();
     await expect(core.commands.executeCommand("workbench.closeSidePanel")).rejects.toThrow("disabled");
     await expect(core.shell.getPanelPolicy("side").acceptsTabs).toBe(false);
     await userEvent.click(panel.getByRole("button", { name: "side header options" }));

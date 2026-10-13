@@ -41,7 +41,7 @@ const SidePanelStory = (props: SidePanelStoryProps) => {
       id: "side-panel.canvas",
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: "side-panel.canvas",
@@ -53,7 +53,7 @@ const SidePanelStory = (props: SidePanelStoryProps) => {
       id: "side-panel.inspector",
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: "side-panel.inspector",

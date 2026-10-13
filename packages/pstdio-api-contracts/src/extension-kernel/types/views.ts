@@ -70,7 +70,10 @@ export interface NavigationTreeContribution extends ContributionDefinition<"navi
  * - "closed": closed until the user opens it (for example through the Add panel).
  * A saved user choice wins over "open" and "closed" on the next visit.
  */
-export type PlacementPresence = "fixed" | "open" | "closed";
+/** @deprecated Use declared tools with presence "open" and panel acceptsTabs. Fixed tabs remain supported by the legacy host adapter. */
+export type LegacyFixedPlacementPresence = "fixed";
+
+export type PlacementPresence = LegacyFixedPlacementPresence | "open" | "closed";
 
 export type PlacementItem =
   | { readonly kind: "view"; readonly view: ViewRef; readonly presence: PlacementPresence }
@@ -124,6 +127,7 @@ export interface PlacementContribution extends ContributionDefinition<"placement
   /** @deprecated For Main, use page Main declarations. Mode Side and Secondary remain supported. */
   readonly region: ExtensionPanelRegion;
   readonly order?: number;
+  /** @deprecated Use panel acceptsTabs. Legacy declarations retain their destination limits until the coordinated breaking release. */
   readonly movableTo?: readonly ExtensionPanelRegion[];
 }
 

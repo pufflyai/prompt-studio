@@ -223,7 +223,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       const registrations = pagePlacementDeclarations(page).map((slot) => {
         const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
         if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
-        const closable = isPageSlotClosable(slot);
+        const closable = isPageSlotClosable(slot, page);
         return registerWorkbenchViewPlacement(
           input.layout,
           input.views,

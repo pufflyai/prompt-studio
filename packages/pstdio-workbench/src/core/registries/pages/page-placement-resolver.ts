@@ -2,7 +2,7 @@ import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
-import { isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
+import { emptyMainSlot, isPageSlotClosable, PAGE_MAIN_SLOT_ID, pageSlots, type ResolvedPageSlot } from "./page-main";
 import { pagePanelMenus } from "./page-panel-menus";
 import type {
   WorkbenchPageContribution,
@@ -94,7 +94,7 @@ const placementFor = <Value>(input: {
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),
       ...(input.open ? { open: input.open } : {}),
-      closable: isPageSlotClosable(input.slot),
+      closable: isPageSlotClosable(input.slot, input.page),
     }),
   } satisfies ResolvedOwnedPlacement<Value>;
 };
@@ -135,6 +135,10 @@ export const resolvePagePlacements = <Value>(input: {
   }
   if (
     input.page.main.kind === "panels" &&
+    (input.page.tabLocks === "legacy" ||
+      !pageSlots(input.page).some(
+        (slot) => slot.region === "main" && slot.item.kind === "view" && !staticSlotOpen(slot, input.state),
+      )) &&
     ![...placements, ...input.sharedPlacements].some((placement) => placement.region === "main")
   ) {
     placements.push(
@@ -142,12 +146,7 @@ export const resolvePagePlacements = <Value>(input: {
         ...input,
         resolvePagePlacement,
         instanceKey: "default",
-        slot: {
-          id: PAGE_MAIN_SLOT_ID,
-          role: "primary",
-          region: "main",
-          item: { kind: "view", view: input.page.main.empty, presence: "fixed" },
-        },
+        slot: emptyMainSlot(input.page)!,
       }),
     );
   }

@@ -61,10 +61,8 @@ The tree `body` inside `ctx.views.registerView(...)` supplies the tree data:
 - `modeId` names the mode that owns the placement. The placement appears only while that mode is active.
 - `item.kind: "view"` says this is one static View rather than a resource-bound set of instances.
 - `item.view` names the registered View to render.
-- `item.presence: "fixed"` keeps the tree open while the mode is active. The user cannot close it and the Add panel
-  does not offer it.
+- `item.presence: "open"` starts the tree open when the owner has no saved state.
 - `region` puts the placement in the `sidenav` region.
-- `movableTo` lists the regions the user may move the placement to. `["sidenav"]` keeps it where it is.
 
 Owners can restrict drop targets in their tree data. The renderer applies that policy; it does not hard-code
 extension or mode ownership rules.

@@ -107,14 +107,13 @@ export const createTreeWorkbench = () => {
     modeId: "project",
     item: {
       kind: "view",
-      presence: "fixed",
+      presence: "open",
       view: {
         kind: "view",
         id: "host.project-navigation",
       },
     },
     region: "sidenav",
-    movableTo: ["sidenav"],
   });
   workbench.pageLocations.switchProject("storybook");
   return workbench;

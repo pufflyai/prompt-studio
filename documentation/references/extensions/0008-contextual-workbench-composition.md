@@ -59,3 +59,11 @@ Every page has a page side (`aside`) and a page bottom (`bottom`), initially clo
 Tabs moved into either page panel stay with the page instance. Panel sizes and edges are saved per page type. The page side runs the full height below the breadcrumb beside the editor and page bottom. The page bottom spans the editor column. Page menus sit beside the editor tab row at full editor height and accept no tabs. Legacy slots in `"side"` still refer to the mode Side; `"aside"` adds the page side without changing that meaning.
 
 Host workbench pages can author `regionSettings.aside.edge` as `"left"` or `"right"` and `regionSettings.bottom.edge` as `"top"` or `"bottom"`. These host geometry fields are separate from the public extension policy fields. Defaults are right and bottom. Whole-panel move commands and gestures follow in PS-613.
+
+## Declared tools
+
+Host pages and modes declare tools through page Main, page slots, and mode placements. Each tool has a declared panel. Every tool tab can close and move to any available panel that accepts tabs. Closing a single-resource Main leaves the page and its panel menus in place. Closing the last document in a many-resource Main still returns to its parent page.
+
+An empty panel offers `Open <tool>` for each tool declared for that panel. Its `+` catalog includes those declarations; the editor catalog also includes every tool declared by the page. Reopening an existing tool focuses it in its current panel and page without creating a second instance. A panel may refuse incoming tabs while still allowing its own declared tools to reopen. Panel open permissions still apply.
+
+The current extension host preserves fixed placements, destination limits, and the host-fixed single-resource Main for old extension declarations. No manifest flag is needed. The public fields remain accepted and their removal and final extension behavior wait for the coordinated breaking release in [API versioning](0014-api-versioning.md). Host stories exercise the new contract first.

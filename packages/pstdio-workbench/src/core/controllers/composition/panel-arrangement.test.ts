@@ -185,13 +185,14 @@ test("moving a location keeps the source's next tab selected", () => {
   expect(w.layout.getLayout().regions.secondary.activeWidgetId).toBe(second!.widgetId);
 });
 
-test("Add reuses a single panel from another region and follows move restrictions", async () => {
+test("Add reuses a single legacy panel from another region and follows move restrictions", async () => {
   const w = harness();
   w.modePlacements.registerPlacement({
     id: "notes",
     ref: { kind: "placement", extensionId: "test", id: "notes" },
     modeId: "edit",
     region: "secondary",
+    tabLocks: "legacy",
     movableTo: ["secondary", "side"],
     item: { kind: "view", view: { kind: "view", id: "editor" }, presence: "open" },
   });
