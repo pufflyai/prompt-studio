@@ -20,10 +20,10 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(1);
   await mainHeader.focus();
-  await page.keyboard.press("Shift+F10");
+  await mainHeader.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   await expect(mainHeader).not.toBeVisible();
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom panel", exact: true }).click();
   const secondary = page.locator('[data-workbench-panel-header="secondary"]');
   await secondary.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
@@ -63,7 +63,7 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   await expect(terminal.locator(".xterm-rows")).toContainText("__arrangement_kept__");
   expect(page.url()).toBe(originalUrl);
   await expect(secondary.getByRole("tab")).toHaveCount(0);
-  await page.getByRole("button", { name: "Page panels", exact: true }).click();
+  await page.getByRole("button", { name: / panels$/, exact: true }).click();
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainHeader.getByRole("tab")).toHaveCount(2);

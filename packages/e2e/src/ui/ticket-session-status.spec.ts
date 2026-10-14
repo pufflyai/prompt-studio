@@ -91,7 +91,7 @@ test.describe("session status on ticket workspace badges", () => {
     await expect(sidePanel).toBeVisible({ timeout: 15_000 });
     await expect(card).toBeVisible();
 
-    await page.getByRole("button", { name: /^(Hide|Close) Side Panel$/ }).click();
+    await page.getByRole("button", { name: "Hide Sidebar" }).click();
     await expect(sidePanel).not.toBeVisible();
 
     const workspaceBadgeTrigger = card.getByTestId("workspace-badge-trigger");

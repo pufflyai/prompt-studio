@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
-import { WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { PanelHeaderContextMenu, PanelHeaderEdge } from "../region/panel-header-menu";
 import { WorkbenchRegion } from "../region/region";
 import {
@@ -10,10 +9,8 @@ import {
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
 import { usePanelPolicy } from "../shared/use-panel-policy";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
-import { PagePanelsMenu } from "./page-panels-menu";
 
 interface MainHeaderBarProps {
   workbench: WorkbenchCore;
@@ -26,12 +23,8 @@ export const MainHeaderBar = (props: MainHeaderBarProps) => {
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
   const policy = usePanelPolicy(workbench, "main");
 
-  const page = useWorkbenchStore(workbench.pages.store, (state) =>
-    state.activePageId ? state.pages[state.activePageId] : undefined,
-  );
-  const hasPagePanels = Boolean(page);
   const visible = policy.legacyHeaders
-    ? hasPagePanels || ((policy.showHeader || hasMainContentTabs) && (hasMainHeader || hasPanelHeader))
+    ? (policy.showHeader || hasMainContentTabs) && (hasMainHeader || hasPanelHeader)
     : policy.showHeader;
 
   return (
@@ -57,8 +50,6 @@ export const MainHeaderBar = (props: MainHeaderBarProps) => {
           <Box flex={hasMainHeader || !hasMainContentTabs ? "1" : "0"} h="full" minW="0" overflow="hidden">
             <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" />
           </Box>
-          <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" />
-          <PagePanelsMenu workbench={workbench} />
           <WorkbenchHeaderBorder workbench={workbench} region="main-header" />
         </Header>
       </PanelHeaderContextMenu>

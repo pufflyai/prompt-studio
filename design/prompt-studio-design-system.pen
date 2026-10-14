@@ -15329,7 +15329,7 @@
                       "type": "frame",
                       "id": "Uke3B",
                       "name": "cmp/WorkbenchNavChrome",
-                      "context": "Owns history, breadcrumbs, resource actions, and closed-Panel recovery. Sidenav, Secondary Panel, and Side Panel recovery controls use the compact 2xs icon-button size shared by Kanban Filter and Display controls.",
+                      "context": "Page header: history, project segment, breadcrumbs, resource actions, page panels and trailing Expand view slot. Mode toggles belong to the host.",
                       "reusable": true,
                       "width": "fill_container",
                       "height": 40,
@@ -15514,10 +15514,10 @@
                           "height": 1
                         },
                         {
-                          "id": "kUCSG",
+                          "id": "rXYdK",
                           "type": "ref",
                           "ref": "nvvgg",
-                          "name": "Sidenav control",
+                          "name": "Workspace panels",
                           "theme": {
                             "btn": "ghost",
                             "size": "2xs"
@@ -15526,49 +15526,18 @@
                           "height": 24,
                           "descendants": {
                             "k7mgm": {
-                              "icon": "panel-left",
-                              "width": 12,
-                              "height": 12
+                              "icon": "panels-right-bottom",
+                              "width": 14,
+                              "height": 14
                             }
                           }
                         },
                         {
-                          "id": "q7B3uG",
-                          "type": "ref",
-                          "ref": "nvvgg",
-                          "name": "Secondary Panel control",
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          },
+                          "type": "frame",
+                          "id": "qBzLR",
+                          "name": "Expand view slot · PS-616",
                           "width": 24,
-                          "height": 24,
-                          "descendants": {
-                            "k7mgm": {
-                              "icon": "panel-bottom",
-                              "width": 12,
-                              "height": 12
-                            }
-                          }
-                        },
-                        {
-                          "id": "ups0z",
-                          "type": "ref",
-                          "ref": "nvvgg",
-                          "name": "Side Panel control",
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          },
-                          "width": 24,
-                          "height": 24,
-                          "descendants": {
-                            "k7mgm": {
-                              "icon": "panel-right",
-                              "width": 12,
-                              "height": 12
-                            }
-                          }
+                          "height": 24
                         }
                       ]
                     },
@@ -30999,6 +30968,78 @@
                               "height": 14
                             }
                           }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "x1Zd6E",
+                          "name": "Host panel toggles",
+                          "gap": 4,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "VGIoB",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "list-tree toggle",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "fill": "$ds-bg-active",
+                              "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "list-tree",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "eiysS",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "panel-bottom toggle",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "fill": "$ds-bg-active",
+                              "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "panel-bottom",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            },
+                            {
+                              "id": "u39tB5",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "panel-right toggle",
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "width": 24,
+                              "height": 24,
+                              "fill": "$ds-bg-active",
+                              "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "panel-right",
+                                  "width": 14,
+                                  "height": 14
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     }
@@ -67137,24 +67178,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -69810,24 +69833,6 @@
                         "btn": "ghost",
                         "size": "xs"
                       }
-                    },
-                    "kUCSG": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
-                    },
-                    "q7B3uG": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
-                    },
-                    "ups0z": {
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "2xs"
-                      }
                     }
                   }
                 },
@@ -70057,24 +70062,6 @@
                             "btn": "ghost",
                             "size": "xs"
                           }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
                         }
                       }
                     },
@@ -70213,29 +70200,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "width": 1,
-                          "height": 1,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "enabled": true,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "enabled": true,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         }
                       }
@@ -74687,30 +74651,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "height": 22,
-                              "width": 22,
-                              "name": "Side Panel control",
-                              "context": "Closed-state recovery control for the Side Panel."
                             }
                           }
                         },
@@ -75022,27 +74962,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -75477,27 +75396,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -78076,27 +77974,6 @@
                             "btn": "ghost",
                             "size": "xs"
                           }
-                        },
-                        "kUCSG": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "enabled": false,
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
                         }
                       }
                     },
@@ -78260,27 +78137,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -78931,27 +78787,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -79670,27 +79505,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -79996,27 +79810,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -80302,27 +80095,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -80607,27 +80379,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -80927,27 +80678,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -81253,27 +80983,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -81600,27 +81309,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -81926,27 +81614,6 @@
                                 "btn": "ghost",
                                 "size": "xs"
                               }
-                            },
-                            "kUCSG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "enabled": false,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
                             }
                           }
                         },
@@ -82170,15 +81837,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
                               "enabled": false
                             }
                           }
@@ -82432,15 +82090,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
                               "enabled": false
                             }
                           }
@@ -82720,15 +82369,6 @@
                             },
                             "saN8L": {
                               "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
-                              "enabled": false
                             }
                           }
                         },
@@ -82938,15 +82578,6 @@
                               "enabled": false
                             },
                             "saN8L": {
-                              "enabled": false
-                            },
-                            "kUCSG": {
-                              "enabled": false
-                            },
-                            "q7B3uG": {
-                              "enabled": false
-                            },
-                            "ups0z": {
                               "enabled": false
                             }
                           }
@@ -83649,24 +83280,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 }
                               }
@@ -85263,24 +84876,6 @@
                                     "btn": "ghost",
                                     "size": "xs"
                                   }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
                                 }
                               }
                             },
@@ -86872,24 +86467,6 @@
                                     "btn": "ghost",
                                     "size": "xs"
                                   }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
                                 }
                               }
                             },
@@ -87369,24 +86946,6 @@
                                     "btn": "ghost",
                                     "size": "xs"
                                   }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
                                 }
                               }
                             },
@@ -87766,24 +87325,6 @@
                                   "theme": {
                                     "btn": "ghost",
                                     "size": "xs"
-                                  }
-                                },
-                                "kUCSG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "q7B3uG": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  }
-                                },
-                                "ups0z": {
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
                                   }
                                 }
                               }
@@ -107404,24 +106945,6 @@
                             "btn": "ghost",
                             "size": "xs"
                           }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
                         }
                       }
                     },
@@ -110143,24 +109666,6 @@
                           "theme": {
                             "btn": "ghost",
                             "size": "xs"
-                          }
-                        },
-                        "kUCSG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "q7B3uG": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
-                          }
-                        },
-                        "ups0z": {
-                          "theme": {
-                            "btn": "ghost",
-                            "size": "2xs"
                           }
                         }
                       }
@@ -143065,24 +142570,6 @@
                               "theme": {
                                 "btn": "ghost",
                                 "size": "xs"
-                              }
-                            },
-                            "kUCSG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "q7B3uG": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              }
-                            },
-                            "ups0z": {
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
                               }
                             }
                           }
@@ -185128,7 +184615,7 @@
         "mode": "dark"
       },
       "width": 1440,
-      "height": 960,
+      "height": 984,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 12,
@@ -185218,61 +184705,30 @@
                   "height": 1
                 },
                 {
-                  "id": "I54PR",
+                  "id": "u6Luq",
                   "type": "ref",
                   "ref": "nvvgg",
-                  "name": "Navigation",
-                  "width": 24,
-                  "height": 24,
+                  "name": "Workspace panels",
                   "theme": {
                     "btn": "ghost",
                     "size": "2xs"
                   },
+                  "width": 24,
+                  "height": 24,
                   "descendants": {
                     "k7mgm": {
-                      "icon": "panel-left",
-                      "width": 12,
-                      "height": 12
+                      "icon": "panels-right-bottom",
+                      "width": 14,
+                      "height": 14
                     }
                   }
                 },
                 {
-                  "id": "VYDOH",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Secondary",
+                  "type": "frame",
+                  "id": "C6SAuF",
+                  "name": "Expand view slot · PS-616",
                   "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-bottom",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                },
-                {
-                  "id": "X0ARl2",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Side",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
+                  "height": 24
                 }
               ]
             },
@@ -185378,25 +184834,6 @@
                               "name": "Tab spacer",
                               "width": "fill_container",
                               "height": 1
-                            },
-                            {
-                              "id": "F78JPs",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Page panels",
-                              "width": 24,
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "panels-right-bottom",
-                                  "width": 12,
-                                  "height": 12
-                                }
-                              }
                             }
                           ]
                         },
@@ -185717,6 +185154,96 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "MuJjC",
+          "name": "Status bar · host panel controls",
+          "width": "fill_container",
+          "height": 24,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "lZHXB",
+              "name": "Mode status spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "hhhaI",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "pR6sD",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "dtGmV",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "A3K7oL",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -185730,7 +185257,7 @@
         "mode": "light"
       },
       "width": 1440,
-      "height": 960,
+      "height": 984,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 12,
@@ -185820,61 +185347,30 @@
                   "height": 1
                 },
                 {
-                  "id": "jgjZg",
+                  "id": "a5SoZl",
                   "type": "ref",
                   "ref": "nvvgg",
-                  "name": "Navigation",
-                  "width": 24,
-                  "height": 24,
+                  "name": "Workspace panels",
                   "theme": {
                     "btn": "ghost",
                     "size": "2xs"
                   },
+                  "width": 24,
+                  "height": 24,
                   "descendants": {
                     "k7mgm": {
-                      "icon": "panel-left",
-                      "width": 12,
-                      "height": 12
+                      "icon": "panels-right-bottom",
+                      "width": 14,
+                      "height": 14
                     }
                   }
                 },
                 {
-                  "id": "c7Dcfl",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Secondary",
+                  "type": "frame",
+                  "id": "q4ivI",
+                  "name": "Expand view slot · PS-616",
                   "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-bottom",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                },
-                {
-                  "id": "sEUsj",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Side",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
+                  "height": 24
                 }
               ]
             },
@@ -185980,25 +185476,6 @@
                               "name": "Tab spacer",
                               "width": "fill_container",
                               "height": 1
-                            },
-                            {
-                              "id": "NqeaR",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Page panels",
-                              "width": 24,
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "panels-right-bottom",
-                                  "width": 12,
-                                  "height": 12
-                                }
-                              }
                             }
                           ]
                         },
@@ -186315,6 +185792,96 @@
                   "fontFamily": "$font-body",
                   "fontSize": 13,
                   "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CbYM4",
+          "name": "Status bar · host panel controls",
+          "width": "fill_container",
+          "height": 24,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ICAQ5",
+              "name": "Mode status spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "KPiKl",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "hJVFF",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "ltkZ6",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "WkT8o",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
                 }
               ]
             }
@@ -186701,7 +186268,7 @@
         "mode": "dark"
       },
       "width": 1440,
-      "height": 960,
+      "height": 984,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 12,
@@ -186791,61 +186358,30 @@
                   "height": 1
                 },
                 {
-                  "id": "z2HgrY",
+                  "id": "jmwlL",
                   "type": "ref",
                   "ref": "nvvgg",
-                  "name": "Navigation",
-                  "width": 24,
-                  "height": 24,
+                  "name": "Workspace panels",
                   "theme": {
                     "btn": "ghost",
                     "size": "2xs"
                   },
+                  "width": 24,
+                  "height": 24,
                   "descendants": {
                     "k7mgm": {
-                      "icon": "panel-left",
-                      "width": 12,
-                      "height": 12
+                      "icon": "panels-right-bottom",
+                      "width": 14,
+                      "height": 14
                     }
                   }
                 },
                 {
-                  "id": "j3Wo3",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Secondary",
+                  "type": "frame",
+                  "id": "GRLQv",
+                  "name": "Expand view slot · PS-616",
                   "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-bottom",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                },
-                {
-                  "id": "mqBUs",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Side",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
+                  "height": 24
                 }
               ]
             },
@@ -187100,25 +186636,6 @@
                               "name": "Tab spacer",
                               "width": "fill_container",
                               "height": 1
-                            },
-                            {
-                              "id": "Uy0Zw",
-                              "type": "ref",
-                              "ref": "nvvgg",
-                              "name": "Page panels",
-                              "width": 24,
-                              "height": 24,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "k7mgm": {
-                                  "icon": "panels-right-bottom",
-                                  "width": 12,
-                                  "height": 12
-                                }
-                              }
                             }
                           ]
                         },
@@ -187286,6 +186803,96 @@
                   "fontFamily": "$font-body",
                   "fontSize": 13,
                   "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "h1aaCR",
+          "name": "Status bar · host panel controls",
+          "width": "fill_container",
+          "height": 24,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "gAuAx",
+              "name": "Mode status spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "m0R6kN",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "J1ny6",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "A0xH3",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "J1uqu",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
                 }
               ]
             }
@@ -191118,6 +190725,570 @@
                     "size": "lg",
                     "bubble": "open"
                   }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "d9OMSO",
+      "x": 57422,
+      "y": 0,
+      "name": "PS-701 · Page and host panel controls",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1100,
+      "height": 640,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "id": "jAnlS",
+          "type": "ref",
+          "ref": "Uke3B",
+          "name": "Page header · project and workspace",
+          "width": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "PuYoy",
+          "name": "Default placement",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "PwWX3",
+              "name": "Default placement label",
+              "fill": "$ds-fg-muted",
+              "content": "Default placement",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "j5pWLx",
+              "name": "Status content and mode chrome",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "vkC00",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "tYMIq",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "lAL7x",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "uc9Kk",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "E8EwHw",
+          "name": "Side on the left",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "qejjI",
+              "name": "Side on the left label",
+              "fill": "$ds-fg-muted",
+              "content": "Side on the left",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "nbAaY",
+              "name": "Status content and mode chrome",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "M74co6",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "g6Q0q1",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "q1SDVP",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-left · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-left",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "Wk5HQ",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "fwbzB",
+          "name": "Navigation on the right",
+          "width": "fill_container",
+          "height": 32,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "pyjQr",
+              "name": "Navigation on the right label",
+              "fill": "$ds-fg-muted",
+              "content": "Navigation on the right",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "h8prU",
+              "name": "Status content and mode chrome",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "NlKml",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "bgKGI",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "K6yWck",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "lCeXI",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree · visibility pressed",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "es1LG",
+          "type": "ref",
+          "ref": "SUg7j",
+          "name": "Desktop · controls beside project tabs",
+          "width": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "B0Gg9K",
+          "name": "Workspace panels menu",
+          "width": 260,
+          "fill": "$ds-panel",
+          "cornerRadius": 4,
+          "layout": "vertical",
+          "gap": 4,
+          "padding": 8,
+          "children": [
+            {
+              "type": "frame",
+              "id": "LbCcf",
+              "name": "Bottom panel checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "fill": "$ds-menu-selected",
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "ZcEW1",
+                  "name": "Bottom panel visibility",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "icon",
+                  "id": "cl3FR",
+                  "name": "Bottom panel checkbox icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "panel-bottom",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "ILd2H",
+                  "name": "Bottom panel",
+                  "fill": "$ds-fg",
+                  "content": "Bottom panel",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "m81RKZ",
+              "name": "Side panel checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "vMwUY",
+                  "name": "Side panel visibility",
+                  "opacity": 0,
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "icon",
+                  "id": "s8w7hV",
+                  "name": "Side panel checkbox icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "panel-right",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "vB6w1",
+                  "name": "Side panel",
+                  "fill": "$ds-fg",
+                  "content": "Side panel",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wZ7zY",
+              "name": "Workspace tools checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "fill": "$ds-menu-selected",
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "m7I2H",
+                  "name": "Workspace tools visibility",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "icon",
+                  "id": "VOJiH",
+                  "name": "Workspace tools checkbox icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "panel-left",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "nXTDM",
+                  "name": "Workspace tools",
+                  "fill": "$ds-fg",
+                  "content": "Workspace tools",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n6AALy",
+              "name": "Inspector checkbox",
+              "width": "fill_container",
+              "height": 28,
+              "fill": "$ds-menu-selected",
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "XZ0Ji",
+                  "name": "Inspector visibility",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "icon",
+                  "id": "Klvux",
+                  "name": "Inspector checkbox icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "panel-right",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "tyxeL",
+                  "name": "Inspector",
+                  "fill": "$ds-fg",
+                  "content": "Inspector",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fngKn",
+              "name": "Reset layout action",
+              "width": "fill_container",
+              "height": 28,
+              "gap": 8,
+              "padding": [
+                0,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "aSWH9",
+                  "name": "Reset layout icon",
+                  "width": 14,
+                  "height": 14,
+                  "icon": "rotate-ccw",
+                  "library": "lucide",
+                  "fill": "$ds-fg"
+                },
+                {
+                  "type": "text",
+                  "id": "y4x7YO",
+                  "name": "Reset layout",
+                  "fill": "$ds-fg",
+                  "content": "Reset layout",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }

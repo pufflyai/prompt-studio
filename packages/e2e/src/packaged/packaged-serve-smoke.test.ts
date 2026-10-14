@@ -18,6 +18,7 @@ import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-vie
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
+// Includes sortable status items beside host-owned panel toggles and page-header controls.
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.

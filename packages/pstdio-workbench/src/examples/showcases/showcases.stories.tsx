@@ -64,7 +64,7 @@ export const Boombox: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvasElement.querySelector('[data-workbench-region="secondary"]')).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Hide Secondary Panel" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Hide Bottom panel" })).toBeNull();
     await expect(canvasElement.querySelector('[data-workbench-region="sidenav"]')).not.toBeVisible();
     await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
     for (const region of ["main", "side", "secondary"] as const) {
@@ -87,7 +87,7 @@ export const Boombox: Story = {
       await reopen!.open?.();
       await expect(await canvas.findByRole("tab", { name: title })).toBeVisible();
     }
-    await expect(canvas.queryByRole("button", { name: "Hide Secondary Panel" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Hide Bottom panel" })).toBeNull();
   },
 };
 export const Zipline: Story = {
@@ -111,10 +111,10 @@ export const Kiln: Story = {
     const position = canvas.getByRole("spinbutton", { name: "Cube position X" });
     await userEvent.clear(position);
     await userEvent.type(position, "2.5");
-    await expect(canvas.queryByRole("button", { name: "Hide Secondary Panel" })).toBeNull();
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
+    await expect(canvas.queryByRole("button", { name: "Hide Bottom panel" })).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
     await expect(canvasElement.querySelector('[data-workbench-region="secondary"]')).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Show Side Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Show Sidebar" }));
     await expect(canvas.getByRole("spinbutton", { name: "Cube position X" })).toHaveValue(2.5);
     await userEvent.keyboard("{Escape}");
     const edge = canvas.getByLabelText("secondary header edge");

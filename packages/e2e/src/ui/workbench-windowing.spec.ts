@@ -16,6 +16,16 @@ import {
 } from "./workbench-windowing-interactions";
 
 const storyIds = [
+  "panel-toggles-default",
+  "panel-toggles-side-left",
+  "panel-toggles-navigation-right",
+  "panel-toggles-mode-status",
+  "panel-toggles-hidden-status",
+  "panel-toggles-kiln",
+  "panel-toggles-boombox",
+  "workspace-page-header",
+  "ticket-page-header",
+  "page-header-without-menus",
   "session-start-empty",
   "session-start-closed",
   "session-start-visible",
@@ -67,6 +77,15 @@ const storyIds = [
   "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 storyIds.push(
+  "pstdio-workbench-reference-core-api-panel-menus--legacy-without-page",
+  "pstdio-workbench-reference-core-api-panel-menus--reopen-attached",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-when-narrow",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-embedded-content",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-tall-content",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-peek-keeps-attached-menu",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-peek-keeps-open-preference",
+  "pstdio-workbench-reference-core-api-title-bar--desktop-panel-controls",
+  "pstdio-workbench-reference-core-api-status-bar--mode-status-with-panel-toggles",
   "pstdio-workbench-guides-tab-actions--pin-and-close",
   "pstdio-workbench-showcases--boombox",
   "pstdio-workbench-showcases--kiln",

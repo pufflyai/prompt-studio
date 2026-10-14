@@ -25,16 +25,16 @@ export const moveStoryTab = async (tab: HTMLElement, destination: string) => {
     if (!visible(existing))
       await userEvent.click(
         body.getByRole("button", {
-          name: region === "side" ? "Show Side Panel" : "Show Secondary Panel",
+          name: region === "side" ? "Show Sidebar" : "Show Bottom panel",
         }),
       );
   }
   if (region === "aside" || region === "bottom") {
-    await userEvent.click(body.getByRole("button", { name: "Page panels" }));
-    const opener = body.queryByRole("menuitem", {
-      name: region === "aside" ? "Show Side panel" : "Show Page bottom",
+    await userEvent.click(body.getByRole("button", { name: / panels$/ }));
+    const opener = body.queryByRole("menuitemcheckbox", {
+      name: region === "aside" ? "Side panel" : "Bottom panel",
     });
-    if (opener) await userEvent.click(opener);
+    if (opener?.getAttribute("aria-checked") === "false") await userEvent.click(opener);
     else await userEvent.keyboard("{Escape}");
   }
   const getTarget = () => document.querySelector<HTMLElement>(`[data-workbench-region="${region}"]`)!;

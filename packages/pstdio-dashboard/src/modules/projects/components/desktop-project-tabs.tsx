@@ -1,7 +1,7 @@
 import { IconButton } from "@chakra-ui/react";
 import { Tooltip, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import { useWorkbenchStore } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WorkbenchPanelToggles } from "@pstdio/workbench/react";
 import { Folder, Plus } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -56,6 +56,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
           <Plus />
         </IconButton>
       </Tooltip>
+      <WorkbenchPanelToggles workbench={workbench} />
     </WindowTitleBar>
   );
 };

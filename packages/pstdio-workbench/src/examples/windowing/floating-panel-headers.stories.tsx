@@ -83,7 +83,7 @@ export const EmptyFloatingPanelHeaders: Story = {
     const core = fixture.workbench;
     const canvas = within(canvasElement);
     const document = within(globalThis.document.body);
-    await userEvent.click(await canvas.findByRole("button", { name: "Show Side Panel" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "Show Sidebar" }));
     await waitFor(() => expect(canvas.getByTestId("workbench-side-panel-attached")).toBeVisible());
     await expect(within(canvas.getByTestId("workbench-side-panel-attached")).queryByRole("banner")).toBeNull();
     core.shell.setSidePanelPresentation("floating");
@@ -106,7 +106,7 @@ export const EmptyFloatingPanelHeaders: Story = {
     await expect(
       within(canvas.getByTestId("workbench-side-panel-attached")).getByText("Drop a tab here"),
     ).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
     await waitFor(() => expect(canvas.getByTestId("workbench-side-panel-attached")).not.toBeVisible());
   },
 };

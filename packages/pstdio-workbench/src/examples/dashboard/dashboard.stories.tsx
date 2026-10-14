@@ -121,7 +121,7 @@ export const InteractionChecks: Story = {
     await expect(canvas.getByRole("tab", { name: "Terminal 2" })).toBeVisible();
     await expect(canvas.getByRole("tab", { name: "Terminal 3" })).toBeVisible();
     await moveStoryTab(canvas.getByRole("tab", { name: "Files" }), "Side");
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
     await userEvent.click(
       within(canvas.getByRole("region", { name: "Sidenav" })).getByRole("option", { name: "package.json" }),
     );

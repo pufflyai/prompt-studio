@@ -83,8 +83,8 @@ const sessionStartStory = (scenario: Scenario) => {
         running: true,
       });
       if (scenario === "fixed") {
-        await expect(canvas.queryByRole("button", { name: "Hide Side Panel" })).toBeNull();
-        await expect(canvas.queryByRole("button", { name: "Show Side Panel" })).toBeNull();
+        await expect(canvas.queryByRole("button", { name: "Hide Sidebar" })).toBeNull();
+        await expect(canvas.queryByRole("button", { name: "Show Sidebar" })).toBeNull();
       }
       await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
       await waitFor(() => expect(fixture.workbench).not.toBe(core));

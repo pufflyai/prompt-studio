@@ -144,7 +144,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     expect(await editor.evaluate((node, original) => node === original, editorNode)).toBe(true);
     await first.click();
     await expect(editor).toContainText("retainedDraft");
-    await page.getByRole("button", { name: /^(Hide|Close) Side Panel$/ }).click();
+    await page.getByRole("button", { name: "Hide Sidebar", exact: true }).click();
     await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
     const floating = page.getByTestId("workbench-side-panel-floating");
     await expect(floating.locator('[data-testid="content-editable"][contenteditable="true"]').last()).toHaveText(

@@ -1,6 +1,6 @@
 import { Box, Button, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchStatusBar } from "./workbench-panels";
@@ -238,5 +238,17 @@ export const ItemRegisteredAfterMount: Story = {
     });
     await expect(await canvas.findByText("Registered after mount")).toBeVisible();
     registration.dispose();
+  },
+};
+
+import { createPanelControlsFixture } from "../../examples/windowing/panel-controls-fixture";
+import { WindowingStory } from "../../examples/windowing/windowing-story";
+export const ModeStatusWithPanelToggles: Story = {
+  args: { workbench: createWorkbench() },
+  render: () => <WindowingStory createFixture={() => createPanelControlsFixture({}, true)} />,
+  play: async ({ canvasElement }) => {
+    const status = within(canvasElement.querySelector('[data-workbench-region="status"]') as HTMLElement);
+    await expect(status.getByText("Mode status")).toBeVisible();
+    await expect(status.getByRole("group", { name: "Panel toggles" })).toBeVisible();
   },
 };
