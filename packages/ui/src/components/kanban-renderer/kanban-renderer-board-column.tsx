@@ -26,10 +26,12 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
   const [dropKey, setDropKey] = useState<string | null>(null);
   const entries: BoardEntryData[] = column.groups?.length
     ? column.groups.flatMap((group) => [
-        { key: `group:${group.key}`, group },
-        ...(collapsed[group.key] ? [] : group.items.map((item) => ({ key: item.id, item, groupKey: group.key }))),
+        { key: JSON.stringify(["group", group.key]), group },
+        ...(collapsed[group.key]
+          ? []
+          : group.items.map((item) => ({ key: JSON.stringify(["row", item.id]), item, groupKey: group.key }))),
       ])
-    : column.items.map((item) => ({ key: item.id, item }));
+    : column.items.map((item) => ({ key: JSON.stringify(["row", item.id]), item }));
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
     getScrollElement: () => viewport.current,
@@ -38,14 +40,18 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
     overscan: 5,
     rangeExtractor: (range) => {
       const indexes = new Set(defaultRangeExtractor(range));
-      for (const key of [focusedKey, focusTarget, draggedItemId, revealedItemId]) {
+      for (const key of [focusedKey, focusTarget]) {
         const index = entries.findIndex((entry) => entry.key === key);
+        if (index >= 0) indexes.add(index);
+      }
+      for (const id of [draggedItemId, revealedItemId]) {
+        const index = entries.findIndex((entry) => entry.item?.id === id);
         if (index >= 0) indexes.add(index);
       }
       return [...indexes].sort((a, b) => a - b);
     },
   });
-  const revealIndex = entries.findIndex((entry) => entry.key === revealedItemId);
+  const revealIndex = entries.findIndex((entry) => entry.item?.id === revealedItemId);
   useLayoutEffect(() => {
     if (revealIndex >= 0) virtualizer.scrollToIndex(revealIndex, { align: "auto" });
   }, [revealIndex, virtualizer]);

@@ -90,7 +90,7 @@ export const BoardEntry = (props: BoardEntryProps) => {
   return (
     <ResourceContextMenu actions={item.contextMenuActions ?? []}>
       <Box
-        data-board-key={item.id}
+        data-board-key={entry.key}
         tabIndex={0}
         role="button"
         aria-label={item.cardProps.title}
