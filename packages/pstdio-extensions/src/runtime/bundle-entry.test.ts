@@ -9,7 +9,8 @@ test("reports the unresolved dependency when an extension cannot be bundled", as
   const entry = join(root, "extension.ts");
   writeFileSync(entry, 'export { default } from "missing-desktop-dependency";');
   try {
-    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("missing-desktop-dependency");
+    const error = await bundleEntry(entry, root, join(root, "out")).catch((error: unknown) => error);
+    expect(error).toMatchObject({ message: expect.stringContaining("missing-desktop-dependency") });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -46,7 +47,8 @@ test("a later bundle retries after a failed build", async () => {
   const entry = join(root, "extension.ts");
   writeFileSync(entry, 'export { default } from "./missing-module";');
   try {
-    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("missing-module");
+    const error = await bundleEntry(entry, root, join(root, "out")).catch((error: unknown) => error);
+    expect(error).toMatchObject({ message: expect.stringContaining("missing-module") });
     writeFileSync(join(root, "missing-module.ts"), 'export default { marker: "retried-bundle" };');
 
     const bundlePath = await bundleEntry(entry, root, join(root, "out"));
