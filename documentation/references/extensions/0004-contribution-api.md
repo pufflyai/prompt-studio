@@ -42,7 +42,9 @@ Do not return `metadata.resourceParent` or infer a view from a resource type. Re
 
 ## Settings
 
-`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`. A settings panel without `section` appears in the host's Project group.
+`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`.
+
+Use `workbenchSlots.extensionSettings` for native controls in the owning extension's Settings tab. A `controls` view supplies fields to the shared parameter editor, next to the extension's ordinary settings. It follows normal page flow and shares the settings page's scrollbar. It does not add an entry to project settings navigation. Use `workbenchSlots.projectSettings` for a separate project settings entry, such as a shared status editor. A project settings panel without `section` appears in the host's Project group.
 
 A `string` setting can offer choices in two ways:
 
@@ -119,6 +121,8 @@ A command action may pass params with `target: { command: preview.ref, params: {
 ## Dashboard UI Contributions
 
 Native controls views can declare a harness field with `{ id: "agent", name: "Model", type: "harness", defaultValue: { harnessId, model, params } }`. Its value is the same object accepted by `ctx.sessions.create({ harness: value })`. The host renders its harness, model and model options inline using the command-form picker. Use `onApply` to save the choice or `onValueChange` to save each edit. This control requires API 0.1.3.
+
+Controls with `onApply` keep edited values during background refreshes. Apply saves the draft; a rejected save shows its error beside the unchanged inputs. Reset discards the draft and uses the latest saved values. An optional `onReset` also lets the extension reset its stored values. Each resource owns a separate draft.
 
 Dashboard UI contributions have one ownership model:
 

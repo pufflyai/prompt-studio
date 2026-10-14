@@ -29,6 +29,7 @@ export const registerExtensionViewsSmokeTests = () => {
         `
 export default {
  views:[{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",query:()=>({rows:[]})}}],
+ settingsPanels:[{id:"workflow",ref:{kind:"settings-panel",id:"workflow"},view:{kind:"view",id:"tasks"},slot:{extensionId:"pstdio",kind:"settings-panel",id:"extension.settings"}}],
  commands:[{id:"save",ref:{kind:"command",id:"save"},title:"Save",mutating:true,params:{},async run(ctx){
    const board={kind:"view",id:"tasks"};
    const created=await ctx.views.create(board,{title:"Team work",filter:{conjunction:"and",rules:[{attributeId:"title",condition:"contains",value:"Ready"}]}});
@@ -64,6 +65,15 @@ export default {
         }),
       });
       expect(enabled.status).toBe(200);
+      const metadataResponse = await fetch(`${base}/extensions/ui`, { headers });
+      expect(metadataResponse.status).toBe(200);
+      const metadata = await metadataResponse.json();
+      expect(metadata.settingsPanels).toContainEqual(
+        expect.objectContaining({
+          extensionId: "test.views",
+          slot: expect.objectContaining({ id: "extension.settings" }),
+        }),
+      );
       const executed = await fetch(`${base}/extensions/commands/test.views.command.save/execute`, {
         method: "POST",
         headers,
