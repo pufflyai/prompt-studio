@@ -11,9 +11,7 @@ const tick = async () => {
 
 test("SSE owns even an empty transcript and the queue while it is live", async () => {
   const registry = createRendererReadRegistry();
-  const history = Promise.withResolvers<{ messages: SessionMessage[] }>();
   let handlers!: SessionStreamHandlers;
-  let signal!: AbortSignal;
   let historyReads = 0;
   let queueReads = 0;
   let state!: SessionHistoryState;
@@ -21,11 +19,11 @@ test("SSE owns even an empty transcript and the queue while it is live", async (
     sessionId: "s",
     ownerKey: "placement",
     reads: registry,
+    initialSession: { id: "s", status: "in_progress" },
     transport: {
-      getConversation: async (_id, nextSignal) => {
+      getConversation: async () => {
         historyReads++;
-        signal = nextSignal!;
-        return history.promise;
+        return { messages: [] };
       },
       getQueuedMessages: async () => {
         queueReads++;
@@ -43,12 +41,10 @@ test("SSE owns even an empty transcript and the queue while it is live", async (
   controller.connect();
   await tick();
   handlers.onPatch!({ op: "replace", path: "/messages", value: [] });
-  expect(signal.aborted).toBe(true);
-  history.resolve({ messages: [message("stale")] });
   for (let i = 0; i < 1000; i++) controller.sessionChanged({ id: "s", status: "in_progress" });
   controller.sessionChanged({ id: "other", status: "in_progress" });
   await tick();
-  expect(historyReads).toBe(1);
+  expect(historyReads).toBe(0);
   expect(queueReads).toBe(1);
   expect(state.messages).toEqual([message("queued-prompt-s-1")]);
   // After the stream ends, session row events are the only queue signal left.
@@ -56,23 +52,26 @@ test("SSE owns even an empty transcript and the queue while it is live", async (
   await tick();
   controller.sessionChanged({ id: "s", status: "completed" });
   await tick();
-  expect(historyReads).toBe(2);
+  expect(historyReads).toBe(0);
   expect(queueReads).toBe(3);
   controller.dispose();
   await registry.dispose();
 });
 
-test("a later run rejects the previous end GET and stale stream events", async () => {
+test("a new run cancels obsolete history loading and rejects stale stream events", async () => {
   const registry = createRendererReadRegistry();
   const requests: ReturnType<typeof Promise.withResolvers<{ messages: SessionMessage[] }>>[] = [];
   const streams: SessionStreamHandlers[] = [];
   let state!: SessionHistoryState;
+  let signal!: AbortSignal;
   const controller = createSessionHistoryController({
     sessionId: "s",
     ownerKey: "placement",
     reads: registry,
+    initialSession: { id: "s", status: "completed", last_request_started: "old" },
     transport: {
-      getConversation: async () => {
+      getConversation: async (_id, nextSignal) => {
+        signal = nextSignal!;
         const request = Promise.withResolvers<{ messages: SessionMessage[] }>();
         requests.push(request);
         return request.promise;
@@ -89,15 +88,15 @@ test("a later run rejects the previous end GET and stale stream events", async (
   });
   controller.connect();
   await tick();
+  controller.sessionChanged({ id: "s", status: "in_progress", last_request_started: "first" });
+  expect(signal.aborted).toBe(true);
   streams[0]!.onPatch!({ op: "replace", path: "/messages", value: [message("first")] });
-  requests[0]!.resolve({ messages: [] });
-  await tick();
-  streams[0]!.onEnd!({});
+  requests[0]!.resolve({ messages: [message("old-history")] });
   await tick();
   controller.sessionChanged({ id: "s", status: "in_progress", last_request_started: "next" });
   streams[1]!.onPatch!({ op: "replace", path: "/messages", value: [message("second")] });
-  requests[1]!.resolve({ messages: [message("old-end")] });
   streams[0]!.onPatch!({ op: "replace", path: "/messages", value: [] });
+  streams[0]!.onEnd!({});
   await tick();
   expect(state.messages).toEqual([message("second")]);
   controller.dispose();
@@ -112,7 +111,7 @@ test("a new run observed before the old stream ends owns the next connection", a
     sessionId: "s",
     ownerKey: "view",
     reads,
-    initialSession: { id: "s", last_request_started: "old" },
+    initialSession: { id: "s", status: "in_progress", last_request_started: "old" },
     transport: {
       getConversation: async () => ({ messages: [] }),
       getQueuedMessages: async () => ({ messages: [] }),
@@ -151,6 +150,7 @@ test("authoritative queue snapshots preserve repeated prompts and reject older q
     ownerKey: "view",
     reads,
     initialState: { messages: [queued(1), queued(2)], loading: false, streaming: false },
+    initialSession: { id: "s", status: "in_progress" },
     transport: {
       getConversation: async () => ({ messages: [] }),
       getQueuedMessages: async () => old.promise,
@@ -207,6 +207,7 @@ test("only temporary failures are marked as worth retrying", async () => {
   await tick();
   expect(state.error).toEqual({ message: "Session not found", temporary: false });
   expect(state.queueError).toEqual({ message: "Queue unavailable", temporary: true });
+  controller.sessionChanged({ id: "s", status: "in_progress", last_request_started: "run" });
   handlers.onError!(new TypeError("Failed to fetch"));
   expect(state.error).toEqual({ message: "The network is unavailable.", temporary: true });
   controller.dispose();

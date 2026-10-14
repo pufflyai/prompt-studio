@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { expectPackagedChatHistory } from "./packaged-chat-history-smoke";
 
 const expectResizedPanelReopen = async (page: Page, label: string, openName: string, direction: number) => {
   const open = page.getByRole("button", { name: openName, exact: true });
@@ -119,4 +120,5 @@ export const expectPackagedStreamingMotion = async (
     )
     .toBe(0);
   await earlier?.dispose();
+  await expectPackagedChatHistory(page, session.id);
 };
