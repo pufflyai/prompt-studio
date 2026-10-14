@@ -26,7 +26,7 @@ export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, pr
   await page.getByRole("separator", { name: "Resize Main left menu", exact: true }).dblclick();
   await expect(tab).toBeVisible();
   const instanceId = await tab.locator("..").getAttribute("data-workbench-tab");
-  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Sidebar", exact: true }).click();
   await movePanelTab(page, tab, page.locator('[data-workbench-region="side"]'));
   const moved = page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: "Cams", exact: true });
   await expect(moved).toBeVisible();

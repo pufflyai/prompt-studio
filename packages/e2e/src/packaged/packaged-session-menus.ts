@@ -43,7 +43,7 @@ export const verifyPackagedSessionMenus = async (
   await page.getByRole("menuitem", { name: "Show header", exact: true }).click();
   await expect(side.getByRole("tab", { name: /Packaged session actions/ })).toBeVisible();
   if (await page.getByTestId("workbench-side-panel-floating").isVisible()) {
-    await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+    await side.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
   }
   const sessionTab = page.getByRole("tab", { name: /Packaged session actions/ });
   const instanceId = await sessionTab.locator("..").getAttribute("data-workbench-tab");
@@ -51,7 +51,7 @@ export const verifyPackagedSessionMenus = async (
   const bubble = page.getByRole("button", { name: "Close Side Panel", exact: true });
   await expect(bubble).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
-  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await side.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await expect(sessionTab.locator("..")).toHaveAttribute("data-workbench-tab", instanceId!);
   await side.getByRole("button", { name: "Float Side Panel", exact: true }).click();
