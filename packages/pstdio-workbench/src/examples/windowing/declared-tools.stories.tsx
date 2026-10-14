@@ -5,6 +5,7 @@ import { emptyWorkbenchExtensionMetadata } from "../../extensions/contributions/
 import { registerWorkbenchExtensionContributions } from "../../extensions/host/workbench-extension-host";
 import { createWindowingFixture } from "./fixture";
 import { windowingExtensionId } from "./resources";
+import { moveStoryTab } from "./tab-moves";
 import { WindowingStory } from "./windowing-story";
 
 const meta = {
@@ -50,7 +51,6 @@ const boomboxFixture = () => {
   fixture.workbench.shell.setHeaderVisible("secondary", true);
   fixture.workbench.shell.setHeaderVisible("side", true);
   fixture.workbench.shell.setHeaderVisible("main", true);
-  fixture.workbench.shell.setRegionOpen("side", true);
   return fixture;
 };
 
@@ -77,9 +77,7 @@ export const MovedDeclaredTool: Story = {
   play: async ({ canvasElement }) => {
     const side = within(panel(canvasElement, "side"));
     const tab = await side.findByRole("tab", { name: "Up next" });
-    tab.focus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Move to Main" }));
+    await moveStoryTab(tab, "Main");
     await expect(side.queryByText("Drop a tab here")).toBeNull();
     await userEvent.click(side.getByRole("button", { name: "Open Up next" }));
     await waitFor(() =>
