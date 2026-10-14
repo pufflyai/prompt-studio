@@ -7,6 +7,8 @@ import { preparePackagedSmokeBrowser, resolvePackagedRuntimeTestArgs } from "./p
 import { verifyPublicPackages } from "./public-package-consumer";
 import { verifyPublishedTypeExports } from "./published-type-exports";
 
+const logTestPhase = (phase: string) => process.stdout.write(`[${new Date().toISOString()}] ${phase}\n`);
+
 const config = loadEmbedConfig();
 const platformPackage = getHostPlatformPackage(config.platformBinaries);
 const verifyPlatformPackage = process.env.PSTDIO_VERIFY_PLATFORM_PKG;
@@ -18,6 +20,7 @@ process.stdout.write(
     : "Building all compiled targets...\n",
 );
 
+logTestPhase("build compiled packages");
 const build = spawnSync("bun", ["run", "--cwd", "scripts", "build:all"], {
   stdio: "inherit",
   env: verifyPlatformPackage ? { ...process.env, PSTDIO_BUILD_PLATFORM_PKG: platformPackage.pkg } : process.env,
@@ -28,7 +31,9 @@ if (build.status !== 0) {
   process.exit(build.status ?? 1);
 }
 
+logTestPhase("verify published types");
 await verifyPublishedTypeExports(process.cwd());
+logTestPhase("verify package consumers");
 verifyPublicPackages(process.cwd());
 
 let failed = false;
@@ -53,9 +58,11 @@ if (failed) {
 
 const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
 process.stdout.write("\nPreparing Chromium for packaged e2e checks...\n");
+logTestPhase("prepare packaged Chromium");
 preparePackagedSmokeBrowser(platformPackage, hostBinaryPath);
 
 process.stdout.write("\nRunning packaged e2e checks...\n");
+logTestPhase("run packaged e2e");
 const packagedE2e = spawnSync("bun", resolvePackagedRuntimeTestArgs(platformPackage), {
   cwd: "./packages/e2e",
   stdio: "inherit",
@@ -68,6 +75,7 @@ if (packagedE2e.status !== 0) {
 }
 
 process.stdout.write("\nRunning compiled Bun CLI smoke check...\n");
+logTestPhase("run compiled CLI smoke");
 runCompiledBunSmoke(platformBinaries);
 
 process.stdout.write("\nAll platform binaries and packaged e2e checks passed.\n");
