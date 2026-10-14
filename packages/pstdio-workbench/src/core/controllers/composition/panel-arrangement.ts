@@ -84,7 +84,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
           activeLocationWidgetId: movesLocation ? next.regions.main.activeWidgetId : layout.activeLocationWidgetId,
         });
         saveOpenOwnerLayouts(core);
-        if (movesLocation) reconcileMainAfterMove(core);
+        if (leavesPage) reconcileMainAfterMove(core, found.regionId, movesLocation);
         const final = core.layout.getLayout();
         core.layout.restoreLayout({
           ...final,
