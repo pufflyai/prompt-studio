@@ -49,6 +49,8 @@
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
+        "src/perf/planner-moves.stress.ts",
+        "src/perf/planner-moves.validation.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
         // Specs install fixture extensions by path.
@@ -216,6 +218,7 @@
         "src/**/*.test.tsx",
         "src/views/tags-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
+        "src/commands/reorder-ticket.stress.fixture.ts",
         "vendor/collection-filter.js",
         "src/timeline/view/entry.tsx"
       ],

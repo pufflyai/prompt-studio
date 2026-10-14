@@ -49,7 +49,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
-// Planner checks request-owned indicators, protected generic tag edits, and the request page.
+// Planner checks complete moves, no-op saves, request-owned indicators, protected tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 // Timeline coverage configures Auto build mode and checks implementation status in both Planner views.
 // Queue drag targets follow live-input support and retain padded delete actions.
