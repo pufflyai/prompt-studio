@@ -1,6 +1,7 @@
 import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ListFilter, RotateCcw } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
 import { addAdvancedGroup, normalFilter, setAdvancedGroup } from "./advanced-filter";
@@ -150,34 +151,41 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
             borderTopWidth="1px"
             borderColor="border.subtle"
           >
-            <HStack minW="0" gap="2xs" overflowX="auto">
-              {filter.rules.map((rule, index) => (
-                <FilterRulePill
-                  key={`${index}:${rule.attributeId}`}
-                  fields={filterFields}
-                  rule={rule}
-                  options={optionsForId(rule.attributeId)}
-                  open={openRuleIndex === index}
-                  onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
-                  onChange={(next) => setFilter(setRuleAt(filter, index, next))}
-                  onRemove={() => {
-                    setOpenRuleIndex(null);
-                    setFilter(setRuleAt(filter, index, undefined));
-                  }}
-                />
-              ))}
-              {filter.groups?.map((group, index) => (
-                <AdvancedFilterPill
-                  key={index}
-                  fields={filterFields}
-                  group={group}
-                  optionsFor={optionsFor}
-                  onChange={(next) => setFilter(setAdvancedGroup(filter, index, next))}
-                  onRemove={() => setFilter(setAdvancedGroup(filter, index))}
-                />
-              ))}
-            </HStack>
-            <Box flex="1" />
+            <ScrollArea
+              flex="1"
+              minW="0"
+              showHorizontalScrollbar
+              showVerticalScrollbar={false}
+              contentProps={{ height: "full", display: "flex", alignItems: "center" }}
+            >
+              <HStack gap="2xs" width="max-content">
+                {filter.rules.map((rule, index) => (
+                  <FilterRulePill
+                    key={`${index}:${rule.attributeId}`}
+                    fields={filterFields}
+                    rule={rule}
+                    options={optionsForId(rule.attributeId)}
+                    open={openRuleIndex === index}
+                    onOpenChange={(isOpen) => setOpenRuleIndex(isOpen ? index : null)}
+                    onChange={(next) => setFilter(setRuleAt(filter, index, next))}
+                    onRemove={() => {
+                      setOpenRuleIndex(null);
+                      setFilter(setRuleAt(filter, index, undefined));
+                    }}
+                  />
+                ))}
+                {filter.groups?.map((group, index) => (
+                  <AdvancedFilterPill
+                    key={index}
+                    fields={filterFields}
+                    group={group}
+                    optionsFor={optionsFor}
+                    onChange={(next) => setFilter(setAdvancedGroup(filter, index, next))}
+                    onRemove={() => setFilter(setAdvancedGroup(filter, index))}
+                  />
+                ))}
+              </HStack>
+            </ScrollArea>
             {dirty ? (
               <>
                 <Button size="2xs" variant="outline" onClick={() => activeView && activateView(activeView)}>

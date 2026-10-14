@@ -1,25 +1,29 @@
-import { chromium, expect } from "@playwright/test";
+import { type Browser, expect } from "@playwright/test";
+import { logQueuedPhase } from "./packaged-queued-fixture";
 import { expectPackagedQueuedSubmission } from "./packaged-queued-submission-smoke";
 
 export const expectPackagedQueuedEditorCancellation = async (
+  browser: Browser,
   baseUrl: string,
   headers: Record<string, string>,
   projectId: string,
   sessionId: string,
   acceptsLiveInput = true,
 ) => {
-  const browser = await chromium.launch();
+  const page = await browser.newPage({ extraHTTPHeaders: headers });
   try {
-    const page = await browser.newPage({ extraHTTPHeaders: headers });
     await page.addInitScript((id) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", id);
     }, projectId);
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${sessionId}`);
+    logQueuedPhase("editor", "open session page");
     await page.goto(`${baseUrl}/projects/${projectId}/session?resource=${resource}`);
     const editor = page.getByTestId("content-editable").last();
     await expect(editor).toBeEditable();
+    logQueuedPhase("editor", "pending submission and failure recovery");
     await expectPackagedQueuedSubmission(page, sessionId);
+    logQueuedPhase("editor", "drag cancellation and independent draft");
     const grip = page.getByRole("button", { name: "Drag queued follow-up 1", exact: true });
     const queue = grip.locator("xpath=ancestor::*[@data-send-now-visible]");
     const topRadius = await queue.evaluate((element) => getComputedStyle(element).borderTopRightRadius);
@@ -62,6 +66,6 @@ export const expectPackagedQueuedEditorCancellation = async (
     await editor.press("Escape");
     await expect(editor).toHaveText("Independent draft");
   } finally {
-    await browser.close();
+    await page.close();
   }
 };

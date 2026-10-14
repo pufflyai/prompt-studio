@@ -70,3 +70,39 @@ describe("session scheduler cancellation", () => {
     expect(remove).toHaveBeenCalledWith(7);
   });
 });
+
+test("automatic continuation rejects a user stop after scheduler observation", async () => {
+  const handle = await createTestApp();
+  try {
+    const service = handle.deps.sessionService;
+    const project = await handle.deps.projectService.create({ name: "Automatic recovery" });
+    const session = await service.create({ project_id: project.id, title: "Owner", agent: "test" });
+    const completed = (await service.transitionStatus(session.id, "completed", { drainCapacity: false }))!;
+    const resume = service.resume;
+    const scheduler = createSessionScheduler({
+      ...handle.deps,
+      sessionService: {
+        ...service,
+        resume: async (id, options) => {
+          await service.transitionStatus(id, "cancelled", { drainCapacity: false, exitCause: "user_stop" });
+          return resume(id, options);
+        },
+      },
+    });
+    await expect(
+      scheduler.startOrQueueExisting({
+        session: completed,
+        prompt: "Automatic",
+        expectedRun: {
+          status: completed.status,
+          startedAt: completed.last_request_started,
+          endedAt: completed.last_request_ended,
+        },
+      }),
+    ).rejects.toThrow("execution changed");
+    expect((await service.get(session.id))?.status).toBe("cancelled");
+    expect(await handle.deps.sessionQueueEntriesService.listPendingBySession(session.id)).toHaveLength(0);
+  } finally {
+    await handle.close();
+  }
+});

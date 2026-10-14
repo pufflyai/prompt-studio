@@ -5,6 +5,7 @@
 Changes worked in the source workspace but broke or slowed ordinary use of the installed product. Automated checks covered parts of the system without always proving that a new user could reach a working tool.
 
 - [PR #802](https://github.com/pufflyai/prompt-studio/pull/802) removed an OpenCode extension's dependency on an SDK API that had not been published. The local workspace supplied that API; the released SDK did not.
+- [PR #998](https://github.com/pufflyai/prompt-studio/pull/998) hit the same problem with Social radar's harness control. [PR #1024](https://github.com/pufflyai/prompt-studio/pull/1024) removed that use until SDK 0.43.0 was published. Extension builds must resolve their declared SDK and UI packages from npm even when a local workspace version matches the range.
 - [PR #807](https://github.com/pufflyai/prompt-studio/pull/807) fixed unnecessary catalog downloads and development dependency installs during packaged project creation. Creating the first project had slowed from about 5 seconds to 12–14 seconds on macOS.
 - [PR #808](https://github.com/pufflyai/prompt-studio/pull/808) added extension lockfiles after the first install fix. A cold Skills extension install then downloaded 9.4 MB instead of 535 MB.
 

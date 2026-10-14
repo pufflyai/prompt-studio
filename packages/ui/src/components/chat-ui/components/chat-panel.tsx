@@ -1,4 +1,4 @@
-import { Flex } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
@@ -225,42 +225,44 @@ export const ChatPanel = (props: ChatPanelProps) => {
               </ChatPrimitives.Viewport>
               {isMessageViewportReady ? <ChatPrimitives.ScrollToBottom aria-label="Scroll to latest message" /> : null}
             </ChatPrimitives.Root>
-            {approvalPrompt}
-            {streaming ? (
-              <WorkingIndicator key={messageListKey} startedAt={streamingStartedAt} hidden={!showThinkingIndicator} />
-            ) : null}
-            <ChatPanelComposer
-              conversationKey={conversationKey ?? messages[0]?.id}
-              recentUserMessages={getRecentUserPrompts(messages)}
-              actions={actions}
-              attachmentActions={attachmentActions}
-              composerHeader={composerHeader}
-              attachedResources={attachedResources}
-              attachmentList={attachmentList}
-              chatInputAutoFocus={chatInputAutoFocus}
-              chatInputPlaceholder={chatInputPlaceholder}
-              chatInputQuestionPrompt={activeQuestionPrompt}
-              composerDecision={questionNavigation.prompt ? undefined : composerDecision}
-              chatInputCommands={chatInputCommands}
-              hasWorkspaceHub={hasWorkspaceHub}
-              inputDisabled={inputDisabled}
-              submitDisabled={submitDisabled}
-              onAttachFiles={onAttachFiles}
-              onAttachText={onAttachText}
-              onClearAttachments={onClearAttachments}
-              onInterrupt={onInterrupt}
-              onQueuedFollowUpMove={onQueuedFollowUpMove}
-              onQueuedFollowUpRemove={onQueuedFollowUpRemove}
-              onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
-              onQueuedFollowUpSteer={onQueuedFollowUpSteer}
-              onQueuedFollowUpCombine={onQueuedFollowUpCombine}
-              queueSteeringUnavailableReason={queueSteeringUnavailableReason}
-              unsavedQueueItemIds={unsavedQueueItemIds}
-              queuedComposer={queuedComposer}
-              queuedFollowUps={queuedFollowUps}
-              streaming={streaming}
-              workspaceHub={workspaceHub}
-            />
+            <Box layerStyle="chatContent" flexShrink="0">
+              {approvalPrompt}
+              {streaming ? (
+                <WorkingIndicator key={messageListKey} startedAt={streamingStartedAt} hidden={!showThinkingIndicator} />
+              ) : null}
+              <ChatPanelComposer
+                conversationKey={conversationKey ?? messages[0]?.id}
+                recentUserMessages={getRecentUserPrompts(messages)}
+                actions={actions}
+                attachmentActions={attachmentActions}
+                composerHeader={composerHeader}
+                attachedResources={attachedResources}
+                attachmentList={attachmentList}
+                chatInputAutoFocus={chatInputAutoFocus}
+                chatInputPlaceholder={chatInputPlaceholder}
+                chatInputQuestionPrompt={activeQuestionPrompt}
+                composerDecision={questionNavigation.prompt ? undefined : composerDecision}
+                chatInputCommands={chatInputCommands}
+                hasWorkspaceHub={hasWorkspaceHub}
+                inputDisabled={inputDisabled}
+                submitDisabled={submitDisabled}
+                onAttachFiles={onAttachFiles}
+                onAttachText={onAttachText}
+                onClearAttachments={onClearAttachments}
+                onInterrupt={onInterrupt}
+                onQueuedFollowUpMove={onQueuedFollowUpMove}
+                onQueuedFollowUpRemove={onQueuedFollowUpRemove}
+                onQueuedFollowUpUpdate={onQueuedFollowUpUpdate}
+                onQueuedFollowUpSteer={onQueuedFollowUpSteer}
+                onQueuedFollowUpCombine={onQueuedFollowUpCombine}
+                queueSteeringUnavailableReason={queueSteeringUnavailableReason}
+                unsavedQueueItemIds={unsavedQueueItemIds}
+                queuedComposer={queuedComposer}
+                queuedFollowUps={queuedFollowUps}
+                streaming={streaming}
+                workspaceHub={workspaceHub}
+              />
+            </Box>
           </Flex>
         </ChatQuestionNavigationContext>
       </ChatLinkProvider>

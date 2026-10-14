@@ -106,7 +106,7 @@ describe("pstdio close", () => {
           stdio: "pipe",
         },
       );
-      await waitForReady(url);
+      await waitForReady(url, runtimeToCleanup);
 
       expect(await isReachable(url)).toBe(true);
 
@@ -142,7 +142,7 @@ describe("pstdio close", () => {
           stdio: "pipe",
         },
       );
-      await waitForReady(url);
+      await waitForReady(url, runtimeToCleanup);
 
       const descriptor = JSON.parse(readFileSync(join(homePath, "runtime.json"), "utf8")) as { token: string };
       const stream = await fetch(`${url}/v1/sync/stream`, {
@@ -185,7 +185,7 @@ describe("pstdio close", () => {
           stdio: "pipe",
         },
       );
-      await waitForReady(url);
+      await waitForReady(url, runtimeToCleanup);
 
       browserToCleanup = await firefox.launch({ headless: true });
       const page = await browserToCleanup.newPage();

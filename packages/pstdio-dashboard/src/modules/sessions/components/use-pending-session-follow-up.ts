@@ -1,16 +1,17 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useSyncExternalStore } from "react";
+import { serverShowsPendingFollowUp } from "../chat/queued-follow-ups";
 import {
   getPendingFollowUp,
-  hasAcceptedPendingFollowUp,
   mergeMessagesWithPendingFollowUp,
   subscribePendingFollowUps,
   updatePendingFollowUp,
 } from "../chat/session-chat-state";
-import { hasPendingSessionRunStarted, resolveSessionWorkStartedAt } from "../chat/session-work-start";
+import { resolveSessionWorkStartedAt } from "../chat/session-work-start";
 
 export const usePendingSessionFollowUp = (
   conversationKey: string,
+  sessionId: string | null,
   messages: SessionMessage[],
   lastRequestStarted: string | null,
   runInProgress: boolean,
@@ -20,12 +21,9 @@ export const usePendingSessionFollowUp = (
   useEffect(() => {
     // An unsent message stays until the user resends or removes it.
     if (!pendingFollowUp || pendingFollowUp.failure) return;
-    if (
-      hasAcceptedPendingFollowUp(messages, pendingFollowUp) &&
-      hasPendingSessionRunStarted(lastRequestStarted, pendingFollowUp.previousRunStarted)
-    )
+    if (serverShowsPendingFollowUp(messages, sessionId, pendingFollowUp, lastRequestStarted))
       updatePendingFollowUp(conversationKey, (current) => (current === pendingFollowUp ? null : current));
-  }, [conversationKey, messages, pendingFollowUp, lastRequestStarted]);
+  }, [conversationKey, sessionId, messages, pendingFollowUp, lastRequestStarted]);
 
   return {
     pendingFollowUp,

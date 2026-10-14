@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type {
   HarnessContext,
   HarnessEventSink,
@@ -80,6 +83,31 @@ describe("createFakeHarness", () => {
     });
     expect(messages[1]?.role).toBe("assistant");
     expect(sink.getMessages()).toEqual(messages);
+  });
+
+  test("holds a run until its release file appears in the session folder", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "fake-hold-"));
+    try {
+      const harness = createFakeHarness();
+      const held = await harness.start(ctx, {
+        prompt: "Keep working __fake_hold__",
+        sessionId: "host-1",
+        cwd,
+        events: recordingSink().sink,
+      });
+      const normal = await harness.start(ctx, {
+        prompt: "Finish",
+        sessionId: "host-2",
+        cwd,
+        events: recordingSink().sink,
+      });
+      await normal.done;
+      expect(await Promise.race([held.done, Promise.resolve("running")])).toBe("running");
+      writeFileSync(join(cwd, ".fake-hold-release"), "");
+      expect(await held.done).toEqual({ status: "completed" });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
 
   test("resolves cancelled when stopped before completion", async () => {

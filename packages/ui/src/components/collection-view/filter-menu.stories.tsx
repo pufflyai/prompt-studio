@@ -146,6 +146,8 @@ export const LongValueList: Story = {
     const canvas = within(canvasElement);
     const panel = canvas.getByTestId("filter-value-column");
     const viewport = panel.querySelector('[data-part="viewport"]')!;
+    const scrollbar = panel.querySelector('[data-part="scrollbar"]')!;
+    expect(getComputedStyle(scrollbar).width).toBe("2px");
     expect(viewport.getBoundingClientRect().bottom).toBe(panel.getBoundingClientRect().bottom - 12);
     viewport.scrollTop = viewport.scrollHeight;
     const last = canvas.getByRole("checkbox", { name: "Option 29", exact: true });

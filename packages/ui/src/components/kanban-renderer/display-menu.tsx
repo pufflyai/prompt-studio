@@ -1,6 +1,7 @@
 import { Button, HStack, Icon, IconButton, Menu, Popover, Portal, Text } from "@chakra-ui/react";
 import { Check, ChevronDown, List, Settings2, SquareKanban } from "lucide-react";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { type MenuOption, resolveSubGroupingOptions } from "./kanban-renderer-helpers";
 import type { KanbanRendererSettings } from "./types";
@@ -48,18 +49,20 @@ export const DisplayMenuSelect = (props: DisplayMenuSelectProps) => {
         </Button>
       </Menu.Trigger>
       <Menu.Positioner>
-        <Menu.Content>
-          {props.options.map((option, index) => (
-            <Fragment key={option.value}>
-              {hasNoneFirst && index === 1 ? <Menu.Separator /> : null}
-              <Menu.Item value={option.value} onClick={() => props.onSelect(option.value)}>
-                <HStack width="full" gap="xs">
-                  <Text textStyle="label/S/regular">{option.label}</Text>
-                  {option.value === props.value ? <Icon as={Check} marginLeft="auto" boxSize="0.875rem" /> : null}
-                </HStack>
-              </Menu.Item>
-            </Fragment>
-          ))}
+        <Menu.Content overflow="hidden" overflowY="hidden">
+          <ScrollArea maxH="var(--available-height)" minH="0" viewportProps={{ overscrollBehavior: "contain" }}>
+            {props.options.map((option, index) => (
+              <Fragment key={option.value}>
+                {hasNoneFirst && index === 1 ? <Menu.Separator /> : null}
+                <Menu.Item value={option.value} onClick={() => props.onSelect(option.value)}>
+                  <HStack width="full" gap="xs">
+                    <Text textStyle="label/S/regular">{option.label}</Text>
+                    {option.value === props.value ? <Icon as={Check} marginLeft="auto" boxSize="0.875rem" /> : null}
+                  </HStack>
+                </Menu.Item>
+              </Fragment>
+            ))}
+          </ScrollArea>
         </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>

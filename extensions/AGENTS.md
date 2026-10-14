@@ -13,7 +13,8 @@ When a change requires both SDK updates and extension updates:
 - Make and validate the SDK change first.
 - Test the extension against the SDK change by linking the local SDK package, for example `bun link` from `packages/sdk`, then `bun link @pstdio/sdk` from the extension package.
 - Open one PR for the SDK change first.
-- After the new SDK package is available, update the extension dependency to point to that SDK version and open a separate extension PR.
+- Open the extension change as a separate PR. If the SDK change is not published yet, add the red `waiting-for-release` label and name the SDK PR in the description. Its `published_extensions` check fails until the release.
+- After the new SDK package is published, update the extension dependency to that SDK version, wait for `published_extensions` to pass, and remove the label.
 - Do not combine SDK and extension release changes in one PR unless explicitly requested.
 
 ## Core extension releases

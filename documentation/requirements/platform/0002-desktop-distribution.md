@@ -20,12 +20,22 @@ folder. Drag the app onto Applications. Finder copies it. It may show a
 progress window, and it shows its own replace prompt or error when needed. The
 window itself does not change after the
 drop. When the copy finishes, open Applications and launch Prompt Studio from
-there, not from the DMG. On the first launch from
-Applications, the app links `/usr/local/bin/pst` to its bundled runtime. macOS asks
-for an administrator password if the directory requires it. Cancelling leaves
-the app usable and does not repeat the prompt on later launches. Choose
-**Prompt Studio → Install pst Command…** to retry or restore a removed link.
+there, not from the DMG. After the person creates their first project in the app
+launched from Applications, the app links `/usr/local/bin/pst` to its bundled
+runtime. The first launch asks for nothing. When the directory needs an
+administrator password, the app first explains why, then asks **Install** or
+**Not Now**. Only **Install** opens the macOS password window, which
+shows the app's reason under the title "osascript wants to make changes." Choosing
+**Not Now** or cancelling the password window leaves the app usable and does not
+ask again. Choose **Prompt Studio → Install pst Command…** to
+install later or restore a removed link.
 Apps running from the DMG or another unpacked folder do not install the command.
+
+The app's `bin` folder holds the runtime and a `pst` link to it on macOS and Linux.
+The desktop app puts that folder first on the runtime's `PATH`, and agents inherit
+it, so they can run `pst` even when the terminal command is missing. Agents run
+commands in login shells. On macOS, a login shell moves `/usr/local/bin` ahead of
+the app's folder, so a different `pst` installed there takes priority.
 
 The Linux DEB installs `/usr/bin/pst` and removes its own link when uninstalled.
 The Windows Setup installer creates a `pst.cmd` launcher in the installation's
@@ -149,9 +159,11 @@ for how nightlies are built and pruned.
 
 The configured publication channel is this repository's `pstdio@<version>`
 GitHub release. The release owner must approve this channel before the first
-production publish. `.github/workflows/release-packages.yml` creates it as a draft and calls
-`.github/workflows/release-desktop.yml`. Only the final publish job can write
-release contents. Native build artifacts are retained by Actions for 14 days.
+production publish. `.github/workflows/release-packages.yml` calls
+`.github/workflows/release-desktop.yml` to build and verify the native artifacts,
+then its publish job creates the release and attaches them after every release
+check passed. Only that publish job can write release contents. Native build
+artifacts are retained by Actions for 14 days.
 
 Repository administrators provision these GitHub Actions secrets:
 
@@ -175,7 +187,7 @@ Credentials are decoded only into the native runner's temporary directory. The
 macOS certificate is imported into an ephemeral keychain that is deleted even
 when the job fails. Never print, upload, or commit decoded credentials.
 
-## Release readiness evidence
+## Release verification evidence
 
 Each native target launches the actual application produced by Forge after the
 target's signing step. The packaged suite must prove all of the following before
@@ -205,7 +217,7 @@ The Intel clean start may take up to 28 seconds. The other targets run the full
 suites.
 
 The workflow uploads the Playwright JSON results as
-`release-readiness-<platform>-<architecture>` with 14-day retention. A release
+`test-results-desktop-<platform>-<architecture>` with 14-day retention. A release
 owner links every native job run and their evidence artifacts from the
 ticket validation report. Contract tests in the owning packages separately
 cover active-work refusal/confirmation, indefinite graceful wait, lock and bind
@@ -220,10 +232,11 @@ version.
 
 ## Release troubleshooting
 
-- **Release remains a draft:** open the native matrix and identify the first
-  failed target. The draft is the safety boundary; do not publish it manually.
+- **Release remains unpublished:** open the Release Packages run and identify the
+  first failed target. Nothing is published until every check passes; do not
+  publish manually. Re-run the failed jobs for a flake, or merge a fix to `main`.
 - **Missing credential:** provision the exact secret named in the failure and
-  rerun the desktop workflow for the existing version/tag.
+  re-run the failed jobs of the release run.
 - **macOS notarization or Gatekeeper failure:** verify the Developer ID identity,
   App Store Connect key permissions, Team ownership, timestamp service, and
   stapling result. Do not disable hardened runtime or signature validation.

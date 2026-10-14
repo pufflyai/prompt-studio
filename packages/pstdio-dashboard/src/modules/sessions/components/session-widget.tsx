@@ -1,4 +1,4 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
 import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
@@ -61,10 +61,8 @@ export const SessionViewWidget = (props: SessionWidgetProps) => {
   const { input, drafts } = props;
 
   return (
-    <Flex h="full" minH="0" w="full" bg="bg" overflow="hidden" px="sm" py="sm" justify="center">
-      <Box h="full" minH="0" w="full" maxW="52rem">
-        <SessionWidget input={input} drafts={drafts} />
-      </Box>
+    <Flex h="full" minH="0" w="full" bg="bg" overflow="hidden" py="sm">
+      <SessionWidget input={input} drafts={drafts} />
     </Flex>
   );
 };
