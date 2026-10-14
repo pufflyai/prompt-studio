@@ -38,6 +38,18 @@ planner ticket ──┐
 - Multiple concurrent sessions per workspace are allowed.
 - Planner ticket attempts are host workspaces plus planner-owned link/status metadata and linked sessions.
 
+## Session management
+
+Saved sessions have shared Rename, Archive, and Delete commands on their breadcrumb and navigation rows. Commands use the explicit session ID or the row or tab context before the active session. Drafts have no saved-session actions.
+
+Rename trims the name and uses `PATCH /v1/sessions/{id}/title`. Archive keeps the conversation, cancels queued work, and allows live work to continue. Both operations update the synced session row.
+
+`DELETE /v1/sessions/{id}` returns 204 after deleting an inactive session. It returns 404 when the session is missing and 409 when active, queued, dispatching, or retained run work prevents deletion. The SDK exposes the same operation as `client.sessions.delete(id)`. Deletion shares the scheduler lock and locks the database row before checking eligibility.
+
+Deletion removes workspace joins and incoming and outgoing resource anchors in one transaction. It publishes synced removals, refreshed surviving anchor sources, and a resource removal event after commit. A checkpoint is removed through the file service only when its `session_messages` kind and database references prove exclusive ownership. Shared checkpoints, attachments, workspace files, linked resources, and external agent history are kept. Storage read or removal errors roll back database removal; a failed database commit restores removed checkpoint bytes.
+
+Archive and delete close only the affected session's saved views and selection. Its routed page returns to Sessions. The workbench previews direct changes while saving and restores failed previews. Dialog failures appear inline and can be retried.
+
 ## Data model
 
 | Data | Owner and purpose |

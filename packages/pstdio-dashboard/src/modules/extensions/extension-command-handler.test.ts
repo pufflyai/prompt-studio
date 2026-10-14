@@ -1,8 +1,32 @@
 import { describe, expect, test } from "bun:test";
+import { createWorkbench } from "@pstdio/workbench";
 import { type CommandFilesParamValue, createCommandFilesParamValue } from "@pstdio/workbench/react";
-import { prepareExtensionCommandArgs } from "./extension-command-handler";
+import { dashboardCommandIds } from "@/shared/app/commands";
+import { openSessionCommandResult, prepareExtensionCommandArgs } from "./extension-command-handler";
 
 const input = { projectId: "project-1", commandId: "extension.command.upload" };
+
+test("extension session results open the project-owned session resource", async () => {
+  const workbench = createWorkbench();
+  let opened: unknown;
+  workbench.commands.registerCommand(
+    { id: dashboardCommandIds.openSessionPanel, label: "Open session panel" },
+    {
+      execute: (args) => {
+        opened = args;
+      },
+    },
+  );
+  await openSessionCommandResult(workbench, "project-1", {
+    commandId: "extension.create-session",
+    extensionId: "extension",
+    outcome: { ok: true, status: "success", value: { type: "session", id: "session-1", title: "Created" } },
+  });
+  expect(opened).toMatchObject({
+    resource: { type: "session", id: "session-1", label: "Created", extensionId: "pstdio", projectId: "project-1" },
+  });
+  await workbench.dispose();
+});
 
 describe("extension command file arguments", () => {
   test("uploads files in order and preserves existing refs and other arguments", async () => {

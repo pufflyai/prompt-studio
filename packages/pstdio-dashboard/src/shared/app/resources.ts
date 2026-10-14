@@ -15,6 +15,16 @@ export const createDashboardResource = (
     icon,
     metadata: { ...metadata, favoriteScope: { scope: "project", projectId } },
   }) satisfies ResourceRef;
+export const createDashboardSessionResource = (
+  id: string,
+  label: string,
+  projectId: string | undefined,
+  metadata: Record<string, unknown> = {},
+) => ({
+  ...createDashboardResource("session", id, label, "MessageCircle", projectId, metadata),
+  extensionId: "pstdio",
+  projectId,
+});
 export const dashboardViews = {
   start: { id: "start", label: "Start", icon: "House" },
   workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },

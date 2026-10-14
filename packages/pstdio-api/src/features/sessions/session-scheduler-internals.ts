@@ -149,7 +149,8 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
     ...(input.expectedRun ? { expectedRun: input.expectedRun } : {}),
   });
   if (!resumed && input.expectedRun) throw new Error("Session execution changed before continuation.");
-  const dispatchSession = resumed ?? session;
+  if (!resumed) throw new Error(`Session not found: ${session.id}`);
+  const dispatchSession = resumed;
   const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {
     sessionId: session.id,
     prompt,

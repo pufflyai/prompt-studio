@@ -59,6 +59,7 @@ export type SessionClient = {
   deleteAttachment(projectId: string, fileId: string): Promise<void>;
   create(input: CreateSessionInput): Promise<CreateSessionResponse>;
   archive(sessionId: string): Promise<void>;
+  delete(sessionId: string): Promise<void>;
   followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
   getConversation(sessionId: string, signal?: AbortSignal): Promise<SessionConversationResponse>;
@@ -179,6 +180,7 @@ export const createSessionClient = (
       }),
     create: (input) => request("/v1/sessions", { method: "POST", body: input }),
     archive: (sessionId) => request(`/v1/sessions/${sessionId}/archive`, { method: "POST" }),
+    delete: (sessionId) => request(`/v1/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" }),
     followUp: (sessionId, input) => request(`/v1/sessions/${sessionId}/follow-up`, { method: "POST", body: input }),
     approve: (sessionId, input) => request(`/v1/sessions/${sessionId}/approve`, { method: "POST", body: input }),
     getConversation: (sessionId, signal) => request(`/v1/sessions/${sessionId}/conversation`, { signal }),

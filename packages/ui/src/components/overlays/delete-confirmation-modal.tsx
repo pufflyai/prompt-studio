@@ -36,9 +36,10 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
     // outside interactions must never cancel them, and when nested inside another
     // overlay (e.g. the settings dialog) a portal keeps the layers cooperating.
     <Dialog.Root
+      size="sm"
       open={open}
       onOpenChange={(details) => {
-        if (!details.open) onClose();
+        if (!details.open && !isDeleting) onClose();
       }}
       closeOnInteractOutside={false}
     >
@@ -49,7 +50,7 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
             <Dialog.Header>
               <Text textStyle="heading/M">{headline}</Text>
               <Dialog.CloseTrigger asChild>
-                <CloseButton size="sm" />
+                <CloseButton size="sm" disabled={isDeleting} />
               </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body>
@@ -60,7 +61,9 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
             </Dialog.Body>
             <Dialog.Footer>
               <Stack direction="row" gap="1">
-                <Button onClick={onClose}>Close</Button>
+                <Button onClick={onClose} disabled={isDeleting}>
+                  Close
+                </Button>
                 <Button loading={isDeleting} variant="destructive" onClick={handleDelete}>
                   {buttonText}
                 </Button>

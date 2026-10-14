@@ -1,5 +1,7 @@
-import { DeleteConfirmationModal } from "@pstdio/ui";
+import { AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
+import { useState } from "react";
 import type { WorkbenchCore } from "../../core";
+import type { WorkbenchCommandConfirmation } from "../../core/controllers/command-palette/command-palette-controller";
 import { reportUserActionError } from "../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { type CommandParamFieldRenderer, CommandParamsDialog } from "./command-params-dialog";
@@ -15,14 +17,7 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
   const confirmation = useWorkbenchStore(workbench.commandPalette.store, (state) => state.confirmation);
   return (
     <>
-      <DeleteConfirmationModal
-        open={Boolean(confirmation)}
-        headline={confirmation ? `${confirmation.label}?` : undefined}
-        notificationText="This cannot be undone."
-        buttonText="Delete"
-        onClose={() => confirmation?.resolve(false)}
-        onDelete={() => confirmation?.resolve(true)}
-      />
+      {confirmation ? <CommandConfirmationDialog key={confirmation.label} confirmation={confirmation} /> : null}
       <CommandParamsDialog
         request={request}
         renderParamField={renderParamField}
@@ -40,5 +35,31 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
         }}
       />
     </>
+  );
+};
+
+export const CommandConfirmationDialog = (props: { confirmation: WorkbenchCommandConfirmation }) => {
+  const { confirmation } = props;
+  const [error, setError] = useState<string>();
+  return (
+    <DeleteConfirmationModal
+      open
+      headline={`${confirmation.label}?`}
+      notificationText={confirmation.description ?? "This cannot be undone."}
+      buttonText={confirmation.buttonLabel ?? "Delete"}
+      onClose={() => confirmation.resolve(false)}
+      onDelete={async () => {
+        setError(undefined);
+        try {
+          await confirmation.onConfirm?.();
+          confirmation.resolve(true);
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : "Could not save. Try again.");
+          throw caught;
+        }
+      }}
+    >
+      {error ? <AlertMessage status="error" title={error} role="alert" /> : null}
+    </DeleteConfirmationModal>
   );
 };

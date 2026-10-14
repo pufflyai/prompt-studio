@@ -12,6 +12,7 @@ const ticket = { type: "ticket", id: "PS-1", label: "PS-1 Fix header", extension
 const createBreadcrumbWorkbench = (target: {
   page: typeof boardPage | typeof ticketPage;
   resource?: typeof ticket;
+  contributed?: boolean;
 }) => {
   const workbench = createWorkbench({ startPage: boardPage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -31,12 +32,46 @@ const createBreadcrumbWorkbench = (target: {
   });
   workbench.pages.registerPage({
     id: "ticket",
+    parentId: "board",
     ref: ticketPage,
     path: "ticket",
     modeId: "project",
     resource: { kinds: [{ kind: "resource-kind", id: "ticket" }] },
     main: { kind: "panels", empty: { kind: "view", id: "body" } },
-    slots: [],
+    slots: target.contributed
+      ? [
+          {
+            id: "panel",
+            region: "main",
+            item: {
+              kind: "binding",
+              binding: {
+                kinds: [{ kind: "resource-kind", id: "ticket" }],
+                view: { kind: "view", id: "body" },
+                cardinality: "one",
+              },
+            },
+            tab: {
+              getSnapshot: (instance) => ({
+                label: instance.resource?.label,
+                menu: [
+                  {
+                    id: "panel",
+                    rows: [
+                      { id: "archive", label: "Archive", action: { kind: "command", commandId: "archive" } },
+                      {
+                        id: "details",
+                        label: "Panel details",
+                        action: { kind: "command", commandId: "panel-details" },
+                      },
+                    ],
+                  },
+                ],
+              }),
+            },
+          },
+        ]
+      : [],
   });
   // Resource actions also appear when the ticket is a tree row.
   workbench.commands.registerCommand(
@@ -52,6 +87,7 @@ const createBreadcrumbWorkbench = (target: {
   workbench.layout.registerMenuItem(workbenchBreadcrumbLocationMenuPath, { commandId: "copy-link" });
   workbench.pageLocations.setProject("storybook");
   workbench.pageLocations.navigate({ kind: "page", ...target });
+  if (target.contributed) workbench.pages.openSlot({ pageId: "ticket", slotId: "panel", resource: ticket });
   return workbench;
 };
 
@@ -85,5 +121,14 @@ export const PlainPage: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Page actions" }));
     await expect(await menuLabels()).toEqual(["Copy link"]);
+  },
+};
+
+export const ContributedPanelActions: Story = {
+  args: { workbench: createBreadcrumbWorkbench({ page: ticketPage, resource: ticket, contributed: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Actions for PS-1 Fix header" }));
+    await expect(await menuLabels()).toEqual(["Archive", "Panel details", "Copy link"]);
   },
 };

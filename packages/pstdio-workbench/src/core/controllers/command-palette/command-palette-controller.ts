@@ -24,6 +24,9 @@ export interface WorkbenchCommandParamsRequest {
 
 export interface WorkbenchCommandConfirmation {
   label: string;
+  description?: string;
+  buttonLabel?: string;
+  onConfirm?: () => Promise<void>;
   resolve(confirmed: boolean): void;
 }
 
@@ -49,7 +52,10 @@ export interface WorkbenchCommandPaletteController {
   open(input?: WorkbenchCommandPaletteOpenInput): void;
   close(): void;
   toggle(): void;
-  requestConfirmation(label: string): Promise<boolean>;
+  requestConfirmation(
+    label: string,
+    options?: Pick<WorkbenchCommandConfirmation, "description" | "buttonLabel" | "onConfirm">,
+  ): Promise<boolean>;
   requestParams(request: WorkbenchCommandParamsRequest): void;
   clearParams(): void;
   onDidChange(listener: WorkbenchCommandPaletteChangeListener): Disposable;
@@ -104,11 +110,12 @@ export const createWorkbenchCommandPaletteController = (
     toggle() {
       setOpenState({ open: !internal.getState().open, view: "main", initialQuery: "" });
     },
-    requestConfirmation(label) {
+    requestConfirmation(label, options) {
       internal.getState().confirmation?.resolve(false);
       return new Promise<boolean>((resolve) => {
         const confirmation = {
           label,
+          ...options,
           resolve: (confirmed: boolean) => {
             if (internal.getState().confirmation === confirmation)
               internal.setState({ ...internal.getState(), confirmation: null });

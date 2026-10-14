@@ -121,7 +121,7 @@ describe("session auto-open", () => {
     expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(session!.instanceId);
     expect(workbench.sidePanel.getMode()).toBe("closed");
     expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
-      resourceKey({ type: "session", id: "session-older" }),
+      resourceKey({ type: "session", id: "session-older", extensionId: "pstdio", projectId: "project-1" }),
     );
   });
   test("opens a ticket's session as a preview, including sessions of its workspaces", async () => {

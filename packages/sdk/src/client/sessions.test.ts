@@ -48,6 +48,18 @@ const createFakeStreamServer = ({ holdSubscribes = false } = {}) => {
 };
 
 describe("session stream client", () => {
+  it("deletes a saved session through the public client", async () => {
+    const requests: Array<{ url: string; method: string }> = [];
+    const client = createClient({
+      baseUrl: "http://session-api.test",
+      fetch: (async (url, init) => {
+        requests.push({ url: String(url), method: init?.method ?? "GET" });
+        return new Response(null, { status: 204 });
+      }) as typeof fetch,
+    });
+    await client.sessions.delete("saved session");
+    expect(requests).toEqual([{ url: "http://session-api.test/v1/sessions/saved%20session", method: "DELETE" }]);
+  });
   it("uploads and deletes session attachments through the sdk client", async () => {
     const calls: Array<{ url: string; method: string; headers: Headers; body?: BodyInit | null }> = [];
     const fetchFn = ((url: string, init?: RequestInit) => {

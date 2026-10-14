@@ -40,6 +40,8 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
   };
 };
 const sessionResource = {
+  extensionId: "pstdio",
+  projectId: "project-1",
   type: "session",
   id: "session-1",
   label: "Session one",

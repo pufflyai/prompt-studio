@@ -1,6 +1,6 @@
 import type { ResourceRef } from "@pstdio/workbench";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardSessionResource } from "@/shared/app/resources";
 import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 
 export interface RecentProjectResource {
@@ -25,7 +25,7 @@ const createSessionRecent = (row: SyncedRow, projectId: string | undefined): Rec
     title,
     icon: "MessageCircle",
     updatedAt: rowString(row.updated_at) || rowString(row.created_at),
-    resource: createDashboardResource("session", row.id, title, "MessageCircle", sessionProjectId, { status }),
+    resource: createDashboardSessionResource(row.id, title, sessionProjectId, { status }),
   };
 };
 

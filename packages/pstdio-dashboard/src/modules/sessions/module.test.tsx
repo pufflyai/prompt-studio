@@ -4,7 +4,7 @@ import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
+import { createDashboardResource, createDashboardSessionResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../workspaces/module";
@@ -62,7 +62,7 @@ describe("createSessionsModule", () => {
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
-    const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
+    const session = createDashboardSessionResource("session-1", "My session", "project-1", {
       status: "completed",
     });
     workbench.context.set(dashboardSelectedProjectIdContextKey, "project-1");
@@ -78,8 +78,8 @@ describe("createSessionsModule", () => {
   test("reuses the main tab when another session is selected", () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
-    const first = createDashboardResource("session", "session-1", "First session", "MessageCircle", "project-1");
-    const second = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1");
+    const first = createDashboardSessionResource("session-1", "First session", "project-1");
+    const second = createDashboardSessionResource("session-2", "Second session", "project-1");
     workbench.context.set(dashboardSelectedProjectIdContextKey, "project-1");
     workbench.registerModule(createSessionsModule());
     openSessionsPage(workbench, first);
@@ -91,7 +91,7 @@ describe("createSessionsModule", () => {
   test("updates the breadcrumb when starting a new session from sessions", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
-    const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
+    const session = createDashboardSessionResource("session-1", "My session", "project-1", {
       status: "completed",
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -104,7 +104,7 @@ describe("createSessionsModule", () => {
   test("navigates back from a session to the sessions root", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
-    const session = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {
+    const session = createDashboardSessionResource("session-2", "Second session", "project-1", {
       status: "completed",
     });
     getWriter("sessions")?.truncateAndWrite([
@@ -168,7 +168,7 @@ describe("createSessionsModule", () => {
     seedContractSessions();
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
-    const session = createDashboardResource("session", "session-2", "Second session", "MessageCircle", "project-1", {
+    const session = createDashboardSessionResource("session-2", "Second session", "project-1", {
       status: "completed",
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -190,18 +190,28 @@ describe("createSessionsModule", () => {
     openWorkspacesPage(workbench);
     const sessionEntry = workbench.resources
       .listResources("")
-      .find((entry) => resourceKey(entry.resource) === resourceKey({ type: "session", id: "session-1" }));
+      .find(
+        (entry) =>
+          resourceKey(entry.resource) ===
+          resourceKey({ type: "session", id: "session-1", extensionId: "pstdio", projectId: "project-1" }),
+      );
     if (sessionEntry) await sessionEntry.activate?.(sessionEntry.resource);
     const layout = workbench.layout.getLayout();
     const bubblePlacement = layout.regions.side.widgets.find(
-      (widget) => resourceKey(widget.resource) === resourceKey({ type: "session", id: "session-1" }),
+      (widget) =>
+        resourceKey(widget.resource) ===
+        resourceKey({ type: "session", id: "session-1", extensionId: "pstdio", projectId: "project-1" }),
     );
     expect(workbench.sidePanel.getMode()).toBe("attached");
-    expect(resourceKey(bubblePlacement?.resource)).toBe(resourceKey({ type: "session", id: "session-1" }));
+    expect(resourceKey(bubblePlacement?.resource)).toBe(
+      resourceKey({ type: "session", id: "session-1", extensionId: "pstdio", projectId: "project-1" }),
+    );
     expect(workbench.modes.getActiveModeId()).not.toBe("sessions");
     expect(
       layout.regions.main.widgets.some(
-        (widget) => resourceKey(widget.resource) === resourceKey({ type: "session", id: "session-1" }),
+        (widget) =>
+          resourceKey(widget.resource) ===
+          resourceKey({ type: "session", id: "session-1", extensionId: "pstdio", projectId: "project-1" }),
       ),
     ).toBe(false);
   });
