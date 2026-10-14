@@ -47,6 +47,11 @@ export const spacing = {
 };
 
 export const sizes = {
+  "chat-user-preview": { value: sp[1600] },
+  "chat-user-footer": { value: sp[400] },
+  "chat-user-expanded": { value: "min(70dvh, calc(100dvh - 12rem), 22rem)" },
+  "scrollbar-thin": { value: sp[25] },
+  "chat-content": { value: "52rem" },
   "palette-width": { value: "44rem" },
   "palette-results-height": { value: "24rem" },
   "queue-send-now": { value: sp[250] },
@@ -57,6 +62,7 @@ export const sizes = {
   "performance-meter": { value: "0.625rem" },
   "performance-chart": { value: "2.25rem" },
   "performance-popover": { value: "23.75rem" },
+  "popover-panel": { value: "27.5rem" },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },
   "folder-picker-header": { value: "3.25rem" },

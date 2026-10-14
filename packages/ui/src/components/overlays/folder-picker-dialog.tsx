@@ -1,6 +1,6 @@
 import { Box, Button, Dialog, Input, InputGroup, Text, useSlotRecipe } from "@chakra-ui/react";
 import { ArrowUp, Folder, FolderPlus, Home, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
@@ -25,14 +25,16 @@ export const FolderPicker = (props: FolderPickerProps) => {
   const { currentPath, entries, isLoading, isOpening, error, onClose, onSelect, onNavigate, onCreateFolder } = props;
   const styles = useSlotRecipe({ key: "folderPicker" })({});
   const [path, setPath] = useState(currentPath);
+  const [previousPath, setPreviousPath] = useState(currentPath);
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [saving, setSaving] = useState(false);
-  useEffect(() => {
+  if (currentPath !== previousPath) {
+    setPreviousPath(currentPath);
     setPath(currentPath);
     setQuery("");
-  }, [currentPath]);
+  }
   const folders = entries.filter(
     (entry) => entry.isDirectory && entry.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
   );

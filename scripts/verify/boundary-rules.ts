@@ -11,9 +11,11 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-wt": ["pstdio-file-types"],
   "pstdio-storage": ["pstdio-paths"],
   "@pstdio/sdk": ["pstdio-api-contracts"],
-  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths"],
+  // pstdio-extensions also declares extension-lab, whose documented examples its tests load,
+  // so changing an example marks pstdio-extensions as affected.
+  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "extension-lab"],
   "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions"],
-  // pstdio-api also declares the core extensions its tests install from source,
+  // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
   "pstdio-api": [
     "pstdio-api-contracts",
@@ -26,19 +28,25 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-storage",
     "pstdio-wt",
     "extension-lab",
+    "pstdio-base-themes",
     "pstdio-planner",
     "pstdio-skills",
+    "workbench-fixture",
   ],
   pstdio: ["pstdio-extensions", "@pstdio/sdk", "pstdio-api", "pstdio-logging", "pstdio-paths", "pstdio-wt"],
   "@pstdio/ui": ["@pstdio/sdk", "pstdio-file-types"],
   "@pstdio/workbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions"],
   "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
+  // The testbench also declares the extensions its tests load from source,
+  // so changing one marks the testbench as affected.
   "pstdio-extension-testbench": [
     "@pstdio/sdk",
     "@pstdio/ui",
     "pstdio-api-contracts",
     "pstdio-extensions",
     "@pstdio/workbench",
+    "pstdio-base-themes",
+    "pstdio-planner",
   ],
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.

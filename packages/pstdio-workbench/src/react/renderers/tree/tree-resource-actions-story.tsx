@@ -61,6 +61,7 @@ export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") =
           id: "file",
           label: "notes.md",
           icon: "FileText",
+          tooltip: "docs/notes.md",
           contextMenuActions: [
             {
               id: "rename",
@@ -95,7 +96,8 @@ export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") =
       render: () => (
         <Box p="md">
           <Text>
-            Right-click a ticket, file, or workspace. Right-click the Sidenav background to customize the tree.
+            Hover the file to see its path. Right-click a ticket, file, or workspace. Right-click the Sidenav background
+            to customize the tree.
           </Text>
         </Box>
       ),

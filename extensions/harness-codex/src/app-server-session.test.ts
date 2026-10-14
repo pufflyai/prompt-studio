@@ -281,7 +281,7 @@ test("fails and releases a provider that exits successfully without completing i
   }
 });
 
-test("reports disconnection for unreadable native events received before turn acknowledgement", async () => {
+test("stops only the thread for unreadable native events received before turn acknowledgement", async () => {
   const session = await startCodexSession(
     {
       prompt: "Fail protocol",
@@ -290,7 +290,7 @@ test("reports disconnection for unreadable native events received before turn ac
     },
     fixtureDeps,
   );
-  expect(await session.done).toEqual({ status: "disconnected" });
+  expect(await session.done).toEqual({ status: "failed" });
   expect(session.agentSessionId).toBe("thread-fixture");
   const followUp = await resumeCodexSession(
     {

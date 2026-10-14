@@ -39,6 +39,7 @@ test.each([
     createSession: { mutateAsync: () => response },
     followUp: { mutateAsync: () => Promise.reject(new Error("Must create a session")) },
     reconnect: () => undefined,
+    refreshQueue: async () => undefined,
     onSubmitted: () => {
       expect(getPendingFollowUp(conversationKey)).toMatchObject({
         prompt: "Start here",
@@ -79,6 +80,7 @@ test("keeps a new draft when no agent is selected", async () => {
       },
       followUp: { mutateAsync: () => Promise.reject(new Error("Must create a session")) },
       reconnect: () => undefined,
+      refreshQueue: async () => undefined,
       onSubmitted: () => {
         submitted = true;
       },

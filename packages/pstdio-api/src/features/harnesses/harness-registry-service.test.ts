@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
+import { writeProvisionHarnessExtension } from "../../test-utils/write-provision-harness-extension";
 import { installExtensionSource } from "../extensions/install-extension-source";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
@@ -102,7 +103,12 @@ describe("harness registry", () => {
     process.env.PSTDIO_HOME = join(tempRoot, "home-selection");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
     await installExtensionSource({ source: resolve(REPO_ROOT, "packages/workbench-fixture"), skipInstall: true });
-    await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-claude-code"), skipInstall: true });
+    const secondHarness = writeProvisionHarnessExtension(join(tempRoot, "sources-selection"), {
+      installName: "second-harness",
+      localId: "second",
+      skillsDir: ".second/skills",
+    });
+    await installExtensionSource({ source: secondHarness, skipInstall: true });
 
     const { app, close } = await createTestApp({
       databasePath: ":memory:",
@@ -110,7 +116,7 @@ describe("harness registry", () => {
     });
 
     try {
-      // Leaving claude-code unselected at create disables its extension for this project.
+      // Leaving the second harness unselected at create disables its extension for this project.
       const project = await (
         await app.request("/v1/projects", {
           method: "POST",
@@ -129,7 +135,7 @@ describe("harness registry", () => {
       // Globally both harnesses stay installed and listed.
       const globalInfo = (await (await app.request("/v1/agents/info")).json()) as Array<{ id: string }>;
       expect(globalInfo.map((agent) => agent.id).sort()).toEqual(
-        ["pstdio.harness-claude-code.harness.claude-code", ...fixtureAgents.map((agent) => agent.id)].sort(),
+        ["pstdio.second-harness.harness.second", ...fixtureAgents.map((agent) => agent.id)].sort(),
       );
 
       // Sessions in that project cannot use the disabled harness.
@@ -140,7 +146,7 @@ describe("harness registry", () => {
           project_id: project.id,
           title: "blocked",
           prompt: "blocked",
-          agent: "pstdio.harness-claude-code.harness.claude-code",
+          agent: "pstdio.second-harness.harness.second",
         }),
       });
       expect(sessionRes.status).toBe(400);

@@ -1,4 +1,6 @@
+import { Stack, Text } from "@chakra-ui/react";
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
+import { SelectionInput } from "@pstdio/ui/param-editor";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ExtensionDetail } from "./extension-detail";
 
@@ -141,6 +143,29 @@ export default meta;
 type Story = StoryObj<typeof ExtensionDetail>;
 
 export const Loaded: Story = {};
+export const CustomWorkflowSettings: Story = {
+  args: {
+    settingsViews: (
+      <Stack gap="md" padding="lg">
+        <Text textStyle="heading/S/semibold">Planner workflow</Text>
+        <SelectionInput
+          id="completed"
+          name="Completed statuses"
+          description="Statuses used for dependency completion."
+          defaultValue={["done"]}
+          multiSelect
+          searchable
+          fullWidth
+          onChange={noop}
+          options={[
+            { id: "building", name: "Building", icon: "status-progress", color: "blue" },
+            { id: "done", name: "Delivered", icon: "status-done", color: "green" },
+          ]}
+        />
+      </Stack>
+    ),
+  },
+};
 
 // A local source is fixed where it lives, so the alert offers only Copy error.
 export const FailedToLoad: Story = {

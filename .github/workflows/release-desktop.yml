@@ -1,5 +1,7 @@
-name: Release Desktop
+name: Build desktop release
 
+# Builds, signs and verifies the desktop apps of a release candidate and uploads them as
+# artifacts. Release Packages publishes them only after every release check passed.
 on:
   workflow_call:
     inputs:
@@ -7,26 +9,18 @@ on:
         required: true
         type: string
       tag:
+        description: Release tag, which must point at ref
         required: true
         type: string
-      validation_ref:
-        description: Git revision with desktop checks compatible with the release tag
-        required: false
-        type: string
-      source_ref:
-        description: Git revision to rehearse before the release tag exists. A rehearsal publishes nothing.
-        required: false
+      ref:
+        description: Commit to build
+        required: true
         type: string
       targets:
         description: JSON list of native targets to build. Nightlies skip Windows.
         required: false
         type: string
         default: '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]'
-      prerelease:
-        description: Publish as a prerelease that is never marked Latest
-        required: false
-        type: boolean
-        default: false
       extension_ref:
         description: Git revision packaged apps install core extensions from (defaults to the tag)
         required: false
@@ -44,38 +38,6 @@ on:
         required: true
       APPLE_API_ISSUER:
         required: true
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Existing pstdio package and desktop version
-        required: true
-        type: string
-      tag:
-        description: Existing draft GitHub release tag
-        required: true
-        type: string
-      validation_ref:
-        description: Git revision with compatible desktop checks (defaults to the workflow revision)
-        required: false
-        type: string
-      source_ref:
-        description: Git revision to rehearse before the release tag exists. A rehearsal publishes nothing.
-        required: false
-        type: string
-      targets:
-        description: JSON list of native targets to build
-        required: false
-        type: string
-        default: '["darwin-arm64","darwin-x64","linux-x64","win32-x64"]'
-      prerelease:
-        description: Publish as a prerelease that is never marked Latest
-        required: false
-        type: boolean
-        default: false
-      extension_ref:
-        description: Git revision packaged apps install core extensions from (defaults to the tag)
-        required: false
-        type: string
 
 concurrency:
   group: desktop-release-${{ inputs.tag }}
@@ -122,9 +84,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
-      # Packaged apps install default extensions from this ref. A rehearsal runs before the tag exists.
-      # A nightly uses its main commit, because older nightly tags are deleted.
-      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_ref || inputs.extension_ref || inputs.tag }}
+      # Packaged apps install default extensions from this ref. A nightly uses its main commit,
+      # because older nightly tags are deleted.
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.extension_ref || inputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -132,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_ref || inputs.tag }}
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Isolate hosted Intel runner indexing
@@ -250,14 +212,6 @@ jobs:
           sudo chmod 4755 clients/desktop/node_modules/electron/dist/chrome-sandbox
 
       # The source suite reuses the desktop build from packaging.
-      - name: Load compatible desktop checks
-        shell: bash
-        env:
-          DESKTOP_VALIDATION_REF: ${{ inputs.validation_ref || github.sha }}
-        run: >-
-          git restore --source="$DESKTOP_VALIDATION_REF" --
-          clients/desktop/src/e2e clients/desktop/src/testing clients/desktop/playwright.benchmark.config.ts
-
       - name: Test source Electron
         if: matrix.platform != 'linux' && !matrix.essential_only
         working-directory: clients/desktop
@@ -289,11 +243,12 @@ jobs:
           DEBUG: pw:api,pw:browser
         run: xvfb-run -a bun run --cwd clients/desktop test:packaged
 
-      - name: Upload packaged release-readiness evidence
+      # The name must not start with "desktop-": the publish job downloads desktop-* as release assets.
+      - name: Upload packaged test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: release-readiness-${{ matrix.target }}
+          name: test-results-desktop-${{ matrix.target }}
           path: clients/desktop/test-results
           if-no-files-found: error
           retention-days: 14
@@ -358,7 +313,7 @@ jobs:
           retention-days: 14
 
       - name: Upload signed Windows candidate for installation and update checks
-        if: matrix.platform == 'win32' && inputs.source_ref != ''
+        if: matrix.platform == 'win32'
         uses: actions/upload-artifact@v4
         with:
           name: windows-signed-candidate
@@ -372,15 +327,3 @@ jobs:
         env:
           KEYCHAIN_PATH: ${{ runner.temp }}/pstdio-desktop.keychain-db
         run: security delete-keychain "$KEYCHAIN_PATH" || true
-
-  release_set:
-    needs: native
-    permissions:
-      contents: write
-    uses: ./.github/workflows/publish-desktop-release.yml
-    with:
-      version: ${{ inputs.version }}
-      tag: ${{ inputs.tag }}
-      source_ref: ${{ inputs.source_ref }}
-      targets: ${{ inputs.targets }}
-      prerelease: ${{ inputs.prerelease }}

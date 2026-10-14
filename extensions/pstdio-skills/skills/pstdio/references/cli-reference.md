@@ -150,6 +150,31 @@ Workspace params must match the provider declaration. Unknown keys, invalid valu
 | Runtime is unreachable | Run `pst serve`, then `pst logs`. |
 | Workspace cleanup failed | Run `pst workspaces list`, then remove the exact workspace when its work is safe. |
 
+### `pst: command not found`
+
+The `pst` command is not on this shell's `PATH`. Do not search for another copy. Run the CLI that ships with the desktop app by its full path, with the same arguments:
+
+| Installation | Use in place of `pst` |
+| --- | --- |
+| macOS | `"/Applications/Prompt Studio.app/Contents/Resources/bin/pstdio"` |
+| Linux DEB | `/usr/lib/prompt-studio/resources/bin/pstdio` |
+| Linux portable ZIP | `<extracted folder>/resources/bin/pstdio` |
+| Windows (PowerShell) | `& "$env:LOCALAPPDATA\PromptStudio\bin\pst.cmd"` |
+
+For example, on macOS:
+
+```sh
+"/Applications/Prompt Studio.app/Contents/Resources/bin/pstdio" --version
+```
+
+Keep the quotes on macOS, because the path contains a space. If the file does not exist, ask the person where Prompt Studio is installed.
+
+Then tell the person how to add `pst` to their terminal:
+
+- macOS: in the desktop app, choose **Prompt Studio → Install pst Command…**.
+- Windows: open a new terminal. The installer adds `pst` to `PATH`, and open terminals do not see the change.
+- Linux: install the DEB package, which adds `/usr/bin/pst`.
+
 ## Shared board views
 
 Use `pst views boards` to discover board and data table IDs, each field's kind,

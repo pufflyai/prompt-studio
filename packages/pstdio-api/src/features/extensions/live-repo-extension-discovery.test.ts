@@ -139,12 +139,9 @@ describe("live repo-local extension discovery", () => {
         version: "1.0.0",
       });
 
-      const instances = await handle.deps.extensionInstancesService.list({
-        scope_id: project.id,
-        scope_type: "project",
-      });
+      const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
       expect(instances).toHaveLength(1);
-      expect(instances[0]?.enabled).toBe(true);
+      expect(instances[0]?.instance.enabled).toBe(true);
     } finally {
       await handle?.close();
       restoreEnv();

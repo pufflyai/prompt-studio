@@ -26,7 +26,6 @@ export type ExtensionsRouteDeps = Pick<
   activityEventsService: RouteDeps["activityEventsService"];
   extensionAutomationPreferencesService: RouteDeps["extensionAutomationPreferencesService"];
   extensionFileService: RouteDeps["extensionFileService"];
-  extensionInstancesService: RouteDeps["extensionInstancesService"];
   extensionStorageService: RouteDeps["extensionStorageService"];
   fileService: RouteDeps["fileService"];
   projectService: RouteDeps["projectService"];
