@@ -47,3 +47,29 @@ export const RowActionsDuringRefresh = {
     await expect(openedRevision).toBeGreaterThan(Number(revision?.split(": ")[1]));
   },
 };
+
+const StatisticsRowActivation = () => {
+  const [opened, setOpened] = useState(false);
+  return (
+    <Box height="full" padding="md">
+      <Text>{opened ? "Opened invoice" : "Select an invoice"}</Text>
+      <DataTable
+        data={Array.from({ length: 5 }, (_, index) => ({ Invoice: `INV-00${index + 1}`, Amount: index + 1 }))}
+        columnStats={{ Invoice: { type: "top-values", limit: 5 }, Amount: { type: "histogram" } }}
+        defaultSettings={{ showStats: true }}
+        onRowClick={() => setOpened(true)}
+        toolbarStorageKey="storybook-statistics-row-activation"
+      />
+    </Box>
+  );
+};
+
+export const RowActivationWithStatistics = {
+  tags: ["!manifest"],
+  render: () => <StatisticsRowActivation />,
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("cell", { name: "INV-001" }));
+    await expect(canvas.getByText("Opened invoice", { exact: true })).toBeVisible();
+  },
+};

@@ -21,7 +21,7 @@ const meta: Meta<typeof DataTable> = {
 export default meta;
 type Story = StoryObj<typeof DataTable>;
 
-/** Statistics load when enabled, including when the first render did not need the stats chunk. */
+/** Statistics charts load when enabled, including after an initial render without them. */
 export const EnableStatistics: Story = {
   args: {
     toolbarStorageKey: "storybook-enable-table-statistics",

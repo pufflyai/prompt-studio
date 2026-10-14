@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./src/packaged",
   testMatch: [
     "packaged-webview-browsers.spec.ts",
+    "packaged-statistics-loading.spec.ts",
     "packaged-planner-upgrade.spec.ts",
     "packaged-native-settings.spec.ts",
   ],
