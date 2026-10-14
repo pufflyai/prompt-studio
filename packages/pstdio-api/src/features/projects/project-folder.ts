@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import type { CreateProjectInput, ExtensionSetupWarning } from "pstdio-api-contracts";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../extensions/repo-extensions";
 import { runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
@@ -60,24 +61,37 @@ const initializeLocalProjectWorkspace = async (
   setupExtensions?: () => Promise<ExtensionSetupWarning[]>,
 ) => {
   await deps.workspaceService.setInitializing(workspace.id, true);
+  const context = { project_id: projectId, workspace_id: workspace.id };
   try {
-    await ensureWorkspaceConfig(rootPath, rootPath, workspace.id, projectId, deps);
-    const setupError = await extensionSetupError(setupExtensions);
-    if (setupError) throw new Error(setupError);
-    const defaults = await resolveDefaultExtensionsConfig(process.env);
-    await installRepoDefaultExtensions({
-      defaultExtensions: defaults.defaultExtensions,
-      repoPath: rootPath,
-      releaseRef: deps.extensionUpgradeService?.releaseRef,
+    await traceSetupPhase("project.config", context, () =>
+      ensureWorkspaceConfig(rootPath, rootPath, workspace.id, projectId, deps),
+    );
+    await traceSetupPhase("project.extensions", context, async () => {
+      const setupError = await extensionSetupError(setupExtensions);
+      if (setupError) throw new Error(setupError);
     });
-    await syncRepoExtensionsForProject({
-      extensionService: deps.extensionService,
-      installedExtensionSourcesService: deps.installedExtensionSourcesService,
-      projectId,
-      repoPath: rootPath,
-    });
+    const defaults = await traceSetupPhase("project.defaults", context, () =>
+      resolveDefaultExtensionsConfig(process.env),
+    );
+    await traceSetupPhase("project.repo_extensions", context, () =>
+      installRepoDefaultExtensions({
+        defaultExtensions: defaults.defaultExtensions,
+        repoPath: rootPath,
+        releaseRef: deps.extensionUpgradeService?.releaseRef,
+      }),
+    );
+    await traceSetupPhase("project.repo_sync", context, () =>
+      syncRepoExtensionsForProject({
+        extensionService: deps.extensionService,
+        installedExtensionSourcesService: deps.installedExtensionSourcesService,
+        projectId,
+        repoPath: rootPath,
+      }),
+    );
     deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
-    return await runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath });
+    return await traceSetupPhase("project.provision", context, () =>
+      runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath }),
+    );
   } catch (error) {
     return (
       (await deps.workspaceService.setSetupError(
@@ -111,13 +125,15 @@ export const initializeProjectWorkspace = async (
   const workspace =
     existing && (existing.root_path || existing.provider_ref_json || hasProviderOperation) && !needsFolderRetry
       ? existing
-      : await createProviderBackedWorkspace(deps, {
-          projectId,
-          providerId: initial.provider_id,
-          params: initial.params,
-          isDefault: true,
-          name: "Project folder",
-        });
+      : await traceSetupPhase("project.workspace", { project_id: projectId }, () =>
+          createProviderBackedWorkspace(deps, {
+            projectId,
+            providerId: initial.provider_id,
+            params: initial.params,
+            isDefault: true,
+            name: "Project folder",
+          }),
+        );
   if (remoteSetupError) return (await deps.workspaceService.setSetupError(workspace.id, remoteSetupError)) ?? workspace;
   if (workspace.execution_kind === "remote")
     return (await deps.workspaceService.setSetupError(workspace.id, null)) ?? workspace;
