@@ -14,6 +14,7 @@ const restoredTabDestination = (
   source: WorkbenchPanelRegion,
   available: WorkbenchPanelRegion[],
 ) => {
+  if (!core.layout.getWidget(tab.contributionId)) return undefined;
   const identity = tab.declarationIdentity ?? tab.placementIdentity;
   const declaration = identity && presetDeclaration(core, identity);
   const movableTo =
