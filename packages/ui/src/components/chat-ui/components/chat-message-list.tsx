@@ -55,7 +55,6 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     },
   });
   const totalSize = virtualizer.getTotalSize();
-  const stickyIndex = getChatStickyRowIndex(rows, virtualizer.range?.startIndex ?? 0);
   const measurements = virtualizer.measurementsCache;
 
   useTailReady({ itemCount: rows.length, onReady, scrollRef, totalSize });
@@ -65,14 +64,40 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
       <Box position="relative" width="100%" style={{ height: totalSize }}>
         {virtualizer.getVirtualItems().map((virtualItem) => {
           const row = rows[virtualItem.index];
-          const isSticky = row.type === "user" && virtualItem.index === stickyIndex;
-          let top = virtualItem.start;
-          if (isSticky) {
-            // Keep the user context within its turn while responses mount independently.
+          if (row.type === "user") {
             const end =
               (measurements[row.endIndex]?.end ?? totalSize) -
               (hasChatRowGap(rows, row.endIndex) ? VIRTUAL_LIST_GAP : 0);
-            top = Math.max(top, Math.min(virtualizer.scrollOffset ?? 0, end - virtualItem.size));
+            return (
+              <Box
+                key={virtualItem.key}
+                position="absolute"
+                left="0"
+                width="100%"
+                zIndex={1}
+                pointerEvents="none"
+                style={{ top: virtualItem.start, height: Math.max(virtualItem.size, end - virtualItem.start) }}
+              >
+                {/* Native sticky layout follows every scroll frame, including within one response. */}
+                <Box
+                  ref={virtualizer.measureElement}
+                  data-index={virtualItem.index}
+                  data-chat-message-list-item="user"
+                  data-chat-message-id={row.key}
+                  position="sticky"
+                  top="0"
+                  pointerEvents="auto"
+                  pb={hasChatRowGap(rows, virtualItem.index) ? "xs" : undefined}
+                >
+                  <StickyUserMessage
+                    message={row.message}
+                    expanded={expandedStickyMessageIds.has(row.key)}
+                    animate={animatedKeys.has(row.key)}
+                    onToggle={onToggleStickyMessage}
+                  />
+                </Box>
+              </Box>
+            );
           }
           return (
             <Box
@@ -85,25 +110,15 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
               left="0"
               width="100%"
               pb={hasChatRowGap(rows, virtualItem.index) ? "xs" : undefined}
-              zIndex={row.type === "user" ? 1 : undefined}
-              style={{ top }}
+              style={{ top: virtualItem.start }}
             >
-              {row.type === "user" ? (
-                <StickyUserMessage
-                  message={row.message}
-                  expanded={expandedStickyMessageIds.has(row.key)}
-                  animate={animatedKeys.has(row.key)}
-                  onToggle={onToggleStickyMessage}
-                />
-              ) : (
-                <ChatMessageListResponse
-                  message={row.message}
-                  streaming={streaming && row.isActiveTurn && row.showAssistantActions}
-                  hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
-                  animate={animatedKeys.has(row.key)}
-                  showAssistantActions={row.showAssistantActions}
-                />
-              )}
+              <ChatMessageListResponse
+                message={row.message}
+                streaming={streaming && row.isActiveTurn && row.showAssistantActions}
+                hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
+                animate={animatedKeys.has(row.key)}
+                showAssistantActions={row.showAssistantActions}
+              />
             </Box>
           );
         })}

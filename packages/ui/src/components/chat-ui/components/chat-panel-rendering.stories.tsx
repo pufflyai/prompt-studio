@@ -5,6 +5,7 @@ import { updateStreamingTextPart } from "../performance/chat-performance-fixture
 import { defaultChatPanelProps, markAfterPaint, streamMessages } from "../performance/chat-performance-story-utils";
 import { chatRenderingFixtures, renderingStreamTail } from "../performance/chat-rendering-fixtures";
 import { ChatPanel } from "./chat-panel";
+import { validateContinuousChatScroll } from "./chat-panel-continuous-scroll.play";
 import { validateLongTurnRendering } from "./chat-panel-rendering.play";
 import type { SessionMessage } from "./message-types";
 
@@ -74,4 +75,9 @@ export const RenderingWorkloads: Story = { render: () => <RenderingBenchmark /> 
 export const LongTurnScrolling: Story = {
   render: RenderingWorkloads.render,
   play: validateLongTurnRendering,
+};
+
+export const ContinuousScrolling: Story = {
+  render: RenderingWorkloads.render,
+  play: validateContinuousChatScroll,
 };

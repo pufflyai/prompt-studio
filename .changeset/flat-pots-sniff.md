@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Bound chat responses within long turns and avoid redundant rich message updates.
+Bound chat responses within long turns, keep user context sticky during scrolling, and avoid redundant rich message updates.
