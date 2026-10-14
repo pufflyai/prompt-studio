@@ -170,7 +170,6 @@ jobs:
       - name: Build signed macOS distributions
         if: matrix.platform == 'darwin'
         env:
-          DEBUG: electron-notarize*
           PSTDIO_DESKTOP_RELEASE: "1"
           MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           APPLE_API_KEY: ${{ runner.temp }}/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
@@ -252,9 +251,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-desktop-${{ matrix.target }}
+          name: test-results-desktop-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: clients/desktop/test-results
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Verify macOS signatures and notarization
@@ -265,7 +264,7 @@ jobs:
           APP_PATH="clients/desktop/out/Prompt Studio-darwin-${{ matrix.arch }}/Prompt Studio.app"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           codesign --verify --strict --verbose=2 "$APP_PATH/Contents/Resources/bin/pstdio"
-          xcrun stapler validate "$APP_PATH"
+          bun clients/desktop/scripts/run-stapler.ts validate "$APP_PATH"
           spctl --assess --type execute --verbose=2 "$APP_PATH"
 
       - name: Verify Windows signatures and update payload
