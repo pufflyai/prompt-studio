@@ -191712,15 +191712,15 @@
     },
     {
       "type": "frame",
-      "id": "zhyE7",
-      "x": 52682,
+      "id": "uEGgk",
+      "x": 60962,
       "y": 0,
-      "name": "PS-704 · Closing preview · Side",
+      "name": "PS-704 · Page side closing preview",
       "theme": {
         "mode": "dark"
       },
       "width": 1440,
-      "height": 960,
+      "height": 984,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 12,
@@ -191728,17 +191728,17 @@
       "children": [
         {
           "type": "text",
-          "id": "Qyfdi",
+          "id": "om1yP",
           "name": "Title",
           "fill": "$ds-fg",
-          "content": "Release to close · Side below half its minimum",
+          "content": "Closing page side · retained view",
           "fontFamily": "$font-heading",
           "fontSize": 20,
           "fontWeight": "normal"
         },
         {
           "type": "frame",
-          "id": "jsQOo",
+          "id": "c2eYPD",
           "name": "Main page surface",
           "clip": true,
           "width": "fill_container",
@@ -191749,7 +191749,7 @@
           "children": [
             {
               "type": "frame",
-              "id": "XDqZf",
+              "id": "BfGFI",
               "name": "Breadcrumb row",
               "width": "fill_container",
               "height": 40,
@@ -191761,7 +191761,7 @@
               "alignItems": "center",
               "children": [
                 {
-                  "id": "nUwXH",
+                  "id": "uDAi9",
                   "type": "ref",
                   "ref": "N3VfvY",
                   "name": "Project",
@@ -191775,7 +191775,7 @@
                   }
                 },
                 {
-                  "id": "xsryq",
+                  "id": "Jj4jv",
                   "type": "ref",
                   "ref": "N3VfvY",
                   "name": "Workspaces",
@@ -191789,7 +191789,7 @@
                   }
                 },
                 {
-                  "id": "y140Ll",
+                  "id": "o800gY",
                   "type": "ref",
                   "ref": "N3VfvY",
                   "name": "Workspace 1",
@@ -191804,80 +191804,50 @@
                 },
                 {
                   "type": "frame",
-                  "id": "TMOwi",
+                  "id": "xHNpk",
                   "name": "Breadcrumb spacer",
                   "width": "fill_container",
                   "height": 1
                 },
                 {
-                  "id": "I7uAl",
+                  "id": "TJP8w",
                   "type": "ref",
                   "ref": "nvvgg",
-                  "name": "Navigation",
-                  "width": 24,
-                  "height": 24,
+                  "name": "Workspace panels",
                   "theme": {
                     "btn": "ghost",
                     "size": "2xs"
                   },
+                  "width": 24,
+                  "height": 24,
                   "descendants": {
                     "k7mgm": {
-                      "icon": "panel-left",
-                      "width": 12,
-                      "height": 12
+                      "icon": "panels-right-bottom",
+                      "width": 14,
+                      "height": 14
                     }
                   }
                 },
                 {
-                  "id": "YRNj2",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Secondary",
+                  "type": "frame",
+                  "id": "hl6oA",
+                  "name": "Expand view slot · PS-616",
                   "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-bottom",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                },
-                {
-                  "id": "CnA5q",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Side",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
+                  "height": 24
                 }
               ]
             },
             {
               "type": "frame",
-              "id": "gS4Nk",
+              "id": "a7dYjl",
               "name": "Page panels below breadcrumb",
               "width": "fill_container",
               "height": "fill_container",
+              "gap": 1,
               "children": [
                 {
                   "type": "frame",
-                  "id": "s7WgW",
+                  "id": "Pz6kr",
                   "name": "Editor and page bottom",
                   "width": "fill_container",
                   "height": "fill_container",
@@ -191886,160 +191856,176 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "woBA3",
-                      "name": "Editor with full-height menus",
+                      "id": "NMzXx",
+                      "name": "Editor with menus below header",
                       "width": "fill_container",
                       "height": "fill_container",
+                      "layout": "vertical",
                       "gap": 1,
                       "children": [
                         {
                           "type": "frame",
-                          "id": "z2xBM",
-                          "name": "Left panel menu",
-                          "width": 200,
-                          "height": "fill_container",
-                          "fill": "$ds-bg-subtle",
-                          "layout": "vertical",
-                          "padding": 16,
+                          "id": "GiMEc",
+                          "name": "Main tab and action row",
+                          "width": "fill_container",
+                          "height": 40,
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "text",
-                              "id": "RGVK7",
-                              "name": "Left panel menu content",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
+                              "id": "lLXLq",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Files",
+                              "theme": {
+                                "tab": "active",
+                                "size": "sm"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "files"
+                                },
+                                "k9XlqC": {
+                                  "content": "Files"
+                                }
+                              }
+                            },
+                            {
+                              "id": "J1b4Y8",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Changes",
+                              "theme": {
+                                "tab": "default",
+                                "size": "sm"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "git-compare"
+                                },
+                                "k9XlqC": {
+                                  "content": "Changes"
+                                }
+                              }
+                            },
+                            {
+                              "id": "ihgOP",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add tab",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "e6EfzG",
+                              "name": "Tab spacer",
                               "width": "fill_container",
-                              "content": "Workspace tools\n\nWorkspace 1",
-                              "fontFamily": "$font-body",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
+                              "height": 1
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "TTbc6",
-                          "name": "Editor with tab row",
+                          "id": "mZY42",
+                          "name": "Panel menus below Main header",
                           "width": "fill_container",
                           "height": "fill_container",
-                          "layout": "vertical",
+                          "gap": 1,
                           "children": [
                             {
                               "type": "frame",
-                              "id": "TTPnA",
-                              "name": "Main tab and action row",
-                              "width": "fill_container",
-                              "height": 40,
-                              "gap": 8,
-                              "padding": [
-                                0,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "id": "TGccs",
-                                  "type": "ref",
-                                  "ref": "TwCXd",
-                                  "name": "Files",
-                                  "theme": {
-                                    "tab": "active",
-                                    "size": "sm"
-                                  },
-                                  "height": 24,
-                                  "descendants": {
-                                    "w7NkD3": {
-                                      "icon": "files"
-                                    },
-                                    "k9XlqC": {
-                                      "content": "Files"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "q8QBd",
-                                  "type": "ref",
-                                  "ref": "TwCXd",
-                                  "name": "Changes",
-                                  "theme": {
-                                    "tab": "default",
-                                    "size": "sm"
-                                  },
-                                  "height": 24,
-                                  "descendants": {
-                                    "w7NkD3": {
-                                      "icon": "git-compare"
-                                    },
-                                    "k9XlqC": {
-                                      "content": "Changes"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "FMRv0",
-                                  "type": "ref",
-                                  "ref": "nvvgg",
-                                  "name": "Add tab",
-                                  "width": 24,
-                                  "height": 24,
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  },
-                                  "descendants": {
-                                    "k7mgm": {
-                                      "icon": "plus",
-                                      "width": 12,
-                                      "height": 12
-                                    }
-                                  }
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "pYXWq",
-                                  "name": "Tab spacer",
-                                  "width": "fill_container",
-                                  "height": 1
-                                },
-                                {
-                                  "id": "UsWJf",
-                                  "type": "ref",
-                                  "ref": "nvvgg",
-                                  "name": "Page panels",
-                                  "width": 24,
-                                  "height": 24,
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  },
-                                  "descendants": {
-                                    "k7mgm": {
-                                      "icon": "panels-top-left",
-                                      "width": 12,
-                                      "height": 12
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "A8LTV",
-                              "name": "Page content",
-                              "width": "fill_container",
+                              "id": "fdzVQ",
+                              "name": "Left panel menu",
+                              "width": 200,
                               "height": "fill_container",
-                              "fill": "$ds-panel",
+                              "fill": "$ds-bg-subtle",
                               "layout": "vertical",
                               "padding": 16,
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "USMTs",
-                                  "name": "Page content content",
+                                  "id": "jWoJL",
+                                  "name": "Left panel menu content",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Files\n\nWorkspace 1\n\nEditable draft",
+                                  "content": "Workspace tools\n\nWorkspace 1",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qSAgP",
+                              "name": "Editor with tab row",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "TO7TS",
+                                  "name": "Page content",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$ds-panel",
+                                  "layout": "vertical",
+                                  "padding": 16,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "z1GPS",
+                                      "name": "Page content content",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Files\n\nWorkspace 1\n\nEditable draft",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "TzlP6",
+                              "name": "Right panel menu",
+                              "width": 240,
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "layout": "vertical",
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "B2Iko",
+                                  "name": "Right panel menu content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Inspector\n\nWorkspace 1",
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
                                   "fontWeight": "normal"
@@ -192047,36 +192033,12 @@
                               ]
                             }
                           ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "h2iTr",
-                          "name": "Right panel menu",
-                          "width": 240,
-                          "height": "fill_container",
-                          "fill": "$ds-bg-subtle",
-                          "layout": "vertical",
-                          "padding": 16,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "yt0Mm",
-                              "name": "Right panel menu content",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Inspector\n\nWorkspace 1",
-                              "fontFamily": "$font-body",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            }
-                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "G2Ase",
+                      "id": "UDvlO",
                       "name": "Page bottom",
                       "width": "fill_container",
                       "height": 160,
@@ -192086,7 +192048,7 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "rXFZd",
+                          "id": "bE7kZ",
                           "name": "Page bottom header",
                           "width": "fill_container",
                           "height": 40,
@@ -192098,7 +192060,7 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "id": "pFlO6",
+                              "id": "h4PI8",
                               "type": "ref",
                               "ref": "TwCXd",
                               "name": "Terminal tab",
@@ -192120,7 +192082,7 @@
                               }
                             },
                             {
-                              "id": "ntCeT",
+                              "id": "Q04vpg",
                               "type": "ref",
                               "ref": "nvvgg",
                               "name": "Add page tool",
@@ -192142,7 +192104,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "Jynbo",
+                          "id": "t0JL1",
                           "name": "Page bottom body",
                           "width": "fill_container",
                           "height": "fill_container",
@@ -192150,7 +192112,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "G7m4L",
+                              "id": "NTbWg",
                               "name": "Page bottom content",
                               "fill": "$ds-fg",
                               "content": "Workspace 1 terminal",
@@ -192165,10 +192127,10 @@
                   ]
                 },
                 {
-                  "id": "vLyzP",
+                  "id": "GmceG",
                   "type": "ref",
                   "ref": "E0LIIW",
-                  "name": "Closing separator · fg.warning",
+                  "name": "Closing page side separator",
                   "height": "fill_container",
                   "descendants": {
                     "J8Z0p": {
@@ -192178,17 +192140,21 @@
                 },
                 {
                   "type": "frame",
-                  "id": "M4nAly",
+                  "id": "gmwCf",
                   "name": "Closing page side · minimum 160px · opacity 40%",
                   "opacity": 0.4,
                   "width": 160,
                   "height": "fill_container",
                   "fill": "$ds-bg-subtle",
+                  "stroke": "$ds-border",
+                  "strokeWidth": {
+                    "top": 1
+                  },
                   "layout": "vertical",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "w435v",
+                      "id": "kk6H1",
                       "name": "Page side header",
                       "width": "fill_container",
                       "height": 40,
@@ -192200,7 +192166,7 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "id": "EP4aS",
+                          "id": "k0iS2",
                           "type": "ref",
                           "ref": "TwCXd",
                           "name": "Session tab",
@@ -192222,7 +192188,7 @@
                     },
                     {
                       "type": "text",
-                      "id": "K8fUN6",
+                      "id": "fiF5D",
                       "name": "Page side content",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
@@ -192240,7 +192206,7 @@
         },
         {
           "type": "frame",
-          "id": "QhdDv",
+          "id": "xrclh",
           "name": "Separate mode Secondary",
           "width": "fill_container",
           "height": 120,
@@ -192250,7 +192216,7 @@
           "children": [
             {
               "type": "frame",
-              "id": "hcf48",
+              "id": "sGE5W",
               "name": "Separate mode Secondary header",
               "width": "fill_container",
               "height": 40,
@@ -192262,7 +192228,7 @@
               "alignItems": "center",
               "children": [
                 {
-                  "id": "UGtyh",
+                  "id": "OBOc3",
                   "type": "ref",
                   "ref": "TwCXd",
                   "name": "Mode tools tab",
@@ -192287,7 +192253,7 @@
             },
             {
               "type": "frame",
-              "id": "y52cLy",
+              "id": "fBKbC",
               "name": "Separate mode Secondary body",
               "width": "fill_container",
               "height": "fill_container",
@@ -192295,7 +192261,7 @@
               "children": [
                 {
                   "type": "text",
-                  "id": "ZXcRp",
+                  "id": "vRSgZ",
                   "name": "Separate mode Secondary content",
                   "fill": "$ds-fg",
                   "content": "Project tools",
@@ -192306,20 +192272,110 @@
               ]
             }
           ]
+        },
+        {
+          "type": "frame",
+          "id": "kGxrG",
+          "name": "Status bar · host panel controls",
+          "width": "fill_container",
+          "height": 24,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "OY5gC",
+              "name": "Mode status spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "mFvVZ",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "h9nAb",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "fW1nG",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "h39OtA",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },
     {
       "type": "frame",
-      "id": "o5zw0s",
-      "x": 54202,
+      "id": "ltaBa",
+      "x": 62482,
       "y": 0,
-      "name": "PS-704 · Closing preview · Bottom",
+      "name": "PS-704 · Page bottom closing preview",
       "theme": {
         "mode": "dark"
       },
       "width": 1440,
-      "height": 960,
+      "height": 984,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 12,
@@ -192327,17 +192383,17 @@
       "children": [
         {
           "type": "text",
-          "id": "xK7C1",
+          "id": "C2DxC",
           "name": "Title",
           "fill": "$ds-fg",
-          "content": "Release to close · Bottom below half its minimum",
+          "content": "Closing page bottom · retained view",
           "fontFamily": "$font-heading",
           "fontSize": 20,
           "fontWeight": "normal"
         },
         {
           "type": "frame",
-          "id": "zaToU",
+          "id": "HnkKF",
           "name": "Main page surface",
           "clip": true,
           "width": "fill_container",
@@ -192348,7 +192404,7 @@
           "children": [
             {
               "type": "frame",
-              "id": "n7U6xb",
+              "id": "t1dI4",
               "name": "Breadcrumb row",
               "width": "fill_container",
               "height": 40,
@@ -192360,7 +192416,7 @@
               "alignItems": "center",
               "children": [
                 {
-                  "id": "I7eY7C",
+                  "id": "stXfT",
                   "type": "ref",
                   "ref": "N3VfvY",
                   "name": "Project",
@@ -192374,7 +192430,7 @@
                   }
                 },
                 {
-                  "id": "quD12",
+                  "id": "mzVFz",
                   "type": "ref",
                   "ref": "N3VfvY",
                   "name": "Workspaces",
@@ -192388,7 +192444,7 @@
                   }
                 },
                 {
-                  "id": "O56hb",
+                  "id": "W48XFK",
                   "type": "ref",
                   "ref": "N3VfvY",
                   "name": "Workspace 1",
@@ -192403,73 +192459,42 @@
                 },
                 {
                   "type": "frame",
-                  "id": "gp9n5",
+                  "id": "ze7Xj",
                   "name": "Breadcrumb spacer",
                   "width": "fill_container",
                   "height": 1
                 },
                 {
-                  "id": "QKPDH",
+                  "id": "BhkdO",
                   "type": "ref",
                   "ref": "nvvgg",
-                  "name": "Navigation",
-                  "width": 24,
-                  "height": 24,
+                  "name": "Workspace panels",
                   "theme": {
                     "btn": "ghost",
                     "size": "2xs"
                   },
+                  "width": 24,
+                  "height": 24,
                   "descendants": {
                     "k7mgm": {
-                      "icon": "panel-left",
-                      "width": 12,
-                      "height": 12
+                      "icon": "panels-right-bottom",
+                      "width": 14,
+                      "height": 14
                     }
                   }
                 },
                 {
-                  "id": "pdGrN",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Secondary",
+                  "type": "frame",
+                  "id": "mQaHm",
+                  "name": "Expand view slot · PS-616",
                   "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-bottom",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
-                },
-                {
-                  "id": "s76D3l",
-                  "type": "ref",
-                  "ref": "nvvgg",
-                  "name": "Side",
-                  "width": 24,
-                  "height": 24,
-                  "theme": {
-                    "btn": "ghost",
-                    "size": "2xs"
-                  },
-                  "descendants": {
-                    "k7mgm": {
-                      "icon": "panel-right",
-                      "width": 12,
-                      "height": 12
-                    }
-                  }
+                  "height": 24
                 }
               ]
             },
             {
               "type": "frame",
-              "id": "yAsrz",
+              "id": "sKCDA",
               "name": "Page panels below breadcrumb",
               "width": "fill_container",
               "height": "fill_container",
@@ -192477,168 +192502,185 @@
               "children": [
                 {
                   "type": "frame",
-                  "id": "GFuho",
+                  "id": "U0jaqe",
                   "name": "Editor and page bottom",
                   "width": "fill_container",
                   "height": "fill_container",
                   "layout": "vertical",
+                  "gap": 1,
                   "children": [
                     {
                       "type": "frame",
-                      "id": "F30YV",
-                      "name": "Editor with full-height menus",
+                      "id": "d06C9Z",
+                      "name": "Editor with menus below header",
                       "width": "fill_container",
                       "height": "fill_container",
+                      "layout": "vertical",
                       "gap": 1,
                       "children": [
                         {
                           "type": "frame",
-                          "id": "TkFxR",
-                          "name": "Left panel menu",
-                          "width": 200,
-                          "height": "fill_container",
-                          "fill": "$ds-bg-subtle",
-                          "layout": "vertical",
-                          "padding": 16,
+                          "id": "U4Efh",
+                          "name": "Main tab and action row",
+                          "width": "fill_container",
+                          "height": 40,
+                          "gap": 8,
+                          "padding": [
+                            0,
+                            8
+                          ],
+                          "alignItems": "center",
                           "children": [
                             {
-                              "type": "text",
-                              "id": "YkAUF",
-                              "name": "Left panel menu content",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
+                              "id": "P7eJG",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Files",
+                              "theme": {
+                                "tab": "active",
+                                "size": "sm"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "files"
+                                },
+                                "k9XlqC": {
+                                  "content": "Files"
+                                }
+                              }
+                            },
+                            {
+                              "id": "LlhIO",
+                              "type": "ref",
+                              "ref": "TwCXd",
+                              "name": "Changes",
+                              "theme": {
+                                "tab": "default",
+                                "size": "sm"
+                              },
+                              "height": 24,
+                              "descendants": {
+                                "w7NkD3": {
+                                  "icon": "git-compare"
+                                },
+                                "k9XlqC": {
+                                  "content": "Changes"
+                                }
+                              }
+                            },
+                            {
+                              "id": "JZgm2",
+                              "type": "ref",
+                              "ref": "nvvgg",
+                              "name": "Add tab",
+                              "width": 24,
+                              "height": 24,
+                              "theme": {
+                                "btn": "ghost",
+                                "size": "2xs"
+                              },
+                              "descendants": {
+                                "k7mgm": {
+                                  "icon": "plus",
+                                  "width": 12,
+                                  "height": 12
+                                }
+                              }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "PJ8rl",
+                              "name": "Tab spacer",
                               "width": "fill_container",
-                              "content": "Workspace tools\n\nWorkspace 1",
-                              "fontFamily": "$font-body",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
+                              "height": 1
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "rNdWf",
-                          "name": "Editor with tab row",
+                          "id": "acaxb",
+                          "name": "Panel menus below Main header",
                           "width": "fill_container",
                           "height": "fill_container",
-                          "layout": "vertical",
+                          "gap": 1,
                           "children": [
                             {
                               "type": "frame",
-                              "id": "WVXiq",
-                              "name": "Main tab and action row",
-                              "width": "fill_container",
-                              "height": 40,
-                              "gap": 8,
-                              "padding": [
-                                0,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "id": "mjbwb",
-                                  "type": "ref",
-                                  "ref": "TwCXd",
-                                  "name": "Files",
-                                  "theme": {
-                                    "tab": "active",
-                                    "size": "sm"
-                                  },
-                                  "height": 24,
-                                  "descendants": {
-                                    "w7NkD3": {
-                                      "icon": "files"
-                                    },
-                                    "k9XlqC": {
-                                      "content": "Files"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "o9j8Y",
-                                  "type": "ref",
-                                  "ref": "TwCXd",
-                                  "name": "Changes",
-                                  "theme": {
-                                    "tab": "default",
-                                    "size": "sm"
-                                  },
-                                  "height": 24,
-                                  "descendants": {
-                                    "w7NkD3": {
-                                      "icon": "git-compare"
-                                    },
-                                    "k9XlqC": {
-                                      "content": "Changes"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "hKTl7",
-                                  "type": "ref",
-                                  "ref": "nvvgg",
-                                  "name": "Add tab",
-                                  "width": 24,
-                                  "height": 24,
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  },
-                                  "descendants": {
-                                    "k7mgm": {
-                                      "icon": "plus",
-                                      "width": 12,
-                                      "height": 12
-                                    }
-                                  }
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "O9twL4",
-                                  "name": "Tab spacer",
-                                  "width": "fill_container",
-                                  "height": 1
-                                },
-                                {
-                                  "id": "SaCOs",
-                                  "type": "ref",
-                                  "ref": "nvvgg",
-                                  "name": "Page panels",
-                                  "width": 24,
-                                  "height": 24,
-                                  "theme": {
-                                    "btn": "ghost",
-                                    "size": "2xs"
-                                  },
-                                  "descendants": {
-                                    "k7mgm": {
-                                      "icon": "panels-top-left",
-                                      "width": 12,
-                                      "height": 12
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "m96QA",
-                              "name": "Page content",
-                              "width": "fill_container",
+                              "id": "v9IGSB",
+                              "name": "Left panel menu",
+                              "width": 200,
                               "height": "fill_container",
-                              "fill": "$ds-panel",
+                              "fill": "$ds-bg-subtle",
                               "layout": "vertical",
                               "padding": 16,
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "S6Age1",
-                                  "name": "Page content content",
+                                  "id": "N4pjCm",
+                                  "name": "Left panel menu content",
                                   "fill": "$ds-fg",
                                   "textGrowth": "fixed-width",
                                   "width": "fill_container",
-                                  "content": "Files\n\nWorkspace 1\n\nEditable draft",
+                                  "content": "Workspace tools\n\nWorkspace 1",
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "W6QVs5",
+                              "name": "Editor with tab row",
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "vyrUY",
+                                  "name": "Page content",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "fill": "$ds-panel",
+                                  "layout": "vertical",
+                                  "padding": 16,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "u3eWaG",
+                                      "name": "Page content content",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Files\n\nWorkspace 1\n\nEditable draft",
+                                      "fontFamily": "$font-body",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MoV8m",
+                              "name": "Right panel menu",
+                              "width": 240,
+                              "height": "fill_container",
+                              "fill": "$ds-bg-subtle",
+                              "layout": "vertical",
+                              "padding": 16,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "EHWBU",
+                                  "name": "Right panel menu content",
+                                  "fill": "$ds-fg",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Inspector\n\nWorkspace 1",
                                   "fontFamily": "$font-body",
                                   "fontSize": 14,
                                   "fontWeight": "normal"
@@ -192646,38 +192688,14 @@
                               ]
                             }
                           ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "FGpqH",
-                          "name": "Right panel menu",
-                          "width": 240,
-                          "height": "fill_container",
-                          "fill": "$ds-bg-subtle",
-                          "layout": "vertical",
-                          "padding": 16,
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "jpunZ",
-                              "name": "Right panel menu content",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Inspector\n\nWorkspace 1",
-                              "fontFamily": "$font-body",
-                              "fontSize": 14,
-                              "fontWeight": "normal"
-                            }
-                          ]
                         }
                       ]
                     },
                     {
-                      "id": "kfqVo",
+                      "id": "bbPaM",
                       "type": "ref",
                       "ref": "NpD8c",
-                      "name": "Closing separator · fg.warning",
+                      "name": "Closing page bottom separator",
                       "width": "fill_container",
                       "descendants": {
                         "kvjkx": {
@@ -192687,8 +192705,8 @@
                     },
                     {
                       "type": "frame",
-                      "id": "a5XN74",
-                      "name": "Page bottom",
+                      "id": "UmzM4",
+                      "name": "Closing page bottom · minimum 80px · opacity 40%",
                       "opacity": 0.4,
                       "width": "fill_container",
                       "height": 80,
@@ -192698,7 +192716,7 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "UhwUQ",
+                          "id": "HYBjj",
                           "name": "Page bottom header",
                           "width": "fill_container",
                           "height": 40,
@@ -192710,7 +192728,7 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "id": "vasnd",
+                              "id": "XsXus",
                               "type": "ref",
                               "ref": "TwCXd",
                               "name": "Terminal tab",
@@ -192732,7 +192750,7 @@
                               }
                             },
                             {
-                              "id": "VBngS",
+                              "id": "uCzNw",
                               "type": "ref",
                               "ref": "nvvgg",
                               "name": "Add page tool",
@@ -192754,7 +192772,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "vhlV0",
+                          "id": "VMV5G",
                           "name": "Page bottom body",
                           "width": "fill_container",
                           "height": "fill_container",
@@ -192762,7 +192780,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "aMUoc",
+                              "id": "o3ql0k",
                               "name": "Page bottom content",
                               "fill": "$ds-fg",
                               "content": "Workspace 1 terminal",
@@ -192778,16 +192796,20 @@
                 },
                 {
                   "type": "frame",
-                  "id": "dAR1W",
+                  "id": "vzlKu",
                   "name": "Page side · 280px · minimum 160px",
                   "width": 280,
                   "height": "fill_container",
                   "fill": "$ds-bg-subtle",
+                  "stroke": "$ds-border",
+                  "strokeWidth": {
+                    "top": 1
+                  },
                   "layout": "vertical",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "eRRHI",
+                      "id": "H4pdgc",
                       "name": "Page side header",
                       "width": "fill_container",
                       "height": 40,
@@ -192799,7 +192821,7 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "id": "TQwYk",
+                          "id": "IY6O1",
                           "type": "ref",
                           "ref": "TwCXd",
                           "name": "Session tab",
@@ -192821,7 +192843,7 @@
                     },
                     {
                       "type": "text",
-                      "id": "oZ0Ru",
+                      "id": "yXNGr",
                       "name": "Page side content",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
@@ -192839,7 +192861,7 @@
         },
         {
           "type": "frame",
-          "id": "c564Ec",
+          "id": "D8kN7q",
           "name": "Separate mode Secondary",
           "width": "fill_container",
           "height": 120,
@@ -192849,7 +192871,7 @@
           "children": [
             {
               "type": "frame",
-              "id": "FL6m3",
+              "id": "UZxsl",
               "name": "Separate mode Secondary header",
               "width": "fill_container",
               "height": 40,
@@ -192861,7 +192883,7 @@
               "alignItems": "center",
               "children": [
                 {
-                  "id": "Bs5Re",
+                  "id": "IjA18",
                   "type": "ref",
                   "ref": "TwCXd",
                   "name": "Mode tools tab",
@@ -192886,7 +192908,7 @@
             },
             {
               "type": "frame",
-              "id": "uVqQ6",
+              "id": "Uoo8M",
               "name": "Separate mode Secondary body",
               "width": "fill_container",
               "height": "fill_container",
@@ -192894,13 +192916,103 @@
               "children": [
                 {
                   "type": "text",
-                  "id": "C2E4J",
+                  "id": "B2YsV",
                   "name": "Separate mode Secondary content",
                   "fill": "$ds-fg",
                   "content": "Project tools",
                   "fontFamily": "$font-body",
                   "fontSize": 13,
                   "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ifXd9",
+          "name": "Status bar · host panel controls",
+          "width": "fill_container",
+          "height": 24,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "AgVi1",
+              "name": "Mode status spacer",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "Ir5MG",
+              "name": "Host panel toggles",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "i2xmTI",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "list-tree toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "list-tree",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "N7hKe1",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-bottom toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-bottom",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
+                },
+                {
+                  "id": "G9173",
+                  "type": "ref",
+                  "ref": "nvvgg",
+                  "name": "panel-right toggle",
+                  "theme": {
+                    "btn": "ghost",
+                    "size": "2xs"
+                  },
+                  "width": 24,
+                  "height": 24,
+                  "fill": "$ds-bg-active",
+                  "context": "Pressed · panel visible. Hover/focus reveals the same visibility label.",
+                  "descendants": {
+                    "k7mgm": {
+                      "icon": "panel-right",
+                      "width": 14,
+                      "height": 14
+                    }
+                  }
                 }
               ]
             }

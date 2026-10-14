@@ -39,8 +39,8 @@ export const DragClosePageBottom: Story = {
     await waitFor(() => expect(bottom.parentElement!.parentElement!.getAnimations()).toHaveLength(0));
     const previousSize = bottom.getBoundingClientRect().height;
     await dragClosed(separator, "height");
-    await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Show Page bottom" }));
+    await userEvent.click(canvas.getByRole("button", { name: / panels$/ }));
+    await userEvent.click(await within(document.body).findByRole("menuitemcheckbox", { name: "Bottom panel" }));
     await waitFor(() => expect(bottom.getBoundingClientRect().height).toBe(previousSize));
     await expect(bottom).toBeVisible();
   },
@@ -58,7 +58,7 @@ export const DragCloseSide: Story = {
     await waitFor(() => expect(separator.parentElement!.getAnimations()).toHaveLength(0));
     const previousSize = side.getBoundingClientRect().width;
     await dragClosed(separator, "width");
-    await userEvent.click(canvas.getByRole("button", { name: "Show Side Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Show Sidebar" }));
     await waitFor(() => expect(side.getBoundingClientRect().width).toBe(previousSize));
     await expect(side).toBeVisible();
   },
@@ -79,8 +79,8 @@ export const DragClosePageSide: Story = {
     await waitFor(() => expect(separator.parentElement!.getAnimations()).toHaveLength(0));
     const previousSize = aside.getBoundingClientRect().width;
     await dragClosed(separator, "width");
-    await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Show Side panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: / panels$/ }));
+    await userEvent.click(await within(document.body).findByRole("menuitemcheckbox", { name: "Side panel" }));
     await waitFor(() => expect(aside.getBoundingClientRect().width).toBe(previousSize));
   },
 };
@@ -93,7 +93,7 @@ export const DragCloseSecondary: Story = {
     const secondary = canvasElement.querySelector<HTMLElement>('[data-workbench-panel="secondary"]')!;
     const previousSize = secondary.getBoundingClientRect().height;
     await dragClosed(separator, "height");
-    await userEvent.click(canvas.getByRole("button", { name: "Show Secondary Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Show Bottom panel" }));
     await waitFor(() => expect(secondary.getBoundingClientRect().height).toBe(previousSize));
   },
 };
