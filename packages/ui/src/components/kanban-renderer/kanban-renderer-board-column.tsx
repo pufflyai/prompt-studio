@@ -13,11 +13,12 @@ interface BoardColumnCardsProps {
   revealedItemId: string | null;
   onDragStart: (itemId: string) => (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
+  onDragTarget: () => void;
   onDrop: (event: DragEvent<HTMLDivElement>, beforeItemId?: string, groupKey?: string) => void;
 }
 
 export const BoardColumnCards = (props: BoardColumnCardsProps) => {
-  const { column, selectedItemId, draggedItemId, revealedItemId, onDragStart, onDragEnd, onDrop } = props;
+  const { column, selectedItemId, draggedItemId, revealedItemId, onDragStart, onDragEnd, onDragTarget, onDrop } = props;
   const viewport = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -69,11 +70,12 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
     virtualizer.scrollToIndex(target, { align: "auto" });
     setFocusTarget(entries[target].key);
   };
-  const dragOver = (event: DragEvent<HTMLDivElement>, key: string) => {
+  const dragOver = (event: DragEvent<HTMLDivElement>, key: string, card: boolean) => {
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = "move";
     setDropKey(key);
+    if (card) onDragTarget();
   };
 
   return (
@@ -130,7 +132,7 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
                 onToggle={() => {
                   if (group) setCollapsed((current) => ({ ...current, [group.key]: !current[group.key] }));
                 }}
-                onDragOver={(event) => dragOver(event, entry.key)}
+                onDragOver={(event) => dragOver(event, entry.key, Boolean(item))}
                 onDrop={drop}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}

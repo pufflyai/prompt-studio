@@ -140,6 +140,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
             revealedItemId={revealedItemId}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragTarget={() => setActiveColumn(column.id)}
             onDrop={(event, beforeItemId, targetGroupKey) => {
               event.preventDefault();
               event.stopPropagation();
