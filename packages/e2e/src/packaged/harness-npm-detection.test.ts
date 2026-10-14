@@ -157,9 +157,12 @@ test("stops every hanging probe and recovers healthy harness detection", async (
     await Promise.all(harnesses.map((harness) => expectProbeExited(harness.command)));
     expect(() => process.kill(runtime.descriptor.pid, 0)).not.toThrow();
 
+    logTestPhase("repair all npm harness fixtures");
     await installFixtures(prefix, "healthy");
     // Repaired commands become visible after the existing availability cache expires.
+    logTestPhase("wait for harness availability cache expiry");
     await Bun.sleep(5_001);
+    logTestPhase("verify repaired harness availability");
     const recovered = await fetch(`${runtime.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
     expect(recovered.status).toBe(200);
     const agents = (await recovered.json()) as Array<{ id: string; availability: { type: string } }>;
@@ -170,6 +173,7 @@ test("stops every hanging probe and recovers healthy harness detection", async (
           availability: expect.objectContaining({ type: "INSTALLED" }),
         }),
       );
+    logTestPhase("verify repaired harness models");
     const models = await fetch(`${runtime.baseUrl}/v1/agents/${harnessId(harnesses[0])}/models?project=${project.id}`, {
       headers,
     });
