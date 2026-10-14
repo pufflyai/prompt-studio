@@ -1,5 +1,5 @@
 import { Box, HStack, Image, Text } from "@chakra-ui/react";
-import { PaletteShortcut, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
+import { PaletteShortcut, Tooltip, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
 import type {
   ContextKeyValue,
   KeybindingSequence,
@@ -141,8 +141,21 @@ const createMenuIcon = (input: { icon?: string; iconSrc?: string }) => {
   return icon ? <WorkbenchIcon name={icon} /> : undefined;
 };
 
-const createMenuEndContent = (input: { external?: boolean; binding?: KeybindingSequence }) => {
-  const { binding, external } = input;
+const createMenuEndContent = (input: {
+  external?: boolean;
+  binding?: KeybindingSequence;
+  disabledReason?: string;
+  readOnly?: boolean;
+}) => {
+  const { binding, external, disabledReason, readOnly } = input;
+  if (readOnly && disabledReason)
+    return (
+      <Tooltip content={disabledReason} openDelay={300}>
+        <Box as="span" tabIndex={0} aria-label={disabledReason}>
+          <WorkbenchIcon name="Info" />
+        </Box>
+      </Tooltip>
+    );
   if (external) return <WorkbenchIcon name="ArrowUpRight" size={14} color="fg.muted" />;
   if (binding) return <PaletteShortcut binding={binding} />;
   return undefined;
@@ -197,7 +210,12 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
       commandId: action.sourceCommandId ?? record.command.id,
       description: action.description ?? record.command.description,
       icon: createMenuIcon({ icon, iconSrc: action.iconSrc }),
-      endContent: createMenuEndContent({ external: action.external, binding }),
+      endContent: createMenuEndContent({
+        external: action.external,
+        binding,
+        disabledReason: action.description,
+        readOnly,
+      }),
       disabled: readOnly || !workbench.commands.isCommandEnabled(record.command.id, args),
       readOnly,
       separatorBefore: action.separatorBefore,

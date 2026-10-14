@@ -8,7 +8,6 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 const toResourceContextAction = (item: TreeListActionMenuItem): ResourceContextAction => ({
   key: item.id,
   label: item.label,
-  description: item.description,
   commandId: item.commandId,
   icon: typeof item.icon === "function" ? <Icon as={item.icon} boxSize="16px" /> : item.icon,
   endContent: item.endContent,

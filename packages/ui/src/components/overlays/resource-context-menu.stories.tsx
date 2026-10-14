@@ -14,18 +14,6 @@ const createActions = (count: number): ResourceContextAction[] =>
     onClick: () => undefined,
   }));
 
-const sessionActions: ResourceContextAction[] = [
-  { key: "rename", label: "Rename session" },
-  { key: "archive", label: "Archive session" },
-  {
-    key: "delete",
-    label: "Delete session",
-    separatorBefore: true,
-    isDisabled: true,
-    description: "Stop active or queued work before deleting.",
-  },
-];
-
 // The menu passes its trigger props through `asChild`, so the target must be an element that forwards them.
 const menuTarget = (
   <Box borderWidth="1px" borderColor="border" borderRadius="xs" p="md" w="15rem">
@@ -204,8 +192,4 @@ export const LongMenuScrolls: Story = {
     await waitFor(() => expect(menu.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
     await expect(screen.getByRole("menuitem", { name: "Sidenav entry 60" })).toBeInTheDocument();
   },
-};
-
-export const SessionManagement: Story = {
-  render: () => <ResourceContextMenu actions={sessionActions}>{menuTarget}</ResourceContextMenu>,
 };

@@ -9,7 +9,6 @@ type MenuRootProps = ComponentProps<typeof Menu.Root>;
 export interface ResourceContextAction {
   key: string;
   label: string;
-  description?: string;
   commandId?: string;
   onClick?: () => Promise<void> | void;
   /** Nested actions, opened by hover or the arrow keys. */
@@ -89,7 +88,6 @@ const ResourceMenuContent = (props: {
                       asChild
                       variant="full-width"
                       label={action.label}
-                      description={action.description}
                       icon={action.icon}
                       endContent={action.items ? <ChevronRight size={14} /> : action.endContent}
                       disabled={action.isDisabled}
