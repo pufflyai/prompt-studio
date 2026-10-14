@@ -269,9 +269,6 @@ export const createSessionsDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
-  const updateStatus = async (id: string, status: SessionStatus, options?: SessionStatusGuards) =>
-    updateSessionStatus(db, id, status, options);
-
   const archive = async (id: string) => {
     const [updated] = await db
       .update(sessions)
@@ -279,11 +276,6 @@ export const createSessionsDBService = (db: DbClient) => {
       .where(eq(sessions.id, id))
       .returning(sessionColumns);
     return updated ?? null;
-  };
-
-  const listByStatus = async (status: SessionStatus) => {
-    const rows = await db.select(sessionColumns).from(sessions).where(eq(sessions.status, status));
-    return rows;
   };
 
   // "Active" means the host believed a harness process was alive, whether it was working or
@@ -329,11 +321,13 @@ export const createSessionsDBService = (db: DbClient) => {
     query: createSessionQuery(db),
     list,
     update,
-    updateStatus,
+    updateStatus: (id: string, status: SessionStatus, options?: SessionStatusGuards) =>
+      updateSessionStatus(db, id, status, options),
     archive,
     remove: (id: string, prepareCheckpoint: Parameters<typeof removeSession>[2]) =>
       removeSession(db, id, prepareCheckpoint),
-    listByStatus,
+    listByStatus: async (status: SessionStatus) =>
+      db.select(sessionColumns).from(sessions).where(eq(sessions.status, status)),
     listActive,
     listByAgentSession,
     countActive,
