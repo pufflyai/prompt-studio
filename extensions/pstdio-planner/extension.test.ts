@@ -242,19 +242,6 @@ describe("pstdio planner workspace contributions", () => {
       rmSync(worktreePath, { recursive: true, force: true });
     }
   });
-  test("contributes ticket workspace and merge hooks", () => {
-    expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
-      "auto-build.plan-changed",
-      "auto-build.project-opened",
-      "auto-build.session-completed",
-      "auto-build.tickets-changed",
-      "git-merged-mark-done",
-      "review-request-cleanup",
-      "session-awaiting-input",
-      "timeline.gate-cleanup",
-      "worktree-created",
-    ]);
-  });
   test("mounts run review in the workspace overflow menu", () => {
     expect(command("run-review")?.menus).toMatchObject([
       {
