@@ -2,6 +2,7 @@ import { Box, Tabs, Text } from "@chakra-ui/react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { DropIndicator } from "@/components/primitives/drop-indicator";
+import { Tooltip } from "@/components/primitives/tooltip";
 
 interface CollectionViewTabProps {
   id: string;
@@ -27,37 +28,43 @@ export const CollectionViewTab = (props: CollectionViewTabProps) => {
           target.setNodeRef(node);
         }}
       >
-        <Tabs.Trigger
-          value={id}
-          title={title}
-          data-reorderable={reorderable || undefined}
-          data-dragging={drag.isDragging || undefined}
-          aria-keyshortcuts={reorderable ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
-          {...drag.listeners}
-          onKeyDown={(event) => {
-            if (!reorderable || !event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-            event.preventDefault();
-            event.stopPropagation();
-            const tab = event.currentTarget;
-            onMove(event.key === "ArrowLeft" ? "left" : "right");
-            // The optimistic move renders before the next frame, retaining this node.
-            requestAnimationFrame(() => tab.scrollIntoView({ block: "nearest", inline: "nearest" }));
-          }}
-        >
-          <Text as="span" data-tab-label>
-            {title}
-          </Text>
-          {dirty ? (
-            <Box
-              aria-label="Unsaved view changes"
-              width="0.375rem"
-              height="0.375rem"
-              flexShrink={0}
-              borderRadius="full"
-              bg="fg.warning"
-            />
-          ) : null}
-        </Tabs.Trigger>
+        <Tabs.Context>
+          {(tabs) => (
+            <Tooltip content={title} openDelay={300} closeDelay={150} positioning={{ placement: "bottom" }}>
+              <Tabs.Trigger
+                id={tabs.getTriggerProps({ value: id }).id}
+                value={id}
+                data-reorderable={reorderable || undefined}
+                data-dragging={drag.isDragging || undefined}
+                aria-keyshortcuts={reorderable ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
+                {...drag.listeners}
+                onKeyDown={(event) => {
+                  if (!reorderable || !event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const tab = event.currentTarget;
+                  onMove(event.key === "ArrowLeft" ? "left" : "right");
+                  // The optimistic move renders before the next frame, retaining this node.
+                  requestAnimationFrame(() => tab.scrollIntoView({ block: "nearest", inline: "nearest" }));
+                }}
+              >
+                <Text as="span" data-tab-label>
+                  {title}
+                </Text>
+                {dirty ? (
+                  <Box
+                    aria-label="Unsaved view changes"
+                    width="0.375rem"
+                    height="0.375rem"
+                    flexShrink={0}
+                    borderRadius="full"
+                    bg="fg.warning"
+                  />
+                ) : null}
+              </Tabs.Trigger>
+            </Tooltip>
+          )}
+        </Tabs.Context>
         {dropEdge ? (
           <DropIndicator
             orientation="vertical"

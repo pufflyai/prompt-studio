@@ -9,6 +9,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
+import { Tooltip } from "@/components/primitives/tooltip";
 import { windowTabsRecipe as recipe } from "@/theme/recipes/window-title-bar";
 
 const { withProvider, withContext } = createSlotRecipeContext({ recipe });
@@ -56,25 +57,26 @@ const WindowTabItem = (props: WindowTabItemProps) => {
       transform={CSS.Translate.toString(transform)}
       transition={transition}
     >
-      <Trigger
-        {...(reorderable ? attributes : {})}
-        {...listeners}
-        ref={setActivatorNodeRef}
-        type="button"
-        role="tab"
-        aria-selected={selected}
-        aria-label={tab.label}
-        tabIndex={tabIndex}
-        title={tab.label}
-        onClick={onSelect}
-        onKeyDown={(event) => {
-          listeners?.onKeyDown?.(event);
-          if (!isSorting && !event.defaultPrevented) onKeyDown(event);
-        }}
-      >
-        {tab.icon}
-        <Label>{tab.label}</Label>
-      </Trigger>
+      <Tooltip content={tab.label} openDelay={300} closeDelay={150} positioning={{ placement: "bottom" }}>
+        <Trigger
+          {...(reorderable ? attributes : {})}
+          {...listeners}
+          ref={setActivatorNodeRef}
+          type="button"
+          role="tab"
+          aria-selected={selected}
+          aria-label={tab.label}
+          tabIndex={tabIndex}
+          onClick={onSelect}
+          onKeyDown={(event) => {
+            listeners?.onKeyDown?.(event);
+            if (!isSorting && !event.defaultPrevented) onKeyDown(event);
+          }}
+        >
+          {tab.icon}
+          <Label>{tab.label}</Label>
+        </Trigger>
+      </Tooltip>
       <Close type="button" aria-label={`Close ${tab.label}`} title={`Close ${tab.label}`} onClick={onClose}>
         <X aria-hidden="true" />
       </Close>

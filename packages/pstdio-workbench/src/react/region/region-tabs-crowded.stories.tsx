@@ -2,6 +2,7 @@ import { Box, Text } from "@chakra-ui/react";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
@@ -71,4 +72,19 @@ export const MinimumWidth: Story = {
       </Box>
     </ChakraProvider>
   ),
+};
+
+export const FullTitle: Story = {
+  ...SharedWidth,
+  args: { workbench: createCrowdedWorkbench() },
+  play: async ({ canvasElement }) => {
+    const tab = await within(canvasElement).findByRole("tab", { name: "a-very-long-resource-name-component.tsx" });
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.hover(tab);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.unhover(tab);
+    tab.focus();
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("a-very-long-resource-name-component.tsx");
+  },
 };
