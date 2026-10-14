@@ -2,6 +2,7 @@
 import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { readTickets } from "../../commands/read-tickets";
 import { readTicketStatuses } from "../../data/status-operations";
+import { plannerSchemaChanged } from "../../events";
 import { planChanged, type StoredPlan } from "../contracts";
 import { resolvePlan } from "../model/resolve-plan";
 import type { PlannerTicket } from "../planner";
@@ -18,13 +19,16 @@ export async function loadPlan(ctx: Pick<ExtensionContextBase, "storage">) {
   return { tickets, statuses: statuses.statuses, plan: resolvePlan(stored, tickets, statuses.statuses) };
 }
 
+export const writeStoredPlan = (storage: ExtensionStorageApi, plan: StoredPlan) => storage.set(planKey, plan);
+
 export async function savePlan(
   ctx: Pick<ExtensionContextBase, "storage" | "events">,
   plan: StoredPlan,
   reason: string,
 ) {
-  await ctx.storage.set(planKey, plan);
+  await writeStoredPlan(ctx.storage, plan);
   await ctx.events.emit(planChanged, { reason });
+  if (reason === "deadline") await ctx.events.emit(plannerSchemaChanged, {});
 }
 
 // The view passes ids; people on the CLI pass shorthands such as PS-32.

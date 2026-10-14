@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { readTicketTags } from "../data/tag-operations";
-import { plannerTicketsChanged } from "../events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 import { makeCommandArgs } from "./command-context.fixture";
 import { applyTicketTagDraftCommand, deleteTagOptionCommand, deleteTicketTagCommand } from "./ticket-tags";
 
@@ -33,6 +33,9 @@ for (const mode of ["option", "draft", "tag"] as const) {
       );
     if (mode === "tag")
       await deleteTicketTagCommand.run(...makeCommandArgs({ storage, overrides, params: { tagId: tag.id } }));
-    expect(events).toEqual([{ event: plannerTicketsChanged, payload: {} }]);
+    expect(events).toEqual([
+      { event: plannerTicketsChanged, payload: {} },
+      { event: plannerSchemaChanged, payload: {} },
+    ]);
   });
 }

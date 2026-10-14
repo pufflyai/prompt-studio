@@ -12,7 +12,7 @@ const ticketIdsBySortOrder = async (storage: ReturnType<typeof createMemoryStora
     .map((ticket) => ticket.id);
 
 describe("reorderTicketCommand", () => {
-  test("moves a ticket before a target ticket and persists sequential sort order", async () => {
+  test("moves a ticket before a target without rewriting its neighbors", async () => {
     const storage = createMemoryStorage();
     const first = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
     const second = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Second" } }));
@@ -24,8 +24,8 @@ describe("reorderTicketCommand", () => {
 
     expect(await ticketIdsBySortOrder(storage)).toEqual([first.id, third.id, second.id]);
     expect((await ticketsCollection(storage).get(first.id))?.sortOrder).toBe(0);
-    expect((await ticketsCollection(storage).get(third.id))?.sortOrder).toBe(1);
-    expect((await ticketsCollection(storage).get(second.id))?.sortOrder).toBe(2);
+    expect((await ticketsCollection(storage).get(third.id))?.sortOrder).toBe(0.5);
+    expect((await ticketsCollection(storage).get(second.id))?.sortOrder).toBe(1);
   });
 
   test("appends to the end when no target ticket is supplied", async () => {

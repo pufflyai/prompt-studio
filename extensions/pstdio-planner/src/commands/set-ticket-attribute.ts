@@ -1,53 +1,8 @@
-import { defineCommand, type ExtensionContextBase, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { putTicket, tagsCollection, ticketsCollection } from "../data/collections";
-import { ticketTagAttributeId } from "../data/mappers";
-import { assertSingleSelectTagIds } from "../data/tag-cardinality";
+import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
+import { putTicket, ticketsCollection } from "../data/collections";
+import { ticketWithAttributes } from "../data/ticket-attributes";
 import { plannerTicketsChanged } from "../events";
 import { moveTicketInPlan } from "../timeline/commands/move-ticket";
-
-const selectedTagOptionIds = (value: string | string[] | undefined, tagOptionIds: Set<string>) => {
-  if (Array.isArray(value)) return value.filter((id) => tagOptionIds.has(id));
-  if (!value || !tagOptionIds.has(value)) return [];
-  return [value];
-};
-
-// Applies a single attribute change to a ticket. The attribute id + value follow the
-// grouping/renderer convention: a statusId for status, a tag option id for single-select
-// tags, or the next option-id array for multi-select tags. Shared by the board's inline
-// edits and the ticket properties controls panel.
-export const applyTicketAttribute = async (input: {
-  storage: ExtensionStorageApi;
-  rowId: string;
-  attributeId: string;
-  value: string | string[] | undefined;
-}) => {
-  const { storage, rowId, attributeId, value } = input;
-  const collection = ticketsCollection(storage);
-  const existing = await collection.get(rowId);
-  if (!existing) return null;
-
-  if (attributeId === "status") {
-    const statusId = typeof value === "string" ? value : "";
-    const next = { ...existing, statusId: statusId || null, updatedAt: new Date().toISOString() };
-    return putTicket(storage, next);
-  }
-
-  const tag = (await tagsCollection(storage).list()).find(
-    (candidate) => candidate.id === attributeId || ticketTagAttributeId(candidate) === attributeId,
-  );
-  if (!tag) return existing;
-
-  const tagOptionIds = new Set(tag.options.map((option) => option.id));
-  const others = (existing.tagIds ?? []).filter((id) => !tagOptionIds.has(id));
-  const selected = selectedTagOptionIds(value, tagOptionIds);
-  await assertSingleSelectTagIds(storage, [...others, ...selected], existing.tagIds);
-  const next = {
-    ...existing,
-    tagIds: [...others, ...selected],
-    updatedAt: new Date().toISOString(),
-  };
-  return putTicket(storage, next);
-};
 
 export const setTicketAttribute = async (
   ctx: Pick<ExtensionContextBase, "storage" | "events">,
@@ -60,18 +15,12 @@ export const setTicketAttribute = async (
     });
     return ticketsCollection(ctx.storage).get(input.rowId);
   }
-  const value =
-    typeof input.value === "string" ||
-    (Array.isArray(input.value) && input.value.every((item) => typeof item === "string"))
-      ? input.value
-      : undefined;
-  const ticket = await applyTicketAttribute({
-    storage: ctx.storage,
-    rowId: input.rowId,
-    attributeId: input.attributeId,
-    value,
-  });
-  if (ticket) await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
+  const existing = await ticketsCollection(ctx.storage).get(input.rowId);
+  if (!existing) return null;
+  const next = await ticketWithAttributes(ctx.storage, existing, { [input.attributeId]: input.value });
+  if (next === existing) return existing;
+  const ticket = await putTicket(ctx.storage, { ...next, updatedAt: new Date().toISOString() });
+  await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
   return ticket;
 };
 
