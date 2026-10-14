@@ -70,7 +70,7 @@ The lifecycle protocol serves `index.html` with that theme's classes, `data-them
 
 ## Native menus and icon
 
-Edit keeps native undo, redo, clipboard, and selection actions, and adds Settings and Keyboard Shortcuts. View opens Search, the project picker, notifications, and theme selection. It also offers sidebar visibility, history navigation, reload, zoom, and full screen. The menu does not expose developer tools.
+On macOS, Settings appears in the Prompt Studio application menu. On Windows and Linux, Settings appears in Edit. Edit keeps native undo, redo, clipboard, and selection actions, and adds Keyboard Shortcuts. View opens Search, the project picker, notifications, and theme selection. It also offers sidebar visibility, history navigation, reload, zoom, and full screen. The menu does not expose developer tools.
 
 App menu items send command IDs only to the workbench renderer through the preload's `onCommand` subscription. The dashboard executes its registered commands and reports failures through workbench notifications. Lifecycle state enables those items only while the workbench is ready. Settings uses Cmd/Ctrl+,; existing workbench shortcuts remain owned by the workbench so native accelerators do not override editor shortcuts.
 

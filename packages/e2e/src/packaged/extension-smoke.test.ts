@@ -4,6 +4,7 @@ import { once } from "node:events";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
 import { writeSmokeExtension } from "./extension-smoke-fixtures";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -12,6 +13,7 @@ const browserHome = mkdtempSync(join(tmpdir(), "extension-smoke-browser-home-"))
 const smokeEnv = { ...process.env, PSTDIO_HOME: browserHome };
 beforeAll(async () => {
   buildBinary();
+  logTestPhase("prepare extension smoke browser");
   const setup = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
     env: smokeEnv,
   });
@@ -37,6 +39,7 @@ for (const [behavior, code] of [
     try {
       const source = writeSmokeExtension(root, behavior);
       const original = readFileSync(join(source, "package.json"), "utf8");
+      logTestPhase(`run packaged extension smoke: ${behavior}`);
       const run = await runTestCommand(
         PACKAGED_BINARY_PATH,
         [
@@ -96,6 +99,7 @@ test("missing Chromium produces a setup result without changing source", async (
   const root = mkdtempSync(join(tmpdir(), "extension-smoke-browser-"));
   try {
     const source = writeSmokeExtension(root);
+    logTestPhase("run extension smoke without Chromium");
     const run = await runTestCommand(
       PACKAGED_BINARY_PATH,
       ["extensions", "test", source, "--json"],
@@ -124,6 +128,7 @@ test("missing Chromium produces a setup result without changing source", async (
 test("interruption stops the browser and host while retaining requested evidence", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-smoke-signal-"));
   const source = writeSmokeExtension(root);
+  logTestPhase("launch interruptible extension smoke");
   const child = spawn(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json", "--keep-home"], {
     cwd: root,
     env: { ...smokeEnv, TMPDIR: root, TMP: root, TEMP: root },
@@ -162,6 +167,7 @@ test("a successful run removes disposable disk state by default", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-smoke-cleanup-"));
   try {
     const source = writeSmokeExtension(root, "commands");
+    logTestPhase("run disposable extension smoke");
     const run = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json"], {
       cwd: root,
       env: { ...smokeEnv, TMPDIR: root, TMP: root, TEMP: root },

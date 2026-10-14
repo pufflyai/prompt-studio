@@ -102,6 +102,12 @@ The full stage adds:
 
 `build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
 
+## macOS release checks
+
+Signed macOS builds submit the app with native `notarytool` from Forge's `postPackage` hook. Submission and ticket retrieval are separate operations. After Apple accepts the upload, `stapler staple` gets up to three attempts for Apple network failures: exit code 68 with `NSURLErrorDomain` in the output. The pauses are one and two seconds. Release verification uses the same rule for `stapler validate`.
+
+Every attempt logs its status and output. Other errors fail at once. This retries an external service call; test retries remain disabled. Validate a change to this path with a nightly release run that builds, notarizes, staples, and verifies both macOS targets.
+
 ## Published extension dependencies
 
 Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
@@ -149,7 +155,11 @@ Tests install local fixture extensions from `packages/e2e/src/default-extensions
 
 Playwright uses one worker and no retries. CI rejects focused Playwright tests (`test.only`). UI and Vite traces are recorded on the first run and retained on failure. This follows [Playwright's trace modes](https://playwright.dev/docs/test-use-options#recording-options).
 
-CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds run in the merge queue and full stages, next to the other jobs. Each UI shard uploads `ui-e2e-results-<shard>`; the packaged/Vite job uploads `packaged-vite-e2e-results`. Reports and failure artifacts are under `packages/e2e/playwright-report` and `packages/e2e/test-results`. `build_clients` rows that run desktop tests upload `desktop-test-results-<target>`. Release desktop jobs upload their own readiness results and traces.
+CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds run in the merge queue and full stages, next to the other jobs.
+
+Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps the earlier evidence. UI shards upload `ui-e2e-results-<shard>-attempt-<run_attempt>`; packaged/Vite uploads `packaged-vite-e2e-results-attempt-<run_attempt>`. Desktop test rows upload `desktop-test-results-<target>-attempt-<run_attempt>`; release rows upload `test-results-desktop-<target>-attempt-<run_attempt>`. Windows update checks upload `windows-installation-readiness-attempt-<run_attempt>`. Failed native toolchain checks upload `packaged-toolchain-<platform_pkg>-attempt-<run_attempt>`, including a timestamped `verification.log`.
+
+Browser reports and traces are under `packages/e2e/playwright-report` and `packages/e2e/test-results`. Desktop results are under `clients/desktop/test-results`. Each packaged test home attaches complete redacted copies of `logs.jsonl` and `desktop-runtime.log` as files before removal. Startup errors include the last 50 runtime output lines. Electron traces start before the lifecycle-page wait, after the sidecar startup wait has protected process isolation; an unavailable attachment states why a trace could not start or be saved. Missing evidence warns without replacing the original build or test failure.
 
 Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. They run as user 1001, matching the owner of GitHub's mounted home directory; Firefox rejects a root process using that user's home. The image includes browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Desktop jobs still run on their native Linux and macOS runners.
 
