@@ -40,7 +40,7 @@ type SigningInput = {
 
 export type DesktopSigningConfig = {
   osxSign?: { identity: string };
-  osxNotarize?: { appleApiKey: string; appleApiKeyId: string; appleApiIssuer: string };
+  macosNotarization?: { appleApiKey: string; appleApiKeyId: string; appleApiIssuer: string };
   windowsSign?: SignToolOptions;
   squirrelWindowsSign?: SignToolOptions;
 };
@@ -65,7 +65,7 @@ export const resolveDesktopSigning = (input: SigningInput): DesktopSigningConfig
       osxSign: {
         identity: values.MACOS_SIGN_IDENTITY,
       },
-      osxNotarize: {
+      macosNotarization: {
         appleApiKey: values.APPLE_API_KEY,
         appleApiKeyId: values.APPLE_API_KEY_ID,
         appleApiIssuer: values.APPLE_API_ISSUER,

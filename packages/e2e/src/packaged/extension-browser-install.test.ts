@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
 import { writeSmokeExtension } from "./extension-smoke-fixtures";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -15,6 +16,7 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
   writeFileSync(join(root, "package.json"), callerManifest);
   try {
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== "PATH"));
+    logTestPhase("install packaged Chromium without JavaScript runtimes");
     const result = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
       cwd: root,
       env: {
@@ -25,8 +27,10 @@ test("installs the smoke browser without external JavaScript runtimes", async ()
     });
     expect({ code: result.status, output: result.stderr }).toMatchObject({ code: 0 });
     expect(existsSync(join(root, "home", "runtime.json"))).toBe(false);
+    logTestPhase("launch installed Chromium");
     const browser = await chromium.launch({ executablePath: chromium.executablePath() });
     try {
+      logTestPhase("open browser validation page");
       const page = await browser.newPage();
       expect(await page.evaluate(() => 6 * 7)).toBe(42);
     } finally {
@@ -44,6 +48,7 @@ test("a missing Playwright install is a setup error with browser setup instructi
   const root = mkdtempSync(join(tmpdir(), "extension-browser-missing-"));
   try {
     const source = writeSmokeExtension(root);
+    logTestPhase("run extension smoke with missing Playwright");
     const run = await runTestCommand(
       PACKAGED_BINARY_PATH,
       ["extensions", "test", source, "--json"],
@@ -72,12 +77,14 @@ test("the installed Playwright cache runs a packaged extension page outside the 
   const root = mkdtempSync(join(tmpdir(), "extension-browser-page-"));
   try {
     const env = { ...process.env, PSTDIO_HOME: join(root, "home") };
+    logTestPhase("install browser into consumer cache");
     const installed = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
       cwd: root,
       env,
     });
     expect({ code: installed.status, output: installed.stderr }).toMatchObject({ code: 0 });
     const source = writeSmokeExtension(root);
+    logTestPhase("run extension page smoke with installed cache");
     const run = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json"], {
       cwd: root,
       env,

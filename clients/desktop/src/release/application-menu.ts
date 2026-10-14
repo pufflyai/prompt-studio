@@ -35,7 +35,7 @@ export const createApplicationMenuTemplate = (
         { role: "delete" },
         { role: "selectAll" },
         { type: "separator" },
-        command("workbench.settings.open", "Settings…", "CmdOrCtrl+,"),
+        ...(platform === "darwin" ? [] : [command("workbench.settings.open", "Settings…", "CmdOrCtrl+,")]),
         command("dashboard.openShortcuts", "Keyboard Shortcuts"),
       ],
     },
@@ -76,6 +76,7 @@ export const createApplicationMenuTemplate = (
         submenu: [
           { role: "about" },
           { type: "separator" },
+          command("workbench.settings.open", "Settings…", "CmdOrCtrl+,"),
           updateItem,
           ...(installCli ? [{ label: "Install pst Command…", click: installCli }] : []),
           { type: "separator" },
