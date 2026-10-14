@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
+import { moveStoryTab } from "./tab-moves";
 import { visibleWindowingLabel } from "./visible-label";
 import { WindowingStory } from "./windowing-story";
 
@@ -13,13 +14,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const move = async (element: HTMLElement, name: string, destination: string) => {
-  within(element)
-    .getByRole("tab", { name: new RegExp(`^${name}(?: ·|$)`) })
-    .focus();
-  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-  await userEvent.click(await within(document.body).findByRole("menuitem", { name: `Move to ${destination}` }));
-};
+const move = async (element: HTMLElement, name: string, destination: string) =>
+  moveStoryTab(within(element).getByRole("tab", { name: new RegExp(`^${name}(?: ·|$)`) }), destination);
 const panel = (element: HTMLElement, region: string) =>
   element.querySelector(`[data-workbench-panel="${region}"]`) as HTMLElement;
 const sessionInPage = async (element: HTMLElement) => {
