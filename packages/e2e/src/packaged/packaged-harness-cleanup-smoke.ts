@@ -5,9 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { registerHarnessDetectionSmokeTests } from "./packaged-harness-detection-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 export const registerHarnessCleanupSmokeTests = () => {
+  registerHarnessDetectionSmokeTests();
   test("packaged host releases project harness resources on disablement and shutdown", async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-harness-cleanup-"));
     const evidence = join(root, "released.jsonl");
