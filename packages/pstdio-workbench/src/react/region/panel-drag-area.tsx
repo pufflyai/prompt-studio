@@ -3,7 +3,8 @@ import { useDraggable } from "@dnd-kit/core";
 import type { PanelEdge } from "@pstdio/sdk/extensions";
 import { ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
-import type { MovablePanel } from "../../core/registries/layout/panel-geometry";
+import type { WorkbenchLayout } from "../../core/registries/layout/layout-types";
+import { geometryEdge, type MovablePanel } from "../../core/registries/layout/panel-geometry";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -26,15 +27,11 @@ export const moveGeometry = (workbench: WorkbenchCore, panel: GeometryDrag, edge
       { panel, edge },
     ),
   );
-export const geometryPositions = (workbench: WorkbenchCore, panel: GeometryDrag) =>
+export const geometryPositions = (workbench: WorkbenchCore, panel: GeometryDrag, layout: WorkbenchLayout) =>
   (panel === "activity"
     ? (["left", "right", "top", "bottom"] as PanelEdge[])
     : workbench.getPanelPositions(panel)
-  ).filter(
-    (edge) =>
-      edge !==
-      (panel === "activity" ? (workbench.layout.getLayout().actionBarEdge ?? "left") : workbench.getPanelEdge(panel)),
-  );
+  ).filter((edge) => edge !== (panel === "activity" ? (layout.actionBarEdge ?? "left") : geometryEdge(layout, panel)));
 
 interface PanelDragAreaProps extends BoxProps {
   workbench: WorkbenchCore;
@@ -44,9 +41,9 @@ const occupied =
   "button,a,input,textarea,select,[role='button'],[role='tab'],[role='menuitem'],[contenteditable='true'],[data-workbench-tab],[data-workbench-breadcrumb]";
 export const PanelDragHandle = (props: PanelDragAreaProps) => {
   const { workbench, panel, ...rest } = props;
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  const positions = geometryPositions(workbench, panel);
+  const positions = geometryPositions(workbench, panel, layout);
   const drag = useDraggable({ id: `panel:${panel}`, data: { panel }, disabled: !positions.length });
   const empty = (target: EventTarget | null) => target instanceof Element && !target.closest(occupied);
   return (
@@ -68,11 +65,11 @@ export const PanelDragHandle = (props: PanelDragAreaProps) => {
 
 export const PanelDragArea = (props: PanelDragAreaProps) => {
   const { workbench, panel } = props;
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   return (
     <ResourceContextMenu
-      actions={geometryPositions(workbench, panel).map((edge) => ({
+      actions={geometryPositions(workbench, panel, layout).map((edge) => ({
         key: edge,
         label: panelPositionLabel(panel, edge),
         onClick: () => {

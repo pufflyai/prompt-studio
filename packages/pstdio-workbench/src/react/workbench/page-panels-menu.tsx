@@ -3,6 +3,7 @@ import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { pageTitle } from "../../core/controllers/page-location/page-breadcrumbs";
+import { geometryEdge } from "../../core/registries/layout/panel-geometry";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchPanelMenuPeek } from "../panel-menu/panel-menu";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
@@ -20,7 +21,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
   const menus = useWorkbenchPanelMenus(workbench, "main").filter((menu) => menu.has);
   const bottom = usePanelPolicy(workbench, "bottom");
   const aside = usePanelPolicy(workbench, "aside");
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const peekMenu = menus.find((menu) => menu.menuId === peekMenuId && !menu.canAttach);
   useEffect(() => {
     if (peekMenuId && !peekMenu) setPeekMenuId(undefined);
@@ -32,13 +33,13 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
       region: "bottom",
       label: "Bottom panel",
       policy: bottom,
-      icon: workbench.getPanelEdge("bottom") === "top" ? "PanelTop" : "PanelBottom",
+      icon: geometryEdge(layout, "bottom") === "top" ? "PanelTop" : "PanelBottom",
     },
     {
       region: "aside",
       label: "Side panel",
       policy: aside,
-      icon: workbench.getPanelEdge("aside") === "left" ? "PanelLeft" : "PanelRight",
+      icon: geometryEdge(layout, "aside") === "left" ? "PanelLeft" : "PanelRight",
     },
   ] as const;
   return (

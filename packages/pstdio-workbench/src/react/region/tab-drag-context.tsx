@@ -53,7 +53,9 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
   const resolveGeometryDrop = (event: DragOverEvent) => {
     const source = event.active.data.current?.panel as GeometryDrag | undefined;
     const data = event.over?.data.current;
-    return source && data?.panel === source && geometryPositions(workbench, source).includes(data.edge)
+    return source &&
+      data?.panel === source &&
+      geometryPositions(workbench, source, workbench.layout.getLayout()).includes(data.edge)
       ? { panel: source, edge: data.edge as PanelEdge }
       : undefined;
   };
