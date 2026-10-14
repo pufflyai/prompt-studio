@@ -2,10 +2,6 @@ export type ResizableSplitSide = "left" | "right" | "top" | "bottom";
 
 export const FALLBACK_ROOT_SIZE = { width: 1200, height: 720 };
 
-const MIN_HORIZONTAL_COLLAPSE_THRESHOLD_PX = 72;
-const MAX_HORIZONTAL_COLLAPSE_THRESHOLD_PX = 160;
-const VERTICAL_COLLAPSE_THRESHOLD_PX = 72;
-
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 const axes = {
@@ -66,11 +62,6 @@ export const resolveResizableBounds = (input: {
   return { minSize, maxSize };
 };
 
-const resolveCollapseThreshold = (side: ResizableSplitSide, minSize: number) => {
-  if (side === "top" || side === "bottom") return VERTICAL_COLLAPSE_THRESHOLD_PX;
-  return clamp(minSize / 2, MIN_HORIZONTAL_COLLAPSE_THRESHOLD_PX, MAX_HORIZONTAL_COLLAPSE_THRESHOLD_PX);
-};
-
 export const resolveDraggedPanelSize = (input: {
   side: ResizableSplitSide;
   startSize: number;
@@ -81,7 +72,7 @@ export const resolveDraggedPanelSize = (input: {
 }) => {
   const axis = getResizableSplitAxis(input.side);
   const rawSize = input.startSize + input.pointerDelta * axis.deltaDirection;
-  const collapsed = input.collapsible && rawSize <= resolveCollapseThreshold(input.side, input.minSize);
+  const collapsed = input.collapsible && rawSize < input.minSize / 2;
 
   return {
     rawSize,

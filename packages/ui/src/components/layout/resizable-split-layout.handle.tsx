@@ -67,10 +67,9 @@ const ResizeHandleBar = (props: HandlePartProps) => {
   return (
     <Box
       data-part="bar"
+      data-active={active}
       position="absolute"
       borderRadius="xs"
-      bg="fg.info"
-      opacity={active ? 1 : 0}
       transition="opacity 120ms ease"
       pointerEvents="none"
       {...layout.bar}
@@ -83,6 +82,7 @@ interface ResizeHandleProps {
   axis: ReturnType<typeof getResizableSplitAxis>;
   bounds: { minSize: number; maxSize: number };
   collapsed: boolean;
+  closing: boolean;
   collapsible: boolean;
   contentPanelId: string;
   dragging: boolean;
@@ -102,6 +102,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     axis,
     bounds,
     collapsed,
+    closing,
     collapsible,
     contentPanelId,
     dragging,
@@ -138,6 +139,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       css={css}
       ref={separatorRef}
       data-collapsed={collapsed}
+      data-closing={closing}
       inert={collapsed}
       role="separator"
       aria-label={resizeLabel}
