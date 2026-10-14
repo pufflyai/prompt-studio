@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { movePanelTab } from "../helpers/move-panel-tab";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -75,7 +76,7 @@ const expectCanonicalFrame = async (
   expect(sideBox).not.toBeNull();
 
   const contentHeight = options.statusBar === "visible" ? 688 : 720;
-  const panelHeight = contentHeight - 2 * PANEL_GAP_PX;
+  const panelHeight = contentHeight - PANEL_GAP_PX - (options.statusBar === "visible" ? 0 : PANEL_GAP_PX);
   const sidenavWidth = options.sidenav === "visible" ? 250 : 0;
   const sideX = 1280 - PANEL_GAP_PX - 420;
   const mainColumnX = PANEL_GAP_PX + sidenavWidth + (options.sidenav === "visible" ? PANEL_GAP_PX : 0);
@@ -128,12 +129,11 @@ test("aligns Main and attached Side frames with the breadcrumb inside Main", asy
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText("Canonical geometry", { exact: true }).click();
-  const nav = page.locator('[data-workbench-region="nav"]');
-  await nav.getByRole("button", { name: "Show Side Panel" }).click();
+  await page.locator('[data-workbench-region="status"]').getByRole("button", { name: "Show Sidebar" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "Session", exact: true }).click();
 
-  await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "hidden" });
+  await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "visible" });
 });
 
 test("reopens the Main right menu from a single-resource page", async ({ page, request }) => {
@@ -162,11 +162,61 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   await page.getByRole("separator", { name: "Resize Main right menu" }).press("Home");
   await expect(rightMenu).toBeHidden();
   await expect(mainPanelHeader).toBeVisible();
-  await mainPanelHeader.getByRole("button", { name: "Open Main right menu" }).click();
+  await page
+    .locator('[data-workbench-region="nav"]')
+    .getByRole("button", { name: / panels$/ })
+    .click();
+  await page.getByRole("menuitemcheckbox", { name: "Properties", exact: true }).click();
 
   await expect(rightMenu).toBeVisible();
   await expect(page.getByRole("menu", { name: "Main right menu controls" })).toHaveCount(0);
   await expect(mainPanelHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainPanelHeader.getByRole("tab")).toHaveCount(1);
   await expect(ticketLink).toBeVisible();
+
+  const [headerBox, menuBox] = await Promise.all([mainPanelHeader.boundingBox(), rightMenu.boundingBox()]);
+  expectNear(menuBox!.y, headerBox!.y + headerBox!.height);
+  const ticketUrl = page.url();
+  const tab = mainPanelHeader.getByRole("tab");
+  const tabName = await tab.textContent();
+  for (const region of ["aside", "bottom"]) {
+    await page.getByRole("button", { name: "Page panels", exact: true }).click();
+    const controls = page.getByRole("menu", { name: "Page panels", exact: true });
+    const option = controls.getByRole("menuitem", {
+      name: region === "aside" ? "Show Side panel" : "Show Page bottom",
+      exact: true,
+    });
+    await expect(option.locator("svg")).toBeVisible();
+    await option.click();
+    const destination = page.locator(`[data-workbench-region="${region}"]`);
+    await movePanelTab(page, mainPanelHeader.getByRole("tab"), destination);
+    await expect(page).toHaveURL(ticketUrl);
+    await expect(ticketLink).toBeVisible();
+    const moved = destination.getByRole("tab", { name: tabName!, exact: true });
+    await expect(moved).toBeVisible();
+    // The 280px page side shows its Inspector as a floating menu; page bottom can attach it.
+    let movedMenu = page.locator(`[data-workbench-panel-menu="${region}-right"]`);
+    if (region === "aside") {
+      await destination.getByRole("button", { name: "Open Page side right menu", exact: true }).click();
+      movedMenu = page.getByRole("menu", { name: "Page side right menu controls", exact: true });
+    }
+    await expect(movedMenu.getByText(ticket.shorthand, { exact: true })).toBeVisible();
+    await expect(destination.getByRole("textbox").first()).toHaveText("Reopen ticket details");
+    if (region === "aside") {
+      await page.keyboard.press("Escape");
+      await expect(movedMenu).toBeHidden();
+      expect(
+        await page
+          .locator('[data-workbench-panel="aside"]')
+          .evaluate((element) => getComputedStyle(element).borderTopWidth),
+      ).toBe("1px");
+      await movePanelTab(page, moved, page.locator('[data-workbench-region="main"]'));
+      await expect(mainPanelHeader.getByRole("tab", { name: tabName!, exact: true })).toBeVisible();
+      await expect(rightMenu.getByText(ticket.shorthand, { exact: true })).toBeVisible();
+      await expect(page.getByRole("menu")).toHaveCount(0);
+    }
+  }
+  await test
+    .info()
+    .attach("Ticket retained in page bottom", { body: await page.screenshot(), contentType: "image/png" });
 });

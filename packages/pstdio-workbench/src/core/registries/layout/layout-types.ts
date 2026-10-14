@@ -261,6 +261,8 @@ export interface WorkbenchRegionState {
   activeWidgetId?: string;
   /** Side region only: how the open Side Panel is shown. `visible` says whether it is open. */
   presentation?: Exclude<WorkbenchSidePanelMode, "closed">;
+  /** One normalized floating bubble anchor, owned by the mode. */
+  bubblePosition?: import("../../controllers/side-panel/floating-bubble-position").FloatingBubblePosition;
 }
 
 export interface WorkbenchLayout {

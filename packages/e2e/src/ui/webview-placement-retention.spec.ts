@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { movePanelTab } from "../helpers/move-panel-tab";
 import { uiOrigin } from "../ui-server";
 
 test("moving a webview between panels preserves its browsing context", async ({ page, request }) => {
@@ -22,11 +23,9 @@ test("moving a webview between panels preserves its browsing context", async ({ 
     const frame = await (await element.elementHandle())?.contentFrame();
     expect(frame).toBeTruthy();
     await frame!.evaluate(() => Reflect.set(window, "placementMarker", "original context"));
+    await page.getByRole("button", { name: "Show Sidebar", exact: true }).click();
     for (const destination of ["Side", "Main"]) {
-      await tab.click({ button: "right" });
-      await page
-        .getByRole("menuitem", { name: `Move to ${destination === "Side" ? "Sidebar" : "Editor"}`, exact: true })
-        .click();
+      await movePanelTab(page, tab, page.locator(`[data-workbench-region="${destination.toLowerCase()}"]`));
       await expect(
         page
           .getByRole("region", { name: destination === "Side" ? "Side Panel" : "Main", exact: true })
@@ -36,7 +35,6 @@ test("moving a webview between panels preserves its browsing context", async ({ 
       expect(await frame!.evaluate(() => Reflect.get(window, "placementMarker"))).toBe("original context");
       await expect(tab).toBeVisible();
       if (destination === "Side") {
-        await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
         await page.getByRole("button", { name: "Float Side Panel", exact: true }).click();
         await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();
         await expect(element).toBeHidden();

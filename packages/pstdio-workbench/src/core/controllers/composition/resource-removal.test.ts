@@ -54,14 +54,14 @@ test("removal updates inactive page state without moving the active route", () =
   expect(Object.values(core.pages.store.getState().pageStates.notes!.resourceInstances).flat()).toHaveLength(1);
 });
 
-test("an editor can retain its dirty placement while other bindings are removed", () => {
+test("deleted resource bindings close even when an editor requests retention", () => {
   const { core, open } = setup();
   open("a");
   const identity = core.layout.getLayout().regions.main.widgets[0]!.placementIdentity!;
   const subscription = core.resources.onWillRemove(() => [identity]);
   core.resources.removed(resource("a"));
-  expect(core.getPrimaryResource()?.id).toBe("a");
-  expect(core.layout.getLayout().regions.main.widgets).toHaveLength(1);
+  expect(core.getPrimaryResource()).toBeUndefined();
+  expect(core.pages.store.getState().activePageId).toBe("collection");
   subscription.dispose();
   core.resources.removed(resource("a"));
   expect(core.pages.store.getState().activePageId).toBe("collection");

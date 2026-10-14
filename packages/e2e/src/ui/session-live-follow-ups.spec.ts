@@ -1,15 +1,17 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const setup = async (page: Page, request: APIRequestContext) => {
+const setup = async (page: Page, request: APIRequestContext, prompts = ["Session A", "Session B"]) => {
   const project = await (
     await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name: "Live sessions" }) })
   ).json();
   const sessions: { id: string; title: string }[] = [];
-  for (const title of ["Session A", "Session B"]) {
+  for (const [index, title] of ["Session A", "Session B"].entries()) {
     const response = await request.post(`${apiBase}/v1/sessions`, {
-      data: { project_id: project.id, title, prompt: title, agent: "pstdio.workbench-fixture.harness.fake" },
+      data: { project_id: project.id, title, prompt: prompts[index], agent: "pstdio.workbench-fixture.harness.fake" },
     });
     expect(response.ok()).toBe(true);
     sessions.push(await response.json());
@@ -21,21 +23,22 @@ const setup = async (page: Page, request: APIRequestContext) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/`);
-  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
-  await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
+  await page.goto(`/projects/${project.id}/sessions`);
   const header = page.locator('[data-workbench-panel-header="side"]');
   for (const session of sessions) {
-    const draft = header.getByRole("tab", { name: "New session", exact: true });
-    if ((await draft.count()) === 0) {
-      await header.getByRole("button", { name: "Add panel", exact: true }).click();
-      await page.getByRole("menuitem", { name: "Session", exact: true }).click();
-    }
-    await draft.click({ button: "right" });
-    await page
-      .getByRole("menu", { name: "New session context menu", exact: true })
-      .getByRole("menuitem", { name: session.title, exact: true })
-      .click();
+    const row = page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("option", { name: session.title, exact: true });
+    await row.focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+    await expect(page.getByRole("tab", { name: session.title, exact: true })).toBeVisible();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await page.getByRole("tab", { name: session.title, exact: true }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    const reattach = page.getByRole("button", { name: "Reattach Side Panel", exact: true });
+    if (await reattach.isVisible()) await reattach.click();
   }
   return { header, sessions };
 };
@@ -59,10 +62,10 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   page,
   request,
 }) => {
-  const { header, sessions } = await setup(page, request);
+  // The fake agent keeps Session B's run active until the test releases it.
+  const { header, sessions } = await setup(page, request, ["Session A", "Session B __fake_hold__"]);
   const session = sessions[1]!;
   const url = `${apiBase}/v1/sessions/${session.id}`;
-  await request.patch(`${url}/status`, { data: { status: "in_progress" } });
   await expect(
     header.getByRole("tab", { name: session.title, exact: true }).locator('[aria-label="Session status: in_progress"]'),
   ).toBeVisible();
@@ -98,6 +101,8 @@ test("queues two follow-ups without stopping the active session and keeps a fail
     await expect(editor).toHaveAttribute("contenteditable", "true");
     await expect(editor).toBeEmpty();
     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
+    // The saved request replaces the sending row, so it can be edited.
+    await expect(page.getByRole("button", { name: `Edit queued message: ${prompt}`, exact: true })).toBeEnabled();
     expect((await (await request.get(url)).json()).status).toBe("in_progress");
   }
   await page.reload();
@@ -119,7 +124,7 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   await expect(editor).toBeEmpty();
   await expect(page.getByText("Keep this draft", { exact: true })).toHaveCount(1);
   await expect(editor).toBeFocused();
-  await request.patch(`${url}/status`, { data: { status: "completed" } });
+  writeFileSync(join((await (await request.get(url)).json()).cwd, ".fake-hold-release"), "");
   await expect
     .poll(async () => {
       const body = await (await request.get(`${url}/conversation`)).json();

@@ -65,6 +65,6 @@ The host wiring around the panels:
 - `createWorkbenchSettingsModule({ resolveScopeId })` activates the unified settings surface: the tree, the
   dispatching panel, and the presenter. `resolveScopeId` maps a scope to a storage key, so project entries appear
   only when a project scope id resolves.
-- `ctx.shellPlacements.registerPlacement(...)` with `presence: "fixed"` keeps a launcher View in the `main` region.
+- `ctx.shellPlacements.registerPlacement(...)` with `presence: "open"` starts a closable launcher View in the `main` region.
   The settings surface is a modal overlay, so the launcher gives the user a way back in after closing it.
 - `ctx.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId })` opens the overlay on one panel.

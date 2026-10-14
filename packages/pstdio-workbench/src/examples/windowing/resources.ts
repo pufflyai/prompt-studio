@@ -20,7 +20,7 @@ export const createWindowingResources = () => {
     extensionId: windowingExtensionId,
     context: { type: "workspace", id: `workspace-${number}`, label: `Workspace ${number}` },
   }));
-  const sessions = workspaces.map((workspace, index) => ({
+  let sessions = workspaces.map((workspace, index) => ({
     type: "windowing.session",
     id: `session-${index + 1}`,
     label: `Session ${index + 1}`,
@@ -44,9 +44,24 @@ export const createWindowingResources = () => {
   }));
   return {
     workspaces,
-    sessions,
+    get sessions() {
+      return sessions;
+    },
     terminals,
     notes,
+    startSession(workspace: ResourceRef) {
+      const session = {
+        type: "windowing.session",
+        id: `session-${sessions.length + 1}`,
+        label: `Session ${sessions.length + 1}`,
+        extensionId: windowingExtensionId,
+        metadata: { workspaceId: workspace.id },
+        context: { type: "workspace", id: workspace.id, label: workspace.label } as ResourceContext,
+      };
+      sessions = [...sessions, session];
+      for (const listener of contextListeners) listener();
+      return session;
+    },
     subscribeContext(listener: () => void) {
       contextListeners.add(listener);
       return () => {
@@ -65,19 +80,19 @@ export const createWindowingResources = () => {
 export type WindowingResources = ReturnType<typeof createWindowingResources>;
 
 export const registerWindowingResourceProviders = (workbench: WorkbenchCore, resources: WindowingResources) => {
-  for (const [label, items] of [
-    ["Workspace", resources.workspaces],
-    ["Note", resources.notes],
-    ["Session", resources.sessions],
-    ["Terminal", resources.terminals],
+  for (const [label, read] of [
+    ["Workspace", () => resources.workspaces],
+    ["Note", () => resources.notes],
+    ["Session", () => resources.sessions],
+    ["Terminal", () => resources.terminals],
   ] as const) {
-    const kind = items[0]!.type;
+    const kind = read()[0]!.type;
     workbench.resources.registerKind({ kind, label });
     workbench.resources.registerProvider({
       id: kind,
       kind,
       list: (query) =>
-        items
+        read()
           .filter((item) => item.label?.toLowerCase().includes(query.toLowerCase()))
           .map((resource) => ({ resource })),
     });

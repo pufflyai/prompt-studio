@@ -106,10 +106,11 @@ export interface ModeContribution extends ContributionDefinition<"mode"> {
   regions: readonly ExtensionPanelRegion[];
   /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
   defaultTheme?: ThemeRef;
-  /** @deprecated Use regionSettings.side.floatable. Defaults to visible. */
+  /** @deprecated Use regionSettings.side.floatable, floatingBubble, and floating.defaultTab. Defaults to visible. */
   floatingPanels?: "visible" | "hidden";
   /** Bubble availability does not grant opening or floating permission. */
   floatingBubble?: boolean;
+  /** Override the host's new-session target on explicit floating open of an empty Side. */
   floating?: { readonly defaultTab?: NavigationTarget };
   /** Replace host chrome with a view, or hide it with false, while the mode is active. */
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", ViewRef | false>>;

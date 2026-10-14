@@ -39,6 +39,12 @@ export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly body: ViewBody;
   /** Reuse one open editor per view/resource across owners. Omission preserves existing placement behavior. */
   readonly instancePolicy?: "per-resource" | "multiple";
+  /** Mount policy for opened views when their owner or tab is inactive. */
+  readonly background?: "active" | "keep-mounted";
+  /** Automatic placement activation may reveal a panel. Explicit navigation always follows panel permissions. */
+  readonly reveal?: "always" | "explicit";
+  /** Mode destination used by view-open commands when no page binding accepts the resource. */
+  readonly defaultPanel?: "side" | "secondary";
 }
 
 export type NavigationOwnerRef = ModeRef | PageRef;
@@ -70,7 +76,10 @@ export interface NavigationTreeContribution extends ContributionDefinition<"navi
  * - "closed": closed until the user opens it (for example through the Add panel).
  * A saved user choice wins over "open" and "closed" on the next visit.
  */
-export type PlacementPresence = "fixed" | "open" | "closed";
+/** @deprecated Use declared tools with presence "open" and panel acceptsTabs. Fixed tabs remain supported by the legacy host adapter. */
+export type LegacyFixedPlacementPresence = "fixed";
+
+export type PlacementPresence = LegacyFixedPlacementPresence | "open" | "closed";
 
 export type PlacementItem =
   | { readonly kind: "view"; readonly view: ViewRef; readonly presence: PlacementPresence }
@@ -112,6 +121,7 @@ export interface PlacementTabPresentation {
 }
 
 export interface PlacementPresentation {
+  /** @deprecated Use ViewContribution.background. Retained for placement-specific legacy behavior. */
   readonly mountStrategy?: PlacementMountStrategy;
   readonly hiddenByDefault?: boolean;
   readonly headerBorderBottom?: boolean;
@@ -124,6 +134,7 @@ export interface PlacementContribution extends ContributionDefinition<"placement
   /** @deprecated For Main, use page Main declarations. Mode Side and Secondary remain supported. */
   readonly region: ExtensionPanelRegion;
   readonly order?: number;
+  /** @deprecated Use panel acceptsTabs. Legacy declarations retain their destination limits until the coordinated breaking release. */
   readonly movableTo?: readonly ExtensionPanelRegion[];
 }
 

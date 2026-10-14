@@ -21,7 +21,7 @@ const fixture = () => {
     pagePanels: true,
     contextNavigation: true,
     registerMode: (workbench) => {
-      workbench.modes.registerMode({
+      return workbench.modes.registerMode({
         id: "windowing",
         label: "Windowing",
         activate: () => [
@@ -112,13 +112,7 @@ export const ClosedEdgeReveal: Story = {
     },
   },
   play: async ({ canvasElement: root }) => {
-    const tab = within(panel(root, "main")).getByRole("tab", { name: /^Files/ });
-    tab.focus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    const menu = within(document.body);
-    await waitFor(() => expect(menu.getByText("Stays with Workspace 1")).toBeVisible());
-    await waitFor(() => expect(menu.getByText("Follows you in Windowing")).toBeVisible());
-    await userEvent.keyboard("{Escape}");
+    await expect(within(panel(root, "main")).getByRole("tab", { name: /^Files/ })).toBeVisible();
     await expect(panel(root, "aside")).not.toBeVisible();
   },
 };

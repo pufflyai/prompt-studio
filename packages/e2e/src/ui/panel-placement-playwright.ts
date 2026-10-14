@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { movePanelTab } from "../helpers/move-panel-tab";
 
 const startTabDrag = async (page: Page, tab: Locator) => {
   const source = (await tab.boundingBox())!;
@@ -39,9 +40,7 @@ export const exerciseClosedEdges = async (page: Page) => {
     await expect(moved).toBeVisible();
     await expect(draft).toHaveValue("Retain this draft through edge drops");
     await expect(page.getByLabel("Files mount").filter({ visible: true })).toHaveText(mount!);
-    await moved.focus();
-    await page.keyboard.press("Shift+F10");
-    await page.getByRole("menuitem", { name: "Move to Editor", exact: true }).click();
+    await movePanelTab(page, moved, page.locator('[data-workbench-region="main"]'));
     await expect(files).toBeVisible();
   }
 };
@@ -74,7 +73,9 @@ export const exercisePanelPointer = async (page: Page) => {
       await expect.poll(async () => (await side.boundingBox())!.x).toBeGreaterThan(original.x);
     }
   }
-  const breadcrumb = (await page.locator('[data-workbench-panel-drag="main"]').boundingBox())!;
+  const breadcrumb = (await page
+    .locator('[data-workbench-panel-drag="main"][data-workbench-region="nav"]')
+    .boundingBox())!;
   await page.mouse.move(breadcrumb.x + breadcrumb.width * 0.65, breadcrumb.y + breadcrumb.height / 2);
   await page.mouse.down();
   await page.mouse.move(breadcrumb.x + breadcrumb.width * 0.65 + 8, breadcrumb.y + breadcrumb.height / 2, { steps: 3 });

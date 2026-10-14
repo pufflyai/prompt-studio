@@ -196,7 +196,7 @@ export const createBoomboxWorkbench = () => {
     panels: ["main", "side", "secondary"],
     floatingBubble: false,
     regionSettings: {
-      side: { canOpen: true, canClose: true, floatable: false, acceptsTabs: false, showHeader: false },
+      side: { canOpen: false, canClose: false, floatable: false, acceptsTabs: false, showHeader: false },
       secondary: {
         size: { defaultPx: 88, minPx: 88, maxPx: 88 },
         canOpen: false,

@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { movePanelTab } from "../helpers/move-panel-tab";
 export const exercisePageSurface = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const bottom = main.locator('[data-workbench-panel="bottom"]');
@@ -18,21 +19,18 @@ export const exercisePageSurface = async (page: Page) => {
   await expect(draft).toHaveValue("Keep the draft when moving into page bottom");
   await expect(page.getByLabel("Changes mount")).toHaveText(mount!);
   await expect(page.getByLabel("Inspector binding")).toHaveText("Workspace 2");
-  await bottom.getByRole("tab", { name: "Changes", exact: true }).focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Editor", exact: true }).click();
+  await movePanelTab(
+    page,
+    bottom.getByRole("tab", { name: "Changes", exact: true }),
+    main.locator('[data-workbench-region="main"]'),
+  );
   await expect(
     main.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Changes", exact: true }),
   ).toBeVisible();
   await expect(draft).toHaveValue("Keep the draft when moving into page bottom");
   await page.getByRole("button", { name: "Session 1", exact: true }).click();
   const sessionTab = page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: /^Session 1/ });
-  await sessionTab.focus();
-  await page.keyboard.press("Shift+F10");
-  await page
-    .getByRole("group", { name: /^Stays with/ })
-    .getByRole("menuitem", { name: "Move to Bottom panel", exact: true })
-    .click();
+  await movePanelTab(page, sessionTab, bottom);
   await page.getByRole("button", { name: "Sessions", exact: true }).click();
   await expect(bottom).not.toBeVisible();
 };

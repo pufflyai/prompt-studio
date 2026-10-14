@@ -68,6 +68,8 @@ const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?
   widgets.find((placement) => placement.widgetId === activeWidgetId) ?? widgets[0];
 const regionIsOccupied = (placement: WorkbenchWidgetPlacement | undefined, chrome: string | false | undefined) =>
   Boolean(placement || chrome);
+const regionViewportDisplay = (placement: WorkbenchWidgetPlacement | undefined, chrome: string | false | undefined) =>
+  placement && !chrome ? "flex" : "none";
 
 export const resolveRenderedRegionPlacements = (
   widgets: WorkbenchWidgetPlacement[],
@@ -217,6 +219,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     }
   };
   const additive = region === "sidenav";
+  const occupied = regionIsOccupied(placement, chrome);
 
   return (
     <Flex
@@ -237,9 +240,9 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       {/* The region owns scrolling: overflowing widget content scrolls here
           with the same narrow overlay scrollbar used across the workbench. */}
       <ModeChromeView workbench={workbench} region={region} viewId={chrome || undefined} />
-      <EmptyPanel workbench={workbench} region={region} occupied={regionIsOccupied(placement, chrome)} />
+      <EmptyPanel workbench={workbench} region={region} occupied={occupied} />
       <ScrollArea
-        display={chrome ? "none" : "flex"}
+        display={regionViewportDisplay(placement, chrome)}
         flex="1"
         minH="0"
         minW="0"

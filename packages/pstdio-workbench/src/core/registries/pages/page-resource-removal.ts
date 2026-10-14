@@ -1,6 +1,6 @@
-import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
-import { placementIdentityKey } from "../layout/placement-reconciliation";
-import { primarySlot } from "./page-main";
+import type { PageLocation, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import { projectResourceReferences } from "../resources/project-resource-identity";
+import { pageOwnerResource, primarySlot } from "./page-main";
 import type { WorkbenchPageRegistryStoreState, WorkbenchPageResourceCodec } from "./page-registry-types";
 import { pageStateKey } from "./page-state-key";
 
@@ -9,43 +9,43 @@ export const removePageResource = <Value>(
   state: WorkbenchPageRegistryStoreState<Value>,
   resource: ResourceRef,
   resources: WorkbenchPageResourceCodec,
-  retained: readonly PlacementIdentity[],
+  _retained: readonly PlacementIdentity[],
 ) => {
-  const key = (value: ResourceRef) => resources.toUri(resources.normalize(value));
+  const key = (value: ResourceRef) =>
+    resources.toUri(resources.normalize({ ...value, projectId: value.projectId ?? state.projectId }));
   const removedKey = key(resource);
-  const keep = new Set(retained.map(placementIdentityKey));
+  const removedOwners = new Set(
+    Object.values(state.pages)
+      .filter((page) => pageOwnerResource(page, resource))
+      .flatMap((page) =>
+        projectResourceReferences(resource, state.projectId).map((reference) =>
+          pageStateKey(page, { page: page.ref, resource: reference }, resources),
+        ),
+      ),
+  );
   const pageStates = Object.fromEntries(
-    Object.entries(state.pageStates).map(([stateKey, current]) => {
-      const pageId = Object.keys(state.pages).find((id) => stateKey === id || stateKey.startsWith(`${id}|`));
-      if (!pageId) return [stateKey, current];
-      const resourceInstances = Object.fromEntries(
-        Object.entries(current.resourceInstances).map(([slotId, instances]) => [
-          slotId,
-          instances.filter(
-            (instance) =>
-              key(instance.resource) !== removedKey ||
-              keep.has(
-                placementIdentityKey({
-                  kind: "page",
-                  pageId,
-                  slotId,
-                  instanceKey: instance.instanceKey,
-                }),
-              ),
-          ),
-        ]),
-      );
-      const primary = primarySlot(state.pages[pageId]!);
-      const remaining = primary ? (resourceInstances[primary.id] ?? []) : [];
-      let activePrimaryInstanceKey = current.activePrimaryInstanceKey;
-      if (
-        primary?.item.kind === "binding" &&
-        !remaining.some((instance) => instance.instanceKey === activePrimaryInstanceKey)
-      ) {
-        activePrimaryInstanceKey = remaining.at(-1)?.instanceKey;
-      }
-      return [stateKey, { ...current, resourceInstances, activePrimaryInstanceKey }];
-    }),
+    Object.entries(state.pageStates)
+      .filter(([stateKey]) => !removedOwners.has(stateKey))
+      .map(([stateKey, current]) => {
+        const pageId = Object.keys(state.pages).find((id) => stateKey === id || stateKey.startsWith(`${id}|`));
+        if (!pageId) return [stateKey, current];
+        const resourceInstances = Object.fromEntries(
+          Object.entries(current.resourceInstances).map(([slotId, instances]) => [
+            slotId,
+            instances.filter((instance) => key(instance.resource) !== removedKey),
+          ]),
+        );
+        const primary = primarySlot(state.pages[pageId]!);
+        const remaining = primary ? (resourceInstances[primary.id] ?? []) : [];
+        let activePrimaryInstanceKey = current.activePrimaryInstanceKey;
+        if (
+          primary?.item.kind === "binding" &&
+          !remaining.some((instance) => instance.instanceKey === activePrimaryInstanceKey)
+        ) {
+          activePrimaryInstanceKey = remaining.at(-1)?.instanceKey;
+        }
+        return [stateKey, { ...current, resourceInstances, activePrimaryInstanceKey }];
+      }),
   );
   let location = state.location;
   const page = state.activePageId ? state.pages[state.activePageId] : undefined;
@@ -55,8 +55,16 @@ export const removePageResource = <Value>(
     const remaining = primary ? (current?.resourceInstances[primary.id] ?? []) : [];
     const active = remaining.find((instance) => instance.instanceKey === current?.activePrimaryInstanceKey);
     if (active) location = { ...location, resource: active.resource, section: active.section };
-    else if (location.parent) location = location.parent;
-    else if (page.parentId) location = { page: state.pages[page.parentId]!.ref };
+    else location = location.parent ?? (page.parentId ? { page: state.pages[page.parentId]!.ref } : undefined);
+  }
+  const ancestors: PageLocation[] = [];
+  for (let current = location; current; current = current.parent) {
+    if (!current.resource || key(current.resource) !== removedKey) ancestors.push(current);
+  }
+  location = undefined;
+  for (const ancestor of ancestors.reverse()) {
+    const { parent: _parent, ...own } = ancestor;
+    location = { ...own, ...(location ? { parent: location } : {}) };
   }
   return { pageStates, location };
 };

@@ -1,7 +1,7 @@
 import { type ControlGroup, type ControlParam, type ControlValueMap, defineView } from "@pstdio/sdk/extensions";
 import { needsLogin } from "../channel-state";
 import type { Run } from "../schemas";
-import { type Channel, type RadarSettings, readSettings } from "../settings";
+import { agentSchema, type Channel, type RadarSettings, readSettings } from "../settings";
 import { changeSettings } from "../settings-lifecycle";
 import { newest, radarChanged, runsOf } from "../store";
 import { plural } from "../text";
@@ -29,11 +29,6 @@ const countControl = (id: string, name: string, value: number): ControlParam => 
   step: 1,
 });
 const readOnly = (id: string, name: string, value: string): ControlParam => ({ id, type: "readOnly", name, value });
-// Harness option keys such as model_reasoning_effort read as "Model reasoning effort".
-const optionName = (key: string) => {
-  const words = key.replace(/[_-]+/g, " ").trim();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-};
 // The group description is the channel's status line: what it costs, or why recent runs skipped it.
 const channelStatus = (channel: Channel, runs: Run[]) => {
   const finished = runs.filter((run) => run.status === "done");
@@ -80,19 +75,13 @@ const partGroups = (part: SettingsPart, settings: RadarSettings, runs: Run[]): C
         params: [{ id: "voice", type: "text", name: "Voice", defaultValue: settings.voice, singleLine: false }],
       },
     ];
-  // The harness control ships in SDK 0.43.0; until then the agent is read-only here and edited with Choose model.
   if (part.id === "agent") {
-    const { harnessId, model, params = {} } = settings.agent;
     return [
       {
         id: "agent",
         title: "Research agent",
-        description: "The harness and model that run each research session. Change them with Choose model in the menu.",
-        params: [
-          readOnly("harness", "Harness", harnessId),
-          readOnly("model", "Model", model ?? "Harness default"),
-          ...Object.entries(params).map(([key, value]) => readOnly(`param-${key}`, optionName(key), String(value))),
-        ],
+        description: "Choose the harness, model and options for research sessions.",
+        params: [{ id: "agent", type: "harness", name: "Model", defaultValue: settings.agent }],
       },
     ];
   }
@@ -125,6 +114,7 @@ const applyValues = (settings: RadarSettings, values: ControlValueMap) => {
   const textValue = (id: string, saved: string | undefined) => (id in values ? String(values[id]).trim() : saved);
   return {
     ...settings,
+    agent: "agent" in values ? agentSchema.parse(values.agent) : settings.agent,
     brandTerms: list("brandTerms", settings.brandTerms),
     topics: list("topics", settings.topics),
     competitors: list("competitors", settings.competitors),

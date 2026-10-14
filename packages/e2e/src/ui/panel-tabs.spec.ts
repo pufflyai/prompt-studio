@@ -47,8 +47,8 @@ test("opens the Session tab context menu while normal clicks only select", async
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText(ticket.content, { exact: true }).click();
 
-  const nav = page.locator('[data-workbench-region="nav"]');
-  await nav.getByRole("button", { name: "Show Side Panel" }).click();
+  const status = page.locator('[data-workbench-region="status"]');
+  await status.getByRole("button", { name: "Show Sidebar" }).click();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
     .getByRole("menu", { name: "Add panel" })
@@ -67,9 +67,9 @@ test("opens the Session tab context menu while normal clicks only select", async
 
   const sessionMenu = page.getByRole("menu", { name: "New session context menu" });
   await expect(sessionMenu).toBeVisible();
-  await expect(sessionMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
-  await expect(sessionMenu.getByRole("menuitem", { name: "View all sessions" })).toBeVisible();
-  await expect(sessionMenu.getByRole("menuitem", { name: "No sessions yet" })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem", { name: "Close tab", exact: true })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem")).toHaveCount(2);
 
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
 });
@@ -86,7 +86,7 @@ test("keeps the tab viewport unscrolled during drag and supports pointer and key
   }, project.id);
   await page.goto(`/projects/${project.id}`);
   await expect(page.getByText("Project home", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Bottom panel", exact: true }).click();
   const header = page.locator('[data-workbench-panel-header="secondary"]');
   for (let index = 0; index < 3; index += 1) {
     await header.getByRole("button", { name: "Add panel", exact: true }).click();

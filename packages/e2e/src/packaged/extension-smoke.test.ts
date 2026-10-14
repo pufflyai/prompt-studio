@@ -1,19 +1,19 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runTestCommand } from "../scripts/run-test-command";
 import { writeSmokeExtension } from "./extension-smoke-fixtures";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 const browserHome = mkdtempSync(join(tmpdir(), "extension-smoke-browser-home-"));
 const smokeEnv = { ...process.env, PSTDIO_HOME: browserHome };
-beforeAll(() => {
+beforeAll(async () => {
   buildBinary();
-  const setup = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
+  const setup = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "install-browser"], {
     env: smokeEnv,
-    encoding: "utf8",
   });
   expect({ code: setup.status, output: setup.stderr }).toMatchObject({ code: 0 });
 }, 180_000);
@@ -31,13 +31,13 @@ for (const [behavior, code] of [
   ["panels", 0],
   ["empty-panels", 0],
 ] as const) {
-  test(`packaged extension smoke reports ${behavior} outside the checkout`, () => {
+  test(`packaged extension smoke reports ${behavior} outside the checkout`, async () => {
     const root = mkdtempSync(join(tmpdir(), "extension-smoke-consumer-"));
     let retained: string | undefined;
     try {
       const source = writeSmokeExtension(root, behavior);
       const original = readFileSync(join(source, "package.json"), "utf8");
-      const run = spawnSync(
+      const run = await runTestCommand(
         PACKAGED_BINARY_PATH,
         [
           "extensions",
@@ -56,9 +56,8 @@ for (const [behavior, code] of [
             PSTDIO_DEFAULT_EXTENSIONS: '["must-not-load"]',
             SMOKE_TEST_CALLER_SECRET: "caller-secret",
           },
-          encoding: "utf8",
-          timeout: 29_000,
         },
+        code,
       );
       expect(existsSync(join(browserHome, "runtime.json"))).toBe(false);
       const result = JSON.parse(run.stdout);
@@ -93,15 +92,19 @@ for (const [behavior, code] of [
   }, 30_000);
 }
 
-test("missing Chromium produces a setup result without changing source", () => {
+test("missing Chromium produces a setup result without changing source", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-smoke-browser-"));
   try {
     const source = writeSmokeExtension(root);
-    const run = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json"], {
-      cwd: root,
-      env: { ...smokeEnv, PLAYWRIGHT_BROWSERS_PATH: join(root, "missing-browser") },
-      encoding: "utf8",
-    });
+    const run = await runTestCommand(
+      PACKAGED_BINARY_PATH,
+      ["extensions", "test", source, "--json"],
+      {
+        cwd: root,
+        env: { ...smokeEnv, PLAYWRIGHT_BROWSERS_PATH: join(root, "missing-browser") },
+      },
+      3,
+    );
     expect(run.status).toBe(3);
     const result = JSON.parse(run.stdout);
     expect(result.checks).toContainEqual(
@@ -155,15 +158,13 @@ test("interruption stops the browser and host while retaining requested evidence
   }
 }, 30_000);
 
-test("a successful run removes disposable disk state by default", () => {
+test("a successful run removes disposable disk state by default", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-smoke-cleanup-"));
   try {
     const source = writeSmokeExtension(root, "commands");
-    const run = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json"], {
+    const run = await runTestCommand(PACKAGED_BINARY_PATH, ["extensions", "test", source, "--json"], {
       cwd: root,
       env: { ...smokeEnv, TMPDIR: root, TMP: root, TEMP: root },
-      encoding: "utf8",
-      timeout: 29_000,
     });
     expect({ code: run.status, result: JSON.parse(run.stdout) }).toMatchObject({ code: 0 });
     expect(readdirSync(root).filter((name) => name.startsWith("pstdio-extension-test-"))).toEqual([]);

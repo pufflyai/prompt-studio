@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import type { DefaultExtensionEntry, DefaultExtensionsConfig } from "./default-extensions-config";
 import { type ExtensionCatalog, findExtensionCatalogEntry } from "./extension-catalog";
 import {
@@ -105,11 +106,13 @@ const prepareDefaultCheckouts = async (
     input.signal?.throwIfAborted();
     sharedByRef.set(
       ref,
-      await prepareShared(names, {
-        ...(ref ? { ref } : {}),
-        hostReleaseRef: input.releaseRef,
-        ...(input.signal ? { signal: input.signal } : {}),
-      }),
+      await traceSetupPhase("default_extensions.checkout", {}, () =>
+        prepareShared(names, {
+          ...(ref ? { ref } : {}),
+          hostReleaseRef: input.releaseRef,
+          ...(input.signal ? { signal: input.signal } : {}),
+        }),
+      ),
     );
   }
   return sharedByRef;

@@ -7,6 +7,7 @@ export const registerWindowingPagePanels = (workbench: WorkbenchCore) => {
     ["workspace-menu", "Workspace tools"],
     ["inspector", "Inspector"],
     ["mode-tools", "Mode tools"],
+    ["proposal", "Proposal"],
   ]) {
     workbench.views.registerView({
       id: `windowing.${id}`,
@@ -28,7 +29,7 @@ export const registerWindowingPagePanels = (workbench: WorkbenchCore) => {
     title: "Ticket",
     path: "windowing/ticket",
     modeId: "windowing",
-    main: { kind: "panels", empty: { kind: "view", id: "windowing.mode-tools" } },
+    main: { kind: "view", view: { kind: "view", id: "windowing.proposal" }, cardinality: "one" },
     panelMenus: { right: { view: { kind: "view", id: "windowing.inspector" }, size: { defaultPx: 240 } } },
     slots: [],
   });
@@ -37,6 +38,6 @@ export const registerWindowingPagePanels = (workbench: WorkbenchCore) => {
     ref: { kind: "placement", extensionId: windowingExtensionId, id: "mode-tools" },
     modeId: "windowing",
     region: "secondary",
-    item: { kind: "view", view: { kind: "view", id: "windowing.mode-tools" }, presence: "fixed" },
+    item: { kind: "view", view: { kind: "view", id: "windowing.mode-tools" }, presence: "open" },
   });
 };

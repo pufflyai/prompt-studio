@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
 import { windowingExtensionId, windowingPages } from "./resources";
+import { moveStoryTab } from "./tab-moves";
 import { WindowingStory } from "./windowing-story";
 
 const meta = {
@@ -41,9 +42,7 @@ export const MixedDocumentTabs: Story = {
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(within(canvasElement).getByRole("textbox", { name: "Notes draft" })).toHaveFocus());
     const header = within(canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement);
-    header.getByRole("tab", { name: "Note A" }).focus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Move to Sidebar" }));
+    await moveStoryTab(header.getByRole("tab", { name: "Note A" }), "Side");
     await expect(header.getByRole("tab", { name: "Note B", selected: true })).toBeVisible();
     await expect(
       within(within(canvasElement).getByRole("navigation", { name: "breadcrumb" })).getByText("Note B", {

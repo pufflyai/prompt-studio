@@ -54,6 +54,7 @@ export interface ConnectWorkbenchPageRuntimeInput {
     state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] | undefined;
   revealRegion?(region: WorkbenchRegion): void;
+  views?: WorkbenchViewRegistry;
   layout: LayoutModel;
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
@@ -69,6 +70,16 @@ const restoreRuntimeGeometry = (
   return clampPanelSizes(restorePageGeometry(layout, geometry, page?.regionSettings ?? {}), (region) =>
     region === "bottom" || region === "aside" ? page?.regionSettings?.[region] : input.layout.getRegionSettings(region),
   );
+};
+
+const revealActivatedPlacements = (
+  input: ConnectWorkbenchPageRuntimeInput,
+  placements: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
+) => {
+  for (const placement of placements) {
+    if (input.views?.getView(placement.value.viewId ?? "")?.reveal !== "explicit")
+      input.revealRegion?.(placement.region);
+  }
 };
 
 const applyPageState = (
@@ -135,9 +146,7 @@ const applyPageState = (
         : available,
     );
     syncOwnedPanelMenus(input.layout);
-    if (source === "transition") {
-      for (const placement of activated) input.revealRegion?.(placement.region);
-    }
+    if (source === "transition") revealActivatedPlacements(input, activated);
   });
 };
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
@@ -234,7 +243,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       const registrations = pagePlacementDeclarations(page).map((slot) => {
         const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
         if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
-        const closable = isPageSlotClosable(slot);
+        const closable = isPageSlotClosable(slot, page);
         return registerWorkbenchViewPlacement(
           input.layout,
           input.views,
@@ -287,6 +296,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       return adopted;
     },
     revealRegion: input.revealRegion,
+    views: input.views,
     layout: input.layout,
     modes: input.modes,
     registry,

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
 import { windowingExtensionId, windowingPages } from "./resources";
+import { moveStoryTab } from "./tab-moves";
 import { WindowingStory } from "./windowing-story";
 
 const meta = {
@@ -15,17 +16,7 @@ const panel = (root: HTMLElement, region: string) =>
   root.querySelector<HTMLElement>(`[data-workbench-panel="${region}"]`)!;
 const moveSession = async (root: HTMLElement, name: string, destination: string) => {
   const tab = within(panel(root, "side")).getByRole("tab", { name: new RegExp(`^${name}(?: ·|$)`) });
-  tab.focus();
-  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-  await userEvent.click(
-    await within(
-      within(document.body).getByRole("group", {
-        name: destination === "Side" || destination === "Secondary" ? /^Follows you in/ : /^Stays with/,
-      }),
-    ).findByRole("menuitem", {
-      name: `Move to ${{ Main: "Editor", Side: "Sidebar", Secondary: "Bottom panel", "Page side": "Side panel", "Page bottom": "Bottom panel" }[destination]}`,
-    }),
-  );
+  await moveStoryTab(tab, destination);
 };
 
 export const PageSideOwnership: Story = {
@@ -58,8 +49,8 @@ export const UndeclaredPagePanels: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Show Side panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Sessions panels" }));
+    await userEvent.click(await within(document.body).findByRole("menuitemcheckbox", { name: "Side panel" }));
     await expect(panel(canvasElement, "aside")).toBeVisible();
     await expect(within(panel(canvasElement, "aside")).getByText("Drop a tab here")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Session 1" }));
@@ -86,7 +77,9 @@ export const TicketPanelMenu: Story = {
     const menu = canvasElement.querySelector<HTMLElement>('[data-workbench-panel-menu="main-right"]')!;
     const tabs = canvasElement.querySelector<HTMLElement>('[data-workbench-panel-header="main"]')!;
     await waitFor(() => expect(within(menu).getByText("Inspector")).toBeVisible());
-    await expect(Math.abs(menu.getBoundingClientRect().top - tabs.getBoundingClientRect().top)).toBeLessThanOrEqual(1);
+    await expect(Math.abs(menu.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom)).toBeLessThanOrEqual(
+      1,
+    );
     await expect(menu.querySelector('[role="tablist"]')).toBeNull();
     await expect(menu.querySelector("[data-workbench-tab-drop]")).toBeNull();
   },

@@ -1,5 +1,6 @@
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { Checkbox, DeleteConfirmationModal, toaster } from "@pstdio/ui";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { executeExtensionCommandValue } from "@/shared/extensions/api";
@@ -15,16 +16,22 @@ import {
   useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
 import { ExtensionDetail } from "./extension-detail";
+import { ExtensionSettingsViews } from "./extension-settings-views";
 
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
   onBack: () => void;
+  settingsInput?: WorkbenchPanelRenderInput;
 }
 
 export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) => {
-  const { projectId, extension, metadata, onBack } = props;
+  const { projectId, extension, metadata, onBack, settingsInput } = props;
+  const settingsPanels =
+    metadata?.settingsPanels.filter(
+      (panel) => panel.extensionId === extension.extensionId && panel.slot.id === "extension.settings",
+    ) ?? [];
   const { t } = useTranslation("projects");
   const setEnabled = useSetProjectExtensionEnabled(projectId);
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
@@ -111,6 +118,11 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         automations={automations}
         diagnostics={diagnostics}
         settings={settingsQuery.data?.settings ?? []}
+        settingsViews={
+          settingsInput && settingsPanels.length ? (
+            <ExtensionSettingsViews input={settingsInput} panels={settingsPanels} />
+          ) : undefined
+        }
         toggling={setEnabled.isPending}
         reloading={reload.isPending}
         upgrading={upgrade.isPending}

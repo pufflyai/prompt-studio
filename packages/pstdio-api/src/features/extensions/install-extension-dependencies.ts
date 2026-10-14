@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createExtensionInstallEnvironment } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import { isPackagedRuntime, resolveManagedBunCommand } from "./extension-bun-runner";
 import { resolveProcessCommand } from "./process-command";
 
@@ -109,13 +110,15 @@ export const installDependencies = async (targetPath: string, input: DependencyI
       })
     : { file: "bun", args, env };
 
-  const result = await run(command.file, command.args, {
-    cwd: targetPath,
-    ...(command.env ? { env: command.env } : {}),
-    ...(input.signal ? { signal: input.signal } : {}),
+  await traceSetupPhase("extension.dependencies", {}, async () => {
+    const result = await run(command.file, command.args, {
+      cwd: targetPath,
+      ...(command.env ? { env: command.env } : {}),
+      ...(input.signal ? { signal: input.signal } : {}),
+    });
+    if (result.exitCode !== 0) {
+      const details = result.stderr.trim() || result.stdout.trim();
+      throw new Error(`Dependency install failed${details ? `: ${details}` : ""}`);
+    }
   });
-  if (result.exitCode !== 0) {
-    const details = result.stderr.trim() || result.stdout.trim();
-    throw new Error(`Dependency install failed${details ? `: ${details}` : ""}`);
-  }
 };

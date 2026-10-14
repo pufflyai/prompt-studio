@@ -33,7 +33,7 @@ For manual app validation, use `bun run dev:playwright`, open the printed dashbo
 
 ## Unused code
 
-`bun run knip` reports unused files, exports, and dependencies across the workspace. CI runs it in the Linux job, so a pull request fails when it leaves dead code or an unused dependency behind. Configure it in `knip.jsonc`:
+`bun run knip` reports unused files, exports, and dependencies across the workspace. CI runs it in the `static_checks` job, so a pull request fails when it leaves dead code or an unused dependency behind. Configure it in `knip.jsonc`:
 
 - Add an entry point when code is loaded by path instead of imported. Examples are webview entries passed to `packageAsset()`, fixtures that tests spawn, and files named in build configs.
 - Add an `ignoreDependencies` entry only when a dependency is used where knip cannot see it, and write a comment that names the user. For example, the workbench build inlines `pstdio-extensions` and `pstdio-api-contracts`, so its `dist` imports their `rimless` and `zod` dependencies.
@@ -46,26 +46,69 @@ The README coverage badge shows line coverage for the whole repository. The Cove
 
 A package's report also lists source files from the packages its tests import. The script merges line hits per file, so each source file counts once. It leaves out tests, stories, fixtures, mocks, test helpers, dependencies, build output, and files outside the repository. Bun reports only files that a test loads, so files that no test imports are missing from the total. Bun's lcov output has no function names, so function coverage cannot be merged and the badge shows lines only.
 
-## Pull request and main runs
+## CI stages
 
-Test and Build runs on every pull request update: opening, reopening, and each new push. The `main` ruleset requires its `ci_passed` check before a pull request can merge. A newer push to the same pull request cancels the older run.
+Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-request-ci-scope.ts` to choose the stage and the packages to test. `ci_passed` is the only check the `main` ruleset requires, and its meaning depends on the stage.
 
-Pull requests run only what their changes need. The `scope` job runs `scripts/ci/pull-request-ci-scope.ts`, which compares the merge commit with the target branch:
+| Stage | Event | Runs | `ci_passed` requires |
+| --- | --- | --- | --- |
+| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI and license checks run when their files change. | No job failed |
+| Merge queue | `merge_group` | Static checks and an unsigned build of every client. No tests and no lint. | The static check, client build and Docker jobs passed |
+| Full | A push to `main`, a manual run, or a pull request with the `ci:full` label | Every job, including Windows, e2e, the desktop tests and the packaged toolchain check | Every job passed |
 
-- The Linux job always builds everything. It lints and tests only changed packages and the packages that depend on them.
-- The Windows jobs run when a package that does filesystem or process work is affected, such as `pstdio-db`, `pstdio-api`, or `pstdio-wt`. A change to one of their dependencies counts. The script lists these packages. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time. The platform job builds and lints every affected package, tests the remaining packages, and runs the Git worktree suite. Both jobs retain the 25-minute limit and are required by `ci_passed`.
-- The e2e jobs run when the `e2e` package is affected. The extensions that e2e loads at runtime and the dashboard it serves are e2e devDependencies, so changes to them count. A test in `packages/e2e` keeps the extension list and the devDependencies in step.
-- The license check runs when a `package.json` or `bun.lock` changes.
-- A change under `scripts/` runs every job. It holds repository tooling, such as the test preload and build scripts.
-- A change outside every workspace package runs every job, unless the file is Markdown, under `design/`, or `LICENSE`.
+A newer event on the same pull request cancels the older run. Every merge queue and `main` commit keeps its own run, so a red commit can always be traced.
 
-On a pull request, `ci_passed` accepts skipped jobs. Each push to `main` runs every job, and there `ci_passed` fails if any job fails or is skipped. A Windows or e2e failure that a pull request skipped shows up on the `main` commit that caused it. Fix it in a follow-up pull request.
+### Pull request stage
+
+The pull request stage is meant to finish in a few minutes, so it runs only Linux jobs:
+
+- `static_checks` runs the whole-repo checks: formatting, package boundaries, knip, the lockfile, the extension API version and report, changesets, the monorepo build, committed build outputs, and translations.
+- `lint_and_test` builds, lints and tests the changed packages and the packages that depend on them. It compares the merge commit with the target branch.
+- `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
+- `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. `license_check` runs when a `package.json` or `bun.lock` changes.
+- A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the three checks above. Markdown files, files under `design/`, and `LICENSE` do not count.
+
+Windows, e2e, packaged, desktop, and Docker jobs do not run on a pull request. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
+
+### Merge queue stage
+
+The merge queue proves that every client still builds from the merged result before it reaches `main`. It runs only work that gives the same result every time, so a flaky test cannot reject a pull request:
+
+- `static_checks`, the same job as on a pull request.
+- `build_clients` builds without signing, because signing secrets are trusted only on `main` and release tags. The Linux row builds the monorepo, compiles the CLI for every platform with `bun run --cwd scripts build:all`, scaffolds the platform packages, and makes the Linux desktop app. The macOS arm64 (`macos-15`), macOS x64 (`macos-15-intel`), and Windows rows make their desktop apps. Desktop sidecars must be compiled on their own platform, so each desktop app needs a native runner.
+- `build_docker` builds the API and landing page images.
+
+The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs passed every `main` run since the stages were split. It squashes, builds up to five groups at once, merges up to five pull requests per group, and merges a group only when every pull request in it passed (`ALLGREEN`). `ci_passed` is the only required check, on pull requests and in the queue.
+
+When a pull request leaves the queue, a build or check failed on the merged result. Rebase, fix, and queue it again. If the failure is not caused by the pull request, the check is not deterministic; fix the check first.
+
+### Full stage
+
+Pushes to `main` run every job. Tests no longer block merging, so a regression shows up on the `main` commit that caused it. Fix it in a follow-up pull request, or link the failure to the flaky-test ticket that owns it before re-running.
+
+Before using **Re-run failed jobs** on a release or nightly, record the failure on a ticket or link it to the ticket that owns it. Keep the job link, failed step or test, and first-attempt evidence. A passing rerun does not close the bug.
+
+The **Weekly CI failure report** workflow collects every attempt of Test and Build and Release Packages from the last seven days. Its job summary groups failed tests and steps, lists affected branches, counts main and release failures, and shows later same-commit passes. Jobs copied into later attempts are counted once. The main first-attempt rate uses completed push runs and includes failures that later passed.
+
+Run it locally with GitHub CLI authentication: `bun scripts/ci/report-ci-failures.ts --since 2026-10-12T00:00:00Z --until 2026-10-13T00:00:00Z`. Optional `--repository owner/repo` and `--output directory` select the source and output folder. The default folder is `test-results/ci-failures`; it contains `runs.json`, `jobs.json`, `summary.json`, and `summary.md`. Failed logs are parsed in memory; unavailable logs are reported beside their job links. The weekly artifact keeps this report data for inspection.
+
+The full stage adds:
+
+- `lint_and_test` and `database_tests` for every package, and the published extension, harness CLI, and license checks.
+- `windows_test_and_build` and `windows_database_tests`. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time.
+- `e2e` (three browser shards), `e2e_cli`, and `packaged_and_vite_e2e`.
+- The desktop source Electron specs and the packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow still runs the Intel tests and the desktop benchmarks.
+- `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows. Linux runs the full packaged suite. Intel macOS runs only the essential CLI, runtime, and extension page tests in `scripts/verify/packaged-runtime-smoke.ts`, as the desktop release runs only `@essential` tests there: slow Intel runners turned timing races in the large UI suite into release failures that other platforms did not have. Windows runs its own short list.
+
+`build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
 
 ## Published extension dependencies
 
 Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
 
-The CI job runs for extension, SDK, UI, and API contract changes, and for repository tooling changes that already run all jobs. It always runs on pushes to `main`. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
+Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
+
+On a pull request, the CI job runs for extension, SDK, UI, and API contract changes, and for changes outside the workspace packages. It always runs in the full stage. The merge queue skips it because it reads the npm registry. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
 ## Extension smoke checks
 
@@ -96,7 +139,7 @@ Global preferences survive project deletion. Browser specs that read or change n
 
 Packaged desktop specs import `test` from `clients/desktop/src/testing/packaged-fixture.ts`. The fixture owns launched process groups and temporary homes. Its teardown runs after a test timeout, even when an unfinished CDP operation prevents the test body from reaching its own cleanup.
 
-Compiled builds generate an empty application database image with the installed PGlite version and current Drizzle migrations. New, empty database directories load that image, including its migration history. The normal migrator still runs, so later schema changes follow the same upgrade path. Nonempty directories always open their existing files, including damaged databases that need recovery. This moves PostgreSQL initialization and fresh schema creation into the build and reduces cold startup. PGlite documents this approach in its [pre-populated filesystem guide](https://pglite.dev/docs/prepopulatedfs).
+Compiled builds generate an empty application database image with the installed PGlite version and current Drizzle migrations. The image holds only `template1`, the database the runtime opens; it leaves out the unused `postgres` and `template0` databases because a first start must write every image file, which is slow on Windows. New, empty database directories load that image, including its migration history. The runtime unpacks the image into `pstdio.db.restoring` beside the data folder, then moves the finished folder into place. A start that stops while unpacking leaves the data folder empty, so the next start unpacks the image again. The normal migrator still runs, so later schema changes follow the same upgrade path. Nonempty directories always open their existing files, including damaged databases that need recovery. This moves PostgreSQL initialization and fresh schema creation into the build and reduces cold startup. PGlite documents this approach in its [pre-populated filesystem guide](https://pglite.dev/docs/prepopulatedfs).
 
 Use the pinned Bun 1.4.2 toolchain for installs and compiled builds. Bun 1.3.14 can reject a valid large tarball when its first network chunk is shorter than the gzip header. This caused intermittent PGlite installation failures on macOS. The [upstream extraction fix](https://github.com/oven-sh/bun/pull/34861) is included in 1.4.2. CI and Docker builds use the same version. The landing-page builder also provides Node 24 for Astro and Vite, matching their runtime in regular CI builds; Bun manages dependencies and runs the package scripts.
 
@@ -106,7 +149,7 @@ Tests install local fixture extensions from `packages/e2e/src/default-extensions
 
 Playwright uses one worker and no retries. CI rejects focused Playwright tests (`test.only`). UI and Vite traces are recorded on the first run and retained on failure. This follows [Playwright's trace modes](https://playwright.dev/docs/test-use-options#recording-options).
 
-CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds start after the Linux build and test job passes. Each UI shard uploads `ui-e2e-results-<shard>`; the packaged/Vite job uploads `packaged-vite-e2e-results`. Reports and failure artifacts are under `packages/e2e/playwright-report` and `packages/e2e/test-results`. Desktop jobs upload their own readiness results and traces.
+CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds run in the merge queue and full stages, next to the other jobs. Each UI shard uploads `ui-e2e-results-<shard>`; the packaged/Vite job uploads `packaged-vite-e2e-results`. Reports and failure artifacts are under `packages/e2e/playwright-report` and `packages/e2e/test-results`. `build_clients` rows that run desktop tests upload `desktop-test-results-<target>`. Release desktop jobs upload their own readiness results and traces.
 
 Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. They run as user 1001, matching the owner of GitHub's mounted home directory; Firefox rejects a root process using that user's home. The image includes browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Desktop jobs still run on their native Linux and macOS runners.
 
@@ -122,19 +165,21 @@ bun run --cwd packages/e2e test:ui -- src/ui/ticket-workflows.spec.ts --repeat-e
 
 To run one CI shard locally, use `bun run --cwd packages/e2e test:ui -- --shard=2/3`. Keep the same shard total when comparing runs.
 
+In CI, UI shards serve prebuilt `ui`, `pstdio-dashboard`, and `pstdio-workbench` Storybooks from the `storybook-static` artifact. The full stage builds that artifact once before starting the shards. Local `test:ui` keeps Storybook dev servers. To check static output locally, run `bun packages/e2e/src/scripts/build-storybooks.ts`, then use `CI=true` when starting the UI tests. Both paths load a real story before tests begin and keep the existing 60-second startup allowance.
+
 Read the first failure and its trace. Check setup, teardown, and server logs before attributing the failure to an assertion. Storybook startup failures include the tail of the server output. Readiness checks must cancel stalled HTTP requests within their deadline.
 
 Keep the existing job and test time limits. A timeout needs an investigation of the slow phase; see [Time limits](#time-limits). A passing rerun alone does not explain the failure.
 
 The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. After building the SDK dependencies, command discovery tests exercise real process launches with PATH overrides, PATHEXT order, PowerShell siblings, explicit wrapper paths, custom npm prefixes, spaces, Unicode, shell operators, conflicting installations, missing targets, and timeout cleanup. npm fixtures use the pinned `cmd-shim` generator and check both adjacent Node and PATH fallback. Argument round trips include literal percent signs, exclamation marks, and variable-like strings with values present in the child environment. Environment tests cover Windows case-insensitive names without passing host secrets to extensions. The same portable cases run on Linux.
 
-`harness-npm-detection.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Changes to any of the three harnesses require native Windows CI. Keep these tests within the existing CI time limits.
+`harness-npm-detection.test.ts` runs the compiled runtime with deterministic OpenCode, Codex, and Claude Code CLI fixtures. It checks detection, versions written to stderr or with terminal colors, a healthy harness alongside failed and hanging probes, project extension filtering, and OpenCode model discovery. It changes installations for the same project and checks discovery again after the availability cache expires. Model requests for all three harnesses must return empty lists when version probes hang, and their child processes must exit. The runtime parent stays alive, and repaired commands must recover detection and model listing in the same runtime after the existing cache expires. The version-probe deadline applies to model listing as well as availability checks. No provider accounts, API keys, or live agent services are required. Changes to any of the three harnesses need native Windows CI, so add the `ci:full` label to their pull requests. Keep these tests within the existing CI time limits.
 
 These tests simulate different inherited environments. Real Explorer/login PATH refresh, PowerShell aliases, WSL-only installations, and organization-managed execution policies still need targeted manual checks. Codex and Claude model/session protocols and OpenCode server startup use separate launch paths; this discovery suite does not establish their Windows compatibility. Those paths need dedicated protocol fixtures before changing their launch behavior.
 
 The npm `cmd-shim@7.0.0` batch wrapper assigns its installation directory without quotes. A prefix containing `&` truncates that directory and fails even when the wrapper runs directly under `cmd.exe`. A native regression checks this failure outside the process API and confirms the API reports the failure too. The healthy npm fixtures use spaces and Unicode; a separate controlled wrapper checks our launcher with `&` in its directory.
 
-Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. The Windows job runs package test suites one at a time to avoid competing database startups; the API suite still uses two file workers.
+Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. The Windows job runs package test suites one at a time to avoid competing database startups. The API suite uses two file workers, then runs `process-discovery.test.ts` alone so PowerShell startup does not compete with a PGlite cold start. The runner logs when that file starts alone. The separate Windows npm shim check still runs it too.
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 

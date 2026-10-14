@@ -121,7 +121,6 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         label={label}
         open={behavior.open}
         setOpen={behavior.setOpen}
-        groups={snapshot.menu ?? []}
         placement={placement}
         workbench={workbench}
       />

@@ -42,7 +42,7 @@ definePlacement({
 });
 ```
 
-A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `fixed` (always open, not closable), `open` (open until the user closes it), or `closed` (opened from the Add panel). A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order` and `movableTo`. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
+A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `open` (open until the user closes it) or `closed` (opened from the panel catalog). The `fixed` value is deprecated. Existing extension declarations retain their always-open, unclosable behavior through the host adapter until the coordinated breaking release. A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order`. `movableTo` is deprecated; use panel `acceptsTabs` to control destinations. The adapter preserves destination limits on old extension declarations. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
 
 Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target validates and activates the mode/page pair as one transaction.
 
@@ -97,7 +97,7 @@ defineMode({
 
 Omitting these fields preserves the existing default positions. Saved user geometry takes priority over authored defaults, except when a panel is fixed with `movable: false`. Hidden and floating panels retain their saved attached edge. Page panel moves remain inside the page and use page-type geometry. Whole-panel moves never change tab ownership or resource binding.
 
-A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Explicit `movableTo` restrictions and the mode's supported panels remain hard limits. Navigation chrome and the Sidenav do not become tabs.
+A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or workbench commands. The destination panel must accept tabs and be available. Deprecated `movableTo` restrictions remain hard limits for legacy extension declarations. Navigation chrome and the Sidenav do not become tabs.
 
 The + control follows the scrolling tab group. Its choices include active panels from other regions that are allowed in this destination. A single-instance panel is reused. Resource bindings retain their declared Add action. Panel menu openers stay at the far right.
 
@@ -123,11 +123,19 @@ Each permission is independent. Omitted permissions allow the action for a provi
 | `floatable` | Allows floating Side. Other panels do not float. |
 | `defaultTab` | Serializable navigation target, resolved once when directly opening an empty panel. |
 
-For a fixed visible panel, declare `canOpen: false` and `canClose: false` in an authored open layout. Disallowed controls are absent. The palette, keyboard commands, navigation, and drops use the same rules. Showing a header grants no permission. Tab movement still follows the placement’s `movableTo` restrictions.
+For a fixed visible panel, declare `canOpen: false` and `canClose: false` in an authored open layout. Disallowed controls are absent. The palette, keyboard commands, navigation, and drops use the same rules. Showing a header grants no permission. Panel permissions never lock a tool tab. Legacy extension tabs still follow their deprecated `movableTo` restrictions.
 
 `collapsible` is deprecated for tab panels in favor of `canOpen` and `canClose`. Old `collapsible: false` declarations still prevent drag collapse while allowing explicit Show and Hide. Page panel menus retain their own collapse settings.
 
-`floatingPanels` is deprecated in favor of `regionSettings.side.floatable`. Existing declarations retain their attached fallback when floating is hidden. New `floatable: false` declarations reject floating requests. Mode `floatingBubble` controls bubble availability; it grants no open or floating permission. `floating.defaultTab` supplies the empty-panel default for a direct floating open. Retained tabs take precedence.
+`floatingPanels` is deprecated in favor of `regionSettings.side.floatable`, `floatingBubble`, and `floating.defaultTab`. Existing declarations retain their attached fallback when floating is hidden. New `floatable: false` declarations reject floating requests.
+
+Mode `floatingBubble` controls bubble availability; it grants no open or floating permission. The global Side control always opens attached Side, including when Side currently floats. The bubble opens floating Side and stays visible while open. Click it again to close. Attaching, floating, or closing keeps the same tabs and their live views.
+
+`floating.defaultTab` overrides the host's new-session creation target for an explicit floating open of an empty Side. It uses the same serializable `NavigationTarget` as a panel's `defaultTab`. The host runs it through the normal navigation and command path after checking panel opening and tab admission. Concurrent opens share the pending creation. Retained tabs take precedence. Navigation, drops, background reveals, restore, and layout reset never create this default. Closing the last tab leaves an explicitly opened panel open.
+
+Drag the bubble to a corner or edge midpoint. All eight targets appear while dragging, with the nearest highlighted. Release saves the anchor. Dragging never toggles Side. Arrow keys move to the next anchor in that direction; Home returns to bottom right. Escape cancels movement, and pointer cancellation restores the starting anchor. The anchor belongs to the mode, survives page navigation and reload, and keeps its alignment when the content area resizes.
+
+Host commands `workbench.openSidePanel` and `workbench.toggleSidePanel` accept `{ presentation: "attached" | "floating" }`. An explicit toggle attaches a floating Side when requesting attached presentation. Omitting presentation keeps the existing command behavior. `workbench.setFloatingBubblePosition` accepts `{ x, y }`, where each coordinate is `0`, `0.5`, or `1`, excluding `{ x: 0.5, y: 0.5 }`. Invalid positions are rejected before layout changes. Pointer, keyboard, and agent movement use this command.
 
 ## Empty panels and headers
 
@@ -137,7 +145,7 @@ An empty-panel `defaultTab` runs only on direct panel open. Navigation, drops, r
 
 A later Close stays effective when that creation finishes. A later explicit navigation or tab move can reveal the panel again. Extension commands return navigation requests as usual; the host keeps those requests linked to the default execution. Native workbench command handlers use `context?.navigation ?? workbench.navigation` for navigation created by their execution, including after an `await`. The fallback supports ordinary command calls that have no execution context. Direct `workbench.navigation` calls remain explicit actions. This keeps creation separate from newer user actions without holding an asynchronous global scope.
 
-Host mode headers are visible by default and show a single fixed tab. `showHeader: false` hides the header until the user chooses Show header. The panel’s top edge offers that action through right-click, Shift+F10, the Context Menu key, or touch hold. Visible headers offer Hide header in their options menu and tab context menu. The saved header choice belongs to the panel owner. Page panel menus have no headers.
+Host mode headers are visible by default, including when only one tool is open. `showHeader: false` hides the header until the user chooses Show header. The panel’s top edge offers that action through right-click, Shift+F10, the Context Menu key, or touch hold. Visible headers offer Hide header in their options menu and tab context menu. The saved header choice belongs to the panel owner. Page panel menus have no headers.
 
 During the additive extension release, the host adapter preserves existing extension header and tab behavior, even when new permission fields are used: tabs may override an authored hidden header, and a lone fixed tab may remain headerless. `alwaysShowTabs` retains its old meaning. The authoritative authored-header behavior applies to host stories first; the extension cutover requires the coordinated breaking release described in [API versioning](0014-api-versioning.md). An explicit user header choice applies to that owner.
 

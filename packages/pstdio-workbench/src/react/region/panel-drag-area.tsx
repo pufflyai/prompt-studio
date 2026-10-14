@@ -42,7 +42,7 @@ interface PanelDragAreaProps extends BoxProps {
 }
 const occupied =
   "button,a,input,textarea,select,[role='button'],[role='tab'],[role='menuitem'],[contenteditable='true'],[data-workbench-tab],[data-workbench-breadcrumb]";
-export const PanelDragArea = (props: PanelDragAreaProps) => {
+export const PanelDragHandle = (props: PanelDragAreaProps) => {
   const { workbench, panel, ...rest } = props;
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
@@ -50,8 +50,29 @@ export const PanelDragArea = (props: PanelDragAreaProps) => {
   const drag = useDraggable({ id: `panel:${panel}`, data: { panel }, disabled: !positions.length });
   const empty = (target: EventTarget | null) => target instanceof Element && !target.closest(occupied);
   return (
+    <Box
+      {...rest}
+      ref={drag.setNodeRef}
+      data-workbench-panel-drag={panel}
+      tabIndex={positions.length ? 0 : undefined}
+      aria-label={`${panel} panel placement`}
+      onMouseDown={(event) => {
+        if (empty(event.target)) drag.listeners?.onMouseDown?.(event);
+      }}
+      onTouchStart={(event) => {
+        if (empty(event.target)) drag.listeners?.onTouchStart?.(event);
+      }}
+    />
+  );
+};
+
+export const PanelDragArea = (props: PanelDragAreaProps) => {
+  const { workbench, panel } = props;
+  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  return (
     <ResourceContextMenu
-      actions={positions.map((edge) => ({
+      actions={geometryPositions(workbench, panel).map((edge) => ({
         key: edge,
         label: panelPositionLabel(panel, edge),
         onClick: () => {
@@ -59,19 +80,7 @@ export const PanelDragArea = (props: PanelDragAreaProps) => {
         },
       }))}
     >
-      <Box
-        {...rest}
-        ref={drag.setNodeRef}
-        data-workbench-panel-drag={panel}
-        tabIndex={positions.length ? 0 : undefined}
-        aria-label={`${panel} panel placement`}
-        onMouseDown={(event) => {
-          if (empty(event.target)) drag.listeners?.onMouseDown?.(event);
-        }}
-        onTouchStart={(event) => {
-          if (empty(event.target)) drag.listeners?.onTouchStart?.(event);
-        }}
-      />
+      <PanelDragHandle {...props} />
     </ResourceContextMenu>
   );
 };

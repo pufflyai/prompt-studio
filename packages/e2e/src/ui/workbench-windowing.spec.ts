@@ -1,5 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
+import { checkFloatingBubblePointer } from "./floating-bubble-interactions";
 import { exerciseForeignContext } from "./foreign-context-playwright";
 import {
   STORY_RENDER_TIMEOUT_MS,
@@ -12,13 +13,37 @@ import { exercisePageSurface } from "./page-surface-playwright";
 import { exerciseClosedEdges, exercisePanelPointer, exerciseTabInsertion } from "./panel-placement-playwright";
 import { readStoryOutcome } from "./story-outcome";
 import { exerciseWebview } from "./webview-playwright";
+import { windowingInteractions } from "./workbench-windowing-interactions";
 
 const storyIds = [
+  "panel-toggles-default",
+  "panel-toggles-side-left",
+  "panel-toggles-navigation-right",
+  "panel-toggles-mode-status",
+  "panel-toggles-hidden-status",
+  "panel-toggles-kiln",
+  "panel-toggles-boombox",
+  "workspace-page-header",
+  "ticket-page-header",
+  "page-header-without-menus",
+  "session-start-empty",
+  "session-start-closed",
+  "session-start-visible",
+  "session-start-fixed",
+  "session-start-inactive",
+  "view-background-active",
+  "view-background-mounted",
+  "view-background-legacy-mounted",
+  "view-background-legacy-active",
   "smoke",
   "whole-panel-placement",
   "action-bar-edges",
   "closed-edge-reveal",
   "tab-insertion",
+  "proposal-reopen",
+  "player-reopen",
+  "moved-declared-tool",
+  "legacy-fixed-tool",
   "webview",
   "boombox",
   "kiln",
@@ -45,12 +70,47 @@ const storyIds = [
   "panel-header-choices",
   "floating-panel-headers",
   "empty-floating-panel-headers",
+  "attached-and-floating",
+  "bubble-keyboard",
+  "bubble-pointer",
   "legacy-panel-headers",
   "fixed-page-transfer",
+  "removed-workspace-resource",
+  "removed-workspace-contribution",
+  "removed-panel-contribution",
+  "removed-mode-contribution",
+  "removed-session-resource",
+  "removed-owner-forbidden-reopen",
   "foreign-context",
   "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 storyIds.push(
+  ...[
+    "single-items",
+    "single-resource-page",
+    "close-resource-page",
+    "hidden-single-tabs",
+    "multiple-items",
+    "single-closable-panel",
+    "single-resource-with-menu",
+    "actions-without-tabs",
+  ].map((name) => `pstdio-workbench-reference-core-api-panel-tabs--${name}`),
+  ...[
+    "single-available-fixed-panel",
+    "multiple-available-fixed-panels",
+    "collapsed-menu-with-tab",
+    "header-action-without-tabs",
+  ].map((name) => `pstdio-workbench-reference-core-api-panel-header-visibility--${name}`),
+  "pstdio-workbench-reference-core-api-panel-menus--legacy-without-page",
+  "pstdio-workbench-reference-core-api-panel-menus--reopen-attached",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-when-narrow",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-embedded-content",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-tall-content",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-peek-keeps-attached-menu",
+  "pstdio-workbench-reference-core-api-panel-menus--floating-peek-keeps-open-preference",
+  "pstdio-workbench-reference-core-api-title-bar--desktop-panel-controls",
+  "pstdio-workbench-reference-core-api-status-bar--mode-status-with-panel-toggles",
+  "pstdio-workbench-guides-tab-actions--pin-and-close",
   "pstdio-workbench-showcases--boombox",
   "pstdio-workbench-showcases--kiln",
   "pstdio-workbench-showcases-dashboard--dashboard",
@@ -120,8 +180,10 @@ test.describe("Workbench windowing stories", () => {
         "page-surface-webview": () => exerciseWebview(page, storyId),
       };
       await interactions[storyId.split("--").at(-1)!]?.();
+      await checkFloatingBubblePointer(page, storyId);
+      await windowingInteractions[storyId]?.(page);
       if (
-        /--(?:foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page)/.test(
+        /--(?:foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page|session-start)/.test(
           storyId,
         )
       ) {

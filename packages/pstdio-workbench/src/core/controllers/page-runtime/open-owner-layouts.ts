@@ -4,7 +4,7 @@ import { buildUpdatedPlacement } from "../../registries/layout/layout-operations
 import type { OpenWidgetInput, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { pageLocationTarget } from "../page-location/page-location-target";
-import { modeLayoutScope } from "./owner-layout-scope";
+import { modeLayoutScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
 
 type LayoutCache = ReturnType<typeof createWorkbenchLayoutCache>;
@@ -34,6 +34,16 @@ export const saveOpenOwnerLayouts = (core: WorkbenchCore) => {
 
 export const connectOpenOwnerLayouts = (core: WorkbenchCore, cache: LayoutCache) => {
   caches.set(core, cache);
+  core.pages.store.subscribe((state, previous) => {
+    for (const id of Object.keys(previous.pages)) {
+      if (!state.pages[id]) cache.removeOwner("page", id, state.projectId);
+    }
+  });
+  core.modes.store.subscribe((state, previous) => {
+    for (const id of Object.keys(previous.modes)) {
+      if (!state.modes[id]) cache.removeOwner("mode", id, core.pages.store.getState().projectId);
+    }
+  });
   core.layout.store.subscribe(() => {
     const state = core.pages.store.getState();
     if (state.activeModeId) cache.saveMode(state.projectId, state.activeModeId, core.layout.getLayout());
@@ -46,7 +56,16 @@ export const openOwnerLayouts = (core: WorkbenchCore) => {
   const current = { scope, layout: core.layout.getLayout() };
   const layouts = state.projectId ? (caches.get(core)?.listLayouts(state.projectId) ?? []) : [];
   const modeScope = state.activeModeId ? modeLayoutScope(state.projectId, state.activeModeId) : undefined;
-  return [current, ...layouts.filter((entry) => entry.scope !== scope && entry.scope !== modeScope)];
+  return [
+    current,
+    ...layouts.filter((entry) => {
+      if (entry.scope === scope || entry.scope === modeScope) return false;
+      const page = pageOwnerFromLayoutScope(entry.scope);
+      if (page) return Boolean(state.pages[page.pageId]);
+      const mode = entry.scope.match(/\/owner\/mode\/([^/]+)$/);
+      return !mode || Boolean(core.modes.getMode(decodeURIComponent(mode[1]!)));
+    }),
+  ];
 };
 
 export const pageOwnerLocation = (core: WorkbenchCore, scope: string) => {

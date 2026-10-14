@@ -7,7 +7,7 @@ import { createTestHarnessRecord } from "./test-harness-registry";
 const buildContext = (_record: unknown, options?: { projectId?: string }) =>
   ({ projectId: options?.projectId }) as HarnessContext;
 
-test("source reload stops only that source's workers and waits before replacing them", async () => {
+test("a changed provider stops only its own workers in that project and waits before replacing them", async () => {
   let releaseCleanup: () => void = () => {};
   const cleanup = new Promise<void>((resolve) => {
     releaseCleanup = resolve;
@@ -31,9 +31,10 @@ test("source reload stops only that source's workers and waits before replacing 
   const secondProject = await lifecycle.get([worker], "p2");
   await secondProject.get(worker.id)!.capabilities({ projectId: "p2" });
 
-  lifecycle.invalidate({ sourcePath: "/extensions/worker", projectId: "p1" });
+  const changed = createTestHarnessRecord("worker");
+  changed.sourcePath = worker.sourcePath;
   let replaced = false;
-  const replacing = lifecycle.get([worker, other], "p1").then((registry) => {
+  const replacing = lifecycle.get([changed, other], "p1").then((registry) => {
     replaced = true;
     return registry;
   });

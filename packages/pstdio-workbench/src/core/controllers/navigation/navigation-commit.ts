@@ -18,7 +18,9 @@ export const activateNavigationPlacement = (
       (tab) => tab.placementIdentity && placementIdentityKey(tab.placementIdentity) === key,
     );
     if (tab) {
-      if (destination) {
+      const changesOwner =
+        destination && ["main", "aside", "bottom"].includes(destination) !== (identity.kind === "page");
+      if (destination && (destination !== region.id || changesOwner)) {
         core.movePanel(tab.widgetId, destination);
         return;
       }

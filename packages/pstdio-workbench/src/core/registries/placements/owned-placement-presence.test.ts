@@ -92,7 +92,7 @@ describe("static placement presence", () => {
       .map((placement) => (placement.identity.kind === "shell" ? placement.identity.placementId : "other-owner"));
     expect(rendered.sort()).toEqual(["fixed", "open"]);
   });
-  test("a fixed placement is not closable", () => {
+  test("host placements are closable even when their old declaration uses fixed", () => {
     const { workbench } = setup();
     workbench.shellPlacements.registerPlacement({
       id: "fixed",
@@ -106,11 +106,9 @@ describe("static placement presence", () => {
       },
       region: "side",
     });
-    expect(() =>
-      workbench.shellPlacements.closePlacement({ kind: "shell", placementId: "fixed", instanceKey: "default" }),
-    ).toThrow();
-    const placement = workbench.shellPlacements.resolvePlacements()[0];
-    expect(placement?.value.closable).toBe(false);
+    expect(workbench.shellPlacements.resolvePlacements()[0]?.value.closable).toBe(true);
+    workbench.shellPlacements.closePlacement({ kind: "shell", placementId: "fixed", instanceKey: "default" });
+    expect(workbench.shellPlacements.resolvePlacements()).toEqual([]);
   });
   test("a closed optional placement stays closed when the user returns to its mode", () => {
     const { workbench, open, sideWidgets } = setup();

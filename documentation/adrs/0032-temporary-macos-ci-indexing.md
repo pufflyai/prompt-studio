@@ -73,6 +73,13 @@ signed app. On 2026-10-10 the user approved a 28-second Intel cold-start budget,
 about 20% above the slowest release rehearsal that day (23.3 seconds), and a
 60-second Intel test limit.
 
+## Update: after-merge desktop tests (2026-10-12)
+
+Test and Build now runs the desktop source and packaged tests after each merge to
+`main`, on Linux, macOS arm64 and Windows. Its Intel row only builds the app and
+runs no tests, so it does not disable indexing. Intel tests still run only in
+`.github/workflows/release-desktop.yml`, together with the indexing step.
+
 ## Removal
 
 Remove the setup when the hosted image provides a quiet indexing state before

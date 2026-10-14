@@ -5,6 +5,7 @@ import {
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
 import { resolvePageMode } from "./page-availability";
+import { isManyResourceMain } from "./page-main";
 import { pageFollowerIdentities, pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
 import type { WorkbenchPageLocationCommitInput } from "./page-registry-internals";
 import { type PageRegistryCommitInput, resolveModePlacementSet } from "./page-registry-state";
@@ -28,6 +29,10 @@ export interface PreparedOwnedPlacements<Value> {
   shell: readonly ResolvedOwnedPlacement<Value>[];
   mode: readonly ResolvedOwnedPlacement<Value>[];
 }
+// A close commits the caller's remaining selection without opening Main again.
+const primaryStateForAction = (input: Parameters<typeof selectPrimaryTarget>[0], action: string) =>
+  action === "closePagePlacement" ? input.state : selectPrimaryTarget(input);
+
 export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryInput<Value>) => {
   const normalizeResource = input.resources.normalize;
   const resourceKey = (resource: Parameters<typeof normalizeResource>[0]) =>
@@ -129,12 +134,16 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       pageStates[stateKey] ??
       input.restorePageState?.(page, target.location, target.projectId) ??
       emptyPageState(page);
-    const primaryState = selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
+    const primaryState = primaryStateForAction(
+      { page, state: currentPageState, target: normalizedTarget, resourceKey },
+      target.action,
+    );
     const openFollowers =
       !target.pageStates ||
       current.activePageId !== page.id ||
       resourceIdentity(current.location?.resource) !== resourceIdentity(normalizedTarget.resource) ||
-      current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey;
+      (isManyResourceMain(page) &&
+        current.pageStates[stateKey]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey);
     const pageState = openFollowers
       ? openPageResourceBindings({ page, state: primaryState, target: normalizedTarget, resourceKey })
       : primaryState;
@@ -166,7 +175,8 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     if (current.activePageId !== target.pageId) throw new Error(`Page is not active: ${target.pageId}`);
     const page = requirePage(current, target.pageId);
     const slot = requirePageSlot(page, target.slotId);
-    if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
+    if (slot.role === "primary" && page.tabLocks === "legacy")
+      throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
     const stateKey = pageStateKey(page, current.location, input.resources);
     let pageState = current.pageStates[stateKey] ?? emptyPageState(page);
     let instanceKey = "default";

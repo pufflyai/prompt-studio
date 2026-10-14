@@ -38,6 +38,7 @@ export const getWorkbenchPanelMenuLabel = (panel: WorkbenchPanelRegion, side: Wo
   `${panelLabels[panel]} ${side} menu`;
 
 export interface WorkbenchPanelMenuView {
+  menuId: string;
   region: WorkbenchPanelMenuRegion;
   side: WorkbenchPanelMenuSide;
   label: string;
@@ -98,6 +99,7 @@ const useWorkbenchPanelMenu = (
   );
 
   return {
+    menuId: panelStateKey,
     region,
     side,
     pageOwned: activePlacement?.role === "panel-menu" && activePlacement.placementIdentity?.kind === "page",

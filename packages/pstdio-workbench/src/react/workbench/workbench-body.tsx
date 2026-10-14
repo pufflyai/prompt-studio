@@ -36,8 +36,8 @@ const resolveRegionSize = (
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench, breadcrumbHeader } = props;
-  const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const edge = useWorkbenchStore(workbench.layout.store, () => workbench.getPanelEdge("secondary"));
+  const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
   const { hasMainHeader, secondaryPanel } = panels;
@@ -63,28 +63,29 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minW="0"
       w="full"
       overflow="hidden"
+      position="relative"
     >
       <WorkbenchRegion workbench={workbench} region="main" title="Main" />
+      <WorkbenchTabDropTarget workbench={workbench} region="main" />
     </WorkbenchFocusRegion>
   );
   const editor = (
-    <WorkbenchPanelMenuLayout workbench={workbench} panel="main">
-      <Grid
-        data-workbench-editor
-        gridTemplateRows="auto minmax(0, 1fr)"
-        w="full"
-        h="full"
-        minH="0"
-        minW="0"
-        position="relative"
-      >
-        <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
-        <WorkbenchTabDropTarget workbench={workbench} region="main" />
-        <Box gridRow="2" minH="0" minW="0" overflow="hidden">
+    <Grid
+      data-workbench-editor
+      gridTemplateRows="auto minmax(0, 1fr)"
+      w="full"
+      h="full"
+      minH="0"
+      minW="0"
+      position="relative"
+    >
+      <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      <Box gridRow="2" minH="0" minW="0" overflow="hidden">
+        <WorkbenchPanelMenuLayout workbench={workbench} panel="main">
           {mainRegion}
-        </Box>
-      </Grid>
-    </WorkbenchPanelMenuLayout>
+        </WorkbenchPanelMenuLayout>
+      </Box>
+    </Grid>
   );
 
   const mainContent = (

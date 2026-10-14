@@ -58,7 +58,7 @@ const createResourceRebindWorkbench = () => {
     id: "guide.branches",
     item: {
       kind: "view",
-      presence: "fixed",
+      presence: "open",
       view: {
         kind: "view",
         id: "guide.branches",
