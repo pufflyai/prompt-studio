@@ -39,7 +39,7 @@ Only Main contains a page side panel and a page secondary panel (`bottom`). Side
 
 Main contains the page breadcrumb and a page frame. Below the breadcrumb, the page side (`aside`) runs the full height beside the editor and page bottom. The page bottom spans only the editor column. The mode's Side and Secondary surround the whole page. Every page has both page panels, even without slots or region settings. Empty automatic panels start closed; an explicitly opened empty panel keeps its drop surface.
 
-Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus sit beside the editor tab row and span the full editor height. They have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
+Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus start below the Main header and span the editor content height. The header spans the editor and both menus. They have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
 
 Page side and bottom slots use normal page placement identities. Moving a tab among Main, aside, and bottom preserves its view and resource. Both page panels accept tabs unless their `acceptsTabs` policy forbids it. The legacy page slot `side` still places its initial view in the mode Side.
 
@@ -65,7 +65,17 @@ Configured persistence is the source of saved owner state. Clearing an inactive 
 
 Layout cache version 6 discards older local arrangements. Routed locations, resources, tree state, and independent menu preferences stay valid. This ownership and cache reset follows the decision recorded for PS-609; it is a breaking behavior change and must pass the workbench track's release gate before publishing.
 
-Terminal bindings use the stable tab ID. Changing a page scope or transferring a tab cannot create or stop a terminal session. Resource and title updates reach the tab's current or saved owner without changing its identity or view. An explicit close follows the terminal surface's existing lifecycle contract.
+Terminal bindings use the stable tab ID. Changing a page scope or transferring a tab cannot create or stop a terminal session. Resource and title updates reach the tab's current or saved owner without changing its identity or view. Closing a session or terminal tab closes its view and leaves its runtime running. Explicit runtime stop/delete owns execution lifetime; disposing the host terminal controller still stops its live sessions.
+
+## Resource and view lifetime
+
+Deleting a resource makes its page inaccessible. Cleanup removes the page instance, all its tabs (including tabs bound to another resource), retained view mounts, selection, saved restoration, and navigation through the deleted resource. It also removes views bound to that resource from other page, mode, and shell owners. Deleted editors and inaccessible owners are not retained for recovery. A resource reference without a project names the active project during cleanup.
+
+A valid foreign session or terminal keeps its resource binding and execution when its containing page is deleted. A later explicit open uses that existing resource and the normal destination policy. A matching forbidden destination fails; navigation does not silently choose another panel or create another runtime. The reopened view may be a new instance. Closed-view drafts and mount state are not a recovery contract.
+
+Contribution unregistration uses the registered disposables and normal navigation failure/fallback rules. It clears saved layouts for the removed owner. Editor lookup uses registered owners and widget contributions, so a closed foreign view cannot prevent explicit reopening. There is no separate preservation or recovery state for removed pages, modes, or panels. Unregistration never stops a valid bound session. Ordinary page navigation, mode changes, and Hide preserve owners and tabs.
+
+Reset restores missing declared tools and layout settings. Open or moved instances stay unique, including foreign sessions dropped into a page. A closed terminal preset reuses its valid resource runtime when reopened. Reset cannot bring back a deleted page or seed its tabs into an orphan owner.
 
 ## Navigation tree ownership
 
@@ -78,3 +88,5 @@ Mode and page Sidenav contributions carry opaque owner keys. TreeRenderer receiv
 - Never infer ownership from region, resource kind, label, or current tab.
 - Never use ownership as a permission decision by itself.
 - Return and track every registration disposable.
+
+Panel header visibility uses a context menu on the visible header or hidden top edge, available by right-click, Shift+F10, Context Menu key, and touch long-press. Headers have no ellipsis menu button. Tab context menus offer only Pin/Unpin and Close when applicable; resource actions remain on resource surfaces. Moving a routed editor from Main to page side or page bottom preserves its page/resource, URL, breadcrumb and menu bindings. Main fallback is reconciled when the editor moves out of the page owner into a mode panel.

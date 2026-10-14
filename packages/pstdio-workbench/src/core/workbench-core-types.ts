@@ -32,7 +32,7 @@ import type {
 import type { MenuRegistry } from "./registries/menus/menu-registry";
 import type { WorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "./registries/modes/mode-registry";
-import type { NavigationRegistry } from "./registries/navigation/navigation-registry";
+import type { NavigationRegistry, NavigationTarget } from "./registries/navigation/navigation-registry";
 import type { NavigationTreeRegistry } from "./registries/navigation/navigation-tree-registry";
 import type { NotificationRegistry } from "./registries/notifications/notification-registry";
 import type { WorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
@@ -84,6 +84,7 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  openView(input: import("./controllers/navigation/view-navigation").OpenWorkbenchViewInput): unknown;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
   movePanel(
@@ -180,6 +181,8 @@ export interface createWorkbenchInput {
   regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
   /** Default floating policy. The active mode may override it. */
   floatingPanels?: "visible" | "hidden";
+  /** Host creation target for an explicit floating open of an empty Side. */
+  floating?: { defaultTab?: NavigationTarget };
   initialSidePanelMode?: WorkbenchSidePanelMode;
   startPage?: PageRef;
 }

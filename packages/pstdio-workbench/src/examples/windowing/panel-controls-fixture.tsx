@@ -8,7 +8,7 @@ export const createPanelControlsFixture = (
   const fixture = createWindowingFixture("windowing", {
     pagePanels: true,
     registerMode: (workbench) => {
-      workbench.modes.registerMode({
+      const mode = workbench.modes.registerMode({
         id: "windowing",
         label: "Windowing",
         chrome: {
@@ -32,6 +32,7 @@ export const createPanelControlsFixture = (
         });
       if (statusChrome === "hidden")
         workbench.statusBar.registerItem({ id: "hidden.status", viewId: "windowing.status", slot: "trailing" });
+      return mode;
     },
   });
   const layout = fixture.workbench.layout.getLayout();

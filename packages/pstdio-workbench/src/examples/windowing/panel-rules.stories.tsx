@@ -140,7 +140,8 @@ export const PanelHeaderChoices: Story = {
     );
     const terminal = headers.workbench.layout.listPanelInstances("bottom")[0]!;
     await expect(() => headers.workbench.movePanel(terminal.instanceId, "secondary")).toThrow("cannot move");
-    await userEvent.click(canvas.getByRole("button", { name: "secondary header options" }));
+    canvas.getByLabelText("secondary header", { exact: true }).focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
     await userEvent.click(within(document.body).getByRole("menuitem", { name: "Hide header" }));
     await waitFor(() => expect(canvas.queryByRole("tab", { name: "Timeline" })).toBeNull());
     await expect(headers.workbench.shell.getPanelPolicy("secondary").showHeader).toBe(false);

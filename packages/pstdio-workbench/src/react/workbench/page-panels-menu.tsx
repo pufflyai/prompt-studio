@@ -20,6 +20,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
   const menus = useWorkbenchPanelMenus(workbench, "main").filter((menu) => menu.has);
   const bottom = usePanelPolicy(workbench, "bottom");
   const aside = usePanelPolicy(workbench, "aside");
+  const geometry = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions);
   const peekMenu = menus.find((menu) => menu.menuId === peekMenuId && !menu.canAttach);
   useEffect(() => {
     if (peekMenuId && !peekMenu) setPeekMenuId(undefined);
@@ -27,8 +28,18 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
   if (!page && !menus.length) return null;
   const label = `${page ? pageTitle(page) : "Editor"} panels`;
   const panels = [
-    { region: "bottom", label: "Bottom panel", policy: bottom },
-    { region: "aside", label: "Side panel", policy: aside },
+    {
+      region: "bottom",
+      label: "Bottom panel",
+      policy: bottom,
+      icon: geometry.bottom.edge === "top" ? "PanelTop" : "PanelBottom",
+    },
+    {
+      region: "aside",
+      label: "Side panel",
+      policy: aside,
+      icon: geometry.aside.edge === "left" ? "PanelLeft" : "PanelRight",
+    },
   ] as const;
   return (
     <>
@@ -43,7 +54,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
         <Portal>
           <Menu.Positioner>
             <Menu.Content aria-label={label}>
-              {(page ? panels : []).map(({ region, label, policy }) => (
+              {(page ? panels : []).map(({ region, label, policy, icon }) => (
                 <Menu.CheckboxItem
                   key={region}
                   value={region}
@@ -53,6 +64,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                     void runUserAction(workbench, label, () => workbench.shell.setRegionOpen(region, checked))
                   }
                 >
+                  <WorkbenchIcon name={icon} size={14} />
                   <Menu.ItemText>{label}</Menu.ItemText>
                   <Menu.ItemIndicator />
                 </Menu.CheckboxItem>
@@ -68,6 +80,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                     else menu.onCollapsedChange(!checked);
                   }}
                 >
+                  <WorkbenchIcon name={menu.side === "left" ? "PanelLeft" : "PanelRight"} size={14} />
                   <Menu.ItemText>{menu.title}</Menu.ItemText>
                   <Menu.ItemIndicator />
                 </Menu.CheckboxItem>
@@ -81,6 +94,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                   )
                 }
               >
+                <WorkbenchIcon name="RotateCcw" size={14} />
                 Reset layout
               </Menu.Item>
             </Menu.Content>

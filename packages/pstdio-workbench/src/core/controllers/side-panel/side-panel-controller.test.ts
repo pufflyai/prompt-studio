@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { LayoutPersistenceAdapter, WorkbenchLayout } from "../../registries/layout/layout-model";
 import { createLayoutModel } from "../../registries/layout/layout-model";
 import { createDisposable } from "../../shared/disposable";
+import { createWorkbench } from "../../workbench-core";
 import { createWorkbenchSidePanelController } from "./side-panel-controller";
 
 const createMemoryLayoutPersistence = (): LayoutPersistenceAdapter => {
@@ -29,6 +30,71 @@ const createFloatingPolicy = () => {
 };
 
 describe("createWorkbenchSidePanelController", () => {
+  test("legacy hidden floating panels keep the requested floating default with attached presentation", async () => {
+    const core = createWorkbench({ initialSidePanelMode: "closed" });
+    let created = 0;
+    core.commands.registerCommand(
+      { id: "legacy-default", label: "Default" },
+      {
+        execute: () => {
+          created++;
+        },
+      },
+    );
+    core.modes.registerMode({
+      id: "legacy",
+      floatingPanels: "hidden",
+      floating: { defaultTab: { kind: "command", commandId: "legacy-default" } },
+      activate() {},
+    });
+    core.modes.setActiveMode("legacy");
+    await core.sidePanel.setMode("floating");
+    expect(core.sidePanel.getMode()).toBe("attached");
+    expect(created).toBe(1);
+    await core.dispose();
+  });
+  test("presentation commands reject invalid and forbidden requests before mutation", async () => {
+    const core = createWorkbench({ regionSettings: { side: { floatable: false } } });
+    const before = core.layout.getLayout();
+    for (const presentation of ["floating", "overlay"]) {
+      await expect(core.commands.executeCommand("workbench.openSidePanel", { presentation })).rejects.toThrow();
+      expect(core.layout.getLayout()).toBe(before);
+    }
+    await expect(
+      core.commands.executeCommand("workbench.openSecondaryPanel", { presentation: "attached" }),
+    ).rejects.toThrow("Only Side");
+    expect(core.layout.getLayout()).toBe(before);
+    await core.dispose();
+  });
+  test("explicit attached and floating opens share tabs and run the host default once", async () => {
+    const core = createWorkbench({
+      initialSidePanelMode: "closed",
+      floating: { defaultTab: { kind: "command", commandId: "new-session" } },
+    });
+    let created = 0;
+    core.layout.registerWidget({ id: "session", region: "side", title: "Session", rendererId: "session" });
+    core.commands.registerCommand(
+      { id: "new-session", label: "New session" },
+      {
+        execute() {
+          created++;
+          core.layout.openWidget("session");
+        },
+      },
+    );
+    await core.commands.executeCommand("workbench.openSidePanel", { presentation: "floating" });
+    expect(core.sidePanel.getMode()).toBe("floating");
+    expect(created).toBe(1);
+    const tabs = core.layout.getLayout().regions.side.widgets;
+    await core.commands.executeCommand("workbench.toggleSidePanel", { presentation: "attached" });
+    expect(core.sidePanel.getMode()).toBe("attached");
+    expect(core.layout.getLayout().regions.side.widgets).toEqual(tabs);
+    await core.commands.executeCommand("workbench.toggleSidePanel", { presentation: "attached" });
+    expect(core.sidePanel.getMode()).toBe("closed");
+    await core.commands.executeCommand("workbench.openSidePanel", { presentation: "floating" });
+    expect(created).toBe(1);
+    await core.dispose();
+  });
   test("starts floating by default and attached when floating is disabled", () => {
     expect(createWorkbenchSidePanelController({ layout: createLayoutModel() }).getMode()).toBe("floating");
 

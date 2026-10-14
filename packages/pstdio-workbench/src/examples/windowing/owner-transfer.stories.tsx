@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
+import { moveStoryTab } from "./tab-moves";
 import { visibleWindowingLabel } from "./visible-label";
 import { WindowingStory } from "./windowing-story";
 
@@ -14,9 +15,7 @@ type Story = StoryObj<typeof meta>;
 
 const moveTab = async (panel: HTMLElement, name: string, destination: string) => {
   const tab = within(panel).getByRole("tab", { name: new RegExp(`^${name}(?: ·|$)`) });
-  tab.focus();
-  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-  await userEvent.click(await within(document.body).findByRole("menuitem", { name: `Move to ${destination}` }));
+  await moveStoryTab(tab, destination);
 };
 
 export const OwnerTransfer: Story = {
@@ -24,7 +23,7 @@ export const OwnerTransfer: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const main = canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement;
-    await userEvent.click(within(main).getByRole("tab", { name: "Changes" }));
+    await userEvent.click(within(main).getByRole("tab", { name: /^Changes(?: ·|$)/ }));
     const draft = canvas.getByRole("textbox", { name: "Changes draft" });
     await userEvent.type(draft, "Keep this workspace draft");
     await userEvent.click(within(canvas.getByRole("group", { name: "Changes view" })).getByText("README.md"));
@@ -70,7 +69,7 @@ export const FilesTransfer: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const main = canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement;
-    await userEvent.click(within(main).getByRole("tab", { name: "Files" }));
+    await userEvent.click(within(main).getByRole("tab", { name: /^Files(?: ·|$)/ }));
     await userEvent.type(canvas.getByRole("textbox", { name: "Files draft" }), "Keep Files draft");
     await userEvent.click(canvas.getByText("README.md"));
     const mount = visibleWindowingLabel(canvasElement, "Files mount").textContent;
@@ -85,14 +84,14 @@ export const FilesTransfer: Story = {
     const secondary = canvasElement.querySelector('[data-workbench-panel="secondary"]') as HTMLElement;
     await moveTab(secondary, "Mode tools", "Main");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
-    await expect(within(secondary).queryByRole("tab", { name: "Mode tools" })).not.toBeInTheDocument();
+    await expect(within(secondary).queryByRole("tab", { name: /^Mode tools(?: ·|$)/ })).not.toBeInTheDocument();
     await expect(within(secondary).getByText(/Changes ·/)).toHaveTextContent("workspace-2");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
-    await expect(within(main).getByRole("tab", { name: "Mode tools" })).toBeVisible();
-    await expect(within(secondary).queryByRole("tab", { name: "Mode tools" })).not.toBeInTheDocument();
+    await expect(within(main).getByRole("tab", { name: /^Mode tools(?: ·|$)/ })).toBeVisible();
+    await expect(within(secondary).queryByRole("tab", { name: /^Mode tools(?: ·|$)/ })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: /^Session 1(?: ·|$)/ }));
     await moveTab(side, "Session 1", "Main");
-    await userEvent.click(within(main).getByRole("tab", { name: "Mode tools" }));
+    await userEvent.click(within(main).getByRole("tab", { name: /^Mode tools(?: ·|$)/ }));
     await userEvent.click(canvas.getByRole("button", { name: /^Session 1(?: ·|$)/ }));
     await expect(within(main).getByRole("tab", { name: /^Session 1(?: ·|$)/ })).toHaveAttribute(
       "aria-selected",
@@ -115,7 +114,7 @@ export const FixedPageTransfer: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const main = canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement;
-    const tab = within(main).getByRole("tab", { name: "Changes" });
+    const tab = within(main).getByRole("tab", { name: /^Changes(?: ·|$)/ });
     const instanceId = tab.parentElement!.getAttribute("data-workbench-tab");
     await userEvent.click(tab);
     await userEvent.type(canvas.getByRole("textbox", { name: "Changes draft" }), "Fixed tool stays with Workspace 2");
@@ -123,9 +122,12 @@ export const FixedPageTransfer: Story = {
     await moveTab(main, "Changes", "Side");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
     const side = canvasElement.querySelector('[data-workbench-panel="side"]') as HTMLElement;
+    await waitFor(() =>
+      expect(visibleWindowingLabel(canvasElement, "Inspector binding")).toHaveTextContent("Workspace 2"),
+    );
     await moveTab(side, "Changes", "Main");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
-    await expect(within(main).queryByRole("tab", { name: "Changes" })).not.toBeInTheDocument();
+    await waitFor(() => expect(within(main).queryByRole("tab", { name: /^Changes(?: ·|$)/ })).not.toBeInTheDocument());
     await expect(canvas.getByRole("textbox", { name: "Files draft" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
     const liveMoved = main.querySelector(`[data-workbench-tab="${instanceId}"]`) as HTMLElement;
@@ -138,7 +140,7 @@ export const FixedPageTransfer: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
     await waitFor(() => expect(canvasElement.contains(main)).toBe(false));
     const restoredMain = canvasElement.querySelector('[data-workbench-panel-header="main"]') as HTMLElement;
-    await expect(within(restoredMain).queryByRole("tab", { name: "Changes" })).not.toBeInTheDocument();
+    await expect(within(restoredMain).queryByRole("tab", { name: /^Changes(?: ·|$)/ })).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
     const moved = restoredMain.querySelector(`[data-workbench-tab="${instanceId}"]`) as HTMLElement;
     await userEvent.click(within(moved).getByRole("tab"));

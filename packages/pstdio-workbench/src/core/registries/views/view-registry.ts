@@ -36,6 +36,9 @@ export interface WorkbenchViewContribution {
   icon?: string;
   body: WorkbenchViewBody;
   instancePolicy?: "per-resource" | "multiple";
+  background?: "active" | "keep-mounted";
+  reveal?: "always" | "explicit";
+  defaultPanel?: "side" | "secondary";
 }
 
 export type RegisteredWorkbenchView = WorkbenchViewContribution & RegisteredContributionMetadata;

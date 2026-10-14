@@ -39,6 +39,12 @@ export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly body: ViewBody;
   /** Reuse one open editor per view/resource across owners. Omission preserves existing placement behavior. */
   readonly instancePolicy?: "per-resource" | "multiple";
+  /** Mount policy for opened views when their owner or tab is inactive. */
+  readonly background?: "active" | "keep-mounted";
+  /** Automatic placement activation may reveal a panel. Explicit navigation always follows panel permissions. */
+  readonly reveal?: "always" | "explicit";
+  /** Mode destination used by view-open commands when no page binding accepts the resource. */
+  readonly defaultPanel?: "side" | "secondary";
 }
 
 export type NavigationOwnerRef = ModeRef | PageRef;
@@ -112,6 +118,7 @@ export interface PlacementTabPresentation {
 }
 
 export interface PlacementPresentation {
+  /** @deprecated Use ViewContribution.background. Retained for placement-specific legacy behavior. */
   readonly mountStrategy?: PlacementMountStrategy;
   readonly hiddenByDefault?: boolean;
   readonly headerBorderBottom?: boolean;

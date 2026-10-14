@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Workbench, WorkbenchIcon, WorkbenchThemeProvider } from "../../react";
+import { moveStoryTab } from "../windowing/tab-moves";
 import { createDashboardFixture } from "./dashboard-fixture";
 
 const DashboardDemo = () => {
@@ -119,9 +120,7 @@ export const InteractionChecks: Story = {
     await expect(canvas.getByRole("tab", { name: "Terminal 1" })).toBeVisible();
     await expect(canvas.getByRole("tab", { name: "Terminal 2" })).toBeVisible();
     await expect(canvas.getByRole("tab", { name: "Terminal 3" })).toBeVisible();
-    canvas.getByRole("tab", { name: "Files" }).focus();
-    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-    await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Move to Side" }));
+    await moveStoryTab(canvas.getByRole("tab", { name: "Files" }), "Side");
     await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
     await userEvent.click(
       within(canvas.getByRole("region", { name: "Sidenav" })).getByRole("option", { name: "package.json" }),

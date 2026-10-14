@@ -67,9 +67,9 @@ test("opens the Session tab context menu while normal clicks only select", async
 
   const sessionMenu = page.getByRole("menu", { name: "New session context menu" });
   await expect(sessionMenu).toBeVisible();
-  await expect(sessionMenu.getByRole("menuitem", { name: "New session" })).toBeVisible();
-  await expect(sessionMenu.getByRole("menuitem", { name: "View all sessions" })).toBeVisible();
-  await expect(sessionMenu.getByRole("menuitem", { name: "No sessions yet" })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem", { name: "Close tab", exact: true })).toBeVisible();
+  await expect(sessionMenu.getByRole("menuitem")).toHaveCount(2);
 
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
 });

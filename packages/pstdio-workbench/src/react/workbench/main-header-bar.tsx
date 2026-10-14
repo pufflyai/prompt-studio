@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
-import { Header, PANEL_HEADER_CONTROL_SIZE } from "@pstdio/ui";
-import { headerTrailingMenuPath, type WorkbenchCore } from "../../core";
-import { WorkbenchHeaderActions } from "../header/header-actions";
+import { Header } from "@pstdio/ui";
+import type { WorkbenchCore } from "../../core";
 import { PanelHeaderContextMenu, PanelHeaderEdge } from "../region/panel-header-menu";
 import { WorkbenchRegion } from "../region/region";
 import {
@@ -12,8 +11,6 @@ import {
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
-
-const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
 
 interface MainHeaderBarProps {
   workbench: WorkbenchCore;
@@ -36,6 +33,7 @@ export const MainHeaderBar = (props: MainHeaderBarProps) => {
       <PanelHeaderContextMenu workbench={workbench} region="main">
         <Header
           tabIndex={0}
+          aria-label="main header"
           data-workbench-panel-header="main"
           display={visible ? "flex" : "none"}
           variant="main"
@@ -52,11 +50,6 @@ export const MainHeaderBar = (props: MainHeaderBarProps) => {
           <Box flex={hasMainHeader || !hasMainContentTabs ? "1" : "0"} h="full" minW="0" overflow="hidden">
             <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" />
           </Box>
-          <WorkbenchHeaderActions
-            workbench={workbench}
-            menuPath={mainHeaderTrailingMenuPath}
-            controlSize={PANEL_HEADER_CONTROL_SIZE}
-          />
           <WorkbenchHeaderBorder workbench={workbench} region="main-header" />
         </Header>
       </PanelHeaderContextMenu>

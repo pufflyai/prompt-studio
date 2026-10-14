@@ -172,7 +172,7 @@ test("keeps page controls in the header and mode controls in the status bar", as
   ).toBe(true);
   expect(await chatInputNode!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(sessionLauncher).toHaveCount(0);
-  await floatingSession.getByRole("button", { name: "Close Side Panel" }).click();
+  await page.getByRole("button", { name: "Close Side Panel" }).click();
   await expect(sessionLauncher).toBeVisible();
 
   await sessionLauncher.click();

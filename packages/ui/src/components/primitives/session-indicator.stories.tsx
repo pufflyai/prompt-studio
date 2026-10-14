@@ -16,6 +16,8 @@ export const InProgress: Story = {
   args: { status: "in_progress" },
 };
 
+export const MutedInProgress: Story = { args: { status: "in_progress", color: "fg.muted" } };
+
 export const AwaitingInput: Story = {
   args: { status: "awaiting_input" },
 };

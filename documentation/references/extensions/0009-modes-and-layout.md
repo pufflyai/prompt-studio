@@ -107,7 +107,15 @@ For a fixed visible panel, declare `canOpen: false` and `canClose: false` in an 
 
 `collapsible` is deprecated for tab panels in favor of `canOpen` and `canClose`. Old `collapsible: false` declarations still prevent drag collapse while allowing explicit Show and Hide. Page panel menus retain their own collapse settings.
 
-`floatingPanels` is deprecated in favor of `regionSettings.side.floatable`. Existing declarations retain their attached fallback when floating is hidden. New `floatable: false` declarations reject floating requests. Mode `floatingBubble` controls bubble availability; it grants no open or floating permission. `floating.defaultTab` supplies the empty-panel default for a direct floating open. Retained tabs take precedence.
+`floatingPanels` is deprecated in favor of `regionSettings.side.floatable`, `floatingBubble`, and `floating.defaultTab`. Existing declarations retain their attached fallback when floating is hidden. New `floatable: false` declarations reject floating requests.
+
+Mode `floatingBubble` controls bubble availability; it grants no open or floating permission. The global Side control always opens attached Side, including when Side currently floats. The bubble opens floating Side and stays visible while open. Click it again to close. Attaching, floating, or closing keeps the same tabs and their live views.
+
+`floating.defaultTab` overrides the host's new-session creation target for an explicit floating open of an empty Side. It uses the same serializable `NavigationTarget` as a panel's `defaultTab`. The host runs it through the normal navigation and command path after checking panel opening and tab admission. Concurrent opens share the pending creation. Retained tabs take precedence. Navigation, drops, background reveals, restore, and layout reset never create this default. Closing the last tab leaves an explicitly opened panel open.
+
+Drag the bubble to a corner or edge midpoint. All eight targets appear while dragging, with the nearest highlighted. Release saves the anchor. Dragging never toggles Side. Arrow keys move to the next anchor in that direction; Home returns to bottom right. Escape cancels movement, and pointer cancellation restores the starting anchor. The anchor belongs to the mode, survives page navigation and reload, and keeps its alignment when the content area resizes.
+
+Host commands `workbench.openSidePanel` and `workbench.toggleSidePanel` accept `{ presentation: "attached" | "floating" }`. An explicit toggle attaches a floating Side when requesting attached presentation. Omitting presentation keeps the existing command behavior. `workbench.setFloatingBubblePosition` accepts `{ x, y }`, where each coordinate is `0`, `0.5`, or `1`, excluding `{ x: 0.5, y: 0.5 }`. Invalid positions are rejected before layout changes. Pointer, keyboard, and agent movement use this command.
 
 ## Empty panels and headers
 

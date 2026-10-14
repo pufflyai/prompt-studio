@@ -192,6 +192,8 @@ export interface CollectionViewsSource<TSettings> {
   ) => Promise<void>;
   onDeleteView: (id: string) => Promise<void>;
   onSetDefaultView: (id: string | null) => Promise<void>;
+  /** Saves the complete view order. Omit when the source does not support reordering. */
+  onReorderViews?: (ids: string[]) => Promise<void>;
 }
 
 export interface CollectionViewsProvider<TSettings> {

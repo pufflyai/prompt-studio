@@ -1,5 +1,5 @@
-import { Box, IconButton } from "@chakra-ui/react";
-import { PANEL_HEADER_CONTROL_SIZE, ResourceActionMenu, ResourceContextMenu } from "@pstdio/ui";
+import { Box } from "@chakra-ui/react";
+import { ResourceContextMenu } from "@pstdio/ui";
 import type { ReactElement } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
@@ -12,23 +12,10 @@ interface PanelHeaderMenuProps {
 
 export const PanelHeaderContextMenu = (props: PanelHeaderMenuProps & { children: ReactElement }) => {
   const { workbench, region, children } = props;
+  const policy = usePanelPolicy(workbench, region);
+  if (!policy.provided) return children;
   return (
     <ResourceContextMenu
-      actions={[
-        { key: "hide-header", label: "Hide header", onClick: () => workbench.shell.setHeaderVisible(region, false) },
-      ]}
-    >
-      {children}
-    </ResourceContextMenu>
-  );
-};
-
-export const PanelHeaderMenu = (props: PanelHeaderMenuProps) => {
-  const { workbench, region } = props;
-  const policy = usePanelPolicy(workbench, region);
-  if (!policy.provided) return null;
-  return (
-    <ResourceActionMenu
       actions={[
         {
           key: "hide-header",
@@ -38,10 +25,8 @@ export const PanelHeaderMenu = (props: PanelHeaderMenuProps) => {
         },
       ]}
     >
-      <IconButton aria-label={`${region} header options`} variant="ghost" size={PANEL_HEADER_CONTROL_SIZE}>
-        <WorkbenchIcon name="Ellipsis" size={14} />
-      </IconButton>
-    </ResourceActionMenu>
+      {children}
+    </ResourceContextMenu>
   );
 };
 

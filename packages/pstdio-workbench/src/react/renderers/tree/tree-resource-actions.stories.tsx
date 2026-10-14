@@ -19,7 +19,7 @@ const exerciseRowMenus = async (canvasElement: HTMLElement) => {
   await userEvent.keyboard("{Shift>}{F10}{/Shift}");
   await waitFor(() => expect(document.getByRole("menuitem", { name: "Inspect session" })).toBeVisible());
   await userEvent.click(document.getByRole("menuitem", { name: "Inspect session" }));
-  await expect(await document.findByText("Inspected Inactive session")).toBeVisible();
+  await waitFor(() => expect(document.getByText("Inspected Inactive session")).toBeVisible());
   await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
   const ticket = await canvas.findByRole("option", { name: /Write notes/ });
   await fireEvent.contextMenu(ticket);
@@ -29,7 +29,11 @@ const exerciseRowMenus = async (canvasElement: HTMLElement) => {
   await userEvent.keyboard("{Escape}");
   await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
 
-  await fireEvent.contextMenu(canvas.getByRole("option", { name: /notes.md/ }));
+  const file = canvas.getByRole("option", { name: /notes.md/ });
+  await userEvent.hover(within(file).getByText("notes.md"));
+  await waitFor(() => expect(document.getByRole("tooltip", { name: "docs/notes.md" })).toBeVisible());
+  await userEvent.unhover(within(file).getByText("notes.md"));
+  await fireEvent.contextMenu(file);
   await userEvent.click(await document.findByRole("menuitem", { name: "Rename" }));
   const dialog = await document.findByRole("dialog");
   const name = within(dialog).getByRole("textbox");
@@ -55,9 +59,10 @@ export const Sidenav: Story = {
     if (!sidenav) throw new Error("Sidenav is missing.");
     await fireEvent.contextMenu(sidenav);
     const document = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await document.findByRole("menuitem", { name: "Hide/show items" }));
     await waitFor(() => expect(document.getByRole("menuitem", { name: /Resources/ })).toBeVisible());
     await expect(document.queryByRole("menuitem", { name: "Archive workspace" })).not.toBeInTheDocument();
-    await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
+    await waitFor(() => expect(document.getByRole("menu", { name: "Hide/show items" })).toHaveFocus());
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(document.queryByRole("menu")).not.toBeInTheDocument());
   },

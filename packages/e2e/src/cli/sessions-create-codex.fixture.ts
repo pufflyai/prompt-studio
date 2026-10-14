@@ -11,6 +11,7 @@ const emit = (event: unknown) => console.log(JSON.stringify(event));
 for await (const line of createInterface({ input: process.stdin })) {
   const request = JSON.parse(line);
   if (request.method === "initialize") emit({ id: request.id, result: {} });
+  if (["config/read", "thread/unsubscribe"].includes(request.method)) emit({ id: request.id, result: {} });
   if (["thread/start", "thread/resume", "thread/read"].includes(request.method))
     emit({ id: request.id, result: { thread: { id: threadId, path: null, turns } } });
   if (request.method === "thread/goal/get") emit({ id: request.id, result: { goal: null } });

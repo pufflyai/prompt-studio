@@ -32,6 +32,7 @@ export interface WorkbenchModeContribution {
   label?: string;
   basePage?: PageRef;
   defaultTheme?: string;
+  /** @deprecated Use regionSettings.side.floatable, floatingBubble, and floating.defaultTab. */
   floatingPanels?: "visible" | "hidden";
   floatingBubble?: boolean;
   floating?: { defaultTab?: NavigationTarget };

@@ -63,9 +63,20 @@ test("dragging a terminal into single-view Main retains its live view and shell 
   await expect(terminal.locator(".xterm-rows")).toContainText("__arrangement_kept__");
   expect(page.url()).toBe(originalUrl);
   await expect(secondary.getByRole("tab")).toHaveCount(0);
-  await moved.click({ button: "right" });
+  await page.getByRole("button", { name: "Page panels", exact: true }).click();
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
   await expect(mainHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
-  await expect(mainHeader.getByRole("tab")).toHaveCount(1);
+  await expect(mainHeader.getByRole("tab")).toHaveCount(2);
+  await expect(moved).toHaveCount(1);
+  await expect(secondary.getByRole("tab")).toHaveCount(0);
   await expect(page.getByText("Project home", { exact: true }).filter({ visible: true })).toBeVisible();
+  await moved.click();
+  expect(
+    await terminal.evaluate(
+      (element) => element === (window as Window & { retainedTerminal?: Element }).retainedTerminal,
+    ),
+  ).toBe(true);
+  await input.pressSequentially('printf "__reset_%s__\\n" "$ARRANGEMENT_STATE"');
+  await input.press("Enter");
+  await expect(terminal.locator(".xterm-rows")).toContainText("__reset_kept__");
 });

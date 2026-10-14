@@ -29,9 +29,9 @@ export const PageSurface: Story = {
     for (const menu of menus) {
       await expect(menu.querySelector('[role="tablist"]')).toBeNull();
       await expect(menu.querySelector("[data-workbench-tab-drop]")).toBeNull();
-      await expect(Math.abs(menu.getBoundingClientRect().top - tabs.getBoundingClientRect().top)).toBeLessThanOrEqual(
-        1,
-      );
+      await expect(
+        Math.abs(menu.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom),
+      ).toBeLessThanOrEqual(1);
     }
     await userEvent.click(canvas.getByRole("button", { name: "Workspace panels" }));
     const popup = within(document.body);

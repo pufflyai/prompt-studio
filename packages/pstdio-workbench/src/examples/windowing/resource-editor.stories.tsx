@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
+import { moveStoryTab } from "./tab-moves";
 import { visibleWindowingLabel } from "./visible-label";
 import { WindowingStory } from "./windowing-story";
 
@@ -17,9 +18,7 @@ const panel = (element: HTMLElement, region: string) =>
 const mainHeader = (element: HTMLElement) =>
   element.querySelector('[data-workbench-panel-header="main"]') as HTMLElement;
 const move = async (element: HTMLElement, name: string, destination: string) => {
-  within(element).getByRole("tab", { name }).focus();
-  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-  await userEvent.click(await within(document.body).findByRole("menuitem", { name: `Move to ${destination}` }));
+  await moveStoryTab(within(element).getByRole("tab", { name }), destination);
 };
 
 export const NoteReuse: Story = {
@@ -104,7 +103,7 @@ export const WorkspaceCatalog: Story = {
     await userEvent.click(within(header).getByRole("tab", { name: "Files" }));
     await userEvent.type(canvas.getByRole("textbox", { name: "Files draft" }), "Keep Files in Side");
     await move(header, "Files", "Side");
-    await userEvent.click(within(panel(canvasElement, "main")).getAllByRole("button", { name: "Add panel" })[0]);
+    await userEvent.click(within(mainHeader(canvasElement)).getByRole("button", { name: "Add panel" }));
     await userEvent.click(await within(document.body).findByRole("menuitem", { name: "Files" }));
     await expect(within(panel(canvasElement, "side")).getByRole("textbox", { name: "Files draft" })).toHaveValue(
       "Keep Files in Side",

@@ -2,11 +2,11 @@ import { reconcileOwnedWidgetLayout } from "../../registries/layout/owned-placem
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { emptyPageState } from "../../registries/pages/page-slot-lifecycle";
 import { pageStateKey } from "../../registries/pages/page-state-key";
-import { clearOwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
 import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { resetOwnedPlacements } from "./reset-owned-placements";
 
 export const resetWorkbenchLayout = (core: WorkbenchCore) => {
   const current = core.pages.store.getState();
@@ -23,10 +23,9 @@ export const resetWorkbenchLayout = (core: WorkbenchCore) => {
     resourceInstances: new Map(shell.getState().resourceInstances),
   };
   for (const declaration of core.modePlacements.listPlacements(current.activeModeId))
-    clearOwnedPlacementState(modeState, declaration.id);
+    modeState.staticOverrides.delete(declaration.id);
   for (const declaration of core.shellPlacements.listPlacements()) {
-    if (["main", "secondary", "side"].includes(declaration.region))
-      clearOwnedPlacementState(shellState, declaration.id);
+    if (["main", "secondary", "side"].includes(declaration.region)) shellState.staticOverrides.delete(declaration.id);
   }
   const internals = getWorkbenchPageRegistryInternals(core.pages);
   const next = internals.prepare.location(
@@ -38,20 +37,26 @@ export const resetWorkbenchLayout = (core: WorkbenchCore) => {
       action: "resetWorkbenchLayout",
       pageStates: {
         ...current.pageStates,
-        [pageStateKey(page, current.location, internals.resources)]: emptyPageState(page),
+        [pageStateKey(page, current.location, internals.resources)]: {
+          ...current.pageStates[pageStateKey(page, current.location, internals.resources)],
+          ...emptyPageState(page),
+          resourceInstances:
+            current.pageStates[pageStateKey(page, current.location, internals.resources)]?.resourceInstances ?? {},
+        },
       },
     },
     current,
     { mode: mode.resolve(current.activeModeId, modeState), shell: shell.resolve(undefined, shellState) },
   );
   const layout = core.layout.getLayout();
+  const placements = resetOwnedPlacements(core, next.placements);
   const defaults = core.layout.store.getInitialState().layout;
   const cleared = {
     ...layout,
     regions: Object.fromEntries(
       Object.entries(layout.regions).map(([id, region]) => [
         id,
-        ["main", "secondary", "side"].includes(id)
+        ["main", "secondary", "side", "bottom"].includes(id)
           ? { ...defaults.regions[id as keyof typeof defaults.regions], widgets: [], activeWidgetId: undefined }
           : region,
       ]),
@@ -66,8 +71,7 @@ export const resetWorkbenchLayout = (core: WorkbenchCore) => {
     core.layout.restoreLayout(
       reconcileOwnedWidgetLayout({
         layout: cleared,
-        placements: next.placements,
-        activate: next.reconciliation.activate.map((p) => p.identity),
+        placements,
       }),
     );
     internals.publish(next, "resetWorkbenchLayout");

@@ -263,7 +263,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
     if (input.sourcePath) {
       const sourcePath = canonicalSourcePath(input.sourcePath);
-      sources.forget(sourcePath);
+      sources.recheck(sourcePath);
       for (const [projectId, state] of states) {
         if (projectId !== input.projectId && !state.knownSourcePaths.has(sourcePath)) continue;
         markDirty(state, input.reason);
@@ -276,7 +276,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
         affected = 1;
       }
     } else {
-      sources.forgetAll();
+      sources.recheckAll();
       for (const state of states.values()) {
         markDirty(state, input.reason);
         affected += 1;

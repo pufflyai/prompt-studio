@@ -40,7 +40,7 @@ definePage({
 });
 ```
 
-Menus render beside the editor tab row and span the full editor height, below the breadcrumb. They have no header, tabs, add action, or tab-drop target. The page bottom has its own tab header and remains separate from the mode's Secondary panel. The page header's "<Page title> panels" menu contains visibility checkboxes for both page panels and declared menus, followed by Reset layout. Each panel's + menu opens tools. Mode panel toggles sit in the web status bar or desktop application header, ordered by the current panel placement.
+Menus start below the Main header beside editor content. The header spans the editor and both menus. They have no header, tabs, add action, or tab-drop target. The page bottom has its own tab header and remains separate from the mode's Secondary panel. The page header's "<Page title> panels" menu contains visibility checkboxes for both page panels and declared menus, followed by Reset layout. Each panel's + menu opens tools. Mode panel toggles sit in the web status bar or desktop application header, ordered by the current panel placement.
 
 `viewMenus`, `ViewMenuContribution`, and `defineViewMenu` are deprecated in favor of page `panelMenus`. Existing view-owned menus keep their behavior during the deprecation period.
 
@@ -56,6 +56,8 @@ The [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md) lin
 
 Every page has a page side (`aside`) and a page bottom (`bottom`), initially closed when empty. Slots are optional. Use `slots[].region: "aside"` to seed the page side and `regionSettings.aside` to set its panel policy. Aside and bottom share size, header visibility, `canOpen`, `canClose`, `acceptsTabs`, `resizable`, `movable`, and `defaultTab` settings. A default tab opens only on a direct open of an empty panel. Floating is supported only by the mode Side.
 
-Tabs moved into either page panel stay with the page instance. Panel sizes and edges are saved per page type. The page side runs the full height below the breadcrumb beside the editor and page bottom. The page bottom spans the editor column. Page menus sit beside the editor tab row at full editor height and accept no tabs. Legacy slots in `"side"` still refer to the mode Side; `"aside"` adds the page side without changing that meaning.
+Tabs moved into either page panel stay with the page instance. Panel sizes and edges are saved per page type. The page side runs the full height below the breadcrumb beside the editor and page bottom. The page bottom spans the editor column. Page menus sit below the editor header, beside its content and accept no tabs. Legacy slots in `"side"` still refer to the mode Side; `"aside"` adds the page side without changing that meaning.
 
 Host workbench pages can author `regionSettings.aside.edge` as `"left"` or `"right"` and `regionSettings.bottom.edge` as `"top"` or `"bottom"`. These host geometry fields are separate from the public extension policy fields. Defaults are right and bottom. Whole-panel move commands and gestures follow in PS-613.
+
+Panel header visibility uses a context menu on the visible header or hidden top edge, available by right-click, Shift+F10, Context Menu key, and touch long-press. Headers have no ellipsis menu button. Tab context menus offer only Pin/Unpin and Close when applicable; resource actions remain on resource surfaces. Moving a routed editor from Main to page side or page bottom preserves its page/resource, URL, breadcrumb and menu bindings. Main fallback is reconciled when the editor moves out of the page owner into a mode panel.

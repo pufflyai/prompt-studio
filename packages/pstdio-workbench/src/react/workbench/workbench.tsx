@@ -31,12 +31,7 @@ import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 import { WorkbenchBody } from "./workbench-body";
 import { resolvePanelCollapsible } from "./workbench-panel-state";
 import { useWorkbenchPanelToggles } from "./workbench-panel-toggles";
-import {
-  WORKBENCH_STATUS_BAR_HEIGHT,
-  WorkbenchActivityBar,
-  WorkbenchSidenav,
-  WorkbenchStatusBar,
-} from "./workbench-panels";
+import { WorkbenchActivityBar, WorkbenchSidenav, WorkbenchStatusBar } from "./workbench-panels";
 import { WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
 import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
@@ -50,7 +45,6 @@ interface WorkbenchProps {
   /** Icon shown in the closed Side Panel's bubble launcher. */
   sidePanelBubbleIcon?: ReactNode;
   /** Host action for opening the closed Side Panel from its bubble launcher. */
-  onOpenSidePanel?: () => void;
   /** Host storage for the chosen theme. Defaults to browser storage. */
   themeStorage?: ThemePreferenceStorage;
 }
@@ -99,14 +93,7 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore, panelTogglesInHost: b
 };
 
 const WorkbenchContent = (props: WorkbenchProps) => {
-  const {
-    workbench,
-    renderParamField,
-    sidePanelBubbleIcon,
-    onOpenSidePanel,
-    titleBar,
-    panelTogglesInHost = false,
-  } = props;
+  const { workbench, renderParamField, sidePanelBubbleIcon, titleBar, panelTogglesInHost = false } = props;
   const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
@@ -203,6 +190,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         {titleBar}
         <Flex
           flex="1"
+          position="relative"
           minH="0"
           minW="0"
           overflow="hidden"
@@ -220,17 +208,15 @@ const WorkbenchContent = (props: WorkbenchProps) => {
             contentMinSizePx={CONTENT_MIN_SIZE_PX}
             onAttachedSlotChange={setAttachedSidePanelSlot}
           />
+          <WorkbenchFloatingSidePanel
+            workbench={workbench}
+            available={hasSidePanel}
+            bubbleIcon={sidePanelBubbleIcon}
+            contentSlotRef={setFloatingSidePanelSlot}
+            header={sideHeader}
+          />
         </Flex>
         <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} panelTogglesInHost={panelTogglesInHost} />
-        <WorkbenchFloatingSidePanel
-          workbench={workbench}
-          available={hasSidePanel}
-          bubbleIcon={sidePanelBubbleIcon}
-          onOpen={onOpenSidePanel}
-          contentSlotRef={setFloatingSidePanelSlot}
-          bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
-          header={sideHeader}
-        />
         <WorkbenchCommandPalette
           workbench={workbench}
           open={paletteOpen}

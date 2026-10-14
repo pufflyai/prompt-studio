@@ -50,6 +50,9 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
       title: view.title,
       icon: view.icon,
       instancePolicy: view.instancePolicy,
+      background: view.background,
+      reveal: view.reveal,
+      defaultPanel: view.defaultPanel,
       panelMenus: menus.length > 0 ? menus : undefined,
       ...viewBody(view),
     };

@@ -27,6 +27,7 @@ import {
 import type { AppLifecycle } from "./app-contracts";
 import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
+import { logStartupPhase } from "./lib/startup-phase";
 
 const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
   const message = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
@@ -36,7 +37,13 @@ const pgliteRecoveryHint = (error: unknown, dbPath: string) => {
 
 export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}) => {
   try {
-    return await createDb({ path, onLockAcquired: lifecycle.onDatabaseLockAcquired });
+    return await createDb({
+      path,
+      onPhase: (phase) => {
+        logStartupPhase(phase);
+        if (phase === "database_locked") lifecycle.onDatabaseLockAcquired?.();
+      },
+    });
   } catch (err) {
     const hint = pgliteRecoveryHint(err, path);
     apiLogger.error({ dataDir: path, err, event: "db.open.failed", hint }, hint ?? "PGlite database failed to open");
@@ -46,26 +53,26 @@ export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}
 };
 
 export const createAppDatabaseServices = (db: DbClient) => ({
-  boardViewsService: createBoardViewsDBService(db),
+  boardViewsDBService: createBoardViewsDBService(db),
   projectsDBService: createProjectsDBService(db),
   automationDBService: createAutomationDBService(db),
-  sessionQueueEntriesService: createSessionQueueEntriesDBService(db),
+  sessionQueueEntriesDBService: createSessionQueueEntriesDBService(db),
   sessionsDBService: createSessionsDBService(db),
   settingsDBService: createSettingsDBService(db),
   workspacesDBService: createWorkspacesDBService(db),
   workspaceSessionsDBService: createWorkspaceSessionsDBService(db),
   skillsDBService: createSkillsDBService(db),
   filesDBService: createFilesDBService(db),
-  activityEventsService: createActivityEventsDBService(db),
-  notificationsDbService: createNotificationsDBService(db),
-  installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
-  extensionInstancesService: createExtensionInstancesDBService(db),
+  activityEventsDBService: createActivityEventsDBService(db),
+  notificationsDBService: createNotificationsDBService(db),
+  installedExtensionSourcesDBService: createInstalledExtensionSourcesDBService(db),
+  extensionInstancesDBService: createExtensionInstancesDBService(db),
   extensionConnectionsDBService: createExtensionConnectionsDBService(db),
   extensionFilesDBService: createExtensionFilesDBService(db),
   extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
-  extensionAutomationPreferencesService: createExtensionAutomationPreferencesDBService(db),
-  extensionStorageService: createExtensionStorageDBService(db),
-  resourceLinksService: createResourceLinksDBService(db),
-  extensionResourceSequencesService: createExtensionResourceSequencesDBService(db),
+  extensionAutomationPreferencesDBService: createExtensionAutomationPreferencesDBService(db),
+  extensionStorageDBService: createExtensionStorageDBService(db),
+  resourceLinksDBService: createResourceLinksDBService(db),
+  extensionResourceSequencesDBService: createExtensionResourceSequencesDBService(db),
   extensionSettingsDBService: createExtensionSettingsDBService(db),
 });

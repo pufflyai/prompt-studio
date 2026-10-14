@@ -6,7 +6,6 @@ import {
   workbenchPanelRegions,
 } from "../../core";
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
-import { terminalPlacementBindingId } from "./terminal-placement-binding";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 // The host-owned terminal panel in the workbench `secondary` (bottom) region.
 // Exported so hosts can open or assert it directly.
@@ -25,35 +24,6 @@ const terminalPlacements = (layout: WorkbenchLayout) =>
   workbenchPanelRegions
     .flatMap((region) => layout.regions[region].widgets)
     .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID);
-const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
-  new Set(terminalPlacements(ctx.layout.getLayout()).map((placement) => placement.widgetId));
-const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
-  // A scope rotation temporarily removes every placement. Only an explicit tab
-  // close should end the PTY bound to that placement.
-  let previousScope = ctx.layout.getPersistenceScope();
-  let previousMode = ctx.modes.getActiveModeId();
-  const unsubscribeLayout = ctx.layout.store.subscribe((state, previousState) => {
-    const scope = ctx.layout.getPersistenceScope();
-    const mode = ctx.modes.getActiveModeId();
-    const changingOwner = scope !== previousScope || mode !== previousMode;
-    previousScope = scope;
-    previousMode = mode;
-    if (changingOwner) return;
-    const currentIds = new Set(terminalPlacements(state.layout).map((placement) => placement.widgetId));
-    const previousIds = terminalPlacements(previousState.layout).map((placement) => placement.widgetId);
-    for (const instanceId of previousIds) {
-      if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(instanceId));
-    }
-  });
-  return {
-    dispose() {
-      unsubscribeLayout();
-      for (const instanceId of terminalInstanceIds(ctx)) {
-        void ctx.terminal.killBinding(terminalPlacementBindingId(instanceId));
-      }
-    },
-  };
-};
 const terminalTitlePattern = /^Terminal (\d+)$/;
 const nextTerminalIndexes = new WeakMap<WorkbenchCoreContributionContext["layout"]["store"], number>();
 const getInitialTerminalIndex = (ctx: WorkbenchCoreContributionContext) => {
@@ -99,25 +69,14 @@ export const openWorkbenchTerminal = (
     icon: "SquareTerminal",
     metadata: workspace?.metadata,
   };
-  const identity = ctx.shellPlacements.openPlacement({
-    placementId: WORKBENCH_TERMINAL_WIDGET_ID,
-    resource,
-    open: "pin",
-    title,
-  });
-  if (identity.kind !== "shell") throw new Error("Terminal placement must be shell-owned");
   if (reveal) {
-    ctx.shell.setRegionOpen("secondary", true);
+    ctx.openView({ viewId: WORKBENCH_TERMINAL_WIDGET_ID, resource, open: "pin" });
+  } else {
+    // Add panel stages a tab before its caller moves and activates the chosen destination.
+    ctx.shellPlacements.openPlacement({ placementId: WORKBENCH_TERMINAL_WIDGET_ID, resource, open: "pin", title });
   }
-  const placement = ctx.layout
-    .getLayout()
-    .regions.secondary.widgets.find(
-      (candidate) =>
-        candidate.placementIdentity?.kind === "shell" &&
-        candidate.placementIdentity.placementId === identity.placementId &&
-        candidate.placementIdentity.instanceKey === identity.instanceKey,
-    );
-  if (!placement) throw new Error(`Terminal placement did not open: ${identity.instanceKey}`);
+  const placement = terminalPlacements(ctx.layout.getLayout()).find((candidate) => candidate.resource?.id === id);
+  if (!placement) throw new Error(`Terminal placement did not open: ${id}`);
   return toPanelInstance(placement);
 };
 /**
@@ -125,8 +84,8 @@ export const openWorkbenchTerminal = (
  * chrome, focus, lifecycle, and styling belong to the workbench. Sessions are
  * owned by `workbench.terminal` (the same registry the `terminal.session`
  * webview capability uses); the host injects a session opener via
- * `workbench.terminal.setSessionOpener(...)`. Closing a tab kills its session;
- * disposing the controller kills every live session.
+ * `workbench.terminal.setSessionOpener(...)`. Closing a tab only closes the view.
+ * Explicit runtime stop and controller disposal own session lifetime.
  */
 export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => ({
   id: "workbench.terminal.surface",
@@ -136,6 +95,9 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         title: "Terminal",
         icon: "SquareTerminal",
+        background: "keep-mounted",
+        reveal: "explicit",
+        defaultPanel: "secondary",
         body: {
           kind: "react",
           render: (input) => <WorkbenchTerminalPanel placement={input.instance} workbench={input.workbench} />,
@@ -161,12 +123,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
           },
         },
         region: "secondary",
-        mountStrategy: "keep-mounted",
-        // Background flows mint terminals without user intent; a closed Secondary
-        // Panel must stay closed until an explicit open reveals it.
-        hiddenByDefault: true,
       }),
-      watchClosedTerminalPlacements(ctx),
       ctx.commands.registerCommand(
         {
           id: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,

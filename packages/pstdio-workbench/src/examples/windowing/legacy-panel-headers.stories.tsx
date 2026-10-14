@@ -20,7 +20,7 @@ export const LegacyPanelHeaders: Story = {
       (fixture = createWindowingFixture("windowing", {
         pagePanels: true,
         registerMode: (workbench) => {
-          registerWorkbenchExtensionContributions({
+          return registerWorkbenchExtensionContributions({
             projectId: "windowing-project",
             workbench,
             executeCommand: () => undefined,

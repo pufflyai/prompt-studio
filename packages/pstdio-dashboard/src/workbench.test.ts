@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
-import { WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
+import { WORKBENCH_TERMINAL_OPEN_COMMAND_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createDashboardWorkbench } from "./workbench";
@@ -39,14 +39,21 @@ describe("createDashboardWorkbench", () => {
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(false);
   });
 
-  test("registers the host terminal surface and API session presenter", () => {
+  test("registers the host terminal surface and API session presenter", async () => {
     const workbench = createDashboardWorkbench();
+    selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start });
 
     expect(workbench.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
       region: "secondary",
-      mountStrategy: "keep-mounted",
       item: { kind: "binding", binding: { view: { id: WORKBENCH_TERMINAL_WIDGET_ID }, cardinality: "many" } },
     });
     expect(workbench.terminal.isAvailable()).toBe(true);
+    await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
+    expect(workbench.layout.getLayout().regions.secondary.widgets[0]).toMatchObject({
+      viewId: WORKBENCH_TERMINAL_WIDGET_ID,
+      mountStrategy: "keep-mounted",
+    });
   });
 });

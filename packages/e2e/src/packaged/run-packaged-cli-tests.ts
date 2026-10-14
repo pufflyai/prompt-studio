@@ -6,6 +6,8 @@ const child = Bun.spawn(
   [
     process.execPath,
     "test",
+    "--preload",
+    "./src/scripts/bun-process-cleanup.ts",
     "src/packaged",
     "--timeout",
     String(PACKAGED_TEST_TIMEOUT),

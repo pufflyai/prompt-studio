@@ -1,4 +1,5 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import { projectResourceKey } from "./project-resource-identity";
 import { createResourcePreview } from "./resource-preview";
 
 export type { ResourceRef } from "@pstdio/sdk/extensions";
@@ -12,6 +13,7 @@ import {
   type RegisteredContributionMetadata,
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
+import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import {
   isWorkbenchViewHierarchyNode,
@@ -103,6 +105,7 @@ export interface ResourceProvider {
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
 }
 export interface ResourceRegistryStoreState {
+  removedResourceKeys: ReadonlySet<string>;
   kinds: Record<string, RegisteredResourceKind>;
   providers: Record<string, ResourceProvider>;
   hierarchyProviders: Record<string, ResolvedResourceHierarchyProvider>;
@@ -110,6 +113,7 @@ export interface ResourceRegistryStoreState {
 export interface ResourceRegistry {
   preview: ReturnType<typeof createResourcePreview>;
   removed(resource: ResourceRef): void;
+  isRemoved(resource: ResourceRef): boolean;
   onWillRemove(listener: (resource: ResourceRef) => readonly PlacementIdentity[]): Disposable;
   store: WorkbenchStore<ResourceRegistryStoreState>;
   registerKind(kind: ResourceKindContribution, metadata?: ContributionMetadata): Disposable;
@@ -124,6 +128,7 @@ export interface ResourceRegistry {
   onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
 }
 export interface CreateResourceRegistryInput {
+  getProjectId?(): string | undefined;
   remove?(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   // Resolves the active primary resource so listResources can scope provider candidates.
   getPrimary?: () => ResourceRef | undefined;
@@ -135,21 +140,33 @@ export interface CreateResourceRegistryInput {
     | undefined;
 }
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
+  const removalKey = (resource: ResourceRef) => projectResourceKey(resource, input.getProjectId?.())!;
   const removalListeners = new Set<(resource: ResourceRef) => readonly PlacementIdentity[]>();
   const cycleListeners = new Set<(cycle: ResourceHierarchyCycle) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
-    initialState: { kinds: {}, providers: {}, hierarchyProviders: {} },
+    initialState: { kinds: {}, providers: {}, hierarchyProviders: {}, removedResourceKeys: new Set() },
   });
   return {
     store,
     preview: createResourcePreview(),
     removed(resource) {
-      input.remove?.(
-        resource,
-        [...removalListeners].flatMap((listener) => listener(resource)),
-      );
+      if (store.getState().removedResourceKeys.has(removalKey(resource))) return;
+      batchWorkbenchChanges(() => {
+        input.remove?.(
+          resource,
+          [...removalListeners].flatMap((listener) => listener(resource)),
+        );
+        // Backend deletion makes stale URLs and saved locations inaccessible.
+        const current = store.getState();
+        store.setState(
+          { ...current, removedResourceKeys: new Set([...current.removedResourceKeys, removalKey(resource)]) },
+          false,
+          "removeResource",
+        );
+      });
     },
+    isRemoved: (resource) => store.getState().removedResourceKeys.has(removalKey(resource)),
     onWillRemove(listener) {
       removalListeners.add(listener);
       return createDisposable(() => removalListeners.delete(listener));

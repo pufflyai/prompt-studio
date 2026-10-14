@@ -1,5 +1,15 @@
 # @pstdio/ui
 
+## 0.43.1
+
+_2026-10-13_
+
+### Patch Changes
+
+- 18bc9e9: Use extra-thin shared scrollbars in view tabs, filter rows, and filter menus.
+- 44c59ca: Focus the chat composer when it unlocks after a send, autofocus, or queued request selection, without taking focus from another text field.
+- ca8b132: Center chat content at a maximum width and keep the scrollbar at the pane edge.
+
 ## 0.43.0
 
 _2026-10-12_
