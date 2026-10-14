@@ -108,7 +108,11 @@ const registerWindowingViews = (
     body: {
       kind: "react",
       render: ({ instance }) => {
-        const terminal = resources.terminals.find((item) => item.metadata.workspaceId === instance.resource?.id)!;
+        const terminal = resources.terminals.find((item) =>
+          instance.resource?.type === "windowing.terminal"
+            ? item.id === instance.resource.id
+            : item.metadata.workspaceId === instance.resource?.id,
+        )!;
         return <WindowingTerminalView resource={terminal} probe={probe} />;
       },
     },
@@ -225,7 +229,16 @@ export const registerWindowingModule = (
         id: "terminal",
         ...(options.pagePanels ? { tab: { getSnapshot: () => ({ label: "Terminal", icon: "Terminal" }) } } : {}),
         region: options.pagePanels ? "bottom" : "side",
-        item: { kind: "view", view: { kind: "view", id: "windowing.terminal" }, presence: "open" },
+        item: options.terminalPreset
+          ? {
+              kind: "binding",
+              binding: {
+                kinds: [{ kind: "resource-kind", id: "windowing.terminal" }],
+                view: { kind: "view", id: "windowing.terminal" },
+                cardinality: "one",
+              },
+            }
+          : { kind: "view", view: { kind: "view", id: "windowing.terminal" }, presence: "open" },
       },
     ],
   });

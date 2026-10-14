@@ -1,6 +1,8 @@
 import type { Disposable, WorkbenchCore, WorkbenchModeContribution, WorkbenchPageContribution } from "../../core";
 
 export interface WindowingFixtureOptions {
+  resetControls?: boolean;
+  terminalPreset?: boolean;
   removalControls?: boolean;
   pageModes?: boolean;
   contextNavigation?: boolean;

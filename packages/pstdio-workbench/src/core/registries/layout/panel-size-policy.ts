@@ -9,9 +9,13 @@ export const clampPanelSizes = (
     WorkbenchRegion,
     WorkbenchLayout["regions"][WorkbenchRegion],
   ][]) {
-    const bounds = getSettings(id)?.size;
-    if (state.size === undefined || !bounds) continue;
-    const size = Math.min(bounds.maxPx ?? Infinity, Math.max(bounds.minPx ?? 0, state.size));
+    const settings = getSettings(id);
+    const bounds = settings?.size;
+    if (state.size === undefined || (!bounds && settings?.resizable !== false)) continue;
+    const size =
+      settings?.resizable === false
+        ? bounds?.defaultPx
+        : Math.min(bounds?.maxPx ?? Infinity, Math.max(bounds?.minPx ?? 0, state.size));
     if (state.size !== size) next = { ...next, regions: { ...next.regions, [id]: { ...state, size } } };
   }
   return next;

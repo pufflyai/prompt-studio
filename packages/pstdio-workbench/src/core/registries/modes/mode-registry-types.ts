@@ -89,5 +89,7 @@ export interface CreateWorkbenchModeRegistryInput {
   navigateMode?(modeId: string): boolean;
   establishLocation?(instanceId: string): void;
   layout: Pick<WorkbenchCoreContributionContext["layout"], "onDidChangePersistenceScope">;
+  /** Correct persisted tab destinations before unavailable regions are cleared. */
+  restoreTabRegions?(layout: WorkbenchLayout): WorkbenchLayout;
   resolveContext(): WorkbenchModeActivationContext;
 }

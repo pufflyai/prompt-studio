@@ -6,6 +6,8 @@ export const removeLayoutPlacements = (
   layout: WorkbenchLayout,
   remove: (placement: WorkbenchWidgetPlacement) => boolean,
 ) => {
+  const closedPresets = layout.closedPresets?.filter((placement) => !remove(placement));
+  if (closedPresets?.length !== layout.closedPresets?.length) layout = { ...layout, closedPresets };
   const removed = new Set(
     Object.values(layout.regions).flatMap((region) =>
       region.widgets.filter(remove).map((placement) => placement.widgetId),

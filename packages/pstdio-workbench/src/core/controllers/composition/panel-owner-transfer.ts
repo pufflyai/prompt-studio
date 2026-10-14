@@ -1,6 +1,7 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { modeLayoutScope } from "../page-runtime/owner-layout-scope";
 
 export const transferPanelOwner = (
   core: WorkbenchCore,
@@ -31,6 +32,11 @@ export const transferPanelOwner = (
     ...placement,
     placementIdentity: owner,
     declarationIdentity: placement.declarationIdentity ?? identity,
+    declarationScope:
+      placement.declarationScope ??
+      (identity?.kind === "mode"
+        ? modeLayoutScope(state.projectId, identity.modeId)
+        : core.layout.getPersistenceScope()),
     ownerResourceKey: pageDestination ? placement.ownerResourceKey : undefined,
   };
 };

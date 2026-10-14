@@ -36,6 +36,7 @@ import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { registerPanelCommands } from "./controllers/shell/panel-commands";
 import { restorePanelPolicy } from "./controllers/shell/restore-panel-policy";
+import { restoreTabRegions } from "./controllers/shell/restore-tab-regions";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { createCommandRegistry } from "./registries/commands/command-registry";
@@ -196,6 +197,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const fullscreen = createMainFullscreenController(() => core);
 
   const modes = createWorkbenchModeRegistry({
+    restoreTabRegions: (layout) => (core ? restoreTabRegions(core, layout) : layout),
     regionSettings: input.regionSettings,
     navigateMode: (modeId) => navigateCoreMode(core, modeId),
     establishLocation,
@@ -206,6 +208,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const { shell, sidePanel } = createCoreShell(() => core, input, layout, modes, layoutCache);
 
   const pages = createLiveWorkbenchPageRegistry({
+    restoreTabRegions: (layout) => (core ? restoreTabRegions(core, layout) : layout),
     existingEditor: (placement, state) => findOtherOwnedResourceEditor(core, placement, state),
     persistPreparedOwners: createPreparedOwnerLayoutSaver({ cache: layoutCache, layout, resolveCore: () => core }),
     loadModeLayout: layoutCache.readMode,

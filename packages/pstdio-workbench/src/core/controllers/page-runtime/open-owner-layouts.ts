@@ -27,6 +27,15 @@ export const updateSavedResourceEditor = (
   }));
 };
 
+export const readOwnerLayout = (core: WorkbenchCore, scope: string | undefined) =>
+  caches.get(core)?.layout.getLayout(scope);
+
+export const rememberClosedOwnerPreset = (
+  core: WorkbenchCore,
+  scope: string | undefined,
+  tab: WorkbenchWidgetPlacement,
+) => caches.get(core)?.rememberClosedPreset(scope, tab);
+
 export const saveOpenOwnerLayouts = (core: WorkbenchCore) => {
   const state = core.pages.store.getState();
   if (state.activeModeId) caches.get(core)?.saveMode(state.projectId, state.activeModeId, core.layout.getLayout());
@@ -47,6 +56,22 @@ export const connectOpenOwnerLayouts = (core: WorkbenchCore, cache: LayoutCache)
   core.layout.store.subscribe(() => {
     const state = core.pages.store.getState();
     if (state.activeModeId) cache.saveMode(state.projectId, state.activeModeId, core.layout.getLayout());
+    const layout = core.layout.getLayout();
+    const grouped = new Map<string | undefined, WorkbenchWidgetPlacement[]>();
+    for (const tab of Object.values(layout.regions).flatMap((r) => r.widgets)) {
+      const identity = tab.declarationIdentity ?? tab.placementIdentity;
+      if (!identity) continue;
+      const scope =
+        tab.declarationScope ??
+        (identity.kind === "mode"
+          ? modeLayoutScope(state.projectId, identity.modeId)
+          : core.layout.getPersistenceScope());
+      grouped.set(scope, [...(grouped.get(scope) ?? []), { ...tab, placementIdentity: identity }]);
+    }
+    for (const [scope, tabs] of grouped) cache.forgetClosedPresets(scope, tabs);
+    const source = readOwnerLayout(core, core.layout.getPersistenceScope());
+    if (layout.closedPresets?.length && source?.closedPresets?.length !== layout.closedPresets.length)
+      core.layout.restoreLayout({ ...layout, closedPresets: source?.closedPresets });
   });
 };
 

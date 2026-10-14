@@ -76,3 +76,39 @@ test("page navigation applies destination bottom bounds before the page is publi
   expect(core.shell.getRegionState("bottom").size).toBe(188);
   await core.dispose();
 });
+
+test("restored choices cannot hide a panel that cannot close or float one that cannot float", async () => {
+  const core = createWorkbench();
+  core.modes.registerMode({
+    id: "fixed",
+    regionSettings: { secondary: { canClose: false }, side: { floatable: false } },
+    activate() {},
+  });
+  core.modes.setActiveMode("fixed");
+  const layout = core.layout.getLayout();
+  core.layout.restoreLayout({
+    ...layout,
+    regions: {
+      ...layout.regions,
+      secondary: { ...layout.regions.secondary, visibility: "closed", visible: false },
+      side: { ...layout.regions.side, visibility: "open", presentation: "floating" },
+    },
+  });
+  expect(core.layout.getLayout().regions.secondary.visibility).toBeUndefined();
+  expect(core.layout.getLayout().regions.side.presentation).toBe("attached");
+  await core.dispose();
+});
+
+test("restoration resets stored sizes when the author disables resizing", async () => {
+  const core = createWorkbench();
+  core.modes.registerMode({
+    id: "fixed",
+    regionSettings: { side: { resizable: false, size: { defaultPx: 250 } } },
+    activate() {},
+  });
+  core.modes.setActiveMode("fixed");
+  const layout = core.layout.getLayout();
+  core.layout.restoreLayout({ ...layout, regions: { ...layout.regions, side: { ...layout.regions.side, size: 700 } } });
+  expect(core.layout.getLayout().regions.side.size).toBe(250);
+  await core.dispose();
+});

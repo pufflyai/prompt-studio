@@ -70,7 +70,10 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   const prepareScope = (mode: WorkbenchModeContribution) => {
     const context = input.resolveContext();
     const scopeKey = `${mode.id}\0${context.layout.getPersistenceScope() ?? "unscoped"}`;
-    const current = applyModePanelAvailability(context.layout.getLayout(), panelsForMode(mode));
+    const current = applyModePanelAvailability(
+      input.restoreTabRegions?.(context.layout.getLayout()) ?? context.layout.getLayout(),
+      panelsForMode(mode),
+    );
     const needsDefaults = (!current.modeLayout && mode.layout) || (!current.actionBarEdge && mode.actionBarEdge);
     const availableLayout = needsDefaults
       ? {

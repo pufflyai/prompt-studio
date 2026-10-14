@@ -32,7 +32,8 @@ assertOwner(workbench.pages.store.getState().activePageId === "collection", "Rem
 assertOwner(!allTabs().some((tab) => tab.resource?.id === session.id), "Foreign tab survived owner deletion");
 assertOwner(!workbench.pageLocations.navigate({ kind: "page", page: packagePage("workspace"), resource: workspace }).ok, "Deleted page reopened");
 await workbench.navigation.openTarget(openSession);
-workbench.resetLayout();
+await workbench.resetPageLayout();
+await workbench.resetModeLayout();
 const reopened = allTabs().filter((tab) => tab.resource?.id === session.id);
 assertOwner(reopened.length === 1 && reopened[0]?.resource?.metadata?.workspaceId === "valid", "Reset lost or duplicated the foreign session binding");
 workbench.pageLocations.navigate({ kind: "page", page: packagePage("workspace"), resource: { ...workspace, id: "valid" } });

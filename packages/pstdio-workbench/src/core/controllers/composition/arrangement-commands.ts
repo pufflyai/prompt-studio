@@ -46,15 +46,17 @@ export const registerArrangementCommands = (core: WorkbenchCore) => {
     },
     { execute: ({ edge }) => core.setActionBarPosition(edge) },
   );
-  core.commands.registerCommand(
-    {
-      id: "workbench.resetLayout",
-      label: "Reset workbench layout",
-      category: "Workbench",
-      icon: "RotateCcw",
-    },
-    { execute: () => core.resetLayout() },
-  );
+  for (const owner of ["Page", "Mode"] as const) {
+    core.commands.registerCommand(
+      {
+        id: `workbench.reset${owner}Layout`,
+        label: `Reset ${owner.toLowerCase()} layout`,
+        category: "Workbench",
+        icon: "RotateCcw",
+      },
+      { execute: () => (owner === "Page" ? core.resetPageLayout() : core.resetModeLayout()) },
+    );
+  }
   core.commands.registerCommand<{ instanceId: string; region: WorkbenchPanelRegion }>(
     {
       id: "workbench.dropPanelOnEdge",
