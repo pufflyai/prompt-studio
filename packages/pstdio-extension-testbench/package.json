@@ -29,6 +29,8 @@
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
+    "pstdio-base-themes": "workspace:*",
+    "pstdio-planner": "workspace:*",
     "typescript": "6.0.2",
     "vite": "^8.3.1"
   }

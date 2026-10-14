@@ -76,11 +76,13 @@ export const trackHarnessSession = (
   submitted?: SubmittedMessages,
   entry: ActiveSession | null = deps.sessionService.store.get(sessionId),
 ) => {
+  let timedOut = false;
   return resolveHarnessExit({
     session,
     activity,
     timeoutMs: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
-    onTimeout: () =>
+    onTimeout: () => {
+      timedOut = true;
       sessionLogger.error(
         {
           event: "session.process.timeout",
@@ -88,7 +90,8 @@ export const trackHarnessSession = (
           timeout_ms: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
         },
         "Harness session timed out without new events; stopping it",
-      ),
+      );
+    },
   })
     .then(async (exit) => {
       await finishControls(entry, exit.status);
@@ -116,7 +119,10 @@ export const trackHarnessSession = (
           "Harness session exited with failure",
         );
       }
-      await deps.sessionService.transitionStatus(sessionId, exit.status, { expectedOwner: entry });
+      await deps.sessionService.transitionStatus(sessionId, exit.status, {
+        expectedOwner: entry,
+        exitCause: timedOut ? "timeout" : undefined,
+      });
       if (persisted && entry) deps.sessionService.store.remove(sessionId, entry);
     })
     .catch((err) => {
