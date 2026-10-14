@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { isNavigationHref } from "../extension-kernel/navigation-href";
 import { isFileSourcePosition } from "../extension-kernel/source-position";
-import type { FileSourcePosition } from "../extension-kernel/types/pages";
+import type { FileSourcePosition, PageParams } from "../extension-kernel/types/pages";
+import { pageParamValueSchema } from "./page-params-schema";
 import { extensionResourceRefSchema } from "./resource-ref";
 import { commandTargetSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
 
@@ -27,6 +28,7 @@ export interface MetadataPageTarget {
   open?: "preview" | "pin";
   section?: z.infer<typeof sectionSchema>;
   position?: FileSourcePosition;
+  params?: PageParams;
   parent?: MetadataPageTarget;
 }
 
@@ -40,6 +42,7 @@ const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
         open: z.enum(["preview", "pin"]).optional(),
         section: sectionSchema.optional(),
         position: sourcePositionSchema.optional(),
+        params: z.record(z.string(), pageParamValueSchema).optional(),
         parent: pageTargetSchema.optional(),
       })
       .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),

@@ -15,6 +15,7 @@ import {
 import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { RendererReadNotice } from "../renderer-read-notice";
+import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { mergeControlDraft } from "./control-draft";
 import { createControlSaveQueue } from "./control-save-queue";
@@ -50,6 +51,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
 const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   const { workbench, contribution, placement, renderParamField } = props;
   const resource = placement.resource;
+  const pageParams = usePageParams(workbench, placement);
   const [state, setState] = useState<ControlsViewState>(initialState);
   const [pending, setPending] = useState(false);
   const saves = useRef(createControlSaveQueue());
@@ -57,9 +59,9 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
-    queryKey: JSON.stringify([contribution.id, resourceKey(resource)]),
+    queryKey: JSON.stringify([contribution.id, resourceKey(resource), pageParams]),
 
-    load: (signal) => contribution.executeQuery(resource, signal),
+    load: (signal) => contribution.executeQuery(resource, signal, pageParams),
     subscribe: (refresh) => {
       const subscription = contribution.subscribe?.(refresh);
       const events = getWorkbenchRenderers(workbench).onDidRefreshControlsRenderer((event) => {

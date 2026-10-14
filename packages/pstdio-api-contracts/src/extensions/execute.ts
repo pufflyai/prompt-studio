@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { NavigationTarget, Struct } from "../extension-kernel";
 import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema } from "./common";
 import { navigationTargetSchema } from "./navigation-target-metadata";
+import { pageParamValueSchema } from "./page-params-schema";
 import { extensionResourceRefSchema } from "./resource-ref";
 import { workbenchAttachmentTargetSchema } from "./targets";
 
@@ -22,6 +23,7 @@ export const extensionAttachmentInvocationSchema = z.object({
 
 export const extensionRendererContextSchema = z.object({
   rendererId: z.string(),
+  pageParams: z.record(z.string(), pageParamValueSchema).optional(),
   projectId: z.string().optional(),
   modeId: z.string().optional(),
   resource: extensionResourceRefSchema.optional(),

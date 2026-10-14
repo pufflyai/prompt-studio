@@ -8,6 +8,7 @@ import type {
   TreeRendererState,
   TreeViewSection,
   WorkbenchCore,
+  WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
@@ -30,6 +31,7 @@ import { useTreeViewCustomization } from "./use-tree-view-customization";
 
 interface WorkbenchTreeViewProps {
   readOwnerKey?: string;
+  placement?: WorkbenchPanelInstance;
   workbench: WorkbenchCore;
   treeViewId: string;
   activeNodeId?: string | null;
@@ -145,6 +147,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     treeRenderer?.searchable ? filter.trim() || undefined : undefined,
     props.readOwnerKey,
     onOpenResourceError,
+    props.placement,
   );
   const [paramsRequest, setParamsRequest] = useState<TreeActionParamsRequest | null>(null);
 

@@ -10,6 +10,7 @@
  */
 
 import type { GuestHost } from "./guest-host";
+import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
 
 export type { GuestHost } from "./guest-host";
 
@@ -36,6 +37,7 @@ export type ExtensionViewRenderContext<TProps = unknown> = {
   mount: HTMLElement;
   host: GuestHost;
   files: WebviewFilesClient;
+  page: WebviewPageClient;
   propsStore: PropsStore<TProps>;
   locale: string;
   t: (key: string, defaultValue?: string, args?: Record<string, unknown>) => string;
@@ -128,6 +130,7 @@ export const defineExtensionView = <TProps = unknown>(definition: {
       mount,
       host,
       files: createFilesClient(host),
+      page: createWebviewPageClient(host, propsStore),
       propsStore,
       get locale() {
         return translations.locale();

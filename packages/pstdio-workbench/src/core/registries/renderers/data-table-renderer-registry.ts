@@ -74,6 +74,7 @@ export interface DataTableRendererQueryResult {
 }
 
 export interface DataTableRendererQueryContext {
+  pageParams?: import("@pstdio/sdk/extensions").PageParams;
   resource?: ResourceRef;
   modeId?: string;
   filter: ViewFilterGroup;

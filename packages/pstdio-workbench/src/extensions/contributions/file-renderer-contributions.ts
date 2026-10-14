@@ -36,12 +36,14 @@ const executeFileCommand = async (
   extra: Record<string, unknown> = {},
   metadata?: CommandExecuteRequest["metadata"],
   signal?: AbortSignal,
+  pageParams?: import("@pstdio/sdk/extensions").PageParams,
 ) => {
   const ext = resource;
   return executeWorkbenchExtensionCommand(input, commandId, {
     params: {
       renderer: {
         rendererId,
+        ...(pageParams ? { pageParams } : {}),
         projectId: input.projectId,
         ...(ext ? { resource: ext } : {}),
         invocation: { placement: "visible" },
@@ -98,7 +100,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
     body: {
       kind: "file",
       resourceKind: record.resourceKind,
-      load: async (resource, signal) => {
+      load: async (resource, signal, pageParams) => {
         const result = await executeFileCommand(
           input,
           record.id,
@@ -107,6 +109,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
           {},
           undefined,
           signal,
+          pageParams,
         );
         return (result ?? {}) as FileRendererContent;
       },

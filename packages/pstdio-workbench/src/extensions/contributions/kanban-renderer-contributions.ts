@@ -247,6 +247,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               },
               undefined,
               signal,
+              state.pageParams,
             );
             const mapRows = (rows: unknown[]) => {
               const nextCache = new Map<string, { signature: string; row: KanbanRendererRow }>();

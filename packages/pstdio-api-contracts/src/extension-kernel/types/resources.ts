@@ -72,6 +72,7 @@ export interface RendererInvocationContext {
 }
 
 export interface RendererContext {
+  pageParams?: import("./pages").PageParams;
   rendererId: string;
   projectId?: string;
   modeId?: string;

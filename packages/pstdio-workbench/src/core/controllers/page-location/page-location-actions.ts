@@ -1,5 +1,5 @@
 import type { NavigationTargetPage, PageLocation, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
-import { isWorkbenchProjectUrl } from "@pstdio/sdk/extensions";
+import { isWorkbenchProjectUrl, normalizePageParams } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type {
   CreateWorkbenchPageLocationControllerInput,
@@ -79,6 +79,24 @@ export const createPageLocationControllerActions = <Value>(
       } catch (error) {
         return actions.fail("navigation", error);
       }
+    },
+    updateParams(patch) {
+      const current = input.registry.store.getState();
+      if (!current.location || !current.projectId) throw new Error("page_params_no_page");
+      const page = input.registry.getPage(current.activePageId!);
+      const values = { ...current.location.params };
+      for (const [name, value] of Object.entries(patch)) {
+        if (!page?.params || !Object.hasOwn(page.params, name)) throw new Error(`page_param_invalid: ${name}`);
+        if (value === null) delete values[name];
+        else values[name] = value;
+      }
+      const params = normalizePageParams(page?.params, values);
+      const { params: previous, ...location } = current.location;
+      const resolved = actions.normalizeStored({ ...location, ...(params ? { params } : {}) });
+      if (actions.locationsEqual(current.location, resolved.location)) return current.location;
+      const result = actions.commit(current.projectId, resolved, "replace", "updatePageParams");
+      if (!result.ok) throw new Error(result.diagnostic.message);
+      return result.location;
     },
     replay(location) {
       const projectId = input.registry.store.getState().projectId;

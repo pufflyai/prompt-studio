@@ -8,6 +8,7 @@ import type {
   createInstalledExtensionSourcesDBService,
   createResourceLinksDBService,
   createSessionQueueEntriesDBService,
+  createWebviewPreferencesDBService,
 } from "pstdio-db";
 import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
 import type { createExtensionFileService } from "../services/extension-file-service";
@@ -66,6 +67,7 @@ export interface RouteDeps {
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionConnectionService: ReturnType<typeof createExtensionConnectionService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
+  webviewPreferencesDBService: ReturnType<typeof createWebviewPreferencesDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;
   ensureExtensionWebviews: (installedExtensionId: string, webviewId?: string) => Promise<void>;

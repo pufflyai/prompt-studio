@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { localizableStringSchema } from "./common";
+import { pageParamDefinitionsSchema } from "./page-params-schema";
 import { workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { placementItemSchema, resourceConstraintSchema } from "./resource-binding-metadata";
 import { modeRefSchema, pageRefSchema, viewRefSchema } from "./workbench-refs-metadata";
@@ -33,6 +34,7 @@ export const workbenchExtensionPageRecordSchema = z.object({
   title: localizableStringSchema,
   icon: z.string().optional(),
   path: z.string(),
+  params: pageParamDefinitionsSchema.optional(),
   document: z.object({ metadataKey: z.string().refine((key) => key.trim().length > 0) }).optional(),
   mode: modeRefSchema,
   parent: pageRefSchema.optional(),

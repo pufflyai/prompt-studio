@@ -1,7 +1,9 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import type { WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { previewTreeResources } from "./tree-resource-preview";
 import {
@@ -21,7 +23,9 @@ export const useTreeData = (
   filter?: string,
   ownerKey = JSON.stringify(["tree", treeViewId, viewId]),
   onMoveError?: (error: unknown) => void,
+  placement?: WorkbenchPanelInstance,
 ) => {
+  const pageParams = usePageParams(workbench, placement);
   const trees = getWorkbenchRenderers(workbench);
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   useWorkbenchStore(trees.treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
@@ -39,9 +43,9 @@ export const useTreeData = (
     getPageOwner,
   );
   // Navigation keeps mounted rows. A new search clears results that no longer match its query.
-  const queryKey = JSON.stringify([treeViewId, viewId, project, filter]);
+  const queryKey = JSON.stringify([treeViewId, viewId, project, filter, pageParams]);
   const refreshKey = JSON.stringify(
-    trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter }) ?? [
+    trees.getTreeRenderer(treeViewId)?.getReadKey?.({ resource, viewId, filter, pageParams }) ?? [
       resourceKey(resource),
       resourceKey(location?.resource),
       mode,
@@ -61,7 +65,7 @@ export const useTreeData = (
     queryKey,
     refreshKey,
     load: async (signal, publish) => {
-      const ctx = { resource, viewId, filter, signal };
+      const ctx = { resource, viewId, filter, signal, pageParams };
       const data = await loadTreeData(trees, treeViewId, ctx, (available) => publish({ ...available, children: {} }));
       signal.throwIfAborted();
       const children =
@@ -77,7 +81,7 @@ export const useTreeData = (
   });
   // Expanding one folder loads only its children. The next full read already includes them.
   const loadChildren = (node: TreeNode) => {
-    void trees.getChildren(treeViewId, node, { resource, viewId, filter }).then((children) => {
+    void trees.getChildren(treeViewId, node, { resource, viewId, filter, pageParams }).then((children) => {
       setExpandedChildren((current) => ({
         queryKey: childrenKey,
         byNodeId: { ...(current.queryKey === childrenKey ? current.byNodeId : {}), [node.id]: children },

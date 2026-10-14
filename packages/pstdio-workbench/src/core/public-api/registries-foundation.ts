@@ -222,6 +222,7 @@ export type {
   PreferenceScope,
   PreferenceScopeRef,
   PreferenceValue,
+  PreferenceValueAdapter,
 } from "../registries/preferences/preference-registry";
 export { createPreferenceRegistry } from "../registries/preferences/preference-registry";
 export type {

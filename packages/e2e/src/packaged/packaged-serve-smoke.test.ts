@@ -43,6 +43,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
@@ -322,3 +323,5 @@ registerQueuedRequestSmokeTests();
 registerSessionQuerySmokeTests();
 
 registerWorkspaceCapabilitiesSmokeTests();
+
+registerPageParamsSmokeTests();

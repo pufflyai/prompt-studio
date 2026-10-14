@@ -19,6 +19,7 @@ import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./ren
 import type { ViewToolbarAction } from "./view-toolbar-action";
 
 export interface KanbanRendererQueryState {
+  pageParams?: import("@pstdio/sdk/extensions").PageParams;
   settings: KanbanRendererSettings;
   filter: ViewFilterGroup;
   sorts: ViewSort[];

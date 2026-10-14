@@ -4,6 +4,7 @@ import type { CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
 import type { JsonObject, JsonValue } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { PageLocation, PageParamValue } from "./pages";
 import type { ResourceRef } from "./resources";
 
 export type { ExtensionBlobRef } from "./context";
@@ -16,6 +17,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
   "commands.stream",
   "navigation.open",
+  "page.params.update",
   "placement.close",
   "notification.show",
   "notification.action",
@@ -91,6 +93,7 @@ export interface WebviewNotificationResolveParams {
 export type WebviewNotificationDismissParams = Pick<WebviewNotificationResolveParams, "id" | "dedupeKey">;
 
 export interface WebviewPreferencesGetParams {
+  /** Access to another extension's registered names is deprecated. Use names owned by the caller. */
   name: string;
   scope?: {
     scope: "default" | "user" | "project" | "workspace" | "extension" | "session";
@@ -100,6 +103,11 @@ export interface WebviewPreferencesGetParams {
 
 export interface WebviewPreferencesSetParams extends WebviewPreferencesGetParams {
   value: boolean | number | string | string[] | number[] | boolean[] | Record<string, unknown>;
+}
+
+export interface WebviewPageParamsUpdateParams {
+  /** Merge overrides into the active page. Null resets a name to its declared default. */
+  params: Readonly<Record<string, PageParamValue | null>>;
 }
 
 export interface WebviewExtensionSettingKeyParams {
@@ -153,6 +161,7 @@ export interface WebviewKeyboardEventParams {
 export interface WebviewHostCapabilityParams {
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.stream": WebviewCommandsStreamParams;
+  "page.params.update": WebviewPageParamsUpdateParams;
   "navigation.open": WebviewNavigationOpenParams;
   "placement.close": Record<string, never>;
   "notification.show": WebviewNotificationShowParams;
@@ -176,6 +185,7 @@ export interface WebviewHostCapabilityParams {
 export interface WebviewHostCapabilityResults {
   "commands.execute": { outcome: CommandOutcome };
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
+  "page.params.update": { location: PageLocation };
   "navigation.open": void;
   "placement.close": void;
   "notification.show": void;
