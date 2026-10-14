@@ -74,10 +74,13 @@ const sidePanelSessionUris = (workbench: ReturnType<typeof createDashboardWorkbe
     .listPanelInstances("side")
     .filter((panel) => panel.resource?.type === "session")
     .map((panel) => resourceKey(panel.resource));
-const selectProject = (workbench: ReturnType<typeof createDashboardWorkbench>, projectId = "project-1") =>
-  workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+const selectProject = async (workbench: ReturnType<typeof createDashboardWorkbench>, projectId = "project-1") => {
+  await workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
     project: { id: projectId, name: projectId },
   });
+  await flushMicrotasks();
+  expect(workbench.modes.getActiveModeId()).toBe("project");
+};
 // Synced rows are process-wide; leave the tables empty so other suites start clean.
 afterEach(() => {
   getWriter("projects")?.truncateAndWrite([]);

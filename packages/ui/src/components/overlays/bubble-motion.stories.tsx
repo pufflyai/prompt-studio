@@ -16,16 +16,14 @@ const FloatingPanel = (props: FloatingPanelProps) => {
   return (
     <>
       <Button onClick={() => setOpen(!open)}>Toggle floating panel</Button>
-      <BubbleButton isOpen={open} aria-label="Open Side Panel" onClick={() => setOpen(true)}>
+      <BubbleButton
+        isOpen={open}
+        aria-label={open ? "Close Side Panel" : "Open Side Panel"}
+        onClick={() => setOpen(!open)}
+      >
         <MessageCircle />
       </BubbleButton>
-      <BubblePanel
-        isOpen={open}
-        title="Side Panel"
-        showHeader={showHeader}
-        closeLabel="Minimize"
-        onClose={() => setOpen(false)}
-      >
+      <BubblePanel isOpen={open} title="Side Panel" showHeader={showHeader}>
         <Stack p="sm">
           <Input aria-label="Draft" placeholder="A draft stays here when minimized" />
         </Stack>
@@ -50,7 +48,7 @@ export const LauncherAndPanel: Story = {
     const panel = canvas.getByRole("dialog", { name: "Side Panel" });
     const draft = canvas.getByRole("textbox", { name: "Draft" });
     await userEvent.type(draft, "Keep this draft");
-    await userEvent.click(canvas.getByRole("button", { name: "Minimize" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Close Side Panel" }));
     await expect(panel).toHaveAttribute("inert");
     await expect(draft).toBeVisible();
     await waitFor(() => expect(draft).not.toBeVisible());

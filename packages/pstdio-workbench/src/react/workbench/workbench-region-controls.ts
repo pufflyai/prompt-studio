@@ -28,7 +28,11 @@ export const createWorkbenchRegionControls = (workbench: WorkbenchCore, input: W
       icon,
       open,
       onToggle: () => {
-        void runUserAction(workbench, label, () => input.setPanelOpen(region, !open));
+        void runUserAction(workbench, label, () =>
+          region === "side"
+            ? workbench.shell.setRegionOpen("side", !open, "attached")
+            : input.setPanelOpen(region, !open),
+        );
       },
     });
   };
@@ -43,9 +47,9 @@ export const createWorkbenchRegionControls = (workbench: WorkbenchCore, input: W
   if (input.hasSidePanel)
     add(
       "side",
-      input.sidePanelMode !== "closed" ? "Hide Side Panel" : "Show Side Panel",
+      input.sidePanelMode === "attached" ? "Hide Side Panel" : "Show Side Panel",
       "PanelRight",
-      input.sidePanelMode !== "closed",
+      input.sidePanelMode === "attached",
     );
   return controls;
 };

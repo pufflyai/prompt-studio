@@ -1,7 +1,12 @@
 import { workbenchCommandPaletteMenuPath } from "../../registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { requireFloatingBubblePosition } from "../side-panel/floating-bubble-position";
 
 export const registerPanelCommands = (core: WorkbenchCore) => {
+  core.commands.registerCommand(
+    { id: "workbench.setFloatingBubblePosition", label: "Move floating bubble", category: "Workbench" },
+    { execute: (args: unknown) => core.sidePanel.setBubblePosition(requireFloatingBubblePosition(args)) },
+  );
   for (const [region, name, label, icon] of [
     ["side", "SidePanel", "Side Panel", "PanelRight"],
     ["secondary", "SecondaryPanel", "Secondary Panel", "PanelBottom"],
@@ -20,11 +25,18 @@ export const registerPanelCommands = (core: WorkbenchCore) => {
           isVisible: () =>
             allowed() && (action === "toggle" || core.shell.getRegionState(region).open === (action === "close")),
           isEnabled: allowed,
-          execute: () =>
-            core.shell.setRegionOpen(
+          execute: (args: { presentation?: "attached" | "floating" } | undefined) => {
+            const presentation = args?.presentation;
+            if (presentation !== undefined && presentation !== "attached" && presentation !== "floating")
+              throw new Error("Invalid Side presentation");
+            const current = core.shell.getRegionState(region).open;
+            const samePresentation = !presentation || core.sidePanel.getMode() === presentation;
+            return core.shell.setRegionOpen(
               region,
-              action === "toggle" ? !core.shell.getRegionState(region).open : action === "open",
-            ),
+              action === "toggle" ? !(current && samePresentation) : action === "open",
+              presentation,
+            );
+          },
         },
       );
       core.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: id, group: "Workbench" });

@@ -27118,7 +27118,7 @@
                       "type": "frame",
                       "id": "C572TP",
                       "name": "cmp/BubbleButton",
-                      "context": "Shown when the session side panel is closed and no floating session panel is open.",
+                      "context": "Floating Side toggle stays visible while open. Move to one of eight content-area anchors. Pressed border uses border.accent.",
                       "theme": {
                         "btn": "outline",
                         "size": "lg",
@@ -32094,7 +32094,7 @@
                     "section": "closed"
                   },
                   "x": 0,
-                  "y": 665
+                  "y": 658
                 },
                 {
                   "type": "frame",
@@ -74822,7 +74822,7 @@
                                         "btn": "ghost",
                                         "size": "2xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -95455,7 +95455,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -124441,7 +124441,7 @@
                                           "name": "Tab Refinement Related",
                                           "width": "fit_content",
                                           "x": 0,
-                                          "y": 41,
+                                          "y": 40,
                                           "descendants": {
                                             "L109Bg": {
                                               "content": "Refine PS-276"
@@ -150937,7 +150937,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -150959,7 +150959,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151687,7 +151687,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -151709,7 +151709,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152325,7 +152325,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -152347,7 +152347,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153698,7 +153698,7 @@
                                     "btn": "subtle",
                                     "size": "xs"
                                   },
-                                  "x": 44,
+                                  "x": 45,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -153720,7 +153720,7 @@
                                     "btn": "primary",
                                     "size": "xs"
                                   },
-                                  "x": 157,
+                                  "x": 155,
                                   "y": 0,
                                   "layout": "horizontal",
                                   "descendants": {
@@ -190914,6 +190914,210 @@
                   "icon": "copy",
                   "library": "lucide",
                   "fill": "$ds-fg-muted"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "dCktI",
+      "x": 56222,
+      "y": 0,
+      "name": "Workbench · Floating bubble anchors",
+      "width": 1120,
+      "height": 900,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "dDvpb",
+          "name": "Floating Side · eight anchors",
+          "fill": "$ds-fg",
+          "content": "Floating Side · eight anchors",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "pZz0H",
+          "name": "Floating bubble instructions",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Drag shows eight targets. Release snaps to the nearest. Escape cancels. Arrow keys move; Home returns bottom right.",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "n5OkcT",
+          "name": "Floating bubble examples",
+          "width": "fill_container",
+          "height": 720,
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "cHlhR",
+              "name": "Drag targets · content area",
+              "clip": true,
+              "width": 520,
+              "height": 720,
+              "fill": "$ds-bg-subtle",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "RCcic",
+                  "x": 24,
+                  "y": 24,
+                  "name": "Anchor · top-left",
+                  "fill": "$ds-accent",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border-accent",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "NNNyO",
+                  "x": 236,
+                  "y": 24,
+                  "name": "Anchor · top",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "iZ82l",
+                  "x": 448,
+                  "y": 24,
+                  "name": "Anchor · top-right",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "a9uEo",
+                  "x": 24,
+                  "y": 336,
+                  "name": "Anchor · left",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "cKXoo",
+                  "x": 448,
+                  "y": 336,
+                  "name": "Anchor · right",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "lIlMq",
+                  "x": 24,
+                  "y": 648,
+                  "name": "Anchor · bottom-left",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "EyDMG",
+                  "x": 236,
+                  "y": 648,
+                  "name": "Anchor · bottom",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "c0RGq",
+                  "x": 448,
+                  "y": 648,
+                  "name": "Anchor · bottom-right",
+                  "fill": "$ds-bg",
+                  "width": 48,
+                  "height": 48,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "id": "HPX9a",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Bubble follows pointer",
+                  "x": 112,
+                  "y": 146
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "l5pyc",
+              "name": "Floating Side open · bubble stays visible",
+              "clip": true,
+              "width": 520,
+              "height": 720,
+              "fill": "$ds-bg-subtle",
+              "layout": "none",
+              "children": [
+                {
+                  "id": "Fm562",
+                  "type": "ref",
+                  "ref": "MXmR5",
+                  "name": "Side Panel · no close button",
+                  "x": 48,
+                  "y": 28,
+                  "descendants": {
+                    "v6zTn": {
+                      "content": "Side Panel"
+                    },
+                    "f3mS6h": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "id": "hwz07",
+                  "type": "ref",
+                  "ref": "C572TP",
+                  "name": "Close Side Panel · pressed bubble",
+                  "x": 448,
+                  "y": 648,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "lg",
+                    "bubble": "open"
+                  }
                 }
               ]
             }

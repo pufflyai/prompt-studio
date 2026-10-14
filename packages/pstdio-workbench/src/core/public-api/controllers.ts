@@ -63,6 +63,7 @@ export type {
   WorkbenchShellRegionState,
   WorkbenchSidePanelPresentation,
 } from "../controllers/shell/shell-controller";
+export type { FloatingBubblePosition } from "../controllers/side-panel/floating-bubble-position";
 export type {
   CreateWorkbenchSidePanelControllerInput,
   WorkbenchSidePanelChangeListener,

@@ -15,7 +15,7 @@ const hideAndReopen = async (page: Page, panel: "Side" | "Secondary", title: str
   const frame = page.locator(`iframe[title="${title}"]`);
   const original = await frame.elementHandle();
   const url = page.url();
-  await page.getByRole("button", { name: `Hide ${panel} Panel`, exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`^(Hide|Close) ${panel} Panel$`) }).click();
   await expect(frame).toBeHidden();
   await page.getByRole("button", { name: `Show ${panel} Panel`, exact: true }).click();
   await expect(frame).toBeVisible();
@@ -25,10 +25,7 @@ const hideAndReopen = async (page: Page, panel: "Side" | "Secondary", title: str
 const floatAndReattach = async (page: Page) => {
   await page.getByRole("button", { name: "Float Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
-  await page
-    .locator('[data-workbench-region="nav"]')
-    .getByRole("button", { name: "Hide Side Panel", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
   await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();

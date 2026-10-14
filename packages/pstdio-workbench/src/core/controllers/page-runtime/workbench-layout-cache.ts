@@ -71,7 +71,7 @@ const selectPanelChoices = (layout: WorkbenchLayout, owner: "page" | "mode" | "g
     workbenchRegions.map((id) => {
       const region = layout.regions[id];
       if (owner !== "geometry" && isPageRegion(id) === (owner === "page")) return [id, region];
-      const { visibility: _intent, headerVisible: _header, ...geometry } = region;
+      const { visibility: _intent, headerVisible: _header, bubblePosition: _bubble, ...geometry } = region;
       return [id, geometry];
     }),
   ) as WorkbenchLayout["regions"],

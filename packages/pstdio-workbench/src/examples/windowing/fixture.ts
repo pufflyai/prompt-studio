@@ -8,7 +8,7 @@ import type { WindowingFixtureOptions } from "./fixture-options";
 import { createWindowingLifecycleProbe } from "./lifecycle-probe";
 import { registerWindowingModule } from "./module";
 import { registerAvailabilityPages } from "./page-modes";
-import { createWindowingResources, windowingPages } from "./resources";
+import { createWindowingResources, windowingExtensionId, windowingPages } from "./resources";
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
 
@@ -25,12 +25,31 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
     const workbench = createWorkbench({
       startPage: windowingPages.workspaces,
       initialSidePanelMode: "attached",
+      floating: options.floatingSessionDefault
+        ? { defaultTab: { kind: "command", commandId: "windowing.newSession" } }
+        : undefined,
       defaultPanelOpenByRegionId: { side: true, secondary: true, sidenav: options.contextNavigation ?? false },
       layoutPersistence: persistence.layout,
       pageLocationPersistence: persistence.pageLocation,
     });
     registrations = registerWindowingModule(workbench, resources, probe, options);
     options.registerPages?.(workbench);
+    if (options.floatingSessionDefault)
+      workbench.commands.registerCommand(
+        { id: "windowing.newSession", label: "New session" },
+        {
+          execute: async (_args, context) => {
+            const session = { ...resources.sessions[0]!, id: crypto.randomUUID(), label: "New session" };
+            resources.sessions.push(session);
+            await (context?.navigation ?? workbench.navigation).openTarget({
+              kind: "panel",
+              panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
+              resource: session,
+              open: "pin",
+            });
+          },
+        },
+      );
     if (options.pageModes) registerAvailabilityPages(workbench);
     if (options.contextNavigation) registerContextNavigation(workbench, resources);
     workbench.pageLocations.setProject("windowing-project");

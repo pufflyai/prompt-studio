@@ -159,7 +159,7 @@ test("keeps navigation and region controls in one stable Nav Chrome", async ({ p
   ).toBe(true);
   expect(await chatInputNode!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(sessionLauncher).toHaveCount(0);
-  await floatingSession.getByRole("button", { name: "Close Side Panel" }).click();
+  await page.getByRole("button", { name: "Close Side Panel" }).click();
   await expect(sessionLauncher).toBeVisible();
 
   await sessionLauncher.click();

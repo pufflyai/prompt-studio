@@ -4,6 +4,7 @@ export interface WindowingFixtureOptions {
   removalControls?: boolean;
   pageModes?: boolean;
   contextNavigation?: boolean;
+  floatingSessionDefault?: boolean;
   sessionStarts?: boolean;
   sessionBackground?: "active" | "keep-mounted";
   sessionMountStrategy?: "active" | "keep-mounted";

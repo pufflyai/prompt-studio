@@ -1,6 +1,7 @@
 import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { movePanelTab } from "../helpers/move-panel-tab";
+import { checkFloatingBubblePointer } from "./floating-bubble-interactions";
 import {
   STORY_RENDER_TIMEOUT_MS,
   startStorybook,
@@ -51,6 +52,9 @@ const storyIds = [
   "panel-header-choices",
   "floating-panel-headers",
   "empty-floating-panel-headers",
+  "attached-and-floating",
+  "bubble-keyboard",
+  "bubble-pointer",
   "legacy-panel-headers",
   "fixed-page-transfer",
   "removed-workspace-resource",
@@ -122,6 +126,7 @@ test.describe("Workbench windowing stories", () => {
       const outcome = await readWindowingStoryOutcome(page);
       expect(outcome.errors).toEqual([]);
       expect(outcome.result).toMatchObject({ storyId, status: "success" });
+      await checkFloatingBubblePointer(page, storyId);
       if (storyId.endsWith("--page-side-ownership")) await exercisePageSideDrop(page);
       await windowingInteractions[storyId]?.(page);
       if (

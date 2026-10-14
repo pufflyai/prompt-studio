@@ -78,7 +78,7 @@ const selectProjectAndDisplayTicketProperties = async (
 const closeFloatingSessionBubble = async (page: import("@playwright/test").Page) => {
   const bubble = page.getByTestId("workbench-side-panel-floating");
   if (!(await bubble.isVisible().catch(() => false))) return;
-  await bubble.getByRole("button", { name: "Close Side Panel" }).click();
+  await page.getByRole("button", { name: "Close Side Panel" }).click();
   await expect(bubble).toBeHidden();
 };
 
