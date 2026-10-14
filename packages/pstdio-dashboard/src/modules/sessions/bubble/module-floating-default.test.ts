@@ -70,7 +70,10 @@ test("opens the session draft in the Side Panel while a session page is open", a
   workbench.registerModule(createSessionBubbleModule());
   workbench.registerModule(createSessionsModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  await openSessionsPage(workbench, createDashboardResource("session", "session-1", "Session", "MessageCircle", "project-1"));
+  await openSessionsPage(
+    workbench,
+    createDashboardResource("session", "session-1", "Session", "MessageCircle", "project-1"),
+  );
   const location = workbench.pages.store.getState().location;
 
   await workbench.shell.setRegionOpen("side", true, "floating");

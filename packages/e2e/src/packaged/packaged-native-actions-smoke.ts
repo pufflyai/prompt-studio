@@ -38,7 +38,7 @@ export default {
     resolve:(_ctx,input)=>({state:"ready",executionKind:"remote",providerRef:input.providerRef,
       capabilities:{files:"none",diff:false,merge:false,rebase:false,archive:false,delete:false}}),
   }],
-  views:[...["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
+  views:[...["dataTable","kanban"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{schemaRefreshEvents:[],onMove:(_ctx,input)=>input,attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
     {id:"agent",ref:{kind:"view",id:"agent"},title:"Research agent",body:{kind:"controls",query:()=>({params:[{id:"agent",name:"Model",type:"harness",defaultValue:{harnessId:"test.native-actions.harness.worker",model:"research",params:{effort:"high"}}}]}),onApply:(_ctx,input)=>input.values}}
   ],
 };
@@ -62,6 +62,17 @@ export const expectPackagedNativeActions = async (input: {
         entry.extensionId === "test.native-actions" && entry.localId === kind.toLowerCase(),
     );
     expect(view, JSON.stringify(body.diagnostics)).toBeDefined();
+    if (kind === "kanban") {
+      expect(view.body.schemaRefreshEventIds).toEqual([]);
+      const move = { rowId: "one", attributes: { approved: true }, order: {} };
+      const response = await fetch(`${root}/commands/${view.body.moveHandlerId}/execute`, {
+        method: "POST",
+        headers: { ...input.headers, "content-type": "application/json" },
+        body: JSON.stringify({ params: move }),
+      });
+      expect(response.status).toBe(200);
+      expect((await response.json()).outcome.value).toMatchObject(move);
+    }
     const filter = { conjunction: "and", rules: [{ attributeId: "approved", condition: "is", value: false }] };
     const created = await fetch(`${input.baseUrl}/v1/projects/${input.projectId}/boards/${view.id}/views`, {
       method: "POST",

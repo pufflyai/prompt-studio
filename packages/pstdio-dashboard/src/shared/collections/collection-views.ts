@@ -20,6 +20,7 @@ interface CollectionViewsInput {
   record: {
     id: string;
     refreshEventIds?: string[];
+    schemaRefreshEventIds?: string[];
   };
 }
 
@@ -152,7 +153,11 @@ export const createSharedCollectionViews = <TSettings>(
         void apiRequest<BoardViews>(path, { signal: controller.signal }).catch(() => undefined);
       };
       const stopEvents = subscribeToExtensionEventFeed((event) => {
-        if (event.projectId === projectId && record.refreshEventIds?.includes(event.id)) refresh();
+        if (
+          event.projectId === projectId &&
+          (record.schemaRefreshEventIds ?? record.refreshEventIds)?.includes(event.id)
+        )
+          refresh();
       });
       const stopReset = subscribeToExtensionEventReset(refresh);
       refresh();

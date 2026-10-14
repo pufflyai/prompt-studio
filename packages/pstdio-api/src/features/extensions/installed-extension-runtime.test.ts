@@ -19,16 +19,6 @@ import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extens
 import { createInstalledExtensionRuntime, selectExistingSources } from "./installed-extension-runtime";
 
 const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const waitFor = async (predicate: () => boolean | Promise<boolean>) => {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    if (await predicate()) return;
-    await delay(10);
-  }
-
-  throw new Error("Timed out waiting for runtime assertion.");
-};
 
 type Listener = (eventType: string, filename: string | Buffer | null) => void;
 
@@ -232,6 +222,7 @@ describe("createInstalledExtensionRuntime", () => {
       const repoRoot = join(repoPath, ".pstdio", "extensions");
       const sourcePath = join(repoRoot, "repo-tool");
       const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];
+      let rootSyncComplete = Promise.withResolvers<void>();
 
       const runtime = await createInstalledExtensionRuntime({
         ...noopRuntimeDeps,
@@ -252,6 +243,23 @@ describe("createInstalledExtensionRuntime", () => {
         createRootWatcher: (config) =>
           createExtensionRootWatcher({
             ...config,
+            listExtensionRoots: async () =>
+              (await config.listExtensionRoots()).map((root) => {
+                if (root.path !== repoRoot) return root;
+                return {
+                  ...root,
+                  sync: async () => {
+                    try {
+                      const result = await root.sync();
+                      rootSyncComplete.resolve();
+                      return result;
+                    } catch (error) {
+                      rootSyncComplete.reject(error);
+                      throw error;
+                    }
+                  },
+                };
+              }),
             debounceMs: 5,
             ensureRoot: () => {},
             watch: (path, listener) => {
@@ -270,7 +278,7 @@ describe("createInstalledExtensionRuntime", () => {
         expect(repoWatcher).toBeDefined();
         repoWatcher?.watcher.listener("rename", "repo-tool");
 
-        await waitFor(async () => Boolean(await installedExtensionSourcesService.getBySourcePath(sourcePath)));
+        await rootSyncComplete.promise;
 
         const installed = await installedExtensionSourcesService.getBySourcePath(sourcePath);
         const instances = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
@@ -279,12 +287,12 @@ describe("createInstalledExtensionRuntime", () => {
         expect(instances).toHaveLength(1);
         expect(instances[0]?.enabled).toBe(true);
 
+        rootSyncComplete = Promise.withResolvers<void>();
         rmSync(sourcePath, { recursive: true, force: true });
         repoWatcher?.watcher.listener("rename", "repo-tool");
 
-        await waitFor(
-          async () => (await installedExtensionSourcesService.getBySourcePath(sourcePath))?.status === "missing",
-        );
+        await rootSyncComplete.promise;
+        expect((await installedExtensionSourcesService.getBySourcePath(sourcePath))?.status).toBe("missing");
 
         const [reconciled] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
         expect(reconciled?.enabled).toBe(false);

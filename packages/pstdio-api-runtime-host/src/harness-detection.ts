@@ -7,17 +7,27 @@ export const detectHarness = async (provider: HarnessProvider, context: HarnessC
   if (!provider.detect) return { available: true };
   const deadline = Date.now() + DETECTION_TIMEOUT_MS;
   let finished = false;
+  const pending = new Set<Promise<unknown>>();
   const bounded = (input: ProcessRunInput) => {
     const remaining = deadline - Date.now();
     if (finished || remaining <= 0) throw new Error("Harness detection deadline reached.");
     return { ...input, timeoutMs: Math.min(input.timeoutMs ?? remaining, remaining) };
   };
+  const run = (method: "run" | "runOrThrow", input: ProcessRunInput) => {
+    const operation = context.process[method](bounded(input));
+    pending.add(operation);
+    operation.then(
+      () => pending.delete(operation),
+      () => pending.delete(operation),
+    );
+    return operation;
+  };
   const ctx: HarnessContext = {
     ...context,
     process: {
       ...context.process,
-      run: (input) => context.process.run(bounded(input)),
-      runOrThrow: (input) => context.process.runOrThrow(bounded(input)),
+      run: (input) => run("run", input),
+      runOrThrow: (input) => run("runOrThrow", input),
     },
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -38,5 +48,7 @@ export const detectHarness = async (provider: HarnessProvider, context: HarnessC
   } finally {
     finished = true;
     clearTimeout(timer);
+    // The availability deadline can win before its command has finished tree cleanup.
+    await Promise.allSettled([...pending]);
   }
 };
