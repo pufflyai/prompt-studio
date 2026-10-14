@@ -92,7 +92,10 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
   ctx.views.registerView({
     id: settingsViewIds.extensions,
     title: "Extensions",
-    body: { kind: "react", render: () => <ExtensionsPanel projectId={getDashboardSelectedProjectId(ctx)} /> },
+    body: {
+      kind: "react",
+      render: (input) => <ExtensionsPanel projectId={getDashboardSelectedProjectId(ctx)} settingsInput={input} />,
+    },
   });
   ctx.views.registerView({
     id: settingsViewIds.projectFolder,

@@ -33,12 +33,13 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
+// Saved-view fixtures also verify extension detail settings placement metadata.
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// npm harness detection and model discovery are covered by harness-npm-detection.test.ts.
+// Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.

@@ -63,17 +63,13 @@ afterAll(async () => {
 const expectProbeExited = async (command: string) => {
   const pid = Number(await Bun.file(join(prefix, `${command}.pid`)).text());
   expect(pid).toBeGreaterThan(0);
-  // A timeout response can arrive just before the OS finishes stopping the child.
-  // Keep the runtime alive and still require the child to exit within one second.
-  for (let attempt = 0; attempt < 50; attempt++) {
-    try {
-      process.kill(pid, 0);
-    } catch {
-      return;
-    }
-    await Bun.sleep(20);
+  // The process host finishes tree cleanup before returning the timed-out probe.
+  try {
+    process.kill(pid, 0);
+  } catch {
+    return;
   }
-  throw new Error(`Version probe ${command} is still alive after its deadline.`);
+  throw new Error(`Version probe ${command} PID ${pid} is still alive after its deadline.`);
 };
 
 for (const broken of [false, true]) {

@@ -22,6 +22,7 @@ for await (const line of createInterface({ input: process.stdin })) {
     process.exit(0);
   }
   if (["config/read", "thread/unsubscribe"].includes(message.method ?? "")) emit({ id: message.id, result: {} });
+  if (message.method === "fixture/stop" && process.env.PSTDIO_TEST_MODE === "async-cleanup-error") process.exit(1);
   if (message.method === "initialize") emit({ id: message.id, result: {} });
   if (message.method === "thread/goal/get") emit({ id: message.id, result: { goal: null } });
   if (message.method === "thread/read" && process.env.PSTDIO_TEST_MODE === "plan-approval-stalled") {
