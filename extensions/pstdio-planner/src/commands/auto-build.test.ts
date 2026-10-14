@@ -5,6 +5,7 @@ import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
+import { autoBuildScopeCommand } from "./auto-build-scope";
 
 async function supervisorFixture(limit = 2) {
   const result = await fixture(limit);
@@ -45,6 +46,74 @@ test("starts one supervisor with the user prompt instead of dispatching implemen
   });
 });
 
+test("later wakes query work without repeating the brief or resetting a current scope", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  const initial = prompts[0]!;
+  await autoBuildScopeCommand.run(ctx, { revision: "test", queries: [{}] });
+  for (let wake = 0; wake < 2; wake++) {
+    sessions.get(initial.sessionId)!.status = "completed";
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true, sessionId: initial.sessionId });
+    const followup = prompts.at(-1)!.prompt!;
+    expect(followup).not.toContain("Implement relevant tickets.");
+    expect(followup).toContain("pst tickets next");
+    expect(followup).not.toContain("auto-build scope");
+    expect(followup.length).toBeLessThan(initial.prompt!.length / 4);
+    expect(await storage.get("auto-build-supervisor")).toMatchObject({ scope: { revision: "test", queries: [{}] } });
+  }
+  expect(sessions.size).toBe(1);
+});
+
+test("changed configuration requests a scope refresh without replaying session instructions", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture();
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  const initial = prompts[0]!;
+  await autoBuildScopeCommand.run(ctx, { revision: "test", queries: [{}] });
+  const mode = await configureAutoBuildCommand.run(ctx, {
+    enabled: true,
+    prompt: "Choose release work.",
+    blockOnReview: false,
+  });
+  sessions.get(initial.sessionId)!.status = "completed";
+  await autoBuildCommand.run(ctx, {});
+  const changed = prompts.at(-1)!.prompt!;
+  expect(changed).toContain("auto-build read");
+  expect(changed).toContain("auto-build scope");
+  expect(changed).not.toContain("Implement relevant tickets.");
+  expect(changed).not.toContain(mode.prompt);
+  expect(changed.length).toBeLessThan(initial.prompt!.length / 4);
+  await autoBuildScopeCommand.run(ctx, { revision: mode.revision, queries: [{}] });
+  sessions.get(initial.sessionId)!.status = "completed";
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts.at(-1)!.prompt).not.toContain("auto-build scope");
+  expect(sessions.size).toBe(1);
+});
+
+test("a missing saved scope gets a short setup request on the existing supervisor", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture();
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  const initial = prompts[0]!;
+  sessions.get(initial.sessionId)!.status = "completed";
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts.at(-1)!.sessionId).toBe(initial.sessionId);
+  expect(prompts.at(-1)!.prompt).toContain("auto-build scope");
+  expect(prompts.at(-1)!.prompt).not.toContain("Implement relevant tickets.");
+  expect(prompts.at(-1)!.prompt!.length).toBeLessThan(initial.prompt!.length / 4);
+});
+
+test("a replacement supervisor receives the initial brief again", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture();
+  await ticket("First");
+  await autoBuildCommand.run(ctx, {});
+  const initial = prompts[0]!;
+  sessions.delete(initial.sessionId);
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts.at(-1)!.prompt).toBe(initial.prompt);
+});
+
 test("unchanged full-capacity work gets an hourly stalled-progress reminder", async () => {
   const start = Date.parse("2026-10-14T12:00:00Z");
   setSystemTime(start);
@@ -59,6 +128,8 @@ test("unchanged full-capacity work gets an hourly stalled-progress reminder", as
     expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
     setSystemTime(start + 3_600_000);
     expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true, sessionId: supervisorId });
+    expect(prompts.at(-1)!.prompt).not.toContain("Implement relevant tickets.");
+    expect(prompts.at(-1)!.prompt!.length).toBeLessThan(prompts[0]!.prompt!.length / 4);
     sessions.get(supervisorId)!.status = "completed";
     setSystemTime(start + 3_780_000);
     expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });

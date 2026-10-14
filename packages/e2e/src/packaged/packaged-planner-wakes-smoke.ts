@@ -1,0 +1,95 @@
+import { expect } from "bun:test";
+import { execFileSync } from "node:child_process";
+import { folderProjectInput } from "../helpers/folder-project";
+
+export async function expectBriefSupervisorWakes(input: { baseUrl: string; headers: Record<string, string> }) {
+  const { baseUrl, headers } = input;
+  const request = async (path: string, method = "GET", body?: unknown) => {
+    const response = await fetch(`${baseUrl}/v1${path}`, {
+      method,
+      headers: { ...headers, "content-type": "application/json" },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    expect(response.ok).toBe(true);
+    return response.json();
+  };
+  const projectInput = folderProjectInput({
+    name: "supervisor-wake-smoke",
+    agents: ["pstdio.workbench-fixture.harness.fake"],
+  });
+  const folder = projectInput.initial_workspace.params.path;
+  execFileSync("git", ["init", "-b", "main", folder]);
+  execFileSync("git", [
+    "-C",
+    folder,
+    "-c",
+    "user.name=Smoke",
+    "-c",
+    "user.email=smoke@example.com",
+    "commit",
+    "--allow-empty",
+    "-m",
+    "Initialize smoke repository",
+  ]);
+  const project = await request("/projects", "POST", projectInput);
+  const execute = async (name: string, params: unknown = {}) => {
+    const result = await request(
+      `/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
+      "POST",
+      { params },
+    );
+    expect(result.outcome.status).toBe("success");
+    return result.outcome.value;
+  };
+  const completedSupervisor = async (previousStart?: string) => {
+    for (let check = 0; check < 100; check++) {
+      const mode = await execute("auto-build.read");
+      if (mode.supervisor?.status === "completed" && mode.supervisor.last_request_started !== previousStart)
+        return mode.supervisor;
+      await Bun.sleep(50);
+    }
+    throw new Error("The fixture supervisor did not finish its turn");
+  };
+  const brief = "Choose work for the packaged supervisor test.";
+  try {
+    await execute("create-ticket", { content: "# Supervisor work", status: "Todo" });
+    const mode = await execute("auto-build.configure", { enabled: true, prompt: brief });
+    const session = await completedSupervisor();
+    await execute("auto-build.scope", { revision: mode.revision, queries: [{}] });
+    await execute("auto-build");
+    const resumed = await completedSupervisor(session.last_request_started);
+    expect(resumed.id).toBe(session.id);
+    const conversation = await request(`/sessions/${session.id}/conversation`);
+    const prompts = conversation.messages
+      .filter((message: { role: string }) => message.role === "user")
+      .map((message: { parts: { type: string; text?: string }[] }) =>
+        message.parts
+          .filter((part) => part.type === "text")
+          .map((part) => part.text ?? "")
+          .join("\n"),
+      );
+    expect(prompts.filter((prompt: string) => prompt.includes(brief))).toHaveLength(1);
+    expect(prompts.length).toBeGreaterThan(1);
+    for (const prompt of prompts.slice(1)) expect(prompt.length).toBeLessThan(prompts[0].length / 4);
+    expect(prompts.at(-1)).not.toContain("auto-build scope");
+    const updated = await execute("auto-build.configure", {
+      enabled: true,
+      prompt: "Choose changed work.",
+      blockOnReview: false,
+    });
+    expect((await completedSupervisor(resumed.last_request_started)).id).toBe(session.id);
+    const changed = await request(`/sessions/${session.id}/conversation`);
+    const last = changed.messages.filter((message: { role: string }) => message.role === "user").at(-1);
+    const text = last.parts
+      .filter((part: { type: string }) => part.type === "text")
+      .map((part: { text: string }) => part.text)
+      .join("\n");
+    expect(text).toContain("auto-build read");
+    expect(text).toContain("auto-build scope");
+    expect(text).not.toContain(updated.prompt);
+    expect(text.length).toBeLessThan(prompts[0].length / 4);
+    expect(await execute("auto-build.read")).toMatchObject({ prompt: updated.prompt, blockOnReview: false });
+  } finally {
+    await execute("auto-build.configure", { enabled: false });
+  }
+}
