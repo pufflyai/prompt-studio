@@ -186,8 +186,12 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
       name: region === "aside" ? "Side panel" : "Bottom panel",
       exact: true,
     });
-    await expect(option.locator("svg")).toBeVisible();
-    await option.click();
+    await expect(option.locator(":scope > svg")).toBeVisible();
+    if ((await option.getAttribute("aria-checked")) !== "true") {
+      await option.click();
+    } else {
+      await page.keyboard.press("Escape");
+    }
     const destination = page.locator(`[data-workbench-region="${region}"]`);
     await movePanelTab(page, mainPanelHeader.getByRole("tab"), destination);
     await expect(page).toHaveURL(ticketUrl);
