@@ -12,7 +12,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPanelWorkbench = (
   options: {
-    alwaysShowTabs?: boolean;
+    showHeader?: boolean;
     multiple?: boolean;
     actions?: boolean;
     closable?: boolean;
@@ -30,7 +30,7 @@ const createPanelWorkbench = (
     initialSidePanelMode: "attached",
     defaultPanelOpenByRegionId: { secondary: true },
     regionSettings: Object.fromEntries(
-      workbenchPanelRegions.map((region) => [region, { alwaysShowTabs: options.alwaysShowTabs }]),
+      workbenchPanelRegions.map((region) => [region, { showHeader: options.showHeader }]),
     ),
   });
   workbench.modes.registerMode({ id: "panel-tabs", label: "Panel tabs", activate: () => undefined });
@@ -77,7 +77,7 @@ const createPanelWorkbench = (
             item: {
               kind: "view" as const,
               view: { kind: "view" as const, id: `${region}.first` },
-              presence: options.closable ? ("open" as const) : ("fixed" as const),
+              presence: "open" as const,
             },
           },
         ]),
@@ -103,6 +103,11 @@ const createPanelWorkbench = (
     modeId: "panel-tabs",
     main: { kind: "view", view: { kind: "view", id: "main.first" }, cardinality: "one" },
     slots,
+    regionSettings: {
+      main: { showHeader: options.showHeader },
+      aside: { showHeader: options.showHeader },
+      bottom: { showHeader: options.showHeader },
+    },
   });
   const resourcePage = { ...page, id: "document" };
   workbench.pages.registerPage({
@@ -120,6 +125,11 @@ const createPanelWorkbench = (
       ...(options.tabLabel ? { tab: { getSnapshot: () => ({ label: options.tabLabel }) } } : {}),
     },
     slots,
+    regionSettings: {
+      main: { showHeader: options.showHeader },
+      aside: { showHeader: options.showHeader },
+      bottom: { showHeader: options.showHeader },
+    },
   });
   workbench.pageLocations.switchProject("storybook-panel-tabs");
   if (options.menusOnly) {
@@ -167,7 +177,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Single-resource Main pages have no tab. Pages supporting many resources and optional panels keep their last tab and Close button. alwaysShowTabs overrides the single-tab default. Header actions remain available without tabs.",
+          "Every declared tool can close. A panel keeps its single tab visible unless showHeader is false. Closed tools can reopen from the panel empty state or its + catalog.",
       },
     },
   },
@@ -183,11 +193,11 @@ export const SingleItems: Story = {
     for (const region of workbenchPanelRegions) {
       await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
     }
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(workbenchPanelRegions.length);
   },
 };
 export const MenuOnlyPanels: Story = {
-  args: { workbench: createPanelWorkbench({ menusOnly: true }) },
+  args: { workbench: createPanelWorkbench({ menusOnly: true, showHeader: false }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     for (const region of ["secondary", "side"] as const) {
@@ -205,7 +215,7 @@ export const UnavailableMenuPanel: Story = {
   },
 };
 export const AlwaysShowTabs: Story = {
-  args: { workbench: createPanelWorkbench({ alwaysShowTabs: true }) },
+  args: { workbench: createPanelWorkbench({ showHeader: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     for (const region of workbenchPanelRegions) {
@@ -218,7 +228,7 @@ export const SingleResourcePage: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("main.first content")).toBeVisible();
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(workbenchPanelRegions.length);
   },
 };
 export const SingleResourceWithMenu: Story = {
@@ -228,12 +238,12 @@ export const SingleResourceWithMenu: Story = {
     await expect(await canvas.findByText("main.first content")).toBeVisible();
     await expect(await canvas.findByText("main.second content")).toBeVisible();
     const header = canvasElement.querySelector('[data-workbench-panel-header="main"]');
-    await expect(header).not.toBeVisible();
+    await expect(header).toBeVisible();
     const menu = args.workbench.layout.getLayout().regions["main-right-menu"].widgets[0]!;
     args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, false);
-    await expect(await canvas.findByRole("button", { name: "Panel tabs panels" })).toBeVisible();
+    await expect(await canvas.findByRole("button", { name: "Document panels" })).toBeVisible();
     args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, true);
-    await expect(header).not.toBeVisible();
+    await expect(header).toBeVisible();
   },
 };
 export const CloseResourcePage: Story = {
@@ -241,8 +251,10 @@ export const CloseResourcePage: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Close main first" }));
-    await expect(canvas.queryByRole("button", { name: "Close main first" })).toBeNull();
-    await expect(canvas.getByText("main.first content")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Close main first" })).toBeVisible();
+    await expect(
+      canvas.getAllByText("main.first content").filter((element) => element.getClientRects().length > 0),
+    ).toHaveLength(1);
   },
 };
 export const SingleClosablePanel: Story = {
@@ -258,7 +270,7 @@ export const SingleClosablePanel: Story = {
   },
 };
 export const HiddenSingleTabs: Story = {
-  args: { workbench: createPanelWorkbench({ closable: true, alwaysShowTabs: false }) },
+  args: { workbench: createPanelWorkbench({ closable: true, showHeader: false }) },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryAllByRole("tab")).toHaveLength(0);
   },
@@ -279,7 +291,7 @@ export const ExplicitTabLabel: Story = {
       cardinality: "many",
       resourceLabel: "Design notes",
       tabLabel: "Unsaved notes",
-      alwaysShowTabs: true,
+      showHeader: true,
     }),
   },
   play: async ({ canvasElement }) => {
@@ -290,7 +302,7 @@ export const ExplicitTabLabel: Story = {
   },
 };
 export const AlwaysShowClosablePanel: Story = {
-  args: { workbench: createPanelWorkbench({ closable: true, alwaysShowTabs: true }) },
+  args: { workbench: createPanelWorkbench({ closable: true, showHeader: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const close = await canvas.findByRole("button", { name: "Close side first" });
@@ -310,7 +322,7 @@ export const MultipleItems: Story = {
       await userEvent.click(canvas.getByRole("button", { name: `Close ${region} second` }));
       await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
       if (region === "main") {
-        await expect(canvas.queryByRole("tab", { name: `${region} first` })).not.toBeInTheDocument();
+        await expect(canvas.getByRole("tab", { name: `${region} first` })).toBeVisible();
       } else {
         await expect(canvas.getByRole("button", { name: `Close ${region} first` })).toBeVisible();
       }
@@ -324,6 +336,6 @@ export const ActionsWithoutTabs: Story = {
     for (const region of workbenchPanelRegions) {
       await expect(await canvas.findByRole("button", { name: `Refresh ${region}` })).toBeVisible();
     }
-    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(workbenchPanelRegions.length);
   },
 };

@@ -1,8 +1,11 @@
 import type {
   FileRendererSectionTarget,
   FileSourcePosition,
+  ModeLayout,
   ModeRegionSettings,
   PageLocation,
+  PagePanelLayout,
+  PanelEdge,
   PlacementIdentity,
 } from "@pstdio/sdk/extensions";
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
@@ -247,7 +250,6 @@ export type WorkbenchSidePanelMode = "floating" | "closed" | "attached";
 
 export interface WorkbenchRegionState {
   id: WorkbenchRegion;
-  edge?: "left" | "right" | "top" | "bottom";
   visible: boolean;
   /** Owner intent. `visible` is the legacy layout projection, not another user choice. */
   visibility?: "auto" | "open" | "closed";
@@ -264,6 +266,9 @@ export interface WorkbenchRegionState {
 }
 
 export interface WorkbenchLayout {
+  modeLayout?: ModeLayout;
+  pageLayout?: PagePanelLayout;
+  actionBarEdge?: PanelEdge;
   regions: Record<WorkbenchRegion, WorkbenchRegionState>;
   locationSubPanelSelections?: Record<string, Partial<Record<WorkbenchPanelRegion, string>>>;
   activeWidgetId?: string;

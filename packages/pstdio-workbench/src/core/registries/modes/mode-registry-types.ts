@@ -1,4 +1,4 @@
-import type { PageRef } from "@pstdio/sdk/extensions";
+import type { ModeLayout, PageRef, PanelEdge } from "@pstdio/sdk/extensions";
 import type { Disposable } from "../../shared/disposable";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
@@ -28,6 +28,8 @@ export interface WorkbenchModeAddablePanelContext {
 }
 
 export interface WorkbenchModeContribution {
+  layout?: ModeLayout;
+  actionBarEdge?: PanelEdge;
   id: string;
   label?: string;
   basePage?: PageRef;

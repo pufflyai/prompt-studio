@@ -122,7 +122,7 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
       id: PANEL_WIDGET_ID,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: PANEL_WIDGET_ID,
@@ -139,7 +139,7 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
       id: SIDENAV_WIDGET_ID,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: SIDENAV_WIDGET_ID,
@@ -156,7 +156,7 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
       id: SECONDARY_WIDGET_ID,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: SECONDARY_WIDGET_ID,

@@ -3,6 +3,7 @@ import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/b
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import { registerArrangementCommands } from "./controllers/composition/arrangement-commands";
 import { createPanelArrangement } from "./controllers/composition/panel-arrangement";
+import { createPanelGeometry } from "./controllers/composition/panel-geometry";
 import { createPlacementCloseController } from "./controllers/composition/placement-close-controller";
 import { createPlacementPinController } from "./controllers/composition/placement-pin-controller";
 import { createLayoutResetController } from "./controllers/composition/reset-workbench-layout";
@@ -253,6 +254,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     closePlacement: createPlacementCloseController(() => core),
     pinPlacement: createPlacementPinController(() => core),
     ...createPanelArrangement(() => core),
+    ...createPanelGeometry(() => core),
     ...createLayoutResetController(() => core),
     breadcrumbs,
     commandPalette: createWorkbenchCommandPaletteController(),

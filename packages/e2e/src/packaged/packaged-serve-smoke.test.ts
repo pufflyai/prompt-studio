@@ -38,6 +38,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
+import { expectPackagedModeGeometry } from "./packaged-mode-geometry";
 // Native actions cover complete Kanban moves and independent schema dependencies.
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
@@ -45,6 +46,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Navigation metadata preserves view background/reveal/defaultPanel, instance policy, page menus, aside and bottom settings, modes/basePage,
 // resource context, page-owned Main headers, independent mode panel permissions, and explicit-open targets.
+// Deprecated fixed presence and movableTo survive the packaged extension metadata path.
 // Browser smoke also verifies floating Side defaults, retained tabs, and persisted bubble anchors.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
@@ -145,6 +147,7 @@ test(
       const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
         headers: runtimeAuthorization(started.descriptor),
       });
+      await expectPackagedModeGeometry(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
       expect(extensionsRes.status).toBe(200);
 
       const body = (await extensionsRes.json()) as {

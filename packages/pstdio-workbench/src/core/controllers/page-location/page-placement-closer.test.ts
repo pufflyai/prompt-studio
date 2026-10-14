@@ -53,5 +53,5 @@ test("closing the last resource returns to its declared home page", () => {
   const identity = workbench.layout.getLayout().regions.main.widgets[0]!.placementIdentity!;
   expect(workbench.pageLocations.closePlacement(identity).ok).toBe(true);
   expect(workbench.pages.store.getState().location).toEqual({ page: home });
-  expect(workbench.layout.getLayout().regions.main.widgets).toMatchObject([{ closable: false }]);
+  expect(workbench.layout.getLayout().regions.main.widgets).toMatchObject([{ closable: true }]);
 });

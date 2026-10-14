@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { WorkbenchCore, WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout } from "../panel-menu/panel-menu";
+import { PanelEdgeTargets } from "../region/panel-edge-targets";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
@@ -35,6 +36,7 @@ const resolveRegionSize = (
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench, breadcrumbHeader } = props;
+  const edge = useWorkbenchStore(workbench.layout.store, () => workbench.getPanelEdge("secondary"));
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
@@ -64,7 +66,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       position="relative"
     >
       <WorkbenchRegion workbench={workbench} region="main" title="Main" />
-      <WorkbenchTabDropTarget region="main" />
+      <WorkbenchTabDropTarget workbench={workbench} region="main" />
     </WorkbenchFocusRegion>
   );
   const editor = (
@@ -100,6 +102,8 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       position="relative"
     >
       {breadcrumbHeader}
+      <PanelEdgeTargets workbench={workbench} inner />
+      <PanelEdgeTargets workbench={workbench} content />
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         <WorkbenchPageAsideLayout workbench={workbench}>
           <WorkbenchPageBottomLayout workbench={workbench}>{editor}</WorkbenchPageBottomLayout>
@@ -113,7 +117,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       as="main"
       minH="0"
       minW="0"
-      resizableSide="bottom"
+      resizableSide={edge === "top" ? "top" : "bottom"}
       contentPanel={mainContent}
       resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
       collapsed={!secondaryPanel.has || secondaryPanel.collapsed}

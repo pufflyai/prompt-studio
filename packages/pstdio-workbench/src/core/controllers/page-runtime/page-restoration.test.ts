@@ -22,6 +22,7 @@ const harness = (saved: Map<string | undefined, WorkbenchLayout>, fixedFiles = f
   for (const id of ["empty", "editor", "inspector"])
     workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
+    tabLocks: fixedFiles ? "legacy" : undefined,
     id: "workspace",
     ref: page,
     path: "workspace",
@@ -87,7 +88,7 @@ test("reload restores editor collections and closed panels from each location's 
   restored.pageLocations.dispose();
 });
 
-test("restoring a location applies current fixed panel declarations to its cached layout", async () => {
+test("legacy restoration applies fixed panel declarations to its cached layout", async () => {
   const saved = new Map<string | undefined, WorkbenchLayout>();
   const first = harness(saved);
   await first.navigation.openTarget(target("alpha"));

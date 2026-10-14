@@ -1,16 +1,16 @@
-import type { WorkbenchRegionState } from "../../registries/layout/layout-types";
+import type { PanelEdge } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelPolicy } from "./panel-policy";
 
 type ToggleRegion = "sidenav" | "secondary" | "side";
 interface PanelTogglesInput {
-  regions: Partial<Record<ToggleRegion, Pick<WorkbenchRegionState, "edge">>>;
+  edges: Partial<Record<ToggleRegion, PanelEdge>>;
   policies: Record<ToggleRegion, Pick<WorkbenchPanelPolicy, "provided" | "canToggle" | "open">>;
 }
 
 /** Navigation is outermost, Side is beside the page, and Secondary is in its middle. */
 export const resolvePanelToggles = (input: PanelTogglesInput) => {
-  const navigationRight = input.regions.sidenav?.edge === "right";
-  const sideLeft = input.regions.side?.edge === "left";
+  const navigationRight = input.edges.sidenav === "right";
+  const sideLeft = input.edges.side === "left";
   const order: ToggleRegion[] = [
     ...(navigationRight ? [] : ["sidenav" as const]),
     ...(sideLeft ? ["side" as const] : []),
@@ -21,7 +21,7 @@ export const resolvePanelToggles = (input: PanelTogglesInput) => {
   const names = { sidenav: "Navigation", secondary: "Bottom panel", side: "Sidebar" };
   const icons = {
     sidenav: "ListTree",
-    secondary: input.regions.secondary?.edge === "top" ? "PanelTop" : "PanelBottom",
+    secondary: input.edges.secondary === "top" ? "PanelTop" : "PanelBottom",
     side: sideLeft ? "PanelLeft" : "PanelRight",
   };
   return order

@@ -1,5 +1,6 @@
 import { isLocalizedString, type NavigationTargetPage, type PageLocation, type PageRef } from "@pstdio/sdk/extensions";
 import type { NavigationTreeRegistry } from "../../registries/navigation/navigation-tree-registry";
+import { PAGE_MAIN_SLOT_ID } from "../../registries/pages/page-main";
 import type {
   WorkbenchPageContribution,
   WorkbenchPageRegistry,
@@ -19,6 +20,12 @@ export const pageTitle = (page: WorkbenchPageContribution) => {
   if (page.title === undefined) return page.ref.id;
   if (!isLocalizedString(page.title)) return page.title;
   return page.title.default ?? page.title.$l10n;
+};
+const landingPanelId = (page: WorkbenchPageContribution) => {
+  if (page.tabLocks !== "legacy") return page.main.kind === "view" ? PAGE_MAIN_SLOT_ID : undefined;
+  return page.slots.find(
+    (slot) => slot.region === "main" && slot.item.kind === "view" && slot.item.presence === "fixed",
+  )?.id;
 };
 export const createWorkbenchPageBreadcrumbItems = (input: {
   location: PageLocation;
@@ -40,16 +47,11 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
       ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };
     // Collection pages return to their landing panel; resource crumbs keep their resource link.
-    const landingPanel =
-      page?.main.kind === "panels" && !location.resource
-        ? page.slots.find(
-            (slot) => slot.region === "main" && slot.item.kind === "view" && slot.item.presence === "fixed",
-          )
-        : undefined;
+    const landingPanel = !location.resource && page ? landingPanelId(page) : undefined;
     if (index < locations.length - 1 || (landingPanel && input.openPanel)) {
       item.onClick = () => {
         input.navigate(pageLocationTarget(location));
-        if (page && landingPanel) input.openPanel?.(page.id, landingPanel.id);
+        if (page && landingPanel) input.openPanel?.(page.id, landingPanel);
       };
     }
     return item;

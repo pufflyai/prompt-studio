@@ -23,7 +23,7 @@ test("moving a webview between panels preserves its browsing context", async ({ 
     const frame = await (await element.elementHandle())?.contentFrame();
     expect(frame).toBeTruthy();
     await frame!.evaluate(() => Reflect.set(window, "placementMarker", "original context"));
-    await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+    await page.getByRole("button", { name: "Show Sidebar", exact: true }).click();
     for (const destination of ["Side", "Main"]) {
       await movePanelTab(page, tab, page.locator(`[data-workbench-region="${destination.toLowerCase()}"]`));
       await expect(
