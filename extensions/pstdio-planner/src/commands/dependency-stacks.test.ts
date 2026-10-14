@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
 import { ticketsCollection } from "../data/collections";
+import { listTicketReviewRequests } from "../data/review-request-storage";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { submitChangeRequestCommand } from "./change-requests";
 import { prepareDependencyBase } from "./dependency-base";
+import { runAttemptCommand } from "./run-attempt";
 import { stackSubmissionFixture } from "./stack-submission.fixture";
 import { readStackRepair, updateStackCommand } from "./update-stack";
 
@@ -77,13 +79,46 @@ test("repairs an unsubmitted child from Done dependency branches without changin
   }
 });
 
-test("dependency conflicts leave the child's files, HEAD, and recorded base untouched", async () => {
+test("the owner can reconcile conflicting dependencies and submit without a human request", async () => {
   const f = await independentDependencies(true);
   try {
     await expect(updateStackCommand.run(f.ctx, f.input)).rejects.toThrow("conflict");
-    expect(await f.git("rev-parse", "HEAD")).toBe(f.child);
+    const pending = await f.git("diff", "--name-only", "--diff-filter=U");
+    expect(pending).toBe("shared.txt");
+    expect(await f.git("show", "HEAD:child.txt")).toBe("child.txt");
+    await Bun.write(`${f.path}/shared.txt`, "Both dependency implementations reconciled");
+    await f.git("add", "shared.txt");
+    await f.git("commit", "-m", "Reconcile dependency code");
+    const updated = await updateStackCommand.run(f.ctx, {
+      ...f.input,
+      expectedHeadSha: await f.git("rev-parse", "HEAD"),
+    });
+    await f.git("merge-base", "--is-ancestor", f.left, updated.headSha);
+    await f.git("merge-base", "--is-ancestor", f.right, updated.headSha);
     expect(await f.git("status", "--porcelain")).toBe("");
-    expect((await readAttempt(f.storage, "child"))?.base.headSha).toBe(f.base);
+    expect(updated.base.headSha).toBe(f.base);
+    await submitChangeRequestCommand.run(f.ctx, await f.params());
+    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!)).toBeNull();
+    expect((await listTicketReviewRequests(f.storage, "Child")).requests).toHaveLength(0);
+    expect(await f.git("rev-parse", "main")).toBe(f.base);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+test("conflicting dependency branches start a managed implementation owner", async () => {
+  const f = await independentDependencies(true);
+  try {
+    await putAttempt(f.storage, { ...f.attempt, state: "abandoned" });
+    f.ctx.workspaces.create = async () => ({ id: "new-child", workspace_shorthand: "Child_A2" }) as never;
+    f.ctx.sessions.create = async () => ({ id: "new-owner", title: "Resolve code", status: "queued" }) as never;
+    const started = await runAttemptCommand.run(f.ctx, { ticket: "Child" });
+    expect(started).toMatchObject({
+      decision: "started",
+      workspace: { id: "new-child" },
+      session: { id: "new-owner" },
+    });
+    expect((await listTicketReviewRequests(f.storage, "Child")).requests).toHaveLength(0);
     expect(await f.git("rev-parse", "main")).toBe(f.base);
   } finally {
     await f.cleanup();

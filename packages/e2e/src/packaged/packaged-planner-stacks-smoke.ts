@@ -4,6 +4,11 @@ import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 
 export async function expectPackagedDependencyStacks(input: { baseUrl: string; headers: Record<string, string> }) {
+  await expectDependencyStack(input, false);
+  await expectDependencyStack(input, true);
+}
+
+async function expectDependencyStack(input: { baseUrl: string; headers: Record<string, string> }, conflict: boolean) {
   const request = async (path: string, method = "GET", body?: unknown) => {
     const response = await fetch(`${input.baseUrl}/v1${path}`, {
       method,
@@ -15,7 +20,7 @@ export async function expectPackagedDependencyStacks(input: { baseUrl: string; h
     return JSON.parse(bodyText);
   };
   const projectInput = folderProjectInput({
-    name: "dependency-stack-smoke",
+    name: conflict ? "dependency-conflict-smoke" : "dependency-stack-smoke",
     agents: ["pstdio.workbench-fixture.harness.fake"],
   });
   const folder = projectInput.initial_workspace.params.path;
@@ -58,7 +63,7 @@ export async function expectPackagedDependencyStacks(input: { baseUrl: string; h
     await stop(started.session.id);
     const headSha = await commit(
       started.workspace.root_path,
-      `${word}.ts`,
+      conflict ? "words.ts" : `${word}.ts`,
       `export const ${word} = () => "${word}";\n`,
     );
     const report = await execute(
@@ -92,28 +97,55 @@ export async function expectPackagedDependencyStacks(input: { baseUrl: string; h
     await execute("update-ticket", { id: ticket.id, status: "Done" });
     dependencies.push({ ticketId: ticket.id, headSha });
   }
-  // Adding dependencies to an existing attempt reproduces a child left on an older base.
-  const child = await execute("create-ticket", { content: "# Consume both words", status: "Todo" });
+  // Cover both a stale existing attempt and a fresh owner launched to reconcile conflicting dependencies.
+  const child = await execute("create-ticket", {
+    content: "# Consume both words",
+    status: "Todo",
+    ...(conflict ? { dependsOn: dependencies.map(({ ticketId }) => ticketId) } : {}),
+  });
   const started = await execute("run-attempt", { ticket: child.id });
   await stop(started.session.id);
-  const head = await commit(started.workspace.root_path, "child.ts", "export const child = true;\n");
+  let head = await commit(started.workspace.root_path, "child.ts", "export const child = true;\n");
   await execute("update-ticket", { id: child.id, dependsOn: dependencies.map(({ ticketId }) => ticketId) });
   const next = await execute("next-tickets");
   expect(next.tickets).toContainEqual(
     expect.objectContaining({ id: child.id, action: "update-stack", workspaceId: started.workspace.id }),
   );
-  const updated = await execute("update-stack", {
-    workspaceId: started.workspace.id,
-    implementationSessionId: started.session.id,
-    expectedHeadSha: head,
-  });
+  const update = () =>
+    execute("update-stack", {
+      workspaceId: started.workspace.id,
+      implementationSessionId: started.session.id,
+      expectedHeadSha: head,
+    });
+  if (conflict) {
+    const response = await request(
+      `/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.update-stack/execute`,
+      "POST",
+      {
+        params: {
+          workspaceId: started.workspace.id,
+          implementationSessionId: started.session.id,
+          expectedHeadSha: head,
+        },
+      },
+    );
+    expect(response.outcome.ok).toBe(false);
+    expect(git(started.workspace.root_path, "diff", "--name-only", "--diff-filter=U")).toBe("words.ts");
+    head = await commit(
+      started.workspace.root_path,
+      "words.ts",
+      'export const left = () => "left";\nexport const right = () => "right";\n',
+    );
+  }
+  const updated = await update();
   for (const dependency of dependencies)
-    git(folder, "merge-base", "--is-ancestor", dependency.headSha, updated.base.headSha);
-  expect(git(started.workspace.root_path, "show", "HEAD:left.ts")).toContain("left");
-  expect(git(started.workspace.root_path, "show", "HEAD:right.ts")).toContain("right");
+    git(folder, "merge-base", "--is-ancestor", dependency.headSha, updated.headSha);
+  expect(git(started.workspace.root_path, "show", conflict ? "HEAD:words.ts" : "HEAD:left.ts")).toContain("left");
+  expect(git(started.workspace.root_path, "show", conflict ? "HEAD:words.ts" : "HEAD:right.ts")).toContain("right");
   expect(git(started.workspace.root_path, "show", "HEAD:child.ts")).toContain("true");
   expect(git(folder, "rev-parse", "main")).toBe(original);
   expect(
     (await execute("list-attempts")).filter((attempt: { ticketId: string }) => attempt.ticketId === child.id),
   ).toHaveLength(1);
+  expect((await execute("review-requests.list", { ticket: child.id })).requests).toHaveLength(0);
 }

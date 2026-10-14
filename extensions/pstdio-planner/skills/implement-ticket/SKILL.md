@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.16
+  version: 0.0.17
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
@@ -28,7 +28,7 @@ Before editing a managed attempt:
 2. Read the ticket's dependencies and inspect the required files in this workspace. A submitted prerequisite can exist only on its own branch. A Done ticket or an answered human request does not prove that its commits reached the target branch or your workspace.
 3. For dependent work, verify the base with `pst pstdio-planner update-stack --workspace-id <workspace-id> --implementation-session-id <owner-session-id> --expected-head-sha <git-rev-parse-HEAD>`. Commit your existing changes first if the workspace is dirty. Planner combines compatible submitted dependency branches into a base and integrates it in this same workspace. Check its result and the required files before continuing.
 
-Dependency integration is part of implementing this ticket. This assignment authorizes stack updates in your assigned workspace; run them without asking for another confirmation. It does not approve another ticket, merge into the project target, or move a ticket to Done. Do not recreate prerequisite code, create a replacement attempt, or use Done status to bypass missing code. If the selected dependency revisions conflict, report the exact conflicting revisions and the decision needed. If integrating the base conflicts with your ticket's changes, preserve both, resolve and commit the merge in this workspace, then retry `update-stack`.
+Dependency integration is part of implementing this ticket. This assignment authorizes stack updates in your assigned workspace; run them without asking for another confirmation. It does not approve another ticket, merge into the project target, or move a ticket to Done. Do not recreate prerequisite code, create a replacement attempt, or use Done status to bypass missing code. Reconcile Git conflicts yourself in this workspace: inspect both revisions, preserve their required behavior and your ticket's changes, resolve the files, commit the merge, and retry `update-stack`. Run the affected tests before submitting. Do not request human review or confirmation merely because Git reports conflicts. Ask only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. Explain that semantic conflict and the exact choice needed; a conflicting file alone is not a human decision.
 
 ## Workflow
 

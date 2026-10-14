@@ -46,7 +46,7 @@ import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-n
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner checks dependency-only blockers, empty CLI clears, request-owned indicators, and protected tag edits.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
-// Timeline coverage checks Auto Build scope, short wakes, managed status, and repair of unsubmitted children with Done dependencies on separate branches.
+// Timeline coverage checks Auto Build scope, short wakes, managed status, and owner reconciliation of Done dependency branches, including Git conflicts.
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
 // Queue drag targets follow live-input support and retain padded delete actions.

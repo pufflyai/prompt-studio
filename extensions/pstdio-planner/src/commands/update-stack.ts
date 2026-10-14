@@ -7,7 +7,7 @@ import { withWriteGuard } from "../data/write-guard";
 import { loadAttemptDependencies } from "./attempt-readiness";
 import { isLiveSession } from "./auto-build-sessions";
 import { workspaceGitPath, workspaceHead } from "./change-requests";
-import { containsDependencyHeads } from "./dependency-base";
+import { containsDependencyHeads, dependencyHeads } from "./dependency-base";
 import { containsCommit, prepareRequiredStackBase, readRequiredStackDependencies } from "./stack-validation";
 
 export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecord) {
@@ -31,7 +31,7 @@ export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecor
       : { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha };
   const needsIntegration =
     !(await containsCommit(ctx, workspace.root_path, base.headSha, head)) ||
-    !(await containsDependencyHeads(ctx, readiness, attempt.base.headSha));
+    !(await containsDependencyHeads(ctx, readiness, head));
   if ((!latest || (head === latest.headSha && latest.baseSha === base.headSha)) && !needsIntegration) return null;
   return {
     eventId,
@@ -68,21 +68,19 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
   if (status.stdout.trim()) throw new Error("Commit or resolve the workspace changes before updating the stack.");
   const readiness = await readRequiredStackDependencies(ctx, attempt, input.base);
   const base = await prepareRequiredStackBase(ctx, attempt, input.base);
-  if (!(await containsCommit(ctx, path, base.headSha, before))) {
+  for (const required of [base.headSha, ...(await dependencyHeads(ctx, readiness.dependencyAttemptIds))]) {
+    if (await containsCommit(ctx, path, required, await workspaceHead(ctx, attempt.workspaceId))) continue;
     const merged = await ctx.process.run({
-      command: ["git", "-C", path, "merge", "--no-edit", "--", base.headSha],
+      command: ["git", "-C", path, "merge", "--no-edit", "--", required],
     });
     if (merged.exitCode !== 0)
       throw new Error(
-        `Dependency integration needs repair in this workspace. Resolve and commit the merge, then retry update-stack. ${merged.stderr.trim()}`,
+        `Dependency integration needs repair in this workspace. Reconcile the code, resolve and commit the merge, then retry update-stack. Do not request human review for Git conflicts; ask only for conflicting requirements or design decisions. ${merged.stdout.trim()} ${merged.stderr.trim()}`,
       );
   }
   const headSha = await workspaceHead(ctx, attempt.workspaceId);
   const current = await readRequiredStackDependencies(ctx, attempt, input.base);
-  if (
-    JSON.stringify(current) !== JSON.stringify(readiness) ||
-    !(await containsDependencyHeads(ctx, current, base.headSha))
-  )
+  if (JSON.stringify(current) !== JSON.stringify(readiness) || !(await containsDependencyHeads(ctx, current, headSha)))
     throw new Error("The selected dependency revision changed during integration. Query and update the stack again.");
   if (!(await containsCommit(ctx, path, base.headSha, headSha)))
     throw new Error("The updated workspace does not contain the required dependency base.");

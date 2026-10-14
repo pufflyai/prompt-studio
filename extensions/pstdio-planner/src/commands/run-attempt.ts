@@ -18,7 +18,7 @@ import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness } from "./attempt-readiness";
-import { DependencyConflict, prepareDependencyBase } from "./dependency-base";
+import { prepareDependencyBase } from "./dependency-base";
 import {
   createAnchoredWorkspace,
   harnessInput,
@@ -29,7 +29,6 @@ import {
 
 const humanReadinessReasons = new Set<HumanRequestReason>([
   "ambiguous-dependency-attempt",
-  "divergent-dependency-attempts",
   "dependency-cycle",
   "dependency-missing",
 ]);
@@ -80,24 +79,7 @@ export async function startAttempt(
     }
     throw new Error(message);
   }
-  let dependencyBase = { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha };
-  try {
-    dependencyBase = await prepareDependencyBase(ctx, readiness);
-  } catch (error) {
-    if (error instanceof DependencyConflict) {
-      const storedTicket = await findTicket(ctx.storage, ticketRef);
-      if (storedTicket)
-        await createReviewRequest(ctx, {
-          ticket: storedTicket.id,
-          reason: "divergent-dependency-attempts",
-          title: "Resolve conflicting dependency revisions",
-          instructions: error.message,
-          request: handoffRequest,
-          expectedTicketStatusId: storedTicket.statusId ?? "",
-        });
-    }
-    throw error;
-  }
+  const dependencyBase = await prepareDependencyBase(ctx, readiness);
   const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
     ctx,
     commandParams,
@@ -130,7 +112,7 @@ export async function startAttempt(
       }),
       ...(readiness.mode === "stacked"
         ? [
-            `This workspace starts at dependency base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch and build on this base. It may combine several submitted branches without merging any of them into the project target. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
+            `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request human review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
           ]
         : []),
     ].join("\n\n"),

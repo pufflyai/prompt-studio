@@ -27,8 +27,6 @@ export const containsDependencyHeads = async (ctx: CommandContext, readiness: Re
   return true;
 };
 
-export class DependencyConflict extends Error {}
-
 // A combined dependency commit belongs to the attempt base. No target branch or worktree is changed.
 export const prepareDependencyBase = async (ctx: CommandContext, readiness: Ready) => {
   const base = { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha };
@@ -40,10 +38,9 @@ export const prepareDependencyBase = async (ctx: CommandContext, readiness: Read
     const tree = await ctx.process.run({
       command: ["git", "-C", workspace.root_path, "merge-tree", "--write-tree", head, dependency],
     });
-    if (tree.exitCode !== 0)
-      throw new DependencyConflict(
-        `Dependency revisions conflict while combining ${head} and ${dependency}. Resolve their conflicting changes in a managed workspace, then submit a common dependency revision. ${tree.stdout.trim()} ${tree.stderr.trim()}`,
-      );
+    // Conflicts belong to the implementation owner. Keep a clean starting base so it can reconcile them there.
+    if (tree.exitCode === 1) return base;
+    if (tree.exitCode !== 0) throw new Error(tree.stderr.trim() || "Could not combine dependency revisions.");
     const commit = await ctx.process.run({
       command: [
         "git",
