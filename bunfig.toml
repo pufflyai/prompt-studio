@@ -1,2 +1,5 @@
 [test]
 preload = ["./scripts/test-setup.ts"]
+
+[install]
+linkWorkspacePackages = false

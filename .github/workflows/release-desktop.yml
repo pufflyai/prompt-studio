@@ -117,6 +117,10 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
+      - name: Test native DMG attachment cleanup
+        if: matrix.platform == 'darwin'
+        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+
       - name: Verify release version
         env:
           DESKTOP_RELEASE_VERSION: ${{ inputs.version }}

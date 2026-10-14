@@ -5,9 +5,7 @@ const verify = (version: string, isExtension = true) => {
   const errors: string[] = [];
   checkExtensionUiVersion(
     {
-      name: "example",
       dir: "extensions/example",
-      declared: new Set(["@pstdio/ui"]),
       dependencies: { "@pstdio/ui": version },
       isExtension,
     },

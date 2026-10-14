@@ -25,7 +25,7 @@ Do not edit versions by hand. Add new released workspace packages to the fixed g
    - `verify-packaged-toolchain.yml` checks the compiled CLI on native Linux, Intel macOS and Windows.
    - `harness-cli-support.yml` checks the native harnesses against the minimum and latest supported CLI versions.
    - `release-desktop.yml` builds, signs, notarizes and tests every desktop target and uploads the artifacts. It publishes nothing.
-   - `verify-windows-update.yml` (stable only) builds a signed baseline from the newest published release, installs it, applies the Squirrel update to the signed candidate, and checks installed signatures, launch behavior and project-data preservation.
+   - `verify-windows-update.yml` (stable only) downloads the signed Windows baseline from the newest published release, installs those shipped files, applies the Squirrel update to the signed candidate, and checks installed signatures, launch behavior and project-data preservation.
 3. **publish.** Runs only when every verify job passed and the tag still points at the planned commit. It runs the `build-release` action (build, compile, verify packaged output, checksums), checks the complete desktop release set and its checksums, runs `npm publish --dry-run` for every package npm does not have yet, publishes the `@pstdio/cli-*` platform packages, runs `changeset publish --no-git-tag`, creates the draft GitHub release with CLI assets, attaches the desktop assets and publishes the release.
 4. **version_pr.** Every push to `main` runs `changesets/action` with only its version command, which opens or updates the version PR. It never publishes.
 

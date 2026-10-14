@@ -28,6 +28,22 @@ test("row changes retain previous ownership and indexes follow reassignment and 
   expect(getIndexedRows("workspace_sessions", "session_id", "new")).toEqual([]);
 });
 
+test("sync notifications distinguish complete snapshots from row events", () => {
+  const changes: CollectionChange[] = [];
+  const unsubscribe = subscribeCollections((change) => {
+    if (change?.table === "projects") changes.push(change);
+  });
+  try {
+    const writer = getWriter("projects")!;
+    writer.truncateAndWrite([{ id: "snapshot-project", name: "Snapshot project" }]);
+    writer.upsert({ id: "snapshot-project", name: "Renamed" });
+    writer.remove("snapshot-project");
+    expect(changes.map((change) => change.type)).toEqual(["snapshot", "row", "row"]);
+  } finally {
+    unsubscribe();
+  }
+});
+
 describe("SYNCED_TABLES", () => {
   test("includes extension rows used by dashboard contribution selectors", () => {
     expect(SYNCED_TABLES).toContain("installed_extension_sources");

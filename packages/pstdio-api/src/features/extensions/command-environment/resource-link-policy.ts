@@ -47,7 +47,8 @@ export const createAnchorPolicy = async (deps: ExtensionsRouteDeps, projectId: s
     operation: "add" | "remove",
   ) => {
     if (endpoint.extensionId === "pstdio") return;
-    const owner = records.find((record) => record.installedSource.extension_id === endpoint.extensionId);
+    const owners = records.filter((record) => record.installedSource.extension_id === endpoint.extensionId);
+    const owner = owners.find((record) => record.instance.enabled) ?? owners[0];
     if (!owner) {
       if (operation === "remove") return;
       throw new Error(`Resource owner ${endpoint.extensionId} is not installed.`);
