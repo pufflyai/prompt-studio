@@ -3,6 +3,7 @@ import { AbsoluteCenter, chakra, IconButton } from "@chakra-ui/react";
 import { ArrowDownIcon } from "lucide-react";
 import { StickToBottom as StickToBottomEl, useStickToBottomContext } from "use-stick-to-bottom";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { useConversationVisibility } from "./use-conversation-visibility";
 
 export type ConversationRootProps = HTMLChakraProps<"div", React.ComponentProps<typeof StickToBottomEl>>;
 
@@ -34,6 +35,7 @@ export type ConversationContentProps = Omit<React.ComponentProps<typeof ScrollAr
 export const ConversationContent = (props: ConversationContentProps) => {
   const { children, ...rest } = props;
   const { contentRef, scrollRef } = useStickToBottomContext();
+  useConversationVisibility();
 
   return (
     <ScrollArea

@@ -1,9 +1,11 @@
 import { Box } from "@chakra-ui/react";
+import { defaultRangeExtractor } from "@tanstack/react-virtual";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import { useMessageAnimationKeys } from "./chat-message-animation";
-import { ChatMessageListResponse, StickyMessageResponse } from "./chat-message-list-items";
-import { getAssistantMessageActionTargetId, type MessageGroup, type SessionMessage } from "./message-types";
+import { ChatMessageListResponse } from "./chat-message-list-items";
+import { buildChatMessageRows, getChatStickyRowIndex, hasChatRowGap } from "./chat-message-rows";
+import type { MessageGroup, SessionMessage } from "./message-types";
 import { StickyUserMessage } from "./sticky-user-message";
 import { useTailReady } from "./use-chat-tail-ready";
 
@@ -17,134 +19,9 @@ interface ChatMessageListProps {
   onReady?: () => void;
 }
 
-interface StickyMessageGroupProps {
-  group: MessageGroup;
-  streaming: boolean;
-  hideQuestionForms: boolean;
-  isExpanded: boolean;
-  animate: boolean;
-  onToggleStickyMessage: (messageId: string) => void;
-}
-
-interface ChatMessageListEntryProps
-  extends Pick<
-    ChatMessageListProps,
-    "streaming" | "hideActiveQuestionForms" | "expandedStickyMessageIds" | "onToggleStickyMessage"
-  > {
-  item: ChatMessageListItem;
-  groupCount: number;
-  animate: boolean;
-}
-
-type ChatMessageListItem =
-  | {
-      type: "leading-response";
-      key: string;
-      message: SessionMessage;
-      showAssistantActions: boolean;
-    }
-  | {
-      type: "group";
-      key: string;
-      group: MessageGroup;
-      groupIndex: number;
-    };
-
-const ESTIMATED_TURN_HEIGHT = 720;
-const INITIAL_TAIL_VIEWPORT_HEIGHT = 1;
+const ESTIMATED_MESSAGE_HEIGHT = 360;
 const VIRTUAL_LIST_OVERSCAN = 4;
 const VIRTUAL_LIST_GAP = 8;
-
-const buildMessageListItems = (leadingResponses: SessionMessage[], groups: MessageGroup[]) => {
-  const leadingActionMessageId = getAssistantMessageActionTargetId(leadingResponses);
-
-  return [
-    ...leadingResponses.map((message) => ({
-      type: "leading-response" as const,
-      key: message.id,
-      message,
-      showAssistantActions: message.id === leadingActionMessageId,
-    })),
-    ...groups.map((group, groupIndex) => ({
-      type: "group" as const,
-      key: group.userMessage.id,
-      group,
-      groupIndex,
-    })),
-  ];
-};
-
-const getEstimatedTailOffset = (count: number, viewportHeight: number) => {
-  if (count === 0) return 0;
-
-  const estimatedTotalSize = count * ESTIMATED_TURN_HEIGHT + (count - 1) * VIRTUAL_LIST_GAP;
-  return Math.max(estimatedTotalSize - viewportHeight, 0);
-};
-
-const getInitialViewportHeight = (scrollElement: HTMLElement | null) =>
-  scrollElement?.clientHeight || INITIAL_TAIL_VIEWPORT_HEIGHT;
-
-const StickyMessageGroup = (props: StickyMessageGroupProps) => {
-  const { group, streaming, hideQuestionForms, isExpanded, animate, onToggleStickyMessage } = props;
-  const actionMessageId = getAssistantMessageActionTargetId(group.responses);
-
-  return (
-    <Box>
-      <Box position="sticky" top="0" zIndex={1}>
-        <StickyUserMessage
-          message={group.userMessage}
-          expanded={isExpanded}
-          animate={animate}
-          onToggle={onToggleStickyMessage}
-        />
-      </Box>
-      {group.responses.map((message) => (
-        <StickyMessageResponse
-          key={message.id}
-          message={message}
-          streaming={streaming && message.id === actionMessageId}
-          hideQuestionForms={hideQuestionForms}
-          showAssistantActions={message.id === actionMessageId}
-        />
-      ))}
-    </Box>
-  );
-};
-
-const ChatMessageListEntry = (props: ChatMessageListEntryProps) => {
-  const {
-    item,
-    groupCount,
-    streaming,
-    hideActiveQuestionForms,
-    expandedStickyMessageIds,
-    animate,
-    onToggleStickyMessage,
-  } = props;
-
-  if (item.type === "leading-response") {
-    return (
-      <ChatMessageListResponse
-        message={item.message}
-        streaming={streaming && groupCount === 0 && item.showAssistantActions}
-        hideQuestionForms={groupCount > 0 || hideActiveQuestionForms}
-        animate={animate}
-        showAssistantActions={item.showAssistantActions}
-      />
-    );
-  }
-
-  return (
-    <StickyMessageGroup
-      group={item.group}
-      streaming={streaming && item.groupIndex === groupCount - 1}
-      hideQuestionForms={item.groupIndex < groupCount - 1 || hideActiveQuestionForms}
-      isExpanded={expandedStickyMessageIds.has(item.group.userMessage.id)}
-      animate={animate}
-      onToggleStickyMessage={onToggleStickyMessage}
-    />
-  );
-};
 
 export const ChatMessageList = (props: ChatMessageListProps) => {
   const {
@@ -157,57 +34,76 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     onReady,
   } = props;
   const { scrollRef } = useStickToBottomContext();
-  const items = buildMessageListItems(leadingResponses, groups);
-  const animatedItemKeys = useMessageAnimationKeys(items.map((item) => item.key));
-  const initialViewportHeight = getInitialViewportHeight(scrollRef.current);
-
+  const rows = buildChatMessageRows(leadingResponses, groups);
+  const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.key));
+  const initialHeight = scrollRef.current?.clientHeight || 1;
+  const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
-    count: items.length,
+    count: rows.length,
     getScrollElement: () => scrollRef.current as HTMLDivElement | null,
-    estimateSize: () => ESTIMATED_TURN_HEIGHT,
-    getItemKey: (index) => items[index]?.key ?? index,
+    estimateSize: (index) => ESTIMATED_MESSAGE_HEIGHT + (hasChatRowGap(rows, index) ? VIRTUAL_LIST_GAP : 0),
+    getItemKey: (index) => rows[index].key,
     overscan: VIRTUAL_LIST_OVERSCAN,
-    gap: VIRTUAL_LIST_GAP,
-    initialRect: { width: 0, height: initialViewportHeight },
-    initialOffset: () => getEstimatedTailOffset(items.length, initialViewportHeight),
+    initialRect: { width: 0, height: initialHeight },
+    initialOffset: () =>
+      Math.max(rows.length * ESTIMATED_MESSAGE_HEIGHT + gapCount * VIRTUAL_LIST_GAP - initialHeight, 0),
+    rangeExtractor: (range) => {
+      const indexes = defaultRangeExtractor(range);
+      const stickyIndex = getChatStickyRowIndex(rows, range.startIndex);
+      if (stickyIndex !== null && !indexes.includes(stickyIndex)) indexes.unshift(stickyIndex);
+      return indexes;
+    },
   });
   const totalSize = virtualizer.getTotalSize();
+  const stickyIndex = getChatStickyRowIndex(rows, virtualizer.range?.startIndex ?? 0);
+  const measurements = virtualizer.measurementsCache;
 
-  useTailReady({
-    itemCount: items.length,
-    onReady,
-    scrollRef,
-    totalSize,
-  });
+  useTailReady({ itemCount: rows.length, onReady, scrollRef, totalSize });
 
   return (
     <Box px="xs">
       <Box position="relative" width="100%" style={{ height: totalSize }}>
         {virtualizer.getVirtualItems().map((virtualItem) => {
-          const item = items[virtualItem.index];
-          if (!item) return null;
-
+          const row = rows[virtualItem.index];
+          const isSticky = row.type === "user" && virtualItem.index === stickyIndex;
+          let top = virtualItem.start;
+          if (isSticky) {
+            // Keep the user context within its turn while responses mount independently.
+            const end =
+              (measurements[row.endIndex]?.end ?? totalSize) -
+              (hasChatRowGap(rows, row.endIndex) ? VIRTUAL_LIST_GAP : 0);
+            top = Math.max(top, Math.min(virtualizer.scrollOffset ?? 0, end - virtualItem.size));
+          }
           return (
             <Box
               key={virtualItem.key}
               ref={virtualizer.measureElement}
               data-index={virtualItem.index}
-              data-chat-message-list-item={item.type}
+              data-chat-message-list-item={row.type}
+              data-chat-message-id={row.key}
               position="absolute"
-              top="0"
               left="0"
               width="100%"
-              style={{ top: virtualItem.start }}
+              pb={hasChatRowGap(rows, virtualItem.index) ? "xs" : undefined}
+              zIndex={row.type === "user" ? 1 : undefined}
+              style={{ top }}
             >
-              <ChatMessageListEntry
-                item={item}
-                groupCount={groups.length}
-                streaming={streaming}
-                hideActiveQuestionForms={hideActiveQuestionForms}
-                expandedStickyMessageIds={expandedStickyMessageIds}
-                animate={animatedItemKeys.has(item.key)}
-                onToggleStickyMessage={onToggleStickyMessage}
-              />
+              {row.type === "user" ? (
+                <StickyUserMessage
+                  message={row.message}
+                  expanded={expandedStickyMessageIds.has(row.key)}
+                  animate={animatedKeys.has(row.key)}
+                  onToggle={onToggleStickyMessage}
+                />
+              ) : (
+                <ChatMessageListResponse
+                  message={row.message}
+                  streaming={streaming && row.isActiveTurn && row.showAssistantActions}
+                  hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
+                  animate={animatedKeys.has(row.key)}
+                  showAssistantActions={row.showAssistantActions}
+                />
+              )}
             </Box>
           );
         })}

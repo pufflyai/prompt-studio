@@ -47,6 +47,7 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner checks request-owned indicators, protected generic tag edits, and the request page.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
+// Chat setup also checks retained visible chunks and bounded responses within a long turn.
 // Timeline coverage configures Auto build mode and checks implementation status in both Planner views.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";

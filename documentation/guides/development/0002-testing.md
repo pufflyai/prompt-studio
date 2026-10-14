@@ -193,6 +193,27 @@ Readable attachments share their stored bytes through hard links and are removed
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 
+## Chat rendering measurements
+
+Use the **Patterns/Chat/Chat Panel Rendering** Storybook stories to inspect long turns. `RenderingWorkloads` starts with an empty chat and prepares fixtures before the measured mount. `LongTurnScrolling` checks bounded responses, sticky user context, expansion, scrolling, hidden-page recovery, session switching, and tail following during streaming.
+
+The fixed workloads in `packages/ui/src/components/chat-ui/performance/chat-rendering-fixtures.ts` are:
+
+- Rich turns: 500 turns and 1,000 messages, with four Markdown repetitions and three tools per turn.
+- Plain turns: the same message roles and count, with short text only.
+- Long turns: one rich user message followed by 1,000 or 5,000 rich responses. Each response has one Markdown repetition, reasoning, and three tools.
+- Large response: one user message and one response containing 100 repetitions of rich Markdown.
+
+Run `CPU_THROTTLE=1 bun run --cwd packages/ui perf:chat -- chat-rendering.perf.ts` for native Chromium measurements. Repeat with `CPU_THROTTLE=4` for throttled measurements. The existing config runs each workload three times in fresh contexts. Record viewport size, browser version, hardware, commit, and any competing work. Compare the same fixtures and settings before and after a change; report medians and ranges rather than one sample.
+
+The measurement excludes module loading, fixture construction, API requests, and database work. It measures mount, scrolling to the middle, session switching, and streaming one response in 384-character chunks. Readiness requires a visible chat viewport and three animation frames. Each phase attaches a CPU profile, script/layout/style/task times, long tasks, and mounted row/editor/table/DOM counts to the Playwright report. These component timings are not end-to-end session-opening timings. A stopped or timed-out measurement is incomplete, not a performance result. Existing budgets and execution allowances remain unchanged.
+
+The shared chat list virtualizes each user message and response independently with four rows of overscan. It also retains the user row for the visible turn, positioned within that turn's measured bounds. Logical turns still determine sticky context, question visibility, and final-response actions; their length does not determine mounted response count. Markdown display imports only changed content and installs editing plugins and source tracking only when editable. Rich messages still use Lexical for selection, copying, links, highlighting, and rich nodes.
+
+The viewport preserves its visible pixel offset across hiding and resumes tail following when appropriate. The scroll library's hidden-element limitation and the isolated restoration hook are recorded in [Temporary hidden conversation scroll restoration](../../adrs/0075-temporary-hidden-conversation-scroll-restoration.md).
+
+This boundary bounds the number of mounted messages, not the size of one message. A large response, an expanded user message, or a merged reasoning/tool timeline still mounts all its content. Parsing, node creation, and layout therefore scale with that content. Measure this limit separately rather than splitting the benchmark input or hiding rich content to make a budget pass.
+
 ## Time limits
 
 Tests have two kinds of time limit. [ADR 0067](../../adrs/0067-separate-performance-budgets-from-execution-allowances.md) records the decision.
