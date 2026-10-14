@@ -1,0 +1,119 @@
+import { expect } from "bun:test";
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
+import { folderProjectInput } from "../helpers/folder-project";
+
+export async function expectPackagedDependencyStacks(input: { baseUrl: string; headers: Record<string, string> }) {
+  const request = async (path: string, method = "GET", body?: unknown) => {
+    const response = await fetch(`${input.baseUrl}/v1${path}`, {
+      method,
+      headers: { ...input.headers, "content-type": "application/json" },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const bodyText = await response.text();
+    expect(response.ok, `${method} ${path}: ${response.status} ${bodyText}`).toBe(true);
+    return JSON.parse(bodyText);
+  };
+  const projectInput = folderProjectInput({
+    name: "dependency-stack-smoke",
+    agents: ["pstdio.workbench-fixture.harness.fake"],
+  });
+  const folder = projectInput.initial_workspace.params.path;
+  const git = (path: string, ...args: string[]) =>
+    execFileSync("git", ["-C", path, ...args], { encoding: "utf8" }).trim();
+  execFileSync("git", ["init", "-b", "main", folder]);
+  git(folder, "config", "user.name", "Stack smoke");
+  git(folder, "config", "user.email", "smoke@example.invalid");
+  await Bun.write(join(folder, ".gitignore"), ".pstdio/\n.codex/\n.claude/\n.agents/\nnode_modules/\n");
+  git(folder, "add", ".gitignore");
+  git(folder, "commit", "-m", "Initialize stack smoke");
+  const original = git(folder, "rev-parse", "HEAD");
+  const project = await request("/projects", "POST", projectInput);
+  const execute = async (name: string, params: unknown = {}, provider = "pstdio-planner") => {
+    const response = await request(
+      `/projects/${project.id}/extensions/commands/pstdio.${provider}.command.${name}/execute`,
+      "POST",
+      { params },
+    );
+    expect(response.outcome.status).toBe("success");
+    return response.outcome.value;
+  };
+  const stop = async (id: string) => {
+    for (let check = 0; check < 100; check++) {
+      if ((await request(`/sessions/${id}`)).status === "completed") return;
+      await Bun.sleep(50);
+    }
+    throw new Error("The fixture worker did not finish");
+  };
+  const commit = async (path: string, file: string, content: string) => {
+    await Bun.write(join(path, file), content);
+    git(path, "add", ".gitignore", file);
+    git(path, "commit", "-m", file);
+    return git(path, "rev-parse", "HEAD");
+  };
+  const dependencies: { ticketId: string; headSha: string }[] = [];
+  for (const word of ["left", "right"]) {
+    const ticket = await execute("create-ticket", { content: `# Add ${word}`, status: "Todo" });
+    const started = await execute("run-attempt", { ticket: ticket.id });
+    await stop(started.session.id);
+    const headSha = await commit(
+      started.workspace.root_path,
+      `${word}.ts`,
+      `export const ${word} = () => "${word}";\n`,
+    );
+    const report = await execute(
+      "reports.write",
+      {
+        name: word,
+        workspace: started.workspace.workspace_shorthand,
+        kind: "change_request",
+        template: "change-request",
+      },
+      "pstdio-reports",
+    );
+    const markdown = await Bun.file(report.path).text();
+    const boundary = markdown.indexOf("\n---", 4);
+    await Bun.write(
+      report.path,
+      `${markdown.slice(0, boundary + 4)}\n\n# Dependency fixture\n\nAdded ${word}.ts and checked its committed Git revision.\n`,
+    );
+    await execute(
+      "reports.save",
+      { name: report.name, workspace: started.workspace.workspace_shorthand },
+      "pstdio-reports",
+    );
+    await execute("submit-change-request", {
+      workspaceId: started.workspace.id,
+      implementationSessionId: started.session.id,
+      headSha,
+      changeRequestReportId: report.reportId,
+      expectedRevision: 0,
+    });
+    await execute("update-ticket", { id: ticket.id, status: "Done" });
+    dependencies.push({ ticketId: ticket.id, headSha });
+  }
+  // Adding dependencies to an existing attempt reproduces a child left on an older base.
+  const child = await execute("create-ticket", { content: "# Consume both words", status: "Todo" });
+  const started = await execute("run-attempt", { ticket: child.id });
+  await stop(started.session.id);
+  const head = await commit(started.workspace.root_path, "child.ts", "export const child = true;\n");
+  await execute("update-ticket", { id: child.id, dependsOn: dependencies.map(({ ticketId }) => ticketId) });
+  const next = await execute("next-tickets");
+  expect(next.tickets).toContainEqual(
+    expect.objectContaining({ id: child.id, action: "update-stack", workspaceId: started.workspace.id }),
+  );
+  const updated = await execute("update-stack", {
+    workspaceId: started.workspace.id,
+    implementationSessionId: started.session.id,
+    expectedHeadSha: head,
+  });
+  for (const dependency of dependencies)
+    git(folder, "merge-base", "--is-ancestor", dependency.headSha, updated.base.headSha);
+  expect(git(started.workspace.root_path, "show", "HEAD:left.ts")).toContain("left");
+  expect(git(started.workspace.root_path, "show", "HEAD:right.ts")).toContain("right");
+  expect(git(started.workspace.root_path, "show", "HEAD:child.ts")).toContain("true");
+  expect(git(folder, "rev-parse", "main")).toBe(original);
+  expect(
+    (await execute("list-attempts")).filter((attempt: { ticketId: string }) => attempt.ticketId === child.id),
+  ).toHaveLength(1);
+}

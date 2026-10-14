@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { attemptEventsCollection, putAttempt } from "../data/attempt-storage";
 import { statusesCollection, ticketsCollection } from "../data/collections";
+import { loadAttemptReadiness } from "./attempt-readiness";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
+import { stackSubmissionFixture } from "./stack-submission.fixture";
 
 test("a merged GitHub review link marks its ticket Done", async () => {
   const storage = createMemoryStorage();
@@ -39,7 +42,14 @@ test("a merged GitHub review link marks its ticket Done", async () => {
       },
     }),
   );
-  expect(commands[0]).toEqual(["gh", "pr", "view", "https://github.com/acme/tools/pull/12", "--json", "state"]);
+  expect(commands[0]).toEqual([
+    "gh",
+    "pr",
+    "view",
+    "https://github.com/acme/tools/pull/12",
+    "--json",
+    "state,mergeCommit,headRefOid",
+  ]);
   expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe("done");
 });
 
@@ -127,3 +137,73 @@ for (const scenario of ["branch merged", "disabled", "open", "unavailable"]) {
     );
   });
 }
+
+test.each([true, false])("GitHub merge evidence must match the submitted revision (matching: %s)", async (matching) => {
+  const f = await stackSubmissionFixture();
+  try {
+    await f.ticket("Parent");
+    await f.ticket("Child", ["Parent"]);
+    await f.git("checkout", "-b", "parent");
+    const head = await f.commit("parent.txt");
+    await f.git("checkout", "main");
+    const ticket = (await ticketsCollection(f.storage).get("Parent"))!;
+    await ticketsCollection(f.storage).put(ticket.id, {
+      ...ticket,
+      reviewLinks: [
+        {
+          id: "pr",
+          provider: "github",
+          kind: "pull_request",
+          url: "https://github.com/acme/tools/pull/12",
+          externalId: "12",
+          title: null,
+          createdAt: ticket.createdAt,
+          updatedAt: ticket.updatedAt,
+        },
+      ],
+    });
+    await putAttempt(f.storage, {
+      ...f.attempt,
+      workspaceId: "parent",
+      ticketId: ticket.id,
+      state: "review_ready",
+      revisions: [
+        {
+          revision: 1,
+          baseSha: f.base,
+          headSha: head,
+          changeRequestReportId: "parent-report",
+          submittedAt: new Date().toISOString(),
+          submittedBy: { type: "agent", id: "owner", displayName: "Owner" },
+          reviews: [],
+        },
+      ],
+    });
+    const run = f.ctx.process.run;
+    f.ctx.process.run = async (input) =>
+      input.command[0] === "gh"
+        ? {
+            exitCode: 0,
+            stderr: "",
+            stdout: JSON.stringify({
+              state: "MERGED",
+              headRefOid: matching ? head : f.base,
+              mergeCommit: { oid: "1111111111111111111111111111111111111111" },
+            }),
+          }
+        : run(input);
+    await checkMergedPullRequestsCommand.run(f.ctx, {});
+    expect((await ticketsCollection(f.storage).get(ticket.id))?.statusId).toBe(matching ? "done" : ticket.statusId);
+    const records = (await attemptEventsCollection(f.storage).list()).filter(
+      (event) => event.type === "attempt_merged",
+    );
+    expect(records).toHaveLength(matching ? 1 : 0);
+    if (matching)
+      expect((await loadAttemptReadiness(f.ctx, "Child", { base: "main" })).readiness).toMatchObject({
+        mode: "stacked",
+        baseHeadSha: head,
+      });
+  } finally {
+    await f.cleanup();
+  }
+});

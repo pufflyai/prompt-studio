@@ -7,11 +7,11 @@ import { withWriteGuard } from "../data/write-guard";
 import { loadAttemptDependencies } from "./attempt-readiness";
 import { isLiveSession } from "./auto-build-sessions";
 import { workspaceGitPath, workspaceHead } from "./change-requests";
-import { containsCommit, readRequiredStackBase } from "./stack-validation";
+import { containsDependencyHeads } from "./dependency-base";
+import { containsCommit, prepareRequiredStackBase, readRequiredStackDependencies } from "./stack-validation";
 
 export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecord) {
   const latest = attempt.revisions.at(-1);
-  if (!latest) return null;
   const session = await ctx.sessions.get(attempt.implementationSessionId);
   if (!session || isLiveSession(session)) return null;
   if (!(await ctx.sessions.listByWorkspace(attempt.workspaceId)).some(({ id }) => id === session.id)) return null;
@@ -29,8 +29,10 @@ export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecor
     readiness.mode === "main"
       ? attempt.base
       : { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha };
-  const needsIntegration = !(await containsCommit(ctx, workspace.root_path, base.headSha, head));
-  if (head === latest.headSha && latest.baseSha === base.headSha && !needsIntegration) return null;
+  const needsIntegration =
+    !(await containsCommit(ctx, workspace.root_path, base.headSha, head)) ||
+    !(await containsDependencyHeads(ctx, readiness, attempt.base.headSha));
+  if ((!latest || (head === latest.headSha && latest.baseSha === base.headSha)) && !needsIntegration) return null;
   return {
     eventId,
     workspaceId: attempt.workspaceId,
@@ -64,7 +66,8 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
   const status = await ctx.process.run({ command: ["git", "-C", path, "status", "--porcelain"] });
   if (status.exitCode !== 0) throw new Error(status.stderr);
   if (status.stdout.trim()) throw new Error("Commit or resolve the workspace changes before updating the stack.");
-  const base = await readRequiredStackBase(ctx, attempt, input.base);
+  const readiness = await readRequiredStackDependencies(ctx, attempt, input.base);
+  const base = await prepareRequiredStackBase(ctx, attempt, input.base);
   if (!(await containsCommit(ctx, path, base.headSha, before))) {
     const merged = await ctx.process.run({
       command: ["git", "-C", path, "merge", "--no-edit", "--", base.headSha],
@@ -75,8 +78,11 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
       );
   }
   const headSha = await workspaceHead(ctx, attempt.workspaceId);
-  const currentBase = await readRequiredStackBase(ctx, attempt, input.base);
-  if (currentBase.headSha !== base.headSha || currentBase.workspaceId !== base.workspaceId)
+  const current = await readRequiredStackDependencies(ctx, attempt, input.base);
+  if (
+    JSON.stringify(current) !== JSON.stringify(readiness) ||
+    !(await containsDependencyHeads(ctx, current, base.headSha))
+  )
     throw new Error("The selected dependency revision changed during integration. Query and update the stack again.");
   if (!(await containsCommit(ctx, path, base.headSha, headSha)))
     throw new Error("The updated workspace does not contain the required dependency base.");

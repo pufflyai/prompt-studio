@@ -10,6 +10,16 @@ export async function fixture(limit = 2) {
     params: {},
     overrides: {
       automation: { list: async () => [], enqueue: async () => ({}) } as never,
+      process: {
+        run: async ({ command }) => ({
+          exitCode:
+            command.includes("--is-ancestor") && command.at(-2) !== command.at(-1) && command.at(-2) !== "main-sha"
+              ? 1
+              : 0,
+          stdout: "main-sha\n",
+          stderr: "",
+        }),
+      },
       settings: {
         get: async (key) => settings[key] ?? "",
         all: async () => ({ ...settings }),

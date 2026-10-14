@@ -56,7 +56,7 @@ If two implementation sessions are already running in the project, Run attempt d
 
 Auto Build uses a supervisor to query work with `pst tickets next` and dispatch matching tickets through the same readiness checks as manual implementation. It reuses stopped implementation owners when they can continue and assigns changed-stack repair in their existing workspaces. It does not approve or merge PRs.
 
-With **Block on review** off, submitted revisions can provide dependency bases before review finishes. Missing, incompatible, ambiguous, actively replaced, and human-blocked dependencies still wait. Independent tickets can run together up to the implementation session limit. Stop prevents future prompts and dispatches while running work continues.
+With **Block on review** off, submitted revisions can provide dependency bases before review finishes. Missing, ambiguous, actively replaced, and human-blocked dependencies still wait. Independent dependency branches can be combined when their changes merge cleanly. Independent tickets can run together up to the implementation session limit. Stop prevents future prompts and dispatches while running work continues.
 
 See [Auto Build](0007-auto-build.md) for scope filters, recovery, CLI commands, and settings.
 
@@ -66,9 +66,9 @@ A ticket can depend on other tickets. Set dependencies with `--depends-on` on [`
 
 Before an attempt starts, Planner checks every ticket the ticket depends on, directly or through other tickets:
 
-- A dependency in the Done status is finished.
-- When no dependencies are left, the attempt starts from the commit you chose, or from the project folder's current commit.
-- An unfinished dependency needs exactly one approved attempt, or the attempt selected for that ticket. The new attempt then starts from that attempt's latest commit, so it builds on the work that is not merged yet. With several unfinished dependencies, one of their attempts must already contain the others' commits.
+- Done describes ticket completion. It does not prove that a managed dependency's code reached the chosen base. Planner checks whether that base contains the submitted commit or its recorded merge commit. A completed human task with no managed attempt needs no Git integration.
+- When all dependency code is integrated, the attempt starts from the commit you chose, or from the project folder's current commit.
+- An unfinished dependency needs exactly one approved attempt, or the attempt selected for that ticket. A Done managed dependency can use its submitted revision. The new attempt starts from a dependency tip that contains all required code and the chosen base. Otherwise, Planner combines the submitted branches into an attempt base without changing the target branch. Conflicting dependency changes still need repair.
 - If a dependency has no approved or selected attempt yet, Run attempt cannot start.
 
 When Run attempt cannot start, its dialog and command show the blocker and the next step. A missing dependency, a dependency loop, or ambiguous attempts also ask a person to fix the ticket graph or choose an attempt. Run attempt also refuses a second start while another start for the same ticket is still running. `attempt-readiness` returns a structured `reason` for agents and the CLI.
@@ -85,7 +85,11 @@ pst pstdio-planner update-stack --workspace-id <workspace> --implementation-sess
 
 The command requires committed changes and no other live workspace session. It integrates the current dependency base with a Git merge so existing published history remains intact. If the merge conflicts, resolve and commit it, then retry. Run the affected checks, save a fresh change request report, and submit the exact resulting HEAD with `--expected-revision <last-revision-number>`. Updating the base does not submit or validate a revision by itself.
 
-For a root ticket deliberately moved to another target branch, pass `--base <target-branch>` to align its recorded base. Unfinished dependencies still determine a dependent ticket's base; this option cannot bypass them.
+An attempt with no submitted revision can also need this repair. Keep its existing workspace and implementation owner, commit any work in progress, and run `update-stack`. This is authorized dependency integration; it does not approve work, merge into the delivery target, or mark prerequisites Done. The assigned branch is where the agent edits. The dependency base supplies prerequisite code. The delivery target is the branch where reviewed work will eventually be merged.
+
+Answering a human request does not change Git. After an answer, the owner must check the actual files and dependency commits. If the same missing-code blocker remains, repair the stack before resuming implementation rather than repeating the request.
+
+For a root ticket deliberately moved to another target branch, pass `--base <target-branch>` to align its recorded base. Dependencies whose code is absent still determine a dependent ticket's base; this option cannot bypass them.
 
 A revision identifies both its base and HEAD. Correcting a recorded base can create a fresh revision with the same HEAD and a fresh report; prior review evidence remains on the original base/HEAD pair. Even retrying an existing submission rechecks current dependency ancestry.
 

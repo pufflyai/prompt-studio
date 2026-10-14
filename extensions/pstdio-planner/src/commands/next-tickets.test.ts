@@ -86,7 +86,7 @@ test("next tickets keeps submitted stacks available across track boundaries when
   expect((await nextTicketsCommand.run(result.ctx, { track: "Workbench" })).tickets).toHaveLength(0);
 });
 
-test("next tickets explains incompatible submitted branches instead of hiding the dependent ticket", async () => {
+test("next tickets offers a combined base for independent submitted branches", async () => {
   const result = await trackFixture();
   const { parent, attempt } = await submitDependency(result);
   const other = await result.ticket("Editor reuse");
@@ -105,14 +105,47 @@ test("next tickets explains incompatible submitted branches instead of hiding th
   });
   await configureAutoBuildCommand.run(result.ctx, { enabled: false, blockOnReview: false });
   const next = await nextTicketsCommand.run(result.ctx, { track: "Workbench" });
-  expect(next.tickets).toHaveLength(0);
-  expect(next.waiting).toContainEqual(
+  expect(next.tickets).toContainEqual(
     expect.objectContaining({
       id: child.id,
-      reason: "divergent-dependency-attempts",
-      dependencyIds: [parent.shorthand, other.shorthand],
+      action: "start",
+      baseHeadSha: "main-sha",
     }),
   );
+});
+
+test("a changed dependency head prevents dispatching a stale combined base", async () => {
+  const result = await trackFixture();
+  const { parent, attempt } = await submitDependency(result);
+  const other = await result.ticket("Other dependency");
+  await putTicket(result.storage, { ...parent, statusId: "done" });
+  await putTicket(result.storage, { ...other, statusId: "done" });
+  await putAttempt(result.storage, {
+    ...attempt,
+    ticketId: other.id,
+    ticketShorthand: other.shorthand,
+    workspaceId: "other-workspace",
+    revisions: attempt.revisions.map((revision) => ({ ...revision, headSha: "other-head" })),
+  });
+  const child = await result.ticket("Combined child", "workbench", [parent.id, other.id]);
+  const mode = await configureAutoBuildCommand.run(result.ctx, { enabled: true, blockOnReview: false });
+  const run = result.ctx.process.run;
+  let changed = false;
+  result.ctx.process.run = async (input) => {
+    if (input.command.includes("commit-tree") && !changed) {
+      changed = true;
+      await putAttempt(result.storage, {
+        ...attempt,
+        revisions: attempt.revisions.map((revision) => ({ ...revision, headSha: "replacement-head" })),
+      });
+    }
+    return run(input);
+  };
+  await expect(autoBuildDispatchCommand.run(result.ctx, { ticket: child.id, revision: mode.revision })).rejects.toThrow(
+    "Work changed before dispatch",
+  );
+  expect(changed).toBe(true);
+  expect((await listAttempts(result.storage)).filter(({ ticketId }) => ticketId === child.id)).toHaveLength(0);
 });
 
 test("next tickets respects saved ignore rules, draft state and live assignments", async () => {

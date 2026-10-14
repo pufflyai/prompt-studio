@@ -41,6 +41,7 @@ interface ResolveAttemptReadinessInput {
   selections: TicketAttemptSelection[];
   doneStatusIds: Set<string>;
   mainHeadSha: string;
+  mergedHeads: Map<string, string[]>;
   activeImplementationCount: number;
   maxInProgress: number;
   isAncestor(baseSha: string, headSha: string): Promise<boolean>;
@@ -54,12 +55,57 @@ const isSelectedAttemptViable = (attempt: AttemptRecord) => {
 
 const isApprovedAttempt = (attempt: AttemptRecord) => attempt.state === "approved" && latestHead(attempt) !== null;
 
+type DependencyInput = Omit<ResolveAttemptReadinessInput, "activeImplementationCount" | "maxInProgress">;
+const isDependencyAttemptReady = (input: DependencyInput, attempt: AttemptRecord, done: boolean, selected: boolean) => {
+  if (input.activeImplementationWorkspaceIds?.has(attempt.workspaceId)) return false;
+  if (isApprovedAttempt(attempt)) return true;
+  if (done || input.dependencyReview === "submitted")
+    return ["review_ready", "reviewing"].includes(attempt.state) && latestHead(attempt) !== null;
+  return input.dependencyReview === undefined && selected && isSelectedAttemptViable(attempt);
+};
+
+const selectDependencyAttempts = async (input: DependencyInput, dependencies: AttemptReadinessTicket[]) => {
+  const selectedAttempts: AttemptRecord[] = [];
+  for (const dependency of dependencies) {
+    const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
+    const attempts = input.attempts.filter((attempt) => attempt.ticketId === dependency.id);
+    const done = input.doneStatusIds.has(dependency.statusId ?? "");
+    // A completed human task may have no code artifact. Managed code must still reach this base.
+    if (done && attempts.length === 0) continue;
+    const selected = attempts.filter(
+      (attempt) =>
+        (!selection || attempt.workspaceId === selection.workspaceId) &&
+        isDependencyAttemptReady(input, attempt, done, Boolean(selection)),
+    );
+    if (selected.length === 0)
+      return {
+        decision: "wait",
+        reason: "dependency-not-ready",
+        dependencyIds: [dependency.shorthand],
+      } satisfies AttemptReadinessResult;
+    if (selected.length > 1)
+      return {
+        decision: "wait",
+        reason: "ambiguous-dependency-attempt",
+        dependencyIds: [dependency.shorthand],
+      } satisfies AttemptReadinessResult;
+    const head = latestHead(selected[0]!)!;
+    const integrated = await Promise.all(
+      [head, ...(input.mergedHeads.get(head) ?? [])].map((commit) => input.isAncestor(commit, input.mainHeadSha)),
+    );
+    if (integrated.some(Boolean)) continue;
+    if (!selectedAttempts.some((attempt) => attempt.workspaceId === selected[0]!.workspaceId))
+      selectedAttempts.push(selected[0]!);
+  }
+  return selectedAttempts;
+};
+
 export const findPendingPrerequisites = (
   target: AttemptReadinessTicket,
   byRef: Map<string, AttemptReadinessTicket>,
   requests: ResolveAttemptReadinessInput["requests"],
 ) => {
-  // Completion chooses the attempt base; it cannot answer requests on any prerequisite.
+  // Requests still pause dependent work after the prerequisite code is integrated.
   const prerequisites = new Map<string, AttemptReadinessTicket>();
   const remaining = [target];
   while (remaining.length) {
@@ -83,9 +129,7 @@ export const resolveAttemptReadiness = async (input: ResolveAttemptReadinessInpu
   return resolveAttemptDependencies(input);
 };
 
-export const resolveAttemptDependencies = async (
-  input: Omit<ResolveAttemptReadinessInput, "activeImplementationCount" | "maxInProgress">,
-): Promise<AttemptReadinessResult> => {
+export const resolveAttemptDependencies = async (input: DependencyInput): Promise<AttemptReadinessResult> => {
   const byRef = new Map(
     input.tickets.flatMap((ticket) => [
       [ticket.id, ticket],
@@ -118,10 +162,8 @@ export const resolveAttemptDependencies = async (
         cycle = dependency.shorthand;
         break;
       }
-      if (!input.doneStatusIds.has(dependency.statusId ?? "")) {
-        visit(dependency);
-        unresolved.set(dependency.id, dependency);
-      }
+      visit(dependency);
+      unresolved.set(dependency.id, dependency);
     }
     visiting.delete(ticket.id);
     visited.add(ticket.id);
@@ -134,7 +176,10 @@ export const resolveAttemptDependencies = async (
   const pending = findPendingPrerequisites(target, byRef, input.requests);
   if (pending.length)
     return { decision: "wait", reason: "human-input-needed", dependencyIds: pending.map((ticket) => ticket.shorthand) };
-  if (unresolvedTickets.length === 0) {
+  const selectedAttempts = await selectDependencyAttempts(input, unresolvedTickets);
+  if (!Array.isArray(selectedAttempts)) return selectedAttempts;
+
+  if (selectedAttempts.length === 0) {
     return {
       decision: "ready",
       mode: "main",
@@ -143,55 +188,23 @@ export const resolveAttemptDependencies = async (
       dependencyAttemptIds: [],
     };
   }
-
-  const selectedAttempts: AttemptRecord[] = [];
-  for (const dependency of unresolvedTickets) {
-    const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
-    const attempts = input.attempts.filter((attempt) => attempt.ticketId === dependency.id);
-    const eligible = (attempt: AttemptRecord) => {
-      if (input.activeImplementationWorkspaceIds?.has(attempt.workspaceId)) return false;
-      if (isApprovedAttempt(attempt)) return true;
-      if (input.dependencyReview === "submitted")
-        return ["review_ready", "reviewing"].includes(attempt.state) && latestHead(attempt) !== null;
-      return input.dependencyReview === undefined && Boolean(selection) && isSelectedAttemptViable(attempt);
-    };
-    const selected = attempts.filter(
-      (attempt) => (!selection || attempt.workspaceId === selection.workspaceId) && eligible(attempt),
-    );
-
-    if (selected.length === 0) {
-      return {
-        decision: "wait",
-        reason: "dependency-not-ready",
-        dependencyIds: [dependency.shorthand],
-      };
-    }
-    if (selected.length > 1) {
-      return {
-        decision: "wait",
-        reason: "ambiguous-dependency-attempt",
-        dependencyIds: [dependency.shorthand],
-      };
-    }
-    if (!selectedAttempts.some((attempt) => attempt.workspaceId === selected[0]!.workspaceId)) {
-      selectedAttempts.push(selected[0]!);
-    }
-  }
-
   const tips: AttemptRecord[] = [];
   for (const candidate of selectedAttempts) {
     const candidateHead = latestHead(candidate)!;
     const containsEveryHead = await Promise.all(
       selectedAttempts.map((attempt) => input.isAncestor(latestHead(attempt)!, candidateHead)),
     );
-    if (containsEveryHead.every(Boolean)) tips.push(candidate);
+    if (containsEveryHead.every(Boolean) && (await input.isAncestor(input.mainHeadSha, candidateHead)))
+      tips.push(candidate);
   }
 
-  if (tips.length !== 1) {
+  if (tips.length === 0) {
     return {
-      decision: "wait",
-      reason: "divergent-dependency-attempts",
-      dependencyIds: unresolvedTickets.map((dependency) => dependency.shorthand),
+      decision: "ready",
+      mode: "stacked",
+      baseWorkspaceId: null,
+      baseHeadSha: input.mainHeadSha,
+      dependencyAttemptIds: selectedAttempts.map((attempt) => attempt.workspaceId),
     };
   }
 

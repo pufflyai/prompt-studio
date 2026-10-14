@@ -4,7 +4,7 @@ import {
   resolveAttemptDependencies,
   resolveAttemptReadiness,
 } from "../data/attempt-readiness";
-import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
+import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { readTicketReviewRequests } from "../data/review-request-storage";
@@ -35,7 +35,7 @@ const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) =
 };
 
 const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, commandParams: ReadinessParams) => {
-  const [storedTickets, attempts, selections, statuses, home, providers, requests] = await Promise.all([
+  const [storedTickets, attempts, selections, statuses, home, providers, requests, events] = await Promise.all([
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
@@ -43,6 +43,7 @@ const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, com
     ctx.workspaces.getDefault(),
     ctx.workspaces.listProviders(),
     readTicketReviewRequests(ctx.storage),
+    attemptEventsCollection(ctx.storage).list(),
   ]);
   const storedTarget = await findTicket(ctx.storage, ticketRef);
   const target: AttemptReadinessTicket = storedTarget ?? {
@@ -83,6 +84,12 @@ const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, com
     owners.filter(({ session }) => isLiveSession(session)).map(({ workspaceId }) => workspaceId),
   );
   const input = {
+    mergedHeads: events.reduce((heads, event) => {
+      const head = event.metadata.headSha;
+      if (event.type === "attempt_merged" && typeof head === "string" && event.commitSha)
+        heads.set(head, [...(heads.get(head) ?? []), event.commitSha]);
+      return heads;
+    }, new Map<string, string[]>()),
     activeImplementationWorkspaceIds,
     requests,
     target: target.id,
@@ -98,6 +105,11 @@ const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, com
       });
       if (result.exitCode === 0) return true;
       if (result.exitCode === 1) return false;
+      // A recorded remote merge may not have been fetched into this repository yet.
+      const present = await ctx.process.run({
+        command: ["git", "-C", rootPath, "cat-file", "-e", `${baseSha}^{commit}`],
+      });
+      if (present.exitCode !== 0) return false;
       throw new Error(result.stderr.trim() || "Could not compare dependency commits.");
     },
   };

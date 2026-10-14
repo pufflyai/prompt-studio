@@ -85,7 +85,7 @@ export async function resumeAutoBuildAttempt(
   await ctx.sessions.followup({
     sessionId: resumption.sessionId,
     prompt: [
-      "Continue the unfinished implementation in the same workspace and managed attempt. Address any outstanding review findings and complete the required validation and revision submission.",
+      "Continue the unfinished implementation in the same workspace and managed attempt. Read the current implement-ticket skill and attempt history. Verify the dependency files and saved human answers before editing. If code is missing or stale, run update-stack with the current HEAD and owner session; this does not approve work or merge the target branch. A confirmed answer alone does not repair Git. Address outstanding findings, validate, and submit the exact resulting revision.",
       ...resumption.requests.map((request) => `${request.title}\n${request.instructions}\n${request.outcomeText}`),
     ].join("\n\n"),
   });

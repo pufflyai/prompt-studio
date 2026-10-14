@@ -2,7 +2,7 @@
 name: create-ticket
 description: "Create a planner ticket. Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket."
 metadata:
-  version: 0.0.3
+  version: 0.0.4
 ---
 
 Manage Planner tickets with the `pst tickets` commands.
@@ -19,7 +19,7 @@ Manage Planner tickets with the `pst tickets` commands.
    - The work in scope and the checks or tests that will prove it works.
    - The real files or modules involved, plus assumptions and gaps.
    - Required documentation changes, or `None`.
-   - `depends_on` in the frontmatter. List every ticket that must be done first. Run attempt starts a ticket only when nothing in `depends_on` blocks it.
+   - `depends_on` in the frontmatter. List the tickets that supply required code or other prerequisites. Planner checks their current attempts and Git integration before starting dependent work.
 5. Put priority and type in tags from `pst tags list`. Repeat `--tags` when needed.
 6. Check unfinished tickets with `pst tickets list`. If another ticket must finish first, add it to `depends_on`. Keep dependency waiting in those links; do not copy it into `blocked_reason` or change the ticket to Blocked for that reason alone. Planner derives readiness from the current prerequisites. Use `--blocked-reason "<why>"` only for an independent blocker, such as missing credentials. Clear that text with `pst tickets update --id <shorthand> --blocked-reason ''` when the independent blocker is resolved; keep the dependency links.
 7. Stop after saving the ticket unless the user also asked for implementation. In that case, follow the `implement-ticket` skill.
@@ -33,5 +33,7 @@ pst tickets save --id PS-42
 ```
 
 ## Reference
+
+Use `depends_on` for real code prerequisites. If a ticket consumes a file or API another ticket introduces, link that ticket before launching work. Independent prerequisites can run in parallel; Planner combines their submitted revisions when a child needs both. Do not mark prerequisites Done or add dependency-only blocker text just to control launch order. With review blocking off, children can build on submitted revisions while the prerequisites remain in review.
 
 Pass a ticket shorthand such as `PS-42` to `--id`. The command resolves it to the stored ticket.

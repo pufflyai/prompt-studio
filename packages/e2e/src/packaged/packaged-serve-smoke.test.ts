@@ -46,7 +46,7 @@ import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-n
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner checks dependency-only blockers, empty CLI clears, request-owned indicators, and protected tag edits.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
-// Timeline coverage checks Auto Build scope, short supervisor wakes, next tickets, and managed status after workers stop.
+// Timeline coverage checks Auto Build scope, short wakes, managed status, and repair of unsubmitted children with Done dependencies on separate branches.
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
 // Queue drag targets follow live-input support and retain padded delete actions.
@@ -190,6 +190,7 @@ test(
           "extension-lab",
           "pstdio-artifacts",
           "pstdio-planner",
+          "pstdio-reports",
         ),
         // This check exercises metadata and commands; browser suites cover webview builds.
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",

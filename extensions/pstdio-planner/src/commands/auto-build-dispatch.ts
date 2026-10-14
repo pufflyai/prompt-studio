@@ -43,7 +43,7 @@ export const autoBuildDispatchCommand = defineCommand({
       const mode = await readAutoBuildMode(ctx);
       if (!mode.enabled || mode.revision !== revision)
         return { decision: "wait" as const, reason: "auto-build-stopped" };
-      const { tickets: candidates, capacity } = await readNextTickets(ctx, mode);
+      const { tickets: candidates, capacity, snapshot } = await readNextTickets(ctx, mode);
       const candidate = candidates.find((row) => row.id === ticket || row.ticket === ticket);
       if (!candidate)
         return {
@@ -55,11 +55,13 @@ export const autoBuildDispatchCommand = defineCommand({
         if (!current.enabled || current.revision !== revision) {
           throw new Error("Auto Build stopped or the ticket is no longer ready.");
         }
-        const latest = (await readNextTickets(ctx, current)).tickets.find(({ id }) => id === candidate.id);
+        const next = await readNextTickets(ctx, current);
+        const latest = next.tickets.find(({ id }) => id === candidate.id);
         if (!latest || latest.action !== candidate.action || latest.workspaceId !== candidate.workspaceId)
           throw new Error("Auto Build stopped or the ticket is no longer ready.");
         if (baseHeadSha && latest.baseHeadSha !== baseHeadSha)
           throw new Error("The dependency revision changed. Read candidates again before dispatching.");
+        if (next.snapshot !== snapshot) throw new Error("Work changed before dispatch. Read tickets next again.");
       };
       const result = await dispatchNext(ctx, candidate, beforeDispatch);
       if (result.decision === "started") {

@@ -41,8 +41,10 @@ const resolve = (input: {
   attempts?: AttemptRecord[];
   selections?: TicketAttemptSelection[];
   ancestors?: Array<[string, string]>;
+  mergedHeads?: Map<string, string[]>;
   target?: string;
   activeImplementationCount?: number;
+  mainHeadSha?: string;
 }) =>
   resolveAttemptReadiness({
     requests: new Map(),
@@ -51,11 +53,12 @@ const resolve = (input: {
     attempts: input.attempts ?? [],
     selections: input.selections ?? [],
     doneStatusIds: new Set(["done"]),
-    mainHeadSha: "main",
+    mergedHeads: input.mergedHeads ?? new Map(),
+    mainHeadSha: input.mainHeadSha ?? "main",
     activeImplementationCount: input.activeImplementationCount ?? 0,
     maxInProgress: 2,
     isAncestor: async (base, head) =>
-      base === head || (input.ancestors ?? []).some(([a, b]) => a === base && b === head),
+      base === head || base === "main" || (input.ancestors ?? []).some(([a, b]) => a === base && b === head),
   });
 
 describe("attempt readiness", () => {
@@ -67,6 +70,43 @@ describe("attempt readiness", () => {
       mode: "main",
       baseWorkspaceId: null,
       baseHeadSha: "main",
+      dependencyAttemptIds: [],
+    });
+  });
+
+  test("Done does not discard a submitted dependency absent from the target", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    const submitted = { ...attempt("PS-1", "workspace-1", "head-1"), state: "review_ready" as const };
+    expect(await resolve({ tickets: [dependency, ticket("PS-3", [dependency.id])], attempts: [submitted] })).toEqual({
+      decision: "ready",
+      mode: "stacked",
+      baseWorkspaceId: "workspace-1",
+      baseHeadSha: "head-1",
+      dependencyAttemptIds: ["workspace-1"],
+    });
+  });
+
+  test("Done dependencies use the target only when their submitted code is integrated", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    expect(
+      await resolve({
+        tickets: [dependency, ticket("PS-3", [dependency.id])],
+        attempts: [attempt("PS-1", "workspace-1", "head-1")],
+        ancestors: [["head-1", "main"]],
+      }),
+    ).toMatchObject({ mode: "main", dependencyAttemptIds: [] });
+  });
+
+  test("squash merge evidence must be present in the chosen target history", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    const input = {
+      tickets: [dependency, ticket("PS-3", [dependency.id])],
+      attempts: [attempt("PS-1", "workspace-1", "head-1")],
+      mergedHeads: new Map([["head-1", ["squash-1"]]]),
+    };
+    expect(await resolve(input)).toMatchObject({ mode: "stacked", baseHeadSha: "head-1" });
+    expect(await resolve({ ...input, ancestors: [["squash-1", "main"]] })).toMatchObject({
+      mode: "main",
       dependencyAttemptIds: [],
     });
   });
@@ -115,15 +155,34 @@ describe("attempt readiness", () => {
     });
   });
 
-  test("waits when selected dependency heads diverge", async () => {
+  test("plans a combined base for independent submitted dependencies", async () => {
     const attempts = [attempt("PS-1", "workspace-1", "head-1"), attempt("PS-2", "workspace-2", "head-2")];
 
     await expect(
       resolve({ tickets: [ticket("PS-1"), ticket("PS-2"), ticket("PS-3", ["PS-1", "PS-2"])], attempts }),
     ).resolves.toEqual({
-      decision: "wait",
-      reason: "divergent-dependency-attempts",
-      dependencyIds: ["PS-1", "PS-2"],
+      decision: "ready",
+      mode: "stacked",
+      baseWorkspaceId: null,
+      baseHeadSha: "main",
+      dependencyAttemptIds: ["workspace-1", "workspace-2"],
+    });
+  });
+
+  test("an unmerged dependency cannot discard code already delivered to the chosen target", async () => {
+    expect(
+      await resolve({
+        tickets: [{ ...ticket("PS-1"), statusId: "done" }, ticket("PS-2"), ticket("PS-3", ["PS-1", "PS-2"])],
+        attempts: [attempt("PS-1", "left", "left-head"), attempt("PS-2", "right", "right-head")],
+        mainHeadSha: "target-with-left",
+        ancestors: [["left-head", "target-with-left"]],
+      }),
+    ).toEqual({
+      decision: "ready",
+      mode: "stacked",
+      baseWorkspaceId: null,
+      baseHeadSha: "target-with-left",
+      dependencyAttemptIds: ["right"],
     });
   });
 

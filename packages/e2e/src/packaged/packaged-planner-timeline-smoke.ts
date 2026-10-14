@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { expectPackagedDependencyBlockers } from "./packaged-planner-blockers-smoke";
+import { expectPackagedDependencyStacks } from "./packaged-planner-stacks-smoke";
 import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 import { expectBriefSupervisorWakes } from "./packaged-planner-wakes-smoke";
 
@@ -85,6 +86,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
   await expectPackagedDependencyBlockers({ ...input, execute });
   await expectBriefSupervisorWakes(input);
+  await expectPackagedDependencyStacks(input);
   await expectImplementationStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {

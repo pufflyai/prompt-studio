@@ -18,6 +18,7 @@ import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness } from "./attempt-readiness";
+import { DependencyConflict, prepareDependencyBase } from "./dependency-base";
 import {
   createAnchoredWorkspace,
   harnessInput,
@@ -79,10 +80,28 @@ export async function startAttempt(
     }
     throw new Error(message);
   }
+  let dependencyBase = { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha };
+  try {
+    dependencyBase = await prepareDependencyBase(ctx, readiness);
+  } catch (error) {
+    if (error instanceof DependencyConflict) {
+      const storedTicket = await findTicket(ctx.storage, ticketRef);
+      if (storedTicket)
+        await createReviewRequest(ctx, {
+          ticket: storedTicket.id,
+          reason: "divergent-dependency-attempts",
+          title: "Resolve conflicting dependency revisions",
+          instructions: error.message,
+          request: handoffRequest,
+          expectedTicketStatusId: storedTicket.statusId ?? "",
+        });
+    }
+    throw error;
+  }
   const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
     ctx,
     commandParams,
-    readiness.baseHeadSha,
+    dependencyBase.headSha,
     async () => {
       await options.beforeDispatch?.(readiness.baseHeadSha);
     },
@@ -111,7 +130,7 @@ export async function startAttempt(
       }),
       ...(readiness.mode === "stacked"
         ? [
-            `This workspace starts at dependency commit ${readiness.baseHeadSha}. Stack your changes on this work; do not reset to the project base or discard dependency changes. Dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}.`,
+            `This workspace starts at dependency base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch and build on this base. It may combine several submitted branches without merging any of them into the project target. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
           ]
         : []),
     ].join("\n\n"),
@@ -125,7 +144,7 @@ export async function startAttempt(
     ticketShorthand: anchor.label ?? ticketIdentity.shorthand,
     implementationSessionId: session.id,
     state: "implementing",
-    base: { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha },
+    base: dependencyBase,
     revisions: [],
     implementationDisconnectRetries: 0,
     reviewDisconnectRetries: 0,
@@ -143,7 +162,7 @@ export async function startAttempt(
     reportId: null,
     reviewId: null,
     threadId: null,
-    commitSha: readiness.baseHeadSha,
+    commitSha: dependencyBase.headSha,
     metadata: { mode: readiness.mode, dependencyAttemptIds: readiness.dependencyAttemptIds },
   });
   // A short session can finish before its attempt is saved and miss the completion hook.
