@@ -49,8 +49,8 @@ export const GroupedCards: StoryObj = {
           {
             ...column,
             groups: [
-              { key: "high", label: "High", items: items.slice(0, 500) },
-              { key: "medium", label: "Medium", items: items.slice(500) },
+              { key: "row-0", label: "High", items: items.slice(0, 500) },
+              { key: "medium", label: "Medium", items: items.slice(0, 25).concat(items.slice(500)) },
             ],
           },
         ]}

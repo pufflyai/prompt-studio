@@ -62,7 +62,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
   const { columns, selectedItemId = null, onMoveItem, onMoveToGroup, onCreateStart, onColumnAction } = props;
 
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
-  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
   const [revealedItemId, setRevealedItemId] = useState<string | null>(null);
   const panViewportProps = useBoardPan();
   const dragScroll = useBoardDragScroll();
@@ -70,13 +70,13 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
   const handleDragStart = (itemId: string) => (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData("text/plain", itemId);
     event.dataTransfer.effectAllowed = "move";
-    setDraggedItemId(itemId);
+    setDraggedKey(event.currentTarget.closest<HTMLElement>("[data-board-key]")?.dataset.boardKey ?? null);
     dragScroll.startDrag(event);
   };
 
   const handleDragEnd = () => {
     setActiveColumn(null);
-    setDraggedItemId(null);
+    setDraggedKey(null);
   };
 
   const handleDragOver = (columnId: string) => (event: DragEvent<HTMLDivElement>) => {
@@ -136,7 +136,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
           <BoardColumnCards
             column={column}
             selectedItemId={selectedItemId}
-            draggedItemId={draggedItemId}
+            draggedKey={draggedKey}
             revealedItemId={revealedItemId}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
@@ -145,7 +145,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
               event.preventDefault();
               event.stopPropagation();
               setActiveColumn(null);
-              setDraggedItemId(null);
+              setDraggedKey(null);
               const itemId = event.dataTransfer.getData("text/plain");
               if (!itemId || itemId === beforeItemId) return;
               setRevealedItemId(itemId);

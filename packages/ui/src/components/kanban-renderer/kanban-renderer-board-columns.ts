@@ -129,7 +129,9 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
       canDragOut: columnConfig.canDragOut ?? false,
       canCreate: columnConfig.canCreate ?? false,
       actions: columnConfig.actions ?? [],
-      items: groups ? groups.flatMap((group) => group.items) : toBoardItems(column.rows),
+      items: groups
+        ? [...new Map(groups.flatMap((group) => group.items).map((item) => [item.id, item])).values()]
+        : toBoardItems(column.rows),
       groups,
       totalCount: columnTotals?.get(column.key),
     };

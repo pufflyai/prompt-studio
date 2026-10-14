@@ -9,7 +9,7 @@ import { BoardEntry, type BoardEntryData } from "./kanban-renderer-board-entry";
 interface BoardColumnCardsProps {
   column: KanbanRendererBoardColumn;
   selectedItemId: string | null;
-  draggedItemId: string | null;
+  draggedKey: string | null;
   revealedItemId: string | null;
   onDragStart: (itemId: string) => (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
@@ -18,7 +18,7 @@ interface BoardColumnCardsProps {
 }
 
 export const BoardColumnCards = (props: BoardColumnCardsProps) => {
-  const { column, selectedItemId, draggedItemId, revealedItemId, onDragStart, onDragEnd, onDragTarget, onDrop } = props;
+  const { column, selectedItemId, draggedKey, revealedItemId, onDragStart, onDragEnd, onDragTarget, onDrop } = props;
   const viewport = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -26,12 +26,16 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
   const [dropKey, setDropKey] = useState<string | null>(null);
   const entries: BoardEntryData[] = column.groups?.length
     ? column.groups.flatMap((group) => [
-        { key: JSON.stringify(["group", group.key]), group },
+        { key: JSON.stringify(["group", column.id, group.key]), group },
         ...(collapsed[group.key]
           ? []
-          : group.items.map((item) => ({ key: JSON.stringify(["row", item.id]), item, groupKey: group.key }))),
+          : group.items.map((item) => ({
+              key: JSON.stringify(["row", column.id, group.key, item.id]),
+              item,
+              groupKey: group.key,
+            }))),
       ])
-    : column.items.map((item) => ({ key: JSON.stringify(["row", item.id]), item }));
+    : column.items.map((item) => ({ key: JSON.stringify(["row", column.id, item.id]), item }));
   const virtualizer = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
     getScrollElement: () => viewport.current,
@@ -40,11 +44,11 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
     overscan: 5,
     rangeExtractor: (range) => {
       const indexes = new Set(defaultRangeExtractor(range));
-      for (const key of [focusedKey, focusTarget]) {
+      for (const key of [focusedKey, focusTarget, draggedKey]) {
         const index = entries.findIndex((entry) => entry.key === key);
         if (index >= 0) indexes.add(index);
       }
-      for (const id of [draggedItemId, revealedItemId]) {
+      for (const id of [revealedItemId]) {
         const index = entries.findIndex((entry) => entry.item?.id === id);
         if (index >= 0) indexes.add(index);
       }
