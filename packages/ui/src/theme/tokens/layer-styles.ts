@@ -62,6 +62,12 @@ export const layerStyles = defineLayerStyles({
       _focusVisible: { bg: "bg.subtle", outline: "2px solid", outlineColor: "border.accent", outlineOffset: "-2px" },
     },
   },
+  pageSidePanel: {
+    value: {
+      borderTopWidth: "1px",
+      borderColor: "border.subtle",
+    },
+  },
   filterPicker: {
     value: {
       height: "min({sizes.filter-picker-height}, calc(100dvh - {spacing.xl}))",

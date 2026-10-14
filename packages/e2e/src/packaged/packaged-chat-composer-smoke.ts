@@ -86,6 +86,9 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",
     );
     await editor.press("Enter");
+    await expect(page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last()).toContainText(
+      "Read the changes and confirm that shared tools work together for people who never read code.",
+    );
     const table = page.getByRole("log").locator('table[data-edit-mode="true"]').last();
     const detail = table.getByRole("cell", { name: /Read the changes/ });
     await expect(detail).toBeVisible();
@@ -95,6 +98,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await table.getByRole("button", { name: "Display settings" }).click();
     const wrap = page.getByRole("switch", { name: "Wrap rows" });
     await expect(wrap).toBeChecked();
+    await expect(page.getByText("Wrap rows", { exact: true })).toBeVisible();
     await page.getByText("Wrap rows", { exact: true }).click();
     await expect(detail).toHaveCSS("white-space", "nowrap");
     await page.getByText("Wrap rows", { exact: true }).click();

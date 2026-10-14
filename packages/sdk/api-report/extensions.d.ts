@@ -2662,19 +2662,14 @@ interface ViewMenuContribution extends ContributionDefinition<"view-menu"> {
 type PageSlotRole = "primary" | "auxiliary";
 type PageSlotCardinality = "one" | "many";
 type PageOpenIntent = "preview" | "pin";
-type PageSlotRegion = ExtensionPanelRegion | "bottom";
+type PageSlotRegion = ExtensionPanelRegion | "bottom" | "aside";
 interface PanelMenuDeclaration {
   readonly view: ViewRef;
   readonly size?: RegionSize;
   readonly collapsible?: boolean;
   readonly hiddenByDefault?: boolean;
 }
-interface PageRegionSettings {
-  readonly showHeader?: boolean;
-  readonly size?: RegionSize;
-  readonly collapsible?: boolean;
-  readonly alwaysShowTabs?: boolean;
-}
+interface PageRegionSettings extends ModeRegionSettings {}
 interface PageMainView extends PlacementPresentation {
   readonly kind: "view";
   readonly view: ViewRef;
@@ -2726,6 +2721,7 @@ interface PageContribution extends ContributionDefinition<"page"> {
   readonly regionSettings?: {
     readonly main?: Pick<PageRegionSettings, "showHeader">;
     readonly bottom?: PageRegionSettings;
+    readonly aside?: PageRegionSettings;
   };
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;

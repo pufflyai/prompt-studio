@@ -14,6 +14,6 @@ export const restorePanelPolicy = (core: WorkbenchCore | undefined, layout: Work
   const owner = getWorkbenchPageRegistryInternals(core.pages).getPublishingState();
   const page = owner.activePageId ? owner.pages[owner.activePageId] : undefined;
   return clampPanelSizes(next, (region) =>
-    region === "bottom" ? page?.regionSettings?.bottom : core.layout.getRegionSettings(region),
+    region === "bottom" || region === "aside" ? page?.regionSettings?.[region] : core.layout.getRegionSettings(region),
   );
 };

@@ -15,14 +15,14 @@ Proposed implementation. The product owner accepted the initial rules on 2026-10
 | Owner/resource removal | Closing a tab does not end its session; deleting a resource closes all tabs on its inaccessible page | PS-618 |
 | Boombox Up next (2026-10-11; superseded) | Replaced by the no-locks rule accepted on 2026-10-13 | PS-610; PS-702 |
 | Page panels and layout (2026-10-13) | Every page has side and bottom panels; page layout repeats mode layout | PS-700 |
-| Panel menus (2026-10-13) | Page-owned menus sit beside the editor's tab row | PS-700 |
+| Panel menus (2026-10-13) | Page-owned menus sit below the editor header | PS-700 |
 | Page header and project segment (2026-10-13) | Page controls and project-first breadcrumb on both hosts | PS-701 |
 | Mode toggles (2026-10-13) | Host chrome, ordered by placement; Navigation uses `list-tree` | PS-701 |
 | Page expansion (2026-10-13) | Page `expandable` defaults to allowed | PS-701; PS-616 |
 | Tabs and declared tools (2026-10-13) | Every tab can close and move; declarations provide reopen and reset | PS-702; PS-610; PS-617 |
 | Panel closing and keyboard resize (2026-10-13) | Drag the resize edge to close; keys move the separator in their direction | PS-704 |
 | Floating Side bubble (2026-10-13) | Visible while open; click toggles floating Side | PS-614 |
-| Tab menus and drop labels (2026-10-13) | Group destinations by page or mode owner | PS-613 |
+| Tab menus and drop labels (2026-10-13) | Pin/Unpin and Close only; drop labels name the owner | PS-613 |
 | Inner page edge drops (2026-10-13) | Open a closed page panel and move the tab together | PS-700; PS-613 |
 | Boombox and Kiln examples (2026-10-13) | Boombox hides tab headers; Kiln mixes a togglable sessions Side with a fixed Timeline panel | PS-610 |
 
@@ -165,13 +165,15 @@ Every page owns a side panel and a bottom panel without opting in. Both start cl
 
 The page repeats the mode layout. Its side panel spans the full page height beside a column containing the editor and page bottom. The page bottom is only as wide as the editor, visibly narrower than the mode's bottom when the page side is open. The page side moves left or right; the page bottom moves above or below the editor. Both resize inside the page. Geometry is saved per page type, and page reset restores it. In tight space, the page side shrinks before the editor column.
 
+Moving a routed primary editor from Main to page side or page secondary preserves its page/resource, URL, breadcrumb, Inspector binding, editor identity, and unsaved state. Parent/collection fallback applies when it leaves the page owner for a mode panel.
+
 ## 9. Panel menus beside the editor
 
-Page-owned `panelMenus.left` and `panelMenus.right` sit left and right of the editor's tab row at full editor height. They belong to the page, not a tab. They have no header, tabs, add action, or drop target. The declaration supplies the menu; layout stores its visibility, never a fake tab. The ticket Inspector and Notes notebook list are menus.
+Page-owned `panelMenus.left` and `panelMenus.right` start below the editor header, beside its content. The header spans the editor and both menus. The page side panel has a top border. They belong to the page, not a tab. They have no header, tabs, add action, or drop target. The declaration supplies the menu; layout stores its visibility, never a fake tab. The ticket Inspector and Notes notebook list are menus.
 
 ## 10. Page header controls
 
-The page header is the breadcrumb row inside the page frame. It shows Back and Forward, the project segment, and the breadcrumb. On the right, a button labelled `<Page title> panels` lists Bottom panel and Side panel as checkboxes on every page, then each declared menu (such as Inspector), then Reset layout. Expand view follows when the page allows it. The editor's tab row contains only tabs and its + button.
+The page header is the breadcrumb row inside the page frame. It shows Back and Forward, the project segment, and the breadcrumb. On the right, a button labelled `<Page title> panels` lists Bottom panel and Side panel as checkboxes on every page, then each declared menu (such as Inspector), then Reset layout. The button uses Lucide `panels-right-bottom`; every menu option has an icon. Reset belongs here, never in a tab menu. No Open terminal or Open session shortcuts in headers or Page panels; tools use the panel's + and empty declared-tool controls. Expand view follows when the page allows it. The editor's tab row contains only tabs and its + button.
 
 ## 11. Mode panel toggles
 
@@ -199,9 +201,11 @@ Panel headers have no close or hide button. A panel closes when its resize edge 
 
 Floating Side has no resize edge to drag. Its bubble stays visible while open: click opens floating Side, and another click closes it. The global Side control continues to open Side attached.
 
-## 16. Owner-grouped tab menus and drop labels
+## 16. Tab menus and owner-labelled drop previews
 
-The tab menu groups destinations as `Stays with <page title>` (Editor, Bottom panel, Side panel) and `Follows you in <mode>` (Sidebar, the mode's bottom panel). It omits the current panel and forbidden destinations. Drop labels use the same words.
+Tab context menus contain only Pin/Unpin and Close when applicable. Contributed actions remain on resource surfaces. Move tabs by dragging or workbench commands. Drop labels use `Stays with <page title>` for page destinations and `Follows you in <mode>` for mode destinations. Omit forbidden destinations.
+
+Hide/show a panel header from a context menu on the visible header or hidden top edge. Support right-click, Shift+F10, Context Menu key, and touch long-press. Headers have no ellipsis button.
 
 ## 17. Inner page edge drops
 

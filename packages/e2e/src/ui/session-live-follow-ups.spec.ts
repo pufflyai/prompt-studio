@@ -23,21 +23,22 @@ const setup = async (page: Page, request: APIRequestContext, prompts = ["Session
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/`);
-  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
-  await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
+  await page.goto(`/projects/${project.id}/sessions`);
   const header = page.locator('[data-workbench-panel-header="side"]');
   for (const session of sessions) {
-    const draft = header.getByRole("tab", { name: "New session", exact: true });
-    if ((await draft.count()) === 0) {
-      await header.getByRole("button", { name: "Add panel", exact: true }).click();
-      await page.getByRole("menuitem", { name: "Session", exact: true }).click();
-    }
-    await draft.click({ button: "right" });
-    await page
-      .getByRole("menu", { name: "New session context menu", exact: true })
-      .getByRole("menuitem", { name: session.title, exact: true })
-      .click();
+    const row = page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("option", { name: session.title, exact: true });
+    await row.focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+    await expect(page.getByRole("tab", { name: session.title, exact: true })).toBeVisible();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await page.getByRole("tab", { name: session.title, exact: true }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    const reattach = page.getByRole("button", { name: "Reattach Side Panel", exact: true });
+    if (await reattach.isVisible()) await reattach.click();
   }
   return { header, sessions };
 };

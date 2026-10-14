@@ -22,6 +22,16 @@ export const registerWindowingPagePanels = (workbench: WorkbenchCore) => {
       },
     });
   }
+  workbench.pages.registerPage({
+    id: "windowing.ticket",
+    ref: { kind: "page", extensionId: windowingExtensionId, id: "ticket" },
+    title: "Ticket",
+    path: "windowing/ticket",
+    modeId: "windowing",
+    main: { kind: "panels", empty: { kind: "view", id: "windowing.mode-tools" } },
+    panelMenus: { right: { view: { kind: "view", id: "windowing.inspector" }, size: { defaultPx: 240 } } },
+    slots: [],
+  });
   workbench.modePlacements.registerPlacement({
     id: "windowing.mode-tools",
     ref: { kind: "placement", extensionId: windowingExtensionId, id: "mode-tools" },

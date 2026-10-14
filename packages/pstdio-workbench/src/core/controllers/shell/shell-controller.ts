@@ -15,7 +15,7 @@ export interface WorkbenchPanelPolicyContext {
 
 export type WorkbenchSidePanelPresentation = WorkbenchSidePanelMode;
 
-export type WorkbenchShellOpenRegion = "sidenav" | "secondary" | "side" | "bottom";
+export type WorkbenchShellOpenRegion = "sidenav" | "secondary" | "side" | "bottom" | "aside";
 
 export interface WorkbenchShellRegionState {
   open: boolean;

@@ -54,7 +54,7 @@ and `chatContent` layer style. Narrow panes use their available width. Keep the
 scroll area at the full pane width so its scrollbar stays at the pane edge.
 
 The [chat width stories](src/components/chat-ui/components/chat-panel-width.stories.tsx)
-cover wide, narrow, and empty panes. The matching Pencil frame is `Ty4tk` in
+cover wide, narrow, and empty panes. The matching Pencil frame is `ZAXiG` in
 [the design system](../../design/prompt-studio-design-system.pen).
 
 ## Contributor Workflow

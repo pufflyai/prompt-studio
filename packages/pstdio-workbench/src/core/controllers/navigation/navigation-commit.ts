@@ -52,8 +52,8 @@ export const commitPreparedNavigation = (input: {
     const region = Object.values(layout.regions).find((region) =>
       region.widgets.some((tab) => tab.widgetId === layout.activeWidgetId),
     );
-    if (region && ["main", "bottom", "side", "secondary"].includes(region.id))
-      core.focus.setActiveRegion(region.id as "main" | "bottom" | "side" | "secondary");
+    if (region && ["main", "aside", "bottom", "side", "secondary"].includes(region.id))
+      core.focus.setActiveRegion(region.id as "main" | "aside" | "bottom" | "side" | "secondary");
     if (layout.activeWidgetId) core.focus.requestPanelFocus(layout.activeWidgetId);
     return result;
   });

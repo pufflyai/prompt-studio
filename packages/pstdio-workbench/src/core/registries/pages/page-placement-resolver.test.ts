@@ -30,3 +30,25 @@ test("resolves page panels from the current resource capabilities", () => {
     expect(placements.map((placement) => placement.value)).toEqual(supportsDiff ? ["changes", "files"] : ["files"]);
   }
 });
+
+test("aside slots resolve to page side and legacy side slots still use mode Side", () => {
+  const page: WorkbenchPageContribution = {
+    id: "tools",
+    ref: { kind: "page", id: "tools" },
+    path: "tools",
+    modeId: "project",
+    main: { kind: "panels", empty: { kind: "view", id: "empty" } },
+    slots: ["aside", "side"].map((region) => ({
+      id: region,
+      region: region as "aside" | "side",
+      item: { kind: "view", view: { kind: "view", id: region }, presence: "open" },
+    })),
+  };
+  const placements = resolvePagePlacements({
+    page,
+    state: { openStaticSlotIds: ["aside", "side"], resourceInstances: {} },
+    sharedPlacements: [],
+    resolvePagePlacement: (input) => input,
+  });
+  expect(placements.filter((p) => p.region !== "main").map((p) => p.region)).toEqual(["aside", "side"]);
+});

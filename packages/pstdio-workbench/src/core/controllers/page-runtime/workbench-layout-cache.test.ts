@@ -7,17 +7,28 @@ test("page geometry is shared by page type while mode geometry follows the mode"
   const saved = new Map();
   const w = harness(saved);
   await w.navigation.openTarget(navigate("alpha"));
+  w.layout.setRegionSize("aside", 321);
+  w.layout.restoreLayout({
+    ...w.layout.getLayout(),
+    regions: {
+      ...w.layout.getLayout().regions,
+      aside: { ...w.layout.getLayout().regions.aside, edge: "left" },
+      bottom: { ...w.layout.getLayout().regions.bottom, edge: "top" },
+    },
+  });
   w.layout.setRegionSize("bottom", 171);
   w.layout.setRegionSize("secondary", 290);
   await w.navigation.openTarget(navigate("beta"));
-  expect(w.layout.getLayout().regions.bottom.size).toBe(171);
+  expect(w.layout.getLayout().regions.aside).toMatchObject({ size: 321, edge: "left" });
+  expect(w.layout.getLayout().regions.bottom).toMatchObject({ size: 171, edge: "top" });
   expect(w.layout.getLayout().regions.secondary.size).toBe(290);
   w.layout.setRegionSize("bottom", 213);
   await w.navigation.openTarget(navigate("alpha"));
   expect(w.layout.getLayout().regions.bottom.size).toBe(213);
   const restored = harness(saved);
   await restored.navigation.openTarget(navigate("beta"));
-  expect(restored.layout.getLayout().regions.bottom.size).toBe(213);
+  expect(restored.layout.getLayout().regions.aside).toMatchObject({ size: 321, edge: "left" });
+  expect(restored.layout.getLayout().regions.bottom).toMatchObject({ size: 213, edge: "top" });
   expect(restored.layout.getLayout().regions.secondary.size).toBe(290);
   await w.dispose();
   await restored.dispose();
@@ -26,7 +37,16 @@ test("page geometry is shared by page type while mode geometry follows the mode"
 test("page navigation restores a shared mode layout written before page bottom existed", async () => {
   const layout = createDefaultWorkbenchLayout();
   const regions: Partial<WorkbenchLayout["regions"]> = { ...layout.regions };
-  for (const region of ["bottom", "bottom-header", "bottom-left-menu", "bottom-right-menu"] as const)
+  for (const region of [
+    "aside",
+    "aside-header",
+    "aside-left-menu",
+    "aside-right-menu",
+    "bottom",
+    "bottom-header",
+    "bottom-left-menu",
+    "bottom-right-menu",
+  ] as const)
     delete regions[region];
   const saved = new Map<string | undefined, WorkbenchLayout>([
     ["project/project/owner/mode/project", { ...layout, regions: regions as WorkbenchLayout["regions"] }],
