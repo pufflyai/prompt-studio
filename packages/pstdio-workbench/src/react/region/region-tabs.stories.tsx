@@ -241,7 +241,7 @@ export const SingleResourceWithMenu: Story = {
     await expect(header).toBeVisible();
     const menu = args.workbench.layout.getLayout().regions["main-right-menu"].widgets[0]!;
     args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, false);
-    await expect(await canvas.findByRole("button", { name: "Panel tabs panels" })).toBeVisible();
+    await expect(await canvas.findByRole("button", { name: "Document panels" })).toBeVisible();
     args.workbench.panelMenuState.setOpen(`panel-menu:${menu.widgetId}`, true);
     await expect(header).toBeVisible();
   },
@@ -265,7 +265,7 @@ export const SingleClosablePanel: Story = {
       await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
     }
     await userEvent.click(await canvas.findByRole("button", { name: "Close side first" }));
-    await expect(canvas.queryByText("side.first content")).not.toBeVisible();
+    await expect(canvas.queryByText("side.first content")).toBeNull();
     await expect(await canvas.findByRole("button", { name: "Close secondary first" })).toBeVisible();
   },
 };
