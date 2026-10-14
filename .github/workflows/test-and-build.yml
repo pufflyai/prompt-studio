@@ -390,11 +390,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-e2e-results-${{ matrix.shard }}
+          name: ui-e2e-results-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   e2e_cli:
     needs: scope
@@ -472,11 +472,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: packaged-vite-e2e-results
+          name: packaged-vite-e2e-results-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   license_check:
     needs: scope
@@ -610,9 +610,9 @@ jobs:
         if: always() && needs.scope.outputs.stage == 'full' && matrix.tests
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-test-results-${{ matrix.target }}
+          name: desktop-test-results-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: clients/desktop/test-results
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   build_docker:
     needs: scope
