@@ -93,13 +93,14 @@ An owner can submit a later correction after a passed review. Earlier review evi
 
 ## How Planner sets the ticket status
 
-Planner sets the ticket status from its attempts:
+Planner sets managed ticket status from its attempts, sessions, and human requests:
 
-1. If any attempt is being implemented or has changes requested, the ticket is In Progress.
-2. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
-3. Otherwise, if every attempt is blocked, the ticket is Blocked.
+1. An open or unreadable human request makes the ticket Blocked.
+2. An implementation or changes-requested attempt is In Progress while its session is queued or running. It is Blocked while its session awaits input, and Todo after its session stops so unfinished work can resume in the same attempt.
+3. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
+4. Otherwise, if every attempt is blocked, the ticket is Blocked.
 
-Planner leaves tickets in Done alone. Planner pauses status changes while any review request is open or unreadable. Attempt readiness uses the same rule for the target and all its prerequisites, including completed ones. Automation extensions, including Auto build, must use `attempt-readiness` before `run-attempt`. A manual or stale tag alone does not pause status changes or prevent launch. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
+Planner leaves tickets in Done alone. Session lifecycle events and request changes refresh managed ticket status. Background checks also repair stale status, including when Auto Build is off. Attempt readiness waits for open or unreadable requests on the target and all its prerequisites, including completed ones. Automation extensions, including Auto build, must use `attempt-readiness` before `run-attempt`. A manual or stale tag alone does not block launch. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
 
 ## When a session disconnects
 

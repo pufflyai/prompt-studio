@@ -9,6 +9,7 @@ import {
   sessionEvents,
 } from "@pstdio/sdk/extensions";
 import { autoBuildCommand } from "../commands/auto-build";
+import { refreshAttemptTickets } from "../data/attempt-rollup";
 import { readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
@@ -36,6 +37,7 @@ export const checkAutoBuildCommand = defineCommand({
   id: "auto-build.check",
   title: "Check Auto build",
   async run(ctx: CommandContext) {
+    await refreshAttemptTickets(ctx);
     await enqueueAutoBuild(ctx);
   },
 });

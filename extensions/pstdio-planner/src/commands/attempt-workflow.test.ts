@@ -62,6 +62,7 @@ const setup = async () => {
   const followups: unknown[] = [];
   const addedAnchors: unknown[] = [];
   let createdSessions = 0;
+  let implementationStatus = "completed";
   const context = <const TParams extends Record<string, unknown>>(params: TParams, headSha = "head-sha") =>
     makeCommandArgs({
       storage,
@@ -98,7 +99,7 @@ const setup = async () => {
           get: async (id: string) => ({
             id,
             title: id,
-            status: "completed",
+            status: id === "implementation-1" ? implementationStatus : "completed",
             anchors_json: [{ type: "planner-attempt", id: "workspace-1" }],
           }),
           create: async () => ({
@@ -109,6 +110,7 @@ const setup = async () => {
           }),
           followup: async (input: unknown) => {
             followups.push(input);
+            implementationStatus = "in_progress";
           },
           addAnchors: async (sessionId: string, anchors: unknown[]) => {
             addedAnchors.push({ sessionId, anchors });

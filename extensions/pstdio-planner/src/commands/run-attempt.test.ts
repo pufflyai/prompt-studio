@@ -55,6 +55,7 @@ describe("runAttemptCommand", () => {
             },
           } as never,
           sessions: {
+            get: async () => createSessionResource(),
             create: async (input: unknown) => {
               sessions.push(input);
               return createSessionResource();
@@ -228,6 +229,7 @@ describe("runAttemptCommand guarded launches", () => {
             },
           } as never,
           sessions: {
+            get: async () => createSessionResource(),
             create: async () => createSessionResource(),
           } as never,
         },
@@ -278,7 +280,7 @@ describe("runAttemptCommand guarded launches", () => {
               return { id: "workspace-1", workspace_shorthand: "T-1_A1" };
             },
           } as never,
-          sessions: { create: async () => createSessionResource() } as never,
+          sessions: { create: async () => createSessionResource(), get: async () => createSessionResource() } as never,
         },
       });
 

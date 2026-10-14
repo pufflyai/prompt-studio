@@ -7,10 +7,10 @@ import {
   type ResourceAnchor,
 } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendAttemptEvent, putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
-import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
 import type { HumanRequestReason } from "../data/review-request-types";
@@ -146,7 +146,8 @@ export async function startAttempt(
     commitSha: readiness.baseHeadSha,
     metadata: { mode: readiness.mode, dependencyAttemptIds: readiness.dependencyAttemptIds },
   });
-  await moveTicketToInProgress(ctx, ticket.id);
+  // A short session can finish before its attempt is saved and miss the completion hook.
+  if ("title" in ticket) await rollUpAttemptTicket(ctx, ticket.id);
   return {
     decision: "started" as const,
     mode,

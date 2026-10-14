@@ -215,6 +215,7 @@ async function submitReview(ctx: CommandContext, commandParams: ParamsOf<typeof 
       sessionId: attempt.implementationSessionId,
       prompt: `Review ${review.id} requested changes for ${attempt.workspaceShorthand} at ${revision.headSha}. Read report ${submitted.reportId} and address its findings.`,
     });
+    await rollUpAttemptTicket(ctx, attempt.ticketId);
     await appendAttemptEvent(ctx.storage, {
       workspaceId: attempt.workspaceId,
       revision: revision.revision,

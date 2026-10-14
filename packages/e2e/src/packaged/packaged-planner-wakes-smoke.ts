@@ -89,6 +89,33 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     expect(text).not.toContain(updated.prompt);
     expect(text.length).toBeLessThan(prompts[0].length / 4);
     expect(await execute("auto-build.read")).toMatchObject({ prompt: updated.prompt, blockOnReview: false });
+    await execute("auto-build.configure", { enabled: false });
+    const ticket = await execute("create-ticket", { content: "# Short managed implementation", status: "Todo" });
+    const { attempt } = await execute("run-attempt", { ticket: ticket.id });
+    const expectStatus = async (statusId: string) => {
+      for (let check = 0; check < 100; check++) {
+        if ((await execute("get-ticket", { id: ticket.id })).statusId === statusId) return;
+        await Bun.sleep(50);
+      }
+      expect((await execute("get-ticket", { id: ticket.id })).statusId).toBe(statusId);
+    };
+    // The shipped lifecycle hook repairs the status after a real worker completes.
+    await expectStatus("ready");
+    const human = await execute("request-human", {
+      ticket: ticket.id,
+      workspaceId: attempt.workspaceId,
+      sessionId: attempt.implementationSessionId,
+      title: "Confirm scope",
+      instructions: "Confirm before resuming the same attempt.",
+      request: { kind: "task" },
+    });
+    await expectStatus("blocked");
+    await execute("review", { requestId: human.id, response: { confirmed: true } });
+    await expectStatus("ready");
+    expect(
+      (await execute("list-attempts")).filter((row: { ticketId: string }) => row.ticketId === ticket.id),
+    ).toHaveLength(1);
+    expect(await execute("auto-build.read")).toMatchObject({ enabled: false });
   } finally {
     await execute("auto-build.configure", { enabled: false });
   }

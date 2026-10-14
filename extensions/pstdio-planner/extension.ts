@@ -19,6 +19,7 @@ import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
+import { attemptStatusHooks } from "./src/hooks/attempt-status";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
 import { gitMergedHook } from "./src/hooks/git-merged";
@@ -150,6 +151,7 @@ export default defineExtension({
 
   schedules: [mergedPullRequestsSchedule, autoBuildSchedule],
   hooks: [
+    ...attemptStatusHooks,
     ...dependencyBlockerHooks,
     ...autoBuildHooks,
     gitMergedHook,
