@@ -20,6 +20,20 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const BranchChoices: Story = {};
+export const StatusChoices: Story = {
+  args: {
+    id: "status",
+    name: "Eligible statuses",
+    defaultValue: ["todo"],
+    multiSelect: true,
+    searchable: true,
+    options: [
+      { id: "todo", name: "Todo", icon: "status-todo", color: "gray" },
+      { id: "building", name: "Building", icon: "status-progress", color: "blue" },
+      { id: "done", name: "Delivered", icon: "status-done", color: "green" },
+    ],
+  },
+};
 export const OnlySelectedOption: Story = {
   args: { options: [main] },
   play: async ({ canvasElement }) => {

@@ -4,11 +4,11 @@ export const retainViewPlacements = (
   previous: WorkbenchWidgetPlacement[],
   current: WorkbenchWidgetPlacement[],
   registeredViews: ReadonlySet<string>,
-  keepPlacement: (placement: WorkbenchWidgetPlacement) => boolean = () => true,
+  canRetain: (placement: WorkbenchWidgetPlacement) => boolean = () => true,
 ) => {
   const retained = new Map(
     previous
-      .filter((placement) => placement.viewId && registeredViews.has(placement.viewId) && keepPlacement(placement))
+      .filter((placement) => placement.viewId && registeredViews.has(placement.viewId) && canRetain(placement))
       .map((placement) => [placement.widgetId, placement]),
   );
   for (const placement of current) {

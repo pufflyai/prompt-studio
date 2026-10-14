@@ -96,15 +96,17 @@ test("retains Side chat and the editor draft during repeated file-position navig
       })
     ).json();
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}`);
-    await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
-    await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
-    const header = page.locator('[data-workbench-panel-header="side"]');
-    await header.getByRole("tab", { name: "New session", exact: true }).click({ button: "right" });
-    await page
-      .getByRole("menu", { name: "New session context menu", exact: true })
-      .getByRole("menuitem", { name: session.title, exact: true })
-      .click();
+    await page.goto(`/projects/${project.id}/sessions`);
+    const row = page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("option", { name: session.title, exact: true });
+    await row.focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+    await expect(page.getByRole("tab", { name: session.title, exact: true })).toBeVisible();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    const reattach = page.getByRole("button", { name: "Reattach Side Panel", exact: true });
+    if (await reattach.isVisible()) await reattach.click();
     const side = page.getByTestId("workbench-side-panel-attached");
     const composer = side.locator('[data-testid="content-editable"][contenteditable="true"]').last();
     await composer.fill("Keep this reply draft");

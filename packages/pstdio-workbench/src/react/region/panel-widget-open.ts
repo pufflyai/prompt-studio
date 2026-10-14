@@ -17,6 +17,7 @@ interface OpenPanelWidgetInput {
 }
 
 export const getPanelLabel = (region: WorkbenchPanelRegion) => {
+  if (region === "aside") return "Page side";
   if (region === "bottom") return "Page bottom";
   if (region === "secondary") return "Secondary";
   if (region === "side") return "Side";

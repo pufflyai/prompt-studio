@@ -1,4 +1,4 @@
-import { defaultPageResourceCodec, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import { registerArrangementCommands } from "./controllers/composition/arrangement-commands";
@@ -50,6 +50,7 @@ import { getWorkbenchPageRegistryInternals } from "./registries/pages/page-regis
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
+import { createAvailablePageResourceCodec } from "./registries/resources/available-page-resource-codec";
 import { createResourceRegistry } from "./registries/resources/resource-registry";
 import { createSettingsRegistry } from "./registries/settings/settings-registry";
 import { createStatusRegistry } from "./registries/statuses/status-registry";
@@ -109,7 +110,7 @@ const resolveRegionSettings = (
 ) => {
   const pageId = core ? getWorkbenchPageRegistryInternals(core.pages).getPublishingState().activePageId : undefined;
   const page = pageId ? core?.pages.getPage(pageId) : undefined;
-  if (regionId === "bottom") return page?.regionSettings?.bottom;
+  if (regionId === "bottom" || regionId === "aside") return page?.regionSettings?.[regionId];
   const activeModeId = core?.modes.getActiveModeId();
   const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
   return {
@@ -153,7 +154,9 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const { views, viewMenus, statusBar } = createCoreViews(input, renderers);
-  const pageResources = input.pageResources ?? defaultPageResourceCodec;
+  const pageResources = createAvailablePageResourceCodec(input.pageResources, (resource) =>
+    resources.isRemoved(resource),
+  );
 
   const updateTransferredPlacement = createTransferredPlacementUpdater(layout, layoutCache);
 
@@ -195,10 +198,11 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    remove: (resource, retained) => {
-      removeWorkbenchResource(core, resource, retained);
-      layoutCache.removeResource(resource);
-    },
+    remove: (resource) =>
+      removeWorkbenchResource(core, resource, () =>
+        layoutCache.removeResource(resource, core.pages.store.getState().projectId!, core.pages.listPages()),
+      ),
+    getProjectId: () => core.pages.store.getState().projectId,
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });

@@ -14,6 +14,14 @@ export const createWindowingPersistence = () => {
       // Match stored layouts: live tab callbacks are supplied again by registrations on reload.
       layouts.set(scope, JSON.parse(JSON.stringify(value)));
     },
+    transformLayouts(projectId, transform) {
+      for (const [scope, value] of layouts) {
+        if (!scope.startsWith(`project/${projectId}/`)) continue;
+        const next = transform(value, scope);
+        if (next) layouts.set(scope, next);
+        else layouts.delete(scope);
+      }
+    },
   };
   const pageLocation: WorkbenchPageLocationPersistence = {
     load: (projectId) => {

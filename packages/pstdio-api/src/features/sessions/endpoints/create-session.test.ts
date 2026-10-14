@@ -323,7 +323,12 @@ describe("POST /v1/sessions - lifecycle", () => {
     const activity = (await activityRes.json()) as {
       events: Array<{ event_type: string; resource_id: string }>;
     };
-    expect(activity.events[0]).toMatchObject({ event_type: "session_created", resource_id: created.id });
+    expect(activity.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ event_type: "session_created", resource_id: created.id }),
+        expect.objectContaining({ event_type: "session_execution_ended", resource_id: created.id }),
+      ]),
+    );
   });
 
   test("replays fake agent patches over session stream", async () => {

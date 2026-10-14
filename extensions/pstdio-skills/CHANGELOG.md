@@ -1,5 +1,13 @@
 # Prompt Studio Skills
 
+## 0.43.1
+
+_2026-10-13_
+
+### Patch Changes
+
+- 94ce006: Tell agents how to run the desktop app's pst by its full path when the shell cannot find the pst command.
+
 ## 0.43.0
 
 _2026-10-12_

@@ -1,15 +1,26 @@
 import { IconButton, Menu, Portal } from "@chakra-ui/react";
-import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
+import { ListRow, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
 import type { WorkbenchCore } from "../../core";
-import { pageHasBottom } from "../../core/registries/pages/page-panel-menus";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
-import { openPanelWidget } from "../region/panel-widget-open";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
-import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
-import { useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+
+const PagePanelAction = (props: { value: string; label: string; icon: string; onActivate(): void }) => {
+  const { value, label, icon, onActivate } = props;
+  return (
+    <Menu.Item value={value} asChild>
+      <ListRow
+        asChild
+        variant="full-width"
+        label={label}
+        icon={<WorkbenchIcon name={icon} size={14} />}
+        onActivate={onActivate}
+      />
+    </Menu.Item>
+  );
+};
 
 export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
@@ -18,16 +29,16 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
     state.activePageId ? state.pages[state.activePageId] : undefined,
   );
   const menus = useWorkbenchPanelMenus(workbench, "main").filter((menu) => menu.has && page?.panelMenus?.[menu.side]);
-  const panels = useWorkbenchCompositionPanels(workbench).bottom.addable;
-  const resource = useWorkbenchLocationResource(workbench);
   const bottom = usePanelPolicy(workbench, "bottom");
-  if (!page?.panelMenus && !pageHasBottom(page)) return null;
+  const aside = usePanelPolicy(workbench, "aside");
+  const geometry = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions);
+  if (!page) return null;
   return (
     <Menu.Root positioning={{ placement: "bottom-end", getAnchorElement: () => triggerRef.current }}>
       <Tooltip content="Page panels">
         <Menu.Trigger asChild>
           <IconButton ref={triggerRef} variant="ghost" size={PANEL_HEADER_CONTROL_SIZE} aria-label="Page panels">
-            <WorkbenchIcon name="PanelsTopLeft" size={14} />
+            <WorkbenchIcon name="panels-right-bottom" size={14} />
           </IconButton>
         </Menu.Trigger>
       </Tooltip>
@@ -37,42 +48,41 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
             {menus
               .filter((menu) => menu.collapsible)
               .map((menu) => (
-                <Menu.Item
+                <PagePanelAction
                   key={menu.region}
                   value={menu.region}
-                  onClick={() => menu.onCollapsedChange(!menu.collapsed)}
-                >
-                  {menu.collapsed ? "Show" : "Hide"} {menu.title}
-                </Menu.Item>
+                  label={`${menu.collapsed ? "Show" : "Hide"} ${menu.title}`}
+                  icon={menu.side === "left" ? "PanelLeft" : "PanelRight"}
+                  onActivate={() => menu.onCollapsedChange(!menu.collapsed)}
+                />
               ))}
-            {panels.map((panel) => (
-              <Menu.Item
-                key={panel.panelId}
-                value={panel.panelId}
-                onClick={() =>
-                  openPanelWidget({
-                    workbench,
-                    widget: panel.contribution,
-                    region: "bottom",
-                    resource,
-                    pinned: panel.pinned,
-                    open: panel.open,
-                  })
-                }
-              >
-                Open {panel.contribution.title}
-              </Menu.Item>
-            ))}
+            {aside.provided && (aside.open ? aside.canClose : aside.canOpen) ? (
+              <PagePanelAction
+                value="aside-visibility"
+                label={`${aside.open ? "Hide" : "Show"} Side panel`}
+                icon={geometry.aside.edge === "left" ? "PanelLeft" : "PanelRight"}
+                onActivate={() => {
+                  void workbench.shell.setRegionOpen("aside", !aside.open);
+                }}
+              />
+            ) : null}
             {bottom.provided && (bottom.open ? bottom.canClose : bottom.canOpen) ? (
-              <Menu.Item
+              <PagePanelAction
                 value="bottom-visibility"
-                onClick={() => {
+                label={`${bottom.open ? "Hide" : "Show"} Page bottom`}
+                icon={geometry.bottom.edge === "top" ? "PanelTop" : "PanelBottom"}
+                onActivate={() => {
                   void workbench.shell.setRegionOpen("bottom", !bottom.open);
                 }}
-              >
-                {bottom.open ? "Hide" : "Show"} Page bottom
-              </Menu.Item>
+              />
             ) : null}
+            <Menu.Separator />
+            <PagePanelAction
+              value="reset-layout"
+              label="Reset layout"
+              icon="RotateCcw"
+              onActivate={() => workbench.resetLayout()}
+            />
           </Menu.Content>
         </Menu.Positioner>
       </Portal>

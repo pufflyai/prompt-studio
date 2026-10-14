@@ -49,14 +49,14 @@ test("page navigation applies destination bottom bounds before the page is publi
   core.modes.registerMode({ id: "fixed", activate() {} });
   core.views.registerView({ id: "view", title: "View", body: { kind: "react", render: () => null } });
   const ref = (id: string) => ({ kind: "page" as const, extensionId: "test", id });
-  const registerPage = (id: string, fixed = false) =>
+  const registerPage = (id: string) =>
     core.pages.registerPage({
       id,
       ref: ref(id),
       path: id,
       modeId: id,
       main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "one" },
-      regionSettings: { bottom: { size: fixed ? { minPx: 188, maxPx: 188 } : { minPx: 200, maxPx: 800 } } },
+      regionSettings: { bottom: { size: { minPx: 200, maxPx: 800 } } },
       slots: [
         {
           id: "bottom",
@@ -66,13 +66,12 @@ test("page navigation applies destination bottom bounds before the page is publi
       ],
     });
   registerPage("large");
-  const destination = registerPage("fixed");
+  registerPage("fixed");
   core.pageLocations.setProject("project");
   await core.navigation.openTarget({ kind: "page", page: ref("fixed") });
   core.shell.setRegionSize("bottom", 600);
   await core.navigation.openTarget({ kind: "page", page: ref("large") });
-  destination.dispose();
-  registerPage("fixed", true);
+  core.pages.getPage("fixed")!.regionSettings = { bottom: { size: { minPx: 188, maxPx: 188 } } };
   await core.navigation.openTarget({ kind: "page", page: ref("fixed") });
   expect(core.shell.getRegionState("bottom").size).toBe(188);
   await core.dispose();

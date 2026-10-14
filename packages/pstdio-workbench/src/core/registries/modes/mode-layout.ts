@@ -29,7 +29,7 @@ export const getWorkbenchModePanelForRegion = (region: WorkbenchRegion) =>
 export const isWorkbenchModePanelAvailable = (
   mode: WorkbenchModeContribution | undefined,
   panel: WorkbenchPanelRegion,
-) => panel === "bottom" || !mode || panelsForMode(mode).includes(panel);
+) => panel === "bottom" || panel === "aside" || !mode || panelsForMode(mode).includes(panel);
 
 const placementById = (layout: WorkbenchLayout, widgetId: string | undefined) => {
   if (!widgetId) return undefined;

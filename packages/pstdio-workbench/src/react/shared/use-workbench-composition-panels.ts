@@ -15,6 +15,7 @@ export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): Workben
     main: workbench.composition.panelsFor("main"),
     secondary: workbench.composition.panelsFor("secondary"),
     side: workbench.composition.panelsFor("side"),
+    aside: workbench.composition.panelsFor("aside"),
     bottom: workbench.composition.panelsFor("bottom"),
   };
 };

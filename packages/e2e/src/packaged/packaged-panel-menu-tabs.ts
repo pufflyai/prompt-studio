@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { movePanelTab } from "../helpers/move-panel-tab";
 
 export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, projectId: string) => {
   await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/cameras`);
@@ -23,9 +24,8 @@ export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, pr
   await page.getByRole("separator", { name: "Resize Main left menu", exact: true }).dblclick();
   await expect(tab).toBeVisible();
   const instanceId = await tab.locator("..").getAttribute("data-workbench-tab");
-  await tab.focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await movePanelTab(page, tab, page.locator('[data-workbench-region="side"]'));
   const moved = page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: "Cams", exact: true });
   await expect(moved).toBeVisible();
   await page.getByRole("option", { name: "Lab", exact: true }).click();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateSidecarArtifact } from "../runtime/sidecar-artifact";
@@ -42,6 +42,21 @@ test("stages exactly one executable sidecar with a verifiable manifest", async (
       readVersion: () => "0.25.2",
     }),
   ).resolves.toBe(result.binaryPath);
+});
+
+test.skipIf(process.platform === "win32")("stages pst as a name for the runtime on macOS and Linux", () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-sidecar-pst-"));
+  roots.push(root);
+  const sourcePath = join(root, "build", "pstdio");
+  const resourcesPath = join(root, "resources");
+  mkdirSync(join(root, "build"), { recursive: true });
+  writeFileSync(sourcePath, "compiled-runtime");
+
+  stageSidecar({ sourcePath, resourcesPath, platform: "linux", arch: "x64", version: "0.25.2" });
+
+  // A relative link keeps working wherever the app is installed or moved.
+  expect(readlinkSync(join(resourcesPath, "bin", "pst"))).toBe("pstdio");
+  expect(readFileSync(join(resourcesPath, "bin", "pst"), "utf8")).toBe("compiled-runtime");
 });
 
 describe("stageSidecar", () => {

@@ -3,7 +3,7 @@ import { harness, navigate } from "../../core/controllers/composition/placement-
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "./terminal-module";
 import { terminalPlacementBindingId } from "./terminal-placement-binding";
 
-test("moving a live terminal preserves its binding and closing it in its destination ends it", async () => {
+test("moving and closing a live terminal preserve its runtime until an explicit stop", async () => {
   const workbench = harness();
   await workbench.navigation.openTarget(navigate("alpha"));
   workbench.registerModule(createWorkbenchTerminalModule());
@@ -41,5 +41,8 @@ test("moving a live terminal preserves its binding and closing it in its destina
   expect(signals).toEqual([]);
   workbench.closePlacement(identity);
   await Promise.resolve();
-  expect(signals).toEqual([undefined]);
+  expect(signals).toEqual([]);
+  expect(workbench.terminal.getSession("live-terminal")?.status).toBe("running");
+  await workbench.terminal.kill({ sessionId: "live-terminal" });
+  expect(workbench.terminal.getSession("live-terminal")?.status).toBe("killed");
 });

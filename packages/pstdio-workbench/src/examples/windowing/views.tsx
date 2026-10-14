@@ -49,6 +49,9 @@ export const WindowingDraftView = (props: DraftViewProps) => {
   useEffect(() => {
     setMount(probe.mounted(key));
   }, [key, probe]);
+  useEffect(() => {
+    if (label === "Session" && resource) probe.attach(resource);
+  }, [label, resource, probe]);
   return (
     <Stack role="group" aria-label={`${label} view`} p="md" gap="sm">
       <Text textStyle="heading/S/semibold">{resource?.label ?? label}</Text>

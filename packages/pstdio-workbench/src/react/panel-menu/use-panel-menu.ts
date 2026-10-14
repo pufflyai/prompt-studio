@@ -25,6 +25,7 @@ const panelLabels: Record<WorkbenchPanelRegion, string> = {
   secondary: "Secondary",
   side: "Side",
   bottom: "Page bottom",
+  aside: "Page side",
 };
 
 const resolveRegionSize = (regionSize: WorkbenchRegionSize | undefined) => ({
@@ -143,7 +144,7 @@ const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
-    const element = document.querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
+    const element = document.querySelector<HTMLElement>(`[data-workbench-panel-menu-layout="${panel}"]`);
     if (!element) return;
 
     const measure = () => setWidth(element.clientWidth);

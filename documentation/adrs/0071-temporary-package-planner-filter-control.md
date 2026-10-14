@@ -12,7 +12,7 @@ The released UI package does not export a standalone filter control. Its collect
 
 ## Decision
 
-Build a small, generated browser module from the public UI entry and package that module with Planner. External runtime dependencies remain package imports. A TypeScript declaration describes the packaged control through existing public SDK and UI types. The component source remains in the UI package; no source implementation is copied or maintained in Planner.
+Build a small, generated browser module from the public UI entry and package that module with Planner. Only Planner's declared dependencies and peers remain external package imports. Other UI implementation dependencies are bundled into this module, so changes to the UI entry cannot introduce undeclared runtime imports. React, React DOM, Chakra, and the SDK remain shared imports. A TypeScript declaration describes the packaged control through existing public SDK and UI types. The component source remains in the UI package; no source implementation is copied or maintained in Planner.
 
 The Planner build regenerates the module after the UI build. Planner declares `@pstdio/ui` as an Nx implicit dependency to enforce that order. Its package dependency cannot do this: it names the released UI version, which stops matching the workspace version when a release PR raises it. CI checks committed build output, published extension dependencies, and packaged runtime behavior. This is a temporary packaging workaround, not a second filter implementation.
 

@@ -20,6 +20,8 @@ const makeSourceDir = () => {
   return dir;
 };
 
+const editSourceDir = (dir: string) => writeFileSync(join(dir, "package.json"), '{"name":"edited"}');
+
 const sourceRow = (sourcePath: string, suffix = "1") => ({
   instance: { id: `instance-${suffix}`, namespace: `lab-${suffix}`, enabled: true },
   installedSource: {
@@ -188,6 +190,7 @@ describe("project extension runtime catalog", () => {
 
     const firstA = await harness.catalog.get("p1");
     const firstB = await harness.catalog.get("p2");
+    editSourceDir(dirA);
     harness.catalog.invalidate({ sourcePath: dirA, reason: "source_changed" });
     const secondB = await harness.catalog.get("p2");
     const secondA = await harness.catalog.get("p1");
@@ -200,7 +203,7 @@ describe("project extension runtime catalog", () => {
     expect(harness.loaderCalls.filter((path) => path === dirB)).toHaveLength(1);
   });
 
-  test("a full invalidation replaces every project snapshot once", async () => {
+  test("a full invalidation replaces every project snapshot once and imports only edited sources", async () => {
     const dirA = makeSourceDir();
     const dirB = makeSourceDir();
     const harness = createHarness({
@@ -209,6 +212,7 @@ describe("project extension runtime catalog", () => {
 
     const firstA = await harness.catalog.get("p1");
     const firstB = await harness.catalog.get("p2");
+    editSourceDir(dirA);
     harness.catalog.invalidate({ reason: "runtime_refresh" });
     const secondA = await harness.catalog.get("p1");
     const secondB = await harness.catalog.get("p2");
@@ -216,7 +220,7 @@ describe("project extension runtime catalog", () => {
     expect(secondA).not.toBe(firstA);
     expect(secondB).not.toBe(firstB);
     expect(harness.loaderCalls.filter((path) => path === dirA)).toHaveLength(2);
-    expect(harness.loaderCalls.filter((path) => path === dirB)).toHaveLength(2);
+    expect(harness.loaderCalls.filter((path) => path === dirB)).toHaveLength(1);
     expect(harness.publishes.map((entry) => entry.generation)).toEqual([1, 2, 3, 4]);
   });
 });

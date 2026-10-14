@@ -4,9 +4,7 @@ import { folderProjectInput } from "./folder-project";
 
 export const fakeHarnessId = "pstdio.workbench-fixture.harness.fake";
 
-// Creates a project with two finished fake-harness sessions and shows both, one after the other, in
-// a single Side Panel tab. The tab ends on the last session.
-export const openSessionsInOneSidePanelTab = async (page: Page, request: APIRequestContext, projectName: string) => {
+export const openSessionsInSidePanelTabs = async (page: Page, request: APIRequestContext, projectName: string) => {
   const project = await (
     await request.post(`${apiBase}/v1/projects`, {
       data: folderProjectInput({ name: projectName, agents: [fakeHarnessId] }),
@@ -33,23 +31,29 @@ export const openSessionsInOneSidePanelTab = async (page: Page, request: APIRequ
       JSON.stringify({ harnessId: "pstdio.workbench-fixture.harness.fake" }),
     );
   }, project.id);
-  await page.goto(`/projects/${project.id}/`);
-  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
-  await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
+  await page.goto(`/projects/${project.id}/sessions`);
   const header = page.locator('[data-workbench-panel-header="side"]');
-  const switchTab = async (from: string, to: string) => {
-    await header.getByRole("tab", { name: from, exact: true }).click({ button: "right" });
-    await page
-      .getByRole("menu", { name: `${from} context menu`, exact: true })
-      .getByRole("menuitem", { name: to, exact: true })
-      .click();
-    await expect(header.getByRole("tab", { name: to, exact: true })).toBeVisible();
-  };
-  if ((await header.getByRole("tab", { name: "New session", exact: true }).count()) === 0) {
-    await header.getByRole("button", { name: "Add panel", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Session", exact: true }).click();
+  for (const session of sessions) {
+    const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
+      name: session.title,
+      exact: true,
+    });
+    await row.focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+    const tab = page.getByRole("tab", { name: session.title, exact: true });
+    await expect(tab).toBeVisible();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await tab.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    const reattach = page.getByRole("button", { name: "Reattach Side Panel", exact: true });
+    if (await reattach.isVisible()) await reattach.click();
   }
-  await switchTab("New session", "Session A");
-  await switchTab("Session A", "Session B");
-  return { header, project: project as { id: string }, sessions, switchTab };
+  const selectSession = async (title: string) => {
+    const tab = header.getByRole("tab", { name: title, exact: true });
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+  };
+  return { header, project: project as { id: string }, sessions, selectSession };
 };
