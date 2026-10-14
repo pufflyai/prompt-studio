@@ -14,6 +14,7 @@ interface ResizableSplitPanelsProps {
   axis: ReturnType<typeof getResizableSplitAxis>;
   bounds: { minSize: number; maxSize: number };
   collapsed: boolean;
+  closing: boolean;
   collapsible: boolean;
   resizable: boolean;
   contentPanel: ReactNode;
@@ -39,6 +40,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     axis,
     bounds,
     collapsed,
+    closing,
     collapsible,
     resizable,
     contentPanel,
@@ -64,6 +66,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       ref={resizablePanelRef}
       css={styles.resizablePanel}
       data-collapsed={collapsed}
+      data-closing={closing}
       aria-hidden={collapsed ? true : undefined}
       inert={collapsed}
     >
@@ -84,6 +87,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       axis={axis}
       bounds={bounds}
       collapsed={collapsed}
+      closing={closing}
       collapsible={collapsible}
       contentPanelId={contentPanelId}
       resizablePanelId={resizablePanelId}

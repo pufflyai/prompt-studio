@@ -27,6 +27,7 @@ interface ResizeStartHandlerInput {
   commitPanelSize(size: number): void;
   setCollapsed(collapsed: boolean): void;
   setDragging(dragging: boolean): void;
+  setClosing(closing: boolean): void;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -53,6 +54,7 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
     commitPanelSize,
     setCollapsed,
     setDragging,
+    setClosing,
   } = input;
   return (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || (collapsed && !collapsible)) return;
@@ -103,15 +105,18 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
         collapsible,
       });
       nextCollapsed = result.collapsed;
-      nextSize = result.size;
+      // Keep the panel visible at its minimum until release confirms the close.
+      nextSize = clamp(result.rawSize, bounds.minSize, bounds.maxSize);
+      setClosing(nextCollapsed && !collapsed);
       schedulePanelSize();
     };
 
-    const cleanup = () => {
+    const finish = (commit: boolean) => {
       window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", cleanup);
-      window.removeEventListener("pointercancel", cleanup);
-      window.removeEventListener("blur", cleanup);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("blur", cancel);
+      window.removeEventListener("keydown", handleKeyDown);
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
       if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
@@ -121,7 +126,8 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
         animationFrame = 0;
       }
       cleanupDragRef.current = () => undefined;
-      if (!moved) {
+      setClosing(false);
+      if (!commit || !moved) {
         // Resume opening without committing an intermediate size from a divider press.
         flushSync(() => setDragging(false));
         rootRef.current?.getBoundingClientRect();
@@ -140,7 +146,16 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
       setDragging(false);
     };
 
-    cleanupDragRef.current = cleanup;
+    const handlePointerUp = () => finish(true);
+    const cancel = () => finish(false);
+    const handleKeyDown = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key !== "Escape") return;
+      keyEvent.preventDefault();
+      keyEvent.stopPropagation();
+      cancel();
+    };
+
+    cleanupDragRef.current = cancel;
     resizeHandle.setPointerCapture(event.pointerId);
     document.body.style.cursor = axis.cursor;
     document.body.style.userSelect = "none";
@@ -149,8 +164,9 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
     rootRef.current?.style.setProperty("--split-size", `${startSize}px`);
     setDragging(true);
     window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", cleanup, { once: true });
-    window.addEventListener("pointercancel", cleanup, { once: true });
-    window.addEventListener("blur", cleanup, { once: true });
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    window.addEventListener("pointercancel", cancel, { once: true });
+    window.addEventListener("blur", cancel, { once: true });
+    window.addEventListener("keydown", handleKeyDown);
   };
 };
