@@ -255,6 +255,12 @@ test(
       expect(
         existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "milestone-eta.tsx")),
       ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-canvas-pan.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-canvas-zoom.ts")),
+      ).toBe(true);
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,
