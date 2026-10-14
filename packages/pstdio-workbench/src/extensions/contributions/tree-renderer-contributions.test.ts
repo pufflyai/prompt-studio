@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench, getWorkbenchRenderers } from "../../core";
-import { resolveTreeListSelection } from "../../react/renderers/tree/tree-list-adapter";
+import { resolveTreeListSelection, toTreeListSection } from "../../react/renderers/tree/tree-list-adapter";
 import { registerWorkbenchExtensionTreeRenderers } from "./tree-renderer-contributions";
 import { metadata, treeId } from "./tree-renderer-contributions.fixture";
 
@@ -41,6 +41,24 @@ describe("extension tree renderer contributions", () => {
     const sections = await getWorkbenchRenderers(workbench).getBody(treeId);
     await sections[0]?.actions?.[0]?.run?.(params);
     expect(calls).toEqual([params]);
+  });
+  test("passes an extension node's tooltip to its tree row", async () => {
+    const workbench = createWorkbench();
+    workbench.registerModule({
+      id: "test.tree-tooltip",
+      activate: (context) =>
+        registerWorkbenchExtensionTreeRenderers({
+          executeCommand: () => [
+            { id: "files", nodes: [{ id: "home", label: "home.pen", tooltip: "design/home.pen" }] },
+          ],
+          metadata,
+          projectId: "project-1",
+          workbench: context,
+        }),
+    });
+    const sections = await getWorkbenchRenderers(workbench).getBody(treeId);
+
+    expect(toTreeListSection(sections[0]!, {}, { workbench }).nodes[0]?.tooltip).toBe("design/home.pen");
   });
 });
 

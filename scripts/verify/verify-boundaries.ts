@@ -25,16 +25,13 @@ import {
   PRIVATE_EXPORT_LIMITS,
   RELATIVE_ESCAPE_ALLOWLIST,
 } from "./boundary-rules";
+import { checkExtensionRegistryResolution, type ExtensionPackageDependencies } from "./extension-registry-resolution";
 import { sourceImports } from "./source-imports";
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_reference", "storybook-static"]);
 
-interface WorkspacePackage {
-  name: string;
-  dir: string;
+interface WorkspacePackage extends ExtensionPackageDependencies {
   declared: Set<string>;
-  dependencies: Record<string, string>;
-  isExtension: boolean;
   privateExports?: number;
 }
 
@@ -76,6 +73,7 @@ const discoverPackages = (root: string) => {
       dir,
       declared,
       dependencies,
+      devDependencies: (manifest.devDependencies as Record<string, string>) ?? {},
       isExtension: Boolean((manifest.engines as { pstdio?: unknown } | undefined)?.pstdio),
       privateExports:
         manifest.private === true && typeof manifest.exports === "object" && manifest.exports
@@ -167,7 +165,10 @@ const exactVersion = new RegExp(
   `^${numericIdentifier}\\.${numericIdentifier}\\.${numericIdentifier}(?:-${prereleaseIdentifier}(?:\\.${prereleaseIdentifier})*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$`,
 );
 
-export const checkExtensionUiVersion = (pkg: WorkspacePackage, errors: string[]) => {
+export const checkExtensionUiVersion = (
+  pkg: Pick<WorkspacePackage, "dependencies" | "isExtension" | "dir">,
+  errors: string[],
+) => {
   const declaredVersion = pkg.dependencies["@pstdio/ui"];
   if (pkg.isExtension && declaredVersion && !exactVersion.test(declaredVersion)) {
     errors.push(`${pkg.dir}: must pin @pstdio/ui to an exact published version instead of "${declaredVersion}"`);
@@ -276,6 +277,9 @@ export const verifyBoundaries = (root: string) => {
   const packages = discoverPackages(root);
   const workspace = { root, packages, names: new Set(packages.map((pkg) => pkg.name)) };
   const errors: string[] = [];
+  const lock = Bun.JSONC.parse(readFileSync(path.join(root, "bun.lock"), "utf8")) as {
+    packages: Record<string, unknown[]>;
+  };
 
   for (const cycle of findCycles(packages)) {
     errors.push(`package cycle: ${cycle}`);
@@ -284,6 +288,7 @@ export const verifyBoundaries = (root: string) => {
     checkDeclaredDeps(pkg, workspace.names, errors);
     checkPrivateExports(pkg, errors);
     checkExtensionUiVersion(pkg, errors);
+    checkExtensionRegistryResolution(pkg, lock.packages, errors);
     checkSourceImports(pkg, workspace, errors);
     checkTsconfigPaths(pkg, workspace, errors);
   }

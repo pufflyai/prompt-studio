@@ -1,9 +1,20 @@
-import { Box, Button, Dialog, Icon, IconButton, Input, Tabs, Text } from "@chakra-ui/react";
+import { Box, Button, Dialog, Icon, IconButton, Input, Tabs } from "@chakra-ui/react";
+import {
+  DndContext,
+  type DragOverEvent,
+  DragOverlay,
+  MouseSensor,
+  pointerWithin,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { Copy, LayersPlus, Pencil, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
+import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { CollectionViewTab } from "./collection-view-tab";
 import type { CollectionSavedView, CollectionViewState, CollectionViewsSource } from "./collection-view-types";
 
 interface RenameViewDialogProps {
@@ -77,6 +88,33 @@ export interface CollectionViewTabsProps<TSettings> {
 export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TSettings>) => {
   const { views, activeViewId, viewsSource, dirty, busy, state, onActivate, run, createView } = props;
   const [renameTarget, setRenameTarget] = useState<CollectionSavedView<TSettings>>();
+  const [draggedId, setDraggedId] = useState<string>();
+  const [drop, setDrop] = useState<{ id: string; edge: "before" | "after" }>();
+  const reorderable = Boolean(viewsSource?.onReorderViews && !busy && views.length > 1);
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 5 } }),
+  );
+  const resolveDrop = (event: DragOverEvent) => {
+    if (!event.over || event.active.id === event.over.id) return undefined;
+    const rect = event.active.rect.current.translated;
+    const before = rect && rect.left + rect.width / 2 < event.over.rect.left + event.over.rect.width / 2;
+    return { id: String(event.over.id), edge: before ? ("before" as const) : ("after" as const) };
+  };
+  const reorder = (id: string, targetId: string, edge: "before" | "after") => {
+    if (!reorderable || id === targetId) return;
+    const order = views.map((view) => view.id);
+    const remaining = order.filter((viewId) => viewId !== id);
+    const index = remaining.indexOf(targetId);
+    if (index === -1 || !order.includes(id)) return;
+    remaining.splice(index + (edge === "after" ? 1 : 0), 0, id);
+    if (remaining.every((viewId, position) => viewId === order[position])) return;
+    run(() => viewsSource!.onReorderViews!(remaining));
+  };
+  const finishDrag = () => {
+    setDraggedId(undefined);
+    setDrop(undefined);
+  };
 
   const actionsFor = (view: CollectionSavedView<TSettings> & { builtIn: boolean }): ResourceContextAction[] =>
     viewsSource
@@ -128,29 +166,48 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
           if (view) onActivate(view);
         }}
       >
-        <ScrollArea height="auto" showHorizontalScrollbar showVerticalScrollbar={false}>
-          <Tabs.List width="max-content">
-            {views.map((view) => (
-              <ResourceContextMenu key={view.id} actions={actionsFor(view)} positioning={{ placement: "bottom-start" }}>
-                <Tabs.Trigger value={view.id} title={view.title}>
-                  <Text as="span" data-tab-label>
-                    {view.title}
-                  </Text>
-                  {dirty && view.id === activeViewId ? (
-                    <Box
-                      aria-label="Unsaved view changes"
-                      width="0.375rem"
-                      height="0.375rem"
-                      flexShrink={0}
-                      borderRadius="full"
-                      bg="fg.warning"
-                    />
-                  ) : null}
-                </Tabs.Trigger>
-              </ResourceContextMenu>
-            ))}
-          </Tabs.List>
-        </ScrollArea>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={({ active }) => setDraggedId(String(active.id))}
+          onDragOver={(event) => setDrop(resolveDrop(event))}
+          onDragMove={(event) => setDrop(resolveDrop(event))}
+          onDragCancel={finishDrag}
+          onDragEnd={(event) => {
+            const target = resolveDrop(event);
+            finishDrag();
+            if (target) reorder(String(event.active.id), target.id, target.edge);
+          }}
+        >
+          <ScrollArea height="auto" showHorizontalScrollbar showVerticalScrollbar={false}>
+            <Tabs.List width="max-content">
+              {views.map((view, index) => (
+                <CollectionViewTab
+                  key={view.id}
+                  id={view.id}
+                  title={view.title}
+                  actions={actionsFor(view)}
+                  dirty={dirty && view.id === activeViewId}
+                  reorderable={reorderable}
+                  dropEdge={drop?.id === view.id ? drop.edge : undefined}
+                  onMove={(direction) => {
+                    const neighbor = views[index + (direction === "left" ? -1 : 1)];
+                    if (neighbor) reorder(view.id, neighbor.id, direction === "left" ? "before" : "after");
+                  }}
+                />
+              ))}
+            </Tabs.List>
+          </ScrollArea>
+          <Box asChild pointerEvents="none">
+            <DragOverlay dropAnimation={null}>
+              {draggedId ? (
+                <Box layerStyle="floatingBar" textStyle="label/XS/medium">
+                  {views.find((view) => view.id === draggedId)?.title}
+                </Box>
+              ) : null}
+            </DragOverlay>
+          </Box>
+        </DndContext>
       </Tabs.Root>
       <Tooltip content="Add view">
         <IconButton

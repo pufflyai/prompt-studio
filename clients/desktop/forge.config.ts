@@ -6,6 +6,7 @@ import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { version } from "./package.json";
 import { writeCliInstallScripts } from "./src/packaging/cli-install-scripts";
+import { DeviceDmgMaker } from "./src/packaging/device-dmg-maker";
 import { finalizeWindowsSidecar } from "./src/packaging/finalize-windows-sidecar";
 import { desktopPackageName } from "./src/packaging/package-layout";
 import { resolveDesktopSigning } from "./src/release/release-config";
@@ -77,10 +78,8 @@ const config: ForgeConfig = {
       config: { name: "PromptStudio", windowsSign: signing.squirrelWindowsSign },
     },
     { name: "@electron-forge/maker-zip", platforms: ["darwin", "linux"], config: {} },
-    {
-      name: "@electron-forge/maker-dmg",
-      platforms: ["darwin"],
-      config: {
+    new DeviceDmgMaker(
+      {
         name: "Prompt Studio",
         icon: join(assetsRoot, "icon.icns"),
         // appdmg picks up dmg-background@2x.png next to this file for Retina screens.
@@ -93,7 +92,8 @@ const config: ForgeConfig = {
         ],
         format: "ULFO",
       } satisfies MakerDMGConfig,
-    },
+      ["darwin"],
+    ),
     {
       name: "@electron-forge/maker-deb",
       platforms: ["linux"],

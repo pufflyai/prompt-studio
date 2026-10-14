@@ -42,17 +42,28 @@ export const createAppServerRpc = (
     if (closed) throw new Error("Codex app-server connection closed.");
     child.stdin.write(`${JSON.stringify(message)}\n`);
   };
-  const request = (method: string, params: Record<string, unknown>, onResult?: (result: unknown) => void) => {
+  const request = (
+    method: string,
+    params: Record<string, unknown>,
+    onResult?: (result: unknown) => void,
+    signal?: AbortSignal,
+  ) => {
+    signal?.throwIfAborted();
     const id = nextId++;
     const pending = Promise.withResolvers<unknown>();
     requests.set(id, { ...pending, onResult });
+    const abort = () => {
+      requests.delete(id);
+      pending.reject(signal?.reason);
+    };
+    signal?.addEventListener("abort", abort, { once: true });
     try {
       write({ id, method, params });
     } catch (error) {
       requests.delete(id);
       pending.reject(error);
     }
-    return pending.promise;
+    return pending.promise.finally(() => signal?.removeEventListener("abort", abort));
   };
   const settleResponse = (message: RpcMessage, pending: PendingRequest | undefined) => {
     if (!pending) return;
@@ -66,7 +77,6 @@ export const createAppServerRpc = (
       pending.resolve(message.result);
     } catch (error) {
       pending.reject(error);
-      throw error;
     }
   };
   const reader = createInterface({ input: child.stdout, crlfDelay: Number.POSITIVE_INFINITY });
