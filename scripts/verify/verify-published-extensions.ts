@@ -1,6 +1,7 @@
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
+import { freshInstallArgs } from "./fresh-install";
 
 interface ExtensionManifest {
   name: string;
@@ -49,7 +50,7 @@ export async function verifyPublishedExtension(root: string, dir: string) {
   try {
     const destination = await stageExtension(root, dir, temporaryRoot);
     console.log(`\nChecking ${dir} against published dependencies`);
-    await run(destination, ["bun", "install"]);
+    await run(destination, ["bun", ...freshInstallArgs(root, destination)]);
     const dependencies = (await Bun.file(join(destination, "package.json")).json()).dependencies;
     for (const name of ["@pstdio/sdk", "@pstdio/ui"]) {
       if (!dependencies?.[name]) continue;

@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { buildBinary, runPackaged } from "./packaged-helpers";
 import {
   ACTIVE_CONFLICTS,
@@ -32,6 +33,9 @@ import {
   startPackagedServe,
   stopProcess,
 } from "./packaged-serve-helpers";
+
+test.afterEach(stopPendingTestProcesses);
+test.afterAll(stopPendingTestProcesses);
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
 const browserTest = existsSync(chromium.executablePath()) || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;
@@ -170,6 +174,20 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     let timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
+
+    // Exercise the generated control against Planner's installed runtime dependencies.
+    await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
+    const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
+    await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
+    const filterMenu = timeline.getByTestId("filter-menu");
+    await filterMenu.getByRole("button", { name: "Title", exact: true }).click();
+    await filterMenu.getByRole("textbox", { name: "Value", exact: true }).fill("Seeded");
+    await filterMenu.getByRole("button", { name: "Apply filter", exact: true }).click();
+    await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toBeVisible();
+    await autoBuild.getByRole("textbox", { name: "Value", exact: true }).press("Enter");
+    await autoBuild.getByRole("button", { name: "Remove Title filter", exact: true }).click();
+    await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toHaveCount(0);
+    await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
 
     // Ordinary ticket work stays available while the timeline explains the Track problem.
     expect(await ticketRows(conflicting.execute)).toHaveLength(ACTIVE_CONFLICTS + ARCHIVED_CONFLICTS + 3);

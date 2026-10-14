@@ -42,7 +42,9 @@ Do not return `metadata.resourceParent` or infer a view from a resource type. Re
 
 ## Settings
 
-`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`. A settings panel without `section` appears in the host's Project group.
+`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`.
+
+Use `workbenchSlots.extensionSettings` for native controls in the owning extension's Settings tab. A `controls` view supplies fields to the shared parameter editor, next to the extension's ordinary settings. It follows normal page flow and shares the settings page's scrollbar. It does not add an entry to project settings navigation. Use `workbenchSlots.projectSettings` for a separate project settings entry, such as a shared status editor. A project settings panel without `section` appears in the host's Project group.
 
 A `string` setting can offer choices in two ways:
 
@@ -120,6 +122,8 @@ A command action may pass params with `target: { command: preview.ref, params: {
 
 Native controls views can declare a harness field with `{ id: "agent", name: "Model", type: "harness", defaultValue: { harnessId, model, params } }`. Its value is the same object accepted by `ctx.sessions.create({ harness: value })`. The host renders its harness, model and model options inline using the command-form picker. Use `onApply` to save the choice or `onValueChange` to save each edit. This control requires API 0.1.3.
 
+Controls with `onApply` keep edited values during background refreshes. Apply saves the draft; a rejected save shows its error beside the unchanged inputs. Reset discards the draft and uses the latest saved values. An optional `onReset` also lets the extension reset its stored values. Each resource owns a separate draft.
+
 Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
@@ -174,6 +178,8 @@ over saved row selection and automatic page or resource matching. A contextual p
 tree's declared document selection does not override the open workspace.
 Rows without a resource or navigation target keep their declared selection.
 
+Set `tooltip` to show text while the pointer rests on a row or the row has keyboard focus, such as the full path of a file whose row shows only its name. `iconTooltip` shows text only over the row icon. Use one of the two on a row, not both.
+
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.
@@ -215,6 +221,14 @@ document. Do not add a separate copy-link action or view to an extension.
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
 
 ## View instances
+
+Creating or starting a session publishes its resource to Sessions. It does not call `ctx.navigation.open`, create a hidden or visible UI tab, select a tab, reveal a panel, move focus, change fullscreen, or add a panel badge. This also applies when the view declares `reveal: "always"`. A later explicit Open passes that same resource to the normal page or panel target and follows the current destination permissions.
+
+Views accept `background: "active" | "keep-mounted"`, `reveal: "always" | "explicit"`, and `defaultPanel: "side" | "secondary"`. Keep-mounted preserves opened view content when its tab, page, or mode becomes inactive. Active mounts content only while selected in its owner. Omitted fields retain existing behavior. Explicit reveal leaves a directly closed panel closed during automatic placement activation; explicit navigation can reveal it when permitted. An empty automatic panel still derives visibility from its tabs. These fields do not turn resource creation into navigation.
+
+Host view-open commands use an existing per-resource editor first, then a matching binding in the current page, then a declared binding in the view's mode default panel. A missing or forbidden destination fails before changing the UI. There is no fallback to another panel. Extensions keep their existing page, panel, and compound navigation target shapes.
+
+Placement `mountStrategy` is deprecated in favor of view `background`. Existing placement-specific values take precedence over view defaults. `hiddenByDefault` remains supported: it controls legacy layout population and is not equivalent to the new view reveal policy. Its deprecation waits for a compatible replacement.
 
 Set `defineView({ instancePolicy: "per-resource", ... })` for one editor per resource. Explicit navigation searches every open page and mode owner in the current project and workbench client. It activates the existing editor where it lives, reveals its panel when allowed, and focuses it. Moving the editor does not change its identity or resource. Closing it allows a later open to create an editor at the normal destination.
 

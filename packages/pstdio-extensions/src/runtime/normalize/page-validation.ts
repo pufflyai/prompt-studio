@@ -94,7 +94,7 @@ const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord,
     return;
   }
   for (const [index, slot] of record.contribution.slots.entries()) {
-    if (slot.region === "bottom") continue;
+    if (slot.region === "bottom" || slot.region === "aside") continue;
     if (regions.includes(slot.region)) continue;
     addPageDiagnostic(runtime, {
       code: "extension_page_region_invalid",

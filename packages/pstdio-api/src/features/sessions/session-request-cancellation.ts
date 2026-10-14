@@ -45,7 +45,10 @@ export const bindSessionCancellation = async (
       }
       if (deps.sessionService.store.get(sessionId) === entry) {
         if (entry) await checkpointConversation(sessionId, entry, deps);
-        await deps.sessionService.transitionStatus(sessionId, "cancelled", { expectedOwner: entry });
+        await deps.sessionService.transitionStatus(sessionId, "cancelled", {
+          expectedOwner: entry,
+          exitCause: "request_aborted",
+        });
         if (entry) deps.sessionService.store.remove(sessionId, entry);
       }
     });

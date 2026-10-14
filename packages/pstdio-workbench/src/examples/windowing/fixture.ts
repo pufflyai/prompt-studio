@@ -1,3 +1,4 @@
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
 import { createBoomboxWorkbench } from "../showcases/boombox";
 import { createKilnWorkbench } from "../showcases/kiln";
@@ -15,6 +16,8 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
   const probe = createWindowingLifecycleProbe();
+  const deletedResources: import("@pstdio/sdk/extensions").ResourceRef[] = [];
+  let registrations: ReturnType<typeof registerWindowingModule> | undefined;
   const create = () => {
     if (mode === "boombox") return createBoomboxWorkbench();
     if (mode === "kiln") return createKilnWorkbench();
@@ -29,7 +32,8 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
       layoutPersistence: persistence.layout,
       pageLocationPersistence: persistence.pageLocation,
     });
-    registerWindowingModule(workbench, resources, probe, options);
+    registrations = registerWindowingModule(workbench, resources, probe, options);
+    options.registerPages?.(workbench);
     if (options.floatingSessionDefault)
       workbench.commands.registerCommand(
         { id: "windowing.newSession", label: "New session" },
@@ -48,6 +52,8 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
       );
     if (options.pageModes) registerAvailabilityPages(workbench);
     if (options.contextNavigation) registerContextNavigation(workbench, resources);
+    workbench.pageLocations.setProject("windowing-project");
+    for (const resource of deletedResources) workbench.resources.removed(resource);
     workbench.pageLocations.switchProject("windowing-project");
     if (!savedLocation && !options.pageModes)
       workbench.pageLocations.navigate({
@@ -62,9 +68,23 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
     mode,
     pageModes: options.pageModes,
     contextNavigation: options.contextNavigation,
+    sessionStarts: options.sessionStarts,
     resources,
     persistence,
     probe,
+    removalControls: options.removalControls,
+    removeContribution(kind: "mode" | "workspace" | "panel") {
+      registrations?.[kind].dispose();
+    },
+    removeResource(resource: import("@pstdio/sdk/extensions").ResourceRef) {
+      deletedResources.push(resource);
+      workbench.resources.removed(resource);
+    },
+    startSession(workspace: ResourceRef) {
+      const resource = resources.startSession(workspace);
+      probe.start(resource);
+      return resource;
+    },
     get workbench() {
       return workbench;
     },

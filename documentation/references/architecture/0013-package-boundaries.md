@@ -31,10 +31,18 @@ layer-map change.
    orchestration. They consume contracts and extension runtime packages, but they
    do not import public SDK authoring-only types.
 
-   `pstdio-api` declares the core extensions its tests install from source
-   (`extension-lab`, `pstdio-planner`, and `pstdio-skills`) as development
-   dependencies. It does not import them. The declarations let pull request CI
-   run the API tests when one of those extensions changes.
+   Host tests use fake harnesses, such as the one from
+   `writeProvisionHarnessExtension` or `workbench-fixture`. They never load the
+   real harness extensions. Each harness tests its own process handling, and the
+   `harness_cli_support` job tests it against the real CLI.
+
+   A host package that loads another workspace package from source in its tests
+   declares it as a development dependency, without importing it. Pull request
+   CI then runs those tests when the loaded package changes. `pstdio-api`
+   declares `extension-lab`, `pstdio-base-themes`, `pstdio-planner`,
+   `pstdio-skills` and `workbench-fixture`. `pstdio-extensions` declares
+   `extension-lab`. `pstdio-extension-testbench` declares `pstdio-base-themes`
+   and `pstdio-planner`.
 
 5. **Primitive UI**
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
@@ -99,7 +107,9 @@ layer-map change.
   `package.json`.
 - Extensions consume host APIs only through `@pstdio/sdk` and `@pstdio/ui`. Additional workspace dependencies must be listed explicitly in the layer map.
 - The private `motion-lab` extension reads studies from `design/motion/studies` as project content. Its shared scene kit and Remotion Player belong to the extension. Runtime scenes reuse the preview’s React, Chakra, Remotion and shared UI modules. Production UI and host packages do not depend on Motion Lab or Remotion.
+  Its TypeScript paths resolve study imports through Motion Lab's installed dependencies, so type checking uses the same published UI as the preview.
 - Extensions pin `@pstdio/ui` to an exact published version. The pin does not have to match an unreleased workspace version; extension dependency updates ship after the public package release.
+- Extensions resolve `@pstdio/sdk` and `@pstdio/ui` from npm, including development dependencies. `bunfig.toml` disables automatic workspace links for plain version ranges; explicit `workspace:` links in core packages still work. `verify:boundaries` checks `bun.lock` for registry entries under every extension in `extensions/`, `.pstdio/extensions/`, and `infra/local/extensions/`. A matching local version must never hide an unreleased API.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.
 - E2E tests use package exports and declare every workspace dependency they
   import.

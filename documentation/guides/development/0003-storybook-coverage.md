@@ -50,6 +50,8 @@ bun run --cwd packages/e2e test:ui -- src/ui/workbench-windowing.spec.ts
 
 The fixture uses the current workbench APIs. The Storybook itself has no database; the UI runner uses its existing isolated test runtime and shared Storybooks. A fresh checkout needs built SDK, UI, and workbench dependencies before running it.
 
+SessionStartEmpty, SessionStartClosed, SessionStartVisible, SessionStartFixed, and SessionStartInactive start a session through the resource adapter. They check unchanged tab membership, selection, panel visibility, location, and focus even with `reveal: "always"`. Reload creates no session tab. Sessions lists the started resource, and a later explicit Open binds one editor to it without another start or stop. Their Playwright checks attach screenshots. This fixture does not test dashboard event wiring or real agent execution.
+
 See [design rules](../../../design/DESIGN.md), [UI package guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
 
 The windowing PageSurface story adds page-owned left/right menus and a bottom panel inside Main. Its play function checks menu visibility, workspace rebinding, header placement, and reload. The windowing spec also drags a React draft into bottom and moves it back through the keyboard menu, checking that the draft and mount identity survive.

@@ -1,6 +1,14 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  chatContent: {
+    value: {
+      width: "full",
+      minWidth: "0",
+      maxWidth: "chat-content",
+      marginInline: "auto",
+    },
+  },
   settingsHeader: {
     value: {
       padding: "lg",
@@ -52,6 +60,12 @@ export const layerStyles = defineLayerStyles({
       outline: "none",
       _hover: { bg: "bg.subtle" },
       _focusVisible: { bg: "bg.subtle", outline: "2px solid", outlineColor: "border.accent", outlineOffset: "-2px" },
+    },
+  },
+  pageSidePanel: {
+    value: {
+      borderTopWidth: "1px",
+      borderColor: "border.subtle",
     },
   },
   filterPicker: {

@@ -35,7 +35,9 @@ import { resourceEditorTarget } from "./resource-editor-target";
 export const findOpenEditor = (core: WorkbenchCore, matches: (tab: WorkbenchWidgetPlacement) => boolean) =>
   openOwnerLayouts(core).flatMap((owner) =>
     Object.values(owner.layout.regions).flatMap((region) =>
-      region.widgets.filter(matches).map((tab) => ({ ...owner, region: region.id, tab })),
+      region.widgets
+        .filter((tab) => core.layout.getWidget(tab.contributionId) && matches(tab))
+        .map((tab) => ({ ...owner, region: region.id, tab })),
     ),
   )[0];
 
@@ -146,6 +148,7 @@ export const prepareEditorActivation = (
       core.focus.setActiveRegion(
         editor.region === "main" ||
           editor.region === "bottom" ||
+          editor.region === "aside" ||
           editor.region === "side" ||
           editor.region === "secondary"
           ? editor.region

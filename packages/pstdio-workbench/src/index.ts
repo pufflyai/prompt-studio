@@ -228,7 +228,6 @@ export type {
   WorkflowStatus,
   WorkflowStatusAction,
 } from "./core";
-
 export {
   batchWorkbenchChanges,
   createLevelNavigation,
@@ -250,6 +249,8 @@ export {
   isWorkbenchModePanelAvailable,
   isWorkbenchViewHierarchyNode,
   matchesContextExpression,
+  type OpenWorkbenchViewInput,
+  openWorkbenchView,
   type RendererReadBinding,
   type RendererReadRegistry,
   type RendererReadRequest,

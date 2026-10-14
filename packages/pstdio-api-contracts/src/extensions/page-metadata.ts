@@ -19,7 +19,7 @@ const mainSchema = z.discriminatedUnion("kind", [
 const slotSchema = workbenchPlacementPresentationSchema
   .extend({
     id: z.string(),
-    region: z.enum(["main", "secondary", "side", "bottom"]),
+    region: z.enum(["main", "secondary", "side", "bottom", "aside"]),
     order: z.number().optional(),
     item: placementItemSchema,
     openOn: z.literal("page-resource").optional(),
@@ -54,6 +54,7 @@ export const workbenchExtensionPageRecordSchema = z
       .object({
         main: regionSettingsSchema.pick({ showHeader: true }).strict().optional(),
         bottom: regionSettingsSchema.strict().optional(),
+        aside: regionSettingsSchema.strict().optional(),
       })
       .strict()
       .optional(),

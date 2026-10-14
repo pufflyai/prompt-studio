@@ -10,6 +10,7 @@ export const registerPanelCommands = (core: WorkbenchCore) => {
   for (const [region, name, label, icon] of [
     ["side", "SidePanel", "Side Panel", "PanelRight"],
     ["secondary", "SecondaryPanel", "Secondary Panel", "PanelBottom"],
+    ["aside", "PageSide", "Page side", "PanelRight"],
     ["bottom", "PageBottom", "Page bottom", "PanelBottom"],
   ] as const) {
     for (const action of ["open", "close", "toggle"] as const) {

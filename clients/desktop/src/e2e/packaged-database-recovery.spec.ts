@@ -40,8 +40,12 @@ test("explains a database ownership conflict and retries after its owner stops",
       (await fetch(`${owner.origin}/runtime/ready`, { headers: { authorization: `Bearer ${owner.token}` } })).ok,
     ).toBe(true);
 
+    const previousRecovery = await app.lifecyclePage
+      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
+      .elementHandle();
     expect(await runPackagedCli(ownerHome, ["close"])).toMatchObject({ exitCode: 0 });
     await app.lifecyclePage.getByRole("button", { name: "Retry", exact: true }).click();
+    await previousRecovery!.waitForElementState("hidden");
     const replacement = await waitForDescriptor(desktopHome);
     const workbench = await waitForWorkbenchPage(app.lifecyclePage, replacement.origin);
     await expect(workbench.locator("#root")).not.toBeEmpty();
@@ -84,8 +88,12 @@ test("keeps a damaged database intact and retries after its control file is rest
     const failedRuntime = readDescriptor(home);
     if (failedRuntime) expect(() => process.kill(failedRuntime.pid, 0)).toThrow();
 
+    const previousRecovery = await app.lifecyclePage
+      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
+      .elementHandle();
     writeFileSync(controlPath, originalControl);
     await app.lifecyclePage.getByRole("button", { name: "Retry", exact: true }).click();
+    await previousRecovery!.waitForElementState("hidden");
     const replacement = await waitForDescriptor(home, (runtime) => runtime.instanceId !== failedRuntime?.instanceId);
     const workbench = await waitForWorkbenchPage(app.lifecyclePage, replacement.origin);
     await expect(workbench.locator("#root")).not.toBeEmpty();

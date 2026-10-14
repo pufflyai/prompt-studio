@@ -116,7 +116,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const workbench = createWorkbench({
     initialSidePanelMode: "closed",
     floating: {
-      defaultTab: { kind: "command", commandId: dashboardCommandIds.createSession, args: { region: "side" } },
+      defaultTab: { kind: "command", commandId: dashboardCommandIds.createSession, args: { sidePanel: true } },
     },
     defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {

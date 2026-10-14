@@ -4,9 +4,6 @@ import { pagePlacementContributionId } from "../views/view-placement";
 import type { WorkbenchViewRegistry } from "../views/view-registry";
 import type { WorkbenchPageContribution } from "./page-registry-types";
 
-export const pageHasBottom = (page: WorkbenchPageContribution | undefined) =>
-  Boolean(page?.regionSettings?.bottom || page?.slots.some((slot) => slot.region === "bottom"));
-
 export const pagePanelMenus = (page: WorkbenchPageContribution) =>
   (["left", "right"] as const).flatMap((side) => {
     const menu = page.panelMenus?.[side];

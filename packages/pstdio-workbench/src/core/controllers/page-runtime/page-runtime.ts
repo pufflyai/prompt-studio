@@ -53,6 +53,7 @@ export interface ConnectWorkbenchPageRuntimeInput {
     state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] | undefined;
   revealRegion?(region: WorkbenchRegion): void;
+  views?: WorkbenchViewRegistry;
   layout: LayoutModel;
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
@@ -65,9 +66,19 @@ const restoreRuntimeGeometry = (
   const geometry =
     state.projectId && state.activePageId ? input.loadPageGeometry?.(state.projectId, state.activePageId) : undefined;
   const page = state.activePageId ? state.pages[state.activePageId] : undefined;
-  return clampPanelSizes(restorePageGeometry(layout, geometry), (region) =>
-    region === "bottom" ? page?.regionSettings?.bottom : input.layout.getRegionSettings(region),
+  return clampPanelSizes(restorePageGeometry(layout, geometry, page?.regionSettings ?? {}), (region) =>
+    region === "bottom" || region === "aside" ? page?.regionSettings?.[region] : input.layout.getRegionSettings(region),
   );
+};
+
+const revealActivatedPlacements = (
+  input: ConnectWorkbenchPageRuntimeInput,
+  placements: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
+) => {
+  for (const placement of placements) {
+    if (input.views?.getView(placement.value.viewId ?? "")?.reveal !== "explicit")
+      input.revealRegion?.(placement.region);
+  }
 };
 
 const applyPageState = (
@@ -124,9 +135,7 @@ const applyPageState = (
         : available,
     );
     syncOwnedPanelMenus(input.layout);
-    if (source === "transition") {
-      for (const placement of activated) input.revealRegion?.(placement.region);
-    }
+    if (source === "transition") revealActivatedPlacements(input, activated);
   });
 };
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
@@ -276,6 +285,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       return adopted;
     },
     revealRegion: input.revealRegion,
+    views: input.views,
     layout: input.layout,
     modes: input.modes,
     registry,

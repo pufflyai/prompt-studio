@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import { WORKBENCH_TERMINAL_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { renderToString } from "react-dom/server";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { ContributionExplorer } from "./contribution-explorer";
@@ -107,12 +108,16 @@ describe("createPreviewWorkbench", () => {
     expect(workbench.terminal.getSession(sessionId)?.status).toBe("killed");
   });
 
-  test("registers the host-owned terminal View and placement", () => {
+  test("registers and opens the host-owned terminal with its mount policy", async () => {
     const workbench = createTestWorkbench(baseBench);
     expect(workbench.views.getView("workbench.terminal")).toMatchObject({ id: "workbench.terminal" });
     expect(workbench.shellPlacements.getPlacement("workbench.terminal")).toMatchObject({
       region: "secondary",
       item: { kind: "binding", binding: { view: { kind: "view", id: "workbench.terminal" }, cardinality: "many" } },
+    });
+    await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
+    expect(workbench.layout.getLayout().regions.secondary.widgets[0]).toMatchObject({
+      viewId: "workbench.terminal",
       mountStrategy: "keep-mounted",
     });
   });

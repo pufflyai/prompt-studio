@@ -16,7 +16,7 @@ const create = () =>
       defaultTab: {
         kind: "command",
         commandId: dashboardCommandIds.createSession,
-        args: { region: "side" },
+        args: { sidePanel: true },
       },
     },
   });
@@ -62,4 +62,23 @@ test("floating default creates a Side draft while the Sessions page stays select
   expect(core.pages.store.getState().location).toEqual(location);
   expect(core.sidePanel.getMode()).toBe("floating");
   await core.dispose();
+});
+
+test("opens the session draft in the Side Panel while a session page is open", async () => {
+  const workbench = create();
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  await openSessionsPage(workbench, createDashboardResource("session", "session-1", "Session", "MessageCircle", "project-1"));
+  const location = workbench.pages.store.getState().location;
+
+  await workbench.shell.setRegionOpen("side", true, "floating");
+  expect(workbench.layout.listPanelInstances("side")).toEqual([
+    expect.objectContaining({
+      viewId: dashboardWidgetIds.sessionBubble,
+      resource: expect.objectContaining({ type: "session-draft" }),
+    }),
+  ]);
+  expect(workbench.pages.store.getState().location).toEqual(location);
 });

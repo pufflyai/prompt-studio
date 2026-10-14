@@ -244,8 +244,8 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     // Source files are gone (uninstalled) but the user's tickets and a disabled instance survive.
     expect(existsSync(sourcePath)).toBe(false);
     expect(await listTickets(project.id, instanceId)).toHaveLength(1);
-    const instance = await handle.deps.extensionInstancesService.get(instanceId);
-    expect(instance?.enabled).toBe(false);
+    const record = await handle.deps.extensionService.getProjectExtensionInstance(project.id, instanceId);
+    expect(record?.instance.enabled).toBe(false);
     expect(await handle.deps.extensionService.getInstalledSource(installName)).not.toBeNull();
 
     const listRes = await app.request(`/v1/projects/${project.id}/extensions`);
@@ -264,7 +264,7 @@ describe("DELETE /v1/projects/:projectId/extensions/:instanceId", () => {
     expect(res.status).toBe(204);
 
     expect(existsSync(sourcePath)).toBe(false);
-    expect(await handle.deps.extensionInstancesService.get(instanceId)).toBeNull();
+    expect(await handle.deps.extensionService.getProjectExtensionInstance(project.id, instanceId)).toBeNull();
     expect(await listTickets(project.id, instanceId)).toHaveLength(0);
     expect(await handle.deps.extensionService.getInstalledSource(installName)).toBeNull();
   });

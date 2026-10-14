@@ -77,7 +77,7 @@ test("opening a closed page tool keeps its routed resource binding", async () =>
   await w.dispose();
 });
 
-test("collection menus clear the routed resource and unavailable page bottoms reject moves", async () => {
+test("pages without panel declarations accept tabs in both page panels", async () => {
   const w = fixture();
   const collection = { kind: "page", extensionId: "test", id: "collection" } as const;
   w.pages.registerPage({
@@ -94,6 +94,62 @@ test("collection menus clear the routed resource and unavailable page bottoms re
   w.movePanel(tab.widgetId, "side");
   await w.navigation.openTarget({ kind: "page", page: collection });
   expect(w.layout.getLayout().regions["main-right-menu"].widgets[0]?.resource).toBeUndefined();
-  expect(w.getPanelDestinations(w.layout.getLayout().regions.main.widgets[0]!.widgetId)).not.toContain("bottom");
+  const moved = w.layout.getLayout().regions.side.widgets[0]!;
+  expect(w.getPanelDestinations(moved.widgetId)).toEqual(expect.arrayContaining(["bottom", "aside"]));
+  expect(w.shell.getPanelPolicy("bottom").open).toBe(false);
+  expect(w.shell.getPanelPolicy("aside").open).toBe(false);
+  w.movePanel(moved.widgetId, "aside");
+  expect(w.shell.getPanelPolicy("aside").open).toBe(true);
+  expect(w.layout.getLayout().regions.aside.widgets[0]).toMatchObject({
+    widgetId: tab.widgetId,
+    resource,
+    placementIdentity: { kind: "page", pageId: "collection" },
+  });
+  w.movePanel(moved.widgetId, "bottom");
+  expect(w.shell.getPanelPolicy("aside").open).toBe(false);
+  expect(w.shell.getPanelPolicy("bottom").open).toBe(true);
+  await w.dispose();
+});
+
+test("tabs in the page side stay with their page instance while mode Side follows navigation", async () => {
+  const w = fixture();
+  await w.navigation.openTarget({ kind: "page", page, resource });
+  const tab = w.layout.getLayout().regions.bottom.widgets[0]!;
+  w.movePanel(tab.widgetId, "aside");
+  await w.navigation.openTarget({ kind: "page", page, resource: { ...resource, id: "two" } });
+  expect(w.layout.getLayout().regions.aside.widgets).toEqual([]);
+  const second = w.layout.getLayout().regions.bottom.widgets[0]!;
+  w.movePanel(second.widgetId, "side");
+  await w.navigation.openTarget({ kind: "page", page, resource });
+  expect(w.layout.getLayout().regions.aside.widgets[0]).toMatchObject({ widgetId: tab.widgetId, resource });
+  expect(w.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(second.widgetId);
+  await w.dispose();
+});
+
+test("page side enforces independent permissions and restores its authored edge", async () => {
+  const w = fixture();
+  const overview = { kind: "page", extensionId: "test", id: "overview" } as const;
+  w.pages.registerPage({
+    id: "overview",
+    ref: overview,
+    path: "overview",
+    modeId: "project",
+    main: { kind: "panels", empty: { kind: "view", id: "files" } },
+    slots: [],
+    regionSettings: { aside: { edge: "left", acceptsTabs: false, resizable: false }, bottom: { edge: "top" } },
+  });
+  await w.navigation.openTarget({ kind: "page", page: overview });
+  expect(w.layout.getLayout().regions.aside.edge).toBe("left");
+  expect(w.layout.getLayout().regions.bottom.edge).toBe("top");
+  await w.shell.setRegionOpen("aside", true);
+  expect(w.shell.getPanelPolicy("aside").open).toBe(true);
+  const tab = w.layout.getLayout().regions.main.widgets[0]!;
+  expect(w.getPanelDestinations(tab.widgetId)).not.toContain("aside");
+  expect(() => w.movePanel(tab.widgetId, "aside")).toThrow("Panel cannot move");
+  expect(() => w.shell.setRegionSize("aside", 200)).toThrow("Panel cannot resize");
+  await w.navigation.openTarget({ kind: "page", page, resource });
+  expect(w.layout.getLayout().regions.aside.edge).toBe("right");
+  await w.navigation.openTarget({ kind: "page", page: overview });
+  expect(w.layout.getLayout().regions.aside.edge).toBe("left");
   await w.dispose();
 });

@@ -25,7 +25,11 @@ export interface CollectionRowChange {
   value?: SyncedRow;
   previousValue?: SyncedRow;
 }
-export type CollectionChange = { table: SyncedTable; changes: readonly CollectionRowChange[] };
+export type CollectionChange = {
+  type: "snapshot" | "row";
+  table: SyncedTable;
+  changes: readonly CollectionRowChange[];
+};
 
 export interface CollectionWriter {
   truncateAndWrite: (rows: SyncedRow[]) => void;
@@ -110,7 +114,7 @@ const getOrCreate = (table: string) => {
               syncedIds.add(row.id);
             }
             commit();
-            notifyCollectionsChanged({ table: table as SyncedTable, changes });
+            notifyCollectionsChanged({ type: "snapshot", table: table as SyncedTable, changes });
           },
           upsert: (row) => {
             const previousValue = collections.get(table)?.get(row.id);
@@ -120,6 +124,7 @@ const getOrCreate = (table: string) => {
             syncedIds.add(row.id);
             commit();
             notifyCollectionsChanged({
+              type: "row",
               table: table as SyncedTable,
               changes: [{ key: row.id, previousValue, value: row }],
             });
@@ -130,7 +135,11 @@ const getOrCreate = (table: string) => {
             write({ type: "delete", key: id });
             syncedIds.delete(id);
             commit();
-            notifyCollectionsChanged({ table: table as SyncedTable, changes: [{ key: id, previousValue }] });
+            notifyCollectionsChanged({
+              type: "row",
+              table: table as SyncedTable,
+              changes: [{ key: id, previousValue }],
+            });
           },
         });
 

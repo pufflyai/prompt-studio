@@ -223,6 +223,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   };
 
   for (const target of targets) {
+    if (target.resource) pages.resources.normalize(target.resource);
     if (target.kind === "page") locations.resolve(target, proposed.activeModeId);
     const existing = prepareExistingResourceEditor(core, [target], proposed, stages);
     if (existing) {
@@ -247,11 +248,12 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
     }
     proposed = locatePreparedPageState(proposed, [...stages, proposed]);
     stages.push(proposed);
+    const destination = target.kind === "panel" ? target.destination : undefined;
     for (const placement of proposed.reconciliation.activate) {
       activations.delete(placement.region);
-      activations.set(target.kind === "panel" ? (target.destination ?? placement.region) : placement.region, {
+      activations.set(destination ?? placement.region, {
         identity: placement.identity,
-        destination: target.kind === "panel" ? target.destination : undefined,
+        destination,
       });
     }
   }

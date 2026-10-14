@@ -6,7 +6,7 @@ import type { WorkbenchCore } from "../../core";
 import { floatingBubbleAnchor } from "../../core/controllers/side-panel/floating-bubble-position";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
-import { PanelHeaderEdge, PanelHeaderMenu } from "../region/panel-header-menu";
+import { PanelHeaderContextMenu, PanelHeaderEdge } from "../region/panel-header-menu";
 import { useWorkbenchRegionTabsVisible } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
@@ -61,23 +61,31 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         layerStyle="panel"
         header={
           showHeader && attached ? (
-            <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
-              <WorkbenchSidePanelHeader header={header} />
-              <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
-              <PanelHeaderMenu workbench={workbench} region="side" />
-              {canFloat ? (
-                <Tooltip content="Float Side Panel">
-                  <IconButton
-                    size={PANEL_HEADER_CONTROL_SIZE}
-                    variant="ghost"
-                    aria-label="Float Side Panel"
-                    onClick={() => workbench.sidePanel.setMode("floating")}
-                  >
-                    <Minimize2 size={16} />
-                  </IconButton>
-                </Tooltip>
-              ) : null}
-            </Header>
+            <PanelHeaderContextMenu workbench={workbench} region="side">
+              <Header
+                data-workbench-panel-header="side"
+                aria-label="side header"
+                tabIndex={0}
+                variant="main"
+                flexShrink={0}
+                gap="sm"
+              >
+                <WorkbenchSidePanelHeader header={header} />
+                <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
+                {canFloat ? (
+                  <Tooltip content="Float Side Panel">
+                    <IconButton
+                      size={PANEL_HEADER_CONTROL_SIZE}
+                      variant="ghost"
+                      aria-label="Float Side Panel"
+                      onClick={() => workbench.sidePanel.setMode("floating")}
+                    >
+                      <Minimize2 size={16} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
+              </Header>
+            </PanelHeaderContextMenu>
           ) : undefined
         }
       >
@@ -138,10 +146,11 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         onPopOut={() => workbench.sidePanel.setMode("attached")}
         menu={
           visible ? (
-            <>
-              <WorkbenchSidePanelHeader header={header} />
-              <PanelHeaderMenu workbench={workbench} region="side" />
-            </>
+            <PanelHeaderContextMenu workbench={workbench} region="side">
+              <Box flex="1" minW="0" aria-label="side header" tabIndex={0} data-workbench-panel-header="side">
+                <WorkbenchSidePanelHeader header={header} />
+              </Box>
+            </PanelHeaderContextMenu>
           ) : undefined
         }
         overlay={

@@ -15,9 +15,13 @@ import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Also checks inline and display equations with the packaged KaTeX assets.
 // Chat tables wrap by default, hide row numbers, and retain the wrapping control.
+// Wrapped user prompts collapse by rendered height and retain borderless expand/collapse controls.
 // Streaming chunks retain earlier DOM and settle without running animations.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+// Shared Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
+import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
@@ -29,12 +33,13 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
+// Saved-view fixtures also verify extension detail settings placement metadata.
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// npm harness detection and model discovery are covered by harness-npm-detection.test.ts.
+// Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
@@ -43,7 +48,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
-// Navigation metadata preserves instance policy, page menus, bottom settings, modes/basePage,
+// Navigation metadata preserves view background/reveal/defaultPanel, instance policy, page menus, aside and bottom settings, modes/basePage,
 // resource context, page-owned Main headers, independent mode panel permissions, and explicit-open targets.
 // Browser smoke also verifies floating Side defaults, retained tabs, and persisted bubble anchors.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
@@ -60,6 +65,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
@@ -72,6 +78,9 @@ import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
+// verify:packages also runs the packed workbench ownership consumer: resource deletion,
+// foreign session reopening, deleted-page rejection, and Reset uniqueness.
+
 // Core extensions install from the host's version tag, or from the main commit a nightly build bakes in.
 const hostReleaseRef = /^(?:pstdio@\d|[0-9a-f]{40}$)/;
 
@@ -83,8 +92,11 @@ beforeAll(() => {
   }
 }, BUILD_TIMEOUT);
 
+registerSharedCodexSmokeTests();
 registerExtensionInstallSmokeTests();
+registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
+registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.

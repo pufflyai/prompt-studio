@@ -1,7 +1,6 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchRegion } from "../../registries/layout/layout-types";
 import { isWorkbenchModePanelAvailable } from "../../registries/modes/mode-layout";
-import { pageHasBottom } from "../../registries/pages/page-panel-menus";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { createWorkbenchInput, WorkbenchCore } from "../../workbench-core-types";
 import { pageLayoutScope } from "../page-runtime/owner-layout-scope";
@@ -44,7 +43,7 @@ const ownerLayout = (input: PolicyContextInput, owner: ReturnType<typeof ownerCo
       ? (cache.readMode(context.projectId, context.modeId) ?? layout.store.getInitialState().layout)
       : layout.store.getInitialState().layout;
   }
-  if ((region === "bottom" || region === "main") && !owner.samePage)
+  if ((region === "bottom" || region === "aside" || region === "main") && !owner.samePage)
     return (
       cache.layout.getLayout(
         pageLayoutScope(context, context.pageId ? input.core?.pages.getPage(context.pageId) : undefined),
@@ -53,7 +52,7 @@ const ownerLayout = (input: PolicyContextInput, owner: ReturnType<typeof ownerCo
   return layout.getLayout();
 };
 
-const isTabPanel = (region: WorkbenchRegion) => ["main", "side", "secondary", "bottom"].includes(region);
+const isTabPanel = (region: WorkbenchRegion) => ["main", "side", "secondary", "bottom", "aside"].includes(region);
 
 export const panelPolicyInput = (input: PolicyContextInput) => {
   const { region, host, modes, layout, core } = input;
@@ -64,12 +63,12 @@ export const panelPolicyInput = (input: PolicyContextInput) => {
   let settings = layout.getRegionSettings(region);
   if (input.context) {
     settings = { ...host.regionSettings?.[region], ...mode?.regionSettings?.[region] };
-    if (region === "bottom") settings = page?.regionSettings?.bottom;
+    if (region === "bottom" || region === "aside") settings = page?.regionSettings?.[region];
   }
   if (region === "main") settings = { ...settings, ...page?.regionSettings?.main };
   const tabPanel = isTabPanel(region);
   let provided = !tabPanel || region === "main" || isWorkbenchModePanelAvailable(mode, region as "side" | "secondary");
-  if (region === "bottom") provided = pageHasBottom(page);
+  if (region === "bottom" || region === "aside") provided = Boolean(page);
   return {
     provided,
     settings,
@@ -79,7 +78,7 @@ export const panelPolicyInput = (input: PolicyContextInput) => {
     main: region === "main",
     authoredOpen:
       host.defaultPanelOpenByRegionId?.[region] ?? (region !== "side" || host.initialSidePanelMode !== "closed"),
-    legacyVisible: !tabPanel || !mode ? state.visible : undefined,
+    legacyVisible: !tabPanel || (!mode && region !== "bottom" && region !== "aside") ? state.visible : undefined,
     legacyHeaders: !mode || mode.panelHeaders === "legacy",
     supportsFloating: region === "side",
     legacyFloatable: (mode?.floatingPanels ?? host.floatingPanels) !== "hidden",

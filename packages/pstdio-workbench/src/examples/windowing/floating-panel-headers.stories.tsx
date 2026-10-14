@@ -52,7 +52,8 @@ export const FloatingPanelHeaders: Story = {
     await expect(panel.queryByRole("button", { name: "Add panel" })).toBeNull();
     await expect(core.commands.executeCommand("workbench.closeSidePanel")).rejects.toThrow("disabled");
     await expect(core.shell.getPanelPolicy("side").acceptsTabs).toBe(false);
-    await userEvent.click(panel.getByRole("button", { name: "side header options" }));
+    panel.getByLabelText("side header", { exact: true }).focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
     await userEvent.click(document.getByRole("menuitem", { name: "Hide header" }));
     await waitFor(() => expect(panel.queryByRole("banner")).toBeNull());
     core.shell.setSidePanelPresentation("attached");
@@ -94,7 +95,8 @@ export const EmptyFloatingPanelHeaders: Story = {
     await userEvent.click(document.getByRole("menuitem", { name: "Show header" }));
     await expect(await floating.findByRole("banner")).toBeVisible();
     await expect(core.layout.listPanelInstances("side")).toHaveLength(0);
-    await userEvent.click(floating.getByRole("button", { name: "side header options" }));
+    floating.getByLabelText("side header", { exact: true }).focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
     await userEvent.click(document.getByRole("menuitem", { name: "Hide header" }));
     await waitFor(() => expect(floating.queryByRole("banner")).toBeNull());
     await expect(element).toBeVisible();

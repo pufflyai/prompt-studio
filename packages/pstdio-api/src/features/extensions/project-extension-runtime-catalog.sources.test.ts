@@ -118,7 +118,7 @@ describe("project extension runtime catalog with real sources", () => {
     expect(imports).toBe(1);
   });
 
-  test("a source invalidation causes exactly one fresh import on the next read", async () => {
+  test("an edited source is imported once more on the next read", async () => {
     const path = join(createTempDir(), "counter");
     writeRuntimeExtension(path, "count");
     let imports = 0;
@@ -130,13 +130,36 @@ describe("project extension runtime catalog with real sources", () => {
     });
 
     await catalog.get("p1");
+    writeRuntimeExtension(path, "recount");
     catalog.invalidate({ sourcePath: path, reason: "source_changed" });
     const second = await catalog.get("p1");
     const third = await catalog.get("p1");
 
     expect(second.generation).toBe(2);
+    expect(second.runtime.commands.map((command) => command.id)).toEqual(["pstdio.hello.command.recount"]);
     expect(third).toBe(second);
     expect(imports).toBe(2);
+  });
+
+  test("an invalidated but unchanged source keeps its module import", async () => {
+    const path = join(createTempDir(), "counter");
+    writeRuntimeExtension(path, "count");
+    let imports = 0;
+    const catalog = createCatalog({
+      sources: () => [sourceRow({ id: "counter", extensionId: "pstdio.hello", path })],
+      countImport: () => {
+        imports += 1;
+      },
+    });
+
+    const first = await catalog.get("p1");
+    catalog.invalidate({ sourcePath: path, reason: "source_changed" });
+    catalog.invalidate({ reason: "runtime_refresh" });
+    const second = await catalog.get("p1");
+
+    expect(second.generation).toBe(2);
+    expect(second.runtime.commands[0]?.run).toBe(first.runtime.commands[0]?.run);
+    expect(imports).toBe(1);
   });
 
   test("passes installed source kind and repo roots into normalization", async () => {

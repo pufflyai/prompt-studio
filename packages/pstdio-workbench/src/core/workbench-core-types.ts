@@ -84,6 +84,7 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  openView(input: import("./controllers/navigation/view-navigation").OpenWorkbenchViewInput): unknown;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
   movePanel(

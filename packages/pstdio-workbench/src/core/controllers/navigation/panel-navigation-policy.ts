@@ -56,7 +56,8 @@ export const validatePanelNavigation = (
   const region = target.destination ?? existing?.region ?? declaration.region;
   if (target.destination && !panelDestinations(core, declaration.id).includes(target.destination))
     throw new Error(`Panel cannot move to ${target.destination}: ${declaration.id}`);
-  if (region !== "main" && region !== "secondary" && region !== "side" && region !== "bottom") return;
+  if (region !== "main" && region !== "secondary" && region !== "side" && region !== "bottom" && region !== "aside")
+    return;
   const policy = core.shell.getPanelPolicy(region, {
     modeId: state.activeModeId ?? core.modes.getActiveModeId(),
     pageId: state.activePageId,
