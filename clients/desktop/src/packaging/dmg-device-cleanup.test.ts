@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { execFile } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { execFile, execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,16 +10,23 @@ import { type DmgAttachmentCallbacks, withDmgDeviceCleanup } from "./dmg-device-
 const execute = promisify(execFile);
 const nativeTest = process.platform === "darwin" ? test : test.skip;
 
+interface ImageInventory {
+  images: Array<{ "image-path": string; "system-entities": Array<{ "dev-entry": string }> }>;
+}
+
 nativeTest("detaches its image after the volume is unmounted", async () => {
-  const root = mkdtempSync(join(tmpdir(), "pstdio-dmg-cleanup-"));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-dmg-cleanup-")));
   const image = join(root, "fixture.dmg");
   const forgeRequire = createRequire(require.resolve("@electron-forge/maker-dmg"));
   const installerRequire = createRequire(forgeRequire.resolve("electron-installer-dmg"));
   const appdmgRequire = createRequire(installerRequire.resolve("appdmg"));
   const hdiutil = appdmgRequire("./lib/hdiutil") as DmgAttachmentCallbacks;
-  let device: string | undefined;
+  const started = performance.now();
+  const phase = (name: string) =>
+    console.info(`DMG cleanup fixture: ${name} +${Math.round(performance.now() - started)}ms`);
   try {
     await execute("hdiutil", ["create", image, "-size", "16m", "-fs", "HFS+", "-volname", "Pstdio cleanup fixture"]);
+    phase("created");
     await withDmgDeviceCleanup(hdiutil, async () => {
       const mountPath = await new Promise<string>((resolve, reject) => {
         hdiutil.attach(image, (error, mounted) => {
@@ -27,17 +34,24 @@ nativeTest("detaches its image after the volume is unmounted", async () => {
           else resolve(mounted!);
         });
       });
-      const { stdout } = await execute("diskutil", ["info", mountPath]);
-      device = stdout.match(/Device Node:\s+(\/dev\/\S+)/)?.[1];
-      expect(device).toMatch(/^\/dev\/disk/);
+      phase("attached");
       await execute("diskutil", ["unmount", mountPath]);
+      phase("unmounted");
+      expect(existsSync(mountPath)).toBe(false);
       const result = await new Promise<Error | null>((resolve) => hdiutil.detach(mountPath, resolve));
+      phase("detached");
       expect(result).toBeNull();
       const remaining = await execute("hdiutil", ["info"]);
       expect(remaining.stdout).not.toContain(image);
     });
   } finally {
-    if (device) await execute("hdiutil", ["detach", device]).catch(() => {});
+    const { stdout } = await execute("hdiutil", ["info", "-plist"]);
+    const inventory = JSON.parse(
+      execFileSync("plutil", ["-convert", "json", "-o", "-", "--", "-"], { input: stdout, encoding: "utf8" }),
+    ) as ImageInventory;
+    const attached = inventory.images.find((item) => item["image-path"] === image);
+    if (attached) await execute("hdiutil", ["detach", attached["system-entities"][0]["dev-entry"]]);
     rmSync(root, { recursive: true, force: true });
+    phase("cleaned");
   }
 });
