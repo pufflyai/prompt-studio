@@ -452,9 +452,11 @@
         "@types/cmd-shim": "5.0.2",
         "cmd-shim": "7.0.0",
         "extension-lab": "workspace:*",
+        "pstdio-base-themes": "workspace:*",
         "pstdio-planner": "workspace:*",
         "pstdio-skills": "workspace:*",
         "typescript": "6.0.2",
+        "workbench-fixture": "workspace:*",
       },
     },
     "packages/pstdio-api-contracts": {
@@ -552,6 +554,8 @@
         "@types/react": "19.2.3",
         "@types/react-dom": "19.2.3",
         "@vitejs/plugin-react": "^5.2.0",
+        "pstdio-base-themes": "workspace:*",
+        "pstdio-planner": "workspace:*",
         "typescript": "6.0.2",
         "vite": "^8.3.1",
       },
@@ -569,6 +573,7 @@
       "devDependencies": {
         "@types/bun": "1.4.2",
         "@types/react": "19.2.3",
+        "extension-lab": "workspace:*",
         "react": "19.2.4",
         "typescript": "6.0.2",
       },

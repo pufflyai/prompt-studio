@@ -185,10 +185,10 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         closed = true;
         clearTimeout(titlePoll);
         logger.info("terminal session kill", { id, signal });
-        signalProcessTree(child, signal);
+        await signalProcessTree(child, signal);
         const stopped = await exitedWithin(child.exited, KILL_ESCALATION_MS);
 
-        signalProcessTree(child, "SIGKILL");
+        await signalProcessTree(child, "SIGKILL");
         if (!stopped) await exitedWithin(child.exited, KILL_ESCALATION_MS);
       };
 

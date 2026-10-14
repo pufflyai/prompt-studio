@@ -62,6 +62,7 @@ export const sizes = {
   "performance-meter": { value: "0.625rem" },
   "performance-chart": { value: "2.25rem" },
   "performance-popover": { value: "23.75rem" },
+  "popover-panel": { value: "27.5rem" },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },
   "folder-picker-header": { value: "3.25rem" },

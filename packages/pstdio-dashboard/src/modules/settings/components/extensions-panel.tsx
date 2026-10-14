@@ -2,6 +2,7 @@ import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { PstdioApiError } from "@pstdio/sdk/client";
 import { toaster } from "@pstdio/ui";
+import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
@@ -22,10 +23,11 @@ import { ExtensionsPanelView } from "./extensions-panel-view";
 
 interface ExtensionsPanelProps {
   projectId: string | undefined;
+  settingsInput?: WorkbenchPanelRenderInput;
 }
 
 export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
-  const { projectId } = props;
+  const { projectId, settingsInput } = props;
   const { t } = useTranslation("projects");
   useProjectExtensionSync(projectId);
   const extensionsQuery = useProjectExtensions(projectId);
@@ -104,6 +106,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         projectId={projectId}
         extension={selected}
         metadata={metadataQuery.data}
+        settingsInput={settingsInput}
         onBack={() => setSelectedInstanceId(null)}
       />
     );

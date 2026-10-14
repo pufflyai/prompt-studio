@@ -13,6 +13,8 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
+// Shared Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
@@ -30,7 +32,7 @@ import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smo
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// npm harness detection and model discovery are covered by harness-npm-detection.test.ts.
+// Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
@@ -76,6 +78,7 @@ registerSharedCodexSmokeTests();
 registerExtensionInstallSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
+registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
