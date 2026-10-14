@@ -203,8 +203,8 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
       "aria-selected",
       "true",
     );
-    await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
-    await expect(timeline.getByText("Seeded ticket 1", { exact: true })).toHaveCount(0);
+    await expect(timeline.getByRole("button", { name: /Seeded ticket 0$/ })).toBeVisible();
+    await expect(timeline.getByRole("button", { name: /Seeded ticket 1$/ })).toHaveCount(0);
     await timeline.getByRole("tab", { name: "All", exact: true }).click();
     await valid.execute("timeline.views.delete", { id: focusedView.id });
 
