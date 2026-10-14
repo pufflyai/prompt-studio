@@ -141,13 +141,13 @@ export const createDashboardFixture = () => {
           id: "changes",
           region: "main",
           tab: { getSnapshot: () => ({ label: "Changes", icon: "GitCompare" }) },
-          item: { kind: "view", view: { kind: "view", id: "dashboard.changes" }, presence: "fixed" },
+          item: { kind: "view", view: { kind: "view", id: "dashboard.changes" }, presence: "open" },
         },
         {
           id: "files",
           region: "main",
           tab: { getSnapshot: () => ({ label: "Files", icon: "Files" }) },
-          item: { kind: "view", view: { kind: "view", id: "dashboard.files" }, presence: "fixed" },
+          item: { kind: "view", view: { kind: "view", id: "dashboard.files" }, presence: "open" },
         },
       ],
     });

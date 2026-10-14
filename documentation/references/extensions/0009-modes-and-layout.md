@@ -42,7 +42,7 @@ definePlacement({
 });
 ```
 
-A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `fixed` (always open, not closable), `open` (open until the user closes it), or `closed` (opened from the Add panel). A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order` and `movableTo`. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
+A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `open` (open until the user closes it) or `closed` (opened from the panel catalog). The `fixed` value is deprecated. Existing extension declarations retain their always-open, unclosable behavior through the host adapter until the coordinated breaking release. A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order`. `movableTo` is deprecated; use panel `acceptsTabs` to control destinations. The adapter preserves destination limits on old extension declarations. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation normally belongs in the shared Sidenav tree.
 
 Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target validates and activates the mode/page pair as one transaction.
 
@@ -77,7 +77,27 @@ Set `regionSettings.secondary.showHeader: false` for a player or timeline that s
 
 ## User arrangement
 
-A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or the tab context menu. Explicit `movableTo` restrictions and the mode's supported panels remain hard limits. Navigation chrome and the Sidenav do not become tabs.
+Mode declarations accept additive `layout` and `actionBarEdge` defaults. `layout` has exactly three splits: outer horizontal Navigation (`sidenav`) and content, horizontal Side (`side`) and the Main/Secondary column, then vertical Main (`main`) and Secondary (`secondary`). Each split can reverse its two children. Other trees are rejected during normalization. Panel dimensions still use `regionSettings.size`; user resizing saves the existing region size. `actionBarEdge` accepts left/right/top/bottom and defaults to left. Top and bottom action bars render horizontally; custom chrome views should adapt their content to the available frame.
+
+```ts
+defineMode({
+  id: "review",
+  label: "Review",
+  regions: ["main", "side", "secondary"],
+  actionBarEdge: "top",
+  layout: {
+    axis: "horizontal",
+    children: ["sidenav", {
+      axis: "horizontal",
+      children: ["side", { axis: "vertical", children: ["main", "secondary"] }],
+    }],
+  },
+});
+```
+
+Omitting these fields preserves the existing default positions. Saved user geometry takes priority over authored defaults, except when a panel is fixed with `movable: false`. Hidden and floating panels retain their saved attached edge. Page panel moves remain inside the page and use page-type geometry. Whole-panel moves never change tab ownership or resource binding.
+
+A declared region is the starting position. Users can move content tabs between Main, Side, and Secondary with drag and drop or workbench commands. The destination panel must accept tabs and be available. Deprecated `movableTo` restrictions remain hard limits for legacy extension declarations. Navigation chrome and the Sidenav do not become tabs.
 
 The + control follows the scrolling tab group. Its choices include active panels from other regions that are allowed in this destination. A single-instance panel is reused. Resource bindings retain their declared Add action. Panel menu openers stay at the far right.
 
@@ -103,7 +123,7 @@ Each permission is independent. Omitted permissions allow the action for a provi
 | `floatable` | Allows floating Side. Other panels do not float. |
 | `defaultTab` | Serializable navigation target, resolved once when directly opening an empty panel. |
 
-For a fixed visible panel, declare `canOpen: false` and `canClose: false` in an authored open layout. Disallowed controls are absent. The palette, keyboard commands, navigation, and drops use the same rules. Showing a header grants no permission. Tab movement still follows the placement’s `movableTo` restrictions.
+For a fixed visible panel, declare `canOpen: false` and `canClose: false` in an authored open layout. Disallowed controls are absent. The palette, keyboard commands, navigation, and drops use the same rules. Showing a header grants no permission. Panel permissions never lock a tool tab. Legacy extension tabs still follow their deprecated `movableTo` restrictions.
 
 `collapsible` is deprecated for tab panels in favor of `canOpen` and `canClose`. Old `collapsible: false` declarations still prevent drag collapse while allowing explicit Show and Hide. Page panel menus retain their own collapse settings.
 
@@ -125,7 +145,7 @@ An empty-panel `defaultTab` runs only on direct panel open. Navigation, drops, r
 
 A later Close stays effective when that creation finishes. A later explicit navigation or tab move can reveal the panel again. Extension commands return navigation requests as usual; the host keeps those requests linked to the default execution. Native workbench command handlers use `context?.navigation ?? workbench.navigation` for navigation created by their execution, including after an `await`. The fallback supports ordinary command calls that have no execution context. Direct `workbench.navigation` calls remain explicit actions. This keeps creation separate from newer user actions without holding an asynchronous global scope.
 
-Host mode headers are visible by default and show a single fixed tab. `showHeader: false` hides the header until the user chooses Show header. The panel’s top edge offers that action through right-click, Shift+F10, the Context Menu key, or touch hold. Visible headers offer Hide header in their options menu and tab context menu. The saved header choice belongs to the panel owner. Page panel menus have no headers.
+Host mode headers are visible by default, including when only one tool is open. `showHeader: false` hides the header until the user chooses Show header. The panel’s top edge offers that action through right-click, Shift+F10, the Context Menu key, or touch hold. Visible headers offer Hide header in their options menu and tab context menu. The saved header choice belongs to the panel owner. Page panel menus have no headers.
 
 During the additive extension release, the host adapter preserves existing extension header and tab behavior, even when new permission fields are used: tabs may override an authored hidden header, and a lone fixed tab may remain headerless. `alwaysShowTabs` retains its old meaning. The authoritative authored-header behavior applies to host stories first; the extension cutover requires the coordinated breaking release described in [API versioning](0014-api-versioning.md). An explicit user header choice applies to that owner.
 

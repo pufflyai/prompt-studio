@@ -47,8 +47,8 @@ The branches and documents are plain resource values:
 The first View and placement build the launcher:
 
 - `views.registerView({ id: "guide.documents", ... })` renders the buttons with a `body.kind: "react"` body.
-- `shellPlacements.registerPlacement(...)` places it with `item: { kind: "view", view: { kind: "view", id: viewId }, presence: "fixed" }` in
-  `region: "main"`. `presence: "fixed"` keeps the launcher always open with no close button.
+- `shellPlacements.registerPlacement(...)` places it with `item: { kind: "view", view: { kind: "view", id: viewId }, presence: "open" }` in
+  `region: "main"`. The launcher starts open and can close.
 
 The document View and placement demonstrate `cardinality: "many"`:
 

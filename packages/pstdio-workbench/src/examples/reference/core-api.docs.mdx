@@ -113,7 +113,7 @@ A placement references a View and gives it a lifetime and location. Register pla
 
 The `presence` values mean:
 
-- `fixed`: always open while the owner is active. The user cannot close it, and the Add panel does not offer it.
+- `fixed`: deprecated. The extension host adapter preserves the old unclosable behavior for legacy extension declarations. Native host declarations use the same closable behavior as `open`.
 - `open`: open when the owner has no saved state. The user may close it.
 - `closed`: closed until the user or an action opens it. The Add panel offers it.
 
@@ -129,7 +129,7 @@ A page declares its optional `resource` separately from `main`. Main renders a v
 | `region` | Required | Region that owns the panel chrome. Pages and modes use `main`, `secondary`, or `side`. |
 | `hiddenByDefault` | `false` | Starts non-closeable placement chrome hidden in the user's visibility settings. |
 | `order` | `0` | Initial order among contributions from the same owner. User ordering wins after customization. |
-| `movableTo` | Initial region only | Regions to which the user may move a mode placement. The list must include `region`. |
+| `movableTo` | Deprecated | Legacy extension destination limits. Native host tabs use the destination panel’s `acceptsTabs` permission. |
 
 `presence` describes initial availability. It does not make a View globally visible. Owner lifetime still wins: page
 content leaves with its page, and mode content leaves with its mode.

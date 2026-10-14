@@ -24,6 +24,7 @@ import {
   setOwnedPlacementPreparation,
 } from "../placements/owned-placement-preparation";
 import { restoreOwnedPlacementState } from "../placements/owned-placement-restoration";
+import { adaptPlacementItem } from "../placements/placement-contract";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchViewMenuRegistry } from "../view-menus/view-menu-registry";
 import {
@@ -40,6 +41,8 @@ export interface WorkbenchModePlacementContribution extends WorkbenchPlacementPr
   readonly item: WorkbenchOwnedPlacementItem;
   readonly region: DockedWorkbenchRegion;
   readonly order?: number;
+  /** Host adaptation for old extension tab declarations. */
+  readonly tabLocks?: "legacy";
   readonly movableTo?: readonly DockedWorkbenchRegion[];
 }
 
@@ -94,7 +97,7 @@ const validatePlacement = (input: {
   }
   const refKey = placementRefKey(placement.ref);
   if (refs.has(refKey)) throw new Error(`Mode placement ref already registered: ${refKey}`);
-  if (placement.movableTo && !placement.movableTo.includes(placement.region)) {
+  if (placement.tabLocks === "legacy" && placement.movableTo && !placement.movableTo.includes(placement.region)) {
     throw new Error(`Mode placement "${placement.id}" must include its initial region in movableTo`);
   }
   validateOwnedPlacementItem("Mode placement", placement.id, placement.item);
@@ -107,8 +110,8 @@ const validatePlacement = (input: {
 const copyPlacement = (placement: WorkbenchModePlacementContribution) => ({
   ...placement,
   ref: { ...placement.ref },
-  item: { ...placement.item },
-  ...(placement.movableTo ? { movableTo: [...placement.movableTo] } : {}),
+  item: adaptPlacementItem(placement.item, placement.tabLocks),
+  movableTo: placement.tabLocks === "legacy" ? placement.movableTo : undefined,
 });
 
 export const createWorkbenchModePlacementRegistry = (input: {

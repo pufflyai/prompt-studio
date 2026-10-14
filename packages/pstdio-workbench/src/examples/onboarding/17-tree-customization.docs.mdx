@@ -48,7 +48,7 @@ The demo controls change state that the scope persists:
 The rest is the standard module setup:
 
 - `ctx.views.registerView(...)` defines each demo View with a React `body`.
-- `ctx.shellPlacements.registerPlacement(...)` places each View. `item.presence: "fixed"` keeps them open, and
+- `ctx.shellPlacements.registerPlacement(...)` places each View. `item.presence: "open"` starts them open, and
   `region` picks `main`, `sidenav`, or `secondary`.
 - The story seeds three scopes with different Secondary Panel sizes and open states, so switching shows a visible
   difference.

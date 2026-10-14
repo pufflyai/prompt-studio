@@ -7,16 +7,16 @@ const policies = { sidenav: policy, secondary: policy, side: policy };
 describe("panel toggles follow resolved placement", () => {
   test.each([
     [{}, ["sidenav", "secondary", "side"]],
-    [{ side: { edge: "left" } }, ["sidenav", "side", "secondary"]],
-    [{ sidenav: { edge: "right" } }, ["secondary", "side", "sidenav"]],
-    [{ side: { edge: "left" }, sidenav: { edge: "right" } }, ["side", "secondary", "sidenav"]],
-  ] as const)("orders %j from left to right", (regions, expected) => {
-    expect(resolvePanelToggles({ regions, policies }).map((toggle) => toggle.region)).toEqual([...expected]);
+    [{ side: "left" }, ["sidenav", "side", "secondary"]],
+    [{ sidenav: "right" }, ["secondary", "side", "sidenav"]],
+    [{ side: "left", sidenav: "right" }, ["side", "secondary", "sidenav"]],
+  ] as const)("orders %j from left to right", (edges, expected) => {
+    expect(resolvePanelToggles({ edges, policies }).map((toggle) => toggle.region)).toEqual([...expected]);
   });
 
   test("uses the current edge for Side and Secondary icons", () => {
     const toggles = resolvePanelToggles({
-      regions: { side: { edge: "left" }, secondary: { edge: "top" } },
+      edges: { side: "left", secondary: "top" },
       policies,
     });
     expect(toggles.map((toggle) => toggle.icon)).toEqual(["ListTree", "PanelLeft", "PanelTop"]);
@@ -25,7 +25,7 @@ describe("panel toggles follow resolved placement", () => {
   test("keeps Navigation available while open and omits forbidden toggles", () => {
     expect(
       resolvePanelToggles({
-        regions: {},
+        edges: {},
         policies: { ...policies, secondary: { ...policy, canToggle: false }, side: { ...policy, provided: false } },
       }),
     ).toEqual([{ region: "sidenav", icon: "ListTree", label: "Hide Navigation", open: true }]);

@@ -161,7 +161,7 @@ const registerPage = (workbench: WorkbenchCore, page: PageExample, showNavigatio
             kind: "view",
             id: sidenavViewId,
           },
-          presence: "fixed",
+          presence: "open",
         },
       },
       {

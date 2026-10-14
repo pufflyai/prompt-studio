@@ -114,7 +114,7 @@ export const createGenericCollectionRendererModule = (): WorkbenchModuleContribu
       id: "recipes-configured-panel",
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: configuredRecord.id,
@@ -126,7 +126,7 @@ export const createGenericCollectionRendererModule = (): WorkbenchModuleContribu
       id: "recipes-fallback-panel",
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: fallbackRecord.id,

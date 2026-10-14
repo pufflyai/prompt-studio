@@ -138,6 +138,8 @@ export const createWorkbenchExtensionMetadata = (
     ...(mode.contribution.basePage ? { basePage: normalizedRef(mode.contribution.basePage, mode.extensionId) } : {}),
     icon: mode.contribution.icon,
     regions: [...mode.contribution.regions],
+    layout: mode.contribution.layout,
+    actionBarEdge: mode.contribution.actionBarEdge,
     regionSettings: panelSettingsMetadata(mode.contribution.regionSettings, mode.extensionId),
     floatingBubble: mode.contribution.floatingBubble,
     floating: mode.contribution.floating

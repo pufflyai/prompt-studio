@@ -185,13 +185,14 @@ test("moving a location keeps the source's next tab selected", () => {
   expect(w.layout.getLayout().regions.secondary.activeWidgetId).toBe(second!.widgetId);
 });
 
-test("Add reuses a single panel from another region and follows move restrictions", async () => {
+test("Add reuses a single legacy panel from another region and follows move restrictions", async () => {
   const w = harness();
   w.modePlacements.registerPlacement({
     id: "notes",
     ref: { kind: "placement", extensionId: "test", id: "notes" },
     modeId: "edit",
     region: "secondary",
+    tabLocks: "legacy",
     movableTo: ["secondary", "side"],
     item: { kind: "view", view: { kind: "view", id: "editor" }, presence: "open" },
   });
@@ -277,4 +278,55 @@ test("reset changes the active page and shared mode while preserving another pag
   await w.navigation.openTarget(navigate("alpha"));
   expect(w.layout.getLayout().regions.secondary.widgets[0]?.widgetId).toBe(file.widgetId);
   expect(w.layout.getLayout().regions.side.widgets.map((tab) => tab.widgetId)).toEqual([session.widgetId]);
+});
+
+test("dropping into a closed panel publishes one move without a default tab or keep-open intent", async () => {
+  for (const region of ["side", "secondary", "aside", "bottom"] as const) {
+    const w = harness();
+    await w.navigation.openTarget(navigate("alpha"));
+    await w.navigation.openTarget(openFile("drop"));
+    const tab = w.layout.getLayout().regions.main.widgets[0]!;
+    w.shell.setRegionOpen(region, false);
+    const seen: string[][] = [];
+    const stop = w.layout.store.subscribe(() => {
+      const current = w.layout.getLayout();
+      seen.push(current.regions[region].widgets.map((t) => t.widgetId));
+    });
+    await w.commands.executeCommand("workbench.dropPanelOnEdge", { instanceId: tab.widgetId, region });
+    stop();
+    expect(seen).toEqual([[tab.widgetId]]);
+    expect(w.shell.getPanelPolicy(region).open).toBe(true);
+    expect(w.layout.getLayout().regions[region].visibility).not.toBe("open");
+    expect(w.layout.getLayout().regions[region].widgets[0]?.resource).toEqual(tab.resource);
+    if (region === "side") expect(w.sidePanel.getMode()).toBe("attached");
+    await w.dispose();
+  }
+});
+
+test("tab drops cannot open a forbidden closed destination", async () => {
+  const w = harness(undefined, { regionSettings: { secondary: { canOpen: false } } });
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(openFile("drop"));
+  w.shell.setRegionOpen("secondary", false);
+  const tab = w.layout.getLayout().regions.main.widgets[0]!;
+  const before = w.layout.getLayout();
+  expect(w.getPanelDestinations(tab.widgetId)).not.toContain("secondary");
+  expect(() => w.dropPanelOnEdge(tab.widgetId, "secondary")).toThrow();
+  expect(w.layout.getLayout()).toBe(before);
+});
+
+test("a tab dropped into a naturally empty Side opens attached and preserves open floating Side", async () => {
+  const w = harness();
+  await w.navigation.openTarget(navigate("alpha"));
+  await w.navigation.openTarget(openFile("first"));
+  const first = w.layout.getLayout().regions.main.widgets[0]!;
+  expect(w.shell.getPanelPolicy("side").open).toBe(false);
+  expect(w.layout.getLayout().regions.side.visibility).toBeUndefined();
+  w.dropPanelOnEdge(first.widgetId, "side");
+  expect(w.sidePanel.getMode()).toBe("attached");
+  expect(w.layout.getLayout().regions.side.visibility).toBeUndefined();
+  w.sidePanel.setMode("floating");
+  await w.navigation.openTarget(openFile("second"));
+  w.dropPanelOnEdge(w.layout.getLayout().regions.main.widgets[0]!.widgetId, "side");
+  expect(w.sidePanel.getMode()).toBe("floating");
 });

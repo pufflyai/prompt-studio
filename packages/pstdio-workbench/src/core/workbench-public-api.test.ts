@@ -52,7 +52,7 @@ describe("Workbench public API", () => {
       location: { page: { extensionId: "pstdio.test", kind: "page", id: "ticket" } },
       action: "testOpenTicket",
     });
-    expect(workbench.layout.getActivePanel("main")).toMatchObject({ viewId: "ticket", closable: false });
+    expect(workbench.layout.getActivePanel("main")).toMatchObject({ viewId: "ticket", closable: true });
     expect(workbench.layout.getActivePanel("secondary")).toMatchObject({ viewId: "diff", closable: true });
     expect(workbench.layout.listPanelInstances("secondary")).toHaveLength(1);
   });

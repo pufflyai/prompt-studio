@@ -137,7 +137,7 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
     id: "guide.documents",
     item: {
       kind: "view",
-      presence: "fixed",
+      presence: "open",
       view: {
         kind: "view",
         id: "guide.documents",

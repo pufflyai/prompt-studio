@@ -191295,6 +191295,420 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "JJblH",
+      "x": 58602,
+      "y": 0,
+      "name": "PS-702 · Closed declared tools",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1100,
+      "height": 740,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "yL6Qn",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Closed tools stay within reach",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "IsT5y",
+          "name": "Empty tall panels",
+          "width": "fill_container",
+          "height": 360,
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FyEy7",
+              "name": "Empty editor",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "layout": "vertical",
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SzfWy",
+                  "name": "Drop invitation",
+                  "fill": "$ds-fg-muted",
+                  "content": "Drop a tab here",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "Km2Ri",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open Proposal",
+                  "height": 28,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Open Proposal"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hzPWc",
+              "name": "Empty Side",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "layout": "vertical",
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "J8IRP",
+                  "name": "Drop invitation",
+                  "fill": "$ds-fg-muted",
+                  "content": "Drop a tab here",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "CBekP",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open Up next",
+                  "height": 28,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Open Up next"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KYNaJ",
+          "name": "Boombox · Player closed",
+          "width": "fill_container",
+          "height": 240,
+          "fill": "$ds-bg-subtle",
+          "layout": "vertical",
+          "gap": 1,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FFJ54",
+              "name": "Playlist",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "D8QYpf",
+                  "name": "Playlist title",
+                  "fill": "$ds-fg",
+                  "content": "Lazy Sunday",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 24,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "bnHuR",
+                  "name": "Playlist songs",
+                  "fill": "$ds-fg-muted",
+                  "content": "Warm electronics for a slow start.   ·   5 songs",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fD6sQ",
+              "name": "Empty short bottom · Declared tool only",
+              "width": "fill_container",
+              "height": 88,
+              "fill": "$ds-panel",
+              "layout": "vertical",
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "k7Uv4",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open Player",
+                  "height": 28,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Open Player"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "qAB2l",
+      "x": 59782,
+      "y": 0,
+      "name": "PS-613 · Whole panels and closed-edge previews",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1100,
+      "height": 440,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "GD5zO",
+          "name": "Placement rules",
+          "fill": "$ds-fg",
+          "content": "Empty header moves the panel · tabs move tools · Escape cancels",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "JBD9p",
+          "name": "Sidebar left · Follows you in Project",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "JB8it",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Sidebar left · Follows you in Project"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "RFIho",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KCPay",
+          "name": "Navigation far right",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "XCoCP",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Navigation far right"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "ZlpVj",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "j7RLG4",
+          "name": "Flip Main and Secondary · Secondary top",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "Rs4ta",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Flip Main and Secondary · Secondary top"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "q3UnX",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BudSV",
+          "name": "Side panel · Stays with Workspace 1",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "cwj0B",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Side panel · Stays with Workspace 1"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "fxMHY",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "y1bi2",
+          "name": "Bottom panel · Stays with Workspace 1",
+          "width": "fill_container",
+          "height": 48,
+          "fill": "$ds-bg-subtle",
+          "gap": 12,
+          "padding": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "q2Fic",
+              "type": "ref",
+              "ref": "XMJjf",
+              "name": "Named placement preview",
+              "width": 960,
+              "height": 40,
+              "descendants": {
+                "LS4yC": {
+                  "content": "Bottom panel · Stays with Workspace 1"
+                }
+              }
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "L5v24",
+              "name": "Shared insertion line",
+              "fill": "$ds-accent",
+              "width": 2,
+              "height": 24
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "Rbigv",
+          "name": "Edge priority",
+          "fill": "$ds-fg-muted",
+          "content": "48 px inside the page · outer window edges win at intersections · forbidden targets stay absent",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "themes": {
