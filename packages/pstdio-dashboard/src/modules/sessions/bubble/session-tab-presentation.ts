@@ -101,7 +101,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
                     action: {
                       kind: "command" as const,
                       commandId: dashboardCommandIds.renameSession,
-                      args: { sessionId: selected.id, title: selected.title },
+                      args: { sessionId: selected.id },
                     },
                   },
                 ]

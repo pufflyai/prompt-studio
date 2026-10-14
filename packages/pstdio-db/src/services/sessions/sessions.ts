@@ -4,6 +4,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { createLegacyAnchorMutations, sessionColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
 import { createSessionQuery } from "./session-query";
+import { removeSession } from "./session-removal";
 import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
 import {
   cancelQueued,
@@ -313,6 +314,8 @@ export const createSessionsDBService = (db: DbClient) => {
     update,
     updateStatus,
     archive,
+    remove: (id: string, prepareCheckpoint: Parameters<typeof removeSession>[2]) =>
+      removeSession(db, id, prepareCheckpoint),
     listByStatus,
     listActive,
     listByAgentSession,

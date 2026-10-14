@@ -200,6 +200,7 @@ const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
       endContent: createMenuEndContent({ external: action.external, binding }),
       disabled: readOnly || !workbench.commands.isCommandEnabled(record.command.id, args),
       readOnly,
+      separatorBefore: action.separatorBefore,
       onAction: readOnly
         ? undefined
         : () => {

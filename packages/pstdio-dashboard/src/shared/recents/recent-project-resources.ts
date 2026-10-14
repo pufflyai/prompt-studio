@@ -25,7 +25,11 @@ const createSessionRecent = (row: SyncedRow, projectId: string | undefined): Rec
     title,
     icon: "MessageCircle",
     updatedAt: rowString(row.updated_at) || rowString(row.created_at),
-    resource: createDashboardResource("session", row.id, title, "MessageCircle", sessionProjectId, { status }),
+    resource: {
+      ...createDashboardResource("session", row.id, title, "MessageCircle", sessionProjectId, { status }),
+      extensionId: "pstdio",
+      projectId: sessionProjectId,
+    },
   };
 };
 

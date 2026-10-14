@@ -95,6 +95,28 @@ export const createFileService = (deps: FileServiceDeps) => {
   };
 
   return {
+    // Session removal deletes the file row in its own transaction. Restore its bytes if
+    // that transaction fails; publish the file deletion only after the commit.
+    prepareRemoval: async (file: NonNullable<Awaited<ReturnType<typeof get>>>) => {
+      let data: Buffer | undefined;
+      try {
+        data = await readFile(file.storage_path);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      try {
+        storage.deleteFile(file.storage_path);
+      } catch (error) {
+        if (data) storage.writeFile(file.project_id, file.id, data);
+        throw error;
+      }
+      return {
+        rollback: () => {
+          if (data) storage.writeFile(file.project_id, file.id, data);
+        },
+        commit: () => deps.eventBus.emit("files", "delete", { id: file.id }),
+      };
+    },
     get,
     list,
     upload,
@@ -103,3 +125,5 @@ export const createFileService = (deps: FileServiceDeps) => {
     removeProjectStorage,
   };
 };
+
+import { readFile } from "node:fs/promises";

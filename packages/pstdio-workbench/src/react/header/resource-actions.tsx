@@ -24,7 +24,14 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
   const subject = contributed.length ? placement?.resource : (items.at(-1)?.resource ?? placement?.resource);
   const resource = subject ? resolveResourcePreview(subject, changes) : undefined;
   const resolved = resource ? resolveActions(resource) : [];
-  const resourceActions = contributed.length ? contributed : resolved;
+  const commandIds = new Set(resolved.map((action) => action.commandId));
+  const keys = new Set(resolved.map((action) => action.key));
+  const resourceActions = [
+    ...resolved,
+    ...contributed.filter(
+      (action) => !keys.has(action.key) && (!action.commandId || !commandIds.has(action.commandId)),
+    ),
+  ];
   const [firstLocationAction, ...locationActions] = createWorkbenchLocationActions(workbench, resource);
   const actions = firstLocationAction
     ? [...resourceActions, { ...firstLocationAction, separatorBefore: resourceActions.length > 0 }, ...locationActions]

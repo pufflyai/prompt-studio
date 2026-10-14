@@ -237,7 +237,8 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     input.signal?.throwIfAborted();
     // Re-read session status inside the lock so we don't race a terminal transition that landed
     // between endpoint entry and lock acquisition.
-    const fresh = (await deps.sessionService.get(input.session.id)) ?? input.session;
+    const fresh = await deps.sessionService.get(input.session.id);
+    if (!fresh) throw new Error(`Session not found: ${input.session.id}`);
     const context = resolveDispatchContext(input, fresh);
     const status = fresh.status;
 

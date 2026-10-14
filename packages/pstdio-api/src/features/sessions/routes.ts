@@ -5,6 +5,7 @@ import type { SessionsRouteDeps } from "./deps";
 import { approveSessionHandler, approveSessionRoute } from "./endpoints/approve-session";
 import { archiveSessionHandler, archiveSessionRoute } from "./endpoints/archive-session";
 import { createSessionHandler, createSessionRoute } from "./endpoints/create-session";
+import { deleteSessionHandler, deleteSessionRoute } from "./endpoints/delete-session";
 import { draftHarnessCommandsHandler, draftHarnessCommandsRoute } from "./endpoints/draft-harness-commands";
 import { followUpSessionHandler, followUpSessionRoute } from "./endpoints/follow-up-session";
 import { getConversationSourcesHandler, getConversationSourcesRoute } from "./endpoints/get-conversation-sources";
@@ -68,6 +69,7 @@ export const createSessionRoutes = (deps: SessionsRouteDeps & ExtensionsRouteDep
   routes.openapi(listSessionsRoute, listSessionsHandler(deps));
   routes.openapi(resolveSessionIdRoute, resolveSessionIdHandler(deps));
   routes.openapi(getSessionRoute, getSessionHandler(deps));
+  routes.openapi(deleteSessionRoute, deleteSessionHandler(deps));
   routes.openapi(listSessionActivityRoute, listSessionActivityHandler(deps));
   routes.openapi(getSessionConversationRoute, getSessionConversationHandler(deps));
   routes.openapi(getConversationSourcesRoute, getConversationSourcesHandler(deps));

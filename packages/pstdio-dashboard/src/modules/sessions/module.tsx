@@ -27,6 +27,8 @@ import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { openResourceSessionPreview } from "./session-auto-open";
+import { registerSessionResourceActions } from "./session-resource-actions";
+import { registerSessionResourceSync } from "./session-resource-sync";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
 
 const SessionViewWidget = lazy(() =>
@@ -131,6 +133,18 @@ const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
     return;
   }
   const session = findDashboardSession(resource.id);
+  if (
+    session &&
+    (resourceKey(resource) !== resourceKey(session.resource) ||
+      resource.label !== session.title ||
+      resource.metadata?.status !== session.status)
+  ) {
+    ctx.pageLocations.replay({
+      ...state.location!,
+      resource: { ...resource, ...session.resource, metadata: { ...resource.metadata, ...session.resource.metadata } },
+    });
+    return;
+  }
   if (session) rememberDashboardSession(ctx, session);
   const workbenchResource: ResourceRef = session?.resource ?? {
     type: resource.type,
@@ -199,6 +213,8 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
       registerSessionsPage(ctx);
       registerSidenavSessions(ctx);
+      registerSessionResourceActions(ctx);
+      const unsubscribeResourceSync = registerSessionResourceSync(ctx, input.sessionSelectionPersistence);
       if (ctx.commands.getCommand(dashboardCommandIds.createSession)) {
         ctx.keybindings.registerKeybinding({
           action: { kind: "command", commandId: dashboardCommandIds.createSession },
@@ -256,6 +272,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       return {
         dispose: () => {
           unsubscribeDashboardData();
+          unsubscribeResourceSync();
           unsubscribeSelection();
           unsubscribePage();
         },

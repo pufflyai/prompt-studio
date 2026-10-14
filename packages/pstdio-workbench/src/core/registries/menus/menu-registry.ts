@@ -23,6 +23,7 @@ export interface MenuItem {
   order?: number;
   args?: unknown;
   readOnly?: boolean;
+  separatorBefore?: boolean;
   /** Marks a menu action that navigates outside the app, rendered with a trailing external-link icon. */
   external?: boolean;
 }

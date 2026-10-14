@@ -61,10 +61,14 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     workspaceBranch: (workspace?.branch as string | null) ?? null,
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
     anchors,
-    resource: createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
-      status: (session.status as string) ?? "unknown",
-      ...(parent ? { resourceParent: parent } : {}),
-    }),
+    resource: {
+      ...createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
+        status: (session.status as string) ?? "unknown",
+        ...(parent ? { resourceParent: parent } : {}),
+      }),
+      extensionId: "pstdio",
+      projectId,
+    },
   };
 };
 export const buildDashboardSessionsFromRows = (

@@ -19,7 +19,6 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
-import { registerSessionRenameCommand } from "./session-rename-command";
 import { createSessionTabPresentation } from "./session-tab-presentation";
 
 const SessionWidget = lazy(() =>
@@ -229,7 +228,6 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
     activate(ctx) {
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
-      registerSessionRenameCommand(ctx);
       ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
         commandId: dashboardCommandIds.openSessionPanel,
         group: "kernel",

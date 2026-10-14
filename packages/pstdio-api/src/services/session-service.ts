@@ -4,6 +4,7 @@ import { createSessionStore } from "../features/sessions/session-store";
 import type { EventBus } from "../features/sync/event-bus";
 import { apiLogger } from "../lib/logger";
 import { publishCreatedResourceAnchors, publishResourceAnchorChanges } from "./resource-anchor-events";
+import { removeSession } from "./session-removal";
 import { releasesCapacity, type TransitionStatusOptions, writeSessionTransition } from "./session-status-transition";
 
 export type SessionStatus =
@@ -298,6 +299,7 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     transitionStatus,
     cancel,
     archive,
+    remove: (id: string, files: Parameters<typeof removeSession>[3]) => removeSession(deps, store, id, files),
     resume,
     emitStartedHook,
     emitResumedHook,

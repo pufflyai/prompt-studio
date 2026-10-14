@@ -12,7 +12,7 @@ export const verifyPackagedSessionMenus = async (
     body: JSON.stringify({
       project_id: projectId,
       title: "Packaged session actions",
-      prompt: "Reply done",
+      prompt: "",
       agent: "pstdio.workbench-fixture.harness.fake",
     }),
   });
@@ -26,6 +26,9 @@ export const verifyPackagedSessionMenus = async (
   await row.focus();
   await page.keyboard.press("Shift+F10");
   await expect(page.getByRole("menu")).toHaveCount(1);
+  for (const name of ["Rename session", "Archive session", "Delete session"]) {
+    await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
+  }
   await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
   await expect(
     page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
@@ -34,4 +37,22 @@ export const verifyPackagedSessionMenus = async (
   ).toBeVisible();
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
+  await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+  await page
+    .locator('[role="menu"][data-state="open"]')
+    .getByRole("menuitem", { name: "Rename session", exact: true })
+    .click();
+  await page.getByRole("textbox", { name: "Session name" }).fill("Packaged renamed session");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await expect(row).toBeHidden();
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Packaged renamed session");
+  await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+  await page
+    .locator('[role="menu"][data-state="open"]')
+    .getByRole("menuitem", { name: "Delete session", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions$`));
+  const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
+  expect(deleted.status).toBe(404);
 };

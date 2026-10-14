@@ -141,7 +141,8 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
   await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, params, switchingAgent });
 
   const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
-  const dispatchSession = resumed ?? session;
+  if (!resumed) throw new Error(`Session not found: ${session.id}`);
+  const dispatchSession = resumed;
   const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {
     sessionId: session.id,
     prompt,

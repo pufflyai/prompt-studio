@@ -68,7 +68,12 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   const snapshot = usePlacementTab(placement, workbench);
   if (items.length === 0) return null;
   const resource = placement?.resource;
-  const crumbs = [...items];
+  const crumbs = items.flatMap((item) => {
+    if (!item.resource) return [item];
+    const projected = resolveResourcePreview(item.resource, changes);
+    if (!projected) return [];
+    return [{ ...item, resource: projected, title: projected !== item.resource ? projected.label : item.title }];
+  });
   if (
     resource &&
     resolveResourcePreview(resource, changes) &&
