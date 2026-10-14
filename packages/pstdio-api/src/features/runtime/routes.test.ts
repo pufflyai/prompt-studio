@@ -56,8 +56,8 @@ const createHarness = (
   return { app, calls, host, request, listeners };
 };
 
-const waitFor = async (condition: () => boolean) => {
-  while (!condition()) await Bun.sleep(1);
+const waitFor = async (condition: () => boolean | Promise<boolean>) => {
+  while (!(await condition())) await Bun.sleep(1);
 };
 
 describe("runtime control routes", () => {
@@ -72,11 +72,10 @@ describe("runtime control routes", () => {
       const shutdown = () =>
         request("/runtime/shutdown", { method: "POST", body: JSON.stringify({ instanceId: "runtime-one" }) });
       try {
-        await Bun.sleep(100);
+        await waitFor(async () => (await supervisor.activity()).length === 0);
         expect((await shutdown()).status).toBe(202);
         terminal.write(`${command}\n`);
-        for (let attempt = 0; attempt < 50 && (await supervisor.activity()).length === 0; attempt += 1)
-          await Bun.sleep(10);
+        await waitFor(async () => (await supervisor.activity()).length > 0);
         const blocked = await shutdown();
         expect(blocked.status).toBe(409);
         expect(await blocked.json()).toMatchObject({
