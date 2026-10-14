@@ -4,6 +4,7 @@ import type { PanelEdge } from "@pstdio/sdk/extensions";
 import { DropIndicator } from "@pstdio/ui";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
+import { geometryEdge } from "../../core/registries/layout/panel-geometry";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { panelDropLabel } from "./panel-destination-labels";
 import { type GeometryDrag, geometryPositions, panelPositionLabel } from "./panel-drag-area";
@@ -83,12 +84,12 @@ const EdgeTarget = (props: EdgeTargetProps) => {
 export const PanelEdgeTargets = (props: { workbench: WorkbenchCore; inner?: boolean; content?: boolean }) => {
   const { workbench, inner = false, content = false } = props;
   const { activeId, panel, destinations } = useTabDrag();
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   if (panel) {
     const local = panel === "aside" || panel === "bottom";
     const onMain = panel === "side" || panel === "main" || panel === "secondary";
     if (local !== inner || onMain !== content) return null;
-    return geometryPositions(workbench, panel).map((edge) => (
+    return geometryPositions(workbench, panel, layout).map((edge) => (
       <EdgeTarget key={edge} workbench={workbench} edge={edge} panel={panel} inner={inner} />
     ));
   }
@@ -102,7 +103,7 @@ export const PanelEdgeTargets = (props: { workbench: WorkbenchCore; inner?: bool
         key={region}
         workbench={workbench}
         region={region}
-        edge={workbench.getPanelEdge(region)}
+        edge={geometryEdge(layout, region)}
         inner={inner}
       />
     ));

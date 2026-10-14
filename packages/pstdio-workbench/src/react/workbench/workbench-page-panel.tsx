@@ -1,6 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
+import { geometryEdge } from "../../core/registries/layout/panel-geometry";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { PanelDragHandle } from "../region/panel-drag-area";
@@ -66,6 +67,7 @@ export const usePagePanelGeometry = (workbench: WorkbenchCore, region: "aside" |
   const settings = useWorkbenchStore(workbench.pages.store, (state) =>
     state.activePageId ? state.pages[state.activePageId]?.regionSettings?.[region] : undefined,
   );
-  const state = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
-  return { settings, size: state.size ?? settings?.size?.defaultPx, edge: workbench.getPanelEdge(region) };
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const state = layout.regions[region];
+  return { settings, size: state.size ?? settings?.size?.defaultPx, edge: geometryEdge(layout, region) };
 };

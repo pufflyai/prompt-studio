@@ -2,6 +2,7 @@ import { HStack, IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { resolvePanelToggles } from "../../core/controllers/shell/panel-toggles";
+import { geometryEdge } from "../../core/registries/layout/panel-geometry";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
@@ -12,13 +13,13 @@ export const useWorkbenchPanelToggles = (workbench: WorkbenchCore) => {
   const sidenav = usePanelPolicy(workbench, "sidenav");
   const secondary = usePanelPolicy(workbench, "secondary");
   const side = usePanelPolicy(workbench, "side");
-  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const hasNavigation = useWorkbenchRegionContent(workbench, "sidenav");
   return resolvePanelToggles({
     edges: {
-      sidenav: workbench.getPanelEdge("sidenav"),
-      side: workbench.getPanelEdge("side"),
-      secondary: workbench.getPanelEdge("secondary"),
+      sidenav: geometryEdge(layout, "sidenav"),
+      side: geometryEdge(layout, "side"),
+      secondary: geometryEdge(layout, "secondary"),
     },
     policies: { sidenav: { ...sidenav, provided: sidenav.provided && hasNavigation }, secondary, side },
   });
