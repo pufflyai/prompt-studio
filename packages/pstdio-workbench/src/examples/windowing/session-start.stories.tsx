@@ -56,7 +56,12 @@ const sessionStartStory = (scenario: Scenario) => {
       const core = fixture.workbench;
       const start = canvas.getByRole("button", { name: "Start agent session" });
       start.focus();
+      const sessions = fixture.resources.sessions.flatMap(
+        (resource) => fixture.probe.store.getState().sessions[resourceKey(resource)] ?? [],
+      );
       const before = {
+        starts: sessions.reduce((total, session) => total + session.starts, 0),
+        stops: sessions.reduce((total, session) => total + session.stops, 0),
         layout: core.layout.getLayout(),
         pages: core.pages.store.getState(),
         focus: core.focus.store.getState(),
@@ -69,7 +74,14 @@ const sessionStartStory = (scenario: Scenario) => {
       await expect(core.focus.store.getState()).toBe(before.focus);
       await expect(start).toHaveFocus();
       await expect(canvas.queryByRole("tab", { name: /Session 3/ })).toBeNull();
-      await expect(canvas.getByLabelText("Started session lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
+      await expect(canvas.getByLabelText("Started session lifecycle")).toHaveTextContent(
+        `Starts ${before.starts + 1} · Stops ${before.stops}`,
+      );
+      await expect(fixture.probe.store.getState().sessions[resourceKey(resource)]).toEqual({
+        starts: 1,
+        stops: 0,
+        running: true,
+      });
       if (scenario === "fixed") {
         await expect(canvas.queryByRole("button", { name: "Hide Side Panel" })).toBeNull();
         await expect(canvas.queryByRole("button", { name: "Show Side Panel" })).toBeNull();
