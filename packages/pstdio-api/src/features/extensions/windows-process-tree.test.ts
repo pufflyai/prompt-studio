@@ -47,6 +47,32 @@ test("ignores a refused PID only after that process has already exited", async (
   expect(() => process.kill(child.pid, 0)).toThrow();
 });
 
+test("checks taskkill targets without treating their parent PIDs as survivors", async () => {
+  const child = hangingProcess();
+  const exitedTarget = hangingProcess();
+  exitedTarget.kill("SIGKILL");
+  await exitedTarget.exited;
+  try {
+    await stopWindowsProcessTree(child, async () => {
+      child.kill("SIGKILL");
+      await child.exited;
+      return {
+        exitCode: 128,
+        output:
+          `SUCCESS: The process with PID ${child.pid} (child process of PID ${process.pid}) has been terminated.\n` +
+          `ERROR: The process with PID ${exitedTarget.pid} could not be terminated.\n` +
+          "Reason: There is no running instance of the task.\n",
+      };
+    });
+    expect(() => process.kill(child.pid, 0)).toThrow();
+    expect(() => process.kill(process.pid, 0)).not.toThrow();
+  } finally {
+    child.kill("SIGKILL");
+    exitedTarget.kill("SIGKILL");
+    await Promise.all([child.exited, exitedTarget.exited]);
+  }
+});
+
 test.skipIf(process.platform !== "win32")("native taskkill ends the root and its spawned child", async () => {
   const child = Bun.spawn(
     [
