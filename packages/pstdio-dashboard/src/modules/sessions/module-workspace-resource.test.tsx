@@ -84,7 +84,9 @@ describe("createSessionsModule workspace session scoping", () => {
     const sessionRowIds = (sessionsGroup?.children ?? [])
       .filter((node) => node.resource || node.target)
       .map((node) => node.id);
-    expect(sessionRowIds).toEqual([resourceKey({ type: "session", id: "session-linked" })]);
+    expect(sessionRowIds).toEqual([
+      resourceKey({ type: "session", id: "session-linked", extensionId: "pstdio", projectId: "project-1" }),
+    ]);
   });
   test("rescopes the session list when switching between workspaces", async () => {
     getWriter("workspaces")?.truncateAndWrite([
@@ -158,9 +160,13 @@ describe("createSessionsModule workspace session scoping", () => {
       workbench.resources.listResources("").find((entry) => entry.resource.id === id)?.resource;
     openWorkspacesPage(workbench, workspaceResource("workspace-1")!);
     await renderSidenav();
-    expect(displayedSessionRowIds()).toEqual([resourceKey({ type: "session", id: "session-one" })]);
+    expect(displayedSessionRowIds()).toEqual([
+      resourceKey({ type: "session", id: "session-one", extensionId: "pstdio", projectId: "project-1" }),
+    ]);
     openWorkspacesPage(workbench, workspaceResource("workspace-2")!);
     await renderSidenav();
-    expect(displayedSessionRowIds()).toEqual([resourceKey({ type: "session", id: "session-two" })]);
+    expect(displayedSessionRowIds()).toEqual([
+      resourceKey({ type: "session", id: "session-two", extensionId: "pstdio", projectId: "project-1" }),
+    ]);
   });
 });

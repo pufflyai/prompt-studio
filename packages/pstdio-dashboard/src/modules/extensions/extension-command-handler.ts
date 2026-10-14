@@ -6,7 +6,7 @@ import {
   isCommandFilesParamValue,
 } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardSessionResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
 export type ExecuteDashboardExtensionCommand = (
@@ -124,7 +124,7 @@ export const openSessionCommandResult = async (
   if (!ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
 
   await ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-    resource: createDashboardResource("session", result.id, result.title ?? "Session", "MessageCircle", projectId, {
+    resource: createDashboardSessionResource(result.id, result.title ?? "Session", projectId, {
       ...(result.status ? { status: result.status } : {}),
     }),
   });

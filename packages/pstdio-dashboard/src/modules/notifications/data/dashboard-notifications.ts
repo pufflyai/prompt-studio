@@ -1,7 +1,7 @@
-import { standardResourceIcons, type ResourceRef as WorkbenchResourceRef } from "@pstdio/workbench";
+import { standardResourceIcons } from "@pstdio/workbench";
 import type { ResourceRef as ExtensionResourceRef, Notification, NotificationAction } from "pstdio-api-contracts";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, createDashboardSessionResource } from "@/shared/app/resources";
 
 const pendingStatuses = new Set(["open", "read"]);
 const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 } as const;
@@ -54,11 +54,15 @@ export const createDashboardNotifications = (projectId: string | undefined) =>
 export const countPendingNotifications = (projectId: string | undefined) =>
   createDashboardNotifications(projectId).length;
 
-export const toWorkbenchResource = (
-  resource: ExtensionResourceRef,
-  projectId: string | undefined,
-): WorkbenchResourceRef =>
-  createDashboardResource(
+export const toWorkbenchResource = (resource: ExtensionResourceRef, projectId: string | undefined) => {
+  if (resource.type === "session")
+    return createDashboardSessionResource(
+      resource.id,
+      resource.label ?? resource.id,
+      resource.projectId ?? projectId,
+      resource.metadata,
+    );
+  return createDashboardResource(
     resource.type,
     resource.id,
     resource.label ?? resource.id,
@@ -66,3 +70,4 @@ export const toWorkbenchResource = (
     resource.projectId ?? projectId,
     resource.metadata,
   );
+};

@@ -3,7 +3,7 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { SessionAttachment } from "pstdio-api-contracts";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardSessionResource } from "@/shared/app/resources";
 import type { HarnessParamValues } from "../components/harness-param-values";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { toSessionNotice } from "../data/session-notice";
@@ -62,7 +62,7 @@ export const openCreatedSessionFromDraft = (args: {
 }) => {
   if (!placementShowsDraft(args.input, args.draftKey)) return undefined;
   const title = createSessionTitle(args.prompt);
-  const resource = createDashboardResource("session", args.sessionId, title, "MessageCircle", args.projectId);
+  const resource = createDashboardSessionResource(args.sessionId, title, args.projectId);
 
   rememberDashboardSessionResource(args.input.workbench, resource);
   const identity = args.input.instance.placementIdentity;

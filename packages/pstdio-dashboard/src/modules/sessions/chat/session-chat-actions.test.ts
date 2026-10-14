@@ -93,7 +93,9 @@ describe("openCreatedSessionFromDraft", () => {
     const opened = workbench.layout.getLayout().regions.side.widgets[0];
     expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
     expect(opened?.widgetId).toBe(placement.instanceId);
-    expect(opened?.resourceKey).toBe(resourceKey({ type: "session", id: "session-created-from-draft" }));
+    expect(opened?.resourceKey).toBe(
+      resourceKey({ type: "session", id: "session-created-from-draft", extensionId: "pstdio", projectId: "project-1" }),
+    );
     expect(opened?.resource?.type).toBe("session");
     expect(opened?.title).toBe("Start the project plan");
   });

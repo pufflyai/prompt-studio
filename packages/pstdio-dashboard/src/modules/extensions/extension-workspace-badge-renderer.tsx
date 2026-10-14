@@ -12,7 +12,7 @@ import { DiffBubble } from "@pstdio/ui/diff";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { createElement, useEffect, useState } from "react";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, createDashboardSessionResource } from "@/shared/app/resources";
 import { normalizeExtensionResourceReference } from "@/shared/workbench/resource-hierarchy";
 import { resolveDashboardWorkspaceIcon } from "@/shared/workspaces/dashboard-workspaces";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
@@ -111,10 +111,8 @@ export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, 
 
 // The caller chooses the session panel with an explicit navigation target. The
 // resource carries identity and display data only.
-export const createWorkspaceBadgeSessionResource = (
-  item: ExtensionWorkspaceBadgeSessionItem,
-  projectId: string,
-): ResourceRef => createDashboardResource("session", item.session.id, item.label, "MessageCircle", projectId);
+export const createWorkspaceBadgeSessionResource = (item: ExtensionWorkspaceBadgeSessionItem, projectId: string) =>
+  createDashboardSessionResource(item.session.id, item.label, projectId);
 
 const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
   const { workspaceId } = props;

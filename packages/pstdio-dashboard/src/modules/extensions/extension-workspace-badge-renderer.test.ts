@@ -114,6 +114,8 @@ describe("extension workspace badge renderer", () => {
       type: "session",
       id: "session-2",
       label: "T-1_A2",
+      extensionId: "pstdio",
+      projectId: "project-1",
     });
   });
 

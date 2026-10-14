@@ -2,7 +2,7 @@ import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ResourceRef, WorkbenchPanelInstance } from "@pstdio/workbench";
 import type { HarnessParams } from "pstdio-api-contracts";
 import { getCollection, getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardSessionResource } from "@/shared/app/resources";
 import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
@@ -61,14 +61,10 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     workspaceBranch: (workspace?.branch as string | null) ?? null,
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
     anchors,
-    resource: {
-      ...createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
-        status: (session.status as string) ?? "unknown",
-        ...(parent ? { resourceParent: parent } : {}),
-      }),
-      extensionId: "pstdio",
-      projectId,
-    },
+    resource: createDashboardSessionResource(session.id, title, projectId, {
+      status: (session.status as string) ?? "unknown",
+      ...(parent ? { resourceParent: parent } : {}),
+    }),
   };
 };
 export const buildDashboardSessionsFromRows = (
