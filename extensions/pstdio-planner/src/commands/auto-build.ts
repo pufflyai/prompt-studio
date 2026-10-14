@@ -27,8 +27,15 @@ async function wakeSupervisor(ctx: CommandContext) {
     const supervisor = await readAutoBuildSupervisor(ctx);
     const session = supervisor.sessionId ? await ctx.sessions.get(supervisor.sessionId) : null;
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
-    const { tickets: candidates, capacity, snapshot } = await readNextTickets(ctx, mode);
-    if (!candidates.length || capacity.running >= capacity.limit || snapshot === supervisor.lastWake)
+    const { tickets: candidates, capacity, snapshot, progressAt } = await readNextTickets(ctx, mode);
+    const history = session ? (await ctx.sessions.list()).find(({ id }) => id === session.id) : undefined;
+    const lastPromptAt = Date.parse(history?.last_request_started ?? "1970-01-01T00:00:00Z");
+    const stalled = Boolean(session && Date.now() - Math.max(progressAt, lastPromptAt) >= 60 * 60 * 1000);
+    if (
+      (!candidates.length && !(stalled && capacity.running > 0)) ||
+      (capacity.running >= capacity.limit && !stalled) ||
+      (snapshot === supervisor.lastWake && capacity.running > 0 && !stalled)
+    )
       return { prompted: false };
     const prompt = [
       mode.prompt,
@@ -42,7 +49,7 @@ async function wakeSupervisor(ctx: CommandContext) {
       mode.blockOnReview
         ? "Children wait for dependency review approval."
         : "Children may start while dependency revisions are in review. Dispatch creates their workspaces on the submitted dependency commit so their work stacks on top.",
-      "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build will re-prompt this same session when the board changes or capacity frees up. If Auto Build is stopped, finish your turn without dispatching more work.",
+      "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build wakes this session for changed work, actionable work with no active implementations, or an hour without progress. A stalled-progress reminder does not allow you to exceed capacity or bypass blockers. If Auto Build is stopped, finish your turn without dispatching more work.",
     ].join("\n\n");
     const current = await readAutoBuildMode(ctx);
     if (!current.enabled || current.revision !== mode.revision) return { prompted: false };

@@ -65,11 +65,14 @@ export async function expectPackagedPlannerTimeline(input: {
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
   expect(await execute("next-tickets", {})).toMatchObject({ enabled: true, tickets: [], waiting: [] });
+  // An idle project without actionable work must not start a supervisor on repeated background checks.
+  for (let check = 0; check < 3; check++) expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({
     enabled: true,
     prompt: "Choose valid tasks.",
     blockOnReview: false,
     stuck: false,
+    supervisor: null,
   });
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,

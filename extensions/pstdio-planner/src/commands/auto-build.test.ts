@@ -1,12 +1,13 @@
-import { expect, test } from "bun:test";
-import { listAttempts } from "../data/attempt-storage";
+import { expect, setSystemTime, test } from "bun:test";
+import { listAttempts, putAttempt } from "../data/attempt-storage";
 import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";
+import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 
 async function supervisorFixture(limit = 2) {
   const result = await fixture(limit);
-  const sessions = new Map<string, { id: string; title: string; status: string }>();
+  const sessions = new Map<string, { id: string; title: string; status: string; last_request_started: string }>();
   const prompts: { sessionId: string; prompt?: string }[] = [];
   result.ctx.sessions.create = async (input) => {
     const session = {
@@ -14,15 +15,18 @@ async function supervisorFixture(limit = 2) {
       id: `supervisor-${sessions.size}`,
       title: input.title,
       status: "in_progress" as const,
+      last_request_started: new Date().toISOString(),
     };
     sessions.set(session.id, session);
     prompts.push({ sessionId: session.id, prompt: input.prompt });
     return session;
   };
   result.ctx.sessions.get = async (id) => sessions.get(id) ?? null;
+  result.ctx.sessions.list = async () => [...sessions.values()] as never;
   result.ctx.sessions.followup = async (input) => {
     prompts.push(input);
     sessions.get(input.sessionId)!.status = "in_progress";
+    sessions.get(input.sessionId)!.last_request_started = new Date().toISOString();
   };
   return { ...result, sessions, prompts };
 }
@@ -40,19 +44,92 @@ test("starts one supervisor with the user prompt instead of dispatching implemen
   });
 });
 
-test("sleeps on unchanged boards and resumes the same supervisor when new work becomes valid", async () => {
+test("unchanged full-capacity work gets an hourly stalled-progress reminder", async () => {
+  const start = Date.parse("2026-10-14T12:00:00Z");
+  setSystemTime(start);
+  try {
+    const { ctx, ticket, sessions, prompts } = await supervisorFixture(1);
+    const first = await ticket("First");
+    await autoBuildCommand.run(ctx, {});
+    const supervisorId = prompts[0]!.sessionId;
+    await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+    sessions.get(supervisorId)!.status = "completed";
+    setSystemTime(start + 3_600_000 - 1);
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+    setSystemTime(start + 3_600_000);
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true, sessionId: supervisorId });
+    sessions.get(supervisorId)!.status = "completed";
+    setSystemTime(start + 3_780_000);
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+    setSystemTime(start + 7_200_000);
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true, sessionId: supervisorId });
+  } finally {
+    setSystemTime();
+  }
+});
+
+test("implementation progress postpones an hourly reminder even while capacity is full", async () => {
+  const start = Date.parse("2026-10-14T12:00:00Z");
+  setSystemTime(start);
+  try {
+    const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture(1);
+    const first = await ticket("First");
+    await autoBuildCommand.run(ctx, {});
+    const supervisorId = prompts[0]!.sessionId;
+    await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+    sessions.get(supervisorId)!.status = "completed";
+    setSystemTime(start + 1_800_000);
+    const [attempt] = await listAttempts(storage);
+    await putAttempt(storage, { ...attempt!, updatedAt: new Date().toISOString() });
+    setSystemTime(start + 3_600_000);
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+    setSystemTime(start + 5_400_000);
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true });
+  } finally {
+    setSystemTime();
+  }
+});
+
+test("sleeps on unchanged active work and resumes the same supervisor when new work becomes valid", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture(3);
+  const first = await ticket("First");
+  await ticket("Waiting for a slot");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(1);
+  await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(2);
+  await ticket("Second");
+  await autoBuildCommand.run(ctx, {});
+  expect(prompts).toHaveLength(3);
+  expect(prompts[2]!.sessionId).toBe(prompts[0]!.sessionId);
+  expect(sessions.size).toBe(2);
+});
+
+test("a failed worker does not reprompt the supervisor while unchanged work is still active", async () => {
+  const { ctx, ticket, sessions, prompts } = await supervisorFixture(3);
+  const first = await ticket("First");
+  const second = await ticket("Second");
+  await ticket("Remaining work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisorId = prompts[0]!.sessionId;
+  const started = await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+  await autoBuildDispatchCommand.run(ctx, { ticket: second.id, revision: "test" });
+  if (started.decision !== "started") throw new Error("Implementation did not start");
+  sessions.get(started.sessionId)!.status = "failed";
+  sessions.get(supervisorId)!.status = "completed";
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+  expect(prompts).toHaveLength(3);
+});
+
+test("unchanged actionable work wakes an idle supervisor when no implementations are active", async () => {
   const { ctx, ticket, sessions, prompts } = await supervisorFixture();
   await ticket("First");
   await autoBuildCommand.run(ctx, {});
-  expect(prompts).toHaveLength(1);
   sessions.get(prompts[0]!.sessionId)!.status = "completed";
-  await autoBuildCommand.run(ctx, {});
-  expect(prompts).toHaveLength(1);
-  await ticket("Second");
-  await autoBuildCommand.run(ctx, {});
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true });
   expect(prompts).toHaveLength(2);
-  expect(prompts[1]!.sessionId).toBe(prompts[0]!.sessionId);
-  expect(sessions.size).toBe(1);
 });
 
 test("defers board changes until the running supervisor ends its turn", async () => {

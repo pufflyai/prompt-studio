@@ -87,13 +87,24 @@ export async function readNextTickets(ctx: CommandContext, mode: AutoBuildMode, 
     revision: mode.revision,
     tickets: tickets.sort((a, b) => a.id.localeCompare(b.id)),
     rows: selected,
-    next,
-    waiting,
-    capacity,
+    attempts: attempts.sort((a, b) => a.workspaceId.localeCompare(b.workspaceId)),
+    limit: capacity.limit,
   });
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(fingerprint));
   const snapshot = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return { tickets: next, waiting, capacity, snapshot };
+  const implementationIds = new Set(attempts.map(({ implementationSessionId }) => implementationSessionId));
+  const progressAt = Math.max(
+    0,
+    ...tickets.map(({ updatedAt }) => Date.parse(updatedAt)),
+    ...attempts.map(({ updatedAt }) => Date.parse(updatedAt)),
+    ...selected.flatMap(({ requests }) =>
+      requests.map((request) => Date.parse(request.outcome?.at ?? request.requestedAt)),
+    ),
+    ...assignments.sessions
+      .filter(({ id }) => implementationIds.has(id))
+      .map((session) => Date.parse(session.last_request_started ?? "1970-01-01T00:00:00Z")),
+  );
+  return { tickets: next, waiting, capacity, snapshot, progressAt };
 }
 
 export const nextTicketsCommand = defineCommand({
