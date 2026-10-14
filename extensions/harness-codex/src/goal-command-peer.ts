@@ -10,11 +10,27 @@ export const createGoalCommandPeer = () => {
   const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
   const requested = Promise.withResolvers<void>();
   const emit = (value: unknown) => stdout.write(`${JSON.stringify(value)}\n`);
+  let goalStatus: ThreadGoal["status"] | null = null;
   let pendingGoal: { id: number } | undefined;
   const kill = () => {
     stdout.end();
     stderr.end();
     exited.resolve({ code: null, signal: "SIGTERM" });
+  };
+  const response = (method: string) => {
+    switch (method) {
+      case "thread/start":
+      case "thread/resume":
+        return { thread: { id: "native-thread", path: null } };
+      case "thread/goal/get":
+        return { goal: goalStatus ? { status: goalStatus } : null };
+      case "thread/read":
+        return { thread: { turns: [] } };
+      case "turn/start":
+        return { turn: { id: "first" } };
+      default:
+        return {};
+    }
   };
   const runtime = createCodexRuntime({
     spawnProcess: () => ({
@@ -32,17 +48,24 @@ export const createGoalCommandPeer = () => {
             return;
           }
           if (message.method === "thread/goal/set") {
-            pendingGoal = message;
-            requested.resolve();
+            if (message.params.status !== "paused") {
+              pendingGoal = message;
+              requested.resolve();
+              done();
+              return;
+            }
+            goalStatus = "paused";
+            emit({ id: message.id, result: { goal: { status: "paused" } } });
             done();
             return;
           }
-          let result: unknown = {};
-          if (message.method === "thread/start" || message.method === "thread/resume")
-            result = { thread: { id: "native-thread", path: null } };
-          if (message.method === "thread/goal/get") result = { goal: null };
-          if (message.method === "turn/start") result = { turn: { id: "first" } };
-          emit({ id: message.id, result });
+
+          emit({ id: message.id, result: response(message.method) });
+          if (message.method === "turn/start")
+            emit({
+              method: "turn/started",
+              params: { threadId: "native-thread", turn: { id: "first", status: "inProgress" } },
+            });
           done();
         },
       }),
@@ -118,7 +141,10 @@ export const createGoalCommandPeer = () => {
           item: { id: "answer", type: "agentMessage", text: "Following the new goal" },
         },
       }),
-    replyGoal: (goal: ThreadGoal) => emit({ id: pendingGoal?.id, result: { goal } }),
+    replyGoal: (goal: ThreadGoal) => {
+      goalStatus = goal.status;
+      emit({ id: pendingGoal?.id, result: { goal } });
+    },
     rejectGoal: () => emit({ id: pendingGoal?.id, error: { code: -32000, message: "Goal rejected" } }),
   };
 };

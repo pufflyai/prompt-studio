@@ -1,7 +1,7 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
 const items = Array.from({ length: 24 }, (_, index) => `Scrollable row ${index + 1}`);
@@ -10,6 +10,13 @@ const layeredItems = Array.from({ length: 16 }, (_, index) => `Layered row ${ind
 const meta: Meta<typeof ScrollArea> = {
   title: "Components/Layout/Scroll Area",
   component: ScrollArea,
+  parameters: {
+    docs: {
+      description: {
+        component: "Shared scrolling surface. The default xs size uses a 2px thumb with an 8px pointer target.",
+      },
+    },
+  },
   decorators: [
     (Story) => (
       <Box bg="bg" maxW="560px" p="lg">
@@ -76,6 +83,23 @@ export const BothDirections: Story = {
       </Stack>
     </ScrollArea>
   ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      for (const orientation of ["vertical", "horizontal"]) {
+        const scrollbar = canvasElement.querySelector<HTMLElement>(
+          `[data-part="scrollbar"][data-orientation="${orientation}"]`,
+        )!;
+        const bounds = scrollbar.getBoundingClientRect();
+        expect(orientation === "vertical" ? bounds.width : bounds.height).toBe(2);
+        const point =
+          orientation === "vertical"
+            ? { x: bounds.right - 7, y: bounds.top + bounds.height / 2 }
+            : { x: bounds.left + bounds.width / 2, y: bounds.bottom - 7 };
+        const target = canvasElement.ownerDocument.elementFromPoint(point.x, point.y);
+        expect(target?.closest('[data-part="scrollbar"]')).toBe(scrollbar);
+      }
+    });
+  },
 };
 
 export const LayeredRows: Story = {

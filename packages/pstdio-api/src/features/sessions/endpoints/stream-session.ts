@@ -3,7 +3,7 @@ import type { SessionsRouteDeps } from "../deps";
 import { getSessionHistory, SessionNotFoundError } from "../session-history";
 import type { ActiveSession } from "../session-store";
 import type { SessionEventSink } from "../session-stream-connections";
-import { createStreamQueuePublisher } from "./stream-session-queue";
+import { createStreamQueuePublisher, type StreamQueuePublisher } from "./stream-session-queue";
 
 const snapshot = (messages: SessionMessage[], sink: SessionEventSink) =>
   sink.write("patch", { op: "replace", path: "/messages", value: messages });
@@ -28,7 +28,7 @@ const withinTick = async <T>(pending: Promise<T>) => {
 const streamLivePatches = async (
   patches: AsyncIterable<JsonPatch>,
   sink: SessionEventSink,
-  queue: ReturnType<typeof createStreamQueuePublisher>,
+  queue: StreamQueuePublisher,
 ) => {
   let aborted = false;
   const iterator = patches[Symbol.asyncIterator]();
@@ -72,7 +72,13 @@ const waitForEntry = async (id: string, deps: SessionsRouteDeps, sink: SessionEv
   return null;
 };
 
-const streamEntry = async (id: string, entry: ActiveSession, deps: SessionsRouteDeps, sink: SessionEventSink) => {
+const streamEntry = async (
+  id: string,
+  entry: ActiveSession,
+  deps: SessionsRouteDeps,
+  sink: SessionEventSink,
+  queue: StreamQueuePublisher,
+) => {
   while (!sink.aborted) {
     const conversation = await withinTick(entry.conversationReady).catch((error) => {
       if (deps.sessionService.store.get(id) !== entry) return null;
@@ -81,7 +87,6 @@ const streamEntry = async (id: string, entry: ActiveSession, deps: SessionsRoute
     if (deps.sessionService.store.get(id) !== entry) return false;
     if (!conversation) continue;
     const current = conversation.snapshotAndSubscribe();
-    const queue = createStreamQueuePublisher(id, deps, sink);
     const iterator = current.stream[Symbol.asyncIterator]();
     try {
       await queue.snapshot(current.messages);
@@ -94,7 +99,12 @@ const streamEntry = async (id: string, entry: ActiveSession, deps: SessionsRoute
   return true;
 };
 
-const sendInactiveSnapshot = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
+const sendInactiveSnapshot = async (
+  id: string,
+  deps: SessionsRouteDeps,
+  sink: SessionEventSink,
+  queue: StreamQueuePublisher,
+) => {
   const history = await getSessionHistory(id, deps).catch((error) => {
     if (error instanceof SessionNotFoundError) return null;
     throw error;
@@ -102,20 +112,34 @@ const sendInactiveSnapshot = async (id: string, deps: SessionsRouteDeps, sink: S
   if (!history) return null;
   const entry = deps.sessionService.store.get(id);
   if (entry) return entry;
-  await createStreamQueuePublisher(id, deps, sink).snapshot(history);
+  await queue.snapshot(history);
   const next = deps.sessionService.store.get(id);
   if (next) return next;
   await snapshot(history, sink);
   return null;
 };
 
+// Returns true when the subscription stopped before the session ended.
+const streamRuns = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink, queue: StreamQueuePublisher) => {
+  let entry = deps.sessionService.store.get(id) ?? (await waitForEntry(id, deps, sink));
+  if (sink.aborted) return true;
+  if (!entry) entry = await sendInactiveSnapshot(id, deps, sink, queue);
+  while (entry) {
+    if (await streamEntry(id, entry, deps, sink, queue)) return true;
+    entry = await waitForEntry(id, deps, sink, entry);
+    if (sink.aborted) return true;
+  }
+  return false;
+};
+
 export const streamSession = async (id: string, deps: SessionsRouteDeps, sink: SessionEventSink) => {
   await sink.write("ready", { sessionId: id });
-  let entry = deps.sessionService.store.get(id) ?? (await waitForEntry(id, deps, sink));
-  if (!entry) entry = await sendInactiveSnapshot(id, deps, sink);
-  while (entry) {
-    if (await streamEntry(id, entry, deps, sink)) return;
-    entry = await waitForEntry(id, deps, sink, entry);
+  // One publisher per subscription keeps the queue live between runs too.
+  const queue = createStreamQueuePublisher(id, deps, sink);
+  try {
+    if (await streamRuns(id, deps, sink, queue)) return;
+  } finally {
+    await queue.close();
   }
   const session = await deps.sessionService.get(id);
   await sink.write("end", { status: session?.status ?? "unknown" });

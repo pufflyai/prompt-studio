@@ -1,19 +1,10 @@
 import { Box } from "@chakra-ui/react";
-import type { WheelEvent } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useVirtualizer } from "@/utils/use-virtualizer";
-import { ChatMessage } from "./ai-message";
-import { messageFadeInProps, useMessageAnimationKeys } from "./chat-message-animation";
-import { ChatMessageListResponse, StickyMessageResponse, StickyMessageToggle } from "./chat-message-list-items";
-import {
-  isStickyUserMessageCollapsible,
-  STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT,
-  STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT,
-  shouldStopStickyUserMessageWheel,
-} from "./chat-panel-sticky-user-message";
-import { MessageActionPanel } from "./message-action-panel";
-import { MessagePartsRenderer } from "./message-parts-renderer";
+import { useMessageAnimationKeys } from "./chat-message-animation";
+import { ChatMessageListResponse, StickyMessageResponse } from "./chat-message-list-items";
 import { getAssistantMessageActionTargetId, type MessageGroup, type SessionMessage } from "./message-types";
+import { StickyUserMessage } from "./sticky-user-message";
 import { useTailReady } from "./use-chat-tail-ready";
 
 interface ChatMessageListProps {
@@ -93,80 +84,19 @@ const getEstimatedTailOffset = (count: number, viewportHeight: number) => {
 const getInitialViewportHeight = (scrollElement: HTMLElement | null) =>
   scrollElement?.clientHeight || INITIAL_TAIL_VIEWPORT_HEIGHT;
 
-const handleExpandedStickyMessageWheel = (event: WheelEvent<HTMLElement>) => {
-  if (shouldStopStickyUserMessageWheel(event.currentTarget, event.deltaY)) {
-    event.stopPropagation();
-  }
-};
-
-const getStickyMessageMaxHeight = (isCollapsible: boolean, isExpanded: boolean) => {
-  if (!isCollapsible) return undefined;
-  if (isExpanded) return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
-
-  return STICKY_USER_MESSAGE_COLLAPSED_MAX_HEIGHT;
-};
-
-const getStickyMessageBodyMaxHeight = (isExpandedCollapsible: boolean) => {
-  if (!isExpandedCollapsible) return undefined;
-
-  return STICKY_USER_MESSAGE_EXPANDED_MAX_HEIGHT;
-};
-
-const getStickyMessageContentState = (isCollapsible: boolean, isExpanded: boolean) => {
-  if (!isCollapsible) return undefined;
-
-  return isExpanded ? "expanded" : "collapsed";
-};
-
 const StickyMessageGroup = (props: StickyMessageGroupProps) => {
   const { group, streaming, hideQuestionForms, isExpanded, animate, onToggleStickyMessage } = props;
-  const isCollapsible = isStickyUserMessageCollapsible(group.userMessage);
-  const isExpandedCollapsible = isCollapsible && isExpanded;
-  const stickyMessageMaxHeight = getStickyMessageMaxHeight(isCollapsible, isExpanded);
-  const toggleStickyMessage = () => onToggleStickyMessage(group.userMessage.id);
   const actionMessageId = getAssistantMessageActionTargetId(group.responses);
 
   return (
     <Box>
       <Box position="sticky" top="0" zIndex={1}>
-        <ChatMessage.Root
-          from="user"
-          delivery={group.userMessage.delivery ?? "sent"}
-          {...(animate ? messageFadeInProps : undefined)}
-        >
-          <ChatMessage.Content
-            from="user"
-            maxH={stickyMessageMaxHeight}
-            overflow="hidden"
-            p={isCollapsible ? "0" : undefined}
-            position={isCollapsible ? "relative" : undefined}
-          >
-            <Box
-              data-sticky-user-message-content={getStickyMessageContentState(isCollapsible, isExpanded)}
-              display="flex"
-              flexDirection="column"
-              gap="sm"
-              maxH={getStickyMessageBodyMaxHeight(isExpandedCollapsible)}
-              minH="0"
-              overflowY={isExpandedCollapsible ? "auto" : "visible"}
-              px={isCollapsible ? "xs" : undefined}
-              py={isCollapsible ? "xs" : undefined}
-              pb={isExpandedCollapsible ? "3rem" : undefined}
-              onWheel={isExpandedCollapsible ? handleExpandedStickyMessageWheel : undefined}
-            >
-              <MessagePartsRenderer message={group.userMessage} />
-            </Box>
-            {isCollapsible ? (
-              <StickyMessageToggle
-                label={isExpanded ? "Show less" : "Show more"}
-                onClick={toggleStickyMessage}
-                actionPanel={<MessageActionPanel message={group.userMessage} alwaysVisible copyAlwaysVisible={false} />}
-              />
-            ) : (
-              <MessageActionPanel message={group.userMessage} alwaysVisible copyAlwaysVisible={false} />
-            )}
-          </ChatMessage.Content>
-        </ChatMessage.Root>
+        <StickyUserMessage
+          message={group.userMessage}
+          expanded={isExpanded}
+          animate={animate}
+          onToggle={onToggleStickyMessage}
+        />
       </Box>
       {group.responses.map((message) => (
         <StickyMessageResponse

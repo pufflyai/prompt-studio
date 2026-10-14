@@ -115,6 +115,7 @@ const openNewSessionDraft = (
   ctx: WorkbenchModuleContext,
   input: {
     workspace?: ResourceRef;
+    sidePanel?: boolean;
     tabRetention?: WorkbenchTabRetention;
     replacePanel?: PlacementIdentity;
   } = {},
@@ -123,10 +124,6 @@ const openNewSessionDraft = (
   const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
-  const pageId = ctx.pages.store.getState().activePageId;
-  if (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id) {
-    return openSessionsPage(ctx, draftResource);
-  }
   const identity = input.replacePanel;
   if (identity?.kind === "mode") {
     const origin = Object.values(ctx.layout.getLayout().regions)
@@ -142,6 +139,11 @@ const openNewSessionDraft = (
       ctx.modePlacements.updatePlacement(identity, { resource: draftResource, title: draftResource.label });
       return ctx.layout.activatePanel(origin.widgetId);
     }
+  }
+  // Requests from the Side Panel stay in the panel; other entry points follow the open Sessions page.
+  const pageId = ctx.pages.store.getState().activePageId;
+  if (!input.sidePanel && (pageId === workbenchPages.sessions.id || pageId === workbenchPages.session.id)) {
+    return openSessionsPage(ctx, draftResource);
   }
   return openSessionBubbleWidgets(ctx, {
     resource: draftResource,
@@ -196,15 +198,21 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "PenBox" },
     {
       execute: async (args, context) => {
-        const { workspace, replacePanel } = (args ?? {}) as {
+        const {
+          workspace,
+          replacePanel,
+          sidePanel = false,
+        } = (args ?? {}) as {
           workspace?: ResourceRef;
           replacePanel?: PlacementIdentity;
+          sidePanel?: boolean;
         };
         // The tab tray's + asks for a new tab; a tab menu replaces its own placement.
         const isNewTab = context?.source === "panel-add";
         await openNewSessionDraft(ctx, {
           workspace,
           replacePanel: isNewTab ? undefined : replacePanel,
+          sidePanel: sidePanel || isNewTab,
           tabRetention: isNewTab ? "persistent" : undefined,
         });
         return undefined;
