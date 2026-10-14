@@ -14,6 +14,7 @@ describe("resolvePackagedRuntimeTestArgs", () => {
       "src/packaged/runtime-lifecycle.test.ts",
       "src/packaged/npm-entrypoint.test.ts",
       "src/packaged/harness-npm-detection.test.ts",
+      "src/packaged/codex-transport.test.ts",
       "src/packaged/extension-smoke.test.ts",
       "src/packaged/extension-browser-install.test.ts",
       "src/packaged/extension-dependency-loading.test.ts",
@@ -23,11 +24,12 @@ describe("resolvePackagedRuntimeTestArgs", () => {
     ]);
   });
 
-  test("runs runtime lifecycle, npm harness detection and supported browser setup checks on Windows", () => {
+  test("runs runtime lifecycle, Codex transport, npm harness detection and supported browser setup checks on Windows", () => {
     expect(resolvePackagedRuntimeTestArgs({ pkg: "cli-win-x64" })).toEqual([
       "test",
       "src/packaged/runtime-lifecycle.test.ts",
       "src/packaged/harness-npm-detection.test.ts",
+      "src/packaged/codex-transport.test.ts",
       "src/packaged/extension-browser-install.test.ts",
       "--timeout",
       "30000",
@@ -37,6 +39,7 @@ describe("resolvePackagedRuntimeTestArgs", () => {
       "test",
       "src/packaged/runtime-lifecycle.test.ts",
       "src/packaged/harness-npm-detection.test.ts",
+      "src/packaged/codex-transport.test.ts",
       "--timeout",
       "30000",
       "--silent",

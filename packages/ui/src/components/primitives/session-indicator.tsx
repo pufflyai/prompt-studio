@@ -46,6 +46,7 @@ export const resolveSessionIndicatorColor = (status: SessionCompletionStatus | u
 };
 
 interface SessionIndicatorProps {
+  color?: ComponentProps<typeof Icon>["color"];
   status?: SessionCompletionStatus;
   boxSize?: ComponentProps<typeof Icon>["boxSize"];
   ariaLabel?: string;
@@ -54,13 +55,13 @@ interface SessionIndicatorProps {
 }
 
 export const SessionIndicator = (props: SessionIndicatorProps) => {
-  const { status, boxSize = "14px", ariaLabel = "Session status", cursor, onClick } = props;
+  const { status, boxSize = "14px", ariaLabel = "Session status", cursor, onClick, color } = props;
 
   return (
     <Icon
       as={resolveSessionIndicatorIcon(status)}
       boxSize={boxSize}
-      color={resolveSessionIndicatorColor(status)}
+      color={color ?? resolveSessionIndicatorColor(status)}
       aria-label={ariaLabel}
       cursor={cursor}
       onClick={onClick}

@@ -31,10 +31,18 @@ layer-map change.
    orchestration. They consume contracts and extension runtime packages, but they
    do not import public SDK authoring-only types.
 
-   `pstdio-api` declares the core extensions its tests install from source
-   (`extension-lab`, `pstdio-planner`, and `pstdio-skills`) as development
-   dependencies. It does not import them. The declarations let pull request CI
-   run the API tests when one of those extensions changes.
+   Host tests use fake harnesses, such as the one from
+   `writeProvisionHarnessExtension` or `workbench-fixture`. They never load the
+   real harness extensions. Each harness tests its own process handling, and the
+   `harness_cli_support` job tests it against the real CLI.
+
+   A host package that loads another workspace package from source in its tests
+   declares it as a development dependency, without importing it. Pull request
+   CI then runs those tests when the loaded package changes. `pstdio-api`
+   declares `extension-lab`, `pstdio-base-themes`, `pstdio-planner`,
+   `pstdio-skills` and `workbench-fixture`. `pstdio-extensions` declares
+   `extension-lab`. `pstdio-extension-testbench` declares `pstdio-base-themes`
+   and `pstdio-planner`.
 
 5. **Primitive UI**
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
