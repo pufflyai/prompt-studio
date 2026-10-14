@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Stop Windows process trees asynchronously and report surviving process IDs.
+Wait for Windows process cleanup and report only surviving target process IDs.
