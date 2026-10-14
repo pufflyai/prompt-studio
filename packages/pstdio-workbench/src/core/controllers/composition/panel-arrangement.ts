@@ -8,6 +8,7 @@ import {
 import { insertAtPosition } from "../../registries/layout/layout-tab-lifecycle";
 import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registries/layout/layout-types";
 import { workbenchPanelRegions } from "../../registries/layout/layout-types";
+import { isPageRegion } from "../../registries/layout/owner-region-state";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
@@ -51,6 +52,8 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
       ),
     };
     const placement = transferPanelOwner(core, found.placement, destination);
+    const leavesPage = isPageRegion(found.regionId) && !isPageRegion(destination);
+    const movesLocation = leavesPage && layout.activeLocationWidgetId === instanceId;
     const next = {
       ...removeLocationSubPanelSelection(layout, instanceId),
       regions: {
@@ -78,23 +81,17 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
           ...selected,
           activeWidgetId: instanceId,
           activeResourceKey: found.placement.resourceKey,
-          activeLocationWidgetId:
-            found.regionId === "main" && destination !== "main" && layout.activeLocationWidgetId === instanceId
-              ? next.regions.main.activeWidgetId
-              : layout.activeLocationWidgetId,
+          activeLocationWidgetId: movesLocation ? next.regions.main.activeWidgetId : layout.activeLocationWidgetId,
         });
         saveOpenOwnerLayouts(core);
-        if (found.regionId === "main" && destination !== "main") reconcileMainAfterMove(core);
+        if (movesLocation) reconcileMainAfterMove(core);
         const final = core.layout.getLayout();
         core.layout.restoreLayout({
           ...final,
           regions: { ...final.regions, [destination]: { ...final.regions[destination], activeWidgetId: instanceId } },
           activeWidgetId: instanceId,
           activeResourceKey: found.placement.resourceKey,
-          activeLocationWidgetId:
-            found.regionId === "main" && destination !== "main"
-              ? final.regions.main.activeWidgetId
-              : final.activeLocationWidgetId,
+          activeLocationWidgetId: movesLocation ? final.regions.main.activeWidgetId : final.activeLocationWidgetId,
         });
         core.layout.reconcilePanelMenus();
         revealPanelRegion(core, destination);

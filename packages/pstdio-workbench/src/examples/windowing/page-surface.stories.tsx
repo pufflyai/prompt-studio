@@ -29,9 +29,9 @@ export const PageSurface: Story = {
     for (const menu of menus) {
       await expect(menu.querySelector('[role="tablist"]')).toBeNull();
       await expect(menu.querySelector("[data-workbench-tab-drop]")).toBeNull();
-      await expect(Math.abs(menu.getBoundingClientRect().top - tabs.getBoundingClientRect().top)).toBeLessThanOrEqual(
-        1,
-      );
+      await expect(
+        Math.abs(menu.getBoundingClientRect().top - tabs.getBoundingClientRect().bottom),
+      ).toBeLessThanOrEqual(1);
     }
     await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
     const popup = within(document.body);
@@ -54,7 +54,9 @@ export const PageSurface: Story = {
     const terminalPanel = canvasElement.querySelector('[data-workbench-panel="bottom"]')!;
     await userEvent.click(within(terminalPanel as HTMLElement).getByRole("button", { name: "Close Terminal" }));
     await userEvent.click(canvas.getByRole("button", { name: "Page panels" }));
-    await userEvent.click(await popup.findByRole("menuitem", { name: "Open Terminal" }));
+    await userEvent.click(await popup.findByRole("menuitem", { name: "Show Page bottom" }));
+    await userEvent.click(within(terminalPanel as HTMLElement).getByRole("button", { name: "Add panel" }));
+    await userEvent.click(await popup.findByRole("menuitem", { name: "Terminal" }));
     await waitFor(() =>
       expect(visibleWindowingLabel(canvasElement, "Terminal binding")).toHaveTextContent("workspace-2"),
     );

@@ -39,11 +39,11 @@ Only Main contains a page side panel and a page secondary panel (`bottom`). Side
 
 Main contains the page breadcrumb and a page frame. Below the breadcrumb, the page side (`aside`) runs the full height beside the editor and page bottom. The page bottom spans only the editor column. The mode's Side and Secondary surround the whole page. Every page has both page panels, even without slots or region settings. Empty automatic panels start closed; an explicitly opened empty panel keeps its drop surface.
 
-Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus sit beside the editor tab row and span the full editor height. They have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
+Page `panelMenus` bind directly to the routed page resource. Selecting an auxiliary tab does not retarget them. Collection menus receive no resource. Menus start below the Main header and span the editor content height. The header spans the editor and both menus. They have no header, tabs, add action, or tab destination; they keep their declared size and collapse settings.
 
 Page side and bottom slots use normal page placement identities. Moving a tab among Main, aside, and bottom preserves its view and resource. Both page panels accept tabs unless their `acceptsTabs` policy forbids it. The legacy page slot `side` still places its initial view in the mode Side.
 
-The Page panels menu lives in Main's tab row. It shows or hides collapsible page menus, opens page-bottom tools, and shows or hides both page panels when their policy permits it. PS-701 moves these controls to the breadcrumb row.
+The Page panels menu lives in Main's tab row. It shows or hides collapsible page menus, offers Reset layout, and shows or hides both page panels when their policy permits it. PS-701 moves these controls to the breadcrumb row.
 
 ## Saved layouts
 
@@ -78,3 +78,5 @@ Mode and page Sidenav contributions carry opaque owner keys. TreeRenderer receiv
 - Never infer ownership from region, resource kind, label, or current tab.
 - Never use ownership as a permission decision by itself.
 - Return and track every registration disposable.
+
+Panel header visibility uses a context menu on the visible header or hidden top edge, available by right-click, Shift+F10, Context Menu key, and touch long-press. Headers have no ellipsis menu button. Tab context menus offer only Pin/Unpin and Close when applicable; resource actions remain on resource surfaces. Moving a routed editor from Main to page side or page bottom preserves its page/resource, URL, breadcrumb and menu bindings. Main fallback is reconciled when the editor moves out of the page owner into a mode panel.

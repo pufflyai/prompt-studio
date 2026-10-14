@@ -61,6 +61,8 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
     suppressClick.current = false;
     if (event.pointerType !== "touch") return;
+    // A tab owns its long press; the surrounding header has a separate menu.
+    event.stopPropagation();
     const element = event.currentTarget;
     start.current = { x: event.clientX, y: event.clientY };
     hold.current = setTimeout(() => {

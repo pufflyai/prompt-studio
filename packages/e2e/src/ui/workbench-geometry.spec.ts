@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { movePanelTab } from "../helpers/move-panel-tab";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -169,4 +170,41 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   await expect(mainPanelHeader.getByRole("button", { name: "Add panel", exact: true })).toBeVisible();
   await expect(mainPanelHeader.getByRole("tab")).toHaveCount(1);
   await expect(ticketLink).toBeVisible();
+
+  const [headerBox, menuBox] = await Promise.all([mainPanelHeader.boundingBox(), rightMenu.boundingBox()]);
+  expectNear(menuBox!.y, headerBox!.y + headerBox!.height);
+  const ticketUrl = page.url();
+  const tab = mainPanelHeader.getByRole("tab");
+  const tabName = await tab.textContent();
+  for (const region of ["aside", "bottom"]) {
+    await page.getByRole("button", { name: "Page panels", exact: true }).click();
+    const controls = page.getByRole("menu", { name: "Page panels", exact: true });
+    const option = controls.getByRole("menuitem", {
+      name: region === "aside" ? "Show Side panel" : "Show Page bottom",
+      exact: true,
+    });
+    await expect(option.locator("svg")).toBeVisible();
+    await option.click();
+    const destination = page.locator(`[data-workbench-region="${region}"]`);
+    await movePanelTab(page, mainPanelHeader.getByRole("tab"), destination);
+    await expect(page).toHaveURL(ticketUrl);
+    await expect(ticketLink).toBeVisible();
+    await expect(rightMenu).toBeVisible();
+    const moved = destination.getByRole("tab", { name: tabName!, exact: true });
+    await expect(moved).toBeVisible();
+    await expect(destination.getByRole("textbox").first()).toHaveText("Reopen ticket details");
+    if (region === "aside") {
+      expect(
+        await page
+          .locator('[data-workbench-panel="aside"]')
+          .evaluate((element) => getComputedStyle(element).borderTopWidth),
+      ).toBe("1px");
+      await movePanelTab(page, moved, page.locator('[data-workbench-region="main"]'));
+      await expect(mainPanelHeader.getByRole("tab", { name: tabName!, exact: true })).toBeVisible();
+      await expect(page.getByRole("menu")).toHaveCount(0);
+    }
+  }
+  await test
+    .info()
+    .attach("Ticket retained in page bottom", { body: await page.screenshot(), contentType: "image/png" });
 });
