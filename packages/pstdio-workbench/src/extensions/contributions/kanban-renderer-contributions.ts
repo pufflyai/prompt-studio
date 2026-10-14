@@ -193,6 +193,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
     let columnConfigs: ColumnConfigRecord | undefined;
     let latestQueryId = 0;
+    let rowCache = new Map<string, { signature: string; row: KanbanRendererRow }>();
     const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
     const toActivatedRow = (row: KanbanRendererRow) => originalRows.get(row) ?? row;
     const onRowActivate = toRowClick(context, record, adapter, resolveRowResource, toActivatedRow);
@@ -247,12 +248,20 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               undefined,
               signal,
             );
-            const mapRows = (rows: unknown[]) =>
-              rows.map((row) => {
-                const mapped = toWorkbenchRow(row, rowResource);
-                originalRows.set(mapped, row as KanbanRendererRow);
+            const mapRows = (rows: unknown[]) => {
+              const nextCache = new Map<string, { signature: string; row: KanbanRendererRow }>();
+              const result = rows.map((row) => {
+                const candidate = row as KanbanRendererRow;
+                const signature = JSON.stringify(row);
+                const cached = rowCache.get(candidate.id);
+                const mapped = cached?.signature === signature ? cached.row : toWorkbenchRow(row, rowResource);
+                originalRows.set(mapped, candidate);
+                nextCache.set(mapped.id, { signature, row: mapped });
                 return mapped;
               });
+              if (queryId === latestQueryId) rowCache = nextCache;
+              return result;
+            };
             if (queryId !== latestQueryId) {
               if (Array.isArray(value)) return mapRows(value);
               return isQueryResult(value) ? mapRows(value.rows ?? []) : [];
@@ -274,6 +283,9 @@ export const registerWorkbenchExtensionKanbanRenderers = (
                   attributeId,
                   value,
                 }).then(() => undefined)
+            : undefined,
+          onMove: record.moveHandlerId
+            ? (move) => runMutation(record, record.moveHandlerId!, { ...move }).then(() => undefined)
             : undefined,
           onReorder: record.reorderHandlerId
             ? (rowId, beforeRowId) =>

@@ -87,18 +87,22 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
   const toBoardItems = (rows: KanbanRendererRow[]) =>
     sortRowsByView(rows, sorts, fields).map((row) => ({
       id: row.id,
-      contextMenuActions: getRowContextMenuActions?.(row as TRow),
-      cardProps: {
-        eyebrow: showsId ? rowEyebrow(row) : undefined,
-        title: row.title,
-        highlight: search,
-        badges: collectDisplayBadges(row, attributes, displayProperties),
-        customSlots: collectDisplayCustomSlots(row, attributes, displayProperties),
-        onBadgeChange: onAttributeChange
-          ? (attributeId: string, value: unknown) =>
-              runKanbanAction("Update attribute", () => onAttributeChange(row.id, attributeId, value), onActionError)
-          : undefined,
-        onClick: () => onRowClick?.(row as TRow),
+      get contextMenuActions() {
+        return getRowContextMenuActions?.(row as TRow);
+      },
+      get cardProps() {
+        return {
+          eyebrow: showsId ? rowEyebrow(row) : undefined,
+          title: row.title,
+          highlight: search,
+          badges: collectDisplayBadges(row, attributes, displayProperties),
+          customSlots: collectDisplayCustomSlots(row, attributes, displayProperties),
+          onBadgeChange: onAttributeChange
+            ? (attributeId: string, value: unknown) =>
+                runKanbanAction("Update attribute", () => onAttributeChange(row.id, attributeId, value), onActionError)
+            : undefined,
+          onClick: () => onRowClick?.(row as TRow),
+        };
       },
     }));
 
@@ -125,7 +129,7 @@ export const buildKanbanBoardColumns = <TRow extends KanbanRendererRow>(input: B
       canDragOut: columnConfig.canDragOut ?? false,
       canCreate: columnConfig.canCreate ?? false,
       actions: columnConfig.actions ?? [],
-      items: toBoardItems(column.rows),
+      items: groups ? groups.flatMap((group) => group.items) : toBoardItems(column.rows),
       groups,
       totalCount: columnTotals?.get(column.key),
     };

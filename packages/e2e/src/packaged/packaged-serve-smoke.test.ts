@@ -44,6 +44,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
 import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
+// Native actions cover complete Kanban moves and independent schema dependencies.
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
