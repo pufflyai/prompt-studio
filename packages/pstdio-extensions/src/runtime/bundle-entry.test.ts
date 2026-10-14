@@ -45,11 +45,13 @@ test("concurrent bundles of one entry share one build and resolve after it finis
 test("a later bundle retries after a failed build", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-bundle-retry-"));
   const entry = join(root, "extension.ts");
+  writeFileSync(join(root, "dependency.ts"), 'export default { marker: "retried-bundle" };');
   writeFileSync(entry, 'export { default } from "./missing-module";');
   try {
     const error = await bundleEntry(entry, root, join(root, "out")).catch((error: unknown) => error);
     expect(error).toMatchObject({ message: expect.stringContaining("missing-module") });
-    writeFileSync(join(root, "missing-module.ts"), 'export default { marker: "retried-bundle" };');
+    // Repair an existing file while Bun caches directory entries. See ADR 0074.
+    writeFileSync(entry, 'export { default } from "./dependency";');
 
     const bundlePath = await bundleEntry(entry, root, join(root, "out"));
 
