@@ -46,11 +46,19 @@ export const stopWindowsProcessTree = async (child: ProcessTreeRoot, run = runTa
     await stopRoot(child);
   }
   if (result.exitCode === 0) return;
-  const refused = [...new Set([...result.output.matchAll(/PID (\d+)/gi)].map((match) => Number(match[1])))];
-  const survivors = refused.filter(isRunning);
+  // Each line names its target first; later PIDs describe parent relationships.
+  const targets = [
+    ...new Set(
+      result.output.split(/\r?\n/).flatMap((line) => {
+        const target = /PID (\d+)/i.exec(line);
+        return target ? [Number(target[1])] : [];
+      }),
+    ),
+  ];
+  const survivors = targets.filter(isRunning);
   if (survivors.length > 0)
     throw new Error(`Stopping the process tree left PIDs running: ${survivors.join(", ")}\n${result.output}`);
   // 128 means the root had already exited before taskkill found it.
-  if (result.exitCode !== 128 && refused.length === 0)
+  if (result.exitCode !== 128 && targets.length === 0)
     throw new Error(`taskkill failed for PID ${child.pid} with code ${result.exitCode}:\n${result.output}`);
 };

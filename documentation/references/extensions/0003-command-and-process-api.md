@@ -33,6 +33,9 @@ Each command runs in its own process group, so stopping it also stops whatever i
 - Cancelling a command settles any `run()` it is waiting on and leaves no child process behind.
 - A child still running when the command returns is stopped too, and its pending `run()` settles.
 
+Windows cleanup reports surviving target processes when a tree cannot be stopped. Parent PIDs in
+native diagnostics describe relationships; they do not identify children owned by the invocation.
+
 `spawnDetached` is the exception. Its children are meant to outlive the host, so the extension
 owns their lifetime.
 
