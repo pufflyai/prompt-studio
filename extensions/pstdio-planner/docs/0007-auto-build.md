@@ -28,6 +28,8 @@ Each new implementation uses its own managed Git workspace and the default agent
 
 Tickets must have ready prerequisites and available dependency revisions. Drafts, archived tickets, blocked tickets, review gates, and open human-review requests are not candidates. A ticket already assigned to a running session is excluded. An unattended In Progress ticket without a current attempt can be considered. Completed implementations already in review stay in the normal [attempt workflow](0002-attempts.md).
 
+Dependency waiting comes from `depends_on`, rather than a second text blocker. Planner recognizes the old sentence “Complete PS-123 before implementing this dependent contract.” only when each named ticket is a linked prerequisite. Work queries derive readiness from those links. When the named prerequisites are Done, Planner clears the saved duplicate text on a ticket change, project open, or merge check. Multiple references separated by commas or “and” are also recognized. Other blocker wording and additional instructions remain intact. Clear an independent blocker with `pst tickets update --id PS-123 --blocked-reason ''`; the dependency links stay in place.
+
 Implementation follows the project's Planner settings, including adversarial review and pull request creation. Auto Build does not approve or merge work.
 
 ## Inspect or stop Auto Build

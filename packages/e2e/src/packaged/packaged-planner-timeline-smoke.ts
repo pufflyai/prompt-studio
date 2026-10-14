@@ -1,5 +1,7 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { expectPackagedDependencyBlockers } from "./packaged-planner-blockers-smoke";
+import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
 
 // Run a Planner command through the packaged HTTP API and return its value.
 const commandRunner =
@@ -54,6 +56,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
+  await expectIndependentPlannerViews({ ...input, execute });
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
@@ -79,6 +82,7 @@ export async function expectPackagedPlannerTimeline(input: {
     enabled: false,
   });
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  await expectPackagedDependencyBlockers({ ...input, execute });
   await expectImplementationStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {

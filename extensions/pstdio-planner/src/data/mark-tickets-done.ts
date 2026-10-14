@@ -1,6 +1,7 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { plannerTicketsChanged } from "../events";
 import { statusesCollection, ticketsCollection } from "./collections";
+import { reconcileDependencyBlockers } from "./reconcile-dependency-blockers";
 
 export const markTicketsDone = async (
   ctx: Pick<ExtensionContextBase, "storage" | "settings" | "events">,
@@ -22,4 +23,5 @@ export const markTicketsDone = async (
     });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: id });
   }
+  await reconcileDependencyBlockers(ctx);
 };

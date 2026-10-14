@@ -232,3 +232,19 @@ test("a scope change during dispatch prevents launching work outside the new sco
   );
   expect(await listAttempts(storage)).toHaveLength(0);
 });
+
+test("dependency-only blocker text cannot override current dependency readiness", async () => {
+  const { ctx, storage, ticket } = await trackFixture();
+  const parent = await ticket("Prerequisite");
+  const child = await ticket("Dependent contract", "workbench", [parent.id]);
+  await putTicket(storage, {
+    ...child,
+    blockedReason: `Complete ${parent.shorthand} before implementing this dependent contract.`,
+  });
+  expect((await nextTicketsCommand.run(ctx, {})).waiting).toContainEqual(
+    expect.objectContaining({ id: child.id, reason: "dependency-not-ready" }),
+  );
+  await putTicket(storage, { ...parent, statusId: "done" });
+  expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toContain(child.id);
+  expect((await ctx.storage.collection("tickets").get(child.id)) as object).toMatchObject({ dependsOn: [parent.id] });
+});

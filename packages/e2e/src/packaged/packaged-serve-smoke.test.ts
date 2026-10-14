@@ -44,7 +44,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
-// Planner checks request-owned indicators, protected generic tag edits, and the request page.
+// Planner checks dependency-only blockers, empty CLI clears, request-owned indicators, and protected tag edits.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.

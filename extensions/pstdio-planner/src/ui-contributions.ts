@@ -25,7 +25,7 @@ import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
-import { ticketBoard } from "./data/ticket-board";
+import { ticketBoard, timelineBoard } from "./data/ticket-board";
 import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
@@ -153,6 +153,12 @@ export const createPlannerUi = (baseUrl: string) => {
       ),
     },
   });
+  const timelineTickets = defineView({
+    id: timelineBoard.id,
+    title: l10n("timeline.page.title", "Project Timeline"),
+    icon: "chart-no-axes-gantt",
+    body: tickets.body,
+  });
   const editor = defineView({
     id: "ticket-editor",
     title: l10n("panels.ticketEditor.title", "Ticket"),
@@ -187,7 +193,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings, requests],
+    views: [tickets, timelineTickets, editor, files, properties, tagSettings, requests],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({

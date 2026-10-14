@@ -1,6 +1,7 @@
 // Turn the resolved execution order into deadline sections with steps, tags, blockers, and risk flags.
 
 import type { AttemptRecord } from "../../data/attempt-types";
+import { withIndependentBlockers } from "../../data/dependency-blockers";
 import { hasPendingInput } from "../../data/review-request-storage";
 import type { TicketReviewRequests } from "../../data/review-request-types";
 import type { Deadline, PlanFlag, PlanLink, PlanRow, PlanTag, StoredPlan } from "../contracts";
@@ -204,7 +205,7 @@ function toSection(deadline: Deadline | undefined, rows: PlanRow[], today: strin
 
 export function buildPlan(input: PlanInput) {
   const groups = executionOrder(input.plan);
-  const index = indexInput(input, groups);
+  const index = indexInput({ ...input, tickets: withIndependentBlockers(input.tickets) }, groups);
   const sections = groups.map(({ deadline, ticketIds }) => {
     const rows = ticketIds.flatMap((id) => {
       const ticket = index.tickets.get(id);
