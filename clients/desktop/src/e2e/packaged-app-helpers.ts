@@ -7,6 +7,7 @@ import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { registerPackagedCleanup, spawnPackagedProcess, stopPackagedProcess } from "../testing/packaged-fixture";
+import { attachPackagedLogs, startupFailure } from "../testing/packaged-test-evidence";
 import { removeTestDirectory } from "../testing/remove-test-directory";
 import { stopPackagedRuntime } from "../testing/stop-packaged-runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
@@ -38,13 +39,7 @@ const packagedEnvironment = (home: string) => {
 
 export const createPackagedHome = () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-package-"));
-  registerPackagedCleanup(async () => {
-    try {
-      if (existsSync(home)) await attachPackagedLogs(home);
-    } finally {
-      await removePackagedHome(home);
-    }
-  });
+  registerPackagedCleanup(() => removePackagedHome(home));
   return home;
 };
 
@@ -52,25 +47,6 @@ export const readDescriptor = (home: string) => {
   const path = join(home, "runtime.json");
   if (!existsSync(path)) return null;
   return JSON.parse(readFileSync(path, "utf8")) as RuntimeDescriptor;
-};
-
-const attachRuntimeOutput = async (home: string) => {
-  const path = join(home, "desktop-runtime.log");
-  if (!existsSync(path)) return;
-  await test.info().attach("runtime-output", {
-    body: redactSensitiveText(readFileSync(path, "utf8").slice(-32_000), [readDescriptor(home)?.token ?? ""]),
-    contentType: "text/plain",
-  });
-};
-
-const attachPackagedLogs = async (home: string, runtime?: RuntimeDescriptor) => {
-  const logPath = join(home, "logs.jsonl");
-  const log = existsSync(logPath) ? readFileSync(logPath, "utf8").slice(-32_000) : "No runtime log was written.";
-  await test.info().attach("runtime-log", {
-    body: redactSensitiveText(log, [runtime?.token ?? "", readDescriptor(home)?.token ?? ""]),
-    contentType: "text/plain",
-  });
-  await attachRuntimeOutput(home);
 };
 
 export const waitForDescriptor = async (home: string, predicate = (_descriptor: RuntimeDescriptor) => true) => {
@@ -173,25 +149,36 @@ const launchPackaged = async <T>(
   );
   child.stdout.resume();
   let browser: Browser | null = null;
+  let finishTrace: (() => Promise<void>) | undefined;
+  let phase = "waiting for the Electron debugging endpoint";
   try {
     const endpoint = await waitForDevTools(child);
+    phase = "waiting for runtime startup before connecting to Electron";
     // Keep the debugging connection out of the spawned runtime. See ADR 0020.
     const startup = await waitForStartup(home);
+    phase = "connecting to Electron";
     browser = await chromium.connectOverCDP(endpoint);
     const context = browser.contexts()[0];
     if (!context) throw new Error("Packaged app did not create a browser context");
+    finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
+    phase = "waiting for the lifecycle page";
     const lifecyclePage = await waitForLifecyclePage(context);
-    const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
     return { home, browser, child, lifecyclePage, startedAt, startup, finishTrace };
   } catch (error) {
     try {
-      // Failed startup has no app handle for the caller's normal disposal path.
-      await attachPackagedLogs(home);
+      if (finishTrace) await finishTrace();
+      else
+        await test.info().attach(`packaged-${child.pid}-unavailable`, {
+          body: redactSensitiveText(`Electron trace did not start: ${phase}. ${String(error)}`, [
+            readDescriptor(home)?.token ?? "",
+          ]),
+          contentType: "text/plain",
+        });
     } finally {
       await browser?.close().catch(() => {});
       await stopPackagedProcess(child);
     }
-    throw error;
+    throw startupFailure(error, home, [readDescriptor(home)?.token ?? ""]);
   }
 };
 
@@ -222,7 +209,7 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
     return { ...app, page, readyInMs: visibleAt - app.startedAt };
   } catch (error) {
     await disposePackagedApp(app);
-    throw error;
+    throw startupFailure(error, home, [app.runtime.token]);
   }
 };
 
@@ -263,13 +250,20 @@ export const runPackagedCli = (home: string, args: string[]) =>
 export const disposePackagedApp = async (app: PackagedWindow | null) => {
   if (!app) return;
   await app.finishTrace();
-  await attachPackagedLogs(app.home, app.runtime);
   await app.browser.close().catch(() => {});
   await stopPackagedProcess(app.child);
 };
 
 export const removePackagedHome = async (home: string) => {
+  if (!existsSync(home)) return;
   const runtime = readDescriptor(home);
-  if (runtime) await stopPackagedRuntime(runtime.pid);
-  await removeTestDirectory(home);
+  try {
+    if (runtime) await stopPackagedRuntime(runtime.pid);
+  } finally {
+    try {
+      await attachPackagedLogs(home, [runtime?.token ?? ""], test.info());
+    } finally {
+      await removeTestDirectory(home);
+    }
+  }
 };
