@@ -71,8 +71,8 @@ const sessionStartStory = (scenario: Scenario) => {
       await expect(canvas.queryByRole("tab", { name: /Session 3/ })).toBeNull();
       await expect(canvas.getByLabelText("Started session lifecycle")).toHaveTextContent("Starts 1 · Stops 0");
       if (scenario === "fixed") {
-        await expect(canvas.queryByRole("button", { name: "Hide Side Panel" })).toBeNull();
-        await expect(canvas.queryByRole("button", { name: "Show Side Panel" })).toBeNull();
+        await expect(canvas.queryByRole("button", { name: "Hide Sidebar" })).toBeNull();
+        await expect(canvas.queryByRole("button", { name: "Show Sidebar" })).toBeNull();
       }
       await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
       await waitFor(() => expect(fixture.workbench).not.toBe(core));

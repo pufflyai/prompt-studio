@@ -180,10 +180,10 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
   const tab = mainPanelHeader.getByRole("tab");
   const tabName = await tab.textContent();
   for (const region of ["aside", "bottom"]) {
-    await page.getByRole("button", { name: "Page panels", exact: true }).click();
-    const controls = page.getByRole("menu", { name: "Page panels", exact: true });
-    const option = controls.getByRole("menuitem", {
-      name: region === "aside" ? "Show Side panel" : "Show Page bottom",
+    await page.getByRole("button", { name: / panels$/, exact: true }).click();
+    const controls = page.getByRole("menu", { name: / panels$/, exact: true });
+    const option = controls.getByRole("menuitemcheckbox", {
+      name: region === "aside" ? "Side panel" : "Bottom panel",
       exact: true,
     });
     await expect(option.locator("svg")).toBeVisible();
