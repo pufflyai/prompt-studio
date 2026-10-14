@@ -78,11 +78,19 @@ The merge queue proves that every client still builds from the merged result bef
 - `build_clients` builds without signing, because signing secrets are trusted only on `main` and release tags. The Linux row builds the monorepo, compiles the CLI for every platform with `bun run --cwd scripts build:all`, scaffolds the platform packages, and makes the Linux desktop app. The macOS arm64 (`macos-15`), macOS x64 (`macos-15-intel`), and Windows rows make their desktop apps. Desktop sidecars must be compiled on their own platform, so each desktop app needs a native runner.
 - `build_docker` builds the API and landing page images.
 
+The `main` ruleset turned the queue on on 2026-10-12, after the queue's jobs passed every `main` run since the stages were split. It squashes, builds up to five groups at once, merges up to five pull requests per group, and merges a group only when every pull request in it passed (`ALLGREEN`). `ci_passed` is the only required check, on pull requests and in the queue.
+
 When a pull request leaves the queue, a build or check failed on the merged result. Rebase, fix, and queue it again. If the failure is not caused by the pull request, the check is not deterministic; fix the check first.
 
 ### Full stage
 
 Pushes to `main` run every job. Tests no longer block merging, so a regression shows up on the `main` commit that caused it. Fix it in a follow-up pull request, or link the failure to the flaky-test ticket that owns it before re-running.
+
+Before using **Re-run failed jobs** on a release or nightly, record the failure on a ticket or link it to the ticket that owns it. Keep the job link, failed step or test, and first-attempt evidence. A passing rerun does not close the bug.
+
+The **Weekly CI failure report** workflow collects every attempt of Test and Build and Release Packages from the last seven days. Its job summary groups failed tests and steps, lists affected branches, counts main and release failures, and shows later same-commit passes. Jobs copied into later attempts are counted once. The main first-attempt rate uses completed push runs and includes failures that later passed.
+
+Run it locally with GitHub CLI authentication: `bun scripts/ci/report-ci-failures.ts --since 2026-10-12T00:00:00Z --until 2026-10-13T00:00:00Z`. Optional `--repository owner/repo` and `--output directory` select the source and output folder. The default folder is `test-results/ci-failures`; it contains `runs.json`, `jobs.json`, `summary.json`, and `summary.md`. Failed logs are parsed in memory; unavailable logs are reported beside their job links. The weekly artifact keeps this report data for inspection.
 
 The full stage adds:
 
@@ -97,6 +105,8 @@ The full stage adds:
 ## Published extension dependencies
 
 Run `bun run --cwd scripts verify:published-extensions` to typecheck and test every extension in the Changesets release group against the registry SDK and UI versions selected by its dependency ranges. The check copies each extension outside the workspace, installs fresh dependencies, runs `tsc --noEmit`, and runs its Bun tests. It preserves shared compiler settings and test isolation, but copies no workspace packages, installed dependencies, or lockfiles. Failures name the extension and command; output shows the resolved SDK and UI versions.
+
+Published-extension checks and public-package consumer checks use a one-day minimum release age for fresh installs. This keeps a third-party publish in progress from selecting packages whose matching dependencies are not available yet. Prompt Studio packages in the Changesets release group are exempt, so these checks can use the SDK and UI immediately after a release. The repository's frozen-lockfile install is unchanged. See [Bun's minimum release age](https://bun.sh/docs/pm/cli/install#minimum-release-age).
 
 On a pull request, the CI job runs for extension, SDK, UI, and API contract changes, and for changes outside the workspace packages. It always runs in the full stage. The merge queue skips it because it reads the npm registry. Repo-local packages outside the release group and extensions using `workspace:` SDK dependencies are excluded. The network check stays separate from local `bun run validate`.
 
@@ -167,7 +177,7 @@ These tests simulate different inherited environments. Real Explorer/login PATH 
 
 The npm `cmd-shim@7.0.0` batch wrapper assigns its installation directory without quotes. A prefix containing `&` truncates that directory and fails even when the wrapper runs directly under `cmd.exe`. A native regression checks this failure outside the process API and confirms the API reports the failure too. The healthy npm fixtures use spaces and Unicode; a separate controlled wrapper checks our launcher with `&` in its directory.
 
-Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. The Windows job runs package test suites one at a time to avoid competing database startups; the API suite still uses two file workers.
+Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. The Windows job runs package test suites one at a time to avoid competing database startups. The API suite uses two file workers, then runs `process-discovery.test.ts` alone so PowerShell startup does not compete with a PGlite cold start. The runner logs when that file starts alone. The separate Windows npm shim check still runs it too.
 
 Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
 

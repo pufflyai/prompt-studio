@@ -110,8 +110,7 @@ test("public resource links enforce owner policies atomically and publish commit
     await expect(api.removeAnchors(source, [guardedTarget])).rejects.toThrow("Protected link");
     await createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.art" }).removed(guardedTarget);
     expect((await api.listAnchors({ resource: source })).items).toHaveLength(1);
-    await app.deps.extensionInstancesService.update(art.instance.id, { enabled: false });
-    app.deps.extensionRuntimeCatalog.invalidate({ projectId: project.id, reason: "enablement_changed" });
+    await app.deps.extensionService.setProjectExtensionEnabled(art.instance.id, false);
     await expect(api.removeAnchors(source, [target])).rejects.toThrow("disabled");
     for (const legacy of legacyApis) {
       await expect(legacy.api.addAnchors(legacy.id, [target])).rejects.toThrow("disabled");

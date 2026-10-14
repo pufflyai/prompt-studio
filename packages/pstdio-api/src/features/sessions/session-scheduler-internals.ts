@@ -11,6 +11,7 @@ export type PendingQueueEntry = Awaited<
 
 export type StartExistingInput = {
   session: ExistingSession;
+  expectedRun?: { status: ExistingSession["status"]; startedAt: string | null; endedAt: string | null };
   prompt: string;
   cwd?: string;
   agentId?: string;
@@ -93,6 +94,7 @@ export const insertFollowUpEntry = async (
 
   const payload = {
     id: input.session.id,
+    expectedRun: input.expectedRun,
     prompt: input.prompt,
     request_kind: "follow_up",
     question_response_json: input.questionResponse ?? null,
@@ -103,10 +105,12 @@ export const insertFollowUpEntry = async (
 
   if (input.transitionToQueued) {
     const { entry } = await deps.sessionService.queueExistingWithEntry(payload);
+    if (!entry && input.expectedRun) throw new Error("Session execution changed before continuation.");
     return entry?.queue_position ?? null;
   }
 
   const entry = await deps.sessionService.insertEntryForActive(payload);
+  if (!entry && input.expectedRun) throw new Error("Session execution changed before continuation.");
   return entry?.queue_position ?? null;
 };
 
@@ -140,7 +144,11 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
 
   await updateExistingDispatchSelection(deps, { session, agentId, model: input.model, params, switchingAgent });
 
-  const resumed = await deps.sessionService.resume(session.id, { emitResumedHook: false });
+  const resumed = await deps.sessionService.resume(session.id, {
+    emitResumedHook: false,
+    ...(input.expectedRun ? { expectedRun: input.expectedRun } : {}),
+  });
+  if (!resumed && input.expectedRun) throw new Error("Session execution changed before continuation.");
   if (!resumed) throw new Error(`Session not found: ${session.id}`);
   const dispatchSession = resumed;
   const submittedQueuePosition = await createSubmittedDispatchEntry(deps, {

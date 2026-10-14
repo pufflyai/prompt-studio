@@ -43,6 +43,7 @@ export interface ExtensionTreeNode {
   icon?: string;
   iconColor?: string;
   iconTooltip?: string;
+  tooltip?: string;
   resource?: ExtensionTreeResource;
   target?: ExtensionTreeTarget;
   rowVariant?: ExtensionTreeNodeRowVariant;

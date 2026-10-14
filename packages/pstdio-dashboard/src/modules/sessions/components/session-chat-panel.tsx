@@ -143,6 +143,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   );
   const { pendingFollowUp, displayedMessages, streamingStartedAt, pendingWork } = usePendingSessionFollowUp(
     view.draftKey,
+    sessionId,
     messages,
     view.lastRequestStarted,
     view.status === "in_progress",
@@ -179,6 +180,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
       createSession,
       followUp,
       reconnect,
+      refreshQueue,
       onSubmitted,
       onSessionCreated: (createdSessionId) => openCreatedSession(createdSessionId, text),
     });

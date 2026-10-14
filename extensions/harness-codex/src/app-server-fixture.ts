@@ -3,7 +3,11 @@ import { createInterface } from "node:readline";
 import { setTimeout } from "node:timers/promises";
 
 // A real stdio peer using the captured Codex 0.139 request and reply protocol.
-const emit = (value: unknown) => writeSync(1, `${JSON.stringify(value)}\n`);
+const emit = (value: unknown) => {
+  const message = value as { method?: string; params?: Record<string, unknown> };
+  if (message.method && message.params) message.params = { threadId: "thread-fixture", ...message.params };
+  return writeSync(1, `${JSON.stringify(value)}\n`);
+};
 const complete = () => {
   emit({ method: "item/completed", params: { item: { id: "answer", type: "agentMessage", text: "Hi, colleague" } } });
   emit({ method: "turn/completed", params: { turn: { id: "turn-1", status: "completed", error: null } } });
@@ -17,6 +21,8 @@ for await (const line of createInterface({ input: process.stdin })) {
     complete();
     process.exit(0);
   }
+  if (["config/read", "thread/unsubscribe"].includes(message.method ?? "")) emit({ id: message.id, result: {} });
+  if (message.method === "fixture/stop" && process.env.PSTDIO_TEST_MODE === "async-cleanup-error") process.exit(1);
   if (message.method === "initialize") emit({ id: message.id, result: {} });
   if (message.method === "thread/goal/get") emit({ id: message.id, result: { goal: null } });
   if (message.method === "thread/read" && process.env.PSTDIO_TEST_MODE === "plan-approval-stalled") {
@@ -58,6 +64,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       continue;
     }
     if (process.env.PSTDIO_TEST_MODE === "protocol-error") {
+      emit({ method: "turn/started", params: { turn: { id: "turn-1", status: "inProgress" } } });
       emit({ method: "item/started", params: { item: null } });
       emit({ id: message.id, result: { turn: { id: "turn-1" } } });
       continue;

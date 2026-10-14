@@ -47,6 +47,7 @@ type CreateQueuedInput = Omit<CreateInput, "status"> & {
 };
 
 type QueueExistingInput = {
+  expectedRun?: { status: string; startedAt: string | null; endedAt: string | null };
   model?: string | null;
   id: string;
   prompt: string;
@@ -158,6 +159,15 @@ export const createSessionsDBService = (db: DbClient) => {
     const timestamp = nowTimestamp();
 
     return db.transaction(async (tx) => {
+      const [current] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, input.id)).for("update");
+      if (
+        input.expectedRun &&
+        (!current ||
+          current.status !== input.expectedRun.status ||
+          current.last_request_started !== input.expectedRun.startedAt ||
+          current.last_request_ended !== input.expectedRun.endedAt)
+      )
+        return { session: null, entry: null };
       const [row] = await tx
         .update(sessions)
         .set({ status: "queued", updated_at: timestamp })
@@ -192,6 +202,13 @@ export const createSessionsDBService = (db: DbClient) => {
     return db.transaction(async (tx) => {
       const [session] = await tx.select(sessionColumns).from(sessions).where(eq(sessions.id, input.id)).for("update");
       if (!session || session.status === "cancelled") return null;
+      if (
+        input.expectedRun &&
+        (session.status !== input.expectedRun.status ||
+          session.last_request_started !== input.expectedRun.startedAt ||
+          session.last_request_ended !== input.expectedRun.endedAt)
+      )
+        return null;
       const timestamp = nowTimestamp();
       const [entry] = await tx
         .insert(session_queue_entries)

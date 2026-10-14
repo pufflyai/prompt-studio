@@ -37,8 +37,10 @@
     "@types/cmd-shim": "5.0.2",
     "cmd-shim": "7.0.0",
     "extension-lab": "workspace:*",
+    "pstdio-base-themes": "workspace:*",
     "pstdio-planner": "workspace:*",
     "pstdio-skills": "workspace:*",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "workbench-fixture": "workspace:*"
   }
 }

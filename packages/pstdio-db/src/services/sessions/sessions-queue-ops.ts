@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { sessionColumns } from "../legacy-resource-links";
+import { insertSessionExit } from "./session-exit";
 import { nextSessionRunStart } from "./session-run-start";
 
 class QueueClaimFailed extends Error {}
@@ -108,6 +109,7 @@ export const cancelQueued = async (db: DbClient, id: string) => {
       .returning(sessionColumns);
 
     if (!updated) return null;
+    await insertSessionExit(tx, updated, "user_stop");
 
     await tx
       .delete(session_queue_entries)
