@@ -235,7 +235,7 @@ describe("createWorkbenchTerminalModule", () => {
   });
 });
 describe("terminal session lifecycle", () => {
-  test("keeps a terminal alive across scope changes and kills it when its tab closes", async () => {
+  test("keeps a terminal alive across scope changes and tab closure until an explicit runtime stop", async () => {
     const layouts = new Map<string | undefined, WorkbenchLayout>();
     const workbench = createWorkbench({
       layoutPersistence: {
@@ -270,6 +270,9 @@ describe("terminal session lifecycle", () => {
       .regions.secondary.widgets.find((candidate) => candidate.widgetId === placement.instanceId)?.placementIdentity;
     if (identity) workbench.shellPlacements.closePlacement(identity);
     await Promise.resolve();
+    expect(killSignals).toEqual([]);
+    expect(workbench.terminal.getSession("session-1")?.status).toBe("running");
+    await workbench.terminal.kill({ sessionId: "session-1" });
     expect(killSignals).toEqual([undefined]);
   });
   test("restores saved terminal placements through the declared shell placement", async () => {

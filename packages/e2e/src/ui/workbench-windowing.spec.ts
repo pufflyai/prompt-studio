@@ -44,6 +44,12 @@ const storyIds = [
   "empty-floating-panel-headers",
   "legacy-panel-headers",
   "fixed-page-transfer",
+  "removed-workspace-resource",
+  "removed-workspace-contribution",
+  "removed-panel-contribution",
+  "removed-mode-contribution",
+  "removed-session-resource",
+  "removed-owner-forbidden-reopen",
   "foreign-context",
   "page-availability",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);

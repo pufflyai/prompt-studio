@@ -125,7 +125,8 @@ const applyPageState = (
     );
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") {
-      for (const placement of activated) input.revealRegion?.(placement.region);
+      for (const placement of ownerLayoutActivation(activation, layoutInput.placements))
+        input.revealRegion?.(placement.region);
     }
   });
 };

@@ -4,6 +4,7 @@ import { useWorkbenchStore, useWorkbenchThemePreferences, Workbench, WorkbenchTh
 import { boomboxTheme, kilnTheme } from "../showcases/themes";
 import { createWindowingFixture, type WindowingFixture, type WindowingMode } from "./fixture";
 import { WindowingModeControls } from "./page-mode-controls";
+import { WindowingRemovalControls } from "./removal-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
 
 interface ControlsProps {
@@ -18,7 +19,16 @@ const WindowingControls = (props: ControlsProps) => {
   const { workbench, resources } = fixture;
   const size = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
   return (
-    <HStack p="sm" gap="sm" flexWrap="wrap" borderBottomWidth="1px" borderColor="border.subtle">
+    <HStack
+      role="group"
+      aria-label="Windowing controls"
+      p="sm"
+      gap="sm"
+      flexWrap="wrap"
+      borderBottomWidth="1px"
+      borderColor="border.subtle"
+    >
+      {fixture.removalControls && <WindowingRemovalControls fixture={fixture} />}
       {fixture.pageModes && <WindowingModeControls workbench={workbench} />}
       {fixture.contextNavigation && (
         <Button

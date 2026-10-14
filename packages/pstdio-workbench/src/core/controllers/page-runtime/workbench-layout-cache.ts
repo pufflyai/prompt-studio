@@ -1,5 +1,7 @@
-import { type PlacementIdentity, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutPersistenceAdapter } from "../../registries/layout/layout-model-types";
+import { removeLayoutPlacements } from "../../registries/layout/layout-removal";
 import {
   mergeWithDefaultRegions,
   type WorkbenchLayout,
@@ -8,9 +10,11 @@ import {
 } from "../../registries/layout/layout-types";
 import { isPageRegion, restorePageGeometry } from "../../registries/layout/owner-region-state";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
+import { projectResourceKey, projectResourceReferences } from "../../registries/resources/project-resource-identity";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput } from "../../workbench-core-types";
-import { modeLayoutScope, pageGeometryScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
+import { modeLayoutScope, pageGeometryScope, pageLayoutScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
 import { retireSingleResourceAliases } from "./owner-layout-widgets";
 
 const selectPlacements = (layout: WorkbenchLayout, include: (placement: WorkbenchWidgetPlacement) => boolean) => {
@@ -112,6 +116,26 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     return persist(layout, scope);
   };
   return {
+    removeOwner(kind: "page" | "mode", id: string, projectId?: string) {
+      const owner = `/owner/${kind}/${encodeURIComponent(id)}`;
+      const matches = (scope?: string) => Boolean(scope && (scope.endsWith(owner) || scope.includes(`${owner}/`)));
+      const known = new Set([...scopes, ...(projectId ? (adapter?.listScopes?.(projectId) ?? []) : [])]);
+      const projects = new Set(projectId ? [projectId] : []);
+      for (const scope of known) {
+        if (!matches(scope)) continue;
+        const layout = read(scope);
+        if (layout)
+          persist(
+            removeLayoutPlacements(layout, () => true),
+            scope,
+          );
+        if (scope) projects.add(scope.split("/")[1]!);
+        memory.delete(scope);
+        scopes.delete(scope);
+      }
+      for (const project of projects)
+        adapter?.transformLayouts?.(project, (layout, scope) => (matches(scope) ? undefined : layout));
+    },
     listLayouts(projectId: string) {
       const known = new Set([...scopes, ...(adapter?.listScopes?.(projectId) ?? [])]);
       return [...known].flatMap((scope) => {
@@ -158,14 +182,35 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
           ),
       });
     },
-    removeResource(resource: ResourceRef) {
-      for (const scope of scopes) {
+    removeResource(resource: ResourceRef, projectId: string, pages: readonly WorkbenchPageContribution[]) {
+      const removedOwners = new Set(
+        pages
+          .flatMap((page) =>
+            projectResourceReferences(resource, projectId).map((reference) =>
+              pageLayoutScope({ projectId, pageId: page.id, resource: reference }, page),
+            ),
+          )
+          .filter((scope) => scope?.includes("/resource/")),
+      );
+      const known = new Set([...scopes, ...(adapter?.listScopes?.(projectId) ?? [])]);
+      for (const scope of known) {
+        if (!scope?.startsWith(`project/${projectId}/`)) continue;
         const layout = read(scope);
         if (layout)
-          write(
-            selectPlacements(layout, (placement) => resourceKey(placement.resource) !== resourceKey(resource)),
+          persist(
+            removeLayoutPlacements(
+              layout,
+              (placement) =>
+                removedOwners.has(scope) ||
+                projectResourceKey(placement.resource, projectId) === projectResourceKey(resource, projectId),
+            ),
             scope,
           );
+      }
+      adapter?.transformLayouts?.(projectId, (layout, scope) => (removedOwners.has(scope) ? undefined : layout));
+      for (const scope of removedOwners) {
+        memory.delete(scope);
+        scopes.delete(scope);
       }
     },
     layout: {

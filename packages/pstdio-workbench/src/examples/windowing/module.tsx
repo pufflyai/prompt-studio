@@ -10,27 +10,26 @@ import {
   windowingPages,
 } from "./resources";
 import { WindowingSessionView } from "./session-view";
+
 import { WindowingDraftView, WindowingResourceList, WindowingTerminalView, WindowingWebview } from "./views";
 
 const registerWindowingMode = (workbench: WorkbenchCore, options: WindowingFixtureOptions) => {
-  if (options.registerMode) options.registerMode(workbench);
-  else
-    workbench.modes.registerMode({
-      id: "windowing",
-      label: options.pageModes ? "Project" : "Windowing",
-      ...(options.pageModes ? { basePage: availabilityPages.overview } : {}),
-      regionSettings: options.regionSettings,
-      activate() {},
-    });
+  if (options.registerMode) return options.registerMode(workbench);
+  return workbench.modes.registerMode({
+    id: "windowing",
+    label: options.pageModes ? "Project" : "Windowing",
+    ...(options.pageModes ? { basePage: availabilityPages.overview } : {}),
+    regionSettings: options.regionSettings,
+    activate() {},
+  });
 };
 
-export const registerWindowingModule = (
+const registerWindowingViews = (
   workbench: WorkbenchCore,
   resources: WindowingResources,
   probe: WindowingLifecycleProbe,
   options: WindowingFixtureOptions = {},
 ) => {
-  registerWindowingMode(workbench, options);
   for (const [id, label, items, page] of [
     ["workspaces", "Workspaces", resources.workspaces, windowingPages.workspace],
     ["notes-list", "Notes", resources.notes, windowingPages.notes],
@@ -111,7 +110,7 @@ export const registerWindowingModule = (
     body: { kind: "react", render: () => <WindowingWebview /> },
   });
   if (options.pagePanels) registerWindowingPagePanels(workbench);
-  workbench.modePlacements.registerPlacement({
+  const panelRegistration = workbench.modePlacements.registerPlacement({
     id: "windowing.sessions",
     ref: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
     modeId: "windowing",
@@ -149,7 +148,18 @@ export const registerWindowingModule = (
     main: { kind: "view", view: { kind: "view", id: "windowing.notes-list" }, cardinality: "one" },
     slots: [],
   });
-  workbench.pages.registerPage({
+  return panelRegistration;
+};
+
+export const registerWindowingModule = (
+  workbench: WorkbenchCore,
+  resources: WindowingResources,
+  probe: WindowingLifecycleProbe,
+  options: WindowingFixtureOptions = {},
+) => {
+  const modeRegistration = registerWindowingMode(workbench, options);
+  const panelRegistration = registerWindowingViews(workbench, resources, probe, options);
+  const workspaceRegistration = workbench.pages.registerPage({
     id: "windowing.workspace",
     ref: windowingPages.workspace,
     title: "Workspace",
@@ -239,4 +249,5 @@ export const registerWindowingModule = (
     slots: [],
   });
   registerWindowingResourceProviders(workbench, resources);
+  return { mode: modeRegistration, workspace: workspaceRegistration, panel: panelRegistration };
 };

@@ -1,6 +1,7 @@
-import type { WorkbenchCore, WorkbenchModeContribution, WorkbenchPageContribution } from "../../core";
+import type { Disposable, WorkbenchCore, WorkbenchModeContribution, WorkbenchPageContribution } from "../../core";
 
 export interface WindowingFixtureOptions {
+  removalControls?: boolean;
   pageModes?: boolean;
   contextNavigation?: boolean;
   changesPresence?: "open" | "fixed";
@@ -8,5 +9,5 @@ export interface WindowingFixtureOptions {
   pageRegionSettings?: WorkbenchPageContribution["regionSettings"];
   mainView?: "files" | "webview";
   regionSettings?: WorkbenchModeContribution["regionSettings"];
-  registerMode?(workbench: WorkbenchCore): void;
+  registerMode?(workbench: WorkbenchCore): Disposable;
 }

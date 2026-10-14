@@ -6,8 +6,10 @@ import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { version } from "./package.json";
 import { writeCliInstallScripts } from "./src/packaging/cli-install-scripts";
+import { DeviceDmgMaker } from "./src/packaging/device-dmg-maker";
 import { finalizeWindowsSidecar } from "./src/packaging/finalize-windows-sidecar";
 import { desktopPackageName } from "./src/packaging/package-layout";
+import { notarizeMacApp } from "./src/release/notarize-macos";
 import { resolveDesktopSigning } from "./src/release/release-config";
 import { validateSidecarArtifact } from "./src/runtime/sidecar-artifact";
 
@@ -53,11 +55,16 @@ const config: ForgeConfig = {
       // to the runtime too, so it must skip the whole folder.
       ignore: (filePath) => filePath.includes("/Contents/Resources/bin/"),
     },
-    osxNotarize: signing.osxNotarize,
     windowsSign: signing.windowsSign,
   },
   hooks: {
     postPackage: async (_forgeConfig, result) => {
+      if (result.platform === "darwin" && signing.macosNotarization) {
+        for (const outputPath of result.outputPaths) {
+          await notarizeMacApp(join(outputPath, `${desktopPackageName("darwin")}.app`), signing.macosNotarization);
+        }
+        return;
+      }
       if (result.platform !== "win32" || !signing.windowsSign) return;
       for (const outputPath of result.outputPaths) {
         const resourcesPath = join(outputPath, "resources");
@@ -77,10 +84,8 @@ const config: ForgeConfig = {
       config: { name: "PromptStudio", windowsSign: signing.squirrelWindowsSign },
     },
     { name: "@electron-forge/maker-zip", platforms: ["darwin", "linux"], config: {} },
-    {
-      name: "@electron-forge/maker-dmg",
-      platforms: ["darwin"],
-      config: {
+    new DeviceDmgMaker(
+      {
         name: "Prompt Studio",
         icon: join(assetsRoot, "icon.icns"),
         // appdmg picks up dmg-background@2x.png next to this file for Retina screens.
@@ -93,7 +98,8 @@ const config: ForgeConfig = {
         ],
         format: "ULFO",
       } satisfies MakerDMGConfig,
-    },
+      ["darwin"],
+    ),
     {
       name: "@electron-forge/maker-deb",
       platforms: ["linux"],

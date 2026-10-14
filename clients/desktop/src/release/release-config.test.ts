@@ -32,7 +32,7 @@ describe("desktop release configuration", () => {
       osxSign: {
         identity: "Developer ID Application: Prompt Studio",
       },
-      osxNotarize: {
+      macosNotarization: {
         appleApiKey: "/tmp/AuthKey_KEY.p8",
         appleApiKeyId: "KEY",
         appleApiIssuer: "issuer",

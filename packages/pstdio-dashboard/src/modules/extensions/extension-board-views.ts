@@ -16,6 +16,7 @@ interface SharedViewsInput {
     id: string;
     extensionId: string;
     refreshEventIds?: string[];
+    schemaRefreshEventIds?: string[];
   };
   metadata: ResolvedWorkbenchExtensionMetadata;
 }

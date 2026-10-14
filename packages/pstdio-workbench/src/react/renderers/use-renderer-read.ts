@@ -1,6 +1,7 @@
 import { PstdioConnectionError } from "@pstdio/sdk/client";
 import { useEffect, useRef, useState } from "react";
 import type { Disposable, RendererReadBinding, WorkbenchCore } from "../../core";
+import { createRendererMutationBinding } from "./renderer-mutations";
 import { useWorkbenchConnection } from "./workbench-connection-provider";
 
 interface RendererReadOptions<T> {
@@ -32,6 +33,9 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const refreshRef = useRef<(() => Promise<void>) | undefined>(undefined);
   const lastRefreshKey = useRef(refreshKey);
   const callbacks = useRef(options);
+  const mutationBinding = useRef(createRendererMutationBinding<T>());
+  const mutations = useRef(mutationBinding.current.bind(ownerKey, queryKey));
+  const saveQueue = useRef(Promise.resolve());
   useEffect(() => {
     callbacks.current = options;
   });
@@ -39,6 +43,8 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: A connection change reloads views after missed sync events, including local contributions.
   useEffect(() => {
     const binding: RendererReadBinding = workbench.views.reads.bind(ownerKey);
+    const owner = mutationBinding.current.bind(ownerKey, queryKey);
+    mutations.current = owner;
     const handlers = {
       onProgress: (value: T) => {
         // Background refreshes keep the complete snapshot until its replacement is ready.
@@ -48,7 +54,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
         });
       },
       onValue: (value: T) => {
-        setState({ queryKey, value, loading: false });
+        setState({ queryKey, value: owner.value() ?? value, loading: false });
       },
       onError: (error: unknown) => {
         const connectionLost = error instanceof PstdioConnectionError;
@@ -65,13 +71,18 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
       },
     };
     const refresh = (reason?: "retry") => {
+      if (owner.pending()) return Promise.resolve();
       const current = callbacks.current;
+      const revision = owner.revision();
       return binding.request(
         {
           ...handlers,
           // A changed read scope cancels older work without clearing the mounted view's snapshot.
           queryKey: JSON.stringify([queryKey, current.refreshKey]),
           load: current.load,
+          onValue: (value: T) => {
+            if (owner.accept(value, revision)) handlers.onValue(value);
+          },
         },
         reason,
       );
@@ -105,5 +116,26 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     error: connectionLost ? undefined : current.error?.message,
     loading: current.loading || (connectionLost && current.value === undefined),
     retry: () => retryRef.current?.() ?? Promise.resolve(),
+    mutate: (update: (value: T) => T, save: () => Promise<void> | void) => {
+      const owner = mutations.current;
+      const operation = owner.begin(update);
+      const publish = () => setState((previous) => ({ ...previous, value: owner.value() }));
+      publish();
+      const pending = saveQueue.current.then(save);
+      saveQueue.current = pending.catch(() => undefined);
+      return pending
+        .then(
+          () => owner.finish(operation, true),
+          (error: unknown) => {
+            owner.finish(operation, false);
+            throw error;
+          },
+        )
+        .finally(() => {
+          if (mutations.current !== owner) return;
+          publish();
+          if (!owner.pending()) void refreshRef.current?.();
+        });
+    },
   };
 };
