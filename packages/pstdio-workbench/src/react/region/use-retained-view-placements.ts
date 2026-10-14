@@ -22,6 +22,8 @@ export const useRetainedViewPlacements = (workbench: WorkbenchCore, current: Wor
   let saved: ReadonlySet<string> | undefined;
   const [previous, setPrevious] = useState(current);
   const placements = retainViewPlacements(previous, current, new Set(Object.keys(views)), (placement) => {
+    if (views[placement.viewId ?? ""]?.background !== undefined && placement.mountStrategy !== "keep-mounted")
+      return false;
     if (placement.resource && removedKeys.has(projectResourceKey(placement.resource, projectId)!)) return false;
     const identity = placement.placementIdentity;
     if (!identity || !projectId) return true;

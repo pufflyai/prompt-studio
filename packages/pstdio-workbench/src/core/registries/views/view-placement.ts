@@ -37,6 +37,8 @@ export const registerWorkbenchViewPlacement = (
   const { role: _role, viewId: _viewId, ...panel } = input;
   return layout.registerPanel({
     ...panel,
+    mountStrategy: input.mountStrategy ?? view.background,
+    hiddenByDefault: input.hiddenByDefault ?? (view.reveal === "explicit" ? true : undefined),
     title: view.title,
     icon: view.icon,
     rendererId: view.id,

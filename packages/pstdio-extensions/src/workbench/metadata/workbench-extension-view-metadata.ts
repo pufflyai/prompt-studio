@@ -165,6 +165,9 @@ export const toViewRecord = (
     title: view.contribution.title,
     icon: view.contribution.icon,
     instancePolicy: view.contribution.instancePolicy,
+    background: view.contribution.background,
+    reveal: view.contribution.reveal,
+    defaultPanel: view.contribution.defaultPanel,
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };

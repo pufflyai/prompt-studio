@@ -15,6 +15,15 @@ import {
 } from "./workbench-windowing-interactions";
 
 const storyIds = [
+  "session-start-empty",
+  "session-start-closed",
+  "session-start-visible",
+  "session-start-fixed",
+  "session-start-inactive",
+  "view-background-active",
+  "view-background-mounted",
+  "view-background-legacy-mounted",
+  "view-background-legacy-active",
   "smoke",
   "webview",
   "boombox",
@@ -116,7 +125,7 @@ test.describe("Workbench windowing stories", () => {
       if (storyId.endsWith("--page-side-ownership")) await exercisePageSideDrop(page);
       await windowingInteractions[storyId]?.(page);
       if (
-        /--(?:foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page)/.test(
+        /--(?:foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page|session-start)/.test(
           storyId,
         )
       ) {

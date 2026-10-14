@@ -6,6 +6,7 @@ import { createWindowingFixture, type WindowingFixture, type WindowingMode } fro
 import { WindowingModeControls } from "./page-mode-controls";
 import { WindowingRemovalControls } from "./removal-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
+import { WindowingSessionStartControls } from "./session-start-controls";
 
 interface ControlsProps {
   fixture: WindowingFixture;
@@ -29,6 +30,7 @@ const WindowingControls = (props: ControlsProps) => {
       borderColor="border.subtle"
     >
       {fixture.removalControls && <WindowingRemovalControls fixture={fixture} />}
+      {fixture.sessionStarts && <WindowingSessionStartControls fixture={fixture} />}
       {fixture.pageModes && <WindowingModeControls workbench={workbench} />}
       {fixture.contextNavigation && (
         <Button

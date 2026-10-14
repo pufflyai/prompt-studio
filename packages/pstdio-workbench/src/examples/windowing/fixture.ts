@@ -1,3 +1,4 @@
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
 import { createBoomboxWorkbench } from "../showcases/boombox";
 import { createKilnWorkbench } from "../showcases/kiln";
@@ -29,6 +30,7 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
       pageLocationPersistence: persistence.pageLocation,
     });
     registrations = registerWindowingModule(workbench, resources, probe, options);
+    options.registerPages?.(workbench);
     if (options.pageModes) registerAvailabilityPages(workbench);
     if (options.contextNavigation) registerContextNavigation(workbench, resources);
     workbench.pageLocations.setProject("windowing-project");
@@ -47,6 +49,7 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
     mode,
     pageModes: options.pageModes,
     contextNavigation: options.contextNavigation,
+    sessionStarts: options.sessionStarts,
     resources,
     persistence,
     probe,
@@ -57,6 +60,11 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
     removeResource(resource: import("@pstdio/sdk/extensions").ResourceRef) {
       deletedResources.push(resource);
       workbench.resources.removed(resource);
+    },
+    startSession(workspace: ResourceRef) {
+      const resource = resources.startSession(workspace);
+      probe.start(resource);
+      return resource;
     },
     get workbench() {
       return workbench;

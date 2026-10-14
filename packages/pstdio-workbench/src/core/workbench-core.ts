@@ -14,6 +14,7 @@ import {
   findOtherOwnedResourceEditor,
   prepareExistingResourceEditor,
 } from "./controllers/navigation/resource-editor-resolver";
+import { openWorkbenchView } from "./controllers/navigation/view-navigation";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
 import {
@@ -248,6 +249,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const navigation = createCoreNavigationRegistry(() => core);
 
   core = {
+    openView: (input) => openWorkbenchView(core, input),
     closePlacement: createPlacementCloseController(() => core),
     pinPlacement: createPlacementPinController(() => core),
     ...createPanelArrangement(() => core),

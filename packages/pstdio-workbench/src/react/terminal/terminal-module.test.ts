@@ -78,7 +78,6 @@ describe("createWorkbenchTerminalModule", () => {
     const workbench = setup();
     expect(workbench.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
       region: "secondary",
-      mountStrategy: "keep-mounted",
       item: {
         kind: "binding",
         binding: {
@@ -89,7 +88,12 @@ describe("createWorkbenchTerminalModule", () => {
         },
       },
     });
-    expect(workbench.views.getView(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({ title: "Terminal" });
+    expect(workbench.views.getView(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
+      title: "Terminal",
+      background: "keep-mounted",
+      reveal: "explicit",
+      defaultPanel: "secondary",
+    });
   });
   test("exposes the terminal panel to the secondary add menu", () => {
     const workbench = setup();

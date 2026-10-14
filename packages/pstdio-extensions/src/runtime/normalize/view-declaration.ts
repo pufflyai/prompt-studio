@@ -73,6 +73,9 @@ export const viewDeclarationSchema = z
     title: localizableStringSchema,
     icon: z.string().optional(),
     instancePolicy: z.enum(["per-resource", "multiple"]).optional(),
+    background: z.enum(["active", "keep-mounted"]).optional(),
+    reveal: z.enum(["always", "explicit"]).optional(),
+    defaultPanel: z.enum(["side", "secondary"]).optional(),
     body,
   })
   .strict();
