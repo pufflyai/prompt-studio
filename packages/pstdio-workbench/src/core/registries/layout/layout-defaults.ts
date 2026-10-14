@@ -1,6 +1,7 @@
 import { normalizeFloatingBubblePosition } from "../../controllers/side-panel/floating-bubble-position";
 import { type WorkbenchRegion, workbenchRegions } from "./layout-regions";
 import type { WorkbenchLayout, WorkbenchRegionState, WorkbenchWidgetPlacement } from "./layout-types";
+import { panelEdges, validModeLayout, validPageLayout } from "./panel-geometry";
 import { resolveUniqueWidgetId } from "./widget-id";
 
 const createRegionState = (id: WorkbenchRegion, visible: boolean): WorkbenchRegionState => ({
@@ -95,6 +96,10 @@ export const mergeWithDefaultRegions = (
   ) as Partial<WorkbenchLayout["regions"]>;
   return normalizeWidgetIds({
     ...persisted,
+    modeLayout: validModeLayout(persisted.modeLayout) ? persisted.modeLayout : undefined,
+    pageLayout: validPageLayout(persisted.pageLayout) ? persisted.pageLayout : undefined,
+    actionBarEdge:
+      persisted.actionBarEdge && panelEdges.includes(persisted.actionBarEdge) ? persisted.actionBarEdge : undefined,
     regions: { ...defaults.regions, ...persistedRegions },
   });
 };

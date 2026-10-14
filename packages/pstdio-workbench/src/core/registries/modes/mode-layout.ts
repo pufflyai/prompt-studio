@@ -126,6 +126,8 @@ export const restoreUnscopedModeLayout = (
       };
     }
     const withoutModeContent = { ...current, regions };
+    withoutModeContent.modeLayout = undefined;
+    withoutModeContent.actionBarEdge = undefined;
     return applyModePanelAvailability(
       {
         ...withActivePlacement(withoutModeContent, [placementById(withoutModeContent, current.activeWidgetId)]),
@@ -137,7 +139,10 @@ export const restoreUnscopedModeLayout = (
 
   const regions = { ...current.regions };
   for (const regionId of allModeRegions) regions[regionId] = saved.regions[regionId];
-  const merged = applyModePanelAvailability({ ...current, regions }, panels);
+  const merged = applyModePanelAvailability(
+    { ...current, regions, modeLayout: saved.modeLayout, actionBarEdge: saved.actionBarEdge },
+    panels,
+  );
   const savedActive = placementById(merged, saved.activeWidgetId);
   const currentActive = placementById(merged, current.activeWidgetId);
   return {

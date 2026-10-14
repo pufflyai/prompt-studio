@@ -127,7 +127,13 @@ export const workbenchExtensionViewRecordSchema = z.object({
   defaultPanel: z.enum(["side", "secondary"]).optional(),
 });
 
+export { modeLayoutSchema, panelEdgeSchema } from "./panel-layout";
+
+import { modeLayoutSchema, panelEdgeSchema } from "./panel-layout";
+
 const workbenchExtensionModeRecordSchema = z.object({
+  layout: modeLayoutSchema.optional(),
+  actionBarEdge: panelEdgeSchema.optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),

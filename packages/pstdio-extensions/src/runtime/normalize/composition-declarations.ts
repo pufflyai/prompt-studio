@@ -1,5 +1,11 @@
 import { extensionPanelRegions } from "@pstdio/sdk/extensions";
-import { localizableStringSchema, regionSettingsSchema, regionSizeSchema } from "pstdio-api-contracts";
+import {
+  localizableStringSchema,
+  modeLayoutSchema,
+  panelEdgeSchema,
+  regionSettingsSchema,
+  regionSizeSchema,
+} from "pstdio-api-contracts";
 import { z } from "zod";
 import { localRefSchema, navigationDeclarationSchema } from "./navigation-declaration";
 
@@ -126,6 +132,8 @@ export const modeDeclarationSchema = z
     icon: z.string().optional(),
     regions: z.array(region),
     floatingPanels: z.enum(["visible", "hidden"]).optional(),
+    layout: modeLayoutSchema.optional(),
+    actionBarEdge: panelEdgeSchema.optional(),
     floatingBubble: z.boolean().optional(),
     floating: z.object({ defaultTab: navigationDeclarationSchema.optional() }).strict().optional(),
     defaultTheme: localRefSchema("theme").optional(),

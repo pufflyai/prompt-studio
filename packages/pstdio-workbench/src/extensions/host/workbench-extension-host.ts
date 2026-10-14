@@ -190,6 +190,8 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
       label: text(mode.label, mode.modeId),
       basePage: mode.basePage,
       panels: mode.panelRegions,
+      layout: mode.layout,
+      actionBarEdge: mode.actionBarEdge,
       regionSettings: mode.regionSettings,
       panelHeaders: "legacy",
       floatingBubble: mode.floatingBubble,

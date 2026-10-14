@@ -139,8 +139,8 @@ test("page side enforces independent permissions and restores its authored edge"
     regionSettings: { aside: { edge: "left", acceptsTabs: false, resizable: false }, bottom: { edge: "top" } },
   });
   await w.navigation.openTarget({ kind: "page", page: overview });
-  expect(w.layout.getLayout().regions.aside.edge).toBe("left");
-  expect(w.layout.getLayout().regions.bottom.edge).toBe("top");
+  expect(w.getPanelEdge("aside")).toBe("left");
+  expect(w.getPanelEdge("bottom")).toBe("top");
   await w.shell.setRegionOpen("aside", true);
   expect(w.shell.getPanelPolicy("aside").open).toBe(true);
   const tab = w.layout.getLayout().regions.main.widgets[0]!;
@@ -148,8 +148,8 @@ test("page side enforces independent permissions and restores its authored edge"
   expect(() => w.movePanel(tab.widgetId, "aside")).toThrow("Panel cannot move");
   expect(() => w.shell.setRegionSize("aside", 200)).toThrow("Panel cannot resize");
   await w.navigation.openTarget({ kind: "page", page, resource });
-  expect(w.layout.getLayout().regions.aside.edge).toBe("right");
+  expect(w.getPanelEdge("aside")).toBe("right");
   await w.navigation.openTarget({ kind: "page", page: overview });
-  expect(w.layout.getLayout().regions.aside.edge).toBe("left");
+  expect(w.getPanelEdge("aside")).toBe("left");
   await w.dispose();
 });

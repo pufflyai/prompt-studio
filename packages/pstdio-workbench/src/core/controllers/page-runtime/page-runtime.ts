@@ -7,6 +7,7 @@ import {
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
 import { restoreAdoptedModeGeometry, restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { enforceFixedGeometry } from "../../registries/layout/panel-geometry";
 import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
@@ -128,7 +129,17 @@ const applyPageState = (
       activated.map((placement) => placement.region),
     );
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
-    const available = mode ? applyModePanelAvailability(restored, panelsForMode(mode)) : restored;
+    const composed = mode ? applyModePanelAvailability(restored, panelsForMode(mode)) : restored;
+    const available = enforceFixedGeometry(
+      {
+        ...composed,
+        modeLayout: layoutInput.modeLayout?.modeLayout ?? mode?.layout,
+        actionBarEdge: layoutInput.modeLayout?.actionBarEdge ?? mode?.actionBarEdge,
+      },
+      { ...composed, modeLayout: mode?.layout },
+      ["side", "sidenav", "main", "secondary"],
+      (panel) => input.layout.getRegionSettings(panel)?.movable !== false,
+    );
     input.layout.restoreLayout(
       storeBeforeTransition.projectId === latest.projectId
         ? reuseSingleMainView(previousLayout, available, latest.pages)

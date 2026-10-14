@@ -51,6 +51,13 @@ export const writeExtensionWithDependency = (root: string, apiVersions = `^${EXT
           source: packageAsset("./template.md", import.meta.url),
         }),
       ];
+      export const modes = [{
+        id: "arrangement", ref: { kind: "mode", id: "arrangement" }, label: "Arrangement",
+        regions: ["main", "side", "secondary"], actionBarEdge: "top",
+        layout: { axis: "horizontal", children: ["sidenav", {
+          axis: "horizontal", children: ["side", { axis: "vertical", children: ["secondary", "main"] }],
+        }] },
+      }];
     `,
   );
 
@@ -68,7 +75,7 @@ export const writeExtensionWithDependency = (root: string, apiVersions = `^${EXT
   );
   writeFileSync(
     join(extDir, "extension.ts"),
-    'import { marker } from "test-dep/feature";\nimport { templates } from "./src/contribution";\nif (typeof marker !== "string") throw new Error("dependency not loaded");\nexport default { templates };\n',
+    'import { marker } from "test-dep/feature";\nimport { modes, templates } from "./src/contribution";\nif (typeof marker !== "string") throw new Error("dependency not loaded");\nexport default { modes, templates };\n',
   );
 
   return extDir;

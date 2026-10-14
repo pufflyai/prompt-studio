@@ -35,15 +35,8 @@ export const createPanelControlsFixture = (
       return mode;
     },
   });
-  const layout = fixture.workbench.layout.getLayout();
-  fixture.workbench.layout.restoreLayout({
-    ...layout,
-    regions: {
-      ...layout.regions,
-      side: { ...layout.regions.side, edge: edges.side },
-      sidenav: { ...layout.regions.sidenav, edge: edges.sidenav },
-    },
-  });
+  if (edges.side) fixture.workbench.repositionPanel("side", edges.side);
+  if (edges.sidenav) fixture.workbench.repositionPanel("sidenav", edges.sidenav);
   fixture.workbench.shell.setRegionOpen("side", true);
   return fixture;
 };

@@ -65,6 +65,7 @@ export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePan
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "side");
   const size = modeSettings?.size ?? workbench.layout.getRegionSize("side");
   const policy = usePanelPolicy(workbench, "side");
+  const edge = useWorkbenchStore(workbench.layout.store, () => workbench.getPanelEdge("side"));
   const collapsible = policy.canClose && (modeSettings?.collapsible ?? workbench.layout.getRegionCollapsible("side"));
 
   return (
@@ -73,7 +74,7 @@ export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePan
       minH="0"
       minW="0"
       w="full"
-      resizableSide="right"
+      resizableSide={edge === "left" ? "left" : "right"}
       contentPanel={contentPanel}
       resizablePanel={
         <WorkbenchAttachedSidePanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
