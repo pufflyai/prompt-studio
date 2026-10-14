@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { stopChildProcess } from "../scripts/child-process";
+import type { StorybookPackageName } from "../scripts/storybook-config";
 import {
   getSharedStorybookBaseUrl,
   STORYBOOK_BOOT_TIMEOUT_MS,
-  type StorybookPackageName,
   startStorybookServer,
 } from "../scripts/storybook-server";
 
