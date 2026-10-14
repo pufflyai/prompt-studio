@@ -189,11 +189,19 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
     await movePanelTab(page, mainPanelHeader.getByRole("tab"), destination);
     await expect(page).toHaveURL(ticketUrl);
     await expect(ticketLink).toBeVisible();
-    await expect(rightMenu).toBeVisible();
     const moved = destination.getByRole("tab", { name: tabName!, exact: true });
     await expect(moved).toBeVisible();
+    // The 280px page side shows its Inspector as a floating menu; page bottom can attach it.
+    let movedMenu = page.locator(`[data-workbench-panel-menu="${region}-right"]`);
+    if (region === "aside") {
+      await destination.getByRole("button", { name: "Open Page side right menu", exact: true }).click();
+      movedMenu = page.getByRole("menu", { name: "Page side right menu controls", exact: true });
+    }
+    await expect(movedMenu.getByText(ticket.shorthand, { exact: true })).toBeVisible();
     await expect(destination.getByRole("textbox").first()).toHaveText("Reopen ticket details");
     if (region === "aside") {
+      await page.keyboard.press("Escape");
+      await expect(movedMenu).toBeHidden();
       expect(
         await page
           .locator('[data-workbench-panel="aside"]')
@@ -201,6 +209,7 @@ test("reopens the Main right menu from a single-resource page", async ({ page, r
       ).toBe("1px");
       await movePanelTab(page, moved, page.locator('[data-workbench-region="main"]'));
       await expect(mainPanelHeader.getByRole("tab", { name: tabName!, exact: true })).toBeVisible();
+      await expect(rightMenu.getByText(ticket.shorthand, { exact: true })).toBeVisible();
       await expect(page.getByRole("menu")).toHaveCount(0);
     }
   }
