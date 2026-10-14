@@ -24,6 +24,15 @@ export const expectNativeWindowActions = async (electronApp: ElectronApplication
     });
   }
   await test.step("delivers native menu actions to the workbench", async () => {
+    expect(
+      await electronApp.evaluate(({ Menu }) => {
+        const menu = Menu.getApplicationMenu()!.items.find(
+          (item) => item.label === (process.platform === "darwin" ? "Prompt Studio" : "Edit"),
+        )!;
+        const settings = menu.submenu!.items.find((item) => item.id === "workbench.settings.open");
+        return settings && { enabled: settings.enabled, accelerator: settings.accelerator };
+      }),
+    ).toEqual({ enabled: true, accelerator: "CmdOrCtrl+," });
     await window.evaluate(() => {
       const received: string[] = [];
       const stop = (globalThis as unknown as Window).promptStudioDesktop.onCommand((id) => received.push(id));
