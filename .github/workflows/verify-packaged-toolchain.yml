@@ -51,6 +51,20 @@ jobs:
         run: bunx playwright@1.60.0 install chromium --with-deps
 
       - name: Verify packaged Bun toolchain
+        shell: bash
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
-        run: bun run --cwd scripts verify:packages
+        run: |
+          set -o pipefail
+          mkdir -p packages/e2e/test-results/packaged-toolchain
+          bun run --cwd scripts verify:packages 2>&1 | tee packages/e2e/test-results/packaged-toolchain/verification.log
+
+      - name: Preserve failed packaged toolchain evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-toolchain-${{ matrix.platform_pkg }}-attempt-${{ github.run_attempt }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
