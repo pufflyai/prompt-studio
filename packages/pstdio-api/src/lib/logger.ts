@@ -54,3 +54,5 @@ export const sessionLogger = forComponent("sessions");
 // Startup steps are written at every log level, like desktop lifecycle events, so the log of a
 // slow or failed launch shows how far it got.
 export const startupLogger = forComponent("startup", "info");
+// A setup stall needs its last entered step even when ordinary request logs are disabled.
+export const setupLogger = forComponent("setup", "info");
