@@ -70,6 +70,8 @@
         "src/cli/run-pstdio.ts",
         "src/**/*.spec.ts",
         "src/**/*.perf.ts",
+        "src/perf/planner-moves.stress.ts",
+        "src/perf/planner-moves.validation.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
@@ -251,6 +253,7 @@
         "src/views/tags-settings-panel.tsx",
         "src/views/status-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
+        "src/commands/reorder-ticket.stress.fixture.ts",
         "src/timeline/view/entry.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
