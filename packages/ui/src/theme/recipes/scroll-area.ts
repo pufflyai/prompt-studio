@@ -6,6 +6,25 @@ export const scrollAreaSlotRecipe = defineSlotRecipe({
     viewport: {
       outline: "none",
     },
+    scrollbar: {
+      borderRadius: "2xs",
+      bg: "transparent",
+      "--thumb-bg": "colors.border",
+      "&:is(:hover, :active)": {
+        "--thumb-bg": "colors.fg.subtle",
+      },
+      // Extend the target into the viewport so the root cannot clip it away.
+      _vertical: {
+        "&::before": {
+          insetInlineStart: "calc(var(--scrollbar-size) - var(--scrollbar-click-area))",
+        },
+      },
+      _horizontal: {
+        "&::before": {
+          top: "calc(var(--scrollbar-size) - var(--scrollbar-click-area))",
+        },
+      },
+    },
     content: {
       // Keep changing scrollbar geometry out of transcript styles. See ADR 0066.
       "--thumb-width": "initial",
@@ -16,6 +35,16 @@ export const scrollAreaSlotRecipe = defineSlotRecipe({
       "--scroll-area-overflow-x-end": "initial",
       "--scroll-area-overflow-y-start": "initial",
       "--scroll-area-overflow-y-end": "initial",
+    },
+  },
+  variants: {
+    size: {
+      xs: {
+        root: {
+          "--scrollbar-size": "sizes.scrollbar-thin",
+          "--scrollbar-click-area": "spacing.xs",
+        },
+      },
     },
   },
 });

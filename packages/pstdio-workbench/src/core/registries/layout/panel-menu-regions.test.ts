@@ -8,6 +8,7 @@ describe("Panel menu regions", () => {
       main: { left: "main-left-menu", right: "main-right-menu" },
       secondary: { left: "secondary-left-menu", right: "secondary-right-menu" },
       side: { left: "side-left-menu", right: "side-right-menu" },
+      aside: { left: "aside-left-menu", right: "aside-right-menu" },
       bottom: { left: "bottom-left-menu", right: "bottom-right-menu" },
     });
 
@@ -21,6 +22,8 @@ describe("Panel menu regions", () => {
   });
 
   test("projects each menu from the anchor owned by its Panel", () => {
+    expect(getSurface("aside-left-menu")).toMatchObject({ reads: ["primary"] });
+    expect(getSurface("aside-right-menu")).toMatchObject({ reads: ["primary"] });
     expect(getSurface("main-left-menu")).toMatchObject({ reads: ["primary"] });
     expect(getSurface("main-right-menu")).toMatchObject({ reads: ["primary"] });
     expect(getSurface("secondary-left-menu")).toMatchObject({ reads: ["secondary"] });

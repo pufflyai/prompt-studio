@@ -71,7 +71,9 @@ export const resolveCodexCommand = (
   } = {},
 ) => {
   const platform = input.platform ?? process.platform;
-  const which = input.which ?? ((command: string) => (typeof Bun.which === "function" ? Bun.which(command) : null));
+  const which =
+    input.which ??
+    ((command: string) => (typeof Bun.which === "function" ? Bun.which(command, { PATH: process.env.PATH }) : null));
   const exists = input.exists ?? existsSync;
   const resolved = which("codex");
 
@@ -84,15 +86,18 @@ export const resolveCodexCommand = (
 };
 
 export const defaultSpawnProcess = (args: string[], options?: { cwd?: string; env?: Record<string, string> }) => {
-  const command = resolveCodexCommand();
+  const command = resolveCodexCommand({
+    which: (name) => Bun.which(name, { PATH: options?.env?.PATH ?? process.env.PATH }),
+  });
   // `child_process.spawn` can't launch a `.cmd`/`.bat` directly on Windows;
   // fall back to a shell only when we couldn't resolve the native binary.
   const useShell = process.platform === "win32" && isWindowsShim(command);
   const child = spawn(command, args, {
     stdio: ["pipe", "pipe", "pipe"],
     cwd: options?.cwd,
-    env: { ...process.env, ...options?.env },
+    env: options?.env ?? process.env,
     windowsHide: true,
+    detached: process.platform !== "win32",
     shell: useShell,
   }) as ChildProcess;
 
@@ -104,13 +109,27 @@ export const defaultSpawnProcess = (args: string[], options?: { cwd?: string; en
     child.once("exit", (code, signal) => resolve({ code, signal }));
     child.once("error", () => resolve({ code: 1, signal: null }));
   });
+  const pid = child.pid;
 
   return {
     stdin: child.stdin!,
     stdout: child.stdout!,
     stderr: child.stderr!,
-    pid: child.pid,
-    kill: () => child.kill(),
+    pid,
+    kill: () => {
+      if (process.platform === "win32") {
+        child.kill();
+        return;
+      }
+      // The npm launcher and native server share this owned process group.
+      // It still exists when the launcher exits before its native child.
+      if (!pid || pid < 1) return;
+      try {
+        process.kill(-pid, "SIGTERM");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ESRCH") child.kill();
+      }
+    },
     onExit,
   };
 };

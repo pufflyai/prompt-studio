@@ -8,7 +8,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 export const registerSessionQuerySmokeTests = () => {
-  test("packaged session queries expose saved usage through extension commands and HTTP", async () => {
+  test("packaged session APIs expose usage, execution exits, and guarded follow-ups", async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-session-query-"));
     let child: ChildProcess | undefined;
     try {
@@ -40,7 +40,8 @@ export const registerSessionQuerySmokeTests = () => {
           }],
           commands: [{ id: "read", ref: { kind: "command", id: "read" }, title: "Read sessions",
             run(ctx, params) { return ctx.sessions.query({ cursor: params?.cursor, agent: "test.session-query.harness.worker", status: ["completed"] }); }
-          }]
+          }, {id:"inspect",ref:{kind:"command",id:"inspect"},title:"Inspect execution",run(ctx,params){return ctx.sessions.get(params.sessionId);}},
+          {id:"continue",ref:{kind:"command",id:"continue"},title:"Guarded continuation",async run(ctx,params){try{await ctx.sessions.followup({sessionId:params.sessionId,prompt:"Automatic continuation",expectedRun:params.expectedRun});return {accepted:true};}catch(error){return {accepted:false,error:error.message};}}}]
         };
       `,
       );
@@ -99,6 +100,39 @@ export const registerSessionQuerySmokeTests = () => {
         `/sessions?project_id=${project.id}&created_from=${encodeURIComponent(session.created_at)}`,
       );
       expect(rows).toMatchObject([{ id: session.id, usage_json: usage }]);
+      const execute = async (id: string, params: unknown) =>
+        (
+          await request(`/projects/${project.id}/extensions/commands/test.session-query.command.${id}/execute`, {
+            source: "api",
+            params,
+          })
+        ).outcome.value;
+      const observed = await execute("inspect", { sessionId: session.id });
+      expect(observed.last_exit).toMatchObject({
+        cause: "completed",
+        startedAt: observed.last_request_started,
+        endedAt: observed.last_request_ended,
+      });
+      const stopped = await fetch(`${runtime.baseUrl}/v1/sessions/${session.id}/status`, {
+        method: "PATCH",
+        headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      expect(stopped.status).toBe(200);
+      const continuation = await execute("continue", {
+        sessionId: session.id,
+        expectedRun: {
+          status: observed.status,
+          startedAt: observed.last_request_started,
+          endedAt: observed.last_request_ended,
+        },
+      });
+      expect(continuation).toMatchObject({ accepted: false });
+      expect(continuation.error).toContain("execution changed");
+      expect(await execute("inspect", { sessionId: session.id })).toMatchObject({
+        status: "cancelled",
+        last_exit: { cause: "user_stop" },
+      });
     } finally {
       if (child) await stopProcess(child);
       rmSync(root, { recursive: true, force: true });

@@ -33,7 +33,7 @@ const pageView = defineView({
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
 describe("page input validation", () => {
-  test("normalizes page menus and bottom slots independently of mode panels", () => {
+  test("normalizes page menus and both page panels independently of mode panels", () => {
     const mode = defineMode({ id: "page-only", label: "Page only", regions: ["main"] });
     const page = definePage({
       id: "page-tools",
@@ -42,8 +42,15 @@ describe("page input validation", () => {
       mode: mode.ref,
       main: { kind: "panels", empty: pageView.ref },
       panelMenus: { left: undefined, right: { view: pageView.ref, size: { defaultPx: 200 }, collapsible: false } },
-      regionSettings: { main: { showHeader: false }, bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
-      slots: [{ id: "tools", region: "bottom", item: { kind: "view", view: pageView.ref, presence: "open" } }],
+      regionSettings: {
+        main: { showHeader: false },
+        aside: { acceptsTabs: false, canClose: false },
+        bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true },
+      },
+      slots: [
+        { id: "session", region: "aside", item: { kind: "view", view: pageView.ref, presence: "open" } },
+        { id: "tools", region: "bottom", item: { kind: "view", view: pageView.ref, presence: "open" } },
+      ],
     });
     const runtime = normalizeExtensionSources([
       source(defineExtension({ modes: [mode], views: [pageView], pages: [page] })),
@@ -54,7 +61,8 @@ describe("page input validation", () => {
       kind: "view",
       id: "page",
     });
-    expect(runtime.pages[0]?.contribution.slots[0]?.region).toBe("bottom");
+    expect(runtime.pages[0]?.contribution.slots.map((slot) => slot.region)).toEqual(["aside", "bottom"]);
+    expect(runtime.pages[0]?.contribution.regionSettings?.aside).toEqual({ acceptsTabs: false, canClose: false });
     expect(runtime.pages[0]?.contribution.regionSettings?.main).toEqual({ showHeader: false });
   });
   test("reports a missing view in a page menu", () => {

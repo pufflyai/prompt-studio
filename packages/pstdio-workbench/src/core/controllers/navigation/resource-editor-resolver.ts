@@ -148,6 +148,7 @@ export const prepareEditorActivation = (
       core.focus.setActiveRegion(
         editor.region === "main" ||
           editor.region === "bottom" ||
+          editor.region === "aside" ||
           editor.region === "side" ||
           editor.region === "secondary"
           ? editor.region

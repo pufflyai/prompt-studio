@@ -24,7 +24,7 @@ export const writeNavigationExtension = (root: string) => {
       placements: [{ id: "policy-tools", ref: { kind: "placement", id: "policy-tools" }, mode: { kind: "mode", id: "policy" }, region: "secondary", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "closed" } }],
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
       views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", instancePolicy: "per-resource", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
-      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, modes: [{ kind: "mode", extensionId: "pstdio", id: "project" }, { kind: "mode", id: "preview" }], resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, panelMenus: { right: { view: { kind: "view", id: "document" }, collapsible: false, size: { defaultPx: 200 } } }, regionSettings: { main: { showHeader: false }, bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } }, slots: [{ id: "tools", region: "bottom", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } }], panels: {} }],
+      pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, modes: [{ kind: "mode", extensionId: "pstdio", id: "project" }, { kind: "mode", id: "preview" }], resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, panelMenus: { right: { view: { kind: "view", id: "document" }, collapsible: false, size: { defaultPx: 200 } } }, regionSettings: { main: { showHeader: false }, aside: { size: { defaultPx: 280, minPx: 160 }, acceptsTabs: true, canClose: false }, bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } }, slots: [{ id: "session", region: "aside", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } }, { id: "tools", region: "bottom", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } }], panels: {} }],
       commands: [{
       id: "open-document", ref: { kind: "command", id: "open-document" }, title: "Open document",
       run(ctx: { navigation: { open(target: unknown): void } }) {
@@ -69,8 +69,15 @@ export const expectPackagedNavigation = async (input: {
           size: { defaultPx: 200 },
         },
       },
-      regionSettings: { main: { showHeader: false }, bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } },
-      slots: [expect.objectContaining({ id: "tools", region: "bottom" })],
+      regionSettings: {
+        main: { showHeader: false },
+        aside: { size: { defaultPx: 280, minPx: 160 }, acceptsTabs: true, canClose: false },
+        bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true },
+      },
+      slots: [
+        expect.objectContaining({ id: "session", region: "aside" }),
+        expect.objectContaining({ id: "tools", region: "bottom" }),
+      ],
     }),
   );
   expect(metadata.modes).toContainEqual(

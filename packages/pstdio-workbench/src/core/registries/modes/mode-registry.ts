@@ -52,7 +52,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   let transitioning = false;
 
   const settingsForMode = (mode: WorkbenchModeContribution) => (region: WorkbenchRegion) =>
-    region === "bottom" ? undefined : { ...input.regionSettings?.[region], ...mode.regionSettings?.[region] };
+    region === "bottom" || region === "aside"
+      ? undefined
+      : { ...input.regionSettings?.[region], ...mode.regionSettings?.[region] };
 
   const initializeMode = (mode: WorkbenchModeContribution) => {
     if (initializedModes.has(mode.id)) return;

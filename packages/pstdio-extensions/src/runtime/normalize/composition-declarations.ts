@@ -38,7 +38,7 @@ const item = z.discriminatedUnion("kind", [
 const slot = z
   .object({
     id: z.string(),
-    region: z.enum(["main", "side", "secondary", "bottom"]),
+    region: z.enum(["main", "side", "secondary", "bottom", "aside"]),
     item,
     order: z.number().optional(),
     openOn: z.literal("page-resource").optional(),
@@ -90,6 +90,7 @@ export const pageDeclarationSchema = z
       .object({
         main: panelSettingsSchema.pick({ showHeader: true }).optional(),
         bottom: panelSettingsSchema.optional(),
+        aside: panelSettingsSchema.optional(),
       })
       .strict()
       .optional(),

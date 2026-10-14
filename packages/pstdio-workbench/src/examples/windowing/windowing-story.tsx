@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Stack, type StackProps, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useWorkbenchStore, useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { boomboxTheme, kilnTheme } from "../showcases/themes";
@@ -127,13 +127,14 @@ const ShowcaseControls = (props: ControlsProps) => {
 };
 
 interface WindowingStoryProps {
+  width?: StackProps["width"];
   initialPage?: "workspace" | "webview";
   mode?: WindowingMode;
   createFixture?: () => WindowingFixture;
 }
 
 export const WindowingStory = (props: WindowingStoryProps) => {
-  const { initialPage = "workspace", mode = "windowing", createFixture } = props;
+  const { width, initialPage = "workspace", mode = "windowing", createFixture } = props;
   const [fixture] = useState(() => {
     const next = createFixture ? createFixture() : createWindowingFixture(mode);
     if (initialPage === "webview")
@@ -163,7 +164,7 @@ export const WindowingStory = (props: WindowingStoryProps) => {
       initialThemePreference={initialThemePreferences[fixture.mode]}
       themePreferences={themePreferences}
     >
-      <Stack key={generation} h="100dvh" gap="0" overflow="hidden">
+      <Stack key={generation} w={width} h="100dvh" gap="0" overflow="hidden">
         {fixture.mode === "windowing" ? (
           <WindowingControls fixture={fixture} reload={reload} />
         ) : (

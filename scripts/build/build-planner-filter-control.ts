@@ -3,12 +3,14 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dir, "../..");
 const uiRoot = resolve(root, "packages/ui");
 const ui = await Bun.file(resolve(uiRoot, "package.json")).json();
+const planner = await Bun.file(resolve(root, "extensions/pstdio-planner/package.json")).json();
 const entry = resolve(uiRoot, ui.exports["./collection-view"].import);
 const result = await Bun.build({
   entrypoints: ["planner-filter-control"],
   target: "browser",
   minify: true,
-  external: [...Object.keys(ui.dependencies), ...Object.keys(ui.peerDependencies)],
+  // The portable module can import only packages its consumer installs.
+  external: [...Object.keys(planner.dependencies), ...Object.keys(planner.peerDependencies ?? {})],
   plugins: [
     {
       name: "planner-filter-control",

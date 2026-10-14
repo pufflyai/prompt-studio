@@ -203,6 +203,40 @@ describe("DesktopRuntimeManager", () => {
     expect(unexpected).toBe(0);
   });
 
+  test.skipIf(process.platform === "win32")(
+    "starts the runtime with the bundled pst first on PATH, so its agents can run pst",
+    async () => {
+      const child = new RuntimeChild();
+      const discoveries = [{ state: "missing" as const }, { state: "healthy" as const, descriptor }];
+      let path: string | undefined;
+      const manager = new DesktopRuntimeManager(
+        {
+          descriptorPath: "/tmp/runtime.json",
+          resolveSidecarPath: () => "/Applications/Prompt Studio.app/Contents/Resources/bin/pstdio",
+          onIntentionalShutdown: () => {},
+          onUnexpectedExit: () => {},
+          onPhase: () => {},
+        },
+        {
+          resolveEnvironment: async () => ({ PATH: "/opt/homebrew/bin:/usr/bin:/bin" }),
+          createInstanceId: () => descriptor.instanceId,
+          discoverRuntime: async () => discoveries.shift()!,
+          existsSync: () => true,
+          observeRuntimeShutdown: async () => {},
+          sleep: async () => {},
+          spawn: (_path, _args, options) => {
+            path = options.env.PATH;
+            return child;
+          },
+        },
+      );
+
+      await manager.start();
+
+      expect(path).toBe("/Applications/Prompt Studio.app/Contents/Resources/bin:/opt/homebrew/bin:/usr/bin:/bin");
+    },
+  );
+
   test("attaches an explicit external runtime without process ownership checks or sidecar selection", async () => {
     let discovered = false;
     let selectedSidecar = false;

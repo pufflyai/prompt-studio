@@ -1,7 +1,12 @@
-import type { WorkbenchLayout, WorkbenchRegion } from "./layout-types";
+import type { WorkbenchLayout, WorkbenchRegion, WorkbenchRegionSettings } from "./layout-types";
 
 export const isPageRegion = (region: WorkbenchRegion) =>
-  region === "main" || region.startsWith("main-") || region === "bottom" || region.startsWith("bottom-");
+  region === "main" ||
+  region.startsWith("main-") ||
+  region === "bottom" ||
+  region.startsWith("bottom-") ||
+  region === "aside" ||
+  region.startsWith("aside-");
 
 export const restoreOwnerRegion = (
   layout: WorkbenchLayout,
@@ -31,19 +36,31 @@ export const ownerRegionSelection = (
   return isPageRegion(regionId) ? [page, mode] : [mode, page];
 };
 
-export const restorePageGeometry = (layout: WorkbenchLayout, geometry?: WorkbenchLayout) => {
-  if (!geometry) return layout;
+export const restorePageGeometry = (
+  layout: WorkbenchLayout,
+  geometry?: WorkbenchLayout,
+  settings?: Partial<Record<"aside" | "bottom", WorkbenchRegionSettings>>,
+) => {
+  if (!geometry && !settings) return layout;
   const regions = { ...layout.regions };
   for (const id of [
     "main",
     "bottom",
+    "aside",
+    "aside-left-menu",
+    "aside-right-menu",
     "main-left-menu",
     "main-right-menu",
     "bottom-left-menu",
     "bottom-right-menu",
   ] as const) {
-    regions[id] = { ...regions[id], size: geometry.regions[id].size };
+    if (geometry) regions[id] = { ...regions[id], size: geometry.regions[id].size, edge: geometry.regions[id].edge };
   }
+  for (const id of ["aside", "bottom"] as const)
+    regions[id] = {
+      ...regions[id],
+      edge: regions[id].edge ?? settings?.[id]?.edge ?? (id === "aside" ? "right" : "bottom"),
+    };
   return { ...layout, regions };
 };
 

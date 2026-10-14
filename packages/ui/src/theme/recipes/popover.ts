@@ -36,6 +36,13 @@ export const popoverRecipe = defineSlotRecipe({
   },
   variants: {
     variant: {
+      panel: {
+        content: { "--popover-size": "sizes.popover-panel", padding: "md", gap: "md", borderColor: "border" },
+        header: { padding: "0" },
+        title: { textStyle: "label/M/medium" },
+        body: { padding: "0" },
+        footer: { padding: "0" },
+      },
       responsive: {
         content: { width: "unset" },
       },

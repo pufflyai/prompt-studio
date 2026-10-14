@@ -1,7 +1,6 @@
-import { Icon } from "@chakra-ui/react";
-import type { ReactElement } from "react";
+import { Tooltip as ChakraTooltip, Icon, Portal } from "@chakra-ui/react";
+import { type ReactElement, useId } from "react";
 import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
-import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem } from "./list-row.types";
 import { ListRowMenu } from "./list-row-menu";
 
@@ -28,6 +27,7 @@ interface ListRowChromeProps {
 
 export const ListRowChrome = (props: ListRowChromeProps) => {
   const { children, item, menuOpen, onMenuOpenChange, onMenuSelect } = props;
+  const generatedTriggerId = useId();
 
   if (item.menuItems && item.menuItems.length > 0) {
     return (
@@ -44,8 +44,32 @@ export const ListRowChrome = (props: ListRowChromeProps) => {
     );
   }
 
-  const row = item.tooltip ? <Tooltip content={item.tooltip}>{children}</Tooltip> : children;
-  if (!item.contextMenuItems || item.contextMenuItems.length === 0) return row;
+  // The context menu clones its direct child, so the tooltip trigger part must be that child: both then attach
+  // their handlers to the row. The row keeps its own id when the props merge, so the tooltip finds it by that id.
+  const triggerId = (children.props as { id?: string }).id ?? generatedTriggerId;
+  const trigger = item.tooltip ? (
+    <ChakraTooltip.Trigger asChild id={triggerId}>
+      {children}
+    </ChakraTooltip.Trigger>
+  ) : (
+    children
+  );
+  const row =
+    item.contextMenuItems && item.contextMenuItems.length > 0 ? (
+      <ResourceContextMenu actions={createResourceContextActions(item.contextMenuItems)}>{trigger}</ResourceContextMenu>
+    ) : (
+      trigger
+    );
+  if (!item.tooltip) return row;
 
-  return <ResourceContextMenu actions={createResourceContextActions(item.contextMenuItems)}>{row}</ResourceContextMenu>;
+  return (
+    <ChakraTooltip.Root openDelay={100} closeDelay={100} ids={{ trigger: triggerId }}>
+      {row}
+      <Portal>
+        <ChakraTooltip.Positioner>
+          <ChakraTooltip.Content>{item.tooltip}</ChakraTooltip.Content>
+        </ChakraTooltip.Positioner>
+      </Portal>
+    </ChakraTooltip.Root>
+  );
 };

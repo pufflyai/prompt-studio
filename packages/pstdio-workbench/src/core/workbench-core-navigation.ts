@@ -19,7 +19,8 @@ const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) =>
 };
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
-  if (region === "bottom" || region === "secondary" || region === "side") core.shell.revealRegion(region);
+  if (region === "bottom" || region === "aside" || region === "secondary" || region === "side")
+    core.shell.revealRegion(region);
 };
 
 export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =>

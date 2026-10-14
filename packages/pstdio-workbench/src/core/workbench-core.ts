@@ -109,7 +109,7 @@ const resolveRegionSettings = (
 ) => {
   const pageId = core ? getWorkbenchPageRegistryInternals(core.pages).getPublishingState().activePageId : undefined;
   const page = pageId ? core?.pages.getPage(pageId) : undefined;
-  if (regionId === "bottom") return page?.regionSettings?.bottom;
+  if (regionId === "bottom" || regionId === "aside") return page?.regionSettings?.[regionId];
   const activeModeId = core?.modes.getActiveModeId();
   const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
   return {

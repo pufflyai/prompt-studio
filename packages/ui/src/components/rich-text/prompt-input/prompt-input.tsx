@@ -14,6 +14,7 @@ import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin"
 import { CommentPlugin } from "./plugins/CommentPlugin/CommentPlugin";
 import { CommentNode } from "./plugins/CommentPlugin/nodes/CommentNode/CommentNode";
 import { CommandMenuPlugin, type PromptCommand } from "./plugins/command-menu-plugin";
+import { FocusRequestPlugin } from "./plugins/focus-request-plugin";
 import { ImperativeAPIPlugin, type PromptEditorRef } from "./plugins/ImperativeAPIPlugin";
 import { KeyboardShortcutPlugin } from "./plugins/KeyboardShortcutPlugin";
 import { PreserveSelectionPlugin, type PromptSelectionSnapshot } from "./plugins/preserve-selection-plugin";
@@ -26,6 +27,12 @@ export interface PromptEditorProps {
   onSelectionChange?: (selection: PromptSelectionSnapshot) => void;
   debug?: boolean;
   isEditable?: boolean;
+  /**
+   * Focus the editor as soon as it is editable, then call `onFocusRequestComplete`. The caller clears the
+   * request there. Focus stays in a field or embedded view the person moved to while the editor was locked.
+   */
+  focusRequested?: boolean;
+  onFocusRequestComplete?: () => void;
   placeholder?: ReactElement | ((isEditable: boolean) => ReactElement | null);
   onChange?: (text: string, state: object) => void;
   onError?: (error: Error) => void;
@@ -40,6 +47,7 @@ const nodes = [CommentNode, MarkNode];
 
 export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptEditorProps> = (props, ref) => {
   const { initialSelection, onSelectionChange, defaultState, debug = false, isEditable = true, placeholder } = props;
+  const { focusRequested = false, onFocusRequestComplete } = props;
   const { onChange, onError = () => {}, onSubmit, onRecallPrevious, onRecallNext, commands = [] } = props;
 
   const initialConfig = {
@@ -90,6 +98,8 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
           initialSelection={initialSelection}
           onSelectionChange={onSelectionChange}
         />
+        {/* After selection preservation, so the restore listener exists before this plugin focuses. */}
+        <FocusRequestPlugin requested={focusRequested} isEditable={isEditable} onComplete={onFocusRequestComplete} />
         <CommentPlugin />
         <KeyboardShortcutPlugin onSubmit={onSubmit} onRecallPrevious={onRecallPrevious} onRecallNext={onRecallNext} />
         <CommandMenuPlugin key={commands.map((command) => command.name).join("\n")} commands={commands} />

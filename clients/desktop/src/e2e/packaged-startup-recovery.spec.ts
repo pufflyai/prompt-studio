@@ -52,12 +52,16 @@ test("recovers from a stalled runtime and retries without replacing its owner", 
       contentType: "image/png",
     });
 
+    const previousRecovery = await app.lifecyclePage
+      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
+      .elementHandle();
     resumeProcess(runtime.pid);
     suspendedPid = null;
     await app.lifecyclePage.keyboard.press("Tab");
     const retry = app.lifecyclePage.getByRole("button", { name: "Retry", exact: true });
     await expect(retry).toBeFocused();
     await app.lifecyclePage.keyboard.press("Enter");
+    await previousRecovery!.waitForElementState("hidden");
     const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
     await expect(workbench.locator("#root")).not.toBeEmpty();
     expect(readDescriptor(home)).toEqual(runtime);
@@ -99,8 +103,12 @@ test("keeps an uncertain runtime owner intact until its descriptor is repaired",
     expect(readiness.ok).toBe(true);
     expect(await readiness.json()).toMatchObject({ instanceId: runtime.instanceId });
 
+    const previousRecovery = await app.lifecyclePage
+      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
+      .elementHandle();
     writeFileSync(descriptorPath, originalDescriptor);
     await app.lifecyclePage.getByRole("button", { name: "Retry", exact: true }).click();
+    await previousRecovery!.waitForElementState("hidden");
     const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
     await expect(workbench.locator("#root")).not.toBeEmpty();
     expect(readDescriptor(home)).toEqual(runtime);

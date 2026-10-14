@@ -49,8 +49,9 @@ const config: ForgeConfig = {
     prune: false,
     osxSign: signing.osxSign && {
       ...signing.osxSign,
-      // The runtime is already signed before its manifest is generated.
-      ignore: (filePath) => filePath.endsWith("/Contents/Resources/bin/pstdio"),
+      // The runtime is already signed before its manifest is generated. The signer follows the pst link
+      // to the runtime too, so it must skip the whole folder.
+      ignore: (filePath) => filePath.includes("/Contents/Resources/bin/"),
     },
     osxNotarize: signing.osxNotarize,
     windowsSign: signing.windowsSign,

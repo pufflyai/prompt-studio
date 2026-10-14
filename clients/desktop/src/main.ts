@@ -261,13 +261,16 @@ const bootstrap = async () => {
     quitApp: quitFlow.requestQuit,
     getWorkbenchState: () => workbenchState.getState(),
     getProjectTabs: () => projectTabs.getProjectTabs(),
-    setProjectTabs: (value) => projectTabs.setProjectTabs(value),
+    setProjectTabs: async (value) => {
+      const { projectIds } = await projectTabs.setProjectTabs(value);
+      // Offer the pst command once the person has a project, so the first launch asks for nothing.
+      if (projectIds.length > 0) void cliSetup?.offerOnce();
+    },
     setWorkbenchItem: (key, value) => workbenchState.setItem(key, value),
     performance: performanceMonitor,
   });
   void performanceMonitor.start();
   await startRuntime();
-  void cliSetup?.onFirstLaunch();
   // Squirrel.Windows still holds its update lock on first run, so wait for the interval.
   if (!process.argv.includes("--squirrel-firstrun")) void updateManager.checkInBackground();
   setInterval(() => void updateManager.checkInBackground(), UPDATE_CHECK_INTERVAL_MS);

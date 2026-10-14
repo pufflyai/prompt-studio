@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWindowingFixture } from "./fixture";
+import { moveStoryTab } from "./tab-moves";
 import { visibleWindowingLabel } from "./visible-label";
 import { WindowingStory } from "./windowing-story";
 
@@ -14,9 +15,7 @@ type Story = StoryObj<typeof meta>;
 
 const moveTab = async (panel: HTMLElement, name: string, destination: string) => {
   const tab = within(panel).getByRole("tab", { name: new RegExp(`^${name}(?: ·|$)`) });
-  tab.focus();
-  await userEvent.keyboard("{Shift>}{F10}{/Shift}");
-  await userEvent.click(await within(document.body).findByRole("menuitem", { name: `Move to ${destination}` }));
+  await moveStoryTab(tab, destination);
 };
 
 export const OwnerTransfer: Story = {
@@ -123,9 +122,12 @@ export const FixedPageTransfer: Story = {
     await moveTab(main, "Changes", "Side");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
     const side = canvasElement.querySelector('[data-workbench-panel="side"]') as HTMLElement;
+    await waitFor(() =>
+      expect(visibleWindowingLabel(canvasElement, "Inspector binding")).toHaveTextContent("Workspace 2"),
+    );
     await moveTab(side, "Changes", "Main");
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 1" }));
-    await expect(within(main).queryByRole("tab", { name: /^Changes(?: ·|$)/ })).not.toBeInTheDocument();
+    await waitFor(() => expect(within(main).queryByRole("tab", { name: /^Changes(?: ·|$)/ })).not.toBeInTheDocument());
     await expect(canvas.getByRole("textbox", { name: "Files draft" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Workspace 2" }));
     const liveMoved = main.querySelector(`[data-workbench-tab="${instanceId}"]`) as HTMLElement;

@@ -33,7 +33,8 @@ export const verifyPackagedSessionMenus = async (
     }),
   ).toBeVisible();
   const side = page.locator('[data-workbench-panel="side"]:visible');
-  await side.getByRole("button", { name: "side header options", exact: true }).click();
+  await side.getByLabel("side header", { exact: true }).focus();
+  await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
   const edge = side.getByLabel("side header edge", { exact: true });
   await expect(edge).toBeVisible();
