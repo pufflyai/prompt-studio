@@ -64,13 +64,14 @@ Download `windows-signed-candidate` for manual installation. Follow [manual plat
 
 Without local Windows hardware, run **Verify Windows installation and update**.
 Supply a successful signing run ID and an older `pstdio@<version>` tag. The job
-builds and signs the older version, installs its Setup on a fresh Windows runner,
+downloads the published older Windows files, installs their Setup on a fresh Windows runner,
 and applies the newer candidate with the installed Squirrel updater. It checks
 installed signatures, versions, project preservation, shutdown, and release
 artifact preparation. Screenshots and results are uploaded as
 `windows-installation-readiness`; prepared files remain unpublished.
-Use the optional baseline run ID to repeat acceptance with an existing signed
-baseline artifact instead of building and signing that version again.
+Every run downloads the published baseline. The check retains both the matching
+and complete Start menu shortcut lists before asserting,
+plus Squirrel's install and shortcut logs.
 
 This candidate check uses a loopback feed containing the generated `RELEASES`
 and unchanged nupkg. It does not prove the app's public GitHub release lookup,
