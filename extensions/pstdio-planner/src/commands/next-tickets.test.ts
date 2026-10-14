@@ -1,8 +1,9 @@
 import { expect, test } from "bun:test";
-import { putAttempt } from "../data/attempt-storage";
+import { listAttempts, putAttempt } from "../data/attempt-storage";
 import { putTicket, tagsCollection } from "../data/collections";
 import { seedDefaultTags } from "../data/seed";
 import { fixture } from "./auto-build.fixture";
+import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
@@ -179,4 +180,55 @@ test("next tickets can explain waits without resolving a Git base when nothing c
   expect((await nextTicketsCommand.run(ctx, { track: "Workbench" })).waiting).toMatchObject([
     { reason: "capacity-full" },
   ]);
+});
+
+test("wake checks, next queries and dispatch share the supervisor scope", async () => {
+  const { ctx, storage, ticket } = await trackFixture();
+  const workbench = await ticket("Requested work");
+  const planner = await ticket("Work outside the prompt", "planner");
+  await storage.set("auto-build-supervisor", {
+    scope: { revision: "test", queries: [{ track: "Workbench" }] },
+  });
+  expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id]);
+  expect((await nextTicketsCommand.run(ctx, { track: "Planner" })).tickets).toEqual([]);
+  expect(await autoBuildDispatchCommand.run(ctx, { ticket: planner.id, revision: "test" })).toMatchObject({
+    decision: "wait",
+    reason: "ticket-not-ready",
+  });
+});
+
+test("supervisor scopes combine tracks and expire when the prompt is reconfigured", async () => {
+  const { ctx, storage, ticket } = await trackFixture();
+  const workbench = await ticket("Workbench work");
+  const planner = await ticket("Planner work", "planner");
+  await storage.set("auto-build-supervisor", {
+    scope: { revision: "test", queries: [{ track: "Workbench" }, { track: "Planner" }] },
+  });
+  expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id, planner.id]);
+  await storage.set("auto-build-supervisor", {
+    scope: { revision: "old-prompt", queries: [{ track: "Workbench" }] },
+  });
+  expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toEqual([workbench.id, planner.id]);
+});
+
+test("a scope change during dispatch prevents launching work outside the new scope", async () => {
+  const { ctx, storage, ticket } = await trackFixture();
+  const task = await ticket("Requested work");
+  await ticket("New scope", "planner");
+  await storage.set("auto-build-supervisor", {
+    scope: { revision: "test", queries: [{ track: "Workbench" }] },
+  });
+  const run = ctx.process.run;
+  let checks = 0;
+  ctx.process.run = async (input) => {
+    if (input.command.includes("--verify") && ++checks === 2)
+      await storage.set("auto-build-supervisor", {
+        scope: { revision: "test", queries: [{ track: "Planner" }] },
+      });
+    return run(input);
+  };
+  await expect(autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).rejects.toThrow(
+    "no longer ready",
+  );
+  expect(await listAttempts(storage)).toHaveLength(0);
 });

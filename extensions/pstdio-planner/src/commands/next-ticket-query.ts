@@ -1,14 +1,21 @@
 import { resolveByIdOrName } from "@pstdio/sdk/data";
 import type { CommandContext } from "@pstdio/sdk/extensions";
+import type { NextTicketQuery } from "../data/auto-build-supervisor";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
 import type { Plan, PlanRow } from "../timeline/contracts";
 
-export interface NextTicketQuery {
-  track?: string;
-  status?: string;
-  tags?: string[];
-  parent?: string;
+export type { NextTicketQuery } from "../data/auto-build-supervisor";
+
+export async function selectNextTicketScopeRows(
+  ctx: CommandContext,
+  plan: Plan,
+  tickets: StoredTicket[],
+  queries: NextTicketQuery[],
+) {
+  const matches = await Promise.all(queries.map((query) => selectNextTicketRows(ctx, plan, tickets, query)));
+  const ids = new Set(matches.flat().map(({ id }) => id));
+  return plan.sections.flatMap(({ rows }) => rows).filter(({ id }) => ids.has(id));
 }
 
 export async function selectNextTicketRows(

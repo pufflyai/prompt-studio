@@ -4,6 +4,7 @@ import { findPendingPrerequisites } from "../data/attempt-readiness";
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import { usableAutoBuildIgnore } from "../data/auto-build-ignore";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
+import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { resolveImplementationBase } from "../data/implementation-targets";
 import { readTicketReviewRequests } from "../data/review-request-storage";
@@ -13,11 +14,17 @@ import { loadAttemptReadiness, readImplementationCapacity } from "./attempt-read
 import { readAutoBuildResumptions } from "./auto-build-resume";
 import { readAutoBuildAssignments } from "./auto-build-sessions";
 import { canOfferStackRepair, readSelectedStackRepair } from "./next-stack-repair";
-import { type NextTicketQuery, selectNextTicketRows } from "./next-ticket-query";
+import { type NextTicketQuery, selectNextTicketRows, selectNextTicketScopeRows } from "./next-ticket-query";
 import type { NextTicket, WaitingTicket } from "./next-ticket-types";
 import { nextTicketWait } from "./next-ticket-wait";
+import { nextWorkSnapshot } from "./next-work-snapshot";
 
-export async function readNextTickets(ctx: CommandContext, mode: AutoBuildMode, input: NextTicketQuery = {}) {
+export async function readNextTickets(
+  ctx: CommandContext,
+  mode: AutoBuildMode,
+  input: NextTicketQuery = {},
+  scope?: NextTicketQuery[],
+) {
   const [plan, attempts, tickets, resumptions, capacity, assignments, requests] = await Promise.all([
     readPlanCommand.run(ctx, {}),
     listAttempts(ctx.storage),
@@ -38,12 +45,17 @@ export async function readNextTickets(ctx: CommandContext, mode: AutoBuildMode, 
   const query = timelineQueryData(plan, (_key, fallback) => fallback ?? _key);
   const ignore = usableAutoBuildIgnore(mode.ignore, query.attributes);
   const ignored = new Set(ignore ? filterRowsByView(query.rows, ignore, query.attributes).map(({ id }) => id) : []);
-  const selected = await selectNextTicketRows(ctx, plan, tickets, input);
+  const supervisor = await readAutoBuildSupervisor(ctx);
+  const queries = scope ?? (supervisor.scope?.revision === mode.revision ? supervisor.scope.queries : [{}]);
+  const scoped = await selectNextTicketScopeRows(ctx, plan, tickets, queries);
+  const scopedIds = new Set(scoped.map(({ id }) => id));
+  const selected = (await selectNextTicketRows(ctx, plan, tickets, input)).filter(
+    ({ id }) => scopedIds.has(id) && !ignored.has(id) && !byId.get(id)?.draft,
+  );
   const next: NextTicket[] = [];
   const waiting: WaitingTicket[] = [];
   let base: string | undefined;
   for (const row of selected) {
-    if (ignored.has(row.id) || byId.get(row.id)?.draft) continue;
     const summary = { id: row.id, ticket: row.shorthand, title: row.title };
     const pending = findPendingPrerequisites(byRef.get(row.id)!, byRef, requests);
     const wait = nextTicketWait(row, {
@@ -82,29 +94,16 @@ export async function readNextTickets(ctx: CommandContext, mode: AutoBuildMode, 
       next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha });
     }
   }
-  // Include bodies and answers so an edit can wake the supervisor even when readiness stays the same.
-  const fingerprint = JSON.stringify({
+  const state = await nextWorkSnapshot(ctx, {
     revision: mode.revision,
-    tickets: tickets.sort((a, b) => a.id.localeCompare(b.id)),
+    tickets,
     rows: selected,
-    attempts: attempts.sort((a, b) => a.workspaceId.localeCompare(b.workspaceId)),
-    limit: capacity.limit,
+    attempts,
+    next,
+    waiting,
+    capacity,
   });
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(fingerprint));
-  const snapshot = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  const implementationIds = new Set(attempts.map(({ implementationSessionId }) => implementationSessionId));
-  const progressAt = Math.max(
-    0,
-    ...tickets.map(({ updatedAt }) => Date.parse(updatedAt)),
-    ...attempts.map(({ updatedAt }) => Date.parse(updatedAt)),
-    ...selected.flatMap(({ requests }) =>
-      requests.map((request) => Date.parse(request.outcome?.at ?? request.requestedAt)),
-    ),
-    ...assignments.sessions
-      .filter(({ id }) => implementationIds.has(id))
-      .map((session) => Date.parse(session.last_request_started ?? "1970-01-01T00:00:00Z")),
-  );
-  return { tickets: next, waiting, capacity, snapshot, progressAt };
+  return { tickets: next, waiting, capacity, ...state };
 }
 
 export const nextTicketsCommand = defineCommand({

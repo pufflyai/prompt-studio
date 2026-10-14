@@ -63,7 +63,7 @@ export const autoBuildDispatchCommand = defineCommand({
       };
       const result = await dispatchNext(ctx, candidate, beforeDispatch);
       if (result.decision === "started") {
-        // The supervisor already knows about work it dispatched. Session churn must not report it as new work.
+        // The supervisor already knows about work it dispatched.
         await withWriteGuard(
           ctx,
           "auto-build-supervisor",

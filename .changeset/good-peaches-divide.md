@@ -2,4 +2,4 @@
 "pstdio-planner": minor
 ---
 
-Query current work, recover valid dependency stacks, show complexity-weighted milestone ETA, navigate the timeline with map-style pan and pinch gestures, and keep supervisors asleep on unchanged active work with hourly stalled-progress reminders.
+Query current work, recover valid dependency stacks, show complexity-weighted milestone ETA, navigate the timeline with map-style pan and pinch gestures, and align supervisor wake checks and dispatch with the requested work scope while keeping unchanged active work asleep until progress stalls for an hour.

@@ -15,6 +15,7 @@ import { autoBuildCommand } from "./auto-build";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
+import { autoBuildScopeCommand } from "./auto-build-scope";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -112,6 +113,7 @@ export const plannerCommands = [
   autoBuildCommand,
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,
+  autoBuildScopeCommand,
   configureAutoBuildCommand,
   readAutoBuildCommand,
   checkAutoBuildCommand,

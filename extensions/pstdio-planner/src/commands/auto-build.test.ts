@@ -1,5 +1,6 @@
 import { expect, setSystemTime, test } from "bun:test";
 import { listAttempts, putAttempt } from "../data/attempt-storage";
+import { putTicket } from "../data/collections";
 import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
@@ -107,7 +108,7 @@ test("sleeps on unchanged active work and resumes the same supervisor when new w
   expect(sessions.size).toBe(2);
 });
 
-test("a failed worker does not reprompt the supervisor while unchanged work is still active", async () => {
+test("a failed worker wakes the supervisor while other work is still active", async () => {
   const { ctx, ticket, sessions, prompts } = await supervisorFixture(3);
   const first = await ticket("First");
   const second = await ticket("Second");
@@ -119,8 +120,27 @@ test("a failed worker does not reprompt the supervisor while unchanged work is s
   if (started.decision !== "started") throw new Error("Implementation did not start");
   sessions.get(started.sessionId)!.status = "failed";
   sessions.get(supervisorId)!.status = "completed";
-  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
-  expect(prompts).toHaveLength(3);
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true });
+  expect(prompts).toHaveLength(4);
+});
+
+test("repeated checks do not wake for startable jobs outside the supervisor scope", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  const parent = await ticket("Requested project");
+  const scoped = await ticket("Waiting for a decision");
+  await putTicket(storage, { ...scoped, parentId: parent.id, blockedReason: "Needs a decision" });
+  await ticket("Startable job in another project");
+  await autoBuildCommand.run(ctx, {});
+  await storage.set("auto-build-supervisor", {
+    sessionId: prompts[0]!.sessionId,
+    scope: { revision: "test", queries: [{ parent: parent.id }] },
+  });
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  for (let check = 0; check < 3; check++)
+    expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
+  expect(prompts).toHaveLength(1);
+  await putTicket(storage, { ...scoped, parentId: parent.id });
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true });
 });
 
 test("unchanged actionable work wakes an idle supervisor when no implementations are active", async () => {
@@ -130,6 +150,25 @@ test("unchanged actionable work wakes an idle supervisor when no implementations
   sessions.get(prompts[0]!.sessionId)!.status = "completed";
   expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true });
   expect(prompts).toHaveLength(2);
+});
+
+test("unrelated ticket edits do not wake a supervisor with unchanged active scoped work", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture(3);
+  const parent = await ticket("Requested parent");
+  const first = await ticket("Requested worker");
+  const next = await ticket("Requested next task");
+  await putTicket(storage, { ...first, parentId: parent.id });
+  await putTicket(storage, { ...next, parentId: parent.id });
+  const unrelated = await ticket("Outside the prompt");
+  await autoBuildCommand.run(ctx, {});
+  await storage.set("auto-build-supervisor", {
+    sessionId: prompts[0]!.sessionId,
+    scope: { revision: "test", queries: [{ parent: parent.id }] },
+  });
+  await autoBuildDispatchCommand.run(ctx, { ticket: first.id, revision: "test" });
+  sessions.get(prompts[0]!.sessionId)!.status = "completed";
+  await putTicket(storage, { ...unrelated, title: "An unrelated edit" });
+  expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
 });
 
 test("defers board changes until the running supervisor ends its turn", async () => {

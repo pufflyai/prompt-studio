@@ -74,6 +74,7 @@ export async function expectPackagedPlannerTimeline(input: {
     stuck: false,
     supervisor: null,
   });
+  await expectScopedAutoBuild(execute);
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
   });
@@ -148,6 +149,25 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 
 type Execute = ReturnType<typeof commandRunner>;
 const reviewNeeded = "default-human-requested-true";
+
+async function expectScopedAutoBuild(execute: Execute) {
+  const { revision } = await execute("auto-build.read", {});
+  expect(await execute("auto-build.scope", { revision, queries: [{ status: "Blocked" }] })).toMatchObject({
+    tickets: [],
+  });
+  const outside = await execute("create-ticket", {
+    content: "# Ready work outside the supervisor scope",
+    status: "Todo",
+  });
+  expect(await execute("next-tickets", {})).toMatchObject({ tickets: [], waiting: [] });
+  for (let check = 0; check < 3; check++) expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  expect(await execute("auto-build.dispatch", { revision, ticket: outside.id })).toMatchObject({
+    decision: "wait",
+    reason: "ticket-not-ready",
+  });
+  expect(await execute("auto-build.read", {})).toMatchObject({ supervisor: null });
+  await execute("delete-ticket", { id: outside.id });
+}
 
 async function expectImplementationStatus(execute: Execute) {
   const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });
