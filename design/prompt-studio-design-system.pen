@@ -191295,6 +191295,207 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "JJblH",
+      "x": 58602,
+      "y": 0,
+      "name": "PS-702 · Closed declared tools",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1100,
+      "height": 740,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "yL6Qn",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Closed tools stay within reach",
+          "fontFamily": "$font-heading",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "IsT5y",
+          "name": "Empty tall panels",
+          "width": "fill_container",
+          "height": 360,
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FyEy7",
+              "name": "Empty editor",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "layout": "vertical",
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SzfWy",
+                  "name": "Drop invitation",
+                  "fill": "$ds-fg-muted",
+                  "content": "Drop a tab here",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "Km2Ri",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open Proposal",
+                  "height": 28,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Open Proposal"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hzPWc",
+              "name": "Empty Side",
+              "width": "fill_container",
+              "height": "fill_container",
+              "fill": "$ds-bg-subtle",
+              "layout": "vertical",
+              "gap": 12,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "J8IRP",
+                  "name": "Drop invitation",
+                  "fill": "$ds-fg-muted",
+                  "content": "Drop a tab here",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "CBekP",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open Up next",
+                  "height": 28,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Open Up next"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KYNaJ",
+          "name": "Boombox · Player closed",
+          "width": "fill_container",
+          "height": 240,
+          "fill": "$ds-bg-subtle",
+          "layout": "vertical",
+          "gap": 1,
+          "children": [
+            {
+              "type": "frame",
+              "id": "FFJ54",
+              "name": "Playlist",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "D8QYpf",
+                  "name": "Playlist title",
+                  "fill": "$ds-fg",
+                  "content": "Lazy Sunday",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 24,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "bnHuR",
+                  "name": "Playlist songs",
+                  "fill": "$ds-fg-muted",
+                  "content": "Warm electronics for a slow start.   ·   5 songs",
+                  "fontFamily": "$font-body",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fD6sQ",
+              "name": "Empty short bottom · Declared tool only",
+              "width": "fill_container",
+              "height": 88,
+              "fill": "$ds-panel",
+              "layout": "vertical",
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "k7Uv4",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Open Player",
+                  "height": 28,
+                  "theme": {
+                    "btn": "outline",
+                    "size": "xs"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Open Player"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

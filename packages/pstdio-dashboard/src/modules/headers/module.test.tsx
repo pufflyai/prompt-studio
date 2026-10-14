@@ -12,7 +12,6 @@ describe("createHeadersModule", () => {
     expect(workbench.layout.listPanelInstances("nav")).toContainEqual(
       expect.objectContaining({
         viewId: dashboardWidgetIds.projectHeader,
-        closable: false,
       }),
     );
     expect(

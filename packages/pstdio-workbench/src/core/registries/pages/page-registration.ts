@@ -7,6 +7,7 @@ import {
   type OwnedPlacementReconciliation,
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
+import { adaptPlacementItem } from "../placements/placement-contract";
 import { validatePageModes } from "./page-availability";
 import { validateWorkbenchPage } from "./page-placement-resolver";
 import type {
@@ -54,7 +55,7 @@ export const registerWorkbenchPage = <Value>(input: {
   const registered = {
     ...page,
     ref: { ...page.ref },
-    slots: page.slots.map((slot) => ({ ...slot })),
+    slots: page.slots.map((slot) => ({ ...slot, item: adaptPlacementItem(slot.item, page.tabLocks) })),
   };
   const placementRegistration = input.registryInput.registerPagePlacements?.(registered);
   store.setState(

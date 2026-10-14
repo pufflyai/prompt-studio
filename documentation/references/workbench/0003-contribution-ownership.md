@@ -89,4 +89,11 @@ Mode and page Sidenav contributions carry opaque owner keys. TreeRenderer receiv
 - Never use ownership as a permission decision by itself.
 - Return and track every registration disposable.
 
+## Declared tools and tab ownership
+
+A page Main view, page slot, or mode placement declares a tool and its starting panel. New host declarations create closable tabs. Fixed panel geometry, visibility, and header choices do not lock tabs. Panel `acceptsTabs` decides where tabs may move. Deprecated placement `presence: "fixed"` and `movableTo` retain their old meaning only through the extension host adapter. Legacy extension Main views keep their previous lock.
+
+Closing a tool removes its live tab from the owning layout. Empty panels derive their recovery actions from the declarations, not from a second saved tool list. An `Open <tool>` action or catalog choice resolves the tool across open owner layouts first. A moved tool keeps its identity and binding; reopening it selects its actual owner. The editor catalog contains all page tools, while each empty panel offers its own declared tools even when it refuses incoming tabs.
+
+A closed single-resource Main leaves its route and page menus intact. A closed static Main stays closed when the page is revisited or restored. The authored empty view of a panel collection is an empty renderer, not a tool tab. When closed Main tools are available, the empty panel shows their recovery actions.
 Panel header visibility uses a context menu on the visible header or hidden top edge, available by right-click, Shift+F10, Context Menu key, and touch long-press. Headers have no ellipsis menu button. Tab context menus offer only Pin/Unpin and Close when applicable; resource actions remain on resource surfaces. Moving a routed editor from Main to page side or page bottom preserves its page/resource, URL, breadcrumb and menu bindings. Main fallback is reconciled when the editor moves out of the page owner into a mode panel.

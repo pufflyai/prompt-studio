@@ -25,6 +25,6 @@ export const registerContextNavigation = (workbench: WorkbenchCore, resources: W
   workbench.shellPlacements.registerPlacement({
     id: "windowing.navigation",
     region: "sidenav",
-    item: { kind: "view", view: { kind: "view", id: "windowing.navigation" }, presence: "fixed" },
+    item: { kind: "view", view: { kind: "view", id: "windowing.navigation" }, presence: "open" },
   });
 };

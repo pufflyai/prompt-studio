@@ -119,14 +119,13 @@ const registerModeSidenav = (workbench: WorkbenchCore, modeId: GuidePage["modeId
     modeId,
     item: {
       kind: "view",
-      presence: "fixed",
+      presence: "open",
       view: {
         kind: "view",
         id: contributionId,
       },
     },
     region: "sidenav",
-    movableTo: ["sidenav"],
   });
 };
 const registerPage = (workbench: WorkbenchCore, page: GuidePage) => {

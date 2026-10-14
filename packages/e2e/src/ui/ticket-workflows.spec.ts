@@ -142,7 +142,7 @@ for (const action of ["Delete workspace"]) {
   });
 }
 
-test("opens ticket action sessions and shows the fixed Sessions page tab", async ({ page, fixture }) => {
+test("opens ticket action sessions with a closable page tab", async ({ page, fixture }) => {
   await openTicket(page, fixture.project.id);
   const ticketUrl = page.url();
   let sessionId = "";
@@ -180,7 +180,7 @@ test("opens ticket action sessions and shows the fixed Sessions page tab", async
   await expect(page).toHaveURL(new RegExp(`/session\\?resource=.*${sessionId}`));
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
   await expect(mainHeader.getByRole("tab", { name: sessionTitle, exact: true })).toBeVisible();
-  await expect(mainHeader.getByRole("button", { name: `Close ${sessionTitle}`, exact: true })).toHaveCount(0);
+  await expect(mainHeader.getByRole("button", { name: `Close ${sessionTitle}`, exact: true })).toBeVisible();
 });
 
 test("Run attempt starts from the chosen base branch", async ({ page, fixture }) => {

@@ -121,7 +121,7 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       id: LAUNCHER_WIDGET_ID,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: LAUNCHER_WIDGET_ID,

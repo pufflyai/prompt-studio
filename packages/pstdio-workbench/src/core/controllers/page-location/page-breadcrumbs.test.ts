@@ -60,10 +60,10 @@ describe("page breadcrumbs", () => {
     expect(items[0].resource).toEqual(resource);
     expect(items[0].onClick).toBeUndefined();
   });
-  test("returns a panel page to its fixed main panel from its current breadcrumb", () => {
+  test("returns a page to its declared Main from its current breadcrumb", () => {
     const library: WorkbenchPageContribution = {
       ...page("artifacts", "Artifacts"),
-      main: { kind: "panels", empty: { kind: "view", id: "empty" } },
+      main: { kind: "view", view: { kind: "view", id: "library" }, cardinality: "one" },
       slots: [
         {
           id: "library",
@@ -85,7 +85,7 @@ describe("page breadcrumbs", () => {
     });
     items[0].onClick?.();
     expect(targets).toEqual([{ kind: "page", page: library.ref }]);
-    expect(panels).toEqual(["artifacts:library"]);
+    expect(panels).toEqual(["artifacts:$main"]);
   });
   test("derives one trail from the canonical parent chain", () => {
     const tickets = page("tickets", "Tickets");

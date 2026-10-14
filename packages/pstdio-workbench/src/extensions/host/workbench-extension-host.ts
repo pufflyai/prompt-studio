@@ -174,7 +174,7 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
     }),
   );
 const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
+  input.metadata.pages.map((page) => input.workbench.pages.registerPage({ ...page, tabLocks: "legacy" }));
 const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.resourceKinds.map((kind) =>
     input.workbench.resources.registerKind({
@@ -201,7 +201,9 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
     }),
   );
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
+  input.metadata.placements.map((placement) =>
+    input.workbench.modePlacements.registerPlacement({ ...placement, tabLocks: "legacy" }),
+  );
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,

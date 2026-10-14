@@ -3,30 +3,34 @@ import type { WorkbenchPageContribution, WorkbenchPageSlot } from "./page-regist
 
 export const PAGE_MAIN_SLOT_ID = "$main";
 
+export const isManyResourceMain = (page: WorkbenchPageContribution | undefined) =>
+  page?.main.kind === "view" && page.main.cardinality === "many";
+
 // A many-resource Main owns one collection. Its route selects a tab in that owner.
 export const pageOwnerResource = (page: WorkbenchPageContribution | undefined, resource?: ResourceRef) =>
-  page?.main.kind === "view" && page.main.cardinality === "many" ? undefined : resource;
+  isManyResourceMain(page) ? undefined : resource;
 
 export interface ResolvedPageSlot extends WorkbenchPageSlot {
   readonly role: "primary" | "auxiliary";
 }
 
-export const isPageSlotClosable = (slot: ResolvedPageSlot) => {
+export const isPageSlotClosable = (slot: ResolvedPageSlot, page: WorkbenchPageContribution) => {
   if (slot.item.kind === "view") return slot.item.presence !== "fixed";
-  // A single-resource Main is the page itself, not a dismissible resource tab.
-  return slot.role !== "primary" || slot.item.binding.cardinality === "many";
+  // Only legacy extension Main retains its single-resource tab lock.
+  return page.tabLocks !== "legacy" || slot.role !== "primary" || slot.item.binding.cardinality === "many";
 };
 
 export const primarySlot = (page: WorkbenchPageContribution): ResolvedPageSlot | undefined => {
   if (page.main.kind !== "view") return undefined;
   const { kind: _kind, view, cardinality, ...presentation } = page.main;
   const binding: ResourceBinding | undefined = page.resource ? { ...page.resource, view, cardinality } : undefined;
+  const presence = page.tabLocks === "legacy" ? "fixed" : "open";
   return {
     ...presentation,
     id: PAGE_MAIN_SLOT_ID,
     role: "primary",
     region: "main",
-    item: binding ? { kind: "binding", binding } : { kind: "view", view, presence: "fixed" },
+    item: binding ? { kind: "binding", binding } : { kind: "view", view, presence },
   };
 };
 

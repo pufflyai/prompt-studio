@@ -106,7 +106,7 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
           id: regionWidgetId(region),
           item: {
             kind: "view",
-            presence: "fixed",
+            presence: "open",
             view: {
               kind: "view",
               id: regionWidgetId(region),
@@ -137,7 +137,7 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
         id: regionWidgetId(panel),
         item: {
           kind: "view",
-          presence: "fixed",
+          presence: "open",
           view: {
             kind: "view",
             id: regionWidgetId(panel),

@@ -76,13 +76,16 @@ export const RefusedPanelTabs: Story = {
     await expect(canvas.queryByRole("button", { name: "Hide Bottom panel" })).toBeNull();
     const tab = refused.workbench.layout.listPanelInstances("bottom")[0]!;
     await expect(() => refused.workbench.movePanel(tab.instanceId, "side")).toThrow("cannot move");
+    await refused.workbench.navigation.openTarget({
+      kind: "panel",
+      panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
+      resource: refused.resources.sessions[0],
+    });
     await expect(
-      refused.workbench.navigation.openTarget({
-        kind: "panel",
-        panel: { kind: "placement", extensionId: windowingExtensionId, id: "sessions" },
-        resource: refused.resources.sessions[0],
+      await within(canvasElement.querySelector('[data-workbench-panel="side"]') as HTMLElement).findByRole("tab", {
+        name: /^Session 1/,
       }),
-    ).rejects.toThrow("cannot accept tabs");
+    ).toBeVisible();
     await expect(refused.workbench.getPanelDestinations(tab.instanceId)).not.toContain("side");
     await expect(
       canvasElement.querySelector('[data-workbench-panel-header="side"] button[aria-label="Add panel"]'),
