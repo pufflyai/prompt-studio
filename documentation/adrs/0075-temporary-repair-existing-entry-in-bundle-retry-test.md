@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-14
 
+Status: Superseded on 2026-10-14 by the released unchanged-source bundle retry fixture. The missing-directory-entry recovery gap remains tracked in PS-732.
+
 ## Intended behavior
 
 A failed extension build must release its pending promise. After the author repairs the source, another call for the same entry and output path must run a new build and produce a complete bundle.
