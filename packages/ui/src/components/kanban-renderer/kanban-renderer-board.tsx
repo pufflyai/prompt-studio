@@ -1,12 +1,11 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { type ComponentProps, type ComponentType, type DragEvent, useState } from "react";
 
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
-import { ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { BoardColumnCards } from "./kanban-renderer-board-column";
 import { ColumnHeader } from "./kanban-renderer-board-column-header";
-import { GroupSection } from "./kanban-renderer-board-group-section";
-import { KanbanRendererCard } from "./kanban-renderer-card";
+import type { KanbanRendererCard } from "./kanban-renderer-card";
 import { useBoardDragScroll } from "./use-board-drag-scroll";
 import { useBoardPan } from "./use-board-pan";
 
@@ -63,19 +62,21 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
   const { columns, selectedItemId = null, onMoveItem, onMoveToGroup, onCreateStart, onColumnAction } = props;
 
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
-  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [revealedItemId, setRevealedItemId] = useState<string | null>(null);
   const panViewportProps = useBoardPan();
   const dragScroll = useBoardDragScroll();
 
   const handleDragStart = (itemId: string) => (event: DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData("text/plain", itemId);
     event.dataTransfer.effectAllowed = "move";
+    setDraggedKey(event.currentTarget.closest<HTMLElement>("[data-board-key]")?.dataset.boardKey ?? null);
     dragScroll.startDrag(event);
   };
 
   const handleDragEnd = () => {
     setActiveColumn(null);
-    setActiveGroup(null);
+    setDraggedKey(null);
   };
 
   const handleDragOver = (columnId: string) => (event: DragEvent<HTMLDivElement>) => {
@@ -96,6 +97,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
     const itemId = event.dataTransfer.getData("text/plain");
     if (!itemId) return;
 
+    setRevealedItemId(itemId);
     onMoveItem?.(itemId, columnId);
   };
 
@@ -131,103 +133,26 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
         >
           <ColumnHeader column={column} onCreateStart={onCreateStart} onColumnAction={onColumnAction} />
 
-          <ScrollArea
-            flex="1"
-            minH="0"
-            size="xs"
-            verticalScrollbarProps={{ margin: "0" }}
-            contentProps={{
-              spaceY: "xs",
+          <BoardColumnCards
+            column={column}
+            selectedItemId={selectedItemId}
+            draggedKey={draggedKey}
+            revealedItemId={revealedItemId}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragTarget={() => setActiveColumn(column.id)}
+            onDrop={(event, beforeItemId, targetGroupKey) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setActiveColumn(null);
+              setDraggedKey(null);
+              const itemId = event.dataTransfer.getData("text/plain");
+              if (!itemId || itemId === beforeItemId) return;
+              setRevealedItemId(itemId);
+              if (onMoveItem) onMoveItem(itemId, column.id, { beforeItemId, targetGroupKey });
+              else if (targetGroupKey) onMoveToGroup?.(itemId, targetGroupKey, { beforeItemId });
             }}
-          >
-            {column.items.length === 0 && column.totalCount ? (
-              <Stack alignItems="center" gap="2xs" paddingY="xl" textAlign="center">
-                <Text textStyle="label/S/regular" color="fg.muted">
-                  No matching cards
-                </Text>
-                <Text textStyle="label/XS" color="fg.subtle">
-                  {column.totalCount} {column.totalCount === 1 ? "card" : "cards"} hidden by search
-                </Text>
-              </Stack>
-            ) : null}
-            {column.groups && column.groups.length > 0
-              ? column.groups.map((group) => {
-                  const groupId = `${column.id}::${group.key}`;
-                  return (
-                    <GroupSection
-                      key={group.key}
-                      columnId={column.id}
-                      group={group}
-                      selectedItemId={selectedItemId}
-                      canDragIn={column.canDragIn}
-                      canDragOut={column.canDragOut}
-                      isDropTarget={activeGroup === groupId}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      onGroupDragOver={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        event.dataTransfer.dropEffect = "move";
-                        setActiveGroup(groupId);
-                        setActiveColumn(null);
-                      }}
-                      onGroupDragLeave={(event) => {
-                        if (event.currentTarget.contains(event.relatedTarget as Node)) return;
-                        setActiveGroup(null);
-                      }}
-                      onGroupDrop={(event, beforeItemId) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setActiveGroup(null);
-                        setActiveColumn(null);
-                        const itemId = event.dataTransfer.getData("text/plain");
-                        if (!itemId) return;
-                        if (onMoveItem) {
-                          onMoveItem(itemId, column.id, { beforeItemId, targetGroupKey: group.key });
-                          return;
-                        }
-                        onMoveToGroup?.(itemId, group.key, { beforeItemId });
-                      }}
-                    />
-                  );
-                })
-              : column.items.map((item) => (
-                  <ResourceContextMenu key={item.id} actions={item.contextMenuActions ?? []}>
-                    <Box
-                      onDragOver={
-                        column.canDragIn
-                          ? (event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              event.dataTransfer.dropEffect = "move";
-                              setActiveColumn(column.id);
-                            }
-                          : undefined
-                      }
-                      onDrop={
-                        column.canDragIn
-                          ? (event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              setActiveColumn(null);
-                              const itemId = event.dataTransfer.getData("text/plain");
-                              if (!itemId || itemId === item.id) return;
-                              onMoveItem?.(itemId, column.id, { beforeItemId: item.id });
-                            }
-                          : undefined
-                      }
-                    >
-                      <KanbanRendererCard
-                        {...item.cardProps}
-                        isSelected={item.id === selectedItemId}
-                        draggable={column.canDragOut}
-                        onDragStart={column.canDragOut ? handleDragStart(item.id) : undefined}
-                        onDragEnd={column.canDragOut ? handleDragEnd : undefined}
-                      />
-                    </Box>
-                  </ResourceContextMenu>
-                ))}
-          </ScrollArea>
+          />
         </Stack>
       ))}
     </ScrollArea>

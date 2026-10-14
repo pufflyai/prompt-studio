@@ -1,5 +1,15 @@
 import { type DragEvent, useEffect, useRef } from "react";
 
+const edgeSpeed = (coordinate: number, start: number, size: number) => {
+  if (coordinate < start || coordinate > start + size) return 0;
+  const edge = Math.min(96, size / 2);
+  const near = coordinate - start;
+  const far = start + size - coordinate;
+  if (near < edge) return -960 * (1 - near / edge);
+  if (far < edge) return 960 * (1 - far / edge);
+  return 0;
+};
+
 export const useBoardDragScroll = () => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const cleanup = useRef<(() => void) | null>(null);
@@ -9,16 +19,19 @@ export const useBoardDragScroll = () => {
   const startDrag = (event: DragEvent<HTMLDivElement>) => {
     cleanup.current?.();
     const viewport = viewportRef.current;
-    if (!viewport || viewport.scrollWidth <= viewport.clientWidth) return;
+    if (!viewport) return;
 
     const document = viewport.ownerDocument;
     const window = document.defaultView!;
+    let columnViewport: HTMLElement | null = null;
     let pointer: { x: number; y: number } | null = { x: event.clientX, y: event.clientY };
     let previousTime = window.performance.now();
     let frame = 0;
 
     const trackPointer = (event: globalThis.DragEvent) => {
       pointer = { x: event.clientX, y: event.clientY };
+      columnViewport =
+        event.target instanceof Element ? event.target.closest<HTMLElement>("[data-board-column-viewport]") : null;
     };
     const leaveDocument = (event: globalThis.DragEvent) => {
       // Leaving the document has no next dragover to update the pointer position.
@@ -35,21 +48,14 @@ export const useBoardDragScroll = () => {
     };
     const scroll = (time: number) => {
       const bounds = viewport.getBoundingClientRect();
-      const edgeWidth = Math.min(96, bounds.width / 2);
-      let speed = 0;
-      if (
-        pointer &&
-        pointer.x >= bounds.left &&
-        pointer.x <= bounds.right &&
-        pointer.y >= bounds.top &&
-        pointer.y <= bounds.bottom
-      ) {
-        const leftDistance = pointer.x - bounds.left;
-        const rightDistance = bounds.right - pointer.x;
-        if (leftDistance < edgeWidth) speed = -960 * (1 - leftDistance / edgeWidth);
-        else if (rightDistance < edgeWidth) speed = 960 * (1 - rightDistance / edgeWidth);
+      const elapsed = (time - previousTime) / 1000;
+      if (pointer && pointer.y >= bounds.top && pointer.y <= bounds.bottom) {
+        viewport.scrollLeft += edgeSpeed(pointer.x, bounds.left, bounds.width) * elapsed;
       }
-      viewport.scrollLeft += (speed * (time - previousTime)) / 1000;
+      if (columnViewport && pointer) {
+        const column = columnViewport.getBoundingClientRect();
+        columnViewport.scrollTop += edgeSpeed(pointer.y, column.top, column.height) * elapsed;
+      }
       previousTime = time;
       frame = window.requestAnimationFrame(scroll);
     };

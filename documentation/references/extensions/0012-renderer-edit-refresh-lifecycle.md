@@ -159,3 +159,15 @@ Extensions use public `viewDataEvents` for host-owned session, workspace, and se
 | Lab example board | Its storage collection event |
 | Host session list and selected session | Sessions, workspace links, and linked workspaces |
 | Host workspace table | Workspaces and workspace diff summaries |
+
+## Kanban moves
+
+A Kanban view can declare `onMove(ctx, { rowId, attributes, order })`. One drop calls it once with the destination grouping attributes. The extension skips unchanged values when saving. Retaining the destination makes later drops independent when an earlier save fails. `order` is omitted for sorted views. In a manual view, `order.beforeRowId` places the row before that target; an empty `order` appends it. The extension validates and saves the complete operation before publishing its refresh event.
+
+The workbench read owner previews the move immediately and saves consecutive gestures in order. It keeps a journal of local edits over its last accepted query. Reads begun before a move or during saving cannot replace that preview. Failed saves remove only that operation's preview, preserve later gestures, and report the failure once. After the saves settle, one fresh query replaces the journal. A failed refresh retains the preview and exposes Retry.
+
+`onAttributeChange` still handles inline edits. `onReorder` is deprecated for moves; old declarations keep their existing callbacks until a breaking release removes them. `onMove` takes precedence for both board and list drops.
+
+`schemaRefreshEvents` declares events that change attribute fields or options. Saved-view validation and filter cleanup read on these events and on event-reset recovery. When it is omitted, the host retains the existing content-event refresh behavior. Shared-view content and order continue to arrive through live sync.
+
+Board columns measure variable-height rows and mount the visible range plus overscan. Focused and dragged rows remain mounted. Arrow keys, Home, and End move focus through the virtual range. Dragging near a column edge scrolls its viewport. Successful drops reveal their destination without changing the view's sort rules.
