@@ -1,18 +1,15 @@
 import { Box, Table } from "@chakra-ui/react";
 import type { Table as TanStackTable } from "@tanstack/react-table";
-import { Fragment, lazy, Suspense } from "react";
+import { Fragment } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { DataTableGroupRow } from "./data-table-group-row";
 import type { DataTablePageEntry } from "./data-table-grouping";
 import type { DataTableRendererRow } from "./data-table-state";
 import { getSelectedOriginalRows, shouldHighlightActiveRow } from "./data-table-state";
+import { DataTableStatsRow } from "./data-table-stats-row";
 import { DataTableBodyRow, DataTableColumnHeader, type DataTableFieldMenu } from "./data-table-table-parts";
 import { SelectionToolbar } from "./selection-toolbar";
 import type { DataTableProps, DataTableSelectionAction, DataTableSettings, RowData } from "./types";
-
-const DataTableStatsRow = lazy(() =>
-  import("./data-table-stats-row").then((module) => ({ default: module.DataTableStatsRow })),
-);
 
 export interface DataTableGridProps
   extends Pick<
@@ -85,15 +82,13 @@ export const DataTableGrid = (props: DataTableGridProps) => {
                   ))}
                 </Table.Row>
                 {columnStats && settings.showStats ? (
-                  <Suspense fallback={null}>
-                    <DataTableStatsRow
-                      headerGroup={headerGroup}
-                      rows={data}
-                      columnStats={columnStats}
-                      noBorder={noBorder}
-                      fullWidth={fullWidth}
-                    />
-                  </Suspense>
+                  <DataTableStatsRow
+                    headerGroup={headerGroup}
+                    rows={data}
+                    columnStats={columnStats}
+                    noBorder={noBorder}
+                    fullWidth={fullWidth}
+                  />
                 ) : null}
               </Fragment>
             ))}
