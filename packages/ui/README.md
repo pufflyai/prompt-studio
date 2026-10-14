@@ -46,6 +46,17 @@ gets its own entry: `./rich-text`, `./param-editor`, `./kanban-renderer`,
 from the root entry may import one of those, or every consumer's bundler emits the
 heavy chunks even when the consumer never renders the feature.
 
+## Chat Layout
+
+`ChatPanel` fills its parent pane. The transcript and composer share a centered
+column with a maximum width of `52rem`, defined by the `chat-content` size token
+and `chatContent` layer style. Narrow panes use their available width. Keep the
+scroll area at the full pane width so its scrollbar stays at the pane edge.
+
+The [chat width stories](src/components/chat-ui/components/chat-panel-width.stories.tsx)
+cover wide, narrow, and empty panes. The matching Pencil frame is `Oc0qI` in
+[the design system](../../design/prompt-studio-design-system.pen).
+
 ## Contributor Workflow
 
 1. Implement or update the component in `src/components`.

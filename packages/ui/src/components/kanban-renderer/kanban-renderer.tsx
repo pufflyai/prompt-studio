@@ -1,19 +1,19 @@
 import { Stack } from "@chakra-ui/react";
-import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type { KanbanRendererMove, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import { type ReactNode, useDeferredValue, useState } from "react";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { withTitleField } from "../collection-view/collection-view-fields";
 import { countFilterRules } from "../collection-view/collection-view-filter";
 import { useCollectionViews } from "../collection-view/use-collection-views";
-import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
+import type { KanbanActionErrorHandler } from "./kanban-renderer-action";
 import type { KanbanRendererBoardColumnAction } from "./kanban-renderer-board";
 import { buildKanbanBoardColumns, narrowKanbanRows } from "./kanban-renderer-board-columns";
-import { applyBoardMoveItem, applyBoardMoveToGroup } from "./kanban-renderer-board-move";
 import { KanbanRendererContent } from "./kanban-renderer-content";
 import { KanbanRendererCreateDialog } from "./kanban-renderer-create-dialog";
 import { groupRows } from "./kanban-renderer-grouping";
 import { resolveKnownColumnKeys } from "./kanban-renderer-helpers";
 import { buildKanbanRendererListItems } from "./kanban-renderer-list-items";
+import { kanbanMoveHandlers } from "./kanban-renderer-move-handlers";
 import { KanbanRendererToolbar } from "./kanban-renderer-toolbar";
 import type {
   AttributeDescriptor,
@@ -68,6 +68,7 @@ export interface KanbanRendererProps<TRow extends KanbanRendererRow = KanbanRend
   /** Called when a row attribute changes through drag/drop, board movement, or inline controls. */
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
   /** Called for manual row ordering when a dragged row is dropped before another row. Only used while the view has no sorts. */
+  onMove?: (move: KanbanRendererMove) => Promise<void> | void;
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   createRow?: KanbanRendererCreateRowConfig;
   onCreateRow?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;
@@ -96,6 +97,7 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     onActionError,
     onAttributeChange,
     onReorder,
+    onMove,
     createRow,
     onCreateRow,
     onColumnAction,
@@ -143,73 +145,50 @@ export const KanbanRenderer = <TRow extends KanbanRendererRow>(props: KanbanRend
     structureRows: rows,
   });
 
-  const listItems = buildKanbanRendererListItems({
+  const listItems =
+    settings.viewMode === "list"
+      ? buildKanbanRendererListItems({
+          settings,
+          sorts,
+          search: deferredSearch,
+          visibleRows,
+          grouped,
+          attributes,
+          onRowClick,
+          onActionError,
+          onAttributeChange,
+          onReorder,
+          onMove,
+          getRowContextMenuActions,
+        })
+      : [];
+
+  const boardColumns =
+    settings.viewMode === "board"
+      ? buildKanbanBoardColumns({
+          grouped,
+          settings,
+          sorts,
+          fields,
+          attributes,
+          search: deferredSearch,
+          columnTotals: searching ? columnTotals : undefined,
+          getBoardColumnConfig,
+          getRowContextMenuActions,
+          onAttributeChange,
+          onActionError,
+          onRowClick,
+        })
+      : [];
+
+  const { handleBoardMoveItem, handleBoardMoveToGroup } = kanbanMoveHandlers({
     settings,
     sorts,
-    search: deferredSearch,
-    visibleRows,
-    grouped,
-    attributes,
-    onRowClick,
+    onMove,
     onActionError,
     onAttributeChange,
     onReorder,
-    getRowContextMenuActions,
   });
-
-  const boardColumns = buildKanbanBoardColumns({
-    grouped,
-    settings,
-    sorts,
-    fields,
-    attributes,
-    search: deferredSearch,
-    columnTotals: searching ? columnTotals : undefined,
-    getBoardColumnConfig,
-    getRowContextMenuActions,
-    onAttributeChange,
-    onActionError,
-    onRowClick,
-  });
-
-  const handleBoardMoveItem = async (
-    rowId: string,
-    targetColumnId: string,
-    context?: { beforeItemId?: string; targetGroupKey?: string },
-  ) => {
-    await runKanbanAction(
-      "Move row",
-      () =>
-        applyBoardMoveItem({
-          settings,
-          sorts,
-          rowId,
-          targetColumnId,
-          targetGroupKey: context?.targetGroupKey,
-          beforeItemId: context?.beforeItemId,
-          onAttributeChange,
-          onReorder,
-        }),
-      onActionError,
-    );
-  };
-
-  const handleBoardMoveToGroup = async (rowId: string, targetGroupKey: string, context?: { beforeItemId?: string }) => {
-    await runKanbanAction(
-      "Move row",
-      () =>
-        applyBoardMoveToGroup({
-          settings,
-          sorts,
-          rowId,
-          targetGroupKey,
-          beforeItemId: context?.beforeItemId,
-          onAttributeChange,
-          onReorder,
-        }),
-      onActionError,
-    );
-  };
 
   return (
     <Stack data-testid="kanban-renderer" height="100%" minH="0" gap="0" background="bg" overflow="hidden">

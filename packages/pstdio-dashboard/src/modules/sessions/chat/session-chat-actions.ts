@@ -1,3 +1,4 @@
+import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { ChatInputQuestionResponse, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
@@ -155,6 +156,7 @@ const submitFollowUpMessage = (input: {
   questionResponse?: ChatInputQuestionResponse;
   followUp: FollowUpMutation;
   reconnect: () => void;
+  refreshQueue: () => Promise<PendingQueuedFollowUpsResponse | undefined>;
   onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
 }) => {
@@ -185,13 +187,31 @@ const submitFollowUpMessage = (input: {
     })
     .then(
       ({ followUp }) => {
-        if (input.questionResponse) input.onSubmitted?.();
-        // Queued turns use their queue entry; accepted answers update the existing question.
-        if (followUp?.status === "queued" || input.questionResponse) clearPendingFollowUp(input.sessionId, pending);
-        else
+        // Accepted answers update the existing question.
+        if (input.questionResponse) {
+          input.onSubmitted?.();
+          clearPendingFollowUp(input.sessionId, pending);
+          input.reconnect();
+          return;
+        }
+        // Only the queue changed, so the live stream stays. The message stays until the queue list shows it.
+        if (followUp?.status === "queued") {
+          const queuePosition = followUp.queue_position;
           updatePendingFollowUp(input.sessionId, (current) =>
-            current?.userMessageId === pending.userMessageId ? { ...current, destination: "conversation" } : current,
+            current?.userMessageId === pending.userMessageId
+              ? { ...current, destination: "queue", queuePosition }
+              : current,
           );
+          // A queue read started now is current. Without the request, the message already left the queue.
+          void input.refreshQueue().then((queue) => {
+            if (queue && !queue.requests.some((request) => request.queuePosition === queuePosition))
+              clearPendingFollowUp(input.sessionId, pending);
+          });
+          return;
+        }
+        updatePendingFollowUp(input.sessionId, (current) =>
+          current?.userMessageId === pending.userMessageId ? { ...current, destination: "conversation" } : current,
+        );
         input.reconnect();
       },
       // The conversation keeps ownership of the failed message.
@@ -222,6 +242,7 @@ export const submitSessionMessage = (input: {
   createSession: CreateSessionMutation;
   followUp: FollowUpMutation;
   reconnect: () => void;
+  refreshQueue: () => Promise<PendingQueuedFollowUpsResponse | undefined>;
   onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
   onSessionCreated?: (sessionId: string) => void;

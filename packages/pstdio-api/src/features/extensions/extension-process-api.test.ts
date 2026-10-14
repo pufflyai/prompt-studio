@@ -96,12 +96,14 @@ describe("process host limits", () => {
 
     // A shell holds the output pipe open through its own children, so the host must stop
     // waiting on the pipe rather than wait for the grandchild to finish.
-    await expect(api.run({ command: ["sh", "-c", "sleep 5; echo done"], timeoutMs: 200 })).rejects.toThrow(
-      /timed out after 200 ms/,
-    );
+    const failure = await api
+      .run({ command: ["sh", "-c", "sleep 5; echo done"], timeoutMs: 200 })
+      .catch((error: unknown) => error);
+    expect(String(failure)).toMatch(/timed out after 200 ms/);
 
     expect(Date.now() - start).toBeLessThan(1500);
     expect(children).toHaveLength(1);
+    expect(isAlive(children[0].pid)).toBe(false);
     await children[0].exited;
     expect(isAlive(children[0].pid)).toBe(false);
   });
@@ -110,9 +112,10 @@ describe("process host limits", () => {
     const marker = `pstdio-descendant-${process.pid}`;
     const api = createProcessApi();
 
-    await expect(api.run({ command: ["sh", "-c", `sleep 271 ${marker} & sleep 5`], timeoutMs: 200 })).rejects.toThrow(
-      /timed out/,
-    );
+    const failure = await api
+      .run({ command: ["sh", "-c", `sleep 271 ${marker} & sleep 5`], timeoutMs: 200 })
+      .catch((error: unknown) => error);
+    expect(String(failure)).toMatch(/timed out/);
 
     await Bun.sleep(200);
     expect(await survivors(marker)).toBe(0);
@@ -122,9 +125,10 @@ describe("process host limits", () => {
     const { children, spawner } = trackingSpawner();
     const api = createProcessApi({ spawner });
 
-    await expect(
-      api.run({ command: ["sh", "-c", `yes pstdio | head -c ${PROCESS_OUTPUT_LIMIT_BYTES * 2}`] }),
-    ).rejects.toThrow(/exceeded the 8 MiB output limit/);
+    const failure = await api
+      .run({ command: ["sh", "-c", `yes pstdio | head -c ${PROCESS_OUTPUT_LIMIT_BYTES * 2}`] })
+      .catch((error: unknown) => error);
+    expect(String(failure)).toMatch(/exceeded the 8 MiB output limit/);
 
     await children[0].exited;
     expect(isAlive(children[0].pid)).toBe(false);
@@ -140,7 +144,8 @@ describe("process host limits", () => {
     await Bun.sleep(50);
     controller.abort(new Error("invocation cancelled"));
 
-    await expect(pending).rejects.toThrow("invocation cancelled");
+    const failure = await pending.catch((error: unknown) => error);
+    expect(String(failure)).toContain("invocation cancelled");
     await children[0].exited;
     expect(isAlive(children[0].pid)).toBe(false);
   });
@@ -155,7 +160,8 @@ describe("process host limits", () => {
     await Bun.sleep(50);
     await scope.close();
 
-    await expect(abandoned).rejects.toThrow("Invocation ended while the command was still running.");
+    const failure = await abandoned.catch((error: unknown) => error);
+    expect(String(failure)).toContain("Invocation ended while the command was still running.");
     await children[0].exited;
     expect(isAlive(children[0].pid)).toBe(false);
   });

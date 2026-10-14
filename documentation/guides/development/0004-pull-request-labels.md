@@ -16,6 +16,8 @@ The `PR area labels` workflow marks changes that need focused review. Labels des
 
 Reviewers own two separate labels: `breaking-change` for incompatible behavior or contracts, and `needs-migration` for required data transitions. Explain the affected consumers or migration in the PR description. These labels are never managed by the workflow.
 
+The PR author owns `waiting-for-release`. Add it to an extension PR that uses SDK or UI changes that are merged but not yet published to npm. Name the SDK or UI PR it waits for in the description. The `published_extensions` CI job fails on such a PR until the next release, so do not merge it. After the release, raise the extension's `@pstdio/sdk` or `@pstdio/ui` range to the published version, rerun CI, and remove the label once `published_extensions` passes. The workflow never manages this label.
+
 `ci:full` is not an area label. A person adds it to run the full Test and Build stage on a PR; see [CI stages](0002-testing.md#ci-stages).
 
 ## SDK and extension separation
@@ -48,7 +50,7 @@ Opening, reopening, pushing commits, editing the base, and editing labels also r
 
 ## Current enforcement
 
-PS-78 implements PRD PS-76. As checked on 2026-10-02, the active `main` ruleset requires `ci_passed` and has no merge queue. It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
+PS-78 implements PRD PS-76. Since 2026-10-12, the active `main` ruleset requires `ci_passed` and merges through a merge queue (see [Tests](0002-testing.md#merge-queue-stage)). It does not require `sdk-extension-separation`, so that status is advisory. Repository settings can change independently of this checkout; inspect the active ruleset before changing enforcement.
 
 The area-label workflow evaluates pull request heads and manual dispatches.
 

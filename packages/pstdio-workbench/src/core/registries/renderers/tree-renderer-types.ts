@@ -63,6 +63,7 @@ export interface TreeNode {
   iconElement?: unknown;
   iconColor?: string;
   iconTooltip?: string;
+  tooltip?: string;
   endContent?: unknown;
   commandId?: string;
   resource?: ResourceRef;

@@ -1,4 +1,4 @@
-import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type { KanbanRendererMove, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -83,6 +83,7 @@ export interface KanbanRendererContribution<
    */
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
   /** Manual within-column reorder. Only fires while the view has no sorts. */
+  onMove?: (move: KanbanRendererMove) => Promise<void> | void;
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   createRow?: KanbanRendererCreateRowConfig;
   onCreateRow?: (submission: KanbanRendererCreateSubmission) => Promise<void> | void;

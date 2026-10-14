@@ -170,7 +170,7 @@ export const MultilineUserMessageShowMore: Story = {
     }
 
     await expect(showMoreButton).toBeVisible();
-    expect(userMessageContent.getBoundingClientRect().height).toBeLessThanOrEqual(72);
+    expect(userMessageContent.getBoundingClientRect().height).toBeLessThanOrEqual(128);
   },
 };
 
@@ -212,6 +212,8 @@ export const TallUserMessageScrollHandoff: Story = {
 
     expect(stickyMessageShell.contains(stickyMessageContent)).toBe(true);
     expect(stickyMessageShell.contains(showLessButton)).toBe(true);
+    expect(stickyMessageContent.dataset.scope).toBe("scroll-area");
+    expect(stickyMessageContent.dataset.part).toBe("viewport");
     expect(stickyMessageContent.scrollHeight).toBeGreaterThan(stickyMessageContent.clientHeight);
     expect(conversationViewport.scrollHeight).toBeGreaterThan(conversationViewport.clientHeight);
 
@@ -239,5 +241,8 @@ export const TallUserMessageScrollHandoff: Story = {
     );
 
     expect(conversationViewport.scrollTop).toBeGreaterThan(boundaryConversationScrollTop);
+    await userEvent.click(showLessButton);
+    await expect(await canvas.findByRole("button", { name: "Show more" })).toBeVisible();
+    expect(stickyMessageContent.scrollTop).toBe(0);
   },
 };

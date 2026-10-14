@@ -25,6 +25,7 @@ import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
+import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
@@ -55,7 +56,6 @@ const createCoreDomainServices = (input: {
   dbs: ReturnType<typeof createAppDatabaseServices>;
   eventBus: EventBus;
   storageRoot: string;
-  onInstalledSourcesChanged: (path?: string) => Promise<void>;
 }) => {
   const { db, dbs, eventBus, storageRoot } = input;
   const filesStorageService = createFilesStorageService(storageRoot);
@@ -68,13 +68,13 @@ const createCoreDomainServices = (input: {
     projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),
     extensionFileService: createExtensionFileService({
       extensionFilesDBService: dbs.extensionFilesDBService,
-      extensionInstancesDBService: dbs.extensionInstancesService,
+      extensionInstancesDBService: dbs.extensionInstancesDBService,
       fileService,
     }),
     syncService,
     notificationService: createNotificationService({
-      notificationsDb: dbs.notificationsDbService,
-      activityEventsService: dbs.activityEventsService,
+      notificationsDb: dbs.notificationsDBService,
+      activityEventsService: dbs.activityEventsDBService,
       eventBus,
     }),
     extensionSettingsService: createExtensionSettingsService({
@@ -131,16 +131,17 @@ const buildApp = async (
 
   const dbs = createAppDatabaseServices(db);
   const {
-    activityEventsService,
+    activityEventsDBService,
     automationDBService,
-    extensionAutomationPreferencesService: extensionAutomationPreferencesDBService,
+    extensionAutomationPreferencesDBService,
     extensionConnectionsDBService,
-    extensionInstancesService,
+    extensionInstancesDBService,
+    extensionSettingsDBService,
     extensionSkillPreferencesDBService,
-    extensionStorageService,
-    installedExtensionSourcesService,
-    notificationsDbService,
-    sessionQueueEntriesService: rawSessionQueueEntriesService,
+    extensionStorageDBService,
+    installedExtensionSourcesDBService,
+    boardViewsDBService,
+    sessionQueueEntriesDBService,
     sessionsDBService,
     settingsDBService,
     skillsDBService,
@@ -149,7 +150,7 @@ const buildApp = async (
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
   const sessionQueueEntriesService = createSessionQueueService(
-    rawSessionQueueEntriesService,
+    sessionQueueEntriesDBService,
     sessionQueueChanged(sessionsDBService, eventBus),
   );
   const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
@@ -172,7 +173,6 @@ const buildApp = async (
     dbs,
     eventBus,
     storageRoot,
-    onInstalledSourcesChanged: (path) => refreshInstalledSources(path),
   });
   let deps!: RouteDeps;
   const {
@@ -183,15 +183,14 @@ const buildApp = async (
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents,
-    refreshInstalledSources,
   } = await wireAppExtensionServices({
     config: input.config.extensions,
     db,
     dependencies,
     eventBus,
-    extensionInstancesService,
+    extensionInstancesDBService,
     extensionConnectionsDBService,
-    installedExtensionSourcesService,
+    installedExtensionSourcesDBService,
     projectService,
     provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
     workspaceService,
@@ -214,21 +213,20 @@ const buildApp = async (
   const sessionQueueLifecycle = createSessionQueueLifecycle();
   const sessionHookDeps = (): SessionHookDeps => ({
     artifactMountWrites,
-    boardViewsService: dbs.boardViewsService,
+    boardViewsService: boardViewsDBService,
     automationService,
-    extensionResourceSequencesService: dbs.extensionResourceSequencesService,
-    resourceLinksService: dbs.resourceLinksService,
-    activityEventsService,
+    extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,
+    resourceLinksService: dbs.resourceLinksDBService,
+    activityEventsService: activityEventsDBService,
     eventBus,
     extensionAutomationPreferencesService,
     extensionConnectionService,
     extensionFileService,
-    extensionInstancesService,
     extensionRuntimeCatalog,
     extensionService,
-    extensionSettingsDBService: dbs.extensionSettingsDBService,
+    extensionSettingsDBService,
     extensionSettingsService,
-    extensionStorageService,
+    extensionStorageService: extensionStorageDBService,
     fileService,
     harnessRegistry,
     projectService,
@@ -262,12 +260,10 @@ const buildApp = async (
 
   deps = {
     artifactMountWrites,
-    resourceLinksService: dbs.resourceLinksService,
-    extensionResourceSequencesService: dbs.extensionResourceSequencesService,
+    resourceLinksService: dbs.resourceLinksDBService,
+    extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,
     extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },
-    closeDb,
-    boardViewsService: dbs.boardViewsService,
     eventBus,
     automationService,
     harnessRegistry,
@@ -280,22 +276,21 @@ const buildApp = async (
     workspaceSessionService,
     skillService,
     fileService,
-    notificationsDbService,
+    boardViewsService: boardViewsDBService,
     notificationService,
-    installedExtensionSourcesService,
-    extensionInstancesService,
+    installedExtensionSourcesService: installedExtensionSourcesDBService,
     extensionAutomationPreferencesService,
     extensionConnectionService,
     extensionFileService,
     extensionRuntimeCatalog,
     webviewPreferencesDBService: dbs.webviewPreferencesDBService,
-    extensionSettingsDBService: dbs.extensionSettingsDBService,
+    extensionSettingsDBService,
     extensionService,
     extensionUpgradeService,
     extensionSettingsService,
-    extensionStorageService,
+    extensionStorageService: extensionStorageDBService,
     syncService,
-    activityEventsService,
+    activityEventsService: activityEventsDBService,
     ensureExtensionWebviews: extensionRuntime.ensureWebviews,
     terminal: terminalSupervisor.api,
   };
@@ -338,7 +333,9 @@ const buildApp = async (
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
   const database = await openAppDatabase(input.config.database.path, input.lifecycle);
   try {
-    return await buildApp(input, dependencies, database);
+    const app = await buildApp(input, dependencies, database);
+    logStartupPhase("app_ready");
+    return app;
   } catch (error) {
     // Nothing else owns the database until startup returns its close function.
     await database.close();

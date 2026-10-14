@@ -74,6 +74,7 @@ export const createMutableAttributeSource = (
 ): MutableAttributeSource => {
   let snapshot = localizeAttributes(record, initial, localize, decorate, resolveStatusOptions, reportUnknownDisplay);
   const listeners = new Set<() => void>();
+  let signature = JSON.stringify(initial);
   return {
     source: {
       getSnapshot: () => snapshot,
@@ -83,6 +84,9 @@ export const createMutableAttributeSource = (
       },
     },
     set(attributes) {
+      const nextSignature = JSON.stringify(attributes);
+      if (nextSignature === signature) return;
+      signature = nextSignature;
       snapshot = localizeAttributes(record, attributes, localize, decorate, resolveStatusOptions, reportUnknownDisplay);
       for (const listener of listeners) listener();
     },

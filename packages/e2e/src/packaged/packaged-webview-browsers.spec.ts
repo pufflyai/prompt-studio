@@ -17,6 +17,7 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyTreeGroups } from "../helpers/tree-groups";
+import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
 import { buildBinary } from "./packaged-helpers";
@@ -26,6 +27,9 @@ import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
 import { verifyPackagedViewInitialization } from "./packaged-webview-initialization";
 import { verifyPackagedWebviewRetention } from "./packaged-webview-retention";
+
+test.afterEach(stopPendingTestProcesses);
+test.afterAll(stopPendingTestProcesses);
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
 // Package verification does not install Playwright browsers on every release runner.

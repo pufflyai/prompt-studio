@@ -3,6 +3,7 @@ import { type ResourceContextAction, ScrollArea } from "@pstdio/ui";
 import {
   type AttributeDescriptor,
   type AttributesSource,
+  applyKanbanMove,
   isAttributesSource,
   KanbanRenderer,
   type KanbanRendererRow,
@@ -193,6 +194,15 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onRowClick={contribution.onRowActivate ? handleOpenRow : undefined}
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
         onAttributeChange={contribution.onAttributeChange}
+        onMove={
+          contribution.onMove
+            ? (move) =>
+                read.mutate(
+                  (rows) => applyKanbanMove(rows, move),
+                  () => contribution.onMove!(move),
+                )
+            : undefined
+        }
         onReorder={contribution.onReorder}
         createRow={contribution.createRow}
         onCreateRow={contribution.onCreateRow}

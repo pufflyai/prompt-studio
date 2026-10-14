@@ -70,7 +70,7 @@ The lifecycle protocol serves `index.html` with that theme's classes, `data-them
 
 ## Native menus and icon
 
-Edit keeps native undo, redo, clipboard, and selection actions, and adds Settings and Keyboard Shortcuts. View opens Search, the project picker, notifications, and theme selection. It also offers sidebar visibility, history navigation, reload, zoom, and full screen. The menu does not expose developer tools.
+On macOS, Settings appears in the Prompt Studio application menu. On Windows and Linux, Settings appears in Edit. Edit keeps native undo, redo, clipboard, and selection actions, and adds Keyboard Shortcuts. View opens Search, the project picker, notifications, and theme selection. It also offers sidebar visibility, history navigation, reload, zoom, and full screen. The menu does not expose developer tools.
 
 App menu items send command IDs only to the workbench renderer through the preload's `onCommand` subscription. The dashboard executes its registered commands and reports failures through workbench notifications. Lifecycle state enables those items only while the workbench is ready. Settings uses Cmd/Ctrl+,; existing workbench shortcuts remain owned by the workbench so native accelerators do not override editor shortcuts.
 
@@ -120,6 +120,12 @@ People and agents read the same snapshot. While monitoring is on, main listens o
 The workbench registers file rendering without loading its editor implementation. Code and diff editor components initialize the bundled Monaco runtime when first rendered. Opening a desktop window with no file open does not download or initialize Monaco.
 
 Recovery codes distinguish a missing sidecar, readiness timeout, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. Recovery never recommends deleting the database.
+
+The runtime records each startup step as a `runtime.startup.phase` entry in the shared log file and in its output, which desktop keeps in `desktop-runtime.log`. The steps are `database_locked`, `database_engine_loaded`, `database_image_restored` (first start only), `database_opened`, `database_migrated`, `extensions_ready`, and `app_ready`. Each entry has `elapsedMs`, the time since the runtime process started. These entries are written at every log level, so the log of a startup timeout shows which step was still running. The runtime publishes its descriptor at `database_locked`, before the database opens; `/runtime/ready` waits for `app_ready`.
+
+Project creation and extension installation also record `runtime.setup.phase` at every log level. Each step writes `started`, then `completed` or `failed`, with a shared `span_id` and a final `duration_ms`. Project steps include project and workspace IDs when available. The phases cover workspace creation, configuration, extension installation and sync, and provisioning. Default-extension requests include time waiting for the install queue; their `active` step begins when the queue admits them. Source checkout and dependency installation have their own steps. A started step without a finish identifies work still pending when the log was captured. These entries do not include source URLs, paths, command arguments, or environment values.
+
+A first start that stops while it unpacks the starter database leaves the data folder empty, so Retry unpacks it again. See [Tests](../../guides/development/0002-testing.md) for the starter database image.
 
 The runtime's `db.open.failed` event identifies database startup failures even when PGlite returns an opaque WebAssembly error. Desktop uses that event to show database recovery guidance. It leaves damaged files untouched and can retry after the user restores them.
 

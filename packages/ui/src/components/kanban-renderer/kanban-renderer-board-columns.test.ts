@@ -49,3 +49,27 @@ test("a failed board badge edit reports once and consumes the rejection", async 
   await columns[0]!.items[0]!.cardProps.onBadgeChange!("status", "done");
   expect(reports).toEqual([{ error, action: "Update attribute" }]);
 });
+
+test("multi-select row groups show each membership while column totals count unique rows", () => {
+  const row = rows[0];
+  const [column] = buildKanbanBoardColumns({
+    grouped: [
+      {
+        key: "todo",
+        label: "Todo",
+        rows: [row],
+        subgroups: [
+          { key: "api", label: "API", rows: [row] },
+          { key: "web", label: "Web", rows: [row] },
+        ],
+      },
+    ],
+    settings: DEFAULT_KANBAN_RENDERER_SETTINGS,
+    sorts: [],
+    fields: withTitleField([]),
+    attributes: [],
+    search: "",
+  });
+  expect(column.groups!.map((group) => group.items.length)).toEqual([1, 1]);
+  expect(column.items).toHaveLength(1);
+});

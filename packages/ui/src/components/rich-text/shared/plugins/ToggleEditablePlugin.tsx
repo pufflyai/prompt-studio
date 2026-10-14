@@ -4,7 +4,7 @@ import { useLayoutEffect } from "react";
 export default function ToggleEditablePlugin({ isEditable }: { isEditable: boolean }) {
   const [editor] = useLexicalComposerContext();
 
-  // Settle the editable DOM before the host's next-frame focus handoff.
+  // Apply the change in the same task as the commit, so no input lands in an editor that was just locked.
   useLayoutEffect(() => {
     editor.setEditable(isEditable);
   }, [isEditable, editor]);

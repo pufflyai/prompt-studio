@@ -2,12 +2,10 @@ import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel
 import type {
   createActivityEventsDBService,
   createBoardViewsDBService,
-  createExtensionInstancesDBService,
   createExtensionResourceSequencesDBService,
   createExtensionSettingsDBService,
   createExtensionStorageDBService,
   createInstalledExtensionSourcesDBService,
-  createNotificationsDBService,
   createResourceLinksDBService,
   createSessionQueueEntriesDBService,
   createWebviewPreferencesDBService,
@@ -49,7 +47,6 @@ export interface RouteDeps {
   boardViewsService: ReturnType<typeof createBoardViewsDBService>;
   extensionWebviewAccess: ExtensionWebviewAccess;
   readiness: ReadinessChecks;
-  closeDb: () => Promise<void>;
   eventBus: EventBus;
   automationService: ReturnType<typeof createAutomationService>;
   harnessRegistry: HarnessRegistryService;
@@ -62,10 +59,8 @@ export interface RouteDeps {
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
-  notificationsDbService: ReturnType<typeof createNotificationsDBService>;
   notificationService: ReturnType<typeof createNotificationService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
-  extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesService>;
   resourceLinksService: ReturnType<typeof createResourceLinksDBService>;
   extensionResourceSequencesService: ReturnType<typeof createExtensionResourceSequencesDBService>;

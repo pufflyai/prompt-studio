@@ -3,8 +3,9 @@ import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
+import { createSessionsModule } from "../module";
 import { createSessionBubbleModule } from "./module";
 import { openDashboardSidePanel } from "./open-side-panel";
 
@@ -32,5 +33,24 @@ test("opens an empty chat panel with a workspace session draft and reuses it on 
   await openDashboardSidePanel(workbench);
   expect(workbench.layout.listPanelInstances("side")).toEqual(panels);
   expect(workbench.sidePanel.getMode()).toBe("floating");
+  expect(workbench.pages.store.getState().location).toEqual(location);
+});
+
+test("opens the session draft in the Side Panel while a session page is open", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionBubbleModule());
+  workbench.registerModule(createSessionsModule());
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
+  openSessionsPage(workbench, createDashboardResource("session", "session-1", "Session", "MessageCircle", "project-1"));
+  const location = workbench.pages.store.getState().location;
+
+  await openDashboardSidePanel(workbench);
+  expect(workbench.layout.listPanelInstances("side")).toEqual([
+    expect.objectContaining({
+      viewId: dashboardWidgetIds.sessionBubble,
+      resource: expect.objectContaining({ type: "session-draft" }),
+    }),
+  ]);
   expect(workbench.pages.store.getState().location).toEqual(location);
 });

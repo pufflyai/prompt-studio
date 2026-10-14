@@ -301,8 +301,46 @@ jobs:
         # ADR 0044: retain the existing Windows default and the API runner's own limit.
         run: bunx lerna run test --scope pstdio-db --scope pstdio-api --stream --concurrency=1 -- --timeout=15000
 
-  e2e:
+  storybooks:
     needs: scope
+    if: needs.scope.outputs.stage == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Storybook dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+
+      - name: Build shared Storybooks
+        run: bun packages/e2e/src/scripts/build-storybooks.ts
+
+      - name: Share prebuilt Storybooks with UI shards
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          overwrite: true
+          path: |
+            packages/ui/storybook-static
+            packages/pstdio-dashboard/storybook-static
+            packages/pstdio-workbench/storybook-static
+          if-no-files-found: error
+
+  e2e:
+    needs: [scope, storybooks]
     if: needs.scope.outputs.stage == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -335,6 +373,16 @@ jobs:
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
 
+      - name: Test desktop readiness helpers with the shared browser image
+        if: matrix.shard == 1
+        run: bun test clients/desktop/src/e2e/desktop-pages.test.ts
+
+      - name: Download prebuilt shared Storybooks
+        uses: actions/download-artifact@v4
+        with:
+          name: storybook-static
+          path: packages
+
       - name: Test UI e2e
         run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
 
@@ -342,11 +390,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-e2e-results-${{ matrix.shard }}
+          name: ui-e2e-results-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   e2e_cli:
     needs: scope
@@ -424,11 +472,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: packaged-vite-e2e-results
+          name: packaged-vite-e2e-results-attempt-${{ github.run_attempt }}
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   license_check:
     needs: scope
@@ -503,6 +551,10 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
+      - name: Test native DMG attachment cleanup
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+
       - name: Build monorepo
         if: matrix.platform == 'linux'
         run: bun run build
@@ -517,7 +569,13 @@ jobs:
 
       - name: Build unsigned desktop app
         id: desktop
+        env:
+          DEBUG: electron-installer-dmg
         run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
+
+      - name: Record disk images after a failed macOS desktop build
+        if: failure() && matrix.platform == 'darwin' && steps.desktop.outcome == 'failure'
+        run: hdiutil info -plist
 
       # Chromium refuses to start on Linux unless its sandbox helper is owned by root and setuid.
       - name: Configure the Linux Chromium sandboxes
@@ -552,9 +610,9 @@ jobs:
         if: always() && needs.scope.outputs.stage == 'full' && matrix.tests
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-test-results-${{ matrix.target }}
+          name: desktop-test-results-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: clients/desktop/test-results
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   build_docker:
     needs: scope
@@ -596,12 +654,14 @@ jobs:
       ref: ${{ github.sha }}
 
   # The one status check the main ruleset and merge queue require. Job and matrix names can
-  # change without touching the ruleset. It must always run: GitHub treats a skipped required
-  # check as passing, and jobs are skipped when a job they need fails.
+  # change without touching the ruleset. It must run whenever the run finishes, because GitHub
+  # treats a skipped required check as passing and jobs are skipped when a job they need fails.
+  # A run cancelled by a newer run on the same commit (for example after a label is added)
+  # reports nothing, so its stale failure does not sit next to the newer run's result.
   # Pull requests may skip jobs their changes do not need. The merge queue requires its build
   # and static check jobs. The full stage requires every job.
   ci_passed:
-    if: always()
+    if: ${{ !cancelled() }}
     needs:
       - scope
       - static_checks
@@ -611,6 +671,7 @@ jobs:
       - harness_cli_support
       - windows_test_and_build
       - windows_database_tests
+      - storybooks
       - e2e
       - e2e_cli
       - packaged_and_vite_e2e

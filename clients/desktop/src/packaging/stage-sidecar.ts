@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { resolveSidecarTarget } from "../runtime/sidecar-artifact";
 import { signMacOSSidecar } from "./sign-macos-sidecar";
@@ -25,7 +34,11 @@ export const stageSidecar = (input: StageSidecarInput) => {
   rmSync(input.resourcesPath, { recursive: true, force: true });
   mkdirSync(binDir, { recursive: true });
   copyFileSync(input.sourcePath, binaryPath);
-  if (input.platform !== "win32") chmodSync(binaryPath, 0o755);
+  if (input.platform !== "win32") {
+    chmodSync(binaryPath, 0o755);
+    // The runtime puts this folder first on its PATH, so its agents can run `pst` without the Terminal command.
+    symlinkSync(target.executable, join(binDir, "pst"));
+  }
 
   // The manifest must describe the final signed bytes sealed inside the application.
   if (input.platform === "darwin" && input.macosSignIdentity) {

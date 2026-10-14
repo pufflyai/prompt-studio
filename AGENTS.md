@@ -258,6 +258,7 @@ Run `bun run dev:playwright`. Open the dashboard URL printed by the command with
 - Pending, failed, cancelled, or timed-out checks mean the work is unfinished. Checks skipped by workflow conditions are allowed.
 - Local checks passing or opening a draft PR does not complete the task.
 - If CI is blocked, report the blocker and keep the PR open. Do not report the task as done.
+- If an extension PR fails `published_extensions` only because it needs SDK or UI changes that are not published yet, add the `waiting-for-release` label. Report it as blocked on the next release. Do not work around the check. See [PR labels](documentation/guides/development/0004-pull-request-labels.md).
 
 ## CI timeouts and performance budgets
 

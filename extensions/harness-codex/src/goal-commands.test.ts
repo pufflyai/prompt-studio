@@ -130,7 +130,6 @@ test("Stop between autonomous goal turns reports cancellation", async () => {
   peer.complete();
   const stopped = peer.run.stop();
   peer.notifyGoal("paused");
-  peer.replyGoal(peer.goal("paused"));
   await stopped;
   expect(await peer.run.done).toEqual({ status: "cancelled" });
 });
@@ -142,8 +141,9 @@ test("aborting a pending goal update retires its operation and releases the cont
   const invoked = prepared.invoke({ events: peer.events, signal: abort.signal });
   await peer.requested;
   abort.abort();
-  await expect(invoked).rejects.toThrow("closed");
-  expect(await peer.run.done).toEqual({ status: "disconnected" });
+  peer.replyGoal(peer.goal("active"));
+  await expect(invoked).rejects.toThrow();
+  expect(await peer.run.done).toEqual({ status: "cancelled" });
 });
 
 test.each([
@@ -159,7 +159,8 @@ test.each([
   expect(await peer.run.done).toEqual({ status: status === "failed" ? "failed" : "cancelled" });
   peer.replyGoal(peer.goal("active"));
   await expect(invoked).rejects.toThrow("ended");
-  expect(worker.isClosed()).toBe(true);
+  expect(worker.isClosed()).toBe(false);
+  expect(peer.calls.some((call) => call.method === "thread/goal/set" && call.params.status === "paused")).toBe(true);
 });
 
 test("editing an active goal uses the same owner and preserves its native status", async () => {

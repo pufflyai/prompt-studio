@@ -1,85 +1,15 @@
 import { afterEach, expect, test } from "bun:test";
-import { PassThrough, Writable } from "node:stream";
-import type { JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
-import { createCodexRuntime } from "./codex-runtime";
+import type { createCodexRuntime } from "./codex-runtime";
+import { peer as createPeer, sink } from "./shared-server-peer";
 
 const runtimes: ReturnType<typeof createCodexRuntime>[] = [];
 afterEach(async () => {
   for (const runtime of runtimes.splice(0)) await runtime.dispose();
 });
-const loseAcknowledgement = (method: string, lose?: boolean) => method === "turn/start" && lose;
-const readState = (id: string, active?: boolean) => ({
-  thread: {
-    id,
-    turns: active ? [{ id: "unresolved", status: "inProgress", items: [] }] : [],
-  },
-});
-const peer = (options: { loseTurnAck?: boolean; recoveryActive?: boolean } = {}) => {
-  const calls: Array<{ method: string; params: Record<string, unknown> }> = [];
-  const children: Array<{ emit: (value: unknown) => void; kill: () => void }> = [];
-  const deps = {
-    spawnProcess: () => {
-      const stdout = new PassThrough();
-      const stderr = new PassThrough();
-      const exited = Promise.withResolvers<{ code: number | null; signal: string | null }>();
-      const emit = (value: unknown) => stdout.write(`${JSON.stringify(value)}\n`);
-      let turn = 0;
-      const stdin = new Writable({
-        write(chunk, _encoding, done) {
-          const m = JSON.parse(String(chunk));
-          calls.push(m);
-          if (loseAcknowledgement(m.method, options.loseTurnAck)) {
-            kill();
-            done();
-            return;
-          }
-          if (m.id === undefined) {
-            done();
-            return;
-          }
-          {
-            let result: unknown = {};
-            if (m.method === "thread/start" || m.method === "thread/resume")
-              result = {
-                thread: { id: m.params.threadId ?? `thread-${children.length}`, path: null },
-                model: "native-default",
-              };
-            if (m.method === "turn/start") {
-              turn++;
-              result = { turn: { id: `turn-${turn}`, status: "inProgress" } };
-            }
-            if (m.method === "thread/read") result = readState(m.params.threadId, options.recoveryActive);
-            emit({ id: m.id, result });
-            if (m.method === "turn/interrupt")
-              emit({
-                method: "turn/completed",
-                params: { threadId: m.params.threadId, turn: { id: m.params.turnId, status: "interrupted" } },
-              });
-          }
-          done();
-        },
-      });
-      const kill = () => {
-        stdout.end();
-        stderr.end();
-        exited.resolve({ code: null, signal: "SIGTERM" });
-      };
-      children.push({ emit, kill });
-      return { stdin, stdout, stderr, kill, pid: children.length, onExit: exited.promise };
-    },
-  };
-  const runtime = createCodexRuntime(deps);
-  runtimes.push(runtime);
-  return { runtime, calls, children };
-};
-const sink = () => {
-  const messages: SessionMessage[] = [];
-  return {
-    getMessages: () => messages,
-    push: (patch: JsonPatch) => {
-      messages[Number(patch.path.split("/").at(-1))] = patch.value as SessionMessage;
-    },
-  };
+const peer = (options: Parameters<typeof createPeer>[0] = {}) => {
+  const p = createPeer(options);
+  runtimes.push(p.runtime);
+  return p;
 };
 test("rediscovers a thread's native default without passing host model or parameter overrides", async () => {
   const { runtime, calls } = peer();
@@ -90,7 +20,10 @@ test("rediscovers a thread's native default without passing host model or parame
     params: { model_reasoning_effort: "high" },
   });
   expect(await worker.readModel("existing-thread")).toBe("native-default");
-  expect(calls.find((call) => call.method === "thread/resume")?.params).toEqual({ threadId: "existing-thread" });
+  const resume = calls.find((call) => call.method === "thread/resume")?.params;
+  expect(resume?.threadId).toBe("existing-thread");
+  expect(resume?.model).toBeUndefined();
+  expect((resume?.config as Record<string, unknown>)?.model_reasoning_effort).toBeUndefined();
   expect(calls.some((call) => call.method === "turn/start")).toBe(false);
 });
 test("reads the native model without applying the next-turn selection and tracks acknowledged turns", async () => {
@@ -130,7 +63,7 @@ test("isolates workers and recreates a lost worker on the recorded native thread
   const { runtime, calls, children } = peer();
   const first = await runtime.run({ prompt: "one", events: sink(), env: { PSTDIO_SESSION_ID: "one" } });
   const second = await runtime.run({ prompt: "two", events: sink(), env: { PSTDIO_SESSION_ID: "two" } });
-  expect(children).toHaveLength(2);
+  expect(children).toHaveLength(1);
   children[0].kill();
   expect(await first.done).toEqual({ status: "disconnected" });
   const recovered = await runtime.run({
@@ -141,10 +74,10 @@ test("isolates workers and recreates a lost worker on the recorded native thread
   });
   expect(calls.filter((c) => c.method === "turn/start")).toHaveLength(3);
   expect(calls.find((c) => c.method === "thread/resume")?.params.threadId).toBe(first.agentSessionId);
-  expect(children).toHaveLength(3);
+  expect(children).toHaveLength(2);
   await runtime.dispose();
   expect(await recovered.done).toEqual({ status: "cancelled" });
-  expect(await second.done).toEqual({ status: "cancelled" });
+  expect(await second.done).toEqual({ status: "disconnected" });
 });
 test("compaction remains exclusive after acknowledgement and ignores another turn's completion", async () => {
   const { runtime, children } = peer();

@@ -220,6 +220,7 @@ export const registerSettings = (input: InternalRegisterWorkbenchExtensionContri
     (left, right) => left.extensionId.localeCompare(right.extensionId) || left.id.localeCompare(right.id),
   );
   for (const [index, panel] of panels.entries()) {
+    if (panel.slotId === "extension.settings") continue;
     disposables.push(
       input.workbench.settings.registerPanel({
         id: panel.id,
