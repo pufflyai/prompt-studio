@@ -88,17 +88,31 @@ export const WholePanelPlacement: Story = {
     );
   },
 };
+let actionBarFixture: ReturnType<typeof fixture>;
 export const ActionBarEdges: Story = {
-  args: { createFixture: fixture },
+  args: {
+    createFixture: () => {
+      actionBarFixture = fixture();
+      return actionBarFixture;
+    },
+  },
   play: async ({ canvasElement: root }) => {
     for (const edge of ["top", "right", "bottom", "left"]) {
       await move(root, "activity", `Action bar ${edge}`);
+      await waitFor(() => expect(actionBarFixture.workbench.layout.getLayout().actionBarEdge).toBe(edge));
       const bar = root.querySelector<HTMLElement>('[data-workbench-region="activity"]')!;
       await waitFor(() =>
         expect(
           edge === "top" || edge === "bottom" ? bar.clientWidth > bar.clientHeight : bar.clientHeight > bar.clientWidth,
         ).toBe(true),
       );
+      const bounds = bar.getBoundingClientRect();
+      const frame = root.querySelector<HTMLElement>("[data-workbench-drag-frame]")!.getBoundingClientRect();
+      await expect(
+        Math.abs(
+          bounds[edge as "left" | "right" | "top" | "bottom"] - frame[edge as "left" | "right" | "top" | "bottom"],
+        ),
+      ).toBeLessThanOrEqual(1);
     }
   },
 };
