@@ -507,6 +507,10 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
+      - name: Test native DMG attachment cleanup
+        if: needs.scope.outputs.stage == 'full' && matrix.platform == 'darwin'
+        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+
       - name: Build monorepo
         if: matrix.platform == 'linux'
         run: bun run build
