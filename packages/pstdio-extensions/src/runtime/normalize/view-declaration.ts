@@ -52,6 +52,7 @@ const body = z.discriminatedUnion("kind", [
       query: callbackSchema,
       onAttributeChange: callbackSchema.optional(),
       onReorder: callbackSchema.optional(),
+      onMove: callbackSchema.optional(),
       onColumnAction: callbackSchema.optional(),
       onRowActivate: callbackSchema.optional(),
     })

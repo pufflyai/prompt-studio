@@ -5,32 +5,9 @@ import { createServer } from "node:net";
 import { dirname, resolve } from "node:path";
 import { chromium, type Request } from "@playwright/test";
 import { stopChildProcess } from "./child-process";
+import { type StorybookPackageName, sharedStorybooks } from "./storybook-config";
 
 export const STORYBOOK_BOOT_TIMEOUT_MS = 60_000;
-
-export type StorybookPackageName = "ui" | "pstdio-dashboard" | "pstdio-workbench";
-
-const sharedStorybooks = [
-  {
-    packageName: "ui",
-    probeStoryId: "patterns-editors-mermaid-renderer--default",
-    urlEnvironmentVariable: "E2E_STORYBOOK_UI_URL",
-  },
-  {
-    packageName: "pstdio-dashboard",
-    probeStoryId: "dashboard-sidenav--workspace-resource",
-    urlEnvironmentVariable: "E2E_STORYBOOK_DASHBOARD_URL",
-  },
-  {
-    packageName: "pstdio-workbench",
-    probeStoryId: "pstdio-workbench-reference-core-api-visual-states--page-composition",
-    urlEnvironmentVariable: "E2E_STORYBOOK_WORKBENCH_URL",
-  },
-] as const satisfies ReadonlyArray<{
-  packageName: StorybookPackageName;
-  probeStoryId: string;
-  urlEnvironmentVariable: string;
-}>;
 
 const getFreePort = async () =>
   new Promise<number>((resolvePort, reject) => {
@@ -137,11 +114,18 @@ export const startStorybookServer = async (probeStoryId: string, packageName: St
   const repoRoot = resolve(import.meta.dirname, "../../..", "..");
   const packageRoot = resolve(repoRoot, "packages", packageName);
   const baseUrl = `http://127.0.0.1:${port}`;
-  const manifestPath = createRequire(import.meta.url).resolve("storybook/package.json", { paths: [packageRoot] });
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { bin: string };
-  const storybook = spawn(
-    "node",
-    [
+  const prebuilt = Boolean(process.env.CI);
+  let command = "bun";
+  let args = [
+    resolve(import.meta.dirname, "static-storybook-server.ts"),
+    resolve(packageRoot, "storybook-static"),
+    String(port),
+  ];
+  if (!prebuilt) {
+    command = "node";
+    const manifestPath = createRequire(import.meta.url).resolve("storybook/package.json", { paths: [packageRoot] });
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { bin: string };
+    args = [
       resolve(dirname(manifestPath), manifest.bin),
       "dev",
       "--config-dir",
@@ -151,16 +135,16 @@ export const startStorybookServer = async (probeStoryId: string, packageName: St
       "--port",
       String(port),
       "--ci",
-    ],
-    {
-      cwd: packageRoot,
-      env: {
-        ...process.env,
-        STORYBOOK_DISABLE_TELEMETRY: "1",
-      },
-      stdio: "pipe",
+    ];
+  }
+  const storybook = spawn(command, args, {
+    cwd: packageRoot,
+    env: {
+      ...process.env,
+      STORYBOOK_DISABLE_TELEMETRY: "1",
     },
-  );
+    stdio: "pipe",
+  });
   let output = "";
   const captureOutput = (chunk: Buffer) => {
     output = (output + chunk.toString()).slice(-16_384);

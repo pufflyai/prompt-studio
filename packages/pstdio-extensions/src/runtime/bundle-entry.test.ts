@@ -9,8 +9,7 @@ test("reports the unresolved dependency when an extension cannot be bundled", as
   const entry = join(root, "extension.ts");
   writeFileSync(entry, 'export { default } from "missing-desktop-dependency";');
   try {
-    const error = await bundleEntry(entry, root, join(root, "out")).catch((error: unknown) => error);
-    expect(error).toMatchObject({ message: expect.stringContaining("missing-desktop-dependency") });
+    await expect(bundleEntry(entry, root, join(root, "out"))).rejects.toThrow("missing-desktop-dependency");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -42,20 +41,25 @@ test("concurrent bundles of one entry share one build and resolve after it finis
   }
 });
 
-test("a later bundle retries after a failed build", async () => {
-  const root = mkdtempSync(join(tmpdir(), "extension-bundle-retry-"));
+test("retries an unchanged source when its bundle output becomes writable", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-bundle-output-repair-"));
   const entry = join(root, "extension.ts");
-  writeFileSync(join(root, "dependency.ts"), 'export default { marker: "retried-bundle" };');
-  writeFileSync(entry, 'export { default } from "./missing-module";');
+  const outDir = join(root, "out");
+  writeFileSync(entry, "export default () => 42;");
+  writeFileSync(outDir, "An existing file blocks the output directory.");
   try {
-    const error = await bundleEntry(entry, root, join(root, "out")).catch((error: unknown) => error);
-    expect(error).toMatchObject({ message: expect.stringContaining("missing-module") });
-    // Repair an existing file while Bun caches directory entries. See ADR 0074.
-    writeFileSync(entry, 'export { default } from "./dependency";');
+    let failure: unknown;
+    try {
+      await bundleEntry(entry, root, outDir);
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(Error);
+    rmSync(outDir);
 
-    const bundlePath = await bundleEntry(entry, root, join(root, "out"));
-
-    expect(readFileSync(bundlePath, "utf8")).toContain("retried-bundle");
+    const bundlePath = await bundleEntry(entry, root, outDir);
+    const loaded = await import(bundlePath);
+    expect(loaded.default()).toBe(42);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
