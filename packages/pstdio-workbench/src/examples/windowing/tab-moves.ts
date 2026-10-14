@@ -47,12 +47,12 @@ export const moveStoryTab = async (tab: HTMLElement, destination: string) => {
     previous = current;
     expect(stable).toBe(true);
   });
-  const source = tab.getBoundingClientRect();
-  const end = target.getBoundingClientRect();
   await waitFor(() => {
+    const end = target.getBoundingClientRect();
     const hit = document.elementFromPoint(end.x + end.width / 2, end.y + end.height / 2);
     expect(hit?.closest("[data-workbench-panel]")?.getAttribute("data-workbench-panel")).toBe(region);
   });
+  const source = tab.getBoundingClientRect();
   fireEvent.mouseDown(tab, {
     button: 0,
     buttons: 1,
@@ -65,6 +65,7 @@ export const moveStoryTab = async (tab: HTMLElement, destination: string) => {
     clientY: source.y + source.height / 2,
   });
   await waitFor(() => expect(document.querySelector(`[data-workbench-tab-drop="${region}"]`)).toBeVisible());
+  const end = target.getBoundingClientRect();
   fireEvent.mouseMove(target, { buttons: 1, clientX: end.x + end.width / 2, clientY: end.y + end.height / 2 });
   await waitFor(() =>
     expect(document.querySelector(`[data-workbench-tab-drop="${region}"][data-drop-active]`)).toBeVisible(),

@@ -55,9 +55,9 @@ test("creates the draft session after focusing another panel while its request i
   request,
 }) => {
   const { header, project } = await openSessionsInSidePanelTabs(page, request, "Background session start");
-  await header.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
   const mainHeader = page.locator('[data-workbench-panel-header="main"]');
+  await mainHeader.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Session", exact: true }).click();
   const draftTab = mainHeader.getByRole("tab", { name: "New session", exact: true });
   await expect(draftTab).toHaveAttribute("aria-selected", "true");
   const main = page.locator('[data-workbench-region="main"] [data-workbench-instance]:visible');
