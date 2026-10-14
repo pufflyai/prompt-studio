@@ -30,6 +30,7 @@ import {
 import { connectPageOwnerRemoval } from "./page-owner-removal";
 import { createPagePlacementCloser } from "./page-placement-closer";
 import { createPageResourceRemover } from "./page-resource-remover";
+import { createProjectPageResourceKey } from "./project-page-resource-key";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,
@@ -49,10 +50,14 @@ export const createWorkbenchPageLocationController = <Value>(
 ): WorkbenchPageLocationController => {
   const internals = getWorkbenchPageRegistryInternals(input.registry);
   const pages = input.registry.listPages;
+  const resourceKey = createProjectPageResourceKey(
+    internals.resources,
+    () => input.registry.store.getState().projectId,
+  );
   const modeMemory = createPageModeMemory({
     pages,
     modes: input.modes,
-    resourceKey: (resource) => internals.resources.toUri(internals.resources.normalize(resource)),
+    resourceKey,
   });
   const activeModeId = () => input.registry.store.getState().activeModeId;
   let historyIndex = 0;
@@ -79,7 +84,7 @@ export const createWorkbenchPageLocationController = <Value>(
     levels: input,
     pages,
     normalize: (location) => normalizeStored(location),
-    resourceKey: (resource) => internals.resources.toUri(internals.resources.normalize(resource)),
+    resourceKey,
     start: () => start(),
   });
 
@@ -243,6 +248,7 @@ export const createWorkbenchPageLocationController = <Value>(
       getState: input.registry.store.getState,
       resources: internals.resources,
       forgetLocations: [rootLevel.forget, modeMemory.forget],
+      start,
       commit,
     }),
     canGoBack: () => historyIndex > 0,

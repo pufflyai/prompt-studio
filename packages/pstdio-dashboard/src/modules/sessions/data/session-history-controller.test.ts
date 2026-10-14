@@ -9,7 +9,7 @@ const tick = async () => {
   for (let i = 0; i < 12; i++) await Promise.resolve();
 };
 
-test("SSE owns even an empty transcript and queue edits never fetch full history", async () => {
+test("SSE owns even an empty transcript and the queue while it is live", async () => {
   const registry = createRendererReadRegistry();
   const history = Promise.withResolvers<{ messages: SessionMessage[] }>();
   let handlers!: SessionStreamHandlers;
@@ -49,8 +49,15 @@ test("SSE owns even an empty transcript and queue edits never fetch full history
   controller.sessionChanged({ id: "other", status: "in_progress" });
   await tick();
   expect(historyReads).toBe(1);
-  expect(queueReads).toBe(2);
+  expect(queueReads).toBe(1);
   expect(state.messages).toEqual([message("queued-prompt-s-1")]);
+  // After the stream ends, session row events are the only queue signal left.
+  handlers.onEnd!({});
+  await tick();
+  controller.sessionChanged({ id: "s", status: "completed" });
+  await tick();
+  expect(historyReads).toBe(2);
+  expect(queueReads).toBe(3);
   controller.dispose();
   await registry.dispose();
 });

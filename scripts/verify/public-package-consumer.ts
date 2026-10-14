@@ -1,8 +1,10 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { freshInstallArgs } from "./fresh-install";
 import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
+import { workbenchOwnershipConsumer } from "./workbench-ownership-consumer";
 
 const run = (cwd: string, args: string[]) => {
   const result = Bun.spawnSync(["bun", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -49,7 +51,12 @@ const consumerDependencies = (packages: { path: string; archive: string }[], rea
   return { dependencies, overrides, imports };
 };
 
-const checkConsumer = (root: string, packages: { path: string; archive: string }[], react: boolean) => {
+const checkConsumer = (
+  root: string,
+  packages: { path: string; archive: string }[],
+  react: boolean,
+  repoRoot: string,
+) => {
   const directory = join(root, react ? "react-consumer" : "native-consumer");
   mkdirSync(directory);
   const { dependencies, overrides, imports } = consumerDependencies(packages, react);
@@ -63,7 +70,8 @@ const checkConsumer = (root: string, packages: { path: string; archive: string }
       overrides,
     }),
   );
-  run(directory, react ? ["install"] : ["install", "--omit", "peer"]);
+  const install = freshInstallArgs(repoRoot, directory);
+  run(directory, react ? install : [...install, "--omit", "peer"]);
   writeFileSync(
     join(directory, "consumer.ts"),
     imports
@@ -93,6 +101,7 @@ const viewBar = createElement(CollectionViewBar, {
 void [filtered, viewBar];
 `
         : "") +
+      (imports.includes("@pstdio/workbench") ? workbenchOwnershipConsumer : "") +
       (react && imports.includes("@pstdio/workbench/react")
         ? `
 import type { ReactAttributeDescriptor, ReactBoardColumnConfig } from "@pstdio/workbench/react";
@@ -157,9 +166,9 @@ export const verifyPublicPackages = (repoRoot: string, sdkOnly = false) => {
       run(path, ["pm", "pack", "--filename", archive]);
       return { path, archive };
     });
-    checkConsumer(root, packages, false);
-    checkConsumer(root, packages, true);
-    verifyProviderPackageConsumer(root, packages[0]!.archive);
+    checkConsumer(root, packages, false, repoRoot);
+    checkConsumer(root, packages, true, repoRoot);
+    verifyProviderPackageConsumer(root, packages[0]!.archive, repoRoot);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

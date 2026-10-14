@@ -93,3 +93,4 @@ export {
   type WorkbenchModuleHostProps,
   type WorkbenchModuleHostRegistration,
 } from "./workbench/workbench-module-host";
+export { WorkbenchPanelToggles } from "./workbench/workbench-panel-toggles";

@@ -1,8 +1,9 @@
-import type { ViewSort } from "@pstdio/sdk/extensions";
+import type { KanbanRendererMove, ViewSort } from "@pstdio/sdk/extensions";
 import type { ResourceContextAction } from "@/components/overlays/resource-context-menu";
 import { getIconComponent } from "@/components/primitives/icon-options";
 import { withTitleField } from "../collection-view/collection-view-fields";
 import { sortRowsByView } from "../collection-view/collection-view-sort";
+import { buildKanbanMove } from "./kanban-move";
 import { type KanbanActionErrorHandler, runKanbanAction } from "./kanban-renderer-action";
 import type { KanbanRendererColumnGroup } from "./kanban-renderer-grouping";
 import {
@@ -26,6 +27,7 @@ interface BuildKanbanRendererListItemsInput<TRow extends KanbanRendererRow> {
   onRowClick?: (row: TRow) => void;
   onActionError?: KanbanActionErrorHandler;
   onAttributeChange?: (rowId: string, attributeId: string, value: unknown) => Promise<void> | void;
+  onMove?: (move: KanbanRendererMove) => Promise<void> | void;
   onReorder?: (rowId: string, beforeRowId?: string) => Promise<void> | void;
   getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
 }
@@ -44,6 +46,7 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
     onActionError,
     onAttributeChange,
     onReorder,
+    onMove,
     getRowContextMenuActions,
   } = input;
   // A sorted view decides its own order, so rows only accept drops that keep a manual order.
@@ -82,14 +85,25 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
         ? (attributeId: string, value: unknown) =>
             runKanbanAction("Update attribute", () => onAttributeChange(row.id, attributeId, value), onActionError)
         : undefined,
-      draggable: Boolean(onAttributeChange || onReorder),
+      draggable: Boolean(onMove || onAttributeChange || onReorder),
       onDropRow:
-        supportsManualReorder && (onAttributeChange || onReorder)
+        supportsManualReorder && (onMove || onAttributeChange || onReorder)
           ? (draggedId) =>
               runKanbanAction(
                 "Move row",
                 async () => {
                   const targetColumnKey = resolveListDropTargetColumnKey(settings.columnGrouping, placement);
+                  if (onMove)
+                    return onMove(
+                      buildKanbanMove({
+                        rowId: draggedId,
+                        ...settings,
+                        sorts,
+                        targetColumnId: targetColumnKey,
+                        targetGroupKey: placement?.rowKey,
+                        beforeRowId: row.id,
+                      }),
+                    );
                   if (targetColumnKey && settings.columnGrouping !== NO_GROUPING && onAttributeChange) {
                     await onAttributeChange(draggedId, settings.columnGrouping, targetColumnKey);
                   }
@@ -116,15 +130,25 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
       countBadge: group.rows.length,
       ...getStatusPresentation(groupingAttributeId, group.key),
       onDropRow:
-        onAttributeChange && settings.columnGrouping !== NO_GROUPING
+        (onMove || onAttributeChange) && settings.columnGrouping !== NO_GROUPING
           ? (draggedId) =>
               runKanbanAction(
                 "Move row",
                 async () => {
                   const columnKey = parent?.columnKey ?? group.key;
-                  await onAttributeChange(draggedId, settings.columnGrouping, columnKey);
+                  if (onMove) {
+                    const move = buildKanbanMove({
+                      rowId: draggedId,
+                      ...settings,
+                      sorts,
+                      targetColumnId: columnKey,
+                      targetGroupKey: parent ? group.key : undefined,
+                    });
+                    return onMove({ rowId: move.rowId, attributes: move.attributes });
+                  }
+                  await onAttributeChange!(draggedId, settings.columnGrouping, columnKey);
                   if (settings.rowGrouping !== NO_GROUPING && parent) {
-                    await onAttributeChange(draggedId, settings.rowGrouping, group.key);
+                    await onAttributeChange!(draggedId, settings.rowGrouping, group.key);
                   }
                 },
                 onActionError,
@@ -151,14 +175,26 @@ export const buildKanbanRendererListItems = <TRow extends KanbanRendererRow>(
           isGroup: true,
           countBadge: column.rows.length,
           ...getStatusPresentation(settings.columnGrouping, column.key),
-          onDropRow: onAttributeChange
-            ? (draggedId: string) =>
-                runKanbanAction(
-                  "Move row",
-                  () => onAttributeChange(draggedId, settings.columnGrouping, column.key),
-                  onActionError,
-                )
-            : undefined,
+          onDropRow:
+            onMove || onAttributeChange
+              ? (draggedId: string) =>
+                  runKanbanAction(
+                    "Move row",
+                    () =>
+                      onMove
+                        ? onMove({
+                            rowId: draggedId,
+                            attributes: buildKanbanMove({
+                              rowId: draggedId,
+                              ...settings,
+                              sorts,
+                              targetColumnId: column.key,
+                            }).attributes,
+                          })
+                        : onAttributeChange!(draggedId, settings.columnGrouping, column.key),
+                    onActionError,
+                  )
+              : undefined,
           children: column.subgroups.map((group) => toGroupListItem(group, { columnKey: column.key })),
         }
       : toGroupListItem(column),

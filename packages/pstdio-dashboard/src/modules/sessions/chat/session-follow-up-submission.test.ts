@@ -1,5 +1,10 @@
 import { beforeEach, expect, test } from "bun:test";
-import { splitQueuedFollowUps } from "./queued-follow-ups";
+import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
+import type { SessionStreamHandlers } from "@pstdio/sdk/client";
+import type { SessionMessage } from "@pstdio/ui/chat-ui";
+import { createRendererReadRegistry } from "@pstdio/workbench";
+import { createSessionHistoryController, type SessionHistoryState } from "../data/session-history-controller";
+import { serverShowsPendingFollowUp, splitQueuedFollowUps } from "./queued-follow-ups";
 import { type FollowUpMutation, submitSessionMessage } from "./session-chat-actions";
 import { getPendingFollowUp, mergeMessagesWithPendingFollowUp, updatePendingFollowUp } from "./session-chat-state";
 
@@ -21,6 +26,11 @@ const submission = (
   onSubmitted: () => void,
   answers?: string[][],
   sessionStatus = "completed",
+  history: {
+    messages?: SessionMessage[];
+    reconnect?: () => void;
+    refreshQueue?: () => Promise<PendingQueuedFollowUpsResponse | undefined>;
+  } = {},
 ) =>
   submitSessionMessage({
     conversationKey: "session-1",
@@ -30,13 +40,39 @@ const submission = (
     agent: "codex",
     model: "model-1",
     text: "Next turn",
-    messages: [],
+    messages: history.messages ?? [],
     createSession: { mutateAsync: () => Promise.reject(new Error("Must use existing session")) },
     followUp,
-    reconnect: () => undefined,
+    reconnect: history.reconnect ?? (() => undefined),
+    refreshQueue: history.refreshQueue ?? (() => new Promise(() => undefined)),
     onSubmitted,
     questionResponse: answers ? { answers } : undefined,
   });
+const savedPrompt = (position: number) => ({
+  messages: [
+    {
+      id: `queued-prompt-session-1-${position}`,
+      role: "user" as const,
+      parts: [{ type: "text" as const, text: "Next turn" }],
+    },
+  ],
+  queue: {
+    requests: [
+      {
+        queuePosition: position,
+        revision: "saved",
+        prompt: "Next turn",
+        steeringDelivery: null,
+        model: null,
+        params: {},
+        attachments: [],
+      },
+    ],
+    activeRunStartedAt: "run",
+    steeringAvailable: false,
+    steeringUnavailableReason: null,
+  } satisfies PendingQueuedFollowUpsResponse,
+});
 
 beforeEach(() => updatePendingFollowUp("session-1", null));
 
@@ -158,12 +194,99 @@ test("a follow-up that cannot be sent stays in the conversation as unsent", asyn
   ]);
 });
 
-test("a queued follow-up leaves the conversation to the queued list", async () => {
-  await submission(
-    { mutateAsync: async () => ({ status: "in_progress", followUp: { status: "queued", queue_position: 2 } }) },
-    () => undefined,
-  );
-  expect(current()).toBeNull();
+const queuedAnswer: FollowUpMutation = {
+  mutateAsync: async () => ({ status: "in_progress", followUp: { status: "queued", queue_position: 2 } }),
+};
+const shownRows = (messages: SessionMessage[]) =>
+  splitQueuedFollowUps(mergeMessagesWithPendingFollowUp(messages, current()), "session-1", undefined, current())
+    .queuedFollowUps;
+
+test("a follow-up the server queues stays in the queue until the queue list shows its saved request", async () => {
+  await submission(queuedAnswer, () => undefined);
+  const pending = current()!;
+  expect(shownRows([])).toEqual([expect.objectContaining({ prompt: "Next turn", sending: true })]);
+  expect(serverShowsPendingFollowUp([], "session-1", pending, null)).toBe(false);
+  expect(serverShowsPendingFollowUp(savedPrompt(2).messages, "session-1", pending, null)).toBe(true);
+});
+
+test.each([
+  ["the queue read after the answer lists it", savedPrompt(2).queue, true],
+  ["no queue snapshot follows the answer", undefined, true],
+  ["the queue read after the answer no longer lists it", { ...savedPrompt(2).queue, requests: [] }, false],
+])("a queued follow-up stays only while it is still queued: %s", async (_label, queue, kept) => {
+  await submission(queuedAnswer, () => undefined, undefined, "in_progress", { refreshQueue: async () => queue });
+  await Promise.resolve();
+  expect(current() !== null).toBe(kept);
+});
+
+test("a queued follow-up that runs before the queue list shows it leaves once its run shows it", async () => {
+  await submission(queuedAnswer, () => undefined, undefined, "in_progress");
+  const pending = { ...current()!, previousRunStarted: "run-1" };
+  const ran = [{ id: "native-user", role: "user" as const, parts: [{ type: "text" as const, text: "Next turn" }] }];
+  expect(serverShowsPendingFollowUp(ran, "session-1", pending, "run-1")).toBe(false);
+  expect(serverShowsPendingFollowUp(ran, "session-1", pending, "run-2")).toBe(true);
+});
+
+test("a follow-up queued during active work stays visible until the queue list shows its saved request", async () => {
+  const reads = createRendererReadRegistry();
+  type QueueRead = { messages: SessionMessage[]; queue?: PendingQueuedFollowUpsResponse };
+  const queueReads: ReturnType<typeof Promise.withResolvers<QueueRead>>[] = [];
+  const streams: SessionStreamHandlers[] = [];
+  let state!: SessionHistoryState;
+  const controller = createSessionHistoryController({
+    sessionId: "session-1",
+    ownerKey: "view",
+    reads,
+    initialSession: { id: "session-1", status: "in_progress", last_request_started: "run" },
+    transport: {
+      getConversation: async () => ({ messages: [] }),
+      getQueuedMessages: (_id, options) => {
+        const read = Promise.withResolvers<QueueRead>();
+        options?.signal?.addEventListener("abort", () => read.reject(options.signal?.reason));
+        queueReads.push(read);
+        return read.promise;
+      },
+      connectStream: (_id, handlers) => {
+        streams.push(handlers);
+        return { close() {} };
+      },
+    },
+    onChange: (next) => {
+      state = next;
+    },
+  });
+  const tick = async () => {
+    for (let i = 0; i < 12; i++) await Promise.resolve();
+  };
+  const rows = () =>
+    splitQueuedFollowUps(state.messages, "session-1", state.queue, current()).queuedFollowUps.map((item) => ({
+      prompt: item.prompt,
+      position: item.position,
+      sending: Boolean(item.sending),
+    }));
+  controller.connect();
+  streams[0]!.onReady!({});
+  await tick();
+  queueReads[0]!.resolve({ messages: [] });
+  await tick();
+  const response = deferred();
+  const sent = submission({ mutateAsync: () => response.promise }, () => undefined, undefined, "in_progress", {
+    messages: state.messages,
+    reconnect: controller.connect,
+    refreshQueue: controller.refreshQueue,
+  });
+  response.resolve({ status: "in_progress", followUp: { status: "queued", queue_position: 3 } });
+  await sent;
+  await tick();
+  expect(rows()).toEqual([{ prompt: "Next turn", position: undefined, sending: true }]);
+  // The stream publishes the saved request and replaces the queue read that would confirm it.
+  streams[0]!.onQueuedMessages!(savedPrompt(3));
+  await tick();
+  expect(rows()).toEqual([{ prompt: "Next turn", position: 3, sending: false }]);
+  expect(serverShowsPendingFollowUp(state.messages, "session-1", current()!, "run")).toBe(true);
+  expect(streams).toHaveLength(1);
+  controller.dispose();
+  await reads.dispose();
 });
 
 test("an accepted question answer clears its pending submission without a new user turn", async () => {

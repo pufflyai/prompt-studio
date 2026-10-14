@@ -246,7 +246,12 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     );
     for (const panel of input.metadata.panels) {
       const view = input.workbench.views.getView(panel.id);
-      if (view) view.instancePolicy = panel.instancePolicy;
+      if (view) {
+        view.instancePolicy = panel.instancePolicy;
+        view.background = panel.background;
+        view.reveal = panel.reveal;
+        view.defaultPanel = panel.defaultPanel;
+      }
     }
     disposables.push(...registerViewMenus(input));
     disposables.push(

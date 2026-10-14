@@ -1,5 +1,6 @@
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { apiLogger } from "../../lib/logger";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import {
   installDefaultExtensions,
   registerInstalledExtensionSources,
@@ -54,18 +55,24 @@ export const setupProjectExtensions = async (
         onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
         releaseRef: deps.extensionUpgradeService?.releaseRef,
       });
-      await registerInstalledExtensionSources(deps.extensionService, installed);
+      await traceSetupPhase("project.extension_register", { project_id: projectId }, () =>
+        registerInstalledExtensionSources(deps.extensionService, installed),
+      );
     } catch (error) {
       addWarning(createExtensionWarning("default extensions", error));
     }
   }
 
-  await syncInstalledExtensionsForProject({
-    extensionService: deps.extensionService,
-    onLoadFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
-    projectId,
-  });
-  await enableSyncedProjectExtensions(deps, projectId, preservedInstanceIds);
+  await traceSetupPhase("project.extension_sync", { project_id: projectId }, () =>
+    syncInstalledExtensionsForProject({
+      extensionService: deps.extensionService,
+      onLoadFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
+      projectId,
+    }),
+  );
+  await traceSetupPhase("project.extension_enable", { project_id: projectId }, () =>
+    enableSyncedProjectExtensions(deps, projectId, preservedInstanceIds),
+  );
 
   return warnings;
 };

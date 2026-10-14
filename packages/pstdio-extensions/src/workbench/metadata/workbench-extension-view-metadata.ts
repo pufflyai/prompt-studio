@@ -122,6 +122,11 @@ const toNativeViewBody = (
     queryHandlerId: String(handlers.queryHandlerId),
     attributeChangeHandlerId: handlers.attributeChangeHandlerId as string | undefined,
     reorderHandlerId: handlers.reorderHandlerId as string | undefined,
+    moveHandlerId: handlers.moveHandlerId as string | undefined,
+    schemaRefreshEventIds:
+      body.schemaRefreshEvents === undefined
+        ? undefined
+        : (refreshEventIds(body.schemaRefreshEvents, view.extensionId) ?? []),
     columnActionHandlerId: handlers.columnActionHandlerId as string | undefined,
     rowActivationHandlerId: handlers.rowActivationHandlerId as string | undefined,
     createRow: body.createRow
@@ -160,6 +165,9 @@ export const toViewRecord = (
     title: view.contribution.title,
     icon: view.contribution.icon,
     instancePolicy: view.contribution.instancePolicy,
+    background: view.contribution.background,
+    reveal: view.contribution.reveal,
+    defaultPanel: view.contribution.defaultPanel,
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };

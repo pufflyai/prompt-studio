@@ -26,11 +26,50 @@ const createWorkspace = (files: Record<string, unknown>) => {
   write(root, "packages/sdk/package.json", { name: "@pstdio/sdk", dependencies: {} });
   write(root, "packages/sdk/src/extensions/index.ts", "export const sdk = 1;\n");
   write(root, "packages/ui/package.json", { name: "@pstdio/ui", dependencies: { "@pstdio/sdk": "workspace:*" } });
+  write(root, "bun.lock", { packages: {} });
   for (const [file, content] of Object.entries(files)) write(root, file, content);
   return root;
 };
 
 describe("verifyBoundaries", () => {
+  for (const [dependency, field] of [
+    ["@pstdio/sdk", "dependencies"],
+    ["@pstdio/ui", "dependencies"],
+    ["@pstdio/sdk", "devDependencies"],
+  ] as const) {
+    test(`rejects extension workspace resolution of ${dependency} in ${field}`, () => {
+      const root = createWorkspace({
+        "extensions/example/package.json": {
+          name: "example",
+          engines: { pstdio: "*" },
+          [field]: { [dependency]: "0.43.0" },
+        },
+        "bun.lock": { packages: { [dependency]: [`${dependency}@workspace:packages/sdk`] } },
+      });
+      expect(verifyBoundaries(root)).toContainEqual(
+        expect.stringContaining(`extensions/example: ${dependency} resolves to the workspace package`),
+      );
+    });
+  }
+
+  test("accepts published extension packages with workspace links for ordinary packages", () => {
+    const root = createWorkspace({
+      "extensions/example/package.json": {
+        name: "example",
+        engines: { pstdio: "*" },
+        dependencies: { "@pstdio/sdk": "0.43.0", "@pstdio/ui": "0.43.0" },
+      },
+      "bun.lock": {
+        packages: {
+          "@pstdio/sdk": ["@pstdio/sdk@workspace:packages/sdk"],
+          "@pstdio/ui": ["@pstdio/ui@workspace:packages/ui"],
+          "example/@pstdio/sdk": ["@pstdio/sdk@0.43.0"],
+          "example/@pstdio/ui": ["@pstdio/ui@0.43.0"],
+        },
+      },
+    });
+    expect(verifyBoundaries(root).filter((error) => error.startsWith("extensions/"))).toEqual([]);
+  });
   test("rejects an extension tsconfig path that resolves SDK source instead of the released package", () => {
     const root = createWorkspace({
       "extensions/example/package.json": {

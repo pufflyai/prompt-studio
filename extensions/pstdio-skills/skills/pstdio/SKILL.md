@@ -1,6 +1,6 @@
 ---
 name: pstdio
-description: Use Prompt Studio and its pst CLI. Covers project setup, .pstdio/config.json, agent setup, commands, extensions, and troubleshooting. Use for Prompt Studio questions or requests to configure a project or agent.
+description: Use Prompt Studio and its pst CLI. Covers project setup, .pstdio/config.json, agent setup, commands, extensions, and troubleshooting. Use for Prompt Studio questions, requests to configure a project or agent, or when the shell cannot find the pst command.
 metadata:
   version: 0.0.8
 ---
@@ -119,4 +119,4 @@ Use `pst extensions dev <path>` while editing a local extension. Run `pst extens
 
 ## References
 
-- [CLI reference and troubleshooting](references/cli-reference.md)
+- [CLI reference and troubleshooting](references/cli-reference.md), including what to do when the shell cannot find `pst`

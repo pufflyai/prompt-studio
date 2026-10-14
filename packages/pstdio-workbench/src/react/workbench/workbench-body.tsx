@@ -61,28 +61,29 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minW="0"
       w="full"
       overflow="hidden"
+      position="relative"
     >
       <WorkbenchRegion workbench={workbench} region="main" title="Main" />
+      <WorkbenchTabDropTarget region="main" />
     </WorkbenchFocusRegion>
   );
   const editor = (
-    <WorkbenchPanelMenuLayout workbench={workbench} panel="main">
-      <Grid
-        data-workbench-editor
-        gridTemplateRows="auto minmax(0, 1fr)"
-        w="full"
-        h="full"
-        minH="0"
-        minW="0"
-        position="relative"
-      >
-        <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
-        <WorkbenchTabDropTarget region="main" />
-        <Box gridRow="2" minH="0" minW="0" overflow="hidden">
+    <Grid
+      data-workbench-editor
+      gridTemplateRows="auto minmax(0, 1fr)"
+      w="full"
+      h="full"
+      minH="0"
+      minW="0"
+      position="relative"
+    >
+      <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
+      <Box gridRow="2" minH="0" minW="0" overflow="hidden">
+        <WorkbenchPanelMenuLayout workbench={workbench} panel="main">
           {mainRegion}
-        </Box>
-      </Grid>
-    </WorkbenchPanelMenuLayout>
+        </WorkbenchPanelMenuLayout>
+      </Box>
+    </Grid>
   );
 
   const mainContent = (

@@ -1,5 +1,6 @@
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 import { LIFECYCLE_URL } from "../windows/lifecycle-protocol";
+import { watchLifecycleRecovery, watchWorkbenchPage } from "./desktop-workbench-readiness";
 
 export const waitForLifecyclePage = async (context: BrowserContext) => {
   const findLifecycle = () => context.pages().find((page) => page.url() === LIFECYCLE_URL);
@@ -9,8 +10,12 @@ export const waitForLifecyclePage = async (context: BrowserContext) => {
 };
 
 export const waitForWorkbenchPage = async (lifecyclePage: Page, origin: string) => {
-  const context = lifecyclePage.context();
-  const page = context.pages().find((candidate) => candidate !== lifecyclePage) ?? (await context.waitForEvent("page"));
-  await page.waitForURL((url) => url.origin === origin && url.pathname === "/", { waitUntil: "commit" });
-  return page;
+  const workbench = watchWorkbenchPage(lifecyclePage, origin);
+  const recovery = watchLifecycleRecovery(lifecyclePage);
+  try {
+    return await Promise.race([workbench.ready, recovery.ready]);
+  } finally {
+    workbench.stop();
+    await recovery.stop();
+  }
 };

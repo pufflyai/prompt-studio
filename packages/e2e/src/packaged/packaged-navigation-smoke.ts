@@ -23,7 +23,7 @@ export const writeNavigationExtension = (root: string) => {
       modes: [{ id: "preview", ref: { kind: "mode", id: "preview" }, label: "Preview", regions: ["main"], basePage: { kind: "page", id: "record" } }, { id: "policy", ref: { kind: "mode", id: "policy" }, label: "Panel policy", regions: ["main", "side", "secondary"], floatingBubble: false, floating: { defaultTab: { kind: "panel", panel: { kind: "placement", id: "policy-tools" } } }, regionSettings: { side: { canOpen: false, canClose: false, acceptsTabs: false, resizable: true, movable: false, floatable: false, showHeader: false, collapsible: false }, secondary: { canOpen: true, canClose: true, defaultTab: { kind: "panel", panel: { kind: "placement", id: "policy-tools" } } } } }],
       placements: [{ id: "legacy-fixed", ref: { kind: "placement", id: "legacy-fixed" }, mode: { kind: "mode", id: "policy" }, region: "side", movableTo: ["side"], item: { kind: "view", view: { kind: "view", id: "document" }, presence: "fixed" } }, { id: "policy-tools", ref: { kind: "placement", id: "policy-tools" }, mode: { kind: "mode", id: "policy" }, region: "secondary", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "closed" } }],
       resourceKinds: [{ id: "record", ref: { kind: "resource-kind", id: "record" } }],
-      views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", instancePolicy: "per-resource", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
+      views: [{ id: "document", ref: { kind: "view", id: "document" }, title: "Document", instancePolicy: "per-resource", background: "keep-mounted", reveal: "explicit", defaultPanel: "secondary", body: { kind: "file", resourceKind: { kind: "resource-kind", id: "record" }, load: () => ({ content: "probe", editable: false }) } }],
       pages: [{ id: "record", ref: { kind: "page", id: "record" }, title: "Record", path: "record", parent: { kind: "page", extensionId: "pstdio", id: "start" }, mode: { kind: "mode", extensionId: "pstdio", id: "project" }, modes: [{ kind: "mode", extensionId: "pstdio", id: "project" }, { kind: "mode", id: "preview" }], resource: { kinds: [{ kind: "resource-kind", id: "record" }] }, document: { metadataKey: "documentId" }, main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" }, panelMenus: { right: { view: { kind: "view", id: "document" }, collapsible: false, size: { defaultPx: 200 } } }, regionSettings: { main: { showHeader: false }, aside: { size: { defaultPx: 280, minPx: 160 }, acceptsTabs: true, canClose: false }, bottom: { size: { defaultPx: 160 }, alwaysShowTabs: true } }, slots: [{ id: "session", region: "aside", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } }, { id: "tools", region: "bottom", item: { kind: "view", view: { kind: "view", id: "document" }, presence: "open" } }], panels: {} }],
       commands: [{
       id: "open-document", ref: { kind: "command", id: "open-document" }, title: "Open document",
@@ -63,7 +63,13 @@ export const expectPackagedNavigation = async (input: {
     }),
   );
   expect(metadata.views).toContainEqual(
-    expect.objectContaining({ localId: "document", instancePolicy: "per-resource" }),
+    expect.objectContaining({
+      localId: "document",
+      instancePolicy: "per-resource",
+      background: "keep-mounted",
+      reveal: "explicit",
+      defaultPanel: "secondary",
+    }),
   );
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({

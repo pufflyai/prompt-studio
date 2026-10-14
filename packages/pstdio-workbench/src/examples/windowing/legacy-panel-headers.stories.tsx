@@ -20,7 +20,7 @@ export const LegacyPanelHeaders: Story = {
       (fixture = createWindowingFixture("windowing", {
         pagePanels: true,
         registerMode: (workbench) => {
-          registerWorkbenchExtensionContributions({
+          return registerWorkbenchExtensionContributions({
             projectId: "windowing-project",
             workbench,
             executeCommand: () => undefined,
@@ -58,7 +58,7 @@ export const LegacyPanelHeaders: Story = {
     await expect(canvasElement.querySelector('[data-workbench-panel-header="main"]')).toBeVisible();
     await expect(canvas.queryByRole("tab", { name: "Mode tools" })).toBeNull();
     await expect(canvasElement.querySelector('[data-workbench-panel-header="secondary"]')).not.toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Hide Secondary Panel" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Hide Bottom panel" })).toBeNull();
     await fixture.workbench.shell.setSidePanelPresentation("floating");
     const document = within(globalThis.document.body);
     const floating = within(await document.findByTestId("workbench-side-panel-floating"));

@@ -1,5 +1,6 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { createDisposable } from "../../shared/disposable";
+import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { InternalWorkbenchStore } from "../../shared/store/workbench-store";
 import {
   composeOwnedPlacements,
@@ -66,34 +67,40 @@ export const registerWorkbenchPage = <Value>(input: {
     false,
     "registerPage",
   );
-  return createDisposable(() => {
-    const snapshot = store.getState();
-    if (snapshot.pages[page.id] !== registered) return;
-    const { [page.id]: _page, ...pages } = snapshot.pages;
-    const pageStates = removePageStates(snapshot.pageStates, page.id);
-    if (snapshot.activePageId === page.id) {
-      const placements = composeOwnedPlacements({ shell: input.registryInput.resolveShellPlacements() }).placements;
-      input.publishState(
-        {
-          ...snapshot,
-          pages,
-          pageStates,
-          location: undefined,
-          activePageId: undefined,
-          activeModeId: undefined,
-          placements,
-          reconciliation: reconcileOwnedPlacements({
-            current: snapshot.placements,
-            desired: placements,
-            valuesEqual: input.registryInput.valuesEqual,
-          }),
-        },
-        "unregisterActivePage",
+  return createDisposable(() =>
+    batchWorkbenchChanges(() => {
+      const snapshot = store.getState();
+      if (snapshot.pages[page.id] !== registered) return;
+      const { [page.id]: _page, ...pages } = snapshot.pages;
+      const pageStates = removePageStates(snapshot.pageStates, page.id);
+      if (snapshot.activePageId === page.id) {
+        const placements = composeOwnedPlacements({ shell: input.registryInput.resolveShellPlacements() }).placements;
+        input.publishState(
+          {
+            ...snapshot,
+            pages,
+            pageStates,
+            location: undefined,
+            activePageId: undefined,
+            activeModeId: undefined,
+            placements,
+            reconciliation: reconcileOwnedPlacements({
+              current: snapshot.placements,
+              desired: placements,
+              valuesEqual: input.registryInput.valuesEqual,
+            }),
+          },
+          "unregisterActivePage",
+        );
+        placementRegistration?.dispose();
+        return;
+      }
+      store.setState(
+        { ...snapshot, pages, pageStates, reconciliation: emptyReconciliation() },
+        false,
+        "unregisterPage",
       );
       placementRegistration?.dispose();
-      return;
-    }
-    store.setState({ ...snapshot, pages, pageStates, reconciliation: emptyReconciliation() }, false, "unregisterPage");
-    placementRegistration?.dispose();
-  });
+    }),
+  );
 };

@@ -1,46 +1,23 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-export const focusPromptEditor = (container: HTMLDivElement | null) => {
-  const editable = container?.querySelector('[contenteditable="true"]');
-  if (editable instanceof HTMLElement) editable.focus();
-};
+/**
+ * Track one pending focus request for the composer. The prompt editor fulfils it once it is editable,
+ * so a request made while the composer is locked waits instead of being lost.
+ */
+export const useComposerFocus = (autoFocus: boolean, focusSignal: number) => {
+  const [requested, setRequested] = useState(autoFocus || focusSignal !== 0);
+  const [source, setSource] = useState({ autoFocus, focusSignal });
 
-const requestPromptEditorFocus = (container: HTMLDivElement | null, onFocus?: () => void) =>
-  requestAnimationFrame(() => {
-    focusPromptEditor(container);
-    onFocus?.();
-  });
+  if (source.autoFocus !== autoFocus || source.focusSignal !== focusSignal) {
+    setSource({ autoFocus, focusSignal });
+    if ((autoFocus && !source.autoFocus) || (focusSignal !== 0 && focusSignal !== source.focusSignal)) {
+      setRequested(true);
+    }
+  }
 
-export const useComposerFocus = (
-  containerRef: { current: HTMLDivElement | null },
-  autoFocus: boolean,
-  editable: boolean,
-  focusSignal: number,
-  setIsSelected: (selected: boolean) => void,
-) => {
-  const [submissionFocusPending, setSubmissionFocusPending] = useState(false);
-  useEffect(() => {
-    if (!submissionFocusPending || !editable) return;
-    // The parent can remain disabled after the submission promise resolves. Keep the
-    // focus request until the editor becomes editable, then consume it once.
-    const handle = requestPromptEditorFocus(containerRef.current, () => {
-      setIsSelected(true);
-      setSubmissionFocusPending(false);
-    });
-    return () => cancelAnimationFrame(handle);
-  }, [submissionFocusPending, editable, containerRef, setIsSelected]);
-
-  useEffect(() => {
-    if (!autoFocus) return;
-    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
-    return () => cancelAnimationFrame(handle);
-  }, [autoFocus, containerRef, setIsSelected]);
-
-  useEffect(() => {
-    if (focusSignal === 0) return;
-    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
-    return () => cancelAnimationFrame(handle);
-  }, [focusSignal, containerRef, setIsSelected]);
-
-  return () => setSubmissionFocusPending(true);
+  return {
+    requested,
+    request: () => setRequested(true),
+    complete: () => setRequested(false),
+  };
 };

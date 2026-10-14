@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
+import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stopPackagedProcess } from "./stop-packaged-process";
 
 test("Node cleanup terminates a packaged process and its descendants", async () => {
   const node = Bun.which("node");
@@ -52,5 +54,33 @@ for (const pid of JSON.parse(readFileSync(${JSON.stringify(pidFile)}, "utf8"))) 
       }
     }
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// Windows `taskkill /T /F` fails the whole tree when one process is already exiting
+// ("The operation attempted is not supported"), even though the app is gone.
+test("cleanup succeeds when the tree kill reports a process that has already exited", async () => {
+  const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
+  const exitedHelper = spawn(process.execPath, ["-e", "0"], { stdio: "ignore" });
+  await new Promise((resolve) => exitedHelper.once("exit", resolve));
+  await stopPackagedProcess(child, async () => {
+    child.kill("SIGKILL");
+    return [exitedHelper.pid!];
+  });
+  expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+});
+
+test("cleanup names a process the tree kill left running", async () => {
+  const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
+  const survivor = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
+  try {
+    await expect(
+      stopPackagedProcess(child, async () => {
+        child.kill("SIGKILL");
+        return [survivor.pid!];
+      }),
+    ).rejects.toThrow(String(survivor.pid));
+  } finally {
+    survivor.kill("SIGKILL");
   }
 });

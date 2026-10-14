@@ -61,8 +61,8 @@ interface WorkbenchTerminalPanelProps {
  * Body of the host-owned terminal panel. Chrome (tab, title, close action,
  * resize) comes from the workbench `secondary` region; this component only mounts
  * the terminal bound to the workbench terminal controller. Collapsing the panel
- * keeps the terminal mounted. Scope changes keep the session alive; the terminal
- * module ends it when its tab is explicitly closed.
+ * keeps the terminal mounted. Scope changes and tab closure keep the session alive;
+ * explicit runtime stop and controller disposal end it.
  */
 export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const { placement, workbench } = props;

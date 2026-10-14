@@ -81,6 +81,47 @@ interface WorkbenchPanelMenuOpenerProps {
   canAttach: boolean;
 }
 
+export const WorkbenchPanelMenuPeek = (props: {
+  workbench: WorkbenchCore;
+  view?: WorkbenchPanelMenuView;
+  anchor: () => HTMLElement | null;
+  onClose: () => void;
+}) => {
+  const { workbench, view, anchor, onClose } = props;
+  return (
+    <Menu.Root
+      variant="panel"
+      open={Boolean(view)}
+      onOpenChange={({ open }) => {
+        if (!open) onClose();
+      }}
+      positioning={{
+        placement: "bottom-end",
+        offset: { mainAxis: 0 },
+        flip: false,
+        fitViewport: true,
+        getAnchorElement: anchor,
+      }}
+      onExitComplete={() => anchor()?.focus()}
+    >
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content
+            aria-label={view ? `${view.label} controls` : undefined}
+            data-workbench-panel-menu-controls={view?.region}
+          >
+            {view && (
+              <Box flex="1" minH="0" minW="0" overflowY="auto">
+                <WorkbenchRegion workbench={workbench} region={view.region} title={view.label} transparent />
+              </Box>
+            )}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+  );
+};
+
 const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
   const { canAttach, view, workbench } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);

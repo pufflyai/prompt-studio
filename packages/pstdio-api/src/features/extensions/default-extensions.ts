@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { resolvePstdioHome } from "pstdio-paths";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import { sourceFor, toInstallInput, withResolvedDefaultEntries } from "./default-extension-entries";
 import { enqueueDefaultExtensionInstall } from "./default-extension-install-queue";
 import {
@@ -79,13 +80,15 @@ const runDefaultExtensionInstall = async (
         if (resolved.scope !== "user") continue;
         try {
           installed.push(
-            await install({
-              ...toInstallInput(resolved.entry, deps.releaseRef),
-              env: context.env,
-              existsOk: true,
-              prepareNamedSource,
-              signal: deps.signal,
-            }),
+            await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
+              install({
+                ...toInstallInput(resolved.entry, deps.releaseRef),
+                env: context.env,
+                existsOk: true,
+                prepareNamedSource,
+                signal: deps.signal,
+              }),
+            ),
           );
         } catch (error) {
           if (!deps.onInstallFailure) throw error;
@@ -101,18 +104,22 @@ const runDefaultExtensionInstall = async (
 
 export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}) => {
   const env = { ...(deps.env ?? process.env) };
-  return enqueueDefaultExtensionInstall(async () => {
-    const catalog = deps.config ? undefined : await loadExtensionCatalog({ env });
-    const context = {
-      config:
-        deps.config ??
-        (deps.installNames ? { defaultExtensions: deps.installNames } : await resolveDefaultExtensionsConfig(env)),
-      env,
-      sourceMode: !deps.config,
-      catalog,
-    };
-    return runDefaultExtensionInstall(deps, context);
-  }, deps.signal);
+  return traceSetupPhase("default_extensions.request", {}, () =>
+    enqueueDefaultExtensionInstall(async () => {
+      return traceSetupPhase("default_extensions.active", {}, async () => {
+        const catalog = deps.config ? undefined : await loadExtensionCatalog({ env });
+        const context = {
+          config:
+            deps.config ??
+            (deps.installNames ? { defaultExtensions: deps.installNames } : await resolveDefaultExtensionsConfig(env)),
+          env,
+          sourceMode: !deps.config,
+          catalog,
+        };
+        return runDefaultExtensionInstall(deps, context);
+      });
+    }, deps.signal),
+  );
 };
 
 export { registerInstalledExtensionSources } from "./register-installed-extension-sources";
