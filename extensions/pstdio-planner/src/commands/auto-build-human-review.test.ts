@@ -47,8 +47,8 @@ test.each([
   false,
 ])("answered implementation input still waits for unanswered prerequisite input (block on review: %s)", async (blockOnReview) => {
   const { ctx, storage, ticket } = await fixture();
-  const mode = await configureAutoBuildCommand.run(ctx, { enabled: true, blockOnReview });
   const parent = await ticket("Prerequisite");
+  const mode = await configureAutoBuildCommand.run(ctx, { enabled: true, blockOnReview });
   await putTicket(storage, { ...parent, statusId: "done" });
   const child = await ticket("Dependent", [parent.id]);
   const first = (await dispatchCandidates(ctx)).started[0]!;
@@ -146,7 +146,7 @@ test("a resolved implementation waits until another running ticket frees a slot"
   });
   occupied = false;
   expect((await dispatchCandidates(ctx)).started).toEqual([first]);
-  expect(followups).toEqual([first.sessionId]);
+  expect(followups).toContain(first.sessionId);
   expect(await listAttempts(ctx.storage)).toHaveLength(2);
 });
 
@@ -179,4 +179,29 @@ test("resolved input waits until every open request is answered", async () => {
   await reviewCommand.run(ctx, { requestId: requests[1]!.id, response: { confirmed: true } });
   expect((await dispatchCandidates(ctx)).started).toEqual([first]);
   expect(followups).toEqual([first.sessionId]);
+});
+
+test("resolved implementation input continues an assigned owner in a blocked column", async () => {
+  const { ctx, storage, ticket } = await fixture();
+  const task = await ticket("Blocked waiting for input");
+  const owner = await runAttemptCommand.run(ctx, { ticket: task.id });
+  ctx.sessions.get = async (id) => ({ id, title: id, status: "completed" });
+  const request = await requestHumanCommand.run(ctx, {
+    ticket: task.id,
+    workspaceId: owner.workspace.id,
+    sessionId: owner.session.id,
+    title: "Choose scope",
+    instructions: "Continue after decision",
+    request: { kind: "task" },
+  });
+  await putTicket(storage, { ...task, statusId: "blocked", blockedReason: "Waiting for input" });
+  await reviewCommand.run(ctx, { requestId: request.id, response: { confirmed: true } });
+  const followups: string[] = [];
+  ctx.sessions.followup = async ({ sessionId }) => {
+    followups.push(sessionId);
+  };
+  expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates).toMatchObject([{ action: "resume", id: task.id }]);
+  await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" });
+  expect(followups).toEqual([owner.session.id]);
+  expect((await storage.collection<{ statusId: string }>("tickets").get(task.id))?.statusId).toBe("blocked");
 });

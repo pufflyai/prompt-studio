@@ -7,17 +7,20 @@ import {
   type ResourceAnchor,
 } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import { appendAttemptEvent, putAttempt } from "../data/attempt-storage";
+import { legacyAttemptOutput } from "../data/attempt-compatibility";
+import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
+import { appendAttemptEvent, attemptSelectionsCollection, listAttempts, putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
-import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
 import type { HumanRequestReason } from "../data/review-request-types";
 import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
-import { loadAttemptReadiness } from "./attempt-readiness";
+import { loadAttemptReadiness, readImplementationCapacity } from "./attempt-readiness";
+import { workspaceHead } from "./change-requests";
+import { repairAttempt } from "./repair-attempt";
 import {
   createAnchoredWorkspace,
   harnessInput,
@@ -25,25 +28,73 @@ import {
   resolveTicketIdentity,
   ticketActionParams,
 } from "./ticket-actions";
+import { readWorkspaceStartBase } from "./workspace-start-base";
 
 const humanReadinessReasons = new Set<HumanRequestReason>([
   "ambiguous-dependency-attempt",
-  "divergent-dependency-attempts",
   "dependency-cycle",
   "dependency-missing",
 ]);
 
 const runAttemptParams = {
   ...ticketActionParams,
+  newVariant: params.boolean({ label: "Explore another implementation variant" }),
   // Attempts review and merge Git commits, so only a Git worktree can run one.
   workspace: params.workspace({ label: "Workspace", providers: ["pstdio.worktree"] }),
 };
 
+const reuseAttempt = async (
+  ctx: CommandContext,
+  ticketIdentity: { id: string; shorthand: string },
+  beforeDispatch: (() => Promise<void>) | undefined,
+) => {
+  const [attempts, selections, retired] = await Promise.all([
+    listAttempts(ctx.storage),
+    attemptSelectionsCollection(ctx.storage).list(),
+    readRetiredWorkspaceIds(ctx.storage),
+  ]);
+  const variants = attempts.filter(
+    (attempt) => attempt.ticketId === ticketIdentity.id && !retired.has(attempt.workspaceId),
+  );
+  const selection = selections.find((candidate) => candidate.ticketId === ticketIdentity.id);
+  const chosen = selection ? variants.filter((attempt) => attempt.workspaceId === selection.workspaceId) : variants;
+  if (variants.length && chosen.length !== 1)
+    throw new Error("Select the implementation variant to resume, or explicitly request a new variant.");
+  const existing = chosen[0];
+  if (existing) {
+    await beforeDispatch?.();
+    const session = await ctx.sessions.get(existing.implementationSessionId);
+    const capacity = await readImplementationCapacity(ctx);
+    if (
+      !session ||
+      (!["queued", "in_progress", "awaiting_input"].includes(session.status ?? "") &&
+        capacity.running >= capacity.limit)
+    )
+      throw new Error("No implementation capacity is available to resume this owner.");
+    await repairAttempt(ctx, {
+      workspaceId: existing.workspaceId,
+      expectedHeadSha: await workspaceHead(ctx, existing.workspaceId),
+      reason: `Continue implementation of ${existing.ticketShorthand} as requested. Reuse this workspace and conversation.`,
+    });
+    const workspace = (await ctx.workspaces.get(existing.workspaceId))!;
+    return {
+      decision: "started" as const,
+      mode: "existing",
+      ticket: ticketIdentity,
+      workspace,
+      attempt: await legacyAttemptOutput(ctx.storage, existing),
+      variant: existing,
+      session: { ...session, workspace_id: workspace.id },
+    };
+  }
+  return null;
+};
 export async function startAttempt(
   ctx: CommandContext,
   commandParams: ParamsOf<typeof runAttemptParams>,
   options: {
     beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
+    requireMergedDependencies?: boolean;
     dependencyReview?: "approved" | "submitted";
   } = {},
 ) {
@@ -51,11 +102,30 @@ export async function startAttempt(
   const chosenBase = commandParams.workspace?.params?.base;
   const ticketRef = resolveTicket(ctx, commandParams);
   const ticketIdentity = await resolveTicketIdentity(ctx, ticketRef);
+  if (!commandParams.newVariant) {
+    const reused = await reuseAttempt(ctx, ticketIdentity, options.beforeDispatch);
+    if (reused) return reused;
+  }
   const ownerRunId = ctx.invocationId ?? crypto.randomUUID();
-  const { readiness, capacity } = await loadAttemptReadiness(ctx, ticketRef, {
+  const loaded = await loadAttemptReadiness(ctx, ticketRef, {
     base: typeof chosenBase === "string" ? chosenBase : undefined,
     dependencyReview: options.dependencyReview,
+    requireMergedDependencies: options.requireMergedDependencies,
   });
+  const { capacity } = loaded;
+  const integration =
+    loaded.readiness.decision === "wait" && loaded.readiness.reason === "divergent-dependency-attempts"
+      ? loaded.readiness
+      : null;
+  const readiness = integration
+    ? {
+        decision: "ready" as const,
+        mode: "stacked" as const,
+        baseWorkspaceId: null,
+        baseHeadSha: integration.baseHeadSha!,
+        dependencyAttemptIds: integration.integrationHeads!.map(({ workspaceId }) => workspaceId),
+      }
+    : loaded.readiness;
   if (readiness.decision === "wait") {
     const message = attemptWaitMessage(ticketIdentity.shorthand, readiness, capacity);
     const storedTicket = await findTicket(ctx.storage, ticketRef);
@@ -87,6 +157,7 @@ export async function startAttempt(
       await options.beforeDispatch?.(readiness.baseHeadSha);
     },
   );
+  const actualBase = await readWorkspaceStartBase(ctx, workspace.id, readiness.baseHeadSha);
   const attemptAnchor: ResourceAnchor = {
     type: "planner-attempt",
     id: workspace.id,
@@ -109,6 +180,11 @@ export async function startAttempt(
         ticket: anchor.label ?? ticketIdentity.shorthand,
         workspaceId: workspace.id,
       }),
+      ...(integration
+        ? [
+            `First integrate these independent prerequisite commits into this workspace: ${JSON.stringify(integration.integrationHeads)}. Run their required integration validation, then record the integration commit with update-stack before implementing or submitting the ticket. Missing ancestry must not be replaced by patch similarity.`,
+          ]
+        : []),
       ...(readiness.mode === "stacked"
         ? [
             `This workspace starts at dependency commit ${readiness.baseHeadSha}. Stack your changes on this work; do not reset to the project base or discard dependency changes. Dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}.`,
@@ -118,14 +194,13 @@ export async function startAttempt(
   });
   const timestamp = new Date().toISOString();
   const attempt: AttemptRecord = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     workspaceId: workspace.id,
     workspaceShorthand: workspace.workspace_shorthand ?? workspace.id,
     ticketId: ticket.id,
     ticketShorthand: anchor.label ?? ticketIdentity.shorthand,
     implementationSessionId: session.id,
-    state: "implementing",
-    base: { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha },
+    base: { workspaceId: readiness.baseWorkspaceId, headSha: actualBase },
     revisions: [],
     implementationDisconnectRetries: 0,
     reviewDisconnectRetries: 0,
@@ -143,16 +218,20 @@ export async function startAttempt(
     reportId: null,
     reviewId: null,
     threadId: null,
-    commitSha: readiness.baseHeadSha,
-    metadata: { mode: readiness.mode, dependencyAttemptIds: readiness.dependencyAttemptIds },
+    commitSha: actualBase,
+    metadata: {
+      mode: readiness.mode,
+      dependencyAttemptIds: readiness.dependencyAttemptIds,
+      integrationHeads: integration?.integrationHeads ?? [],
+    },
   });
-  await moveTicketToInProgress(ctx, ticket.id);
   return {
     decision: "started" as const,
     mode,
     ticket,
     workspace,
-    attempt,
+    attempt: await legacyAttemptOutput(ctx.storage, attempt),
+    variant: attempt,
     session: { ...session, workspace_id: workspace.id },
   };
 }

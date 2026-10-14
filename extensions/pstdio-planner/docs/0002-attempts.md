@@ -1,130 +1,47 @@
-# Attempts
+# Implementation variants
 
-An attempt is one try at a ticket. An agent does the work in its own Git worktree, a second agent reviews it, and you decide what to do with approved work.
+Planner links implementation workspaces, sessions, committed revisions, and optional reviews to a ticket. The responsible agent maintains ticket progress.
 
-## Words used on this page
+## Start and continue work
 
-A workspace is a place where work on a project happens. The project folder is one workspace. Prompt Studio can create more.
+Use **Run attempt** on a ticket, or `pst pstdio-planner run-attempt --ticket PS-123`. Planner checks prerequisites, pending implementation input, and execution capacity. It reuses a suitable linked workspace and its implementation conversation. Request **Explore another implementation variant** only when another approach is useful.
 
-A Git worktree is a second checkout of your repository in its own folder, on its own branch. An agent can change files there without touching your project folder.
+Most tickets need one workspace. When several variants exist, select the intended variant with `select-attempt`. Selection does not change ticket progress. Retired variants remain in history and do not supply automatic dispatch or dependency commits.
 
-A revision is one version of the work that the implementing agent hands in. An attempt can have several revisions when a reviewer asks for changes.
+`pst tickets implement --id PS-123` starts the responsible agent without creating a managed workspace. The agent discovers current status IDs and follows the project's implementation instructions.
 
-## Before you start
+## Submit revisions
 
-A managed attempt needs:
-
-- A project opened from a local folder that is a Git repository with at least one commit.
-- An agent, such as [Claude Code](../../harness-claude-code/README.md), [Codex](../../harness-codex/README.md), or [OpenCode](../../harness-open-code/README.md).
-- The [Reports](../../pstdio-reports/README.md) extension. Agents hand in their work and their reviews as reports.
-
-Planner refuses to start an attempt in a folder that is not a Git repository. You can still use tickets, tools, and ordinary agent sessions there.
-
-## Workspaces on a ticket
-
-The **Workspaces** section of a ticket lists the project folder, shown as **Project workspace**, and every workspace linked to the ticket. Open the project workspace to work directly in the project's files. Archiving a ticket never archives the project workspace.
-
-When the project can create workspaces, the section shows **Create workspace**. It opens a form where you choose a workspace type, called a provider, and fill in its options. The new workspace is linked to the ticket, even while a remote environment is still starting. Creating a workspace does not start an agent. A plain folder or a remote project with no provider shows no create action.
-
-To link an existing workspace or session to a ticket, use [`pst tickets link`](0004-cli.md#link-workspaces-and-sessions).
-
-## Run an attempt
-
-Open a ticket and choose **Run attempt** from its actions menu. Pick the agent and the branch to start from. From a terminal, run:
+After validation and the configured adversarial review, the implementation agent commits, saves a change request report, and records it:
 
 ```sh
-pst pstdio-planner run-attempt --ticket PS-12
+pst pstdio-planner submit-revision --workspace-id <workspace> --implementation-session-id <session> --head-sha <head> --change-request-report-id <report>
 ```
 
-Planner then does the following:
+Planner checks workspace/session ownership, actual HEAD, saved-report ownership, pending implementation input, dependency ancestry, and concurrent writes. Repeating the same commit/report submission is idempotent. A later correction appends a revision. A previous passing verdict stays attached to its original commit and does not block a new submission.
 
-1. It checks that the ticket can start. See [Dependencies](#dependencies).
-2. It creates a Git worktree from the chosen commit, links it to the ticket, and starts an implementation session there. The ticket moves to In Progress.
-3. When the agent finishes, it saves a change request report and submits it. Planner checks that the report and the latest commit belong to this workspace, then records a new revision.
-4. A review starts when someone chooses **Run review** from the workspace's actions menu, or runs `pst pstdio-planner run-review --workspace-id <workspace>`. An agent or an automation can run the same command. Each revision gets at most one review.
-5. The reviewing agent saves a review report and submits a verdict: passed, or changes requested.
-6. If the reviewer requests changes, Planner sends the findings back to the same implementation session, and the cycle repeats from step 3.
-7. If the review passes, Planner sets the ticket's Review Needed flag and asks a person to choose, merge, or otherwise handle the approved work.
+Use `list-variants` and `read-attempt-history` to inspect work. The older `submit-change-request`, `list-attempts`, and `expectedAttemptState` interfaces are deprecated. Their compatibility state describes evidence only and does not control workflow.
 
-Planner does not merge work. Merging, delivering, and moving the ticket to Done are your decisions.
+## Optional reviews
 
-If two implementation sessions are already running in the project, Run attempt does not start another one. To change the limit, open **Settings → Project → Extensions**, select **Prompt Studio Planner**, and set **Maximum in-progress tickets** on its **Settings** tab.
+The implementation skill's adversarial review is the normal review step. A handoff status does not ask Planner to launch another reviewer. For an explicit additional review, use `run-review --workspace-id <workspace> --expected-revision <number>`.
 
-`pst tickets implement` is a lighter option. It moves the ticket to In Progress and starts one agent session with the implement-ticket prompt. It does not create a worktree, a managed attempt, or a review.
+A review records its owner, reviewed SHA, verdict, report, and findings. Submission verifies the exact current commit. Recording or dismissing a verdict does not change ticket status, resume implementation, or manufacture a merge decision. The implementation agent addresses relevant findings under the task instructions.
 
-## Auto build
+## Progress and dependencies
 
-Open **Project Timeline** and select **Auto Build**. Set **Maximum parallel tasks** and confirm with **Auto Build**. This edits the same limit as **Maximum in-progress tickets** in Settings. From the CLI, configure the mode:
+Configure completed, blocked, active, and optional merge-destination statuses in **Settings → Extensions → Prompt Studio Planner → Settings**. Selections use IDs and survive renaming or reordering. Missing selections remain visible and require repair. Empty selections disable only the corresponding status convenience.
 
-```sh
-pst pstdio-planner auto-build configure --enabled true
-pst pstdio-planner auto-build read
-pst pstdio-planner auto-build configure --enabled false
-```
+The responsible agent uses `pst statuses list` and `implementation-policy`, then updates ticket status when starting, blocking, resuming, handing off, and meeting the actual delivery requirements. Users can override progress. Finishing a variant or opening a draft PR does not satisfy a task that requires merge or acceptance.
 
-Planner starts eligible Todo tickets across the project in timeline order until **Maximum in-progress tickets** is reached. Existing running implementations count toward this limit. Auto build uses the project's default agent and target branch. It reacts to ticket, timeline, and session changes and rechecks once per minute to recover after restarts or settings changes. The mode works while the timeline is closed.
+Prerequisites use configured completion or selected/unambiguous submitted commits. Active replacement execution, missing revisions, ambiguous variants, cycles, and implementation decisions still block affected work. Submitted stacking does not require a managed review verdict. Independent dependency branches require a validated integration commit; record it with `update-stack` before submission. Verified squash-merge evidence identifies the merged commit without inventing ancestry.
 
-The selected view, filters, and search only affect the display. Use **Stop Auto Build** to stop future launches; already dispatched work continues. A launch failure turns the mode off and shows the error. Resolve it before turning the mode on again.
+Merge-only requests block merge and merged-prerequisite dispatch. They do not block otherwise authorized submitted stacking. Product and security decisions block implementation. See [Review requests](0006-review-requests.md).
 
-Dependencies decide which tickets can run together. Independent tickets in the same track can start in parallel, and dependencies in other tracks still apply. Approved or explicitly selected dependency revisions can provide a stacked base, as with Run attempt.
+## Recovery and delivery
 
-The mode skips gates, blocked work, tickets that need human input, and tickets with an existing attempt other than an abandoned attempt.
+Execution capacity counts distinct live implementation sessions until they end, including PR and CI work after submission. Reviews remain separate. Known unexpected execution loss permits one same-conversation recovery. Explicit user stop and historical cancellation without evidence stay stopped for inspection.
 
-When an agent cannot continue without a person, the implementation skill tells it to use `pst pstdio-planner request-human` with a concrete task or decision. This creates a review request and sets Review Needed. The agent reads the saved response before resuming.
+Use `repair-attempt` to ask the current owner to continue a correction. HEAD and ownership are checked. Live owners receive a queued follow-up; queueing does not transfer the branch to another writer. Submission, repair, and optional review never imply approval to merge.
 
-## Dependencies
-
-A ticket can depend on other tickets. Set dependencies with `--depends-on` on [`pst tickets create` and `pst tickets update`](0004-cli.md#dependencies).
-
-Before an attempt starts, Planner checks every ticket the ticket depends on, directly or through other tickets:
-
-- A dependency in the Done status is finished.
-- When no dependencies are left, the attempt starts from the commit you chose, or from the project folder's current commit.
-- An unfinished dependency needs exactly one approved attempt, or the attempt selected for that ticket. The new attempt then starts from that attempt's latest commit, so it builds on the work that is not merged yet. With several unfinished dependencies, one of their attempts must already contain the others' commits.
-- If a dependency has no approved or selected attempt yet, Run attempt cannot start.
-
-When Run attempt cannot start, its dialog and command show the blocker and the next step. A missing dependency, a dependency loop, or ambiguous attempts also ask a person to fix the ticket graph or choose an attempt. Run attempt also refuses a second start while another start for the same ticket is still running. `attempt-readiness` returns a structured `reason` for agents and the CLI.
-
-## How Planner sets the ticket status
-
-Planner sets the ticket status from its attempts:
-
-1. If any attempt is being implemented or has changes requested, the ticket is In Progress.
-2. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
-3. Otherwise, if every attempt is blocked, the ticket is Blocked.
-
-Planner leaves tickets in Done alone. Planner pauses status changes while any review request is open or unreadable. Attempt readiness uses the same rule for the target and all its prerequisites, including completed ones. Automation extensions, including Auto build, must use `attempt-readiness` before `run-attempt`. A manual or stale tag alone does not pause status changes or prevent launch. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
-
-## When a session disconnects
-
-If an implementation session disconnects, Planner resumes it once. If a review session disconnects, Planner starts one new review. If a session disconnects a second time, Planner blocks only that attempt and asks a person for input.
-
-Planner checks for disconnects when someone runs `pst pstdio-planner reconcile-attempt --workspace-id <workspace>`.
-
-## Use attempts from another extension
-
-Extensions and agents drive attempts through Planner's commands. Each ID below is short for `pstdio.pstdio-planner.command.<id>`. All of them except `workspace-activity` also run from the CLI. Run `pst pstdio-planner <id> --help` to see their parameters.
-
-| Command                 | What it does                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| `attempt-readiness`     | Checks whether a ticket can start and which commit it would start from.          |
-| `run-attempt`           | Creates the worktree and starts the implementation session.                      |
-| `submit-change-request` | Hands in a revision with its change request report.                              |
-| `run-review`            | Starts a review of the latest revision.                                          |
-| `submit-review`         | Records the reviewer's verdict and review threads.                               |
-| `list-attempts`         | Lists the project's attempts.                                                    |
-| `reconcile-attempt`     | Recovers an attempt whose session disconnected.                                  |
-| `select-attempt`        | Chooses which attempt of a ticket later tickets build on. Not for automations.   |
-| `request-human`         | Asks a person for a task confirmation or a decision and sets Review Needed.      |
-| `review`                | Answers a review request. Only a person or an agent can do this.                 |
-| `workspace-activity`    | Returns a workspace's sessions and whether any of them is still running.         |
-
-In `workspace-activity`, each session carries a phase: `implementation`, `review`, or `other`. The statuses `queued`, `in_progress`, and `awaiting_input` count as running.
-
-Use these commands for workflow state. Workspace and session records only describe what is running. They do not store review results or ticket statuses.
-
-## Ticket cleanup and merge settings
-
-Archiving or deleting a ticket deletes linked workspaces once no active ticket uses them and the project setting **Delete linked workspaces** (`tickets.deleteLinkedWorkspaces`) is on. The setting is on by default. Deletion removes the worktree, its branch, and any uncommitted changes. The default project workspace and providers without deletion support stay available. Unarchiving restores the ticket, but does not restore deleted workspaces.
-
-The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to Done. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.
+**Mark done on merge** remains a separate user policy. Enable it and choose **Status after merge** from completed statuses. Missing configuration leaves tickets unchanged and reports the required setting. Local merges and verified GitHub merge checks follow that destination. GitHub checks require authenticated `gh` on the host. Merging does not archive tickets or delete workspaces.

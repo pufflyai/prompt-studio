@@ -1,58 +1,49 @@
 # Auto Build
 
-Auto Build uses a supervisor to assign valid, unassigned tickets using your prompt. It sleeps between checks and resumes when more work can run.
+Auto Build assigns and resumes authorized ticket work within your chosen scope, ticket filters, prerequisite policy, and execution limit.
 
-## Start Auto Build
+## Configure the run
 
-Open **Project Timeline** and click **Auto Build**. Describe how the supervisor should choose work, then adjust the ignore filters below the prompt and click the primary **Auto Build** button.
+Open **Project Timeline → Auto Build**. Enter a prompt, then set **Eligible tickets** and **Ignore tickets** with the same filters used on the ticket board. Filters can use status, title, and other ticket properties, including advanced And/Or groups. Empty eligibility includes all otherwise valid unfinished tickets. Ignore filters take precedence. Completed tickets are always excluded. Status options keep their icons, colors, and IDs across renames.
 
-For example: “Prioritize small independent tickets for the next release. Leave design decisions for me.”
+Choose completed, blocked, active, and optional merge-destination statuses in **Settings → Extensions → Prompt Studio Planner → Settings**. Each choice saves immediately through the native parameter editor. Auto Build reads that shared configuration. No label or default column assigns workflow meaning. Empty optional selections disable only their status convenience.
 
-![Auto Build form with a supervisor prompt and ignore filters.](../../../documentation/images/auto-build-confirmation.png)
+The Auto Build button uses Play when stopped without an error, and a colored status indicator when enabled or showing an error. Running work uses the session spinner, sleeping uses a blue moon, and completed work uses a green check. Auto Build shows success when every ticket in the resolved scope has a configured completed status. Reopening one of those tickets clears success. Session rows use their normal status icons and colors, without repeated role subtitles or status tags.
 
-The ignore list uses the same filter button, picker, and bubbles as Tickets. Tickets matching the filter are excluded. **Backlog** and **Done** are ignored by default. Remove Backlog from the filter if you want those tickets to be considered. An empty ignore list excludes nothing.
+The supervisor resolves your prompt to explicit ticket IDs once. Changing the prompt or either ticket filter clears that scope so the supervisor resolves it again. Prerequisites provide context but do not grant permission to dispatch outside the scope. Changing scope, prompt, filters, or policy changes the mode revision and invalidates old dispatch requests.
 
-The selected timeline view, search, and display filters only affect what you see. The supervisor considers valid tickets across the project, using its own ignore list.
+**Require merged dependencies** waits for prerequisite commits verified in the selected target base, including verified squash merges. Otherwise, selected or unambiguous submitted dependency commits can supply a stack. Independent branches need validated integration before implementing the child. Ticket-specific prerequisite and branch instructions remain binding.
 
-**Block on review** is on by default. Turn it off to let dependent tickets start while their prerequisites are in review. Their workspaces start at the submitted dependency commit, and the implementing agent stacks its changes on top. Missing revisions, requested changes, ambiguous attempts, and incompatible dependency branches still prevent a launch.
+## Implementation and progress
 
-## How the supervisor works
+The responsible implementation agent updates ticket status using current project columns. It implements, validates, performs the configured adversarial review, repairs, records revisions, and follows the task's PR and CI requirements. Submission and review do not move tickets or request another mandatory reviewer.
 
-Planner checks every three minutes and also checks when tickets change or a session finishes. When the board has changed or capacity has become available, and valid unassigned work exists, Planner starts or resumes the supervisor session with your prompt and Auto Build instructions.
+Eligibility filters govern new dispatch and initial scope discovery. Assigned work can finish and resume after its agent changes ticket properties. Incomplete eligibility or removed filter fields block new dispatch until corrected. Recovery and repair reuse the current workspace and conversation. Additional workspaces are optional alternatives. Planner never transfers a live branch to a competing writer because a follow-up was queued.
 
-The supervisor reads the current candidates and capacity, chooses relevant tickets using your prompt, and launches or resumes their managed attempts. It then ends its turn and sleeps. Planner reuses that session for later prompts and does not repeatedly prompt it for an unchanged board. Board changes during a running supervisor turn are checked after it finishes.
+Capacity counts live implementation execution, including CI work after a submitted revision. The supervisor and optional reviews are separate. Ordinary live sessions prevent conflicting assignment to their ticket.
 
-Each new implementation uses its own managed Git workspace and the default agent. Its ticket moves to **In Progress** in both Tickets and Project Timeline. The supervisor does not consume an implementation slot. Set **Maximum in-progress tickets** in Planner Settings to control how many implementation sessions can run together.
+## Observe and recover
 
-Tickets must have ready prerequisites and available dependency revisions. Drafts, archived tickets, blocked tickets, review gates, and open human-review requests are not candidates. A ticket already assigned to a running session is excluded. An unattended In Progress ticket without a current attempt can be considered. Completed implementations already in review stay in the normal [attempt workflow](0002-attempts.md).
+Planner coalesces relevant events and checks periodically. Unrelated tickets do not change the resolved run snapshot. The supervisor ends its turn when no authorized action remains; it does not poll. Relevant capacity, decisions, dependencies, or PR/check changes can wake it again.
 
-Implementation follows the project's Planner settings, including adversarial review and pull request creation. Auto Build does not approve or merge work.
+Known unexpected execution loss permits one bounded recovery in the same conversation. Explicit stops remain stopped. Historical cancellation without evidence requires inspection. An unchanged extension metadata refresh preserves running workers.
 
-## Inspect or stop Auto Build
+Repair actions compare workspace, submitted, dependency, and PR heads. Old-head review or CI cannot establish a new head's result. A conflicting PR requires repair even when no CI exists. Unavailable evidence, active replacement work, ambiguous variants, and pending implementation decisions remain concrete blockers.
 
-The header button always says **Auto Build**. Its dot is green while implementation capacity is in use, yellow while Auto Build is on with no capacity in use, and red if the supervisor fails. Click it to open a compact popover with a separate supervisor row and running ticket sessions, including their statuses. The supervisor says **sleeping** between turns while Auto Build is on. The header shows used capacity and its limit, such as **Running ticket sessions (0/2)**. Click a session to inspect it.
+Answer implementation [review requests](0006-review-requests.md) to resume affected work. Merge-only decisions block merge or merged-prerequisite dispatch; authorized submitted stacking can continue.
 
-Click the small **Stop Auto Build** button with the pause icon in the popover header to prevent future supervisor prompts and automatic dispatches. Running sessions continue. Stopping does not cancel their work or discard changes.
+## Inspect and stop
 
-Auto Build keeps working when you close the timeline and resumes its checks after restarting Prompt Studio. Starting it again preserves your prompt, ignore filters, and review-blocking choice.
+The Auto Build popover lists the supervisor and running ticket sessions. Open a conversation to inspect its work. CLI candidate observations explain the current owner, blocker, evidence, and next action.
 
-## When work needs attention
-
-If the supervisor cannot start or resume, Auto Build turns off and shows the error. Resolve the problem and start it again. Existing attempts remain available.
-
-The popover shows a small banner when the supervisor fails or needs input, all running ticket sessions need input, or no work can run because of dependencies, blockers, or review requests. A finished board does not show a blocker banner.
-
-If an implementation needs help, answer every open [review request](0006-review-requests.md). The supervisor can then resume that attempt in the same workspace and session when capacity is available, with your answers included.
-
-If nothing starts, check the ignore filters, prerequisites, default agent, and in-progress limit. The supervisor can also leave valid tickets unassigned when they do not match your prompt.
+**Stop Auto Build** prevents new prompts and dispatches. Running sessions continue. Restart preserves prompt, scope, ticket filters, and policy. Legacy runs without eligibility configuration stay stopped until configured. Auto Build does not approve, merge, or publish work.
 
 ## Agent commands
 
-The supervisor uses public Planner commands:
-
 ```sh
 pst pstdio-planner auto-build candidates
+pst pstdio-planner auto-build scope --revision <mode-revision> --ticket-ids '["<ticket-id>"]'
 pst pstdio-planner auto-build dispatch --ticket PS-123 --revision <mode-revision>
 ```
 
-The candidate command reports the current mode revision, valid tickets, and capacity. Dispatch rechecks the mode, ignore filters, assignments, prerequisites, and capacity before launching or resuming work. A prompt from an earlier mode cannot dispatch work after Auto Build is stopped or restarted.
+Resolve scope once, then reread the returned revision. Dispatch rechecks current configuration, assignments, prerequisites, exact heads, and capacity immediately before acting.

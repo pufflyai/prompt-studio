@@ -1,12 +1,9 @@
 // Pinned Planner revisions and project data for the packaged Planner upgrade check (PS-626).
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
-
-// The current Planner adds the timeline, which imports @pstdio/ui/collection-view (@pstdio/ui 0.42).
-export const timelinePlannerSource = join(repoRoot, "extensions", "pstdio-planner");
 
 // The last release before the timeline. Its Planner uses @pstdio/ui 0.41, which has no
 // collection-view export, so upgrading replaces the installed UI package as the incident did.

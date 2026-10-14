@@ -4,6 +4,8 @@ import { resolveImplementationBase } from "../data/implementation-targets";
 import { withWriteGuard } from "../data/write-guard";
 import { readAutoBuildCandidates } from "./auto-build-candidates";
 import { resumeAutoBuildAttempt } from "./auto-build-resume";
+import { reconcileAttempt } from "./reconcile-attempt";
+import { repairAttempt } from "./repair-attempt";
 import { startAttempt } from "./run-attempt";
 
 export const autoBuildDispatchCommand = defineCommand({
@@ -18,6 +20,7 @@ export const autoBuildDispatchCommand = defineCommand({
       if (!mode.enabled || mode.revision !== revision)
         return { decision: "wait" as const, reason: "auto-build-stopped" };
       const { candidates, capacity } = await readAutoBuildCandidates(ctx, mode);
+      if (capacity.running >= capacity.limit) return { decision: "wait" as const, reason: "capacity-full" };
       const candidate = candidates.find((row) => row.id === ticket || row.ticket === ticket);
       if (!candidate)
         return {
@@ -31,15 +34,33 @@ export const autoBuildDispatchCommand = defineCommand({
         }
         const latest = (await readAutoBuildCandidates(ctx, current)).candidates.find(({ id }) => id === candidate.id);
         if (!latest) throw new Error("Auto Build stopped or the ticket is no longer ready.");
-        if (baseHeadSha && latest.baseHeadSha !== baseHeadSha)
+        if (
+          baseHeadSha &&
+          (latest.baseHeadSha !== baseHeadSha ||
+            JSON.stringify(latest.integrationHeads) !== JSON.stringify(candidate.integrationHeads))
+        )
           throw new Error("The dependency revision changed. Read candidates again before dispatching.");
       };
+      if (candidate.action === "recover") {
+        await beforeDispatch();
+        return reconcileAttempt(ctx, { workspaceId: candidate.workspaceId!, expectedRun: candidate.expectedRun });
+      }
+      if (candidate.action === "repair") {
+        await beforeDispatch();
+        return repairAttempt(ctx, {
+          workspaceId: candidate.workspaceId!,
+          expectedHeadSha: candidate.expectedHeadSha!,
+          expectedRun: candidate.expectedRun,
+          evidenceKey: candidate.evidenceKey,
+          reason: candidate.reason!,
+        });
+      }
       if (candidate.action === "resume") return resumeAutoBuildAttempt(ctx, candidate.id, beforeDispatch);
       const base = await resolveImplementationBase(ctx, await ctx.settings.all());
       const result = await startAttempt(
         ctx,
         { ticket: candidate.id, ...(base ? { workspace: { providerId: "pstdio.worktree", params: { base } } } : {}) },
-        { beforeDispatch, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
+        { beforeDispatch, dependencyReview: "submitted", requireMergedDependencies: mode.requireMergedDependencies },
       );
       return {
         decision: "started" as const,

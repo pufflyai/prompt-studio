@@ -1,5 +1,6 @@
 import type { JsonObject } from "@pstdio/sdk/extensions";
 
+/** @deprecated Attempts have no lifecycle. Read ticket progress and revision evidence. */
 export type AttemptState =
   | "implementing"
   | "review_ready"
@@ -50,13 +51,12 @@ export interface AttemptBlocker {
 }
 
 export interface AttemptRecord {
-  schemaVersion: 1;
+  schemaVersion: 2;
   workspaceId: string;
   workspaceShorthand: string;
   ticketId: string;
   ticketShorthand: string;
   implementationSessionId: string;
-  state: AttemptState;
   base: { workspaceId: string | null; headSha: string };
   revisions: AttemptRevision[];
   implementationDisconnectRetries: number;
@@ -111,6 +111,7 @@ export interface ReviewLaunchClaim {
 }
 
 export type AttemptEventType =
+  | "stack_updated"
   | "attempt_started"
   | "revision_submitted"
   | "review_started"

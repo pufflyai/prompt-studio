@@ -30,7 +30,8 @@ test("candidates include unattended In Progress and exclude default ignore statu
     instructions: "Choose scope",
     request: { kind: "task" },
   });
-  const orphan = await createTicketCommand.run(ctx, { title: "Unattended", statusId: "in-progress" });
+  const orphan = await ticket("Unattended");
+  await putTicket(storage, { ...orphan, statusId: "in-progress" });
   const ready = await ticket("Ready");
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([orphan.id, ready.id]);
 });
@@ -42,6 +43,7 @@ test("custom ignore rules are enforced when reading and dispatching tickets", as
   const mode = await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     ignore: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Postpone" }] },
+    scopeTicketIds: [ignored.id, allowed.id],
   });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([allowed.id]);
   expect(await dispatch(ctx, ignored.id, mode.revision)).toMatchObject({
@@ -113,6 +115,7 @@ test("empty advanced ignore groups leave valid tickets eligible", async () => {
   await configureAutoBuildCommand.run(ctx, {
     enabled: true,
     ignore: { conjunction: "and", rules: [], groups: [{ conjunction: "and", rules: [] }] },
+    scopeTicketIds: [ready.id],
   });
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
 });
@@ -137,6 +140,7 @@ test("unfinished or incompatible ignore rules leave valid tickets eligible", asy
     await configureAutoBuildCommand.run(ctx, {
       enabled: true,
       ignore: { conjunction: "and", rules: [rule] },
+      scopeTicketIds: [ready.id],
     });
     expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
   }

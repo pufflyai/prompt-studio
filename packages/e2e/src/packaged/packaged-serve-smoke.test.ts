@@ -230,6 +230,27 @@ test(
         metadata,
       });
       expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings.ts"))).toBe(
+        true,
+      );
+      const packagedImplementationSkill = Bun.file(
+        join(tempRoot, "extensions", "pstdio-planner", "skills", "implement-ticket", "SKILL.md"),
+      );
+      const sourceImplementationSkill = Bun.file(
+        join(
+          import.meta.dirname,
+          "../../../..",
+          "extensions",
+          "pstdio-planner",
+          "skills",
+          "implement-ticket",
+          "SKILL.md",
+        ),
+      );
+      expect(await packagedImplementationSkill.exists()).toBe(true);
+      expect(Bun.CryptoHasher.hash("sha256", await packagedImplementationSkill.arrayBuffer(), "hex")).toBe(
+        Bun.CryptoHasher.hash("sha256", await sourceImplementationSkill.arrayBuffer(), "hex"),
+      );
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

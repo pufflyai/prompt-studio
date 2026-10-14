@@ -15,6 +15,7 @@ import { autoBuildCommand } from "./auto-build";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
+import { resolveAutoBuildScopeCommand } from "./auto-build-scope";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -37,9 +38,10 @@ import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 import { readTicketsCommand } from "./read-tickets";
-import { listAttemptsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
+import { listAttemptsCommand, listVariantsCommand, reconcileAttemptCommand } from "./reconcile-attempt";
 import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
+import { repairAttemptCommand } from "./repair-attempt";
 import {
   cancelReviewRequestCommand,
   listReviewRequestsCommand,
@@ -54,6 +56,7 @@ import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
 import { submitReviewCommand } from "./submit-review";
+import { submitRevisionCommand } from "./submit-revision";
 import {
   deleteTemplateCommand,
   listTemplatesCommand,
@@ -102,11 +105,20 @@ import {
   ticketWorktreesRemoveAllCommand,
 } from "./ticket-workspaces";
 import { unarchiveTicketCommand } from "./unarchive-ticket";
+import { updateStackCommand } from "./update-stack";
 import { updateTicketCommand } from "./update-ticket";
+import { readWorkflowStatusesCommand, saveWorkflowStatusesCommand } from "./workflow-statuses";
 import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  updateStackCommand,
+  submitRevisionCommand,
+  listVariantsCommand,
+  repairAttemptCommand,
+  resolveAutoBuildScopeCommand,
+  readWorkflowStatusesCommand,
+  saveWorkflowStatusesCommand,
   autoBuildCommand,
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,

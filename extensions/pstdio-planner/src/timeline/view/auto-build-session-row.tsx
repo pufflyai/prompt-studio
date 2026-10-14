@@ -1,5 +1,5 @@
-import { Text } from "@chakra-ui/react";
-import { ListRow, SessionIndicator, sessionCompletionStatuses } from "@pstdio/ui";
+import { ListRow, sessionCompletionStatuses } from "@pstdio/ui";
+import { AutoBuildIndicator } from "./auto-build-indicator";
 
 export interface AutoBuildSession {
   id: string;
@@ -9,13 +9,12 @@ export interface AutoBuildSession {
 
 interface AutoBuildSessionRowProps {
   session: AutoBuildSession;
-  label: string;
-  statusLabel?: string;
+  sleeping?: boolean;
   onOpen: (session: AutoBuildSession) => void;
 }
 
 export function AutoBuildSessionRow(props: AutoBuildSessionRowProps) {
-  const { session, label, statusLabel, onOpen } = props;
+  const { session, sleeping, onOpen } = props;
   const status = sessionCompletionStatuses.find((status) => status === session.status);
   return (
     <ListRow
@@ -23,12 +22,11 @@ export function AutoBuildSessionRow(props: AutoBuildSessionRowProps) {
       role="button"
       variant="compact"
       label={session.title}
-      description={label}
-      icon={<SessionIndicator status={status} boxSize="icon-xs" />}
-      endContent={
-        <Text textStyle="label/XS" color="fg.muted">
-          {statusLabel ?? status?.replaceAll("_", " ") ?? "Unknown"}
-        </Text>
+      icon={
+        <AutoBuildIndicator
+          status={sleeping ? "sleeping" : status}
+          label={sleeping ? "Sleeping" : (status?.replaceAll("_", " ") ?? "Unknown")}
+        />
       }
       onActivate={() => onOpen(session)}
     />

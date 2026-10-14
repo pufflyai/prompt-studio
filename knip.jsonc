@@ -215,6 +215,7 @@
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
         "src/views/tags-settings-panel.tsx",
+        "src/views/workflow-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
         "vendor/collection-filter.js",
         "src/timeline/view/entry.tsx"

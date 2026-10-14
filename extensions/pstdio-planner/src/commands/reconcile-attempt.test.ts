@@ -9,14 +9,13 @@ import { commandParamsFor, makeCommandContext } from "./command-context.fixture"
 import { reconcileAttemptCommand } from "./reconcile-attempt";
 import { runReviewCommand } from "./run-review";
 
-const baseAttempt = (state: AttemptRecord["state"]): AttemptRecord => ({
-  schemaVersion: 1,
+const baseAttempt = (_legacyPhase: string): AttemptRecord => ({
+  schemaVersion: 2,
   workspaceId: "workspace-1",
   workspaceShorthand: "PS-1_A1",
   ticketId: "ticket-1",
   ticketShorthand: "PS-1",
   implementationSessionId: "implementation-1",
-  state,
   base: { workspaceId: null, headSha: "base-sha" },
   revisions: [],
   implementationDisconnectRetries: 0,

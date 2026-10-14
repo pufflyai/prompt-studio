@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { packWorkspacePackageTarball } from "../local-workspace-registry";
@@ -24,12 +25,11 @@ export async function preparePlannerSource(root: string) {
     manifest.overrides[`@pstdio/${name}`] = tarball;
   }
   writeFileSync(path, JSON.stringify(manifest));
-  const lock = Bun.spawn(["bun", "install", "--lockfile-only", "--ignore-scripts"], {
+  const lock = spawnSync("bun", ["install", "--lockfile-only", "--ignore-scripts"], {
     cwd: source,
-    stdout: "ignore",
-    stderr: "pipe",
+    stdio: ["ignore", "ignore", "pipe"],
+    encoding: "utf8",
   });
-  const [exit, error] = await Promise.all([lock.exited, new Response(lock.stderr).text()]);
-  if (exit !== 0) throw new Error(`Could not prepare planner fixture: ${error}`);
+  if (lock.status !== 0) throw new Error(`Could not prepare planner fixture: ${lock.stderr}`);
   return source;
 }

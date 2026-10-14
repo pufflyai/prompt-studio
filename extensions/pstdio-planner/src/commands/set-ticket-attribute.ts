@@ -50,7 +50,7 @@ export const applyTicketAttribute = async (input: {
 };
 
 export const setTicketAttribute = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "events">,
+  ctx: Pick<ExtensionContextBase, "storage" | "events" | "settings">,
   input: { rowId: string; attributeId: string; value?: unknown },
 ) => {
   if (input.attributeId === "milestone") {

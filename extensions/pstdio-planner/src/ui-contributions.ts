@@ -32,6 +32,7 @@ import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
 import { ticketStatuses } from "./ticket-status-provider";
 import { planChanged } from "./timeline/contracts";
+import { queryWorkflowSettings, saveWorkflowSettings } from "./views/workflow-settings";
 
 export { ticketResourceKind } from "./resource-kinds";
 
@@ -82,6 +83,16 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
+  const workflowSettings = defineView({
+    id: "workflow-settings",
+    title: "Planner workflow",
+    body: {
+      kind: "controls",
+      query: queryWorkflowSettings,
+      onValueChange: (ctx, input) => saveWorkflowSettings(ctx, input.values),
+      refreshEvents: [plannerTicketsChanged],
+    },
+  });
   const requests = defineView({
     id: "ticket-requests",
     title: l10n("requests.view.title", "Review requests"),
@@ -187,7 +198,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, editor, files, properties, tagSettings, requests],
+    views: [tickets, editor, files, properties, tagSettings, requests, workflowSettings],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({
@@ -218,6 +229,11 @@ export const createPlannerUi = (baseUrl: string) => {
     ],
     // No section: the host lists Ticket tags in its Project group, next to Statuses.
     settingsPanels: [
+      defineSettingsPanel({
+        id: "workflow-settings",
+        view: workflowSettings.ref,
+        slot: workbenchSlots.extensionSettings,
+      }),
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,

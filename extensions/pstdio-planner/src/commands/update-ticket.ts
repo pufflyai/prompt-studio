@@ -10,6 +10,7 @@ import {
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { validateTicketDependencies } from "../data/ticket-dependencies";
 import type { StoredTicket } from "../data/types";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { plannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
 import { deriveTitle } from "../utils/derive-title";
@@ -76,10 +77,17 @@ export const updateTicketCommand = defineCommand({
   },
 });
 
-const isBlockedTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
+const isBlockedTicket = async (
+  ctx: Pick<Parameters<typeof updateTicketCommand.run>[0], "storage" | "settings">,
+  ticket: StoredTicket,
+) => {
   if (ticket.blockedReason) return true;
-  const status = ticket.statusId ? await statusesCollection(storage).get(ticket.statusId) : null;
-  return status?.name.trim().toLowerCase() === "blocked";
+  const status = ticket.statusId ? await statusesCollection(ctx.storage).get(ticket.statusId) : null;
+  return (
+    status !== undefined &&
+    status !== null &&
+    usableWorkflowStatuses(await readWorkflowStatuses(ctx)).blockedStatusIds.includes(status.id)
+  );
 };
 
 const syncBlockedNotification = async (
@@ -87,10 +95,7 @@ const syncBlockedNotification = async (
   previous: StoredTicket,
   next: StoredTicket,
 ) => {
-  const [wasBlocked, isBlocked] = await Promise.all([
-    isBlockedTicket(ctx.storage, previous),
-    isBlockedTicket(ctx.storage, next),
-  ]);
+  const [wasBlocked, isBlocked] = await Promise.all([isBlockedTicket(ctx, previous), isBlockedTicket(ctx, next)]);
   if (isBlocked) {
     await notifyBlocked(ctx, next);
     return;
