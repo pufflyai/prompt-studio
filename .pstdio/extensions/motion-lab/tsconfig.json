@@ -10,6 +10,11 @@
     "skipLibCheck": true,
     "types": ["bun"],
     "paths": {
+      "@chakra-ui/react": ["./node_modules/@chakra-ui/react"],
+      "@pstdio/ui": ["./node_modules/@pstdio/ui"],
+      "lucide-react": ["./node_modules/lucide-react"],
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
       "motion-lab/kit": ["./src/kit"]
     }
   },

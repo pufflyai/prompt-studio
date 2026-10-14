@@ -42,7 +42,9 @@ Do not return `metadata.resourceParent` or infer a view from a resource type. Re
 
 ## Settings
 
-`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`. A settings panel without `section` appears in the host's Project group.
+`settings.properties` declares values that the host stores for one project or for all projects, as set by `scope`. The Settings tab on the extension's page shows a field for each `boolean`, `number`, and `string` setting. Array and object settings need the extension's own view, placed with `settingsPanels`.
+
+Use `workbenchSlots.extensionSettings` for native controls in the owning extension's Settings tab. A `controls` view supplies fields to the shared parameter editor, next to the extension's ordinary settings. It follows normal page flow and shares the settings page's scrollbar. It does not add an entry to project settings navigation. Use `workbenchSlots.projectSettings` for a separate project settings entry, such as a shared status editor. A project settings panel without `section` appears in the host's Project group.
 
 A `string` setting can offer choices in two ways:
 
@@ -120,6 +122,8 @@ A command action may pass params with `target: { command: preview.ref, params: {
 
 Native controls views can declare a harness field with `{ id: "agent", name: "Model", type: "harness", defaultValue: { harnessId, model, params } }`. Its value is the same object accepted by `ctx.sessions.create({ harness: value })`. The host renders its harness, model and model options inline using the command-form picker. Use `onApply` to save the choice or `onValueChange` to save each edit. This control requires API 0.1.3.
 
+Controls with `onApply` keep edited values during background refreshes. Apply saves the draft; a rejected save shows its error beside the unchanged inputs. Reset discards the draft and uses the latest saved values. An optional `onReset` also lets the extension reset its stored values. Each resource owns a separate draft.
+
 Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
@@ -173,6 +177,8 @@ and their IDs are scoped. While its resource or page is active, it takes precede
 over saved row selection and automatic page or resource matching. A contextual parent
 tree's declared document selection does not override the open workspace.
 Rows without a resource or navigation target keep their declared selection.
+
+Set `tooltip` to show text while the pointer rests on a row or the row has keyboard focus, such as the full path of a file whose row shows only its name. `iconTooltip` shows text only over the row icon. Use one of the two on a row, not both.
 
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and

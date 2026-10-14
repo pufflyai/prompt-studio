@@ -56,12 +56,12 @@ const readWithinBudget = async (
 };
 
 /**
- * One-shot gate the host uses to stop a running command. `failed` settles the call at the moment
- * the host gives up; `released` frees the output readers so nothing waits on a pipe a grandchild
+ * One-shot gate the host uses to stop a running command. `failed` settles after tree cleanup;
+ * `released` immediately frees the output readers so nothing waits on a pipe a grandchild
  * is still holding open.
  */
-const createStopGate = (kill: () => void) => {
-  let stopped = false;
+const createStopGate = (kill: () => Promise<void>) => {
+  let stopping: Promise<void> | undefined;
   let release: (value: null) => void = () => {};
   let fail: (reason: unknown) => void = () => {};
 
@@ -76,12 +76,21 @@ const createStopGate = (kill: () => void) => {
   return {
     released,
     failed,
+    get stopped() {
+      return stopping !== undefined;
+    },
+    get finished() {
+      return stopping?.catch(() => {});
+    },
     stop(reason: unknown) {
-      if (stopped) return;
-      stopped = true;
-      kill();
+      if (stopping) return stopping;
+      stopping = kill();
+      stopping.then(
+        () => fail(reason),
+        (error: unknown) => fail(new AggregateError([reason, error], `${String(reason)}\n${String(error)}`)),
+      );
       release(null);
-      fail(reason);
+      return stopping;
     },
   };
 };
@@ -109,10 +118,12 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
 
   // Children outliving the invocation that started them is the leak this owns. The scope
   // stops whatever is still running when the invocation ends, however it ended.
-  const running = new Set<(reason: unknown) => void>();
-  options.scope?.register(() => {
+  const running = new Set<(reason: unknown) => Promise<void>>();
+  options.scope?.register(async () => {
     closed = true;
-    for (const stop of [...running]) stop(new Error("Invocation ended while the command was still running."));
+    await Promise.all(
+      [...running].map((stop) => stop(new Error("Invocation ended while the command was still running."))),
+    );
   });
 
   const runToCompletion = async (input: ProcessRunInput) => {
@@ -133,7 +144,10 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       windowsVerbatimArguments: resolved.windowsVerbatimArguments,
     });
 
-    const gate = createStopGate(() => signalProcessTree(child, "SIGKILL"));
+    const gate = createStopGate(async () => {
+      await signalProcessTree(child, "SIGKILL");
+      await child.exited;
+    });
     running.add(gate.stop);
 
     const timeout =
@@ -158,12 +172,13 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       readWithinBudget(child.stdout as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
       readWithinBudget(child.stderr as ReadableStream<Uint8Array>, budget, onExceeded, gate.released),
       child.exited,
-    ]).then(([stdout, stderr, exitCode]) => ({ exitCode, stdout, stderr }));
+    ]).then(([stdout, stderr, exitCode]) => (gate.stopped ? gate.failed : { exitCode, stdout, stderr }));
     collect.catch(() => {});
 
     try {
       return await Promise.race([collect, gate.failed]);
     } finally {
+      await gate.finished;
       running.delete(gate.stop);
       clearTimeout(timeout);
       signal?.removeEventListener("abort", onAbort);

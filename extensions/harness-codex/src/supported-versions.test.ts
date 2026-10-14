@@ -33,6 +33,16 @@ const replayPeer = (traffic: Traffic[]) => {
   const stdin = new Writable({
     write(chunk, _encoding, done) {
       const sent = JSON.parse(String(chunk)) as RpcMessage;
+      if (["config/read", "thread/unsubscribe"].includes(sent.method ?? "")) {
+        stdout.write(`${JSON.stringify({ id: sent.id, result: {} })}\n`);
+        done();
+        return;
+      }
+      if (next >= traffic.length) {
+        stdout.write(`${JSON.stringify({ id: sent.id, result: { goal: null, thread: { turns: [] } } })}\n`);
+        done();
+        return;
+      }
       const expected = traffic[next++]?.message;
       if (expected?.method !== sent.method) {
         done(new Error(`Replay expected ${expected?.method ?? "nothing"} but the harness sent ${sent.method}.`));

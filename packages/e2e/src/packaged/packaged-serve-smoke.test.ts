@@ -18,6 +18,8 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 // Wrapped user prompts collapse by rendered height and retain borderless expand/collapse controls.
 // Streaming chunks retain earlier DOM and settle without running animations.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
+// Shared Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
@@ -31,12 +33,13 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
+// Saved-view fixtures also verify extension detail settings placement metadata.
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
-// npm harness detection and model discovery are covered by harness-npm-detection.test.ts.
+// Harness discovery/models live in harness-npm-detection.test.ts; Codex exit outcomes in codex-transport.test.ts.
 // Covers compiled webview publication and persistent bundle reuse across runtime restarts.
 import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke";
 // Async question parts and accepted answers survive the packaged live reply path.
@@ -59,6 +62,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
@@ -80,9 +84,11 @@ beforeAll(() => {
   }
 }, BUILD_TIMEOUT);
 
+registerSharedCodexSmokeTests();
 registerExtensionInstallSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
+registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.

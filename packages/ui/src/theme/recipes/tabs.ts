@@ -22,6 +22,8 @@ export const tabsSlotRecipe = defineSlotRecipe({
       },
     },
     trigger: {
+      "&[data-reorderable]": { cursor: "grab", touchAction: "none" },
+      "&[data-dragging]": { opacity: 0.5 },
       flexShrink: "0",
       overflow: "hidden",
       // Only tabs with a close button share a crowded row; the minimum keeps the
