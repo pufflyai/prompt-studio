@@ -30,10 +30,10 @@ export const AttachedAndFloating: Story = {
     await expect(within(panel).queryByRole("button", { name: "Close Side Panel" })).toBeNull();
     await expect(await within(panel).findByRole("tab", { name: /New session/ })).toBeVisible();
     const tabs = fixture.workbench.layout.getLayout().regions.side.widgets;
-    await userEvent.click(canvas.getByRole("button", { name: "Show Side Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Show Sidebar" }));
     await waitFor(() => expect(canvas.getByTestId("workbench-side-panel-attached")).toBeVisible());
     await expect(fixture.workbench.layout.getLayout().regions.side.widgets).toEqual(tabs);
-    await userEvent.click(canvas.getByRole("button", { name: "Hide Side Panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
     await userEvent.click(canvas.getByRole("button", { name: "Open Side Panel" }));
     await userEvent.click(canvas.getByRole("button", { name: "Close Side Panel" }));
     await waitFor(() => expect(panel).not.toBeVisible());
