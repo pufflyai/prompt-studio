@@ -1,7 +1,9 @@
+import type { SessionExitCause } from "pstdio-api-contracts/extension-kernel";
 import type { ActiveSession, createSessionStore } from "../features/sessions/session-store";
 import type { SessionServiceDeps, SessionStatus } from "./session-service";
 export type TransitionStatusOptions = {
   drainCapacity?: boolean;
+  exitCause?: SessionExitCause;
   expectedOwner?: ActiveSession | null;
   expectedLastRequestStarted?: string | null;
 };
@@ -29,6 +31,9 @@ export const writeSessionTransition = async (
   const expectedRun = current?.last_request_started;
   const guarded = options.expectedOwner !== undefined || options.expectedLastRequestStarted !== undefined;
   return guarded
-    ? await raw.updateStatus(id, status, { expectedLastRequestStarted: expectedRun ?? null })
-    : await raw.updateStatus(id, status);
+    ? await raw.updateStatus(id, status, {
+        expectedLastRequestStarted: expectedRun ?? null,
+        ...(options.exitCause ? { exitCause: options.exitCause } : {}),
+      })
+    : await raw.updateStatus(id, status, ...(options.exitCause ? [{ exitCause: options.exitCause }] : []));
 };

@@ -15,9 +15,13 @@ const hideAndReopen = async (page: Page, panel: "Side" | "Secondary", title: str
   const frame = page.locator(`iframe[title="${title}"]`);
   const original = await frame.elementHandle();
   const url = page.url();
-  await page.getByRole("button", { name: `Hide ${panel} Panel`, exact: true }).click();
+  await page
+    .getByRole("button", { name: panel === "Side" ? "Hide Sidebar" : "Hide Bottom panel", exact: true })
+    .click();
   await expect(frame).toBeHidden();
-  await page.getByRole("button", { name: `Show ${panel} Panel`, exact: true }).click();
+  await page
+    .getByRole("button", { name: panel === "Side" ? "Show Sidebar" : "Show Bottom panel", exact: true })
+    .click();
   await expect(frame).toBeVisible();
   expect(await original!.evaluate((node) => node.isConnected)).toBe(true);
   await expect(page).toHaveURL(url);
@@ -26,11 +30,11 @@ const floatAndReattach = async (page: Page) => {
   await page.getByRole("button", { name: "Float Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
   await page
-    .locator('[data-workbench-region="nav"]')
-    .getByRole("button", { name: "Hide Side Panel", exact: true })
+    .locator('[data-workbench-region="status"]')
+    .getByRole("button", { name: "Hide Sidebar", exact: true })
     .click();
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
-  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Sidebar", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
 };
 const waitForExampleSave = (page: Page, name: string, content: string) =>

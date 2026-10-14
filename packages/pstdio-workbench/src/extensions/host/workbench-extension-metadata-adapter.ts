@@ -50,6 +50,9 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
       title: view.title,
       icon: view.icon,
       instancePolicy: view.instancePolicy,
+      background: view.background,
+      reveal: view.reveal,
+      defaultPanel: view.defaultPanel,
       panelMenus: menus.length > 0 ? menus : undefined,
       ...viewBody(view),
     };
@@ -175,6 +178,8 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     label: mode.label,
     icon: mode.icon,
     panelRegions: mode.regions,
+    layout: mode.layout,
+    actionBarEdge: mode.actionBarEdge,
     regionSettings: adaptPanelSettings(mode.regionSettings, mode.extensionId),
     floatingBubble: mode.floatingBubble,
     floating: adaptFloatingDefaults(mode.floating, mode.extensionId),

@@ -49,12 +49,12 @@ const createPanelWorkbench = (
     resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
     main: { kind: "panels", empty: { kind: "view", id: "files" } },
     slots: [
-      { id: "files", region: "main", item: { kind: "view", view: { kind: "view", id: "files" }, presence: "fixed" } },
+      { id: "files", region: "main", item: { kind: "view", view: { kind: "view", id: "files" }, presence: "open" } },
       {
         id: "changes",
         region: "main",
         isAvailable: () => options.changes === true,
-        item: { kind: "view", view: { kind: "view", id: "changes" }, presence: "fixed" },
+        item: { kind: "view", view: { kind: "view", id: "changes" }, presence: "open" },
       },
     ],
   });
@@ -111,22 +111,22 @@ export const CollapsedMenuWithTab: Story = {
   args: { workbench: createPanelWorkbench({ collapsed: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("button", { name: "Open Main left menu" })).toBeVisible();
+    await expect(await canvas.findByRole("button", { name: "Panel header panels" })).toBeVisible();
     await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Close Files" })).toBeNull();
+    await expect(canvas.getByRole("button", { name: "Close Files" })).toBeVisible();
   },
 };
 
 export const HeaderActionWithoutTabs: Story = {
-  args: { workbench: createPanelWorkbench({ action: true }) },
+  args: { workbench: createPanelWorkbench({ action: true, showHeader: false }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("button", { name: "Refresh files" })).toBeVisible();
+    await expect(await canvas.findByText("Files content")).toBeVisible();
     await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
   },
 };
 
 export const HeaderActionForPanelResource: Story = {
   ...HeaderActionWithoutTabs,
-  args: { workbench: createPanelWorkbench({ action: true, panelResource: true }) },
+  args: { workbench: createPanelWorkbench({ action: true, panelResource: true, showHeader: false }) },
 };

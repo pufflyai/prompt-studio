@@ -34,6 +34,7 @@ import {
   setOwnedPlacementPreparation,
 } from "./owned-placement-preparation";
 import { restoreOwnedPlacementState } from "./owned-placement-restoration";
+import { adaptPlacementItem } from "./placement-contract";
 export interface WorkbenchShellPlacementContribution extends WorkbenchPlacementPresentation {
   readonly id: string;
   readonly item: WorkbenchOwnedPlacementItem;
@@ -221,7 +222,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
         throw new Error(`Workbench shell placement view is not registered: ${placementItemViewId(placement.item)}`);
       }
       validateOwnedPlacementItem(label, placement.id, placement.item);
-      const registered = { ...placement, item: { ...placement.item } };
+      const registered = { ...placement, item: adaptPlacementItem(placement.item) };
       const panel = registerWorkbenchViewPlacement(
         input.registerPanel,
         input.views,

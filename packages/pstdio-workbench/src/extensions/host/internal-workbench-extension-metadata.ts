@@ -42,6 +42,9 @@ export interface InternalWorkbenchExtensionPanel {
   title: MetadataView["title"];
   icon?: string;
   instancePolicy?: MetadataView["instancePolicy"];
+  background?: MetadataView["background"];
+  reveal?: MetadataView["reveal"];
+  defaultPanel?: MetadataView["defaultPanel"];
   webview?: MetadataWebview;
   renderer?: { kind: MetadataRendererKind; id: string };
   panelMenus?: InternalWorkbenchExtensionPanelMenu[];
@@ -56,6 +59,8 @@ export interface InternalWorkbenchExtensionMetadata {
     id: string;
     extensionId: string;
     modeId: string;
+    layout?: import("@pstdio/sdk/extensions").ModeLayout;
+    actionBarEdge?: import("@pstdio/sdk/extensions").PanelEdge;
     basePage?: import("@pstdio/sdk/extensions").PageRef;
     label: WorkbenchExtensionMetadata["modes"][number]["label"];
     icon?: string;

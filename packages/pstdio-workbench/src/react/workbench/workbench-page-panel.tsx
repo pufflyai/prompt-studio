@@ -3,7 +3,8 @@ import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
-import { PanelHeaderEdge, PanelHeaderMenu } from "../region/panel-header-menu";
+import { PanelDragHandle } from "../region/panel-drag-area";
+import { PanelHeaderContextMenu, PanelHeaderEdge } from "../region/panel-header-menu";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
@@ -21,6 +22,7 @@ export const WorkbenchPagePanel = (props: { workbench: WorkbenchCore; region: "a
       data-workbench-panel={region}
       data-workbench-region={region}
       bg={workbenchBackgrounds.panel}
+      layerStyle={region === "aside" ? "pageSidePanel" : undefined}
       display="flex"
       flexDirection="column"
       h="full"
@@ -30,18 +32,23 @@ export const WorkbenchPagePanel = (props: { workbench: WorkbenchCore; region: "a
       overflow="hidden"
     >
       <PanelHeaderEdge workbench={workbench} region={region} visible={policy.showHeader} />
-      <Header
-        variant="main"
-        data-workbench-panel-header={region}
-        flexShrink={0}
-        gap="xs"
-        display={policy.showHeader ? "flex" : "none"}
-      >
-        <WorkbenchRegionTabs workbench={workbench} region={region} />
-        <WorkbenchPanelMenuOpeners workbench={workbench} panel={region} />
-        <PanelHeaderMenu workbench={workbench} region={region} />
-      </Header>
-      <WorkbenchTabDropTarget region={region} />
+      <PanelHeaderContextMenu workbench={workbench} region={region}>
+        <PanelDragHandle workbench={workbench} panel={region} asChild>
+          <Header
+            tabIndex={0}
+            aria-label={`${region} header`}
+            variant="main"
+            data-workbench-panel-header={region}
+            flexShrink={0}
+            gap="xs"
+            display={policy.showHeader ? "flex" : "none"}
+          >
+            <WorkbenchRegionTabs workbench={workbench} region={region} />
+            <WorkbenchPanelMenuOpeners workbench={workbench} panel={region} />
+          </Header>
+        </PanelDragHandle>
+      </PanelHeaderContextMenu>
+      <WorkbenchTabDropTarget workbench={workbench} region={region} />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel={region}>
           <WorkbenchRegion
@@ -60,5 +67,5 @@ export const usePagePanelGeometry = (workbench: WorkbenchCore, region: "aside" |
     state.activePageId ? state.pages[state.activePageId]?.regionSettings?.[region] : undefined,
   );
   const state = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
-  return { settings, size: state.size ?? settings?.size?.defaultPx, edge: state.edge ?? settings?.edge };
+  return { settings, size: state.size ?? settings?.size?.defaultPx, edge: workbench.getPanelEdge(region) };
 };

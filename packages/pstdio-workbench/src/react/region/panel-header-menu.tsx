@@ -1,21 +1,36 @@
-import { Box, IconButton } from "@chakra-ui/react";
-import { PANEL_HEADER_CONTROL_SIZE, ResourceActionMenu, ResourceContextMenu } from "@pstdio/ui";
+import { Box } from "@chakra-ui/react";
+import { ResourceContextMenu } from "@pstdio/ui";
+import type { ReactElement } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
+import { geometryPositions, moveGeometry, panelPositionLabel } from "./panel-drag-area";
 
 interface PanelHeaderMenuProps {
   workbench: WorkbenchCore;
   region: WorkbenchPanelRegion;
 }
 
-export const PanelHeaderMenu = (props: PanelHeaderMenuProps) => {
-  const { workbench, region } = props;
+export const PanelHeaderContextMenu = (props: PanelHeaderMenuProps & { children: ReactElement }) => {
+  const { workbench, region, children } = props;
   const policy = usePanelPolicy(workbench, region);
-  if (!policy.provided) return null;
+  if (!policy.provided) return children;
   return (
-    <ResourceActionMenu
+    <ResourceContextMenu
       actions={[
+        ...geometryPositions(workbench, region).map((edge) => ({
+          key: `move-${edge}`,
+          label: panelPositionLabel(region, edge),
+          icon: (
+            <WorkbenchIcon
+              name={{ left: "PanelLeft", right: "PanelRight", top: "PanelTop", bottom: "PanelBottom" }[edge]}
+              size={14}
+            />
+          ),
+          onClick: () => {
+            void moveGeometry(workbench, region, edge);
+          },
+        })),
         {
           key: "hide-header",
           label: "Hide header",
@@ -24,10 +39,8 @@ export const PanelHeaderMenu = (props: PanelHeaderMenuProps) => {
         },
       ]}
     >
-      <IconButton aria-label={`${region} header options`} variant="ghost" size={PANEL_HEADER_CONTROL_SIZE}>
-        <WorkbenchIcon name="Ellipsis" size={14} />
-      </IconButton>
-    </ResourceActionMenu>
+      {children}
+    </ResourceContextMenu>
   );
 };
 

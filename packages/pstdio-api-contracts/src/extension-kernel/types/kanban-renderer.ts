@@ -5,7 +5,7 @@ import type { RendererCallback } from "./context";
 import type { StatusRef } from "./contribution-identity";
 import type { Struct } from "./json";
 import type { ParamObjectSchema } from "./params";
-import type { RendererContributionBase } from "./renderer-base";
+import type { RendererContributionBase, RendererEventReference } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 import type { ViewToolbarAction } from "./view-toolbar-action";
 
@@ -161,11 +161,24 @@ export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
 
 export type KanbanRendererRowActivationHandler = RendererCallback<{ row: KanbanRendererRow }, void>;
 
+/** One drop, including destination grouping values and optional manual placement. */
+export interface KanbanRendererMove {
+  rowId: string;
+  attributes: Record<string, unknown>;
+  /** Omitted in sorted views. An empty object appends in manual order. */
+  order?: { beforeRowId?: string };
+}
+
 export interface KanbanRendererContribution extends RendererContributionBase {
+  /** Saves the complete drop once. Takes precedence over legacy move callbacks. */
+  onMove?: RendererCallback<KanbanRendererMove, unknown>;
+  /** Events that change filter fields/options. Omit to retain content-event refresh. */
+  schemaRefreshEvents?: readonly RendererEventReference[];
   toolbarActions?: ViewToolbarAction[];
   attributes?: KanbanRendererAttributeDescriptor[];
   query: RendererCallback<KanbanRendererQueryParams, KanbanRendererQueryResult>;
   onAttributeChange?: RendererCallback<{ rowId: string; attributeId: string; value: unknown }, unknown>;
+  /** @deprecated Use onMove to save a complete drop. */
   onReorder?: RendererCallback<{ rowId: string; beforeRowId?: string }, unknown>;
   onColumnAction?: RendererCallback<{ columnId: string; actionId: string }, unknown>;
   createRow?: KanbanRendererCreateRowContribution;

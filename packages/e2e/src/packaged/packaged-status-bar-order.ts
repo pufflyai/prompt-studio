@@ -1,6 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 export const expectPackagedStatusBarOrder = async (page: Page) => {
+  const toggles = page.locator('[data-workbench-region="status"]').getByRole("group", { name: "Panel toggles" });
   await page.getByRole("option", { name: "Developer tools", exact: true }).click();
   const toggle = page.getByRole("checkbox", { name: "Enable performance monitoring" });
   await toggle.focus();
@@ -8,6 +9,9 @@ export const expectPackagedStatusBarOrder = async (page: Page) => {
   await expect(toggle).toBeChecked();
   await page.getByRole("button", { name: "Close Developer tools", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(toggles).toBeVisible();
+  await expect(toggles.locator("[data-status-bar-item]")).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="nav"]').getByRole("button", { name: / panels$/ })).toBeVisible();
   const connection = page.getByRole("group", { name: "Backend connection", exact: true });
   const performance = page.getByRole("group", { name: "Performance", exact: true });
   const isConnectionFirst = async () => {
@@ -35,6 +39,9 @@ export const expectPackagedStatusBarOrder = async (page: Page) => {
   await expect.poll(isConnectionFirst).toBe(true);
   await page.reload();
   await expect.poll(isConnectionFirst).toBe(true);
+  const widgetBounds = await toggles.boundingBox();
+  const performanceBounds = await performance.boundingBox();
+  expect(widgetBounds!.x).toBeGreaterThanOrEqual(performanceBounds!.x + performanceBounds!.width);
   // A widget's control is also a drag surface, and a click still opens its popover.
   const meter = page.getByTestId("performance-status-item");
   const meterBounds = await meter.boundingBox();

@@ -8045,19 +8045,20 @@
                                   "x": 234,
                                   "y": 3,
                                   "name": "Vertical scrollbar track",
+                                  "enabled": false,
                                   "fill": "$ds-bg-subtle",
                                   "width": 6,
                                   "height": 244
                                 },
                                 {
                                   "type": "rectangle",
-                                  "cornerRadius": 3,
+                                  "cornerRadius": 2,
                                   "id": "YXUjY",
-                                  "x": 235,
+                                  "x": 237,
                                   "y": 3,
                                   "name": "Vertical scrollbar thumb",
-                                  "fill": "$ds-fg-subtle",
-                                  "width": 4,
+                                  "fill": "$ds-border",
+                                  "width": 2,
                                   "height": 174
                                 },
                                 {
@@ -8067,20 +8068,21 @@
                                   "x": 3,
                                   "y": 248,
                                   "name": "Horizontal scrollbar track",
+                                  "enabled": false,
                                   "fill": "$ds-bg-subtle",
                                   "width": 228,
                                   "height": 6
                                 },
                                 {
                                   "type": "rectangle",
-                                  "cornerRadius": 3,
+                                  "cornerRadius": 2,
                                   "id": "X2DN3P",
                                   "x": 3,
-                                  "y": 249,
+                                  "y": 251,
                                   "name": "Horizontal scrollbar thumb",
-                                  "fill": "$ds-fg-subtle",
+                                  "fill": "$ds-border",
                                   "width": 108,
-                                  "height": 4
+                                  "height": 2
                                 }
                               ]
                             },
@@ -8651,19 +8653,20 @@
                       "x": 278,
                       "y": 3,
                       "name": "Vertical scrollbar track",
+                      "enabled": false,
                       "fill": "$ds-bg-subtle",
                       "width": 6,
                       "height": 244
                     },
                     {
                       "type": "rectangle",
-                      "cornerRadius": 3,
+                      "cornerRadius": 2,
                       "id": "ckgXM",
-                      "x": 279,
+                      "x": 281,
                       "y": 3,
                       "name": "Vertical scrollbar thumb",
-                      "fill": "$ds-fg-subtle",
-                      "width": 4,
+                      "fill": "$ds-border",
+                      "width": 2,
                       "height": 174
                     },
                     {
@@ -8673,20 +8676,21 @@
                       "x": 3,
                       "y": 248,
                       "name": "Horizontal scrollbar track",
+                      "enabled": false,
                       "fill": "$ds-bg-subtle",
                       "width": 272,
                       "height": 6
                     },
                     {
                       "type": "rectangle",
-                      "cornerRadius": 3,
+                      "cornerRadius": 2,
                       "id": "PhH6P",
                       "x": 3,
-                      "y": 249,
+                      "y": 251,
                       "name": "Horizontal scrollbar thumb",
-                      "fill": "$ds-fg-subtle",
+                      "fill": "$ds-border",
                       "width": 142,
-                      "height": 4
+                      "height": 2
                     }
                   ]
                 },
@@ -8755,19 +8759,20 @@
                       "x": 278,
                       "y": 3,
                       "name": "Vertical scrollbar track",
+                      "enabled": false,
                       "fill": "$ds-bg-subtle",
                       "width": 6,
                       "height": 244
                     },
                     {
                       "type": "rectangle",
-                      "cornerRadius": 3,
+                      "cornerRadius": 2,
                       "id": "Y8nkr9",
-                      "x": 279,
+                      "x": 281,
                       "y": 3,
                       "name": "Vertical scrollbar thumb",
-                      "fill": "$ds-fg-subtle",
-                      "width": 4,
+                      "fill": "$ds-border",
+                      "width": 2,
                       "height": 174
                     },
                     {
@@ -8777,20 +8782,21 @@
                       "x": 3,
                       "y": 248,
                       "name": "Horizontal scrollbar track",
+                      "enabled": false,
                       "fill": "$ds-bg-subtle",
                       "width": 272,
                       "height": 6
                     },
                     {
                       "type": "rectangle",
-                      "cornerRadius": 3,
+                      "cornerRadius": 2,
                       "id": "o2Dewg",
                       "x": 3,
-                      "y": 249,
+                      "y": 251,
                       "name": "Horizontal scrollbar thumb",
-                      "fill": "$ds-fg-subtle",
+                      "fill": "$ds-border",
                       "width": 142,
-                      "height": 4
+                      "height": 2
                     }
                   ]
                 },
@@ -9096,19 +9102,20 @@
                               "x": 272,
                               "y": 3,
                               "name": "Vertical scrollbar track",
+                              "enabled": false,
                               "fill": "$ds-bg-subtle",
                               "width": 6,
                               "height": 244
                             },
                             {
                               "type": "rectangle",
-                              "cornerRadius": 3,
+                              "cornerRadius": 2,
                               "id": "NnMzH",
-                              "x": 273,
+                              "x": 275,
                               "y": 3,
                               "name": "Vertical scrollbar thumb",
-                              "fill": "$ds-fg-subtle",
-                              "width": 4,
+                              "fill": "$ds-border",
+                              "width": 2,
                               "height": 174
                             },
                             {
@@ -9118,20 +9125,21 @@
                               "x": 3,
                               "y": 248,
                               "name": "Horizontal scrollbar track",
+                              "enabled": false,
                               "fill": "$ds-bg-subtle",
                               "width": 266,
                               "height": 6
                             },
                             {
                               "type": "rectangle",
-                              "cornerRadius": 3,
+                              "cornerRadius": 2,
                               "id": "C79xQ",
                               "x": 3,
-                              "y": 249,
+                              "y": 251,
                               "name": "Horizontal scrollbar thumb",
-                              "fill": "$ds-fg-subtle",
+                              "fill": "$ds-border",
                               "width": 132,
-                              "height": 4
+                              "height": 2
                             }
                           ]
                         },

@@ -1,6 +1,7 @@
 import type { PendingQueuedFollowUpsResponse } from "@pstdio/sdk/api";
 import type { QueuedFollowUp, SessionMessage } from "@pstdio/ui/chat-ui";
 import { hasAcceptedPendingFollowUp, type PendingFollowUpState } from "./session-chat-state";
+import { hasPendingSessionRunStarted } from "./session-work-start";
 
 const queuedPromptPrefix = "queued-prompt-";
 
@@ -45,6 +46,18 @@ const hasDeliveredRequest = (
     matching[0].parts.some((part) => part.type === "file" && part.fileId === file.file_id),
   );
 };
+
+// The server shows a sent message once the queue list shows its saved request, or once a new run
+// shows it in the conversation. Until then the client keeps its own copy.
+export const serverShowsPendingFollowUp = (
+  messages: SessionMessage[],
+  sessionId: string | null,
+  pending: PendingFollowUpState,
+  lastRequestStarted: string | null,
+) =>
+  messages.some((message) => getQueuedPromptPosition(message.id, sessionId) === pending.queuePosition) ||
+  (hasAcceptedPendingFollowUp(messages, pending) &&
+    hasPendingSessionRunStarted(lastRequestStarted, pending.previousRunStarted));
 
 export const splitQueuedFollowUps = (
   messages: SessionMessage[],

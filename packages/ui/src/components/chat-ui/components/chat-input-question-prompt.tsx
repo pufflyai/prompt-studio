@@ -15,7 +15,7 @@ import { QuestionFormBlockView } from "./timeline-tool-blocks";
 
 export * from "./chat-input-question-answers";
 
-interface QuestionPromptControlsProps {
+export interface QuestionPromptControlsProps {
   isEditable: boolean;
   questionPrompt: ChatInputQuestionPrompt;
   selectedOptionsByQuestion: Record<string, string[]>;

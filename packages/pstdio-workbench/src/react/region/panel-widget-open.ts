@@ -26,14 +26,14 @@ export const getPanelLabel = (region: WorkbenchPanelRegion) => {
 
 export const openPanelWidget = async (input: OpenPanelWidgetInput) => {
   const { open, pinned, region, resource, widget, workbench } = input;
-  const policy = workbench.shell.getPanelPolicy(region);
-  if (!policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
-  if (!policy.open && !policy.canOpen) throw new Error(`Panel cannot open: ${region}`);
-
   if (open) {
     await runUserAction(workbench, widget.title, () => open(resource));
     return;
   }
+  const policy = workbench.shell.getPanelPolicy(region);
+  if (!policy.acceptsTabs) throw new Error(`Panel cannot accept tabs: ${region}`);
+  if (!policy.open && !policy.canOpen) throw new Error(`Panel cannot open: ${region}`);
+
   if (widget.openCommand) {
     await runUserAction(workbench, widget.title, async () => {
       await workbench.commands.executeCommand(widget.openCommand!.commandId, widget.openCommand!.args, {

@@ -45,6 +45,7 @@ export const ConversationContent = (props: ConversationContentProps) => {
       contentRef={contentRef as React.Ref<HTMLDivElement>}
       verticalScrollbarProps={{ zIndex: 2 }}
       contentProps={{
+        layerStyle: "chatContent",
         py: "sm",
         "aria-live": "polite",
         role: "list",

@@ -66,6 +66,9 @@ export const useWorkbenchRegionTabsState = (
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
+  const page = useWorkbenchStore(workbench.pages.store, (state) =>
+    state.activePageId ? state.pages[state.activePageId] : undefined,
+  );
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const compositionPanels = useWorkbenchCompositionPanels(workbench);
@@ -89,6 +92,12 @@ export const useWorkbenchRegionTabsState = (
   const visibleSubPanelIds = new Set(visibleSubPanels.map((placement) => placement.widgetId));
   const visiblePlacements = regionState.widgets.filter(
     (placement) =>
+      !(
+        page?.tabLocks !== "legacy" &&
+        page?.main.kind === "panels" &&
+        placement.placementIdentity?.kind === "page" &&
+        placement.placementIdentity.slotId === "$main"
+      ) &&
       (visibleSubPanelIds.has(placement.widgetId) || placement.role === "location") &&
       (!placement.resource || Boolean(resolveResourcePreview(placement.resource, changes))),
   );

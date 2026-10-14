@@ -1,6 +1,7 @@
 import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardPageLocationBrowser, readPageUrlProjectId } from "@/shared/app/page-location-browser";
@@ -114,6 +115,9 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench = createWorkbench({
     initialSidePanelMode: "closed",
+    floating: {
+      defaultTab: { kind: "command", commandId: dashboardCommandIds.createSession, args: { sidePanel: true } },
+    },
     defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {
       secondary: { size: WORKBENCH_TERMINAL_PANEL_SIZE },

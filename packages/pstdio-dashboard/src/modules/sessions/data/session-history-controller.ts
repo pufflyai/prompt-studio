@@ -45,6 +45,8 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
   let generation = 0;
   let revision = 0;
   let queueRevision = 0;
+  // Counts queue snapshots shown, so a read can tell whether a snapshot arrived after it started.
+  let queueSnapshots = 0;
   let snapshotSeen = false;
   let disposed = false;
   let runStartedAt = input.initialSession?.last_request_started;
@@ -55,24 +57,31 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
     state = { ...state, ...next, messages: [...visibleSessionMessages(confirmed), ...queued] };
     if (!disposed) onChange(state);
   };
-  const refreshQueue = (reason: "refresh" | "retry" = "refresh") => {
-    if (disposed) return;
+  const showQueue = (value: { messages: SessionMessage[]; queue?: PendingQueuedFollowUpsResponse }) => {
+    queued = value.messages;
+    queueSnapshots++;
+    publish({ queueError: undefined, queue: value.queue });
+  };
+  // Resolves with the queue shown once this read settles, when a snapshot arrived after it started.
+  const refreshQueue = async (reason: "refresh" | "retry" = "refresh") => {
+    if (disposed) return undefined;
     const current = generation;
     const startedRevision = queueRevision;
+    const startedSnapshots = queueSnapshots;
     queueBinding ??= reads.bind(`${ownerKey}:queue`);
-    queueBinding.request(
+    await queueBinding.request(
       {
         queryKey: JSON.stringify([current, startedRevision]),
         load: (signal) => transport.getQueuedMessages(sessionId, { signal }),
         onValue: (value) => {
           if (current !== generation || startedRevision !== queueRevision) return;
-          queued = value.messages;
-          publish({ queueError: undefined, queue: value.queue });
+          showQueue(value);
         },
         onError: (error) => publish({ queueError: toSessionNotice(error) }),
       },
       reason,
     );
+    return queueSnapshots === startedSnapshots ? undefined : state.queue;
   };
   const readHistory = () => {
     if (disposed) return;
@@ -104,7 +113,7 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
     snapshotSeen = false;
     publish({ loading: true, streaming: false, error: undefined });
     readHistory();
-    refreshQueue();
+    void refreshQueue();
     const active = () => !disposed && generation === current;
     connection = transport.connectStream(sessionId, {
       onReady: () => {
@@ -130,17 +139,14 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         queueBinding?.dispose();
         queueBinding = undefined;
         if ("error" in value) publish({ queueError: { message: value.error, temporary: true } });
-        else {
-          queued = value.messages;
-          publish({ queueError: undefined, queue: value.queue });
-        }
+        else showQueue(value);
       },
       onEnd: () => {
         if (!active()) return;
         publish({ loading: false, streaming: false });
         connection?.close();
         readHistory();
-        refreshQueue("retry");
+        void refreshQueue("retry");
       },
       onError: (error) => {
         if (!active()) return;
@@ -159,7 +165,8 @@ export const createSessionHistoryController = (input: HistoryControllerInput) =>
         connect();
         return;
       }
-      refreshQueue();
+      // A live stream publishes queue changes itself; after it ends, the row event is the signal.
+      if (!state.streaming) void refreshQueue();
     },
     dispose() {
       disposed = true;

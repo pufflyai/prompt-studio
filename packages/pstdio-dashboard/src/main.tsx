@@ -18,7 +18,6 @@ import { SyncProvider } from "@/lib/sync/sync-provider";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
 import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appearance";
 import { DesktopProjectTabs } from "@/modules/projects/components/desktop-project-tabs";
-import { openDashboardSidePanel } from "@/modules/sessions/bubble/open-side-panel";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { BrowserSignInRequired } from "@/shared/components/browser-sign-in-required";
@@ -100,6 +99,7 @@ const renderDashboard = async () => {
             <Workbench
               workbench={dashboardWorkbench}
               themeStorage={storage}
+              panelTogglesInHost={Boolean(projectTabs)}
               titleBar={
                 <>
                   {projectTabs && <DesktopProjectTabs workbench={dashboardWorkbench} {...projectTabs} />}
@@ -108,7 +108,6 @@ const renderDashboard = async () => {
                 </>
               }
               renderParamField={renderParamField}
-              onOpenSidePanel={() => void openDashboardSidePanel(dashboardWorkbench)}
             />
           </SyncProvider>
         </HostStorageProvider>

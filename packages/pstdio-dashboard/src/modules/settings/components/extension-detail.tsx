@@ -8,6 +8,7 @@ import type {
 import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
@@ -24,6 +25,7 @@ export interface ExtensionDetailProps {
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
   settings: ExtensionSettingValueRecord[];
+  settingsViews?: ReactNode;
   toggling?: boolean;
   reloading?: boolean;
   upgrading?: boolean;
@@ -49,6 +51,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     automations,
     diagnostics,
     settings,
+    settingsViews,
     toggling,
     reloading,
     upgrading,
@@ -69,6 +72,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const showReload = !extension.canUpgrade && extension.updateAvailable;
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
   const hasSettings = settingsToParams(settings).length > 0;
+  const hasSettingsViews = Boolean(settingsViews);
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
     onToggle(details.checked);
   };
@@ -206,13 +210,16 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                   executeOptionCommand={executeOptionCommand}
                   onChangeSetting={onChangeSetting}
                 />
-              ) : (
+              ) : null}
+              {!hasSettings && !hasSettingsViews ? (
                 <EmptyState
                   size="sm"
                   title={t("projectSettings.extensionsPanel.detail.noSettings")}
                   icon={<SlidersHorizontal />}
                 />
-              )}
+              ) : null}
+
+              {settingsViews}
 
               {projectId && metadata?.connections?.length ? (
                 <ExtensionConnectionsCard projectId={projectId} definitions={metadata.connections} />

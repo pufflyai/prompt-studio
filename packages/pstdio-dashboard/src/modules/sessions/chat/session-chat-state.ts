@@ -13,6 +13,8 @@ export type PendingFollowUpState = {
   assistantMessageId: string;
   attachments?: SessionAttachment[];
   questionResponse?: ChatInputQuestionResponse;
+  // Set when the server saved the message in the queue; it stays until the queue list shows this position.
+  queuePosition?: number;
   // Set when the message could not be sent; it then stays in the conversation until resent or removed.
   failure?: SessionNotice;
 };

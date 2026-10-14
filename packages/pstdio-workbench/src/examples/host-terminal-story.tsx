@@ -47,7 +47,7 @@ const createHostTerminalModule = () => ({
       id: launcherWidgetId,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: launcherWidgetId,

@@ -274,8 +274,7 @@ export const createHarnessRegistryService = (input: {
 
   const unsubscribe = input.extensionRuntimeCatalog.subscribeInvalidation((change) => {
     resolutionGeneration += 1;
-    // A workspace change keeps provider modules. The refreshed snapshot retires only providers it removed or changed.
-    if (change.reason === "source_changed") lifecycle.invalidate({ sourcePath: change.sourcePath });
+    // The refreshed snapshot retires only providers it removed or whose source version changed.
     if (change.reason === "webviews_built") return;
     hostGeneration += 1;
     const projects = [...projectRegistries.keys()].filter((id) => !change.projectId || id === change.projectId);

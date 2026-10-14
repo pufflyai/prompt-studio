@@ -1,6 +1,7 @@
+import { Button, Stack } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { PromptEditor, type PromptEditorProps } from "./prompt-input";
 import { generateEditorStateFromString } from "./utils";
 
@@ -90,5 +91,34 @@ export const DelayedDiscovery: Story = {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.type(canvas.getByRole("textbox"), "/");
     await expect(await page.findByRole("listbox", { name: "Typeahead menu" })).toBeVisible();
+  },
+};
+
+// The editor owns focus: a request made while it is locked lands once it becomes editable.
+const LockedFocusRequest = (props: PromptEditorProps) => {
+  const [editable, setEditable] = useState(false);
+  const [requested, setRequested] = useState(true);
+  return (
+    <Stack gap="xs">
+      <PromptEditor
+        {...props}
+        isEditable={editable}
+        focusRequested={requested}
+        onFocusRequestComplete={() => setRequested(false)}
+      />
+      <Button size="xs" variant="outline" alignSelf="start" onClick={() => setEditable(true)}>
+        Unlock
+      </Button>
+    </Stack>
+  );
+};
+export const FocusRequest: Story = {
+  render: (args) => <LockedFocusRequest {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByRole("textbox");
+    await expect(input).not.toHaveFocus();
+    await userEvent.click(canvas.getByRole("button", { name: "Unlock" }));
+    await waitFor(() => expect(input).toHaveFocus());
   },
 };

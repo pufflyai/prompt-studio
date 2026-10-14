@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createApp, webviewAccess, webviewBasePath, writeExtension } from "./test-utils/webview-asset-app";
@@ -61,6 +61,7 @@ describe("extension webview asset routes", () => {
       expect(res.headers.get("content-type")).toContain("application/javascript");
       expect(res.headers.get("referrer-policy")).toBe("no-referrer");
       expect(await res.text()).toBe("console.log('managed');");
+      appendFileSync(join(sourcePath, "extension.ts"), "\n// edited\n");
       invalidate!();
       await Promise.all(
         Array.from({ length: 5 }, async () => {

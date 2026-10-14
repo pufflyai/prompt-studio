@@ -1,4 +1,5 @@
 import { defineRecipe } from "@chakra-ui/react";
+import { bubbleLauncherAnchors, bubblePanelAnchors } from "./bubble-anchor";
 
 export const treeRevealRecipe = defineRecipe({
   base: {
@@ -52,6 +53,8 @@ export const bubblePanelRecipe = defineRecipe({
       "&[data-open=true]": { _startingStyle: { transform: "none" } },
     },
   },
+  variants: { anchor: bubblePanelAnchors },
+  defaultVariants: { anchor: "bottom-right" },
 });
 
 export const bubbleLauncherRecipe = defineRecipe({
@@ -61,15 +64,34 @@ export const bubbleLauncherRecipe = defineRecipe({
     transform: "none",
     transition:
       "opacity {durations.surface-enter} {easings.enter}, transform {durations.surface-enter} {easings.enter}, visibility 0s",
-    "&[data-open=true]": {
-      visibility: "hidden",
-      opacity: "0",
-      transform: "scale(0.9)",
-      transition:
-        "opacity {durations.surface-exit} {easings.exit}, transform {durations.surface-exit} {easings.exit}, visibility 0s {durations.surface-exit}",
+    _motionReduce: { transform: "none" },
+    "& > button": {
+      borderWidth: "1px",
+      borderColor: "border",
+      rounded: "full",
+      touchAction: "none",
+      _hover: { borderColor: "border.accent" },
+      _active: { borderColor: "border.accent" },
+      "&[aria-pressed=true]": { borderColor: "border.accent" },
     },
-    _motionReduce: { transform: "none", "&[data-open=true]": { transform: "none" } },
   },
+  variants: {
+    anchor: bubbleLauncherAnchors,
+    target: {
+      true: {
+        visibility: "hidden",
+        "&[data-active=true]": { visibility: "visible" },
+        w: "12",
+        h: "12",
+        rounded: "full",
+        borderWidth: "1px",
+        borderColor: "border",
+        bg: "bg",
+        "&[data-nearest=true]": { borderColor: "border.accent", bg: "bg.accent" },
+      },
+    },
+  },
+  defaultVariants: { anchor: "bottom-right" },
 });
 
 export const streamingTextRecipe = defineRecipe({

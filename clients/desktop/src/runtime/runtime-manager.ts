@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import {
   discoverRuntime,
   observeRuntimeShutdown,
@@ -168,6 +168,9 @@ export class DesktopRuntimeManager {
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
     const env = await this.#deps.resolveEnvironment(signal);
     signal.throwIfAborted();
+    // Agents inherit this PATH, so they can run the bundled pst even when the person never installed the
+    // Terminal command. The Windows installer always adds pst to the user PATH, and Windows has no pst link.
+    if (process.platform !== "win32") env.PATH = [dirname(sidecarPath), env.PATH].join(delimiter);
 
     this.#options.onPhase("spawning");
     this.#readOutput = () => "";

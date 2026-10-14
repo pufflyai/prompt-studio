@@ -30,7 +30,15 @@ Run `pst` or open the desktop app to start the runtime again. When you quit the 
 
 ## The `pst` command is missing or out of date
 
-Run `command -v pst` on macOS or Linux, or `where.exe pst` on Windows. If it points to an old installation, remove that installation. On macOS, then choose **Prompt Studio → Install pst Command…** in the desktop app.
+Run `command -v pst` on macOS or Linux, or `where.exe pst` on Windows. If it points to an old installation, remove that installation.
+
+On macOS, choose **Prompt Studio → Install pst Command…** in the desktop app. This also works if you chose **Not Now** or cancelled the password window when the app first offered it. If you cannot enter an administrator password, add the app's own command folder to your `PATH` instead. For zsh, add this line to `~/.zshrc`, then open a new Terminal window:
+
+```sh
+export PATH="/Applications/Prompt Studio.app/Contents/Resources/bin:$PATH"
+```
+
+For the portable Linux `.zip`, add its `resources/bin` folder to your `PATH` the same way.
 
 On Windows, close and reopen your terminal after you install the app, so it sees the new `PATH`.
 

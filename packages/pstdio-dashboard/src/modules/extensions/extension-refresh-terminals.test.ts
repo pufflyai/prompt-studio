@@ -104,6 +104,9 @@ test("keeps a Start terminal alive while an open Lab page receives fresh webview
       .regions.secondary.widgets.find((panel) => panel.widgetId === placement.instanceId)?.placementIdentity;
     if (!identity) throw new Error("The restored terminal must have a placement owner");
     workbench.shellPlacements.closePlacement(identity);
+    expect(kills).toEqual([]);
+    expect(child.exitCode).toBeNull();
+    await workbench.terminal.kill({ sessionId: "terminal-child" });
     await child.exited;
     expect(kills).toEqual(["terminal-child"]);
   } finally {

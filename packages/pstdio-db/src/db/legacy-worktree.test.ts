@@ -12,10 +12,21 @@ import * as schema from "./schemas.pg";
 import { prepareWorkspaceLocations } from "./workspace-location-migration";
 
 test("recovers the actual managed Git worktree source among multiple linked folders", async () => {
+  const started = performance.now();
+  const phase = (name: string) =>
+    process.stderr.write(
+      `[legacy worktree] ${new Date().toISOString()} ${name} +${Math.round(performance.now() - started)}ms\n`,
+    );
+  phase("create temporary fixture");
   const root = await realpath(await mkdtemp(join(tmpdir(), "legacy-worktree-")));
   const previous = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = join(root, "home");
-  const git = (path: string, args: string[]) => execFileSync("git", ["-C", path, ...args], { stdio: "pipe" });
+  const git = (path: string, args: string[]) => {
+    phase(`git ${args[0]} started`);
+    const result = execFileSync("git", ["-C", path, ...args], { stdio: "pipe" });
+    phase(`git ${args[0]} finished`);
+    return result;
+  };
   try {
     for (const name of ["first", "actual"]) {
       const repo = join(root, name);
@@ -36,16 +47,21 @@ test("recovers the actual managed Git worktree source among multiple linked fold
       worktree_path: worktree,
     };
     const folders = [{ path: join(root, "first") }, { path: join(root, "actual") }];
+    phase("resolve managed worktree source");
     expect(await resolveLegacyGitWorkspace(workspace, folders)).toEqual({
       version: 1,
       data: { sourceRoot: join(root, "actual"), worktreeRoot: worktree, relativePath: "" },
     });
     expect(await resolveLegacyGitWorkspace({ ...workspace, branch: null }, folders)).toBeNull();
     const databasePath = join(root, "database");
+    phase("open legacy database");
     const old = new PGlite(databasePath);
     await old.waitReady;
+    phase("legacy database ready");
     try {
+      phase("migrate through entry 25");
       await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 25);
+      phase("insert legacy project and workspace records");
       await old.query(
         "INSERT INTO projects(id,name,shorthand,created_at,updated_at) VALUES ('project','Existing','P','2026-01-01','2026-01-01')",
       );
@@ -67,13 +83,20 @@ test("recovers the actual managed Git worktree source among multiple linked fold
         "INSERT INTO workspaces(id,project_id,name,workspace_shorthand,worktree_path,created_at,updated_at) VALUES ('shared','project','Shared','WS-2',$1,'2026-01-01','2026-01-01')",
         [folders[1]!.path],
       );
+      phase("migrate through entry 31");
       await migrateThrough(drizzle(old, { schema }), join(import.meta.dir, "../../drizzle"), 31);
+      phase("prepare workspace locations");
       await prepareWorkspaceLocations(old);
+      phase("repeat workspace preparation");
       await prepareWorkspaceLocations(old);
     } finally {
+      phase("close legacy database");
       await old.close();
+      phase("legacy database closed");
     }
-    const upgraded = await createDb({ path: databasePath });
+    phase("reopen and upgrade database");
+    const upgraded = await createDb({ path: databasePath, onPhase: (name) => phase(`upgrade ${name}`) });
+    phase("read upgraded workspace records");
     try {
       const rows = await upgraded.db.select().from(schema.workspaces);
       expect(rows.find((row) => row.id === "isolated")).toMatchObject({
@@ -90,13 +113,18 @@ test("recovers the actual managed Git worktree source among multiple linked fold
       expect(rows.find((row) => row.is_default)).toMatchObject({ root_path: folders[0]!.path });
       expect(rows).toHaveLength(3);
     } finally {
+      phase("close upgraded database");
       await upgraded.close();
+      phase("upgraded database closed");
     }
 
+    phase("check linked worktree exclusion");
     expect(await resolveLegacyGitWorkspace(workspace, [...folders, { path: worktree }])).toBeNull();
   } finally {
     if (previous === undefined) delete process.env.PSTDIO_HOME;
     else process.env.PSTDIO_HOME = previous;
+    phase("remove temporary fixture");
     await rm(root, { recursive: true, force: true });
+    phase("temporary fixture removed");
   }
 });

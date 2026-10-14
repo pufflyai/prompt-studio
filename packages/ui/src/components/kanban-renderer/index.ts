@@ -10,6 +10,7 @@ export type {
 } from "../collection-view/collection-view-types";
 export { EMPTY_VIEW_FILTER } from "../collection-view/collection-view-types";
 export { DisplayMenu } from "./display-menu";
+export { applyKanbanMove } from "./kanban-move";
 export type { BoardColumnConfig, KanbanRendererProps } from "./kanban-renderer";
 export { KanbanRenderer } from "./kanban-renderer";
 export type {

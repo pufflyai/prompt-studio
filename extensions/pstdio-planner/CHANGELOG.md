@@ -1,5 +1,13 @@
 # pstdio-planner
 
+## 0.43.1
+
+_2026-10-13_
+
+### Patch Changes
+
+- 18bc9e9: Refresh Planner's bundled filter control with the shared scrollbar changes.
+
 ## 0.43.0
 
 _2026-10-12_

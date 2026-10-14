@@ -1,10 +1,13 @@
 import { Box } from "@chakra-ui/react";
-import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
+import { Header, type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
+import { PanelDragArea } from "../region/panel-drag-area";
 import { WorkbenchRegion } from "../region/region";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchPanelToggles } from "./workbench-panel-toggles";
 import { WorkbenchStatusBarItems } from "./workbench-status-bar-items";
 
 interface WorkbenchSidenavProps {
@@ -33,6 +36,11 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
           overflow="hidden"
           w="full"
         >
+          <PanelDragArea workbench={workbench} panel="sidenav" asChild>
+            <Header variant="main" flexShrink={0}>
+              Navigation
+            </Header>
+          </PanelDragArea>
           <Box flex="1" minH="0" minW="0" overflow="hidden">
             <WorkbenchRegion workbench={workbench} region="sidenav" title="Sidenav" />
           </Box>
@@ -51,26 +59,31 @@ export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
 
 export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
+  const edge = useWorkbenchStore(workbench.layout.store, (state) => state.layout.actionBarEdge ?? "left");
+  const horizontal = edge === "top" || edge === "bottom";
 
   return (
-    <WorkbenchFocusRegion
-      workbench={workbench}
-      region="activity"
-      data-workbench-region="activity"
-      display={props.visible === false ? "none" : "block"}
-      as="nav"
-      flexShrink={0}
-      h="full"
-      minH="0"
-      overflow="hidden"
-      w="3.5rem"
-    >
-      <WorkbenchRegion workbench={workbench} region="activity" title="Activity bar" />
-    </WorkbenchFocusRegion>
+    <PanelDragArea workbench={workbench} panel="activity" asChild>
+      <WorkbenchFocusRegion
+        workbench={workbench}
+        region="activity"
+        data-workbench-region="activity"
+        display={props.visible === false ? "none" : "block"}
+        as="nav"
+        flexShrink={0}
+        h={horizontal ? "14" : "full"}
+        minH="0"
+        overflow="hidden"
+        w={horizontal ? "full" : "14"}
+        order={edge === "right" || edge === "bottom" ? 1 : 0}
+      >
+        <WorkbenchRegion workbench={workbench} region="activity" title="Activity bar" />
+      </WorkbenchFocusRegion>
+    </PanelDragArea>
   );
 };
 
-export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
+export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps & { panelTogglesInHost?: boolean }) => {
   const { workbench } = props;
   const chrome = useModeChrome(workbench, "status");
 
@@ -79,7 +92,7 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       workbench={workbench}
       region="status"
       data-workbench-region="status"
-      display={props.visible === false ? "none" : "block"}
+      display={props.visible === false ? "none" : "flex"}
       as="footer"
       flexShrink={0}
       h={WORKBENCH_STATUS_BAR_HEIGHT}
@@ -87,23 +100,30 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
-      <Box
-        display={chrome ? "none" : "flex"}
-        alignItems="stretch"
-        justifyContent="space-between"
-        px="sm"
-        h="full"
-        minW="0"
-        w="full"
-      >
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
-        </Box>
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+      <Box display="flex" flex="1" minW="0" h="full" alignItems="center">
+        <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
+        <Box
+          display={chrome !== undefined ? "none" : "flex"}
+          alignItems="stretch"
+          justifyContent="space-between"
+          px="sm"
+          h="full"
+          minW="0"
+          w="full"
+        >
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+          </Box>
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+          </Box>
         </Box>
       </Box>
+      {!props.panelTogglesInHost && (
+        <Box display="flex" alignItems="center" pr="sm">
+          <WorkbenchPanelToggles workbench={workbench} />
+        </Box>
+      )}
     </WorkbenchFocusRegion>
   );
 };

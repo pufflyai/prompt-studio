@@ -5,12 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "../bubble/module";
-import { openDashboardSidePanel } from "../bubble/open-side-panel";
 import { openSessionBubbleWidgets } from "../bubble/session-bubble";
 
 const draftResource = {
@@ -36,7 +36,12 @@ const queryClient = new QueryClient({
 const SessionChatDraftStory = (props: { initiallyClosed?: boolean }) => {
   const { initiallyClosed = false } = props;
   const [workbench] = useState(() => {
-    const workbench = createWorkbench({ initialSidePanelMode: initiallyClosed ? "closed" : "attached" });
+    const workbench = createWorkbench({
+      initialSidePanelMode: initiallyClosed ? "closed" : "attached",
+      floating: {
+        defaultTab: { kind: "command", commandId: dashboardCommandIds.createSession, args: { region: "side" } },
+      },
+    });
     workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
     selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
@@ -47,7 +52,7 @@ const SessionChatDraftStory = (props: { initiallyClosed?: boolean }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <Box h="100dvh" w="full">
-        <Workbench workbench={workbench} onOpenSidePanel={() => void openDashboardSidePanel(workbench)} />
+        <Workbench workbench={workbench} />
       </Box>
     </QueryClientProvider>
   );

@@ -41,5 +41,6 @@ export class DesktopProjectTabsStore {
     // Keep later writes usable after an error, while returning the failed write to its caller.
     this.#writes = write.catch(() => {});
     await write;
+    return { projectIds: [...value.projectIds] };
   }
 }

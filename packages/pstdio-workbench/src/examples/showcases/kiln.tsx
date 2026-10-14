@@ -1,7 +1,7 @@
 import { createWorkbench } from "../../core";
 import { KilnNav, KilnStatus } from "./kiln-chrome";
 import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
-import { KilnInspector } from "./kiln-inspector";
+import { KilnInspector, KilnNavigation } from "./kiln-inspector";
 import { registerKilnSessions } from "./kiln-sessions";
 import { KilnTimeline } from "./kiln-timeline";
 import { KilnViewport } from "./kiln-viewport";
@@ -19,7 +19,7 @@ export const createKilnWorkbench = () => {
     id: "kiln",
     label: "Kiln",
     floatingPanels: "hidden",
-    chrome: { nav: "kiln.nav", sidenav: false, activity: false, status: "kiln.status" },
+    chrome: { nav: "kiln.nav", sidenav: "kiln.navigation", activity: false, status: "kiln.status" },
     resourceKinds: ["kiln.object"],
     regionSettings: {
       side: {
@@ -48,6 +48,11 @@ export const createKilnWorkbench = () => {
     id: "kiln.nav",
     title: "Kiln project",
     body: { kind: "react", render: () => <KilnNav /> },
+  });
+  workbench.views.registerView({
+    id: "kiln.navigation",
+    title: "Scene collection",
+    body: { kind: "react", render: (input) => <KilnNavigation input={input} /> },
   });
   workbench.views.registerView({
     id: "kiln.viewport",

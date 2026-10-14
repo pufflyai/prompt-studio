@@ -18,6 +18,8 @@ Show follow-ups submitted during active work in `queuedFollowUps` immediately. S
 
 Use `KanbanRenderer` when users need list and board views over the same rows. Provide stable row ids, an explicit `storageKey`, typed attributes, and host callbacks for row updates, reordering, creation, and context actions.
 
+Kanban and data tables share saved-view tabs. A custom `CollectionViewsSource` can provide `onReorderViews(ids)` to enable dragging and Alt+Left/Right moves. Save every view ID in its new order and update the source optimistically. Sources without this callback keep their fixed order.
+
 ## Tree and row navigation
 
 Use `TreeList` for hierarchical resources with sections, expansion, selection, drag ordering, and context menus. Use `ListRow` when a custom surface needs the same row density, icons, actions, menus, and navigation behavior without a full tree.

@@ -1,6 +1,6 @@
 import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { type LoadedExtensionSource, loadExtensionSources } from "pstdio-extensions";
+import { extensionLoadKey, type LoadedExtensionSource, loadExtensionSources } from "pstdio-extensions";
 import type { EnabledExtensionSource } from "./project-extension-runtime-snapshot";
 
 /** The fields a source needs to be imported, so an unpersisted candidate can be loaded too. */
@@ -25,9 +25,13 @@ export const canonicalSourcePath = (sourcePath: string) => {
 
 // Owns one module import per source version, shared by every project and every
 // concurrent read. Bun retains each import identity for the process lifetime, so this
-// cache is the runtime's memory invariant.
+// cache is the runtime's memory invariant. Harness workers also live as long as their
+// provider's import, so importing an unchanged source again would stop running agents.
 export const createExtensionSourceCache = (input: { loadSources?: typeof loadExtensionSources }) => {
-  const sourcesByPath = new Map<string, Promise<CachedSource | null>>();
+  const sourcesByPath = new Map<string, { loadKey: string; loading: Promise<CachedSource | null> }>();
+  // Sources an invalidation reported as possibly changed. Their load key is compared
+  // on the next read, so only a changed source is imported again.
+  const uncheckedPaths = new Set<string>();
   // The last source that loaded cleanly, kept per source path. Replacing an install renames
   // the directory away for an instant, and publishing a snapshot without it would tell every
   // consumer the extension is gone — tearing down the views it owns instead of refreshing
@@ -37,7 +41,11 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
   const load = (installedSource: LoadableExtensionSource) => {
     const key = canonicalSourcePath(installedSource.source_path);
     const cached = sourcesByPath.get(key);
-    if (cached) return cached;
+    if (cached && !uncheckedPaths.has(key)) return cached.loading;
+    uncheckedPaths.delete(key);
+    // Read before the import, so an edit made during the import changes the key next time.
+    const loadKey = extensionLoadKey(installedSource.source_path);
+    if (cached?.loadKey === loadKey) return cached.loading;
 
     const loading: Promise<CachedSource | null> = (input.loadSources ?? loadExtensionSources)({
       extensionPackages: [{ path: installedSource.source_path, sourceKind: installedSource.source_kind }],
@@ -51,18 +59,23 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
       },
       (error) => {
         // A rejected load must not poison the cache; the next read retries the import.
-        if (sourcesByPath.get(key) === loading) sourcesByPath.delete(key);
+        if (sourcesByPath.get(key)?.loading === loading) sourcesByPath.delete(key);
         throw error;
       },
     );
-    sourcesByPath.set(key, loading);
+    sourcesByPath.set(key, { loadKey, loading });
     return loading;
   };
 
   return {
     load,
-    forget: (sourcePath: string) => sourcesByPath.delete(canonicalSourcePath(sourcePath)),
-    forgetAll: () => sourcesByPath.clear(),
+    recheck: (sourcePath: string) => {
+      const key = canonicalSourcePath(sourcePath);
+      if (sourcesByPath.has(key)) uncheckedPaths.add(key);
+    },
+    recheckAll: () => {
+      for (const key of sourcesByPath.keys()) uncheckedPaths.add(key);
+    },
 
     collect: async (enabledSources: readonly EnabledExtensionSource[]) => {
       const cachedSources: CachedSource[] = [];

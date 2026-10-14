@@ -1,4 +1,5 @@
 import type { WorkbenchLayout, WorkbenchRegion, WorkbenchRegionSettings } from "./layout-types";
+import { defaultPageLayout, enforceFixedGeometry } from "./panel-geometry";
 
 export const isPageRegion = (region: WorkbenchRegion) =>
   region === "main" ||
@@ -23,6 +24,7 @@ export const restoreOwnerRegion = (
     visibility: shared.visibility,
     headerVisible: shared.headerVisible,
     presentation: shared.presentation,
+    bubblePosition: shared.bubblePosition,
   };
 };
 
@@ -54,14 +56,15 @@ export const restorePageGeometry = (
     "bottom-left-menu",
     "bottom-right-menu",
   ] as const) {
-    if (geometry) regions[id] = { ...regions[id], size: geometry.regions[id].size, edge: geometry.regions[id].edge };
+    if (geometry) regions[id] = { ...regions[id], size: geometry.regions[id].size };
   }
-  for (const id of ["aside", "bottom"] as const)
-    regions[id] = {
-      ...regions[id],
-      edge: regions[id].edge ?? settings?.[id]?.edge ?? (id === "aside" ? "right" : "bottom"),
-    };
-  return { ...layout, regions };
+  const defaults = { ...layout, regions, pageLayout: defaultPageLayout(settings?.aside?.edge, settings?.bottom?.edge) };
+  return enforceFixedGeometry(
+    { ...defaults, pageLayout: geometry?.pageLayout ?? defaults.pageLayout },
+    defaults,
+    ["aside", "bottom"],
+    (panel) => settings?.[panel as "aside" | "bottom"]?.movable !== false,
+  );
 };
 
 export const restoreAdoptedModeGeometry = (

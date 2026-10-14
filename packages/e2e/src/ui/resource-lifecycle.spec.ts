@@ -76,11 +76,7 @@ test("returns to a resource's parent after deleting the open resource", async ({
     .not.toContain(ticket.id);
 });
 
-test("remote deletion closes a clean dashboard while keeping another dashboard's pending draft", async ({
-  page,
-  browser,
-  request,
-}) => {
+test("remote deletion closes both dashboards while a save is pending", async ({ page, browser, request }) => {
   const project = await createProject(request);
   await waitForPlanner(request, project.id);
   const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Shared resource draft" });
@@ -108,14 +104,15 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
     await expect.poll(() => held.length).toBe(1);
     await executePlannerCommand(request, apiBase, project.id, "delete-ticket", { id: ticket.id });
     await expect(other.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
-    await expect(editor).toContainText("Keep this unsaved draft.");
-    await expect(page.getByText("This resource was removed.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
+    await expect(editor).toHaveCount(0);
     const saveResponse = page.waitForResponse((response) => response.request() === held[0].request());
     await held[0].continue();
     await saveResponse;
     held.length = 0;
     expect((await listPlannerTickets(request, apiBase, project.id)).map((item) => item.id)).not.toContain(ticket.id);
-    await expect(editor).toContainText("Keep this unsaved draft.");
+    await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
+    await expect(editor).toHaveCount(0);
   } finally {
     await Promise.all(held.map((route) => route.abort().catch(() => undefined)));
     await otherContext.close();

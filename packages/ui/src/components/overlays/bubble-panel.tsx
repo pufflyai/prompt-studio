@@ -14,6 +14,7 @@ import { forwardRef, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { PANEL_HEADER_CONTROL_SIZE } from "@/components/layout/panel-header.constants";
 import { Tooltip } from "@/components/primitives/tooltip";
+import type { BubbleAnchor } from "@/theme/recipes/bubble-anchor";
 
 interface BubblePanelContainerProps extends HTMLChakraProps<"section"> {
   [attribute: `data-${string}`]: string | number | boolean | undefined;
@@ -35,6 +36,8 @@ export interface BubblePanelProps {
   "aria-label"?: string;
   children?: ReactNode;
   overlay?: ReactNode;
+  anchor?: BubbleAnchor;
+  portalled?: boolean;
 }
 
 export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function BubblePanel(props, ref) {
@@ -54,24 +57,24 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
     "aria-label": ariaLabel,
     children,
     overlay,
+    anchor = "bottom-right",
+    portalled = true,
   } = props;
 
   const motion = useRecipe({ key: "bubblePanel" });
 
   return (
-    <Portal>
+    <Portal disabled={!portalled}>
       <chakra.section
         ref={ref}
         role="dialog"
         data-testid={testId}
         aria-label={ariaLabel ?? title}
         position="fixed"
-        bottom="3"
-        right="3"
         w={width}
-        maxW="calc(100vw - 2rem)"
+        maxW="calc(100% - {spacing.6} - {spacing.6} - {spacing.12} - {spacing.3})"
         h={height}
-        maxH="calc(100vh - 2rem)"
+        maxH="calc(100% - {spacing.6} - {spacing.6} - {spacing.12} - {spacing.3})"
         borderRadius="xs"
         borderWidth="1px"
         borderColor="border.subtle"
@@ -79,7 +82,7 @@ export const BubblePanel = forwardRef<HTMLDivElement, BubblePanelProps>(function
         overflow="hidden"
         zIndex="dropdown"
         {...containerProps}
-        css={motion()}
+        css={motion({ anchor })}
         data-open={isOpen}
         inert={!isOpen}
         aria-hidden={!isOpen}

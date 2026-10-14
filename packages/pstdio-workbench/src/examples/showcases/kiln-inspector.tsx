@@ -97,6 +97,12 @@ const SceneOutliner = (props: { input: WorkbenchPanelRenderInput; selectedId: st
   );
 };
 
+export const KilnNavigation = (props: { input: WorkbenchPanelRenderInput }) => {
+  const { input } = props;
+  const selectedId = usePrimaryResource(input.workbench)?.id ?? kilnObjects[0].id;
+  return <SceneOutliner input={input} selectedId={selectedId} />;
+};
+
 export const KilnInspector = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(getKilnStore(input.workbench));
@@ -106,9 +112,6 @@ export const KilnInspector = (props: { input: WorkbenchPanelRenderInput }) => {
 
   return (
     <Stack h="full" minH="0" gap="0" bg="bg.panel">
-      <Box flexShrink={0} maxH="50%" overflowY="auto" borderBottomWidth="1px" borderColor="border">
-        <SceneOutliner input={input} selectedId={selectedId} />
-      </Box>
       <Stack flex="1" minH="0" overflowY="auto" gap="lg" p="md">
         <HStack justify="space-between">
           <HStack minW="0">

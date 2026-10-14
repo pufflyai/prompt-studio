@@ -220,7 +220,7 @@ export const createPreferenceSchemasExampleModule = (): WorkbenchModuleContribut
       id: preferencesWidgetId,
       item: {
         kind: "view",
-        presence: "fixed",
+        presence: "open",
         view: {
           kind: "view",
           id: preferencesWidgetId,

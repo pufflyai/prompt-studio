@@ -43,9 +43,9 @@ const expectResizedPanelReopen = async (page: Page, label: string, openName: str
 };
 
 export const expectPackagedPanelMotion = async (page: Page) => {
-  const hide = page.getByRole("button", { name: "Hide Side Panel", exact: true });
+  const hide = page.getByRole("button", { name: "Hide Sidebar", exact: true });
   if (await hide.isVisible()) await hide.click();
-  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await page.getByRole("button", { name: "Show Sidebar", exact: true }).click();
   const panel = page.getByTestId("workbench-side-panel-attached");
   await expect(panel).toBeVisible();
   await expect
@@ -54,7 +54,7 @@ export const expectPackagedPanelMotion = async (page: Page) => {
   const closing = await panel.evaluate(async (element) => {
     const root = element.closest("[data-dragging]")!;
     const frame = element.closest("[data-collapsed]")!;
-    (document.querySelector('[aria-label="Hide Side Panel"]') as HTMLElement).click();
+    (document.querySelector('[aria-label="Hide Sidebar"]') as HTMLElement).click();
     while (root.getAttribute("data-collapsed") !== "true") await new Promise(requestAnimationFrame);
     return {
       width: frame.getBoundingClientRect().width,
@@ -69,8 +69,8 @@ export const expectPackagedPanelMotion = async (page: Page) => {
   expect(await panel.evaluate((element) => element.closest("[data-collapsed]")!.getBoundingClientRect().width)).toBe(0);
   const separator = page.getByRole("separator", { name: "Resize Side Panel", includeHidden: true });
   expect(await separator.evaluate((element) => element.getBoundingClientRect().width)).toBe(0);
-  await expectResizedPanelReopen(page, "Resize sidenav", "Show Sidenav", 1);
-  await expectResizedPanelReopen(page, "Resize Side Panel", "Show Side Panel", -1);
+  await expectResizedPanelReopen(page, "Resize sidenav", "Show Navigation", 1);
+  await expectResizedPanelReopen(page, "Resize Side Panel", "Show Sidebar", -1);
 };
 
 // Packaged chat must retain earlier DOM as live chunks arrive, then become quiet.

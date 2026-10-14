@@ -7,6 +7,7 @@ import {
   reconcileOwnedWidgetLayout,
 } from "../../registries/layout/owned-placement-layout";
 import { restoreAdoptedModeGeometry, restorePageGeometry } from "../../registries/layout/owner-region-state";
+import { enforceFixedGeometry } from "../../registries/layout/panel-geometry";
 import { clampPanelSizes } from "../../registries/layout/panel-size-policy";
 import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import { applyModePanelAvailability, panelsForMode } from "../../registries/modes/mode-layout";
@@ -53,6 +54,7 @@ export interface ConnectWorkbenchPageRuntimeInput {
     state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[] | undefined;
   revealRegion?(region: WorkbenchRegion): void;
+  views?: WorkbenchViewRegistry;
   layout: LayoutModel;
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
@@ -68,6 +70,16 @@ const restoreRuntimeGeometry = (
   return clampPanelSizes(restorePageGeometry(layout, geometry, page?.regionSettings ?? {}), (region) =>
     region === "bottom" || region === "aside" ? page?.regionSettings?.[region] : input.layout.getRegionSettings(region),
   );
+};
+
+const revealActivatedPlacements = (
+  input: ConnectWorkbenchPageRuntimeInput,
+  placements: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
+) => {
+  for (const placement of placements) {
+    if (input.views?.getView(placement.value.viewId ?? "")?.reveal !== "explicit")
+      input.revealRegion?.(placement.region);
+  }
 };
 
 const applyPageState = (
@@ -117,16 +129,24 @@ const applyPageState = (
       activated.map((placement) => placement.region),
     );
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
-    const available = mode ? applyModePanelAvailability(restored, panelsForMode(mode)) : restored;
+    const composed = mode ? applyModePanelAvailability(restored, panelsForMode(mode)) : restored;
+    const available = enforceFixedGeometry(
+      {
+        ...composed,
+        modeLayout: layoutInput.modeLayout?.modeLayout ?? mode?.layout,
+        actionBarEdge: layoutInput.modeLayout?.actionBarEdge ?? mode?.actionBarEdge,
+      },
+      { ...composed, modeLayout: mode?.layout },
+      ["side", "sidenav", "main", "secondary"],
+      (panel) => input.layout.getRegionSettings(panel)?.movable !== false,
+    );
     input.layout.restoreLayout(
       storeBeforeTransition.projectId === latest.projectId
         ? reuseSingleMainView(previousLayout, available, latest.pages)
         : available,
     );
     syncOwnedPanelMenus(input.layout);
-    if (source === "transition") {
-      for (const placement of activated) input.revealRegion?.(placement.region);
-    }
+    if (source === "transition") revealActivatedPlacements(input, activated);
   });
 };
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
@@ -223,7 +243,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       const registrations = pagePlacementDeclarations(page).map((slot) => {
         const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
         if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
-        const closable = isPageSlotClosable(slot);
+        const closable = isPageSlotClosable(slot, page);
         return registerWorkbenchViewPlacement(
           input.layout,
           input.views,
@@ -276,6 +296,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       return adopted;
     },
     revealRegion: input.revealRegion,
+    views: input.views,
     layout: input.layout,
     modes: input.modes,
     registry,

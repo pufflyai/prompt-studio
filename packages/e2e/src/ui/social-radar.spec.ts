@@ -184,21 +184,21 @@ test("researches, answers and posts through the radar screens", async ({ page, r
     await expect(page.getByText("Writing voice", { exact: true })).toBeVisible();
     await expect(page.getByText("Brand terms", { exact: true })).toBeHidden();
     await shot(page, "06-settings");
-    // The page shows the agent; Choose model edits it with the same model options as a session.
+    // Agent fields are on the page; edits use the same model options as a session.
     const agent = page.getByRole("option", { name: "Research agent", exact: true });
     await agent.click();
-    await expect(page.getByText("research-model", { exact: true })).toBeVisible();
-    await agent.hover();
-    await agent.getByRole("button", { name: "Choose model" }).click();
-    const chooseModel = page.getByRole("dialog");
-    await expect(chooseModel.getByRole("button", { name: /Research model/ }).first()).toBeVisible();
-    await chooseModel.getByRole("button", { name: "High", exact: true }).click();
+    await expect(page.getByRole("button", { name: /Research model/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "High", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect
+      .poll(async () => (await execute(request, projectId!, "get-settings")).agent.params?.effort)
+      .toBe("high");
+    await page.getByRole("button", { name: "High", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Medium", exact: true }).click();
-    await chooseModel.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect
       .poll(async () => (await execute(request, projectId!, "get-settings")).agent.params?.effort)
       .toBeUndefined();
-    await expect(page.getByText("Effort", { exact: true })).toBeHidden();
     await shot(page, "07-research-agent");
 
     const before = (await execute(request, projectId, "get-settings")).channels;

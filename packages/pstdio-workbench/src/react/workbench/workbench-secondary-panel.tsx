@@ -3,7 +3,8 @@ import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
-import { PanelHeaderEdge, PanelHeaderMenu } from "../region/panel-header-menu";
+import { PanelDragHandle } from "../region/panel-drag-area";
+import { PanelHeaderContextMenu, PanelHeaderEdge } from "../region/panel-header-menu";
 import { WorkbenchRegion } from "../region/region";
 import {
   useWorkbenchPanelHeaderVisible,
@@ -49,26 +50,31 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
       position="relative"
     >
       <PanelHeaderEdge workbench={workbench} region="secondary" visible={visible} />
-      <Header
-        display={visible ? "flex" : "none"}
-        data-workbench-panel-header="secondary"
-        variant="main"
-        bg={workbenchBackgrounds.panel}
-        position="relative"
-        flexShrink={0}
-        gap="xs"
-        overflow="hidden"
-        overflowY="hidden"
-      >
-        <WorkbenchRegionTabs workbench={workbench} region="secondary" />
-        <Box display={hasSecondaryHeader ? "block" : "none"} flex="1" h="full" minW="0" overflow="hidden">
-          <WorkbenchRegion workbench={workbench} region="secondary-header" title="Secondary Panel header" />
-        </Box>
-        <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
-        <PanelHeaderMenu workbench={workbench} region="secondary" />
-        <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
-      </Header>
-      <WorkbenchTabDropTarget region="secondary" />
+      <PanelHeaderContextMenu workbench={workbench} region="secondary">
+        <PanelDragHandle workbench={workbench} panel="secondary" asChild>
+          <Header
+            tabIndex={0}
+            aria-label="secondary header"
+            display={visible ? "flex" : "none"}
+            data-workbench-panel-header="secondary"
+            variant="main"
+            bg={workbenchBackgrounds.panel}
+            position="relative"
+            flexShrink={0}
+            gap="xs"
+            overflow="hidden"
+            overflowY="hidden"
+          >
+            <WorkbenchRegionTabs workbench={workbench} region="secondary" />
+            <Box display={hasSecondaryHeader ? "block" : "none"} flex="1" h="full" minW="0" overflow="hidden">
+              <WorkbenchRegion workbench={workbench} region="secondary-header" title="Secondary Panel header" />
+            </Box>
+            <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
+            <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
+          </Header>
+        </PanelDragHandle>
+      </PanelHeaderContextMenu>
+      <WorkbenchTabDropTarget workbench={workbench} region="secondary" />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">
           <WorkbenchRegion workbench={workbench} region="secondary" title="Secondary Panel" />

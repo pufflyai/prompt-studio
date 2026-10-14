@@ -109,6 +109,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         </Tooltip>
         {drop ? (
           <DropIndicator
+            data-tab-drop-indicator={drop.edge}
             orientation="vertical"
             left={drop.edge === "before" ? "0" : undefined}
             right={drop.edge === "after" ? "0" : undefined}
@@ -120,7 +121,6 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         label={label}
         open={behavior.open}
         setOpen={behavior.setOpen}
-        groups={snapshot.menu ?? []}
         placement={placement}
         workbench={workbench}
       />
