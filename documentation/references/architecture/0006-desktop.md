@@ -153,6 +153,14 @@ resources/
 
 macOS release staging signs the Bun runtime with the release identity, hardened runtime, a secure timestamp, and the JIT entitlement before computing its checksum. Forge preserves that nested signature when signing the enclosing application. Signing the runtime again would change its bytes and invalidate the manifest. The packaged launch suite checks the final signed application, so this ordering is part of release validation.
 
+Native release CI and macOS release preparation share `verifyMacOSAppTrust`.
+It requires the app identifier `studio.prompt.desktop` and runtime identifier
+`studio.prompt.desktop.runtime`, anchored to Apple's Developer ID chain and
+Pufflig AB's team `XDNDHQS38D`, before checking the notarization staple and
+Gatekeeper approval. The same check is available as `release:verify:macos`
+before manual installed-app replacements. Ordinary local packages stay unsigned
+and are for isolated validation; they must not replace the signed installation.
+
 Release targets are Apple Silicon macOS arm64, Intel macOS x64, Linux x64, and
 Windows x64. Forge produces ZIP and DMG artifacts on macOS, ZIP and DEB artifacts
 on Linux, and a signed Squirrel Setup installer and update package on Windows.

@@ -243,6 +243,7 @@ Do not write:
 
 # Running and validating the app
 
+- Never replace an installed desktop app with an unsigned local `package` or `make` build. Install a published signed release. Before a manual macOS replacement, run `bun run --cwd clients/desktop release:verify:macos -- "/absolute/path/to/candidate/Prompt Studio.app"` and require success before moving the existing app. Passing smoke tests or signature integrity alone does not prove Developer ID identity or notarization. Do not weaken macOS privacy permissions to make an untrusted replacement work.
 - **Never** run the dev server directly.
 - **Never** connect directly to the local PGlite database.
 - **Always** run the Docker version with `bun run dev:isolated`. This keeps the database isolated.

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
+import { verifyMacOSAppTrust } from "../src/release/macos-app-trust";
 import { parseDesktopReleaseTarget, prepareDesktopReleaseArtifacts } from "../src/release/release-artifacts";
 
 const flag = (name: string) => {
@@ -13,6 +14,11 @@ const target = parseDesktopReleaseTarget(flag("--target") ?? `${process.platform
 const notesPath = flag("--notes-file");
 if (!notesPath) throw new Error("Desktop release preparation requires --notes-file");
 const resolvedNotesPath = isAbsolute(notesPath) ? notesPath : resolve(repoRoot, notesPath);
+
+if (target.startsWith("darwin-")) {
+  if (process.platform !== "darwin") throw new Error("macOS release preparation requires macOS trust verification");
+  await verifyMacOSAppTrust(join(desktopRoot, "out", `Prompt Studio-${target}`, "Prompt Studio.app"));
+}
 
 const result = prepareDesktopReleaseArtifacts({
   desktopRoot,

@@ -117,9 +117,11 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
-      - name: Test native DMG attachment cleanup
+      - name: Test native macOS package safety
         if: matrix.platform == 'darwin'
-        run: bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+        run: >-
+          bun test clients/desktop/src/packaging/dmg-device-cleanup.test.ts
+          clients/desktop/src/release/macos-app-trust.test.ts
 
       - name: Verify release version
         env:
@@ -262,10 +264,7 @@ jobs:
         run: |
           set -euo pipefail
           APP_PATH="clients/desktop/out/Prompt Studio-darwin-${{ matrix.arch }}/Prompt Studio.app"
-          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-          codesign --verify --strict --verbose=2 "$APP_PATH/Contents/Resources/bin/pstdio"
-          bun clients/desktop/scripts/run-stapler.ts validate "$APP_PATH"
-          spctl --assess --type execute --verbose=2 "$APP_PATH"
+          bun clients/desktop/scripts/verify-macos-signatures.ts "$APP_PATH"
 
       - name: Verify Windows signatures and update payload
         if: matrix.platform == 'win32' && !cancelled() && (success() || steps.benchmark.outcome == 'failure')

@@ -78,6 +78,19 @@ spctl --assess --type execute --verbose=2 "/Applications/Prompt Studio.app"
 xcrun stapler validate "/Applications/Prompt Studio.app"
 ```
 
+For a manual replacement from a source checkout, run the shared trust check on
+the candidate before changing the installed app:
+
+```bash
+bun run --cwd clients/desktop release:verify:macos -- "/absolute/path/to/candidate/Prompt Studio.app"
+```
+
+It also requires the Prompt Studio app and runtime identifiers and Pufflig AB's
+Developer ID team (`XDNDHQS38D`). Signature integrity alone can pass for an ad
+hoc signed build. Local development packages must not replace the signed app.
+Published stable and nightly releases use the same signing and notarization
+requirements.
+
 On Windows, run the Setup installer. Its verified publisher is **Pufflig AB**.
 The application, bundled runtime, installer, and update payload carry trusted
 Authenticode signatures and timestamps. To inspect the downloaded installer:

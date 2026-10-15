@@ -18,6 +18,7 @@
     "package": "electron-forge package",
     "release:prepare": "bun scripts/prepare-release.ts",
     "release:verify": "bun scripts/verify-release-set.ts",
+    "release:verify:macos": "bun scripts/verify-macos-signatures.ts",
     "start": "electron dist/main.js",
     "prestorybook": "bun run --cwd ../../packages/ui build",
     "storybook": "storybook dev -p 6009",

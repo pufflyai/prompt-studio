@@ -140,6 +140,25 @@ signature checks for local convenience. See [Desktop distribution and
 updates](../../requirements/platform/0002-desktop-distribution.md) for the native matrix and
 required repository secrets.
 
+Update an installed app from a published stable or nightly release. Do not copy
+the output of a local `package` or `make` command over that installation. An ad
+hoc signed build can change the app's signing identity to `com.github.Electron`;
+macOS can then deny the Documents access granted to the signed app and prevent
+its runtime from starting.
+
+Before any manual macOS replacement, verify the candidate at its current path,
+before moving or deleting the installed app:
+
+```bash
+bun run --cwd clients/desktop release:verify:macos -- "/absolute/path/to/candidate/Prompt Studio.app"
+```
+
+This requires the Prompt Studio app and runtime identifiers, Pufflig AB's
+Developer ID team, valid signatures, a notarization staple, and Gatekeeper
+approval. Stop if any check fails. A successful build, smoke test, or plain
+`codesign --verify` check does not establish that trust. Keep development
+packages in their build directories and use the isolated test homes below.
+
 After creating a local package, run its benchmarks and packaged smoke suite with:
 
 ```bash
