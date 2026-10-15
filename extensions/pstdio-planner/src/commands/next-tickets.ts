@@ -2,6 +2,7 @@ import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensio
 import { filterRowsByView } from "@pstdio/ui/collection-view";
 import { findPendingPrerequisites } from "../data/attempt-readiness";
 import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
+import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
 import { usableAutoBuildIgnore } from "../data/auto-build-ignore";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
@@ -18,6 +19,29 @@ import { type NextTicketQuery, selectNextTicketRows, selectNextTicketScopeRows }
 import type { NextTicket, WaitingTicket } from "./next-ticket-types";
 import { nextTicketWait } from "./next-ticket-wait";
 import { nextWorkSnapshot } from "./next-work-snapshot";
+
+async function appendStackRepair(
+  ctx: CommandContext,
+  summary: Pick<NextTicket, "id" | "ticket" | "title">,
+  attempts: AttemptRecord[],
+  selections: TicketAttemptSelection[],
+  next: NextTicket[],
+  waiting: WaitingTicket[],
+) {
+  const repair = await readSelectedStackRepair(ctx, summary.id, attempts, selections);
+  if (!repair) return false;
+  if ("unavailableWorkspaceId" in repair) {
+    waiting.push({ ...summary, reason: "workspace-unavailable", dependencyIds: [], detail: repair.detail });
+  } else {
+    next.push({
+      ...summary,
+      action: "update-stack",
+      workspaceId: repair.workspaceId,
+      baseHeadSha: repair.base.headSha,
+    });
+  }
+  return true;
+}
 
 export async function readNextTickets(
   ctx: CommandContext,
@@ -65,18 +89,11 @@ export async function readNextTickets(
       resumable: resumptions.has(row.id),
       capacity,
     });
-    if (canOfferStackRepair(wait?.reason, resumptions.has(row.id), capacity)) {
-      const repair = await readSelectedStackRepair(ctx, row.id, attempts, selections);
-      if (repair) {
-        next.push({
-          ...summary,
-          action: "update-stack",
-          workspaceId: repair.workspaceId,
-          baseHeadSha: repair.base.headSha,
-        });
-        continue;
-      }
-    }
+    if (
+      canOfferStackRepair(wait?.reason, resumptions.has(row.id), capacity) &&
+      (await appendStackRepair(ctx, summary, attempts, selections, next, waiting))
+    )
+      continue;
     if (wait) {
       waiting.push({ ...summary, ...wait });
       continue;

@@ -6,11 +6,12 @@ import {
 } from "../data/attempt-readiness";
 import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import { statusesCollection, ticketsCollection } from "../data/collections";
+import { readDependencyDeliveries } from "../data/dependency-deliveries";
 import { findTicket } from "../data/resolve";
 import { readTicketReviewRequests } from "../data/review-request-storage";
 import { isLiveSession } from "./auto-build-sessions";
 
-type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage">;
+type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger">;
 
 interface ReadinessParams {
   base?: string;
@@ -84,6 +85,9 @@ const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, com
     owners.filter(({ session }) => isLiveSession(session)).map(({ workspaceId }) => workspaceId),
   );
   const input = {
+    dependencyDeliveries: storedTarget
+      ? await readDependencyDeliveries(ctx, storedTarget, storedTickets, doneStatusIds, rootPath)
+      : new Map(),
     mergedHeads: events.reduce((heads, event) => {
       const head = event.metadata.headSha;
       if (event.type === "attempt_merged" && typeof head === "string" && event.commitSha)

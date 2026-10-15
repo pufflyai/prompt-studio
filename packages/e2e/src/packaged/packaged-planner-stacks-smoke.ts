@@ -1,5 +1,6 @@
 import { expect } from "bun:test";
 import { execFileSync } from "node:child_process";
+import { rename } from "node:fs/promises";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 
@@ -148,4 +149,19 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     (await execute("list-attempts")).filter((attempt: { ticketId: string }) => attempt.ticketId === child.id),
   ).toHaveLength(1);
   expect((await execute("review-requests.list", { ticket: child.id })).requests).toHaveLength(0);
+  if (!conflict) {
+    const ready = await execute("create-ticket", {
+      content: "# Work independent of the missing workspace",
+      status: "Todo",
+    });
+    const path = started.workspace.root_path;
+    await rename(path, `${path}.missing`);
+    try {
+      const next = await execute("next-tickets");
+      expect(next.tickets).toContainEqual(expect.objectContaining({ id: ready.id, action: "start" }));
+      expect(next.waiting).toContainEqual(expect.objectContaining({ id: child.id, reason: "workspace-unavailable" }));
+    } finally {
+      await rename(`${path}.missing`, path);
+    }
+  }
 }

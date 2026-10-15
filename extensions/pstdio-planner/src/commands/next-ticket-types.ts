@@ -18,7 +18,8 @@ export interface WaitingTicket {
     | "assigned"
     | "review-gate"
     | "blocked"
-    | "existing-attempt";
+    | "existing-attempt"
+    | "workspace-unavailable";
   dependencyIds: string[];
   detail?: string;
 }

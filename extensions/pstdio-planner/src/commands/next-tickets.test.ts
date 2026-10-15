@@ -55,6 +55,44 @@ async function submitDependency(result: Awaited<ReturnType<typeof trackFixture>>
   return { parent, attempt };
 }
 
+test.each([
+  "deleted folder",
+  "missing metadata",
+])("a historical workspace with %s does not prevent discovery or dispatch of another ticket", async (scenario) => {
+  const result = await trackFixture();
+  const old = await result.ticket("Historical work");
+  const started = await runAttemptCommand.run(result.ctx, { ticket: old.id });
+  const ready = await result.ticket("Available work");
+  const owner = { ...started.session, status: "completed" as const };
+  result.ctx.sessions.get = async () => owner;
+  result.ctx.sessions.listByWorkspace = async () => {
+    if (scenario === "missing metadata") throw new Error("Workspace not found");
+    return [owner];
+  };
+  result.ctx.workspaces.get = async () =>
+    (scenario === "missing metadata"
+      ? null
+      : {
+          id: started.workspace.id,
+          root_path: "/deleted-workspace",
+          execution_kind: "local",
+          provider_capabilities_json: { diff: true },
+        }) as never;
+  const run = result.ctx.process.run;
+  result.ctx.process.run = async (input) =>
+    input.command.includes("/deleted-workspace")
+      ? { exitCode: 128, stdout: "", stderr: "fatal: cannot change to deleted workspace" }
+      : run(input);
+
+  const next = await nextTicketsCommand.run(result.ctx, { track: "Workbench" });
+  expect(next.tickets).toContainEqual(expect.objectContaining({ id: ready.id, action: "start" }));
+  expect(next.waiting).toContainEqual(expect.objectContaining({ id: old.id, reason: "workspace-unavailable" }));
+  expect(await autoBuildDispatchCommand.run(result.ctx, { ticket: ready.id, revision: "test" })).toMatchObject({
+    decision: "started",
+    ticket: ready.shorthand,
+  });
+});
+
 test("next tickets query selects a named track and explains its waiting dependencies", async () => {
   const { ctx, ticket } = await trackFixture();
   const ready = await ticket("Owner layout");
