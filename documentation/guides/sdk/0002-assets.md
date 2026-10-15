@@ -51,3 +51,5 @@ Completed versions have no automatic expiry or garbage collection. This local as
 ## Existing blobs
 
 `ctx.storage.files`, collection attachments, and existing webview file calls keep their signatures and file IDs. Their HTTP uploads and downloads now stream through local storage. `getBytes()` still returns a complete byte array when the caller explicitly needs one. Use immutable assets for versioned content and resumable transfers; existing mutable blob IDs are not portable asset references.
+
+Project cleanup removes its mutable blobs and preserves immutable asset versions.

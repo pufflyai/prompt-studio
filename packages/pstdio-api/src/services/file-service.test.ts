@@ -24,13 +24,12 @@ const mockFilesDBService = () =>
 
 const mockFilesStorageService = () =>
   ({
-    writeFile: mock((_pid: string, _fid: string, _data: Buffer) => "/tmp/p1/file-id"),
+    writeFileAtPath: mock((_path: string, _data: Buffer) => {}),
     writeStream: mock(async (_pid: string, _fid: string, data: ReadableStream<Uint8Array>) => {
       const bytes = await new Response(data).arrayBuffer();
       return { storagePath: "/tmp/p1/file-id", byteLength: bytes.byteLength, hash: "fakehash" };
     }),
     deleteFile: mock(() => {}),
-    removeProjectStorage: mock(() => {}),
     computeHash: mock(() => "fakehash"),
   }) satisfies FileServiceDeps["filesStorageService"];
 
@@ -85,7 +84,7 @@ describe("FileService", () => {
     const result = await service.update("f1", { data });
 
     expect(db.get).toHaveBeenCalledWith("f1");
-    expect(storage.writeFile).toHaveBeenCalled();
+    expect(storage.writeFileAtPath).toHaveBeenCalledWith("/tmp/p1/f1", data);
     expect(storage.computeHash).toHaveBeenCalledWith(data);
     expect(db.updateMetadata).toHaveBeenCalled();
     expect(result?.size_bytes).toBe(data.byteLength);

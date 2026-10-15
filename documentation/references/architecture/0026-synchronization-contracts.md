@@ -47,6 +47,9 @@ accepted content, pending work, unresolved alternatives, and backups before dele
 `ctx.storage.assets.stage`, `getTransfer`, `cancel`, `read`, and `verifyComplete` are the narrow extension boundary.
 `client.assets.upload` owns chunking and mechanical transport retries. Existing buffered blob calls remain supported;
 their HTTP adapter now streams local persistence and download. See the [asset guide](../../guides/sdk/0002-assets.md).
+New legacy blobs encode workbench and file IDs under a separate `files` directory. Existing rows keep their stored paths
+for reads, updates, and rollback. Project cleanup deletes only its database-owned file paths and readable siblings;
+it never derives a recursive directory from an opaque identity or removes retained asset versions.
 This does not implement grouped commits, relay storage, hosted grants, backup scheduling, or full offline readiness.
 
 ## Local UI sync and relay ownership

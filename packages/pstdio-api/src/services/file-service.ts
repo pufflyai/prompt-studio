@@ -4,7 +4,10 @@ import type { EventBus } from "../features/sync/event-bus";
 
 export type FileServiceDeps = {
   filesDBService: ReturnType<typeof createFilesDBService>;
-  filesStorageService: ReturnType<typeof createFilesStorageService>;
+  filesStorageService: Pick<
+    ReturnType<typeof createFilesStorageService>,
+    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash"
+  >;
   eventBus: EventBus;
 };
 
@@ -14,7 +17,9 @@ export const createFileService = (deps: FileServiceDeps) => {
 
   const get = db.get;
   const list = db.list;
-  const removeProjectStorage = storage.removeProjectStorage;
+  const removeProjectStorage = async (projectId: string) => {
+    for (const file of await db.list(projectId)) storage.deleteFile(file.storage_path);
+  };
 
   const upload = async (
     input: {
@@ -72,7 +77,7 @@ export const createFileService = (deps: FileServiceDeps) => {
     if (!existing) return null;
 
     // Overwrite the file at the existing storage path
-    storage.writeFile(existing.project_id, fileId, input.data);
+    storage.writeFileAtPath(existing.storage_path, input.data);
 
     const hash = storage.computeHash(input.data);
     const updated = {
@@ -116,12 +121,12 @@ export const createFileService = (deps: FileServiceDeps) => {
       try {
         storage.deleteFile(file.storage_path);
       } catch (error) {
-        if (data) storage.writeFile(file.project_id, file.id, data);
+        if (data) storage.writeFileAtPath(file.storage_path, data);
         throw error;
       }
       return {
         rollback: () => {
-          if (data) storage.writeFile(file.project_id, file.id, data);
+          if (data) storage.writeFileAtPath(file.storage_path, data);
         },
         commit: () => deps.eventBus.emit("files", "delete", { id: file.id }),
       };

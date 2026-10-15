@@ -6,23 +6,20 @@ import { ensureProjectStorageRoot, resolveFileStoragePath } from "../storage/pat
 import { readableFileDirectory } from "../storage/readable-file";
 
 export const createFilesStorageService = (storageRoot: string) => {
+  const writeFileAtPath = (storagePath: string, data: Buffer) => {
+    fs.mkdirSync(path.dirname(storagePath), { recursive: true });
+    fs.writeFileSync(storagePath, data);
+  };
   const writeFile = (projectId: string, fileId: string, data: Buffer) => {
     ensureProjectStorageRoot(storageRoot, projectId);
     const storagePath = resolveFileStoragePath(storageRoot, projectId, fileId);
-    fs.writeFileSync(storagePath, data);
+    writeFileAtPath(storagePath, data);
     return storagePath;
   };
 
   const deleteFile = (storagePath: string) => {
     fs.rmSync(readableFileDirectory(storagePath), { recursive: true, force: true });
     if (fs.existsSync(storagePath)) fs.unlinkSync(storagePath);
-  };
-
-  const removeProjectStorage = (projectId: string) => {
-    const projectDir = path.join(storageRoot, projectId);
-    if (fs.existsSync(projectDir)) {
-      fs.rmSync(projectDir, { recursive: true, force: true });
-    }
   };
 
   const computeHash = (data: Buffer) => createHash("sha256").update(data).digest("hex");
@@ -68,5 +65,5 @@ export const createFilesStorageService = (storageRoot: string) => {
     }
   };
 
-  return { writeFile, writeStream, deleteFile, removeProjectStorage, computeHash };
+  return { writeFile, writeFileAtPath, writeStream, deleteFile, computeHash };
 };

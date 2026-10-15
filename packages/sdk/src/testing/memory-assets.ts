@@ -2,7 +2,7 @@ import type { AssetReference, ExtensionAssetsApi } from "pstdio-api-contracts/ex
 import { hashAssetSource } from "../client/asset-source";
 
 /** Memory test storage has complete immutable Blobs and no interrupted disk writes. */
-export const createMemoryAssets = (): ExtensionAssetsApi => {
+export const createMemoryAssets = () => {
   const versions = new Map<string, Blob>();
   const operations = new Map<string, AssetReference>();
   const getTransfer = async (operationId: string) => {
@@ -15,7 +15,7 @@ export const createMemoryAssets = (): ExtensionAssetsApi => {
     if (source.size !== asset.byteLength) throw new Error("Asset integrity mismatch");
     return source.stream();
   };
-  return {
+  const api: ExtensionAssetsApi = {
     async stage({ operationId, source }) {
       const expected = {
         sha256: await hashAssetSource(source),
@@ -41,4 +41,5 @@ export const createMemoryAssets = (): ExtensionAssetsApi => {
       for (const asset of assets) await (await read(asset)).cancel();
     },
   };
+  return api;
 };

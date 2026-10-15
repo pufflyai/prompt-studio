@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveFileStoragePath } from "../storage/paths";
 import { createFilesStorageService } from "./files";
 
 const roots: string[] = [];
@@ -26,7 +27,6 @@ test("writeFile creates project directory and writes data", () => {
   const storagePath = service.writeFile(projectId, fileId, data);
 
   expect(readFileSync(storagePath, "utf8")).toBe("hello world");
-  expect(storagePath).toBe(join(storageRoot, projectId, fileId));
 });
 
 test("deleteFile removes the file from disk", () => {
@@ -53,22 +53,6 @@ test("deleteFile is a no-op when file does not exist", () => {
   service.deleteFile(join(storageRoot, "nonexistent"));
 });
 
-test("removeProjectStorage removes the entire project directory", () => {
-  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
-  roots.push(storageRoot);
-
-  const service = createFilesStorageService(storageRoot);
-  service.writeFile("proj-1", "file-1", Buffer.from("a"));
-  service.writeFile("proj-1", "file-2", Buffer.from("b"));
-
-  const projectDir = join(storageRoot, "proj-1");
-  expect(existsSync(projectDir)).toBe(true);
-
-  service.removeProjectStorage("proj-1");
-
-  expect(existsSync(projectDir)).toBe(false);
-});
-
 test("computeHash returns a consistent sha256 hex digest", () => {
   const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
   roots.push(storageRoot);
@@ -83,6 +67,18 @@ test("computeHash returns a consistent sha256 hex digest", () => {
   expect(hash1).toHaveLength(64);
 });
 
+test("opaque workbench and file identities cannot alias another owner's bytes", () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(root);
+  const storage = createFilesStorageService(root);
+  const first = storage.writeFile("a/../b", "same", Buffer.from("first owner"));
+  const second = storage.writeFile("b", "same", Buffer.from("second owner"));
+  const third = storage.writeFile("b", "sub/../same", Buffer.from("another file"));
+  expect(readFileSync(first, "utf8")).toBe("first owner");
+  expect(readFileSync(second, "utf8")).toBe("second owner");
+  expect(readFileSync(third, "utf8")).toBe("another file");
+});
+
 test("legacy file uploads persist one chunk before requesting the next and return verified metadata", async () => {
   const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
   roots.push(storageRoot);
@@ -93,7 +89,7 @@ test("legacy file uploads persist one chunk before requesting the next and retur
       pull(controller) {
         if (chunks++ === 0) controller.enqueue(new TextEncoder().encode("first"));
         else {
-          expect(readFileSync(join(storageRoot, "project", "file"), "utf8")).toBe("first");
+          expect(readFileSync(resolveFileStoragePath(storageRoot, "project", "file"), "utf8")).toBe("first");
           controller.enqueue(new TextEncoder().encode("second"));
           controller.close();
         }
@@ -103,7 +99,7 @@ test("legacy file uploads persist one chunk before requesting the next and retur
   );
   const stored = await service.writeStream("project", "file", data);
   expect(stored).toEqual({
-    storagePath: join(storageRoot, "project", "file"),
+    storagePath: resolveFileStoragePath(storageRoot, "project", "file"),
     byteLength: 11,
     hash: createHash("sha256").update("firstsecond").digest("hex"),
   });
@@ -125,5 +121,5 @@ test("failed legacy file streams remove temporary bytes", async () => {
   );
   const error = await service.writeStream("project", "file", data).catch((error: unknown) => error);
   expect(error).toBeInstanceOf(Error);
-  expect(existsSync(join(storageRoot, "project", "file"))).toBe(false);
+  expect(existsSync(resolveFileStoragePath(storageRoot, "project", "file"))).toBe(false);
 });
