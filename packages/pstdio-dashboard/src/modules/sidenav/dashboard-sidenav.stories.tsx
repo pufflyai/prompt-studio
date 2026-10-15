@@ -329,7 +329,7 @@ export const SessionMode: Story = {
     const document = within(canvasElement.ownerDocument.body);
     const row = await canvas.findByRole("option", { name: "Investigate flaky test" });
     await fireEvent.contextMenu(row);
-    await waitFor(() => expect(document.getByRole("menuitem", { name: "Open session panel" })).toBeVisible());
+    await waitFor(() => expect(document.getByRole("menuitem", { name: "Rename session" })).toBeVisible());
     await expect(document.getAllByRole("menu")).toHaveLength(1);
     await waitFor(() => expect(document.getByRole("menu")).toHaveFocus());
     await userEvent.keyboard("{Escape}");

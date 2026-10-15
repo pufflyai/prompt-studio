@@ -1,22 +1,11 @@
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import { resolveSessionIndicatorColor, type SessionCompletionStatus } from "@pstdio/ui";
-import type {
-  ResourceRef,
-  WorkbenchModuleContext,
-  WorkbenchPanelInstance,
-  WorkbenchWidgetTab,
-} from "@pstdio/workbench";
+import type { WorkbenchModuleContext, WorkbenchPanelInstance, WorkbenchWidgetTab } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { resolveDashboardWorkspaceIcon } from "@/shared/workspaces/dashboard-workspaces";
-import {
-  createDashboardSessions,
-  findDashboardSession,
-  resolveDashboardSessionViewForPlacement,
-} from "../data/dashboard-sessions";
+import { findDashboardSession, resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { subscribeSessionListData } from "../data/session-data-subscription";
-import { sessionMenuPage } from "./session-menu-page";
 
 const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
   if (status === "in_progress") return "LoaderCircle";
@@ -27,15 +16,6 @@ const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
   if (status === "queued") return "ClockAlert";
   if (status === "awaiting_input") return "CircleDot";
   return "CircleDashed";
-};
-const sessionOpenAction = (instance: WorkbenchPanelInstance, resource: ResourceRef) => {
-  if (instance.placementIdentity?.kind === "page")
-    return { kind: "navigation" as const, target: { kind: "page" as const, page: workbenchPages.session, resource } };
-  return {
-    kind: "command" as const,
-    commandId: dashboardCommandIds.openSessionPanel,
-    args: { resource, replacePanel: instance.placementIdentity },
-  };
 };
 const sessionStatus = (instance: WorkbenchPanelInstance, status: string | undefined) => {
   const value = status ?? instance.resource?.metadata?.status;
@@ -78,8 +58,6 @@ const resolveWorkspace = (ctx: WorkbenchModuleContext, instance: WorkbenchPanelI
 export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): WorkbenchWidgetTab => ({
   subscribe: subscribeSessionListData,
   getSnapshot(instance) {
-    const projectIdValue = ctx.context.get(dashboardSelectedProjectIdContextKey);
-    const projectId = typeof projectIdValue === "string" ? projectIdValue : undefined;
     const view = resolveDashboardSessionViewForPlacement(instance);
     const selected = findDashboardSession(view.sessionId);
     const status = sessionStatus(instance, selected?.status);
@@ -93,8 +71,8 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
       },
       menu: [
         {
-          id: "quick-access",
-          label: "Quick access",
+          id: "sessions",
+          label: "Sessions",
           rows: [
             {
               id: "new-session",
@@ -106,27 +84,16 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
                 args: { workspace, replacePanel: instance.placementIdentity },
               },
             },
-          ],
-          list: {
-            searchLabel: "Search sessions",
-            emptyLabel: "No sessions yet",
-            loadPage: async (request) => {
-              const sessions = createDashboardSessions(projectId);
-              const page = sessionMenuPage(sessions, request);
-              return {
-                nextCursor: page.nextCursor,
-                rows: page.rows.map((session) => ({
-                  id: session.id,
-                  label: session.title,
-                  icon: sessionStatusIcon(session.status as SessionCompletionStatus),
-                  iconColor: resolveSessionIndicatorColor(session.status as SessionCompletionStatus),
-                  selected: session.id === view.sessionId,
-                  action: sessionOpenAction(instance, session.resource),
-                })),
-              };
+            {
+              id: "switch-session",
+              label: "Switch session",
+              icon: "Search",
+              action: {
+                kind: "command",
+                commandId: dashboardCommandIds.switchSession,
+                args: { placementIdentity: instance.placementIdentity },
+              },
             },
-          },
-          trailingRows: [
             {
               id: "view-all-sessions",
               label: "View all sessions",

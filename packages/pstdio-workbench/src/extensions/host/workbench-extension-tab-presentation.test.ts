@@ -4,53 +4,6 @@ import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-cont
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
-test("extension menu sections retain labels and load pages with their own resource", async () => {
-  const calls: Array<{ id: string; body: unknown }> = [];
-  const workbench = createWorkbench();
-  const input: RegisterWorkbenchExtensionContributionsInput = {
-    workbench,
-    projectId: "project",
-    metadata: emptyWorkbenchExtensionMetadata,
-    executeCommand: async (id, body) => {
-      calls.push({ id, body });
-      if (id === "tabs")
-        return {
-          menu: [
-            {
-              id: "quick",
-              label: "Quick access",
-              rows: [],
-              list: { command: { kind: "command", id: "search" }, searchLabel: "Search", emptyLabel: "Empty" },
-            },
-          ],
-        };
-      return { rows: [{ id: "one", label: "Found" }], nextCursor: "next" };
-    },
-  };
-  const tab = createWorkbenchExtensionTabPresentation(input, {
-    extensionId: "notes",
-    placementId: "note",
-    queryHandlerId: "tabs",
-  });
-  const resource = { type: "note", id: "b" };
-  const instance = { instanceId: "b", panelId: "note", closable: true, resource };
-  const loaded = Promise.withResolvers<void>();
-  const subscription = tab.subscribe!(() => loaded.resolve());
-  tab.getSnapshot(instance);
-  await loaded.promise;
-  const section = tab.getSnapshot(instance).menu?.[0];
-  expect(section?.label).toBe("Quick access");
-  const page = await section?.list?.loadPage({ query: "query", cursor: "prior", signal: new AbortController().signal });
-  expect(page?.rows.map((row) => row.label)).toEqual(["Found"]);
-  expect(page?.nextCursor).toBe("next");
-  expect(calls.at(-1)).toMatchObject({
-    id: "notes.command.search",
-    body: { resource, params: { query: "query", cursor: "prior" } },
-  });
-  if (typeof subscription === "function") subscription();
-  else subscription.dispose();
-});
-
 test("keeps the loaded tab title and actions while an autosave refresh is pending", async () => {
   const requests: Array<ReturnType<typeof Promise.withResolvers<unknown>>> = [];
   let refresh!: (event: { id: string }) => void;

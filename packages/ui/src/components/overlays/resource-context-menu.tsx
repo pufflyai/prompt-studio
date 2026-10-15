@@ -10,7 +10,6 @@ export interface ResourceContextAction {
   label: string;
   commandId?: string;
   group?: { id: string; label?: string };
-  list?: ResourceActionList;
   isSelected?: boolean;
   onClick?: () => Promise<void> | void;
   /** Nested actions, opened by hover or the arrow keys. */
@@ -21,17 +20,6 @@ export interface ResourceContextAction {
   separatorBefore?: boolean;
   /** Override the menu's selection behavior for this action. */
   closeOnSelect?: boolean;
-}
-
-export interface ResourceActionList {
-  /** Stable identity of the source, including its resource or project scope. */
-  id: string;
-  searchLabel: string;
-  emptyLabel: string;
-  loadPage(request: { query: string; cursor?: string; signal: AbortSignal }): Promise<{
-    items: ResourceContextAction[];
-    nextCursor?: string;
-  }>;
 }
 
 interface ResourceContextMenuProps {

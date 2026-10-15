@@ -39,10 +39,10 @@ export const createWorkbenchResourcePaletteEntries = (input: {
   workbench: WorkbenchCore;
   query: string;
   onClose: () => void;
+  resources?: readonly ResourceBrowseEntry[];
 }) => {
   const { onClose, query, workbench } = input;
-  return workbench.resources
-    .listResources(query)
+  return (input.resources ?? workbench.resources.listResources(query))
     .map((entry) => createResourceEntry({ workbench, entry, onClose }))
     .filter((entry): entry is WorkbenchResourcePaletteEntry => entry !== undefined);
 };

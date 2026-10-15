@@ -71,17 +71,6 @@ export interface WorkbenchTabMenuGroup {
   id: string;
   label?: string;
   rows: readonly WorkbenchTabMenuRow[];
-  list?: WorkbenchTabMenuList;
-  trailingRows?: readonly WorkbenchTabMenuRow[];
-}
-
-export interface WorkbenchTabMenuList {
-  searchLabel: string;
-  emptyLabel: string;
-  loadPage(request: { query: string; cursor?: string; signal: AbortSignal }): Promise<{
-    rows: readonly WorkbenchTabMenuRow[];
-    nextCursor?: string;
-  }>;
 }
 
 export interface WorkbenchTabSnapshot {

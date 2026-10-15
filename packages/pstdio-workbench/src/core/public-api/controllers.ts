@@ -12,6 +12,7 @@ export type {
   WorkbenchCommandPaletteOpenInput,
   WorkbenchCommandPaletteState,
   WorkbenchCommandPaletteView,
+  WorkbenchResourceSearchRequest,
 } from "../controllers/command-palette/command-palette-controller";
 export { createWorkbenchCommandPaletteController } from "../controllers/command-palette/command-palette-controller";
 export type {

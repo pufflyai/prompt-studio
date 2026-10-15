@@ -1,11 +1,10 @@
 import { Spinner } from "@chakra-ui/react";
 import { type PlacementIdentity, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
-import {
-  type ResourceRef,
-  resourceContextMenuPath,
-  type WorkbenchModuleContext,
-  type WorkbenchModuleContribution,
-  type WorkbenchTabRetention,
+import type {
+  ResourceRef,
+  WorkbenchModuleContext,
+  WorkbenchModuleContribution,
+  WorkbenchTabRetention,
 } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
 import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
@@ -19,6 +18,7 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
+import { registerSessionPicker } from "./session-picker";
 import { createSessionTabPresentation } from "./session-tab-presentation";
 
 const SessionWidget = lazy(() =>
@@ -228,10 +228,6 @@ export const createSessionBubbleModule = (input: CreateSessionBubbleModuleInput 
     activate(ctx) {
       registerSessionBubbleWidgets(ctx, input.sessionDraftPersistence);
       registerSessionBubbleCommands(ctx);
-      ctx.layout.registerMenuItem(resourceContextMenuPath("session"), {
-        commandId: dashboardCommandIds.openSessionPanel,
-        group: "kernel",
-        order: 10,
-      });
+      registerSessionPicker(ctx);
     },
   }) satisfies WorkbenchModuleContribution;

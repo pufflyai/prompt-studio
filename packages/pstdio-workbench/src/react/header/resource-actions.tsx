@@ -22,7 +22,7 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
   useWorkbenchResourceActionResolver(workbench);
   const subject = placement?.resource ?? items.at(-1)?.resource;
   const resource = subject ? resolveResourcePreview(subject, changes) : undefined;
-  const resourceActions = createWorkbenchResourceMenu(workbench, resource, snapshot, placement);
+  const resourceActions = createWorkbenchResourceMenu(workbench, resource, snapshot);
   const actions = [
     ...resourceActions,
     ...createWorkbenchLocationActions(workbench, resource).map((action) => ({

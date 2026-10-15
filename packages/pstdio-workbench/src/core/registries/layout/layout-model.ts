@@ -63,7 +63,6 @@ export type {
   WorkbenchSidePanelMode,
   WorkbenchTabAction,
   WorkbenchTabMenuGroup,
-  WorkbenchTabMenuList,
   WorkbenchTabMenuRow,
   WorkbenchTabPosition,
   WorkbenchTabRetention,

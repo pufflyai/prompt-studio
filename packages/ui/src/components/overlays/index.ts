@@ -9,7 +9,7 @@ export { DeleteConfirmationModal } from "./delete-confirmation-modal";
 export { handleDialogAcceptShortcut } from "./dialog-accept-shortcut";
 export type { FolderPickerEntry, FolderPickerProps } from "./folder-picker-dialog";
 export { FolderPicker, FolderPickerDialog } from "./folder-picker-dialog";
-export type { ResourceActionList, ResourceActionMenuProps, ResourceContextAction } from "./resource-context-menu";
+export type { ResourceActionMenuProps, ResourceContextAction } from "./resource-context-menu";
 export { ResourceActionMenu, ResourceContextMenu } from "./resource-context-menu";
 export { ResourceMenuItems } from "./resource-menu-items";
 export type { SearchModalContentProps } from "./search-modal-content";
