@@ -70,7 +70,7 @@ Keep the source images in `documentation/images/` with descriptive kebab-case na
 For example, from a guide in `guides/getting-started/`:
 
 ```md
-![Workbench showing the project sidebar and the Start page.](../images/workbench.png)
+![Workbench showing the project sidebar and the Start page.](../../images/workbench.png)
 ```
 
 Capture the real app with `bun run dev:playwright`, using its printed dashboard URL. Use a disposable project and sample content. Capture both light and dark themes for UX GIFs; choose the clearest theme for still screenshots. Do not include credentials, private paths, or personal conversations. Stop the capture stack afterward with `bun run dev:playwright:down`.

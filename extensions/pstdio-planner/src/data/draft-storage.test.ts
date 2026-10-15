@@ -22,11 +22,14 @@ test("ignoring Planner drafts leaves another extension's project files trackable
   }
 });
 
-test("writing drafts keeps a tracked shared storage ignore file clean", async () => {
+test.each([
+  "/extension-storage",
+  "/extension-storage/",
+])("writing drafts keeps a tracked %s ignore rule clean", async (entry) => {
   const root = await mkdtemp(join(tmpdir(), "planner-existing-ignore-"));
   const path = ".pstdio/.gitignore";
   const files = createMemoryRepoFiles();
-  await files.writeText(path, "/extension-storage\nconfig.json\n");
+  await files.writeText(path, `${entry}\nconfig.json\n`);
   try {
     expect(Bun.spawnSync(["git", "init", "--quiet", root]).exitCode).toBe(0);
     await Bun.write(join(root, path), await files.readText(path));
