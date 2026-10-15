@@ -199,7 +199,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
       <ChatLinkProvider handler={linkHandler}>
         <ChatQuestionNavigationContext value={questionNavigation.value}>
           <Flex position="relative" direction="column" w="full" h="full" overflow="hidden">
-            <ChatPrimitives.Root>
+            <ChatPrimitives.Root key={messageListKey}>
               <AutoScroll conversationKey={messageListKey ?? null} userMessageCount={userMessageCount} />
               <ChatPrimitives.Viewport visibility={isMessageViewportReady ? "visible" : "hidden"}>
                 {hasMessages ? (
