@@ -2,7 +2,7 @@ import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { TreeNode, WorkbenchModuleContext } from "@pstdio/workbench";
 import { QueryObserver } from "@tanstack/react-query";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { subscribeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
@@ -36,8 +36,9 @@ export const workspaceNavigationNode = (providers: readonly WorkspaceProviderDes
   }) satisfies TreeNode;
 
 export const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
+  const queryClient = getDashboardQueryClient();
   const options = () => workspaceProvidersQueryOptions(getDashboardSelectedProjectId(ctx));
-  const providers = new QueryObserver(dashboardQueryClient, options());
+  const providers = new QueryObserver(queryClient, options());
   const refreshNavigation = () => {
     if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) {
       ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
@@ -75,7 +76,7 @@ export const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContex
       change?.table !== "installed_extension_sources"
     )
       return;
-    void invalidateWorkspaceProviders(dashboardQueryClient, projectId);
+    void invalidateWorkspaceProviders(queryClient, projectId);
   });
   return {
     dispose() {

@@ -10,6 +10,7 @@ export { createAutomationDBService } from "./services/automation/automation";
 export { createBoardViewsDBService, LastBoardViewError } from "./services/board-views/board-views";
 export type { ValidColor } from "./services/colors";
 export { isValidColor, VALID_COLORS } from "./services/colors";
+export { createEnvironmentDBService } from "./services/environment/environment";
 export { createExtensionConnectionsDBService } from "./services/extension-connections/extension-connections";
 export { createExtensionFilesDBService } from "./services/extension-files/extension-files";
 export { createExtensionInstancesDBService } from "./services/extension-instances/extension-instances";

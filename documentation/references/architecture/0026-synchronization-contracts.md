@@ -28,6 +28,16 @@ The existing [kernel storage API](../../../packages/pstdio-api-contracts/src/ext
 remain unchanged. The SDK implementation must add replacement APIs and deprecate
 old methods under [API versioning](../extensions/0014-api-versioning.md).
 
+## Local UI sync and relay ownership
+
+`environmentIdentitySchema` and `environmentTargetSchema` define stable runtime identities and exact execution targets. The local runtime persists one identity and reuses project IDs for workbenches. Its workspace records supply local folder bindings. See [projects](0015-projects.md#workbench-and-environment-identity).
+
+The exported `dataOwnership` map is the explicit future relay boundary. Workbench content, assets, published extension/catalog revisions, and automation definitions belong to the workbench. Sessions, processes, workspaces, folders, terminals, credentials, caches, and development overrides belong to an environment. Published extension state must be selected explicitly; installed local sources and overrides are not publication records.
+
+The dashboard's local SSE tables continue to include sessions, workspaces, and their links. They mirror one runtime for its UI and are not a replication allow-list. A relay must never copy those tables as shared workbench content. Dashboard collection data, indexes, readiness, and subscriptions belong to the API connection; disposing a connection closes its stream and releases its collection store. Browser credentials are scoped to the selected API origin, including its port. CLI clients capture their runtime URL and credential together.
+
+This identity work does not start relay synchronization or implement hosted grants. An account ID in a protocol envelope remains data, not proof of authorization.
+
 ## Identity and immutable requests
 
 `Scope` contains `accountId`, `workbenchId`, and `extensionId`. A `recordId` is unique

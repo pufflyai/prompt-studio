@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { getWriter } from "@/lib/sync/collections";
+import { createRuntimeCollections, getWriter } from "@/lib/sync/collections";
 import {
   getDashboardWorkspaceDiffSummary,
   requestDashboardWorkspaceDiffSummaries,
@@ -15,6 +15,42 @@ type RuntimeConfigWindow = {
 
 const originalFetch = globalThis.fetch;
 
+test("derived diff data and late responses stay in their originating runtime", async () => {
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) =>
+      Response.json({
+        workspace_id: "same",
+        additions: new URL(request.url).pathname.startsWith("/first/") ? 1 : 2,
+        deletions: 0,
+        file_count: 1,
+      }),
+  });
+  const first = createRuntimeCollections({ baseUrl: `${server.url.origin}/first`, token: "" });
+  const second = createRuntimeCollections({ baseUrl: `${server.url.origin}/second`, token: "" });
+  try {
+    for (const owner of [first, second])
+      owner.getWriter("workspaces")!.upsert({
+        id: "same",
+        provider_state: "ready",
+        root_path: "/same",
+        provider_capabilities_json: { diff: true },
+      });
+    const [a, b] = await Promise.all([
+      requestDashboardWorkspaceDiffSummaries(["same"], undefined, first),
+      requestDashboardWorkspaceDiffSummaries(["same"], undefined, second),
+    ]);
+    expect(a.get("same")?.additions).toBe(1);
+    expect(b.get("same")?.additions).toBe(2);
+    expect(getDashboardWorkspaceDiffSummary("same", first)?.additions).toBe(1);
+    expect(getDashboardWorkspaceDiffSummary("same", second)?.additions).toBe(2);
+  } finally {
+    await first.dispose();
+    await second.dispose();
+    server.stop(true);
+  }
+});
+
 const toUrl = (input: URL | RequestInfo) => {
   if (typeof input === "string") return input;
   if (input instanceof URL) return input.toString();
@@ -29,13 +65,13 @@ describe("workspace diff summary data", () => {
   });
 
   test("resolves requested summaries for initial render updates", async () => {
+    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
     getWriter("workspaces")!.upsert({
       id: "workspace-first-load",
       provider_state: "ready",
       root_path: "/project",
       provider_capabilities_json: { diff: true },
     });
-    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
 
     const calls: string[] = [];
     const fetchMock = Object.assign(

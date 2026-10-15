@@ -19,3 +19,39 @@ test("attaches an initial workspace and retries setup through the public project
   expect(requests[1]!.url).toBe("http://test/v1/projects/project/retry-setup");
   expect(requests.map((request) => request.method)).toEqual(["POST", "POST"]);
 });
+
+test("binds and resolves an explicit environment through the public client", async () => {
+  const target = { environmentId: "local", workbenchId: "shared", workspaceId: "home" };
+  const workspace = { id: "home", project_id: "shared", root_path: "/local/folder" };
+  const binding = { environmentId: "local", workbenchId: "shared", workspace };
+  const input = {
+    environmentId: "local",
+    name: "Shared",
+    initial_workspace: { provider_id: "pstdio.root", params: { path: workspace.root_path } },
+  };
+  const server = Bun.serve({
+    port: 0,
+    fetch: async (request) => {
+      expect(request.headers.get("authorization")).toBe("Bearer owner");
+      const path = new URL(request.url).pathname;
+      if (path === "/v1/environment") return Response.json({ environmentId: "local" });
+      if (path === "/v1/environment/resolve-target") {
+        expect(request.method).toBe("POST");
+        expect(await request.json()).toEqual(target);
+        return Response.json(workspace);
+      }
+      expect(path).toBe("/v1/projects/shared/environment-binding");
+      expect(request.method).toBe("PUT");
+      expect(await request.json()).toEqual(input);
+      return Response.json(binding);
+    },
+  });
+  try {
+    const client = createClient({ baseUrl: server.url.origin, token: "owner" });
+    expect(await client.runtime.environment()).toEqual({ environmentId: "local" });
+    expect(await client.projects.bindEnvironment("shared", input)).toEqual(binding);
+    expect(await client.runtime.resolveTarget(target)).toEqual(workspace);
+  } finally {
+    server.stop(true);
+  }
+});

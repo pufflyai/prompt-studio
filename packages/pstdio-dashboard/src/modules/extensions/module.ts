@@ -11,7 +11,7 @@ import {
 } from "@pstdio/workbench";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
-import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
+import { type CollectionChange, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -78,6 +78,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
   ({
     id: "dashboard.extensions",
     activate(ctx: WorkbenchModuleContext) {
+      const owner = getRuntimeCollections();
       const executeCommand = input.executeCommand ?? executeExtensionCommand;
       const loadAppearance = input.loadAppearance ?? getProjectExtensionAppearance;
       const loadMetadata = input.loadMetadata ?? getProjectExtensionMetadata;
@@ -103,7 +104,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const applyAppearance = (nextAppearance: ListExtensionAppearanceResponse) => {
         rawAppearance = nextAppearance;
         clearAppearance();
-        appearanceDisposable = registerExtensionAppearance(ctx, nextAppearance);
+        appearanceDisposable = registerExtensionAppearance(ctx, nextAppearance, owner);
       };
 
       const registrationError = (projectId: string, error: unknown, extensionId?: string) =>
@@ -145,13 +146,13 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       const commitMetadata = (nextProjectId: string, registeredMetadata: ResolvedWorkbenchExtensionMetadata) => {
         metadata = registeredMetadata;
-        setCachedDashboardExtensionMetadata(nextProjectId, registeredMetadata);
+        setCachedDashboardExtensionMetadata(nextProjectId, registeredMetadata, owner);
         ctx.context.set(dashboardEditableTemplatesContextKey, hasEditableTemplateAssets(registeredMetadata));
         ctx.settings.refresh();
       };
 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
-        const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata);
+        const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata, owner);
         rawMetadata = nextMetadata;
         // `metadata` holds only what registered, so a refresh after a failure always retries.
         if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) {
@@ -213,8 +214,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           rawMetadata = undefined;
           metadata = undefined;
           displacedPageLocation = undefined;
-          clearCachedDashboardExtensionMetadata(previousProjectId);
-          clearCachedDashboardExtensionMetadata(projectId);
+          clearCachedDashboardExtensionMetadata(previousProjectId, owner);
+          clearCachedDashboardExtensionMetadata(projectId, owner);
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
           clearContributions();
@@ -253,7 +254,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           metadataRefresh.clear();
           appearanceRefresh.clear();
           activeResourceContext.dispose();
-          clearCachedDashboardExtensionMetadata(projectId);
+          clearCachedDashboardExtensionMetadata(projectId, owner);
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
           clearContributions();

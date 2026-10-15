@@ -8,6 +8,7 @@ import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
 import { apiRequest, buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
   deleteGlobalExtensionSetting,
@@ -54,6 +55,7 @@ interface ExtensionWebviewFrameProps {
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
+  const owner = getRuntimeCollections();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
@@ -164,7 +166,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       streamCommand(params as WebviewCommandsStreamParams, {
         projectId: requireProjectId(),
         stream: (...args) => getApiClient().extensions.stream(...args),
-        publish: (response) => publishExtensionCommandEvent(response, { projectId }),
+        publish: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
       }),
     "commands.execute": async (params: unknown) => {
       const commandInput = params as Parameters<typeof executeWebviewCommand>[0];

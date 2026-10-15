@@ -27,7 +27,7 @@ export const subscribeSessionData = (sessionId: string | undefined, listener: ()
   const workspaces = () =>
     getIndexedRows("workspace_sessions", "session_id", sessionId).map((row) => String(row.workspace_id));
   let workspaceIds = workspaces();
-  const summaries = () => workspaceIds.map(getDashboardWorkspaceDiffSummary);
+  const summaries = () => workspaceIds.map((workspaceId) => getDashboardWorkspaceDiffSummary(workspaceId));
   let previousSummaries = summaries();
   const unsubscribe = subscribeCollections((change) => {
     if (!sessionId) return;

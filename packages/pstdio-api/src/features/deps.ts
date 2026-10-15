@@ -2,6 +2,7 @@ import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel
 import type {
   createActivityEventsDBService,
   createBoardViewsDBService,
+  createEnvironmentDBService,
   createExtensionResourceSequencesDBService,
   createExtensionSettingsDBService,
   createExtensionStorageDBService,
@@ -44,6 +45,7 @@ export interface ReadinessChecks {
 // and handlers should accept the narrow per-feature deps so adding a service
 // here does not silently widen every feature's surface.
 export interface RouteDeps {
+  environmentService: ReturnType<typeof createEnvironmentDBService>;
   boardViewsService: ReturnType<typeof createBoardViewsDBService>;
   extensionWebviewAccess: ExtensionWebviewAccess;
   readiness: ReadinessChecks;

@@ -6,7 +6,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { type ChatLinkCandidate, type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
 import { workspaceFileQueryOptions } from "@/shared/workspaces/workspace-file-query";
@@ -97,7 +97,7 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         if (parsed?.kind !== "file" || parsed.position) return null;
         const workspace = sessionWorkspace(input);
         const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
-        const file = await dashboardQueryClient.fetchQuery(workspaceFileQueryOptions(workspace.id, path));
+        const file = await getDashboardQueryClient().fetchQuery(workspaceFileQueryOptions(workspace.id, path));
         return file.encoding === "base64" ? (file.data_url ?? null) : null;
       } catch {
         return null;

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { workspaceDeleteResource, workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
@@ -16,7 +16,7 @@ beforeEach(() => {
 afterEach(() => {
   server.stop(true);
   delete runtime.__PSTDIO_CONFIG__;
-  dashboardQueryClient.clear();
+  getDashboardQueryClient().clear();
 });
 
 test.each([

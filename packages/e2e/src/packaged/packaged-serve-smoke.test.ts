@@ -17,6 +17,7 @@ import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
+// Independent hosts also bind one workbench identity to their own environment and folder.
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,

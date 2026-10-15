@@ -462,6 +462,7 @@
     "packages/pstdio-api-contracts": {
       "name": "pstdio-api-contracts",
       "dependencies": {
+        "pstdio-sync-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
       "devDependencies": {

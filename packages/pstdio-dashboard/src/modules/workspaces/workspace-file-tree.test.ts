@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -13,7 +13,7 @@ let server: ReturnType<typeof Bun.serve>;
 let requests: string[];
 
 beforeEach(() => {
-  dashboardQueryClient.clear();
+  getDashboardQueryClient().clear();
   requests = [];
   server = Bun.serve({
     port: 0,
@@ -36,7 +36,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  dashboardQueryClient.clear();
+  getDashboardQueryClient().clear();
   server.stop(true);
   delete runtime.__PSTDIO_CONFIG__;
 });
