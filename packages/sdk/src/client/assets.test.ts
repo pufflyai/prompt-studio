@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { createClient } from "./client";
 
 test("asset uploads hash a stream and resume after a lost acknowledgement without extension retry code", async () => {
-  const data = new Uint8Array(17 * 1024 * 1024).fill(7);
+  const data = new Uint8Array(8 * 1024 * 1024 + 64 * 1024).fill(7);
   const expected = {
     sha256: createHash("sha256").update(data).digest("hex"),
     byteLength: data.byteLength,
@@ -74,7 +74,7 @@ test("asset uploads hash a stream and resume after a lost acknowledgement withou
     });
     expect(asset).toEqual(expected);
     expect(lostAcknowledgement).toBe(true);
-    expect(offsets).toEqual([0, 8 * 1024 * 1024, 16 * 1024 * 1024]);
+    expect(offsets).toEqual([0, 8 * 1024 * 1024]);
     expect(Math.max(...chunkLengths)).toBeLessThanOrEqual(8 * 1024 * 1024);
     const downloaded = await new Response(await client.assets.read({ ...owner, asset })).arrayBuffer();
     expect(createHash("sha256").update(new Uint8Array(downloaded)).digest("hex")).toBe(expected.sha256);

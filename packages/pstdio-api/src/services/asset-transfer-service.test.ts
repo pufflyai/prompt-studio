@@ -200,6 +200,25 @@ test("extension staging returns a portable retained reference and resumes a prev
   }
 });
 
+test("concurrent extension staging retries the same operation without caller retry logic", async () => {
+  const { owner, service, close } = await fixture();
+  try {
+    const source = new Blob(["duplicate"], { type: "application/example" });
+    const expected = { ...asset("duplicate"), mediaType: source.type };
+    const outcomes = await Promise.allSettled([
+      service.stage(owner, "duplicate", source),
+      service.stage(owner, "duplicate", source),
+    ]);
+    expect(outcomes).toEqual([
+      { status: "fulfilled", value: expected },
+      { status: "fulfilled", value: expected },
+    ]);
+    expect(await new Response(await service.read(owner, expected)).text()).toBe("duplicate");
+  } finally {
+    await close();
+  }
+});
+
 test("a failed integrity check preserves incomplete bytes and never returns a complete reference", async () => {
   const { owner, service, close } = await fixture();
   try {
@@ -211,6 +230,22 @@ test("a failed integrity check preserves incomplete bytes and never returns a co
     expect(await service.get(owner, "bad")).toMatchObject({ status: "staging", uploadedByteLength: 5 });
     const missing = await service.read(owner, expected).catch((error: unknown) => error);
     expect(missing).toBeInstanceOf(Error);
+  } finally {
+    await close();
+  }
+});
+
+test("zero byte assets complete without a content request and remain readable", async () => {
+  const { owner, service, close } = await fixture();
+  try {
+    const expected = asset("");
+    await service.begin(owner, "empty", expected);
+    expect(await service.complete(owner, "empty")).toEqual({
+      status: "complete",
+      operationId: "empty",
+      asset: expected,
+    });
+    expect(await new Response(await service.read(owner, expected)).text()).toBe("");
   } finally {
     await close();
   }

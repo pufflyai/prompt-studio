@@ -172,7 +172,7 @@ export const createAssetRoutes = (deps: AssetsRouteDeps) => {
         c,
         params,
         async (owner) =>
-          new Response(await service.read(owner, asset), {
+          new Response(await service.read(owner, asset, c.req.raw.signal), {
             headers: {
               "content-type": asset.mediaType,
               "content-length": String(asset.byteLength),

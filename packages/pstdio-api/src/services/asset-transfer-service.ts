@@ -46,12 +46,42 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
     if (transfer.status === "cancelled") throw new AssetTransferError("ASSET_TRANSFER_CANCELLED");
     return transfer;
   };
-  const begin = async (owner: AssetOwner, operationId: string, expected: AssetReference) => {
+  const begin = async (owner: AssetOwner, operationId: string, expected: AssetReference, signal?: AbortSignal) => {
     assetOwnerSchema.parse(owner);
     assetReferenceSchema.parse(expected);
     const record = await deps.transfers.begin(owner, operationId, expected);
     if (!sameReference(record.expected, expected)) throw new AssetTransferError("ASSET_OPERATION_CONFLICT");
-    return (await get(owner, operationId))!;
+    return (await get(owner, operationId, signal))!;
+  };
+  const appendBytes = async (
+    owner: AssetOwner,
+    operationId: string,
+    offset: number,
+    data: ReadableStream<Uint8Array>,
+    signal: AbortSignal,
+  ) => {
+    const transfer = await requireTransfer(owner, operationId, signal);
+    if (transfer.status === "complete") return transfer;
+    if (transfer.uploadedByteLength !== offset) throw new AssetTransferError("ASSET_OFFSET_MISMATCH");
+    await deps.bytes.append(owner, operationId, offset, data, signal);
+    return (await get(owner, operationId, signal))!;
+  };
+  const completeBytes = async (owner: AssetOwner, operationId: string, signal: AbortSignal) => {
+    const transfer = await requireTransfer(owner, operationId, signal);
+    if (transfer.status === "complete") {
+      await deps.bytes.removeTransfer(owner, operationId);
+      return transfer;
+    }
+    try {
+      if (transfer.expected.byteLength === 0)
+        await deps.bytes.append(owner, operationId, 0, new Blob([]).stream(), signal);
+      await deps.bytes.publish(owner, operationId, transfer.expected, signal);
+    } catch (error) {
+      if (error instanceof AssetIntegrityError)
+        throw new AssetTransferError("ASSET_INTEGRITY_MISMATCH", { cause: error });
+      throw error;
+    }
+    return { status: "complete" as const, operationId, asset: transfer.expected };
   };
   const append = (
     owner: AssetOwner,
@@ -63,36 +93,11 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
     operations.run(
       owner,
       operationId,
-      async (signal) => {
-        const transfer = await requireTransfer(owner, operationId, signal);
-        if (transfer.status === "complete") return transfer;
-        if (transfer.uploadedByteLength !== offset) throw new AssetTransferError("ASSET_OFFSET_MISMATCH");
-        await deps.bytes.append(owner, operationId, offset, data, signal);
-        return (await get(owner, operationId, signal))!;
-      },
+      (signal) => appendBytes(owner, operationId, offset, data, signal),
       requestSignal,
     );
   const complete = (owner: AssetOwner, operationId: string, requestSignal?: AbortSignal) =>
-    operations.run(
-      owner,
-      operationId,
-      async (signal) => {
-        const transfer = await requireTransfer(owner, operationId, signal);
-        if (transfer.status === "complete") {
-          await deps.bytes.removeTransfer(owner, operationId);
-          return transfer;
-        }
-        try {
-          await deps.bytes.publish(owner, operationId, transfer.expected, signal);
-        } catch (error) {
-          if (error instanceof AssetIntegrityError)
-            throw new AssetTransferError("ASSET_INTEGRITY_MISMATCH", { cause: error });
-          throw error;
-        }
-        return { status: "complete" as const, operationId, asset: transfer.expected };
-      },
-      requestSignal,
-    );
+    operations.run(owner, operationId, (signal) => completeBytes(owner, operationId, signal), requestSignal);
   const cancel = (owner: AssetOwner, operationId: string) =>
     operations.interrupt(owner, operationId, async () => {
       const transfer = await get(owner, operationId);
@@ -138,18 +143,25 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
       byteLength: source.size,
       mediaType: source.type || "application/octet-stream",
     };
-    const transfer = await begin(owner, operationId, expected);
-    if (transfer.status === "cancelled") throw new AssetTransferError("ASSET_TRANSFER_CANCELLED");
-    if (transfer.status === "staging")
-      await append(
-        owner,
-        operationId,
-        transfer.uploadedByteLength,
-        source.slice(transfer.uploadedByteLength).stream(),
-        signal,
-      );
-    const completed = await complete(owner, operationId, signal);
-    return completed.asset;
+    return operations.run(
+      owner,
+      operationId,
+      async (stageSignal) => {
+        const transfer = await begin(owner, operationId, expected, stageSignal);
+        if (transfer.status === "cancelled") throw new AssetTransferError("ASSET_TRANSFER_CANCELLED");
+        if (transfer.status === "staging")
+          await appendBytes(
+            owner,
+            operationId,
+            transfer.uploadedByteLength,
+            source.slice(transfer.uploadedByteLength).stream(),
+            stageSignal,
+          );
+        const completed = await completeBytes(owner, operationId, stageSignal);
+        return completed.asset;
+      },
+      signal,
+    );
   };
   return { begin, get, append, complete, cancel, read, verifyComplete, stage };
 };

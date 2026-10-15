@@ -5,6 +5,7 @@ import type {
   ExtensionStorageCollectionApi,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
+import { createMemoryAssets } from "./memory-assets";
 
 export const createMemoryStorage = (): ExtensionStorageApi => {
   const kv = new Map<string, unknown>();
@@ -70,6 +71,7 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
   };
 
   const api: ExtensionStorageApi = {
+    assets: createMemoryAssets(),
     files: blobsApi("project"),
     scope(_scope: StorageScope) {
       return api;

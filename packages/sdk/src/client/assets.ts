@@ -1,6 +1,7 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import type { AssetReference, AssetTransfer } from "pstdio-api-contracts";
+import { hashAssetSource } from "./asset-source";
 import { PstdioApiError, PstdioConnectionError, type RequestFn } from "./request";
 
 export interface AssetClientOwner {
@@ -27,28 +28,6 @@ const ownerPath = (owner: AssetClientOwner) =>
   `/v1/projects/${encodeURIComponent(owner.projectId)}/extensions/${encodeURIComponent(owner.extensionInstanceId)}`;
 const operationPath = (input: AssetOperationInput) =>
   `${ownerPath(input)}/asset-transfers/${encodeURIComponent(input.operationId)}`;
-const hashSource = async (source: Blob, signal?: AbortSignal) => {
-  const hash = sha256.create();
-  const reader = source.stream().getReader();
-  const abort = () => {
-    void reader.cancel(signal?.reason).catch(() => undefined);
-  };
-  signal?.addEventListener("abort", abort, { once: true });
-  try {
-    while (true) {
-      signal?.throwIfAborted();
-      const { done, value } = await reader.read();
-      signal?.throwIfAborted();
-      if (done) break;
-      hash.update(value);
-    }
-    return bytesToHex(hash.digest());
-  } finally {
-    signal?.removeEventListener("abort", abort);
-    reader.releaseLock();
-  }
-};
-
 const retryable = (error: unknown) =>
   error instanceof PstdioConnectionError ||
   (error instanceof PstdioApiError && (error.status >= 500 || error.code === "ASSET_OFFSET_MISMATCH"));
@@ -68,7 +47,7 @@ export const createAssetsClient = (request: RequestFn) => {
     if (transfer.status === "cancelled")
       throw new PstdioApiError("Asset transfer cancelled", 409, "ASSET_TRANSFER_CANCELLED");
     while (transfer.status === "staging" && transfer.uploadedByteLength < expected.byteLength) {
-      const offset = transfer.uploadedByteLength;
+      const offset: number = transfer.uploadedByteLength;
       const body = await input.source.slice(offset, offset + 8 * 1024 * 1024).arrayBuffer();
       transfer = await request<AssetTransfer>(`${operationPath(input)}/content?offset=${offset}`, {
         method: "POST",
@@ -88,7 +67,7 @@ export const createAssetsClient = (request: RequestFn) => {
   };
   const upload = async (input: AssetUploadInput) => {
     const expected = {
-      sha256: await hashSource(input.source, input.signal),
+      sha256: await hashAssetSource(input.source, input.signal),
       byteLength: input.source.size,
       mediaType: input.source.type || "application/octet-stream",
     };

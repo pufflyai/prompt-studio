@@ -1,8 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { assetBytePaths } from "../storage/asset-byte-paths";
 import { createAssetBytesStorage } from "./asset-bytes";
 
 const roots: string[] = [];
@@ -32,12 +33,17 @@ test("partial asset bytes survive reopening and publish only after complete veri
   expect(await first.append(scope, "upload", 0, stream("abc"))).toBe(3);
   const reopened = createAssetBytesStorage(root);
   expect(await reopened.progress(scope, "upload")).toBe(3);
-  await expect(reopened.publish(scope, "upload", asset)).rejects.toThrow();
-  await expect(reopened.open(scope, asset)).rejects.toThrow();
+  expect(await reopened.publish(scope, "upload", asset).catch((error: unknown) => error)).toBeInstanceOf(Error);
+  expect(await reopened.open(scope, asset).catch((error: unknown) => error)).toBeInstanceOf(Error);
   expect(await reopened.append(scope, "upload", 3, stream("def"))).toBe(6);
   expect(await reopened.publish(scope, "upload", asset)).toEqual(asset);
   expect(await new Response(await reopened.open(scope, asset)).text()).toBe("abcdef");
-  await expect(reopened.open({ ...scope, workbenchId: "other" }, asset)).rejects.toThrow();
+  expect(
+    await reopened.open({ ...scope, workbenchId: "other" }, asset).catch((error: unknown) => error),
+  ).toBeInstanceOf(Error);
+  expect(
+    await reopened.open({ ...scope, extensionId: "other" }, asset).catch((error: unknown) => error),
+  ).toBeInstanceOf(Error);
 });
 
 test("integrity failure keeps staged bytes without publishing a readable version", async () => {
@@ -46,9 +52,26 @@ test("integrity failure keeps staged bytes without publishing a readable version
   const storage = createAssetBytesStorage(root);
   const asset = reference("correct");
   await storage.append(scope, "upload", 0, stream("invalid"));
-  await expect(storage.publish(scope, "upload", asset)).rejects.toThrow();
-  await expect(storage.open(scope, asset)).rejects.toThrow();
+  expect(await storage.publish(scope, "upload", asset).catch((error: unknown) => error)).toBeInstanceOf(Error);
+  expect(await storage.open(scope, asset).catch((error: unknown) => error)).toBeInstanceOf(Error);
   expect(await storage.progress(scope, "upload")).toBe(7);
+});
+
+test("publication storage failures retain recoverable staged bytes without exposing a version", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pstdio-assets-"));
+  roots.push(root);
+  const storage = createAssetBytesStorage(root);
+  const asset = reference("recoverable");
+  await storage.append(scope, "upload", 0, stream("recoverable"));
+  const versions = dirname(assetBytePaths(root, scope).version(asset.sha256));
+  await mkdir(dirname(versions), { recursive: true });
+  await writeFile(versions, "Unavailable storage directory");
+  expect(await storage.publish(scope, "upload", asset).catch((error: unknown) => error)).toBeInstanceOf(Error);
+  expect(await storage.open(scope, asset).catch((error: unknown) => error)).toBeInstanceOf(Error);
+  expect(await storage.progress(scope, "upload")).toBe(asset.byteLength);
+  await rm(versions);
+  await storage.publish(scope, "upload", asset);
+  expect(await new Response(await storage.open(scope, asset)).text()).toBe("recoverable");
 });
 
 test("upload bytes reach local storage before the next source chunk is requested", async () => {
