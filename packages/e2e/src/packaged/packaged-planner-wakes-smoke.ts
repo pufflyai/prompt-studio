@@ -90,6 +90,20 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     expect(text.length).toBeLessThan(prompts[0].length / 4);
     expect(await execute("auto-build.read")).toMatchObject({ prompt: updated.prompt, blockOnReview: false });
     await execute("auto-build.configure", { enabled: false });
+    const restartedBrief = "Start a fresh packaged Auto Build run.";
+    await execute("auto-build.configure", { enabled: true, prompt: restartedBrief });
+    const restarted = await completedSupervisor();
+    expect(restarted.id).not.toBe(session.id);
+    const restartedConversation = await request(`/sessions/${restarted.id}/conversation`);
+    const restartedPrompts = restartedConversation.messages.filter(
+      (message: { role: string }) => message.role === "user",
+    );
+    expect(restartedPrompts).toHaveLength(1);
+    expect(restartedPrompts[0].parts).toContainEqual(
+      expect.objectContaining({ text: expect.stringContaining(restartedBrief) }),
+    );
+    expect((await request(`/sessions/${session.id}/conversation`)).messages).toEqual(changed.messages);
+    await execute("auto-build.configure", { enabled: false });
     const ticket = await execute("create-ticket", { content: "# Short managed implementation", status: "Todo" });
     const { attempt } = await execute("run-attempt", { ticket: ticket.id });
     const expectStatus = async (statusId: string) => {
