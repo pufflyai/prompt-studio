@@ -12,7 +12,7 @@ interface PlacementResourceSyncInput {
 }
 // Workspace capabilities can change file access for any extension resource.
 export const isResourceRefreshEvent = (id: string, extensionId: string) =>
-  id.startsWith(`${extensionId}.event.`) || id === viewDataEvents.workspacesChanged.id;
+  id.startsWith(`${extensionId}.`) || id === viewDataEvents.workspacesChanged.id;
 
 export const refreshWorkbenchResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   const placements = Object.values(ctx.layout.getLayout().regions)

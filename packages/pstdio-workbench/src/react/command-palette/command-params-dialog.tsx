@@ -67,7 +67,12 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
 const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandParamsRequest }) => {
   const { request, renderParamField, prepareArgs, executeOptionCommand, onClose, onRun, onRunError } = props;
   const [values, setValues] = useState<Record<string, CommandParamValue>>(() =>
-    buildCommandParamInitialValues(request.record.command.params, request.args, request.context),
+    buildCommandParamInitialValues(
+      request.record.command.params,
+      request.args,
+      request.context,
+      request.record.command.resourceMutation,
+    ),
   );
   const [resolved] = useState(() =>
     resolveCommandResourceParams(request.record.command.params, request.args, request.context),
@@ -114,7 +119,14 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
             args,
             context: request.context,
             onArgsChange: (nextArgs) =>
-              setValues(buildCommandParamInitialValues(request.record.command.params, nextArgs, request.context)),
+              setValues(
+                buildCommandParamInitialValues(
+                  request.record.command.params,
+                  nextArgs,
+                  request.context,
+                  request.record.command.resourceMutation,
+                ),
+              ),
           })
         : args;
       const submission = {

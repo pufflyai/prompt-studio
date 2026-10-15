@@ -50,6 +50,7 @@ const openNoteWorkbench = (resolve: (resource: ResourceRef) => Promise<ResourceR
 describe("open extension resource sync", () => {
   test.each([
     `${extensionId}.event.notes.changed`,
+    `${extensionId}.notes.changed`,
     viewDataEvents.workspacesChanged.id,
   ])("refreshes all placements after %s", async (eventId) => {
     let writable = true;

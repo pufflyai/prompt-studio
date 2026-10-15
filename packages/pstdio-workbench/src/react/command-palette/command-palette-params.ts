@@ -1,6 +1,6 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { FileUploadValue } from "@pstdio/ui/param-editor";
-import type { CommandParamDescriptor, CommandParamSchema, WorkbenchCommandExecutionContext } from "../../core";
+import type { Command, CommandParamDescriptor, CommandParamSchema, WorkbenchCommandExecutionContext } from "../../core";
 export interface CommandFilesParamValue {
   refs: string[];
   uploads: FileUploadValue[];
@@ -111,17 +111,32 @@ export const resolveCommandResourceParams = (
       ]),
   );
 };
+const renameLabelDefault = (
+  key: string,
+  base: Record<string, unknown>,
+  context: WorkbenchCommandExecutionContext | undefined,
+  mutation: Command["resourceMutation"],
+) => {
+  const resource = context?.resource;
+  if (mutation?.kind !== "rename" || key !== mutation.labelParam || resource?.type !== mutation.resourceType)
+    return undefined;
+  const id = base[mutation.idParam];
+  return id === undefined || id === resource.id ? resource.label : undefined;
+};
 export const buildCommandParamInitialValues = (
   params: CommandParamSchema | undefined,
   baseArgs?: unknown,
   context?: WorkbenchCommandExecutionContext,
+  mutation?: Command["resourceMutation"],
 ): Record<string, CommandParamValue> => {
   const base = isRecord(baseArgs) ? baseArgs : {};
   const values: Record<string, CommandParamValue> = {};
   for (const entry of listCommandParamEntries(params)) {
     const raw = Object.hasOwn(base, entry.key)
       ? base[entry.key]
-      : (resourceContextValue(entry, context) ?? entry.defaultValue);
+      : (renameLabelDefault(entry.key, base, context, mutation) ??
+        resourceContextValue(entry, context) ??
+        entry.defaultValue);
     if (entry.type === "boolean") {
       values[entry.key] = raw === undefined ? undefined : raw === true || raw === "true";
       continue;
