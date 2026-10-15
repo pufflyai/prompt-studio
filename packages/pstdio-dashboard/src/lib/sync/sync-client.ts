@@ -1,17 +1,10 @@
-import {
-  createClient,
-  parseSyncDeleteEvent as parseSdkSyncDeleteEvent,
-  type SyncConnection,
-  type SyncWriter,
-} from "@pstdio/sdk/client";
+import { createClient, parseSyncDeleteEvent as parseSdkSyncDeleteEvent, type SyncWriter } from "@pstdio/sdk/client";
 import type { ResourceAnchorChangeEvent, ResourceRemovedEvent } from "@pstdio/sdk/extensions";
 import { apiClientOptions } from "@/lib/api";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { publishResourceAnchorChange } from "@/shared/extensions/resource-anchor-feed";
 import { publishResourceRemoval } from "@/shared/extensions/resource-removal-feed";
 import { getRuntimeCollections } from "./collections";
-
-export type SyncClient = SyncConnection;
 
 interface SyncCallbacks {
   onConnected?: () => void;

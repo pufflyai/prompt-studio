@@ -143,7 +143,9 @@
         "src/**/*.typecheck.ts"
       ],
       "project": ["src/**/*.ts"],
-      "ignore": ["dist/**"]
+      "ignore": ["dist/**"],
+      // tsconfig.build.json includes this transitive contract source in the declaration bundle.
+      "ignoreDependencies": ["pstdio-sync-contracts"]
     },
     "packages/pstdio-workbench": {
       "entry": [
@@ -159,8 +161,8 @@
       ],
       "project": [".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**", "storybook-static/**"],
-      // The build inlines pstdio-extensions and pstdio-api-contracts (build-entries.ts), so dist imports their dependencies.
-      "ignoreDependencies": ["rimless", "zod"]
+      // The build inlines private contracts and extensions (build-entries.ts); sync types also enter via tsconfig.build.json.
+      "ignoreDependencies": ["pstdio-sync-contracts", "rimless", "zod"]
     },
     "packages/ui": {
       "entry": [

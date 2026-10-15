@@ -1,9 +1,6 @@
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import { apiRequest, createApiRequest } from "@/lib/api";
-
-export const fetchWorkspaceProviders = (projectId: string, signal?: AbortSignal) =>
-  apiRequest<WorkspaceProviderDescriptor[]>(`/v1/projects/${projectId}/workspace-providers`, { signal });
+import { createApiRequest } from "@/lib/api";
 
 export const workspaceProvidersQueryKey = (projectId: string | undefined) =>
   ["workspace-providers", projectId] as const;

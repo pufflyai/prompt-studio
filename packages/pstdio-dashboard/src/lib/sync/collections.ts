@@ -250,7 +250,6 @@ export const releaseRuntimeCollections = async (connection: ReturnType<typeof ap
 };
 export const getCollection = (table: SyncedTable) => getRuntimeCollections().getCollection(table);
 export const getWriter = (table: string) => getRuntimeCollections().getWriter(table);
-export const getAllCollections = () => getRuntimeCollections().getAllCollections();
 export const getIndexedRows = (table: SyncedTable, field: string, value: unknown) =>
   getRuntimeCollections().getIndexedRows(table, field, value);
 export const getCollectionsVersion = () => getRuntimeCollections().getCollectionsVersion();

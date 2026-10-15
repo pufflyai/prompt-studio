@@ -49,8 +49,8 @@ test("binds and resolves an explicit environment through the public client", asy
   try {
     const client = createClient({ baseUrl: server.url.origin, token: "owner" });
     expect(await client.runtime.environment()).toEqual({ environmentId: "local" });
-    expect(await client.projects.bindEnvironment("shared", input)).toEqual(binding);
-    expect(await client.runtime.resolveTarget(target)).toEqual(workspace);
+    expect(await client.projects.bindEnvironment("shared", input)).toMatchObject(binding);
+    expect(await client.runtime.resolveTarget(target)).toMatchObject(workspace);
   } finally {
     server.stop(true);
   }

@@ -29,7 +29,8 @@ layer-map change.
 2. **Public authoring SDK**
    `@pstdio/sdk` exposes extension and client authoring APIs. Runtime or host
    contracts shared with the API live below it in `pstdio-api-contracts`, not in
-   API packages.
+   API packages. The SDK and workbench declare `pstdio-sync-contracts` as a build
+   dependency and inline its types and schemas into their public packages.
 
 3. **Extension runtime**
    `pstdio-extensions` owns extension discovery, metadata normalization, bridge
