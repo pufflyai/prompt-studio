@@ -9,21 +9,17 @@ blocked_reason: ""
 
 # {{TICKET_TITLE}}
 
-[Describe the change and its user-visible outcome in one to three sentences.]
+<!-- A reader should know within a minute what changes for users and why. Put detail in the ticket's files. -->
+
+[One or two sentences: what users can do after this ships.]
 
 ## Why
 
-[Describe the problem or opportunity. What is broken or missing today? Why should it change now?]
+[What is broken or missing today, and why it should change now. At most three sentences.]
 
-## Goals
+## Scenarios
 
-- [Outcome]
-
-### Non-goals
-
-- [What is explicitly not included]
-
-## User scenarios and acceptance
+<!-- At most five. Put the rest in files/scenarios.md. -->
 
 ### Scenario: [Title] (Priority: P1)
 
@@ -31,18 +27,6 @@ blocked_reason: ""
 
 Repeat the scenario section for each distinct behavior.
 
-## Implementation outline
+## Not doing
 
-[List the implementation phases in order.]
-
-## Product changes
-
-- [Affected feature, workflow, screen, integration, or capability. Do not list code paths here.]
-
-## Assumptions
-
-- A1: [Assumption]
-
-## Risks and open questions
-
-- [Potential issue, conflict, discrepancy, risk, or unanswered question]
+- [What this proposal leaves out]

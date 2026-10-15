@@ -1,4 +1,5 @@
 {
+  "requests.navigation.label": "Demandes de révision",
   "timeline.page.title": "Chronologie du projet",
   "timeline.view.title": "Chronologie du projet",
   "commands.autoBuild.title": "Construire automatiquement",

@@ -1,6 +1,7 @@
 import {
   defineCommand,
   type ExtensionContextBase,
+  l10n,
   params,
   type RendererContext,
   type TreeAction,
@@ -12,7 +13,8 @@ import { statusesCollection, ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
-import { ticketPageTarget } from "../data/ticket-page-target";
+import { listTicketReviewRequests } from "../data/review-request-storage";
+import { REVIEW_REQUESTS_DOCUMENT, ticketPageTarget, ticketRequestsTarget } from "../data/ticket-page-target";
 import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
@@ -202,6 +204,18 @@ export const listTicketFilesTree = async (
       },
     });
 
+  const reviewRequests = await listTicketReviewRequests(ctx.storage, ticket.id);
+  const openRequests = reviewRequests.requests.filter((request) => request.state === "open").length;
+  const reviewRequestsNode: TreeNode = {
+    id: REVIEW_REQUESTS_DOCUMENT,
+    label: l10n("requests.navigation.label", "Review requests"),
+    icon: "MessageSquare",
+    description: openRequests > 0 ? `${openRequests} open` : undefined,
+    target: ticketRequestsTarget(ticketResource),
+    selected: selectedDocument === REVIEW_REQUESTS_DOCUMENT,
+  };
+  const hasReviewRequests = reviewRequests.requests.length > 0 || reviewRequests.errors.length > 0;
+
   const ticketSection: TreeViewSection = {
     id: "ticket",
     collapsible: false,
@@ -214,6 +228,7 @@ export const listTicketFilesTree = async (
         target: selectTarget(TICKET_BODY_ID),
         selected: selectedDocument === TICKET_BODY_ID,
       },
+      ...(hasReviewRequests ? [reviewRequestsNode] : []),
     ],
   };
 

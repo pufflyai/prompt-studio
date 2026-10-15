@@ -26,7 +26,12 @@ import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { ticketBoard, timelineBoard } from "./data/ticket-board";
-import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target";
+import {
+  ticketDocumentPage,
+  ticketPageTarget,
+  ticketRequestsPage,
+  ticketRequestsTarget,
+} from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
@@ -88,11 +93,11 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/ticket-review-requests.tsx", baseUrl),
-      capabilities: ["commands.execute", "navigation.open"],
+      capabilities: ["commands.execute"],
     },
   });
   const requestsPage = definePage({
-    id: "ticket-requests",
+    id: ticketRequestsPage.id,
     title: l10n("requests.page.title", "Review requests"),
     parent: { kind: "page", id: "tickets" },
     path: "ticket-requests",
@@ -118,11 +123,7 @@ export const createPlannerUi = (baseUrl: string) => {
       onRowActivate: async (ctx, { row }) => {
         if (!row.resource) return;
         const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(
-          pending
-            ? { kind: "page", page: requestsPage.ref, resource: row.resource, parent: ticketPageTarget(row.resource) }
-            : ticketPageTarget(row.resource),
-        );
+        ctx.navigation.open(pending ? ticketRequestsTarget(row.resource) : ticketPageTarget(row.resource));
       },
       onAttributeChange: setTicketAttribute,
       onReorder: reorderTicket,
@@ -218,6 +219,12 @@ export const createPlannerUi = (baseUrl: string) => {
       defineNavigationTree({
         id: "ticket-files",
         owner: ticketDetailPage.ref,
+        slot: "content",
+        view: files.ref,
+      }),
+      defineNavigationTree({
+        id: "ticket-requests-files",
+        owner: requestsPage.ref,
         slot: "content",
         view: files.ref,
       }),
