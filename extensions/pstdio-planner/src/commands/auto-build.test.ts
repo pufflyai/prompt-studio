@@ -2,36 +2,10 @@ import { expect, setSystemTime, test } from "bun:test";
 import { listAttempts, putAttempt } from "../data/attempt-storage";
 import { putTicket } from "../data/collections";
 import { autoBuildCommand } from "./auto-build";
-import { fixture } from "./auto-build.fixture";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
 import { autoBuildScopeCommand } from "./auto-build-scope";
-
-async function supervisorFixture(limit = 2) {
-  const result = await fixture(limit);
-  const sessions = new Map<string, { id: string; title: string; status: string; last_request_started: string }>();
-  const prompts: { sessionId: string; prompt?: string }[] = [];
-  result.ctx.sessions.create = async (input) => {
-    const session = {
-      type: "session" as const,
-      id: `supervisor-${sessions.size}`,
-      title: input.title,
-      status: "in_progress" as const,
-      last_request_started: new Date().toISOString(),
-    };
-    sessions.set(session.id, session);
-    prompts.push({ sessionId: session.id, prompt: input.prompt });
-    return session;
-  };
-  result.ctx.sessions.get = async (id) => sessions.get(id) ?? null;
-  result.ctx.sessions.list = async () => [...sessions.values()] as never;
-  result.ctx.sessions.followup = async (input) => {
-    prompts.push(input);
-    sessions.get(input.sessionId)!.status = "in_progress";
-    sessions.get(input.sessionId)!.last_request_started = new Date().toISOString();
-  };
-  return { ...result, sessions, prompts };
-}
+import { supervisorFixture } from "./auto-build-supervisor.fixture";
 
 test("starts one supervisor with the user prompt instead of dispatching implementation itself", async () => {
   const { ctx, ticket, storage, prompts } = await supervisorFixture();
