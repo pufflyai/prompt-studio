@@ -223,7 +223,8 @@ The host adds **Copy link** to the breadcrumb menu on every page. It copies the 
 document. Do not add a separate copy-link action or view to an extension.
 
 A resource kind's `resolveMany` command returns current `ResourceResolution` records with owner page targets.
-The dashboard also uses this resolver for the open resource after navigation and owner events. When the target
+When no single-resource `resolve` command is declared, the dashboard also uses this resolver for the open
+resource after navigation and owner events. When the target
 matches the open page, resource, and selected document, its parent chain restores the breadcrumb ancestry.
 The open page keeps its params, section, and source position. Keep document-selection metadata in the returned
 reference. For a file inside another resource, return a file-labeled target with the resource's body target as
