@@ -21,7 +21,9 @@ export const exerciseIntegratedShell = async (root: HTMLElement, fixture: Window
   await waitFor(() => expect(canvas.getByTestId("workbench-side-panel-floating")).toBeVisible());
   await expect(files()).toBeVisible();
   await expect(visibleWindowingLabel(root, "Files mount")).toHaveTextContent(mount!);
-  await user.click(canvas.getByRole("button", { name: "Close Side Panel" }));
+  await user.click(
+    within(canvas.getByTestId("workbench-side-panel-floating")).getByRole("button", { name: "Hide Sidebar" }),
+  );
   await user.click(canvas.getByRole("button", { name: "Show Sidebar" }));
   await waitFor(() => expect(canvas.getByTestId("workbench-side-panel-attached")).toBeVisible());
   await expect(files()).toBeVisible();

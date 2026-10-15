@@ -21,14 +21,14 @@ Proposed implementation. The product owner accepted the initial rules on 2026-10
 | Page expansion (2026-10-13) | Page `expandable` defaults to allowed | PS-701; PS-616 |
 | Tabs and declared tools (2026-10-13) | Every tab can close and move; declarations provide reopen and reset | PS-702; PS-610; PS-617 |
 | Panel closing and keyboard resize (2026-10-13) | Drag the resize edge to close; keys move the separator in their direction | PS-704 |
-| Floating Side bubble (2026-10-13) | Visible while open; click toggles floating Side | PS-614 |
+| Floating Side bubble (updated 2026-10-15) | Hidden while floating Side is open; the panel covers the launcher anchor | PS-614; PS-752 |
 | Tab menus and drop labels (2026-10-13) | Pin/Unpin and Close only; drop labels name the owner | PS-613 |
 | Inner page edge drops (2026-10-13) | Open a closed page panel and move the tab together | PS-700; PS-613 |
 | Boombox and Kiln examples (2026-10-13) | Boombox hides tab headers; Kiln mixes a togglable sessions Side with a fixed Timeline panel | PS-610 |
 
-The integration branch is `feature/workbench-panels-integration`. Each child has a separate PR against it. PS-606 records the initial decisions; PS-699 records the updates for PS-700, PS-701, PS-702, and PS-704 alongside PS-607 through PS-619. Children follow dependency order. PS-581 completes only after PS-619 passes. Dashboard and extension migration remain later work.
+The integration branch is `feature/workbench-panels-integration`. Each child has a separate PR against it. PS-606 records the initial decisions; PS-699 records the updates for PS-700, PS-701, PS-702, and PS-704 alongside PS-607 through PS-619. PS-752 records the 2026-10-15 menu, drag, and floating-panel corrections. Children follow dependency order. PS-581 completes only after PS-619 passes. Dashboard and extension migration remain later work.
 
-Ticket support files are stored by Planner and excluded from Git. This document records the accepted rules for PR review. The [Planner record: page panels and controls](/projects/0f3e0b9e-236d-4b54-a77c-4b1d4e4ae9ce/extensions/pstdio.pstdio-planner/ticket?resource=pstdio%3A%2F%2Fextension-resource%2Fticket%2F2d6bf607-5ea2-4b3c-a020-539fbfb12753%3FextensionId%3Dpstdio.pstdio-planner%26projectId%3D0f3e0b9e-236d-4b54-a77c-4b1d4e4ae9ce&document=f051a647-1f7c-45b2-8fb2-a68ff9114569) opens in Prompt Studio and holds decisions 1 through 13, API impact, and ticket mapping. Read its local copy with `pst tickets files --id PS-542`; update and save it with `pst tickets save --id PS-542` when an accepted rule changes.
+Ticket support files are stored by Planner and excluded from Git. This document records the accepted rules for PR review. The [Planner record: page panels and controls](/projects/0f3e0b9e-236d-4b54-a77c-4b1d4e4ae9ce/extensions/pstdio.pstdio-planner/ticket?resource=pstdio%3A%2F%2Fextension-resource%2Fticket%2F2d6bf607-5ea2-4b3c-a020-539fbfb12753%3FextensionId%3Dpstdio.pstdio-planner%26projectId%3D0f3e0b9e-236d-4b54-a77c-4b1d4e4ae9ce&document=f051a647-1f7c-45b2-8fb2-a68ff9114569) opens in Prompt Studio and holds decisions 1 through 14, API impact, and ticket mapping. Read its local copy with `pst tickets files --id PS-542`; update and save it with `pst tickets save --id PS-542` when an accepted rule changes.
 
 ## Mission fit
 
@@ -169,7 +169,7 @@ Moving a routed primary editor from Main to page side or page secondary preserve
 
 ## 9. Panel menus beside the editor
 
-Page-owned `panelMenus.left` and `panelMenus.right` start below the editor header, beside its content. The header spans the editor and both menus. The page side panel has a top border. They belong to the page, not a tab. They have no header, tabs, add action, or drop target. The declaration supplies the menu; layout stores its visibility, never a fake tab. The ticket Inspector and Notes notebook list are menus.
+Page-owned `panelMenus.left` and `panelMenus.right` start below the editor header, beside its content. The header spans the editor and both menus. The Main and page-side tab headers have no divider between them, and the page-side header has no top border (product-owner correction, 2026-10-15). Their content divider starts below the headers. Menus belong to the page, not a tab. They have no header, tabs, add action, or drop target. The declaration supplies the menu; layout stores its visibility, never a fake tab. The ticket Inspector and Notes notebook list are menus.
 
 ## 10. Page header controls
 
@@ -199,7 +199,7 @@ The planned `slots[].locked` and placement `locked` fields were never published 
 
 Panel headers have no close or hide button. A panel closes when its resize edge is dragged past half its minimum size and released. It fades while the drag would close it and reopens at its previous size. A panel that cannot close has no resize-to-close. Mode toggles, the page panels menu, and the same workbench commands provide keyboard and agent actions.
 
-Floating Side has no resize edge to drag. Its bubble stays visible while open: click opens floating Side, and another click closes it. The global Side control continues to open Side attached.
+Floating Side has no resize edge to drag. Clicking the launcher opens floating Side over the launcher anchor and hides the launcher. The panel's Hide Sidebar action closes it and restores the launcher. This product-owner correction on 2026-10-15 supersedes the earlier always-visible bubble rule. The global Side control continues to open Side attached.
 
 ## 16. Tab menus and owner-labelled drop previews
 
@@ -209,7 +209,7 @@ Hide/show a panel header from a context menu on the visible header or hidden top
 
 ## 17. Inner page edge drops
 
-While a tab is dragged, a band inside the page frame previews a closed page side or bottom panel at its current edge. Dropping opens it and moves the existing tab together, without creating a default tab. The outer window edge still targets closed mode Side or Secondary. Where the edges meet, the outer edge wins, and the inner band remains wide enough to reach. The artifact's 48px band is prototype geometry, not a public setting. Opening and tab acceptance must pass the same panel policy as commands.
+While a tab is dragged, invisible hit areas inside the page frame target its closed side and bottom panels at their current edges. Only the hovered valid destination shows a filled cover, without an accent outline. These targets work before the panels have ever opened. Dropping opens the panel and moves the existing tab together, without creating a default tab. The outer window edge still targets closed mode Side or Secondary. Where the edges meet, the outer edge wins, and the inner area remains wide enough to reach. The artifact's 48px band is prototype geometry, not a public setting. Opening and tab acceptance must pass the same panel policy as commands.
 
 ## 18. Kiln's mixed panel rules
 

@@ -1,9 +1,15 @@
 import { Box } from "@chakra-ui/react";
-import { Header, type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
+import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
-import { PanelDragArea } from "../region/panel-drag-area";
+import {
+  geometryPositions,
+  moveGeometry,
+  PanelDragArea,
+  PanelDragHandle,
+  panelPositionLabel,
+} from "../region/panel-drag-area";
 import { WorkbenchRegion } from "../region/region";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -17,10 +23,18 @@ interface WorkbenchSidenavProps {
 
 export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
   const { workbench, contextActions } = props;
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const placementActions = geometryPositions(workbench, "sidenav", layout).map((edge) => ({
+    key: `navigation-${edge}`,
+    label: panelPositionLabel("sidenav", edge),
+    onClick: () => {
+      void moveGeometry(workbench, "sidenav", edge);
+    },
+  }));
 
   return (
-    <ResourceContextMenu actions={contextActions} closeOnSelect={false} keepMountedWhenEmpty>
-      <Box h="full" minH="0" minW="0" w="full">
+    <ResourceContextMenu actions={[...contextActions, ...placementActions]} closeOnSelect={false} keepMountedWhenEmpty>
+      <PanelDragHandle workbench={workbench} panel="sidenav" h="full" minH="0" minW="0" w="full">
         <WorkbenchFocusRegion
           workbench={workbench}
           region="sidenav"
@@ -36,16 +50,11 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
           overflow="hidden"
           w="full"
         >
-          <PanelDragArea workbench={workbench} panel="sidenav" asChild>
-            <Header variant="main" flexShrink={0}>
-              Navigation
-            </Header>
-          </PanelDragArea>
           <Box flex="1" minH="0" minW="0" overflow="hidden">
             <WorkbenchRegion workbench={workbench} region="sidenav" title="Sidenav" />
           </Box>
         </WorkbenchFocusRegion>
-      </Box>
+      </PanelDragHandle>
     </ResourceContextMenu>
   );
 };

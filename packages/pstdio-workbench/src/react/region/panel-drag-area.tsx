@@ -38,7 +38,7 @@ interface PanelDragAreaProps extends BoxProps {
   panel: GeometryDrag;
 }
 const occupied =
-  "button,a,input,textarea,select,[role='button'],[role='tab'],[role='menuitem'],[contenteditable='true'],[data-workbench-tab],[data-workbench-breadcrumb]";
+  "button,a,input,textarea,select,[role='button'],[role='tab'],[role='menuitem'],[role='treeitem'],[role='option'],[contenteditable='true'],[data-workbench-tab],[data-workbench-breadcrumb]";
 export const PanelDragHandle = (props: PanelDragAreaProps) => {
   const { workbench, panel, ...rest } = props;
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);

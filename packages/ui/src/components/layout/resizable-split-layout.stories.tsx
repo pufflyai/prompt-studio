@@ -74,6 +74,27 @@ const meta = {
 
 export default meta;
 
+const PagePanel = (props: { title: string }) => {
+  const { title } = props;
+  return (
+    <Flex direction="column" h="full" minW="0" bg="bg">
+      <Header variant="main">{title}</Header>
+      <Box p="md">
+        <Text textStyle="label/S/regular">The divider starts below this header.</Text>
+      </Box>
+    </Flex>
+  );
+};
+
+export const ContentDividerBelowHeaders: StoryObj<typeof meta> = {
+  args: {
+    separator: "content-line",
+    resizableSide: "right",
+    resizablePanel: <PagePanel title="Session" />,
+    contentPanel: <PagePanel title="Files" />,
+  },
+};
+
 type Story = StoryObj<typeof meta>;
 
 export const LeftPanel: Story = {};

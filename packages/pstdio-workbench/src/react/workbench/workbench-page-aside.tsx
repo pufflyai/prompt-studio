@@ -27,7 +27,7 @@ export const WorkbenchPageAsideLayout = (props: { workbench: WorkbenchCore; chil
       onCollapsedChange={(collapsed) => {
         if (!collapsed || policy.canClose) void workbench.shell.setRegionOpen("aside", !collapsed);
       }}
-      separator="line"
+      separator={policy.showHeader ? "content-line" : "line"}
     />
   );
 };

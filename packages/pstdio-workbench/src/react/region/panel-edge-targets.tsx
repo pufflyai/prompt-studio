@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import { useDroppable } from "@dnd-kit/core";
 import type { PanelEdge } from "@pstdio/sdk/extensions";
-import { DropIndicator } from "@pstdio/ui";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { geometryEdge } from "../../core/registries/layout/panel-geometry";
@@ -23,10 +22,44 @@ interface EdgeTargetProps {
   panel?: GeometryDrag;
   inner: boolean;
 }
+
+interface EdgePreviewProps {
+  workbench: WorkbenchCore;
+  edge: PanelEdge;
+  region: GeometryDrag;
+  inset: boolean;
+  label: string;
+}
+
+const EdgePreview = (props: EdgePreviewProps) => {
+  const { workbench, edge, region, inset, label } = props;
+  const vertical = edge === "left" || edge === "right";
+  const size = region === "activity" ? undefined : workbench.layout.getRegionSize(region)?.defaultPx;
+  const extent = size ?? (vertical ? 280 : 160);
+  const offset = inset ? "-12" : "0";
+  return (
+    <Box
+      position="absolute"
+      {...(vertical
+        ? { top: "0", bottom: "0", [edge]: offset, w: extent }
+        : { left: "0", right: "0", [edge]: offset, h: extent })}
+      layerStyle="tabDropZone"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      p="sm"
+      pointerEvents="none"
+      data-workbench-edge-preview={region}
+    >
+      <Box layerStyle="panelDropLabel">{label}</Box>
+    </Box>
+  );
+};
+
 const EdgeTarget = (props: EdgeTargetProps) => {
   const { workbench, edge, region, panel, inner } = props;
   const id = useId();
-  const { drop, geometryDrop, destinations } = useTabDrag();
+  const { activeId, drop, geometryDrop, destinations } = useTabDrag();
   const element = useRef<HTMLDivElement | null>(null);
   const [inset, setInset] = useState(false);
   useLayoutEffect(() => {
@@ -53,7 +86,12 @@ const EdgeTarget = (props: EdgeTargetProps) => {
         ),
     );
   }, [workbench, inner, region, edge, destinations]);
-  const { setNodeRef } = useDroppable({ id, data: { region, panel, edge, closedEdge: true, priority: inner ? 1 : 2 } });
+  const allowed = Boolean(panel || (activeId && region && destinations?.includes(region)));
+  const { setNodeRef } = useDroppable({
+    id,
+    disabled: !allowed,
+    data: { region, panel, edge, closedEdge: true, priority: inner ? 1 : 2 },
+  });
   const highlighted = region ? drop?.region === region : geometryDrop?.panel === panel && geometryDrop?.edge === edge;
   const label = region ? panelDropLabel(workbench, region) : panelPositionLabel(panel!, edge);
   return (
@@ -69,36 +107,41 @@ const EdgeTarget = (props: EdgeTargetProps) => {
       {...(inset ? { [edge]: "12" } : {})}
       position="absolute"
       zIndex="popover"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      layerStyle="tabDropZone"
       textStyle="label/XS/medium"
-      pointerEvents="auto"
+      pointerEvents={allowed ? "auto" : "none"}
     >
-      <Box pointerEvents="none">{label}</Box>
-      {highlighted ? <DropIndicator bottom="0" /> : null}
+      {highlighted ? (
+        <EdgePreview workbench={workbench} region={region ?? panel!} edge={edge} inset={inset} label={label} />
+      ) : null}
     </Box>
   );
 };
-export const PanelEdgeTargets = (props: { workbench: WorkbenchCore; inner?: boolean; content?: boolean }) => {
-  const { workbench, inner = false, content = false } = props;
-  const { activeId, panel, destinations } = useTabDrag();
+interface PanelEdgeTargetsProps {
+  workbench: WorkbenchCore;
+  pageRegion?: "aside" | "bottom";
+  content?: boolean;
+}
+
+export const PanelEdgeTargets = (props: PanelEdgeTargetsProps) => {
+  const { workbench, pageRegion, content = false } = props;
+  const inner = pageRegion !== undefined;
+  const { panel } = useTabDrag();
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   if (panel) {
     const local = panel === "aside" || panel === "bottom";
     const onMain = panel === "side" || panel === "main" || panel === "secondary";
-    if (local !== inner || onMain !== content) return null;
+    if (local !== inner || onMain !== content || (inner && panel !== pageRegion)) return null;
     return geometryPositions(workbench, panel, layout).map((edge) => (
       <EdgeTarget key={edge} workbench={workbench} edge={edge} panel={panel} inner={inner} />
     ));
   }
-  if (!activeId) return null;
   if (content) return null;
-  const regions: WorkbenchPanelRegion[] = inner ? ["aside", "bottom"] : ["side", "secondary"];
+  const regions: WorkbenchPanelRegion[] = pageRegion ? [pageRegion] : ["side", "secondary"];
   return regions
-    .filter((region) => destinations?.includes(region) && !workbench.fullscreen.isRegionVisible(region))
+    .filter(
+      (region) => workbench.shell.getPanelPolicy(region).provided && !workbench.fullscreen.isRegionVisible(region),
+    )
     .map((region) => (
       <EdgeTarget
         key={region}

@@ -21,10 +21,10 @@ export const checkFloatingBubblePointer = async (page: Page, storyId: string) =>
   await expect(page.locator("[data-bubble-target]:visible")).toHaveCount(0);
   await expect(bubble).toHaveAttribute("aria-pressed", "false");
   await bubble.click();
-  const close = page.getByRole("button", { name: "Close Side Panel", exact: true });
-  await expect(close).toHaveAttribute("aria-pressed", "true");
   const panel = page.getByTestId("workbench-side-panel-floating");
   await expect(panel).toBeVisible();
+  await expect(bubble).toHaveCount(0);
+  const close = panel.getByRole("button", { name: "Hide Sidebar", exact: true });
   await expect(panel.getByRole("button", { name: "Close Side Panel" })).toHaveCount(0);
   await test.info().attach("Floating Side at top left", { body: await page.screenshot(), contentType: "image/png" });
   await close.click();

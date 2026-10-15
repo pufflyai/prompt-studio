@@ -15,6 +15,7 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { useEffectiveSideMode } from "../workbench/use-main-fullscreen";
 import { FloatingBubble } from "./floating-bubble";
+import { useFloatingSideFocus } from "./use-floating-side-focus";
 
 interface WorkbenchSidePanelProps {
   workbench: WorkbenchCore;
@@ -116,6 +117,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && mode === "floating";
+  const focus = useFloatingSideFocus(workbench, visible, fullscreen);
   const showHeader = policy.legacyHeaders || policy.showHeader;
   const modeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const anchor = useWorkbenchStore(workbench.layout.store, () =>
@@ -129,12 +131,14 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           key={modeId}
           workbench={workbench}
           open={visible}
-          canClose={policy.canClose}
           icon={bubbleIcon}
+          buttonRef={focus.launcher}
+          onOpen={focus.onOpen}
         />
       ) : null}
       {/* Both presentation slots stay connected so hiding cannot release a live iframe. */}
       <BubblePanel
+        ref={focus.panel}
         isOpen={visible}
         aria-label="Side Panel"
         testId="workbench-side-panel-floating"
@@ -143,6 +147,9 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         showHeader={showHeader}
         containerProps={{
           "data-workbench-panel": "side",
+          tabIndex: -1,
+          onFocusCapture: focus.onFocusCapture,
+          onBlurCapture: focus.onBlurCapture,
           position: "absolute",
           pointerEvents: "auto",
           bg: workbenchBackgrounds.widget,
@@ -150,7 +157,14 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
         popOutLabel="Reattach Side Panel"
         onPopOut={fullscreen ? undefined : () => workbench.sidePanel.setMode("attached")}
         closeLabel="Hide Sidebar"
-        onClose={fullscreen && policy.canClose ? () => workbench.fullscreen.hideSide() : undefined}
+        onClose={
+          policy.canClose
+            ? () => {
+                if (fullscreen) workbench.fullscreen.hideSide();
+                else void workbench.shell.setRegionOpen("side", false);
+              }
+            : undefined
+        }
         menu={
           visible ? (
             <PanelHeaderContextMenu workbench={workbench} region="side">

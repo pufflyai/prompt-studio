@@ -29,6 +29,25 @@ Use these general UX and UI patterns across the app and its extensions.
 - Use extra-small inputs for inline file creation and renaming in the side navigation.
 - Inputs and buttons in the same row must have matching heights. Use shared component sizes.
 
+## Menus
+
+- Show a selected menu item's checkmark at the far right. Keep its icon and label together at the left.
+- Selection never changes a menu item's background. Hover and keyboard focus use the same feedback on selected and unselected items.
+- This rule applies to checkbox, radio, searchable, and plain selection menus. Tree items and navigation keep their own selected backgrounds.
+- Use shared menu rows for actions such as Reset layout. Keep the action icon beside its left-aligned label.
+
+## Workbench drag and drop
+
+- Reveal a filled cover only over the valid destination under the dragged item. Do not show every panel target when a drag starts.
+- Cover the destination area. Do not draw an accent outline around it. Tab insertion uses the shared thin insertion indicator instead of a panel cover.
+- Closed page side and bottom panels accept drops before they have ever been opened. Their invisible hit areas remain available during a valid drag.
+- Show one destination at a time where page and mode edges meet. The outer mode edge takes priority; page targets remain reachable inside it.
+- Bubble dragging shows its eight anchor targets. Use a filled background for the nearest target, with no accent outline, and keep the dragged bubble attached to the pointer without flicker.
+- The floating panel covers the launcher's position when it opens. Hide the launcher while the floating panel is open and restore it when the panel closes.
+- Navigation has no added panel title header. Keep the Main and page-side tab headers visually continuous: no divider between their headers and no top border on the page-side header. A content divider may start below the headers.
+
+See the drag-and-drop examples in [the Pencil design system](prompt-studio-design-system.pen).
+
 ## Delete icon buttons
 
 - Use the same style as the Statuses editor for every delete icon button in the app and its extensions.

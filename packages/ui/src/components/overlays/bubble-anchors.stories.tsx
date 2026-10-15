@@ -2,7 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { MessageCircle } from "lucide-react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { BubbleAnchor } from "@/theme/recipes/bubble-anchor";
 import { BubbleButton } from "./bubble-button";
 import { BubblePanel } from "./bubble-panel";
@@ -20,7 +20,13 @@ const AnchoredBubble = (props: { anchor: BubbleAnchor }) => {
       >
         <MessageCircle />
       </BubbleButton>
-      <BubblePanel anchor={anchor} isOpen={open} title="Side Panel">
+      <BubblePanel
+        anchor={anchor}
+        isOpen={open}
+        title="Side Panel"
+        closeLabel="Hide Sidebar"
+        onClose={() => setOpen(false)}
+      >
         <Stack p="sm">
           <Text>Floating Side at {anchor}</Text>
         </Stack>
@@ -45,11 +51,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 const play: Story["play"] = async () => {
   const canvas = within(document.body);
-  const bubble = canvas.getByRole("button", { name: "Close Side Panel" });
-  await expect(bubble).toHaveAttribute("aria-pressed", "true");
-  await expect(canvas.getByRole("dialog", { name: "Side Panel" })).toBeVisible();
-  await userEvent.click(bubble);
-  await expect(canvas.getByRole("button", { name: "Open Side Panel" })).toHaveAttribute("aria-pressed", "false");
+  await waitFor(() => expect(canvas.getByRole("dialog", { name: "Side Panel" })).toBeVisible());
+  await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
+  await expect(await canvas.findByRole("button", { name: "Open Side Panel" })).toHaveAttribute("aria-pressed", "false");
 };
 export const TopLeft: Story = { args: { anchor: "top-left" }, play };
 export const Top: Story = { args: { anchor: "top" }, play };

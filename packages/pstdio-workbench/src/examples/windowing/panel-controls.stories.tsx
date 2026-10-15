@@ -92,7 +92,17 @@ const checkPageHeader = async (root: HTMLElement, label: string, menus: string[]
       .getAllByRole("menuitemcheckbox")
       .map((item) => item.textContent),
   ).toEqual(["Bottom panel", "Side panel", ...menus]);
-  await waitFor(() => expect(within(popup).getByRole("menuitem", { name: "Reset layout" })).toBeVisible());
+  const reset = within(popup).getByRole("menuitem", { name: "Reset layout" });
+  await waitFor(() => expect(reset).toBeVisible());
+  const resetLabel = within(reset).getByText("Reset layout");
+  const resetIcon = reset.querySelector("svg")!;
+  await expect(resetLabel.getBoundingClientRect().left - resetIcon.getBoundingClientRect().right).toBeLessThan(16);
+  for (const item of within(popup).getAllByRole("menuitemcheckbox")) {
+    if (item.getAttribute("aria-checked") !== "true") continue;
+    const check = item.querySelector('[data-part="item-indicator"]')!;
+    await expect(check.querySelector("svg")).not.toBeNull();
+    await expect(item.getBoundingClientRect().right - check.getBoundingClientRect().right).toBeLessThan(16);
+  }
   await userEvent.keyboard("{Escape}");
 };
 export const WorkspacePageHeader: Story = {

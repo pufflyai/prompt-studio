@@ -53,8 +53,10 @@ export const verifyPackagedSessionMenus = async (
   await expect(sessionTab).toBeFocused();
   const instanceId = await sessionTab.locator("..").getAttribute("data-workbench-tab");
   await side.getByRole("button", { name: "Float Side Panel", exact: true }).click();
-  const bubble = page.getByRole("button", { name: "Close Side Panel", exact: true });
-  await expect(bubble).toHaveAttribute("aria-pressed", "true");
+  const bubble = page
+    .getByTestId("workbench-side-panel-floating")
+    .getByRole("button", { name: "Hide Sidebar", exact: true });
+  await expect(page.getByRole("button", { name: "Open Side Panel", exact: true })).toHaveCount(0);
   await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
   await side.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();

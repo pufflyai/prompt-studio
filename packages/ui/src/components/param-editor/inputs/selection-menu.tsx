@@ -1,5 +1,5 @@
 import { Button, Flex, Icon, IconButton, Menu, Portal } from "@chakra-ui/react";
-import { Check, ChevronDown, Square, SquareCheck } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListRow } from "../../list-row/list-row";
 import { filterSearchableMenuItems, SearchableMenu, type SearchableMenuItem } from "../../overlays/searchable-menu";
@@ -37,11 +37,8 @@ export interface SelectionMenuProps {
   onGroupChange?: (optionId: string) => void;
 }
 
-export const selectionIndicator = (multiSelect: boolean, selected: boolean) => {
-  if (multiSelect)
-    return <Icon as={selected ? SquareCheck : Square} boxSize="14px" color={selected ? "fg" : "fg.muted"} />;
-  return selected ? <Icon as={Check} boxSize="14px" color="fg" /> : null;
-};
+export const selectionIndicator = (selected: boolean) =>
+  selected ? <Icon as={Check} boxSize="14px" color="fg" /> : null;
 
 const selectionIconComponent = (option: SelectionMenuOption | undefined) =>
   option?.icon ? getIconComponent(option.icon) : undefined;
@@ -218,7 +215,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                     tooltip={option.description}
                     disabled={option.disabled}
                     isSelected={selected}
-                    endContent={selectionIndicator(multiSelect, selected)}
+                    endContent={selectionIndicator(selected)}
                     onActivate={() => onToggle(option.id)}
                   />
                 </Menu.Item>

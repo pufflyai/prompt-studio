@@ -9,13 +9,13 @@ import {
 } from "react";
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 
-// Two separators share one behaviour. The "gap" separator sits between panel
+// Separators share one behaviour. The "gap" separator sits between panel
 // cards: it is as wide as the panel gap and shows a grip of three dots. The
 // "line" separator divides content inside a panel: it is a 1px border line.
-// Both become a full-length bar after a short hover delay, while dragging, or
-// on keyboard focus, and both have an invisible hit area wider than themselves.
+// "content-line" leaves the header clear. Each becomes a full-length bar on
+// hover, drag or keyboard focus and has an invisible hit area wider than itself.
 
-export type ResizableSplitSeparator = "gap" | "line";
+export type ResizableSplitSeparator = "gap" | "line" | "content-line";
 
 const HOVER_DELAY_MS = 250;
 const GRIP_DOTS = [0, 1, 2];
@@ -115,7 +115,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     onResizeKeyDown,
     onResizeStart,
   } = props;
-  const line = separator === "line";
+  const line = separator !== "gap";
   const layout = resolveHandleLayout(axis.separatorOrientation === "vertical");
   const [hovered, setHovered] = useState(false);
   const hoverTimerRef = useRef(0);
@@ -154,7 +154,6 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       alignItems="center"
       justifyContent="center"
       flexShrink={0}
-      bg={line ? "border.subtle" : undefined}
       cursor={axis.cursor}
       touchAction="none"
       outline="none"

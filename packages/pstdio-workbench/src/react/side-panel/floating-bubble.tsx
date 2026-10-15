@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import { type BubbleAnchor, BubbleButton, BubbleTarget } from "@pstdio/ui";
 import { MessageCircle } from "lucide-react";
-import { type PointerEvent, type ReactNode, useRef, useState } from "react";
+import { type PointerEvent, type ReactNode, type RefObject, useRef, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import {
   type FloatingBubblePosition,
@@ -15,8 +15,9 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 interface FloatingBubbleProps {
   workbench: WorkbenchCore;
   open: boolean;
-  canClose: boolean;
   icon?: ReactNode;
+  buttonRef: RefObject<HTMLButtonElement | null>;
+  onOpen: () => void;
 }
 
 interface BubbleDrag {
@@ -24,11 +25,10 @@ interface BubbleDrag {
   y: number;
   moved: boolean;
   button: HTMLButtonElement;
-  animation?: Animation;
 }
 
 export const FloatingBubble = (props: FloatingBubbleProps) => {
-  const { workbench, open, canClose, icon } = props;
+  const { workbench, open, icon, buttonRef, onOpen } = props;
   const position = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getBubblePosition());
   const anchor = floatingBubbleAnchor(position)!;
   const surface = useRef<HTMLDivElement>(null);
@@ -45,7 +45,7 @@ export const FloatingBubble = (props: FloatingBubbleProps) => {
   const cancel = () => {
     const current = drag.current;
     drag.current = undefined;
-    current?.animation?.cancel();
+    current?.button.style.removeProperty("translate");
     suppressClick.current = Boolean(current);
     setNearest(undefined);
   };
@@ -56,12 +56,8 @@ export const FloatingBubble = (props: FloatingBubbleProps) => {
     const y = event.clientY - current.y;
     if (!current.moved && Math.hypot(x, y) < 4) return;
     current.moved = true;
-    current.animation?.cancel();
-    // Pointer geometry is transient. Recipe variants own all saved positioning.
-    current.animation = current.button.animate(
-      { transform: `translate(${x}px, ${y}px)` },
-      { duration: 1, fill: "forwards" },
-    );
+    // Pointer geometry is transient. Do not restart an animation for every move.
+    current.button.style.setProperty("translate", `${x}px ${y}px`);
     let distance = Infinity;
     let candidate = anchor;
     for (const target of surface.current?.querySelectorAll<HTMLElement>("[data-bubble-target]") ?? []) {
@@ -75,7 +71,7 @@ export const FloatingBubble = (props: FloatingBubbleProps) => {
     nearestRef.current = candidate;
     setNearest(candidate);
   };
-  const label = open ? "Close Side Panel" : "Open Side Panel";
+  const label = "Open Side Panel";
   return (
     <Box ref={surface} data-floating-bubble-surface position="absolute" inset="0" pointerEvents="none" zIndex="popover">
       {Object.keys(floatingBubblePositions).map((name) => (
@@ -87,8 +83,10 @@ export const FloatingBubble = (props: FloatingBubbleProps) => {
         />
       ))}
       <BubbleButton
+        ref={buttonRef}
         anchor={anchor}
         isOpen={open}
+        isDragging={nearest !== undefined}
         aria-label={label}
         aria-description="Drag to move. Arrow keys change the anchor. Home returns to bottom right. Escape cancels movement."
         tooltip={label}
@@ -142,11 +140,8 @@ export const FloatingBubble = (props: FloatingBubbleProps) => {
             return;
           }
           suppressClick.current = false;
-          if (open && !canClose) return;
-          void runUserAction(workbench, label, () => {
-            if (open) return workbench.sidePanel.setMode("closed");
-            return workbench.shell.setRegionOpen("side", true, "floating");
-          });
+          onOpen();
+          void runUserAction(workbench, label, () => workbench.shell.setRegionOpen("side", true, "floating"));
         }}
       >
         {icon ?? <MessageCircle size={20} strokeWidth={2} />}

@@ -1,8 +1,7 @@
 import { Button, Icon as ChakraIcon, Flex, IconButton, Menu, Portal, Stack, Text } from "@chakra-ui/react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 import { NumberInputField, NumberInputRoot } from "@/components/primitives/number-input";
-import { ListRow } from "../list-row/list-row";
 
 interface PaginationFooterProps {
   pageCount: number;
@@ -39,17 +38,19 @@ export function PaginationFooter(props: PaginationFooterProps) {
             <Portal>
               <Menu.Positioner>
                 <Menu.Content bg="bg">
-                  {pageSizeOptions.map((option) => (
-                    <Menu.Item key={option} value={`${option}`} asChild>
-                      <ListRow
-                        asChild
-                        variant="full-width"
-                        label={`${option}`}
-                        isSelected={option === pageSize}
-                        onActivate={() => onPageSizeChange(option)}
-                      />
-                    </Menu.Item>
-                  ))}
+                  <Menu.RadioItemGroup
+                    value={`${pageSize}`}
+                    onValueChange={({ value }) => onPageSizeChange(Number(value))}
+                  >
+                    {pageSizeOptions.map((option) => (
+                      <Menu.RadioItem key={option} value={`${option}`}>
+                        <Menu.ItemText>{option}</Menu.ItemText>
+                        <Menu.ItemIndicator>
+                          <Check size={14} />
+                        </Menu.ItemIndicator>
+                      </Menu.RadioItem>
+                    ))}
+                  </Menu.RadioItemGroup>
                 </Menu.Content>
               </Menu.Positioner>
             </Portal>

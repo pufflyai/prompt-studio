@@ -28,26 +28,31 @@ export const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescri
 };
 
 const createRowBackgroundProps = (input: {
+  rowRole: ListRowRootProps["role"];
   isSelected: boolean;
   selectedBg: ListRowProps["selectedBg"];
   hoverBg: ListRowProps["hoverBg"];
   tone: NonNullable<ListRowProps["tone"]>;
   variant: ListRowProps["variant"];
-}) => ({
-  bg: input.isSelected ? input.selectedBg : "transparent",
-  _hover: (() => {
-    if (input.variant === "empty-state") return { bg: "transparent" };
-    if (input.isSelected) return { bg: input.selectedBg };
-    if (input.tone === "danger")
-      return {
-        outline: "1px solid",
-        outlineColor: "red.500",
-        outlineOffset: "-1px",
-      };
-    return { bg: input.hoverBg };
-  })(),
-  _active: input.variant === "empty-state" ? { bg: "transparent" } : { bg: input.selectedBg },
-});
+}) => {
+  // Menu recipes own hover, focus, and selection for rows used as menu items.
+  if (input.rowRole?.startsWith("menuitem")) return {};
+  return {
+    bg: input.isSelected ? input.selectedBg : "transparent",
+    _hover: (() => {
+      if (input.variant === "empty-state") return { bg: "transparent" };
+      if (input.isSelected) return { bg: input.selectedBg };
+      if (input.tone === "danger")
+        return {
+          outline: "1px solid",
+          outlineColor: "red.500",
+          outlineOffset: "-1px",
+        };
+      return { bg: input.hoverBg };
+    })(),
+    _active: input.variant === "empty-state" ? { bg: "transparent" } : { bg: input.selectedBg },
+  };
+};
 
 const rowLabelIds = (labelId: string, hasEndContent: boolean) =>
   hasEndContent ? `${labelId} ${labelId}-end` : labelId;

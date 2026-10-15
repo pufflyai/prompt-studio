@@ -67,7 +67,9 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                 >
                   <WorkbenchIcon name={icon} size={14} />
                   <Menu.ItemText>{label}</Menu.ItemText>
-                  <Menu.ItemIndicator />
+                  <Menu.ItemIndicator>
+                    <WorkbenchIcon name="Check" size={14} />
+                  </Menu.ItemIndicator>
                 </Menu.CheckboxItem>
               ))}
               {menus.map((menu) => (
@@ -83,7 +85,9 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                 >
                   <WorkbenchIcon name={menu.side === "left" ? "PanelLeft" : "PanelRight"} size={14} />
                   <Menu.ItemText>{menu.title}</Menu.ItemText>
-                  <Menu.ItemIndicator />
+                  <Menu.ItemIndicator>
+                    <WorkbenchIcon name="Check" size={14} />
+                  </Menu.ItemIndicator>
                 </Menu.CheckboxItem>
               ))}
               <Menu.Separator />
@@ -96,7 +100,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                 }
               >
                 <WorkbenchIcon name="RotateCcw" size={14} />
-                Reset layout
+                <Menu.ItemText>Reset layout</Menu.ItemText>
               </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>

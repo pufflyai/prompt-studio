@@ -22,9 +22,7 @@ export const AttachedAndFloating: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Open Side Panel" }));
-    const bubble = canvas.getByRole("button", { name: "Close Side Panel" });
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toHaveAttribute("aria-pressed", "true");
+    await expect(canvas.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
     const panel = canvas.getByTestId("workbench-side-panel-floating");
     await waitFor(() => expect(panel).toBeVisible());
     await expect(within(panel).queryByRole("button", { name: "Close Side Panel" })).toBeNull();
@@ -35,8 +33,9 @@ export const AttachedAndFloating: Story = {
     await expect(fixture.workbench.layout.getLayout().regions.side.widgets).toEqual(tabs);
     await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
     await userEvent.click(canvas.getByRole("button", { name: "Open Side Panel" }));
-    await userEvent.click(canvas.getByRole("button", { name: "Close Side Panel" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Hide Sidebar" }));
     await waitFor(() => expect(panel).not.toBeVisible());
+    await expect(canvas.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Open Side Panel" }));
     await expect(fixture.workbench.layout.getLayout().regions.side.widgets).toEqual(tabs);
   },
@@ -63,6 +62,18 @@ export const BubbleKeyboard: Story = {
     await expect(fixture.workbench.sidePanel.getBubblePosition()).toEqual({ x: 0.5, y: 1 });
     await userEvent.click(canvas.getByRole("button", { name: "Reload fixture" }));
     await waitFor(() => expect(fixture.workbench.sidePanel.getBubblePosition()).toEqual({ x: 0.5, y: 1 }));
+    const launcher = canvas.getByRole("button", { name: "Open Side Panel" });
+    launcher.focus();
+    await userEvent.keyboard("{Enter}");
+    const panel = canvas.getByTestId("workbench-side-panel-floating");
+    const draft = await within(panel).findByRole("textbox", { name: "Session draft" });
+    await waitFor(() => expect(draft).toHaveFocus());
+    await userEvent.click(within(panel).getByRole("button", { name: "Hide Sidebar" }));
+    await waitFor(() => expect(launcher).toHaveFocus());
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(draft).toHaveFocus());
+    await fixture.workbench.commands.executeCommand("workbench.closeSidePanel");
+    await waitFor(() => expect(launcher).toHaveFocus());
   },
 };
 

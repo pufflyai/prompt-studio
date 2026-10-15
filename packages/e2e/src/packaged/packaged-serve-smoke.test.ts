@@ -48,7 +48,8 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // resource context, page expansion opt-out, page-owned Main headers, independent mode panel permissions, and explicit-open targets.
 // Deprecated fixed presence and movableTo survive the packaged extension metadata path.
 // Browser panel smoke verifies page reset preserves moved presets once, using their original instances.
-// Browser smoke also verifies floating Side defaults, retained tabs, and persisted bubble anchors.
+// Browser smoke also verifies floating Side defaults, retained tabs, persisted bubble anchors,
+// and the hidden launcher returning after the floating panel's header closes it.
 // Packaged browser session menus return keyboard focus to their tab after Escape.
 // The guest runtime forwards unhandled Escape after nested controls handle it.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";

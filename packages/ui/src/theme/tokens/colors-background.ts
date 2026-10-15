@@ -139,7 +139,7 @@ export const bg = {
       value: "{colors.bg.hover}",
     },
     selected: {
-      value: "{colors.bg.active}",
+      value: "transparent",
     },
   },
 

@@ -103,11 +103,14 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       position="relative"
     >
       {breadcrumbHeader}
-      <PanelEdgeTargets workbench={workbench} inner />
       <PanelEdgeTargets workbench={workbench} content />
-      <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
+      <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden" position="relative">
+        <PanelEdgeTargets workbench={workbench} pageRegion="aside" />
         <WorkbenchPageAsideLayout workbench={workbench}>
-          <WorkbenchPageBottomLayout workbench={workbench}>{editor}</WorkbenchPageBottomLayout>
+          <Box h="full" minH="0" minW="0" position="relative">
+            <PanelEdgeTargets workbench={workbench} pageRegion="bottom" />
+            <WorkbenchPageBottomLayout workbench={workbench}>{editor}</WorkbenchPageBottomLayout>
+          </Box>
         </WorkbenchPageAsideLayout>
       </Box>
     </Grid>

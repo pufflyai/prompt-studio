@@ -11,7 +11,7 @@ export const bubbleLauncherAnchors = {
 
 export type BubbleAnchor = keyof typeof bubbleLauncherAnchors;
 
-const inset = "calc({spacing.6} + {spacing.12} + {spacing.3})";
+const inset = "6";
 
 export const bubblePanelAnchors = {
   "top-left": { top: inset, left: "6", bottom: "auto", right: "auto", transformOrigin: "top left" },

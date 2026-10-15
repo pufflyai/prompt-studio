@@ -62,7 +62,20 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
     },
     separator: {
       gap: { separator: { "--split-separator-thickness": "{spacing.panel-gap}" } },
-      line: { separator: { "--split-separator-thickness": "1px" } },
+      line: { separator: { "--split-separator-thickness": "1px", bg: "border.subtle" } },
+      "content-line": {
+        separator: {
+          "--split-separator-thickness": "1px",
+          _after: {
+            content: '""',
+            position: "absolute",
+            inset: "0",
+            top: "10",
+            bg: "border.subtle",
+            pointerEvents: "none",
+          },
+        },
+      },
     },
     layout: {
       split: {

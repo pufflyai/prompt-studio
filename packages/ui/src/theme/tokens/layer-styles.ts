@@ -42,12 +42,13 @@ export const layerStyles = defineLayerStyles({
   },
   tabDropZone: {
     value: {
-      bg: "bg.accent-primary.default/4",
-      color: "fg.muted",
-      borderWidth: "1px",
-      borderColor: "bg.accent-primary.default",
+      bg: "border.accent/16",
+      color: "fg",
       borderRadius: "inherit",
     },
+  },
+  panelDropLabel: {
+    value: { bg: "bg", color: "fg", paddingInline: "sm", paddingBlock: "xs", borderRadius: "xs" },
   },
   panelHeaderEdge: {
     value: {
@@ -60,12 +61,6 @@ export const layerStyles = defineLayerStyles({
       outline: "none",
       _hover: { bg: "bg.subtle" },
       _focusVisible: { bg: "bg.subtle", outline: "2px solid", outlineColor: "border.accent", outlineOffset: "-2px" },
-    },
-  },
-  pageSidePanel: {
-    value: {
-      borderTopWidth: "1px",
-      borderColor: "border.subtle",
     },
   },
   filterPicker: {

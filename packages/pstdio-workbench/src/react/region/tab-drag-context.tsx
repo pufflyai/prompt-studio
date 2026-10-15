@@ -3,6 +3,7 @@ import {
   DndContext,
   type DragOverEvent,
   DragOverlay,
+  MeasuringStrategy,
   MouseSensor,
   pointerWithin,
   TouchSensor,
@@ -11,7 +12,6 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { PanelEdge } from "@pstdio/sdk/extensions";
-import { DropIndicator } from "@pstdio/ui";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
@@ -91,6 +91,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     >
       <DndContext
         sensors={sensors}
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         collisionDetection={(args) => {
           const pointer = args.pointerCoordinates;
           const panel = pointer
@@ -162,7 +163,7 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion; wo
   const id = useId();
   const allowed = Boolean(activeId && destinations?.includes(region));
   const { setNodeRef } = useDroppable({ id, data: { region }, disabled: !allowed });
-  const highlighted = allowed && drop?.region === region;
+  const highlighted = allowed && drop?.region === region && !drop.closedEdge && !drop.widgetId;
   return (
     <Box
       ref={setNodeRef}
@@ -181,8 +182,7 @@ export const WorkbenchTabDropTarget = (props: { region: WorkbenchPanelRegion; wo
       layerStyle={highlighted ? "tabDropZone" : undefined}
       textStyle="label/XS/medium"
     >
-      {highlighted && !drop?.widgetId ? panelDropLabel(workbench, region) : null}
-      {highlighted && !drop?.widgetId ? <DropIndicator top="0" /> : null}
+      {highlighted ? <Box layerStyle="panelDropLabel">{panelDropLabel(workbench, region)}</Box> : null}
     </Box>
   );
 };

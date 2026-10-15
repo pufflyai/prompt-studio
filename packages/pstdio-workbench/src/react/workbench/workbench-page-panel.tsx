@@ -23,7 +23,6 @@ export const WorkbenchPagePanel = (props: { workbench: WorkbenchCore; region: "a
       data-workbench-panel={region}
       data-workbench-region={region}
       bg={workbenchBackgrounds.panel}
-      layerStyle={region === "aside" ? "pageSidePanel" : undefined}
       display="flex"
       flexDirection="column"
       h="full"
