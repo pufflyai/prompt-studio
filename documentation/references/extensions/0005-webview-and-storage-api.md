@@ -248,11 +248,20 @@ Package asset paths must be relative and stay inside the package.
 
 Command and hook handlers can read other packaged files through `ctx.packageFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
 
-Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/ext/<publisher>.<name>/`. The host adds an ignore entry on the first write unless `tracked` is true.
+Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files and ignore rules. The host adds an ignore entry for that publisher on the first write unless `tracked` is true.
 
 ## Artifact Mounts And Storage
 
+Keep every extension-owned project file under `.pstdio/extension-storage/<package-name>/`,
+including configuration, caches, drafts, prototypes, evidence, and migration backups.
+Use `ctx.extensionFiles` or artifact mounts for these files. See
+[extension file storage](../../guides/extensions/0009-allocated-extension-files.md) for draft
+locations and how to move files from older layouts.
+
 Artifact mounts are constrained to a package-name root under each repo's extension storage directory:
+
+The first mount-path segment cannot be `.publishers`, including case variants.
+That directory is reserved for allocated `ctx.extensionFiles`.
 
 ```txt
 <repo>/.pstdio/extension-storage/<package-name>/...
@@ -383,3 +392,45 @@ Call `stream.cancel()`, abort the signal, or break the loop to stop the command.
 The host allows 16 live streams per frame and 8 MiB of unread JSON per stream. Overflow ends the stream with `command_stream_overflow`. All command streams and session readers share one connection. Events remain invalidation signals; chunks go only to their caller.
 
 The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` operations. `createWebviewClient` handles IDs, consumed-byte acknowledgements, and scoped `data`/`end` events for you.
+
+## Page params
+
+A page can declare a `params` record. Each definition has a `type`: `string`, `number`, `boolean`, or `string[]`. It may have a matching `default`. String definitions may also restrict values with `values`.
+
+Names match `^[a-z][a-z0-9-]*$`, contain at most 64 characters, and cannot use existing host URL selectors: `resource`, `section`, `document`, `line`, `column`, `endLine`, or `endColumn`. A page may declare 32 names. Its encoded param query is limited to 2,048 characters.
+
+Every webview receives `pageLocation` and `pageParams` props. `pageLocation.params` contains overrides that differ from defaults. `pageParams` fills in declared defaults. `defineExtensionView` exposes the same data through `page.location()`, `page.params<T>()`, and `page.subscribe(listener)`.
+
+Declare `page.params.update` to call `page.updateParams({ range: "now-6h" })`. A `null` value resets that name to its default. The host replaces the current history entry and sends the location to every view. Only the extension that owns the active page can update it. Other callers fail with `page_params_not_owner`; calls without a page fail with `page_params_no_page`.
+
+A page navigation target may carry `params`. It replaces all destination params and pushes history when the location or params change. Undeclared names, wrong types, disallowed string values, and oversized queries fail with `page_param_invalid`. The previous location, URL, history, and layout stay intact. Invalid URL values are ignored and use their defaults instead.
+
+URLs use plain query keys. Lists use repeated keys in item order. Missing values use their defaults. Defaults and empty lists are omitted, so an empty list reads as its declared default. Params stay out of route identity, page state keys, layout caches, and breadcrumbs. Saved locations and contextual parents retain their own params.
+
+Native query and file-load callbacks receive defaults through `renderer.pageParams` for placements owned by the active page. The host reruns these reads when params change. Shared shell and mode placements do not inherit page params.
+
+## Webview preferences
+
+Declare `preferences.get` and `preferences.set` to save small view choices:
+
+```ts
+await host.call("preferences.set", { name: "lastRange", value: "now-6h" });
+const range = await host.call("preferences.get", { name: "lastRange" });
+```
+
+An undeclared name belongs to the calling extension. Other extensions have separate values under the same name. Dashboard webviews store these values on the server, so browser reloads and Desktop restarts keep them, and other clients read the same values. `set` returns only after storage succeeds.
+
+The default scope is `user`, shared by clients of the runtime. `project` uses the active project when `scopeId` is omitted. `workspace` and `session` require `scopeId`. `extension` uses the calling extension's user scope. Scoped reads fall back to the user value. `default` is read only and has no value for an undeclared name. Writing it fails with `preference_scope_read_only`.
+
+Each JSON value may contain 16 KiB. An extension may store 256 KiB across all scopes. Writes exceeding either limit fail with `preference_too_large` and preserve stored values. Removing an extension retains its preferences for a later reinstall.
+
+`dashboard.themePreference` and `dashboard.locale` remain shared host names with their existing provider behavior. Access to names registered by another extension still works, but emits a deprecation warning. Use your own extension's preference names; cross-extension access will be removed in a later breaking release.
+
+Agents use the same authenticated API:
+
+- `GET /v1/projects/{projectId}/extensions/{instanceId}/preferences/{name}` reads `{ name, value? }`.
+- `PUT` to the same path writes a JSON body `{ "value": ... }` and returns `{ name, value }`.
+- Optional query keys are `scope` and `scopeId`.
+- Global views use `/v1/extensions/installed/{installName}/preferences/{name}`. Project, workspace, and session scopes need an explicit `scopeId` on this path.
+
+These routes store extension-owned values. Declared settings use the settings API. Theme and locale remain host appearance choices. Use `ctx.storage` for extension product data rather than view preferences.

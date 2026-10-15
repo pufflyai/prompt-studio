@@ -79,11 +79,13 @@ const registerRenderer = (
     resource?: ResourceRef,
     modeId?: string,
     signal?: AbortSignal,
+    pageParams?: import("@pstdio/sdk/extensions").PageParams,
   ) =>
     executeWorkbenchExtensionCommand(context, commandId, {
       params: {
         renderer: {
           rendererId: record.id,
+          ...(pageParams ? { pageParams } : {}),
           projectId: context.projectId,
           ...(modeId ? { modeId } : {}),
           ...(resource ? { resource: resource } : {}),
@@ -124,8 +126,15 @@ const registerRenderer = (
       })),
       emptyTitle: record.emptyTitle ? localize(record.emptyTitle) : undefined,
       emptyDescription: record.emptyDescription ? localize(record.emptyDescription) : undefined,
-      executeQuery: async ({ resource, modeId, filter, sorts, settings }, signal) => {
-        const value = await run(record.queryHandlerId, { filter, sorts, settings }, resource, modeId, signal);
+      executeQuery: async ({ resource, modeId, filter, sorts, settings, pageParams }, signal) => {
+        const value = await run(
+          record.queryHandlerId,
+          { filter, sorts, settings },
+          resource,
+          modeId,
+          signal,
+          pageParams,
+        );
         if (!isQueryResult(value)) return { rows: [] };
         const rows = value.rows.map((row) => {
           const mapped = toRow(row);

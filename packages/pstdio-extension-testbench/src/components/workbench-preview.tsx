@@ -79,6 +79,19 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
     setThemePreference,
   } = props;
   const workbench = createWorkbench();
+  workbench.preferences.registerSchema({
+    properties: {
+      "dashboard.themePreference": { type: "string", scope: "user" },
+    },
+  });
+  workbench.preferences.registerValueAdapter("dashboard.themePreference", {
+    get: getThemePreference,
+    set: (value) => {
+      setThemePreference(String(value));
+      workbench.context.set("extensionTestbench.themePreference", String(value));
+      refreshOpenWorkbenchExtensionWebviews(workbench, bench.metadata);
+    },
+  });
   const resource = createPreviewResource(bench.metadata);
   const webviewFiles = createPreviewWebviewFileHost();
   let publishExtensionEvent: ((event: { id: string }) => void) | undefined;
@@ -140,28 +153,12 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
     },
     metadata: bench.metadata,
     projectId: bench.projectId,
-    createWebviewHostCapabilityOverrides: (context) => {
-      const workbenchCapabilities = createWorkbenchWebviewHostCapabilities({ workbench: context.workbench });
-
-      return {
-        "preferences.get": (params) => {
-          const request = params as { name: string };
-          if (request.name === "dashboard.themePreference") return getThemePreference();
-          return workbenchCapabilities["preferences.get"]?.(params);
-        },
-        "preferences.set": (params) => {
-          const request = params as { name: string; value: ThemePreference };
-          if (request.name !== "dashboard.themePreference") {
-            return workbenchCapabilities["preferences.set"]?.(params);
-          }
-
-          setThemePreference(request.value);
-          workbench.context.set("extensionTestbench.themePreference", request.value);
-          refreshOpenWorkbenchExtensionWebviews(workbench, bench.metadata);
-          return { name: request.name, value: request.value };
-        },
-      };
-    },
+    createWebviewHostCapabilityOverrides: (context) =>
+      createWorkbenchWebviewHostCapabilities({
+        workbench: context.workbench,
+        placement: context.placement,
+        extensionId: context.extensionId,
+      }),
     createWebviewProps: ({ placement }) => ({
       lastCommand: getLastCommand() ?? undefined,
       placement,

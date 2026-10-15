@@ -93,6 +93,21 @@ describe("attempt revision state", () => {
     ).toThrow("A new revision requires a different HEAD");
   });
 
+  test("a changed base creates a fresh revision without rewriting the old review", () => {
+    const first = revision([review({ id: "approved-review" })]);
+    const next = appendRevision([first], {
+      baseSha: "base-2",
+      headSha: first.headSha,
+      changeRequestReportId: "report-change-2",
+      submittedAt: "2026-08-18T11:00:00.000Z",
+      submittedBy: actor,
+    });
+    expect(next).toHaveLength(2);
+    expect(next[0]).toEqual(first);
+    expect(next[1]?.baseSha).toBe("base-2");
+    expect(next[1]?.reviews).toEqual([]);
+  });
+
   test("pages timeline events in stable chronological order", () => {
     const events = [
       { id: "b", createdAt: "2026-08-18T10:00:00.000Z" },

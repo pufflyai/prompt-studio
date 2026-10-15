@@ -110,6 +110,13 @@ const apiSecurity = (host: CreateAppInput["host"], runtime: RuntimeRouteDeps | u
   return host.kind === "standalone" && host.token ? { token: host.token } : undefined;
 };
 
+const sessionQueueChanged =
+  (sessions: ReturnType<typeof createAppDatabaseServices>["sessionsDBService"], eventBus: EventBus) =>
+  async (id: string) => {
+    const session = await sessions.update(id, {});
+    if (session) eventBus.emit("sessions", "set", session);
+  };
+
 const buildApp = async (
   input: CreateAppInput,
   dependencies: AppDependencies,
@@ -142,10 +149,10 @@ const buildApp = async (
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
-  const sessionQueueEntriesService = createSessionQueueService(sessionQueueEntriesDBService, async (id) => {
-    const session = await sessionsDBService.update(id, {});
-    if (session) eventBus.emit("sessions", "set", session);
-  });
+  const sessionQueueEntriesService = createSessionQueueService(
+    sessionQueueEntriesDBService,
+    sessionQueueChanged(sessionsDBService, eventBus),
+  );
   const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
     db: extensionAutomationPreferencesDBService,
     eventBus,
@@ -276,6 +283,7 @@ const buildApp = async (
     extensionConnectionService,
     extensionFileService,
     extensionRuntimeCatalog,
+    webviewPreferencesDBService: dbs.webviewPreferencesDBService,
     extensionSettingsDBService,
     extensionService,
     extensionUpgradeService,

@@ -1,3 +1,4 @@
+import type { ParamsOf } from "@pstdio/sdk/extensions";
 import { type CommandContext, commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
@@ -5,6 +6,8 @@ import { appendRevision } from "../data/attempt-state";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
+import { withWriteGuard } from "../data/write-guard";
+import { validateSubmittedStack } from "./stack-validation";
 
 const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
 const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
@@ -73,75 +76,95 @@ const mapOpenThreads = async (ctx: CommandContext, attempt: AttemptRecord, nextH
   }
 };
 
+const submissionParams = {
+  workspaceId: params.text({ required: true }),
+  implementationSessionId: params.text(),
+  sessionId: params.text(),
+  headSha: params.text({ required: true }),
+  changeRequestReportId: params.text({ required: true }),
+  /** @deprecated Ownership and expectedRevision replace the attempt-state gate. */
+  expectedAttemptState: params.select({
+    options: [
+      { label: "Implementing", value: "implementing" },
+      { label: "Changes requested", value: "changes_requested" },
+    ],
+  }),
+  expectedRevision: params.number(),
+};
+
+async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeof submissionParams>) {
+  const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+  if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+  const implementationSessionId = commandParams.implementationSessionId ?? commandParams.sessionId;
+  if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
+    throw new Error("The implementation session does not own this attempt.");
+  }
+  if (!(await ctx.sessions.listByWorkspace(attempt.workspaceId)).some(({ id }) => id === implementationSessionId))
+    throw new Error("The implementation session is not linked to this workspace.");
+  const currentHead = await workspaceHead(ctx, attempt.workspaceId);
+  if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");
+  const previous = attempt.revisions.at(-1);
+  const path = await workspaceGitPath(ctx, attempt.workspaceId);
+  const base = await validateSubmittedStack(ctx, attempt, path, currentHead);
+  if (
+    previous?.headSha === currentHead &&
+    previous.baseSha === base.headSha &&
+    previous.changeRequestReportId === commandParams.changeRequestReportId
+  )
+    return attempt;
+  if (commandParams.expectedRevision !== undefined && commandParams.expectedRevision !== (previous?.revision ?? 0))
+    throw new Error("Attempt revision changed before submission.");
+  const report = await readReport(ctx, commandParams.changeRequestReportId);
+  if (report.id !== commandParams.changeRequestReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
+    throw new Error("The saved change request report does not belong to this workspace.");
+  }
+
+  const timestamp = new Date().toISOString();
+  const revisions = appendRevision(attempt.revisions, {
+    baseSha: base.headSha,
+    headSha: currentHead,
+    changeRequestReportId: commandParams.changeRequestReportId,
+    submittedAt: timestamp,
+    submittedBy: actorFromSource(ctx.source, ctx.invocationId),
+  });
+  if (revisions === attempt.revisions) return attempt;
+  const revision = revisions.at(-1)!;
+  const finalBase = await validateSubmittedStack(ctx, attempt, path, currentHead);
+  if (finalBase.headSha !== base.headSha || finalBase.workspaceId !== base.workspaceId)
+    throw new Error("The dependency revision changed before submission. Query and submit again.");
+  if ((await workspaceHead(ctx, attempt.workspaceId)) !== currentHead)
+    throw new Error("Workspace HEAD changed before submission.");
+  const next = await putAttempt(ctx.storage, {
+    ...attempt,
+    state: "review_ready",
+    base,
+    revisions,
+    blocker: null,
+    updatedAt: timestamp,
+  });
+  await mapOpenThreads(ctx, attempt, currentHead);
+  await appendAttemptEvent(ctx.storage, {
+    workspaceId: attempt.workspaceId,
+    revision: revision.revision,
+    type: "revision_submitted",
+    actor: revision.submittedBy,
+    sessionId: attempt.implementationSessionId,
+    reportId: revision.changeRequestReportId,
+    reviewId: null,
+    threadId: null,
+    commitSha: revision.headSha,
+    metadata: {},
+  });
+  await rollUpAttemptTicket(ctx, attempt.ticketId);
+  return next;
+}
+
 export const submitChangeRequestCommand = defineCommand({
   id: "submit-change-request",
   title: "Submit change request",
   cli: true,
-  params: {
-    workspaceId: params.text({ required: true }),
-    implementationSessionId: params.text(),
-    sessionId: params.text(),
-    headSha: params.text({ required: true }),
-    changeRequestReportId: params.text({ required: true }),
-    expectedAttemptState: params.select({
-      required: true,
-      options: [
-        { label: "Implementing", value: "implementing" },
-        { label: "Changes requested", value: "changes_requested" },
-      ],
-    }),
-  },
+  params: submissionParams,
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
-    const implementationSessionId = commandParams.implementationSessionId ?? commandParams.sessionId;
-    if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
-      throw new Error("The implementation session does not own this attempt.");
-    }
-    if (attempt.state !== commandParams.expectedAttemptState)
-      throw new Error("Attempt state changed before submission.");
-    const currentHead = await workspaceHead(ctx, attempt.workspaceId);
-    if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");
-    const report = await readReport(ctx, commandParams.changeRequestReportId);
-    if (
-      report.id !== commandParams.changeRequestReportId ||
-      report.workspaceId !== attempt.workspaceId ||
-      report.draft
-    ) {
-      throw new Error("The saved change request report does not belong to this workspace.");
-    }
-
-    const timestamp = new Date().toISOString();
-    const revisions = appendRevision(attempt.revisions, {
-      baseSha: attempt.base.headSha,
-      headSha: currentHead,
-      changeRequestReportId: commandParams.changeRequestReportId,
-      submittedAt: timestamp,
-      submittedBy: actorFromSource(ctx.source, ctx.invocationId),
-    });
-    if (revisions === attempt.revisions) return attempt;
-    const revision = revisions.at(-1)!;
-    await mapOpenThreads(ctx, attempt, currentHead);
-    const next = await putAttempt(ctx.storage, {
-      ...attempt,
-      state: "review_ready",
-      revisions,
-      blocker: null,
-      updatedAt: timestamp,
-    });
-    await appendAttemptEvent(ctx.storage, {
-      workspaceId: attempt.workspaceId,
-      revision: revision.revision,
-      type: "revision_submitted",
-      actor: revision.submittedBy,
-      sessionId: attempt.implementationSessionId,
-      reportId: revision.changeRequestReportId,
-      reviewId: null,
-      threadId: null,
-      commitSha: revision.headSha,
-      metadata: {},
-    });
-    await rollUpAttemptTicket(ctx, attempt.ticketId);
-    return next;
+    return withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, () => submitRevision(ctx, commandParams));
   },
 });

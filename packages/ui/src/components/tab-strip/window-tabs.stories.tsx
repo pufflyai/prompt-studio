@@ -80,6 +80,13 @@ export const KeyboardReordering: Story = {
       "Docs",
       "Agentic design",
     ]);
+    await expect(docs).not.toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard(" {ArrowLeft} ");
+    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Docs",
+      "Agentic kanban",
+      "Agentic design",
+    ]);
   },
 };
 export const FullScreen: Story = {
@@ -116,6 +123,17 @@ export const LongNames: Story = {
       ]}
     />
   ),
+  play: async ({ canvasElement }) => {
+    const label = "Prompt Studio research and documentation for the desktop release";
+    const tab = within(canvasElement).getByRole("tab", { name: label });
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.hover(tab);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.unhover(tab);
+    tab.focus();
+    await expect(await page.findByRole("tooltip")).toHaveTextContent(label);
+  },
 };
 export const Dark: Story = { render: () => <Example />, globals: { theme: "pstdio-dark" } };
 export const Light: Story = { render: () => <Example />, globals: { theme: "pstdio-light" } };

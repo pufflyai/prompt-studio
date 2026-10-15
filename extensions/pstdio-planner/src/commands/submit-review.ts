@@ -1,3 +1,4 @@
+import type { ParamsOf } from "@pstdio/sdk/extensions";
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
@@ -12,6 +13,7 @@ import {
 import type { AttemptReview, ReviewComment, ReviewThread } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
+import { withWriteGuard } from "../data/write-guard";
 import { readReport, workspaceHead } from "./change-requests";
 
 export interface ReviewFinding {
@@ -120,131 +122,138 @@ const createFinding = async (
   return { thread, comment };
 };
 
-export const submitReviewCommand = defineCommand({
-  id: "submit-review",
-  title: "Submit review verdict",
-  cli: true,
-  params: {
-    workspaceId: params.text({ required: true }),
-    reviewId: params.text({ required: true }),
-    reviewSessionId: params.text(),
-    sessionId: params.text(),
-    reviewedHeadSha: params.text({ required: true }),
-    reviewReportId: params.text({ required: true }),
-    verdict: params.select({
-      required: true,
-      options: [
-        { label: "Passed", value: "passed" },
-        { label: "Changes requested", value: "changes_requested" },
-      ],
-    }),
-    expectedRevision: params.number({ required: true }),
-    threads: params.json<ReviewFinding[]>(),
-  },
-  async run(ctx, commandParams) {
-    if (commandParams.verdict !== "passed" && commandParams.verdict !== "changes_requested") {
-      throw new Error(`Unknown review verdict "${commandParams.verdict}"`);
-    }
-    const reviewFindings = validateReviewFindings(commandParams.threads, commandParams.verdict);
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
-    const revision = attempt.revisions.find((candidate) => candidate.revision === commandParams.expectedRevision);
-    if (!revision || revision !== attempt.revisions.at(-1))
-      throw new Error("Attempt revision changed before review submission.");
-    const review = revision.reviews.find((candidate) => candidate.id === commandParams.reviewId);
-    const reviewSessionId = commandParams.reviewSessionId ?? commandParams.sessionId;
-    if (!reviewSessionId || !review || review.state !== "started" || review.sessionId !== reviewSessionId) {
-      throw new Error("The review session does not own this review round.");
-    }
-    const head = await workspaceHead(ctx, attempt.workspaceId);
-    if (head !== revision.headSha || head !== commandParams.reviewedHeadSha) {
-      throw new Error("Workspace HEAD changed before review submission.");
-    }
-    const report = await readReport(ctx, commandParams.reviewReportId);
-    if (report.id !== commandParams.reviewReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
-      throw new Error("The saved review report does not belong to this workspace.");
-    }
+const reviewParams = {
+  workspaceId: params.text({ required: true }),
+  reviewId: params.text({ required: true }),
+  reviewSessionId: params.text(),
+  sessionId: params.text(),
+  reviewedHeadSha: params.text({ required: true }),
+  reviewReportId: params.text({ required: true }),
+  verdict: params.select({
+    required: true,
+    options: [
+      { label: "Passed", value: "passed" },
+      { label: "Changes requested", value: "changes_requested" },
+    ],
+  }),
+  expectedRevision: params.number({ required: true }),
+  threads: params.json<ReviewFinding[]>(),
+};
 
-    const completedAt = new Date().toISOString();
-    const submitted: AttemptReview = {
-      ...review,
-      state: "submitted" as const,
-      reportId: commandParams.reviewReportId,
-      verdict: commandParams.verdict,
-      completedAt,
-    };
-    const nextRevision = {
-      ...revision,
-      reviews: revision.reviews.map((candidate) => (candidate.id === review.id ? submitted : candidate)),
-    };
-    const result = deriveRevisionVerdict(nextRevision);
-    const nextState = attemptStateFromVerdict(result);
-    const revisions = attempt.revisions.map((candidate) =>
-      candidate.revision === nextRevision.revision ? nextRevision : candidate,
+async function submitReview(ctx: CommandContext, commandParams: ParamsOf<typeof reviewParams>) {
+  if (commandParams.verdict !== "passed" && commandParams.verdict !== "changes_requested") {
+    throw new Error(`Unknown review verdict "${commandParams.verdict}"`);
+  }
+  const reviewFindings = validateReviewFindings(commandParams.threads, commandParams.verdict);
+  const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+  if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+  const revision = attempt.revisions.find((candidate) => candidate.revision === commandParams.expectedRevision);
+  if (!revision || revision !== attempt.revisions.at(-1))
+    throw new Error("Attempt revision changed before review submission.");
+  const review = revision.reviews.find((candidate) => candidate.id === commandParams.reviewId);
+  const reviewSessionId = commandParams.reviewSessionId ?? commandParams.sessionId;
+  if (!reviewSessionId || !review || review.state !== "started" || review.sessionId !== reviewSessionId) {
+    throw new Error("The review session does not own this review round.");
+  }
+  const head = await workspaceHead(ctx, attempt.workspaceId);
+  if (head !== revision.headSha || head !== commandParams.reviewedHeadSha) {
+    throw new Error("Workspace HEAD changed before review submission.");
+  }
+  const report = await readReport(ctx, commandParams.reviewReportId);
+  if (report.id !== commandParams.reviewReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
+    throw new Error("The saved review report does not belong to this workspace.");
+  }
+
+  const completedAt = new Date().toISOString();
+  const submitted: AttemptReview = {
+    ...review,
+    state: "submitted" as const,
+    reportId: commandParams.reviewReportId,
+    verdict: commandParams.verdict,
+    completedAt,
+  };
+  const nextRevision = {
+    ...revision,
+    reviews: revision.reviews.map((candidate) => (candidate.id === review.id ? submitted : candidate)),
+  };
+  const result = deriveRevisionVerdict(nextRevision);
+  const nextState = attemptStateFromVerdict(result);
+  const revisions = attempt.revisions.map((candidate) =>
+    candidate.revision === nextRevision.revision ? nextRevision : candidate,
+  );
+  const next = await putAttempt(ctx.storage, { ...attempt, state: nextState, revisions, updatedAt: completedAt });
+
+  const findings = [];
+  for (const finding of reviewFindings) {
+    findings.push(
+      await createFinding(ctx, {
+        finding,
+        workspaceId: attempt.workspaceId,
+        revision: revision.revision,
+        reviewId: review.id,
+        baseSha: revision.baseSha,
+        headSha: revision.headSha,
+      }),
     );
-    const next = await putAttempt(ctx.storage, { ...attempt, state: nextState, revisions, updatedAt: completedAt });
+  }
+  await appendAttemptEvent(ctx.storage, {
+    workspaceId: attempt.workspaceId,
+    revision: revision.revision,
+    type: "review_submitted",
+    actor: submitted.reviewer,
+    sessionId: submitted.sessionId,
+    reportId: submitted.reportId,
+    reviewId: submitted.id,
+    threadId: null,
+    commitSha: revision.headSha,
+    metadata: { verdict: commandParams.verdict },
+  });
+  await rollUpAttemptTicket(ctx, attempt.ticketId);
 
-    const findings = [];
-    for (const finding of reviewFindings) {
-      findings.push(
-        await createFinding(ctx, {
-          finding,
-          workspaceId: attempt.workspaceId,
-          revision: revision.revision,
-          reviewId: review.id,
-          baseSha: revision.baseSha,
-          headSha: revision.headSha,
-        }),
-      );
-    }
+  if (commandParams.verdict === "changes_requested") {
+    await ctx.sessions.followup({
+      sessionId: attempt.implementationSessionId,
+      prompt: `Review ${review.id} requested changes for ${attempt.workspaceShorthand} at ${revision.headSha}. Read report ${submitted.reportId} and address its findings.`,
+    });
+    await rollUpAttemptTicket(ctx, attempt.ticketId);
     await appendAttemptEvent(ctx.storage, {
       workspaceId: attempt.workspaceId,
       revision: revision.revision,
-      type: "review_submitted",
+      type: "implementation_resumed",
       actor: submitted.reviewer,
-      sessionId: submitted.sessionId,
+      sessionId: attempt.implementationSessionId,
       reportId: submitted.reportId,
       reviewId: submitted.id,
       threadId: null,
       commitSha: revision.headSha,
-      metadata: { verdict: commandParams.verdict },
+      metadata: {},
     });
-    await rollUpAttemptTicket(ctx, attempt.ticketId);
+  } else if (result === "passed") {
+    const currentTicket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
+    if (!currentTicket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
+    await createReviewRequest(ctx, {
+      ticket: attempt.ticketId,
+      workspaceId: attempt.workspaceId,
+      revision: revision.revision,
+      sessionId: attempt.implementationSessionId,
+      reason: "approved-revision",
+      title: `${attempt.workspaceShorthand} revision ${revision.revision} is approved at ${revision.headSha}.`,
+      request: handoffRequest,
+      instructions: `Select, merge, or otherwise handle approved workspace ${attempt.workspaceShorthand}. Review report: ${submitted.reportId}.`,
+      expectedTicketStatusId: currentTicket.statusId ?? "",
+      expectedAttemptState: "approved",
+    });
+  }
 
-    if (commandParams.verdict === "changes_requested") {
-      await ctx.sessions.followup({
-        sessionId: attempt.implementationSessionId,
-        prompt: `Review ${review.id} requested changes for ${attempt.workspaceShorthand} at ${revision.headSha}. Read report ${submitted.reportId} and address its findings.`,
-      });
-      await appendAttemptEvent(ctx.storage, {
-        workspaceId: attempt.workspaceId,
-        revision: revision.revision,
-        type: "implementation_resumed",
-        actor: submitted.reviewer,
-        sessionId: attempt.implementationSessionId,
-        reportId: submitted.reportId,
-        reviewId: submitted.id,
-        threadId: null,
-        commitSha: revision.headSha,
-        metadata: {},
-      });
-    } else if (result === "passed") {
-      const currentTicket = await ticketsCollection(ctx.storage).get(attempt.ticketId);
-      if (!currentTicket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
-      await createReviewRequest(ctx, {
-        ticket: attempt.ticketId,
-        workspaceId: attempt.workspaceId,
-        revision: revision.revision,
-        sessionId: attempt.implementationSessionId,
-        reason: "approved-revision",
-        title: `${attempt.workspaceShorthand} revision ${revision.revision} is approved at ${revision.headSha}.`,
-        request: handoffRequest,
-        instructions: `Select, merge, or otherwise handle approved workspace ${attempt.workspaceShorthand}. Review report: ${submitted.reportId}.`,
-        expectedTicketStatusId: currentTicket.statusId ?? "",
-        expectedAttemptState: "approved",
-      });
-    }
+  return { attempt: next, review: submitted, findings };
+}
 
-    return { attempt: next, review: submitted, findings };
+export const submitReviewCommand = defineCommand({
+  id: "submit-review",
+  title: "Submit review verdict",
+  cli: true,
+  params: reviewParams,
+  async run(ctx, commandParams) {
+    return withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, () => submitReview(ctx, commandParams));
   },
 });

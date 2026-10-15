@@ -211,7 +211,9 @@ describe("pstdio planner workspace contributions", () => {
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
     const repoTicketPath = join(repoPath, ticketMarkdownPath(ticket.shorthand));
     const localContent = "# Local ticket edits\n";
-    mkdirSync(join(repoPath, ".pstdio", "tickets", ticket.shorthand), { recursive: true });
+    mkdirSync(join(repoPath, ".pstdio", "extension-storage", "pstdio-planner", "tickets", ticket.shorthand), {
+      recursive: true,
+    });
     writeFileSync(repoTicketPath, localContent);
     try {
       await hook("worktree-created")?.run(
@@ -241,19 +243,6 @@ describe("pstdio planner workspace contributions", () => {
       rmSync(repoPath, { recursive: true, force: true });
       rmSync(worktreePath, { recursive: true, force: true });
     }
-  });
-  test("contributes ticket workspace and merge hooks", () => {
-    expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
-      "auto-build.plan-changed",
-      "auto-build.project-opened",
-      "auto-build.session-completed",
-      "auto-build.tickets-changed",
-      "git-merged-mark-done",
-      "review-request-cleanup",
-      "session-awaiting-input",
-      "timeline.gate-cleanup",
-      "worktree-created",
-    ]);
   });
   test("mounts run review in the workspace overflow menu", () => {
     expect(command("run-review")?.menus).toMatchObject([

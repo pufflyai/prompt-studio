@@ -12,6 +12,7 @@ import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQuerySta
 import { WorkbenchIcon } from "../../react";
 import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
+import { collectionBadgeTarget } from "./collection-badge-navigation";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "./kanban-renderer-adapter";
 import {
   createStatusOptionsResolver,
@@ -151,7 +152,22 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       attribute.display?.kind === "badge-list"
         ? {
             ...attribute,
-            render: (value: unknown, row: KanbanRendererRow) => renderBadgeListDisplay(attribute, value, row),
+            render: (value: unknown, row: KanbanRendererRow) =>
+              renderBadgeListDisplay(attribute, value, row, undefined, (id) => {
+                if (attribute.display?.kind !== "badge-list") return;
+                const target = collectionBadgeTarget(
+                  row,
+                  attribute.display.itemsAttributeId,
+                  id,
+                  record.extensionId,
+                  context.projectId,
+                );
+                return target
+                  ? () => {
+                      void context.workbench.navigation.openTarget(target);
+                    }
+                  : undefined;
+              }),
           }
         : attribute;
     return adapter.decorateAttribute?.(record, withBuiltInDisplay) ?? withBuiltInDisplay;
@@ -247,6 +263,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               },
               undefined,
               signal,
+              state.pageParams,
             );
             const mapRows = (rows: unknown[]) => {
               const nextCache = new Map<string, { signature: string; row: KanbanRendererRow }>();

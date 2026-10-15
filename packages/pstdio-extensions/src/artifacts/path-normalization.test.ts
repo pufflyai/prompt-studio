@@ -48,8 +48,8 @@ describe("normalizeArtifactMountPath", () => {
     expect(normalizeArtifactMountPath("..")).toBeNull();
   });
 
-  test("rejects pstdio-prefixed paths (mount path is relative to .pstdio/<namespace>/)", () => {
-    expect(normalizeArtifactMountPath(".pstdio/tickets")).toBeNull();
+  test("rejects pstdio-prefixed paths (mount path is relative to .pstdio/extension-storage/<package-name>/)", () => {
+    expect(normalizeArtifactMountPath(".pstdio/extension-storage")).toBeNull();
   });
 
   test("rejects empty path", () => {

@@ -1,4 +1,5 @@
 import type { ViewRef } from "@pstdio/sdk/extensions";
 
-// Native Tickets and the timeline share the project's saved ticket views.
+// Each presentation owns its saved views over the same ticket records.
 export const ticketBoard: ViewRef = { kind: "view", id: "tickets" };
+export const timelineBoard: ViewRef = { kind: "view", id: "timeline-tickets" };

@@ -20,7 +20,9 @@ export const validateDeclaration = (input: {
       const collection = input.kind === "navigation-item" ? "navigationItems" : `${input.kind}s`;
       const fieldPath = [collection, input.contribution.id, ...path].join(".");
       const expected = issue.code === "unrecognized_keys" ? "a declared field in the public contract" : issue.message;
-      const code = input.kind === "page" && path[0] === "slots" ? "invalid_page_slot" : `invalid_${input.kind}`;
+      const paramCode = issue.message.match(/page_param_(reserved|invalid)/)?.[0];
+      const code =
+        paramCode ?? (input.kind === "page" && path[0] === "slots" ? "invalid_page_slot" : `invalid_${input.kind}`);
       input.runtime.diagnostics.push(
         createDiagnostic({
           code,

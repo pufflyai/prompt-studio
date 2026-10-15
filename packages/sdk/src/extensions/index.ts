@@ -43,15 +43,18 @@ export {
   localContributionIdGrammar,
   localContributionIdPattern,
   normalizeBooleanViewRule,
+  normalizePageParams,
   packageAsset,
   projectEvents,
   projectSlots,
   qualifyNavigationTarget,
   resolveDataTableComparableValue,
   resolveDataTableFieldKind,
+  resolvePageParams,
   sessionEvents,
   sessionSlots,
   VIEW_FILTER_CONDITIONS,
+  validatePageParamDefinitions,
   viewDataEvents,
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
@@ -157,4 +160,5 @@ export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtension
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 
+export type { WebviewPageClient } from "./webview-page-client";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

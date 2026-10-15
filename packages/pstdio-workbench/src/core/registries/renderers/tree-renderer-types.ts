@@ -8,6 +8,7 @@ import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 export interface TreeQueryContext {
+  pageParams?: import("@pstdio/sdk/extensions").PageParams;
   signal?: AbortSignal;
   /** Publish available sections while the rest of the current read is still loading. */
   onProgress?(sections: TreeViewSection[]): void;
@@ -61,6 +62,7 @@ export interface TreeNode {
   icon?: string;
   iconElement?: unknown;
   iconColor?: string;
+  badge?: { label: string; color?: string };
   iconTooltip?: string;
   tooltip?: string;
   endContent?: unknown;

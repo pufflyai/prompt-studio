@@ -9,6 +9,7 @@ export type {
   ViewSortDirection,
 } from "../collection-view/collection-view-types";
 export { EMPTY_VIEW_FILTER } from "../collection-view/collection-view-types";
+export { CollectionBadge, type CollectionBadgeProps } from "./collection-badge";
 export { DisplayMenu } from "./display-menu";
 export { applyKanbanMove } from "./kanban-move";
 export type { BoardColumnConfig, KanbanRendererProps } from "./kanban-renderer";

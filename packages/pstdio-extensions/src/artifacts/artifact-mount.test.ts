@@ -18,12 +18,24 @@ afterEach(() => {
 });
 
 describe("createArtifactMount", () => {
-  test("rejects mount root that escapes .pstdio/<namespace>", () => {
+  test.each([
+    ".publishers",
+    ".publishers/alice",
+    ".publishers./alice",
+    ".publishers /alice",
+    ".PUBLISHERS/alice",
+    "runs/../.Publishers/alice",
+    ".publishers\\alice",
+  ])("keeps the allocated-file namespace reserved for %s", (mountPath) => {
+    expect(() => createArtifactMount({ repoRoot: "/repo", name: "tools", mountPath })).toThrow();
+  });
+
+  test("rejects mount root that escapes .pstdio/extension-storage/<package-name>", () => {
     expect(() => createArtifactMount({ repoRoot: "/repo", name: "planner", mountPath: "../escape" })).toThrow();
     expect(() => createArtifactMount({ repoRoot: "/repo", name: "planner", mountPath: "/abs" })).toThrow();
   });
 
-  test("writes and reads text under .pstdio/<namespace>/<mount>", async () => {
+  test("writes and reads text under .pstdio/extension-storage/<package-name>/<mount>", async () => {
     const repo = createTempDir();
     const mount = createArtifactMount({ repoRoot: repo, name: "planner", mountPath: "tickets" });
 
@@ -154,14 +166,16 @@ describe("createFileMount", () => {
     const root = createTempDir();
     const mount = createFileMount(root);
 
-    await mount.writeText(".pstdio/tickets/PS-1/ticket.md", "# hello");
-    expect(await mount.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hello");
-    expect(await mount.exists(".pstdio/tickets/PS-1/ticket.md")).toBe(true);
+    await mount.writeText(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md", "# hello");
+    expect(await mount.readText(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md")).toBe("# hello");
+    expect(await mount.exists(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md")).toBe(true);
 
-    expect((await mount.list("**/*.md")).map((f) => f.path)).toEqual([".pstdio/tickets/PS-1/ticket.md"]);
+    expect((await mount.list("**/*.md")).map((f) => f.path)).toEqual([
+      ".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md",
+    ]);
 
-    await mount.delete(".pstdio/tickets/PS-1/ticket.md");
-    expect(await mount.exists(".pstdio/tickets/PS-1/ticket.md")).toBe(false);
+    await mount.delete(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md");
+    expect(await mount.exists(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md")).toBe(false);
   });
 
   test("rejects paths escaping the mount root", async () => {
@@ -199,16 +213,18 @@ describe("createFileMount", () => {
     const root = createTempDir();
     const mount = createFileMount(root);
 
-    await mount.writeText(".pstdio/tickets/T-1/files/a.md", "a");
-    await mount.writeText(".pstdio/tickets/T-1/files/nested/b.md", "b");
-    await mount.writeText(".pstdio/tickets/T-2/files/c.md", "c");
+    await mount.writeText(".pstdio/extension-storage/pstdio-planner/tickets/T-1/files/a.md", "a");
+    await mount.writeText(".pstdio/extension-storage/pstdio-planner/tickets/T-1/files/nested/b.md", "b");
+    await mount.writeText(".pstdio/extension-storage/pstdio-planner/tickets/T-2/files/c.md", "c");
     await mount.writeText("node_modules/pkg/index.js", "noise");
 
-    expect((await mount.list(".pstdio/tickets/T-1/files/**")).map((f) => f.path)).toEqual([
-      ".pstdio/tickets/T-1/files/a.md",
-      ".pstdio/tickets/T-1/files/nested/b.md",
+    expect(
+      (await mount.list(".pstdio/extension-storage/pstdio-planner/tickets/T-1/files/**")).map((f) => f.path),
+    ).toEqual([
+      ".pstdio/extension-storage/pstdio-planner/tickets/T-1/files/a.md",
+      ".pstdio/extension-storage/pstdio-planner/tickets/T-1/files/nested/b.md",
     ]);
-    expect(await mount.list(".pstdio/tickets/T-9/files/**")).toEqual([]);
+    expect(await mount.list(".pstdio/extension-storage/pstdio-planner/tickets/T-9/files/**")).toEqual([]);
   });
 
   test("list rejects a pattern whose literal prefix escapes the mount root", async () => {

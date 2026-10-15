@@ -2,8 +2,9 @@ import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
-import { readAutoBuildCandidates } from "./auto-build-candidates";
+import { initialSupervisorPrompt, supervisorWakePrompt } from "./auto-build-prompts";
 import { isLiveSession } from "./auto-build-sessions";
+import { readNextTickets } from "./next-tickets";
 
 export const autoBuildCommand = defineCommand({
   id: "auto-build",
@@ -27,35 +28,34 @@ async function wakeSupervisor(ctx: CommandContext) {
     const supervisor = await readAutoBuildSupervisor(ctx);
     const session = supervisor.sessionId ? await ctx.sessions.get(supervisor.sessionId) : null;
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
-    const { candidates, capacity, snapshot } = await readAutoBuildCandidates(ctx, mode);
-    if (!candidates.length || capacity.running >= capacity.limit || snapshot === supervisor.lastWake)
+    const { tickets: candidates, capacity, snapshot, progressAt, active } = await readNextTickets(ctx, mode);
+    const history = session ? (await ctx.sessions.list()).find(({ id }) => id === session.id) : undefined;
+    const lastPromptAt = Date.parse(history?.last_request_started ?? "1970-01-01T00:00:00Z");
+    const stalled = Boolean(session && Date.now() - Math.max(progressAt, lastPromptAt) >= 60 * 60 * 1000);
+    if (
+      (!candidates.length && !(stalled && active > 0)) ||
+      (capacity.running >= capacity.limit && !stalled) ||
+      (snapshot === supervisor.lastWake && active > 0 && !stalled)
+    )
       return { prompted: false };
-    const prompt = [
-      mode.prompt,
-      "## Auto Build supervisor instructions",
-      "You coordinate ticket attempts. Do not implement tickets yourself or change the board to bypass its rules.",
-      "Read current valid, unassigned tickets and available capacity with:",
-      "pst pstdio-planner auto-build candidates",
-      `For each relevant candidate, launch or resume its managed attempt with:\npst pstdio-planner auto-build dispatch --ticket <ticket> --revision ${mode.revision}`,
-      "Re-read candidates after dispatching. Respect the user's prompt and the returned capacity. The dispatch command enforces current ignore filters, assignments, dependencies, and capacity.",
-      "Do not call run-attempt directly, create implementation sessions yourself, or change Auto Build settings.",
-      mode.blockOnReview
-        ? "Children wait for dependency review approval."
-        : "Children may start while dependency revisions are in review. Dispatch creates their workspaces on the submitted dependency commit so their work stacks on top.",
-      "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build will re-prompt this same session when the board changes or capacity frees up. If Auto Build is stopped, finish your turn without dispatching more work.",
-      `Current capacity: ${capacity.running}/${capacity.limit}. Candidates: ${JSON.stringify(candidates)}.`,
-    ].join("\n\n");
     const current = await readAutoBuildMode(ctx);
     if (!current.enabled || current.revision !== mode.revision) return { prompted: false };
     let supervisorId = session?.id;
     if (supervisorId) {
-      await ctx.sessions.followup({ sessionId: supervisorId, prompt });
+      await ctx.sessions.followup({
+        sessionId: supervisorId,
+        prompt: supervisorWakePrompt({ stalled, refreshScope: supervisor.scope?.revision !== mode.revision }),
+      });
     } else {
       const home = await ctx.workspaces.getDefault();
-      const created = await ctx.sessions.create({ title: "Auto Build supervisor", workspaceId: home?.id, prompt });
+      const created = await ctx.sessions.create({
+        title: "Auto Build supervisor",
+        workspaceId: home?.id,
+        prompt: initialSupervisorPrompt(mode),
+      });
       supervisorId = created.id;
     }
-    await saveAutoBuildSupervisor(ctx, { sessionId: supervisorId, lastWake: snapshot });
+    await saveAutoBuildSupervisor(ctx, { ...supervisor, sessionId: supervisorId, lastWake: snapshot });
     return { prompted: true, sessionId: supervisorId };
   } catch (error) {
     await pauseAutoBuildMode(ctx, mode);

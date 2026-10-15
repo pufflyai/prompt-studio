@@ -4,6 +4,7 @@ import {
   commandSourceSchema,
   extensionResourceRefSchema,
   localizableStringSchema,
+  pageParamValueSchema,
   serializableJsonObjectSchema,
 } from "pstdio-api-contracts";
 import { z } from "zod";
@@ -34,6 +35,7 @@ const pageTarget: z.ZodType<Extract<NavigationTarget, { kind: "page" }>> = z.laz
         })
         .strict()
         .optional(),
+      params: z.record(z.string(), pageParamValueSchema).optional(),
       position: z.custom<FileSourcePosition>(isFileSourcePosition).optional(),
       parent: pageTarget.optional(),
     })

@@ -26,12 +26,14 @@ const registerControlsRenderer = (
     params: Record<string, unknown>,
     resource?: ResourceRef,
     signal?: AbortSignal,
+    pageParams?: import("@pstdio/sdk/extensions").PageParams,
   ) =>
     commandId
       ? executeWorkbenchExtensionCommand(context, commandId, {
           params: {
             renderer: {
               rendererId: record.id,
+              ...(pageParams ? { pageParams } : {}),
               projectId: context.projectId,
               ...(resource ? { resource: resource } : {}),
               invocation: { placement: "visible" },
@@ -53,8 +55,14 @@ const registerControlsRenderer = (
       emptyTitle: localize(record.emptyTitle, ""),
       emptyDescription: localize(record.emptyDescription, ""),
       defaultValues: record.defaultValues,
-      executeQuery: async (resource, signal) => {
-        const value = await run(record.queryHandlerId, {}, resource ?? adapter.resolveResource?.(record), signal);
+      executeQuery: async (resource, signal, pageParams) => {
+        const value = await run(
+          record.queryHandlerId,
+          {},
+          resource ?? adapter.resolveResource?.(record),
+          signal,
+          pageParams,
+        );
         const result = controlsQueryResultSchema.safeParse(value);
         if (!result.success) {
           const fields = result.error.issues

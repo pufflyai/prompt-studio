@@ -22,6 +22,7 @@ import type { CommandParamFieldRenderer } from "../../command-palette/command-pa
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { RendererReadNotice } from "../renderer-read-notice";
+import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { ViewToolbarActions } from "../view-toolbar-actions";
 import {
@@ -44,6 +45,7 @@ const noopSubscribe = () => () => {};
 
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
+  const pageParams = usePageParams(workbench, placement);
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const storageKey = resolveDataTableRendererStorageKey(contribution, placement, contextValues);
@@ -66,10 +68,17 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       contextValues,
     ),
     // Filter and sorts can narrow what the query returns. Display settings and search never run it again.
-    refreshKey: JSON.stringify([filter, sorts]),
+    refreshKey: JSON.stringify([filter, sorts, pageParams]),
     load: (signal) =>
       contribution.executeQuery(
-        { resource: placement.resource, modeId: workbench.modes.getActiveModeId(), filter, sorts, settings },
+        {
+          pageParams,
+          resource: placement.resource,
+          modeId: workbench.modes.getActiveModeId(),
+          filter,
+          sorts,
+          settings,
+        },
         signal,
       ),
     subscribe: (refresh) => {

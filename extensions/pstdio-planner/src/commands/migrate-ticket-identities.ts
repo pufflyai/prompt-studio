@@ -10,7 +10,7 @@ import {
 import { IDENTITY_MIGRATION, identityMigrations } from "../data/ticket-identity";
 import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 
-const BACKUP_ROOT = ".pstdio/ticket-identity-migration";
+const BACKUP_ROOT = ".pstdio/extension-storage/pstdio-planner/ticket-identity-migration";
 
 export const migrateTicketIdentitiesCommand = defineCommand({
   id: "migrate-ticket-identities",

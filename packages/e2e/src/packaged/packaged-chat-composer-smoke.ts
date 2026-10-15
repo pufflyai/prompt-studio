@@ -86,6 +86,10 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",
     );
     await editor.press("Enter");
+    // The saved turn replaces the optimistic message and its table controls.
+    await expect(page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last()).toContainText(
+      "Read the changes",
+    );
     const table = page.getByRole("log").locator('table[data-edit-mode="true"]').last();
     const detail = table.getByRole("cell", { name: /Read the changes/ });
     await expect(detail).toBeVisible();

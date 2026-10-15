@@ -70,6 +70,7 @@ export interface PlanDeadline extends Deadline {
 }
 
 export interface PlanSection {
+  eta: { remainingMs: number; completedComplexity: number; totalComplexity: number; startedAt: string | null } | null;
   deadline: PlanDeadline | null;
   rows: PlanRow[];
   counts: { total: number; done: number; humanNeeded: number; blocked: number; atRisk: number };

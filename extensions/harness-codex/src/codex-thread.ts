@@ -107,7 +107,10 @@ export const createCodexThread = (
     disconnect: settleTurn,
     turnRevision: () => turnRevision,
     acknowledge: (id: string | undefined, revision: number) => {
-      if (id && revision === turnRevision) currentTurn = id;
+      if (!id || revision !== turnRevision) return;
+      // turn/start can steer an observed goal turn without another start notification.
+      if (currentTurn === id) settleTurn();
+      currentTurn = id;
     },
     receive: (message: import("./app-server-rpc").RpcMessage) => {
       const turn = message.params?.turn as { id: string } | undefined;

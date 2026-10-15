@@ -138,6 +138,9 @@ jobs:
         # The API and database suites take minutes, so database_tests runs them in shards.
         run: bunx lerna run test --ignore e2e --ignore pstdio-api --ignore pstdio-db ${{ needs.scope.outputs.lerna_filter }} --stream
 
+      - name: Test synchronization protocol with isolated storage
+        run: bunx lerna run test:conformance ${{ needs.scope.outputs.lerna_filter }} --stream
+
   relay_smoke:
     needs: scope
     if: needs.scope.outputs.relay_smoke == 'true'

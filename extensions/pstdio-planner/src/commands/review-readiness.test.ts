@@ -27,6 +27,7 @@ const setup = async () => {
     overrides: {
       sessions: {
         create: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }),
+        get: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }),
       } as never,
     },
   });

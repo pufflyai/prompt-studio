@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { expectPackagedChatHistory } from "./packaged-chat-history-smoke";
 
 const expectResizedPanelReopen = async (page: Page, label: string, openName: string, direction: number) => {
   const open = page.getByRole("button", { name: openName, exact: true });
@@ -69,7 +70,7 @@ export const expectPackagedPanelMotion = async (page: Page) => {
   await expectResizedPanelReopen(page, "Resize Side Panel", "Show Side Panel", -1);
 };
 
-// Packaged chat must retain earlier DOM as live chunks arrive, then become quiet.
+// Visible messages retain their DOM as chunks arrive. Older responses may leave the viewport.
 export const expectPackagedStreamingMotion = async (
   page: Page,
   baseUrl: string,
@@ -96,6 +97,8 @@ export const expectPackagedStreamingMotion = async (
   await expect(text).toBeVisible();
   const earlier = await text.elementHandle();
   await expect(page.locator(".streaming-text-chunk").first()).toBeAttached();
+  await expect(page.getByText(/^Step 2\./).first()).toBeVisible();
+  expect(await earlier?.evaluate((element) => element.isConnected)).toBe(true);
   await expect
     .poll(
       async () => {
@@ -106,7 +109,7 @@ export const expectPackagedStreamingMotion = async (
     )
     .toBe("completed");
   await expect(page.getByText(/^Step 30\./).first()).toBeVisible();
-  expect(await earlier?.evaluate((element) => element.isConnected)).toBe(true);
+  expect(await page.locator(".ai-message__root").count()).toBeLessThan(20);
   await expect
     .poll(() =>
       page
@@ -117,4 +120,5 @@ export const expectPackagedStreamingMotion = async (
     )
     .toBe(0);
   await earlier?.dispose();
+  await expectPackagedChatHistory(page, session.id);
 };

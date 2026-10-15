@@ -180,6 +180,10 @@ Rows without a resource or navigation target keep their declared selection.
 
 Set `tooltip` to show text while the pointer rests on a row or the row has keyboard focus, such as the full path of a file whose row shows only its name. `iconTooltip` shows text only over the row icon. Use one of the two on a row, not both.
 
+Set `badge: { label: "3", color: "orange" }` for a trailing count beside a tree row. It uses the notification count badge style. Omit it when there is no count to show.
+
+Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and page `target`. A target makes that badge a direct link without activating the card. Page and resource references are scoped to the contributing extension and project.
+
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.
@@ -217,6 +221,14 @@ Workspace resources use the host project mode. Target workspace actions with
 
 The host adds **Copy link** to the breadcrumb menu on every page. It copies the page URL, including the selected
 document. Do not add a separate copy-link action or view to an extension.
+
+A resource kind's `resolveMany` command returns current `ResourceResolution` records with owner page targets.
+When no single-resource `resolve` command is declared, the dashboard also uses this resolver for the open
+resource after navigation and owner events. When the target
+matches the open page, resource, and selected document, its parent chain restores the breadcrumb ancestry.
+The open page keeps its params, section, and source position. Keep document-selection metadata in the returned
+reference. For a file inside another resource, return a file-labeled target with the resource's body target as
+its parent. This keeps copied links and renamed files consistent with sidebar navigation.
 
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
 

@@ -30,16 +30,19 @@ Never parse `.pstdio/config.json`. It is owned by the host.
 
 ## Store extension-owned project files
 
-Declare the tracking policy in `package.json`:
-
-```json
-{ "pstdio": { "projectFiles": { "tracked": false } } }
-```
-
-Then write paths relative to the allocated directory:
+Keep configuration, caches, drafts, prototypes, evidence, and backups under
+`.pstdio/extension-storage/<package-name>/`. Declare an artifact mount:
 
 ```ts
-await ctx.extensionFiles?.writeText("cache/index.json", JSON.stringify(index));
+const cacheFiles = defineArtifactMount({ id: "cache", path: "cache", label: "Cache" });
 ```
 
-The host allocates `.pstdio/ext/<publisher>.<name>/`, rejects path escapes, and adds the gitignore entry on the first write. Use `ctx.packageFiles` to read shipped assets, `ctx.projectFiles` for files in the default workspace, and `ctx.workspaceFiles` for the active working directory.
+Register it in `artifactMounts`, then write paths relative to it:
+
+```ts
+await ctx.artifacts.mount("cache").writeText("index.json", JSON.stringify(index));
+```
+
+The host rejects path escapes. Extension source belongs in `.pstdio/extensions/`;
+it is not runtime storage. Use `ctx.packageFiles` for shipped assets, `ctx.projectFiles`
+for project source files, and `ctx.workspaceFiles` for the active working directory.

@@ -114,7 +114,7 @@ const extractGlobalOptions = (rawArgs: string[]) => {
       json = true;
       continue;
     }
-    if (arg) args.push(arg);
+    if (arg !== undefined) args.push(arg);
   }
 
   return { args, json, projectId };

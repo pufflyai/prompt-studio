@@ -54,8 +54,10 @@ const normalizeCollectionBadgeItems = (value: unknown): CollectionBadgeItem[] =>
     if (!id) return [];
     const label = textValue(item.label) ?? id;
     const icon = textValue(item.icon);
+    const color = textValue(item.color);
+    const tooltip = textValue(item.tooltip);
     const resource = isCollectionResource(item.resource) ? item.resource : undefined;
-    return [{ id, label, ...(icon ? { icon } : {}), ...(resource ? { resource } : {}) }];
+    return [{ id, label, icon, color, tooltip, ...(resource ? { resource } : {}) }];
   });
 };
 
@@ -64,6 +66,7 @@ export const renderBadgeListDisplay = (
   value: unknown,
   row: KanbanRendererRow,
   openResource?: (resource: NonNullable<CollectionBadgeItem["resource"]>) => void,
+  getItemAction?: (id: string) => (() => void) | undefined,
 ): ReactNode => {
   if (descriptor.display?.kind !== "badge-list") return null;
   const items = normalizeCollectionBadgeItems(row.attributes[descriptor.display.itemsAttributeId]);
@@ -79,7 +82,10 @@ export const renderBadgeListDisplay = (
       key: item.id,
       label: item.label,
       icon: item.icon,
-      onClick: item.resource && openResource ? () => openResource(item.resource!) : undefined,
+      color: item.color,
+      tooltip: item.tooltip,
+      onClick:
+        getItemAction?.(item.id) ?? (item.resource && openResource ? () => openResource(item.resource!) : undefined),
     }),
   );
 };

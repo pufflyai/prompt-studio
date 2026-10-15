@@ -14,5 +14,6 @@ export * from "./schemas/sessions";
 export * from "./schemas/settings";
 export * from "./schemas/skills";
 export type { JsonObject, ResourceRef } from "./schemas/types";
+export * from "./schemas/webview-preferences";
 export * from "./schemas/workspaces";
 export * from "./schemas/ydoc";

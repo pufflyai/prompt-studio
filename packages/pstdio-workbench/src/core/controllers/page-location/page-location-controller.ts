@@ -52,6 +52,11 @@ const isHistoryState = (value: unknown): value is WorkbenchPageHistoryState => {
   );
 };
 
+const locationWithUrlParams = (direct: PageLocation, contextual: PageLocation) => {
+  const { params: previous, ...location } = contextual;
+  return { ...location, ...(direct.params ? { params: direct.params } : {}) };
+};
+
 export const createWorkbenchPageLocationController = <Value>(
   input: CreateWorkbenchPageLocationControllerInput<Value>,
 ): WorkbenchPageLocationController => {
@@ -145,7 +150,7 @@ export const createWorkbenchPageLocationController = <Value>(
     const directKey = workbenchPageLocationRouteKey(direct.location, internals.resources, pages());
     const contextualKey = workbenchPageLocationRouteKey(contextual.location, internals.resources, pages());
     if (entry.state.routeKey !== directKey || contextualKey !== directKey) return direct;
-    return contextual;
+    return { ...contextual, location: locationWithUrlParams(direct.location, contextual.location) };
   };
 
   const restore = (

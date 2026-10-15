@@ -12,21 +12,21 @@ export const githubReviewLinks = (tickets: StoredTicket[]) => {
   return links;
 };
 
-export const readGithubMerge = async (
+export const readGithubMerge = async <T>(
   ctx: Pick<ExtensionContextBase, "process" | "logger">,
   command: string[],
   cwd: string | undefined,
-  isMerged: (output: string) => boolean,
+  parse: (output: string) => T,
 ) => {
   try {
     const result = await ctx.process.run({ command, cwd });
     if (result.exitCode !== 0) {
       ctx.logger.warn(`Could not check GitHub merge: ${result.stderr}`);
-      return false;
+      return null;
     }
-    return isMerged(result.stdout);
+    return parse(result.stdout);
   } catch (error) {
     ctx.logger.warn(`Could not check GitHub merge: ${String(error)}`);
-    return false;
+    return null;
   }
 };

@@ -1,0 +1,243 @@
+# Synchronization contracts
+
+The private `pstdio-sync-contracts` package defines wire protocol 1 and an executable
+reference for the proposed v0.1 synchronization model. Production integration is
+not implemented by this package. See the [PRD](../../requirements/platform/0007-synchronization-contracts.md).
+
+## Package and ownership
+
+Import schemas, types, fingerprint validation and compatibility checks from
+`pstdio-sync-contracts`. The main export uses Zod and Web Crypto, with no Node,
+Bun, host, SDK, UI, database, Yjs or provider imports. `./conformance` is a separate,
+test-only export. Its development dependencies are not a runtime implementation.
+[Package boundaries](0013-package-boundaries.md) record this layer.
+
+| Owner | Responsibility |
+| --- | --- |
+| Contracts, PS-744 | Versioned envelopes, validation and executable semantics. |
+| Identity, PS-745 | Persist stable IDs, map local folders/environments, isolate credentials and caches. |
+| Assets, PS-747 | Immutable content references, streamed persistence, integrity, completion and recovery. |
+| Storage/SDK, PS-746 | Journal, accepted state, atomic local saves, authoring operations and conflict inspection/resolution. |
+| Relay implementation | Authorization, immutable publication checks, atomic PostgreSQL publication, durable replay/snapshots and restore epochs. |
+| Account manager | Account lifecycle and current environment grants; independent from content restore. |
+| Extensions | Data models, domain validation and pure local handlers from published packages. |
+
+The existing [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts),
+[SDK entry point](../../../packages/sdk/src/extensions/index.ts), and
+[host adapter](../../../packages/pstdio-api/src/features/extensions/command-environment/storage.ts)
+remain unchanged. The SDK implementation must add replacement APIs and deprecate
+old methods under [API versioning](../extensions/0014-api-versioning.md).
+
+## Identity and immutable requests
+
+`Scope` contains `accountId`, `workbenchId`, and `extensionId`. A `recordId` is unique
+inside that scope. `environmentId` identifies the originating local runtime, not a
+path, session, Git workspace, access token, or account. IDs are opaque, stable,
+nonempty strings; their persistence and authentication belong to the owners above.
+The relay binds account and environment to current authorization before any access.
+No wire ID grants access by itself.
+
+An operation ID is unique within the extension/workbench/account scope and is never
+reassigned, even after restore, deletion, conflict, or a lost acknowledgment. Record
+IDs cannot be reused to bypass a retained tombstone. A mutation has one change per
+record, one protocol version, one originating environment, and explicit parent IDs.
+Parents represent causal dependencies between grouped mutations, not device clocks.
+
+The fingerprint covers the whole mutation body except the fingerprint itself.
+`canonicalJson` sorts object keys, preserves array order, uses JSON scalar encoding,
+and omits absent optional properties. SHA-256 is lowercase hexadecimal over UTF-8.
+JSON cannot contain undefined array elements, nonfinite numbers, or non-JSON values.
+`sealMutation` constructs a validated envelope; `validateMutation` checks structure
+and digest. A matching operation ID and digest returns the existing terminal receipt.
+A changed digest is rejected. Pending receipts bind the ID too, but can progress
+when bytes or parents become available. Reordering a meaningful array changes the
+digest. Peers must retain and retry the original sealed payload, never regenerate it.
+Fingerprints detect identity/content mismatch; they are not signatures or permission.
+
+## Authoring operations and wire representation
+
+[Authoring inputs](../../../packages/pstdio-sync-contracts/src/authoring.ts) describe
+behavior for the SDK child, not shipped SDK signatures. Commands are scoped through
+an authorized storage context. The SDK must expose grouped edit, revisioned read,
+status inspection, conflict inspection and resolution operations to people, agents
+and extensions without exposing Yjs documents.
+
+| Input | Supported reconciliation |
+| --- | --- |
+| `text.insert`, `text.delete` | Translate indices from the current local view into stable Yjs sequence operations. Concurrent inserts survive; overlapping deletes are idempotent. No whole-document replacement during remote delivery. |
+| `list.insert`, `list.delete` | Insert JSON elements or delete existing sequence elements. Concurrent insertions survive. Deleting an observed element cannot delete an unseen concurrent insertion. List elements are atomic JSON; nested edits and moves are not inferred. |
+| `map.set`, `map.delete` | Changes to different explicit keys commute. Each key checks the captured cell fingerprint, including whether the key exists. Repeated edits to a key within one local group use the final edit and the original cell fingerprint. Keys can be any string, including an empty string. Same-key divergence preserves alternatives. Values are atomic JSON, not recursively merged. |
+| `replace` | Replace an arbitrary JSON value only when its captured value fingerprint matches. Different JSON fields do not establish semantic compatibility. |
+| `asset` | Versioned immutable `{sha256, byteLength, mediaType}` reference, including zero-byte content. Compare the captured base or identical next reference. Competing replacements preserve bytes and alternatives. |
+| `deleted` | Tombstone or explicit restore. Check the deletion state and exact record revision. Never silently resurrect an offline edit. |
+
+Each record has one shared primitive kind once established. Primitive conversion
+requires a separate future contract. A record can also carry an atomic JSON value
+and asset reference. A mutation may edit several records and references together.
+
+Text/list wire changes carry internal base64 Yjs state updates; the reference uses
+record-scoped documents. Their encoding is part of protocol 1, not the public
+extension API. Maps carry explicit key preconditions and set/delete operations.
+Indexes never travel as replay instructions. No Yjs object crosses the SDK boundary.
+A production receiver must validate update encoding and consistency before staging.
+The reference decodes real updates and rolls back invalid transactions. JSON and dictionary validation preserve all permitted property names, including `__proto__` and `constructor`.
+
+`expectedRevision` is the record version observed in the author's working branch.
+Accepted record revisions advance once per accepted group touching that record.
+Text/list and explicit map-key checks allow supported concurrent divergence; JSON
+and assets use their own base preconditions. Future or incompatible bases preserve
+a conflict. Parents gate pending descendants until accepted. They cannot be replaced
+by comparing integer revisions alone. Local revision projection applies an active
+replacement once, rather than counting both it and its captured pending branch.
+
+## Transaction and acknowledgment boundaries
+
+Local storage serializes callers and durably saves the full group, ordered pending
+journal entry, identity, and required bytes before reporting `saved-locally`. The public SDK must accept caller-observed revisions for read-modify-write. It must not infer the caller's base from a later value at save time. Local
+working state is derived from accepted state plus active pending branches. It is
+not a third authoritative stored copy. An online stale save still preserves the
+proposed work and returns revision/conflict information; core never reruns arbitrary
+extension commands with external effects.
+
+The relay validates structure, identity/digest, authorization, parents, asset
+completion and preconditions. It applies all records to temporary candidate state.
+On any unsupported edit it retains the complete group as a conflict alternative.
+No candidate record is published. Missing assets or unaccepted parents return
+`pending`; unrelated groups can progress. Known conflicts keep their whole group,
+including dependent changes to other records.
+
+Commit candidate records, tombstones, receipt, conflict metadata and replay boundary
+in one database transaction. Only then acknowledge or notify. Before-commit failure
+publishes nothing. After-commit acknowledgment loss returns the original receipt on
+retry. Bytes are immutable and must be verified complete before the transaction can
+publish their references. Production asset completion must prevent cleanup racing
+this transaction. Notifications are hints; the current local event bus is not a
+durable replay log.
+
+`Receipt` retains the sealed mutation, digest, outcome, stable journal order and
+acceptance checkpoint. `syncOutcomeSchema` names `saved-locally`, `pending`,
+`synchronized`, and `conflict`. A synchronized result describes relay acceptance;
+it does not mean every peer has received it or that initial download is complete.
+Offline readiness requires all records, packages and bytes to be locally complete.
+
+## Conflict alternatives and resolution
+
+Normal reads keep the first accepted version and conflict metadata. Retain complete
+alternative envelopes and their referenced bytes; do not create duplicate domain
+records. A conflict has its own monotonic revision. Any accepted edit or new
+alternative touching its records changes that revision. Inspection must expose
+accepted inputs and all alternative operation IDs and payloads to authorized callers.
+
+A proposal names `conflictId`, `expectedConflicts` for every covered conflict, exact `expectedInputs`,
+and `capturedOperationIds`. Captured operations must be retained nonaccepted members
+of the root's descendant branch and its complete nonaccepted prerequisite closure, in ancestry order. Joined branches capture whole prerequisite groups, including their other records. Every captured record must be
+included; duplicate records, missing input checks, self-dependencies and unrelated
+captures are invalid. Captured operations are also parents. Other parents must have
+accepted receipts. The relay checks causal closure, membership and every covered conflict/input revision atomically. An unaccepted parent cannot be bypassed by capturing only its child.
+
+A proposal may replace only its captured branch. A resolution carries that branch's
+complete sequence state, merged with current accepted sequence state, and explicit
+choices for incompatible values/assets/map keys. Its accepted receipt supersedes
+only the named operations. Later edits depend on the active replacement and remain
+pending until their own acceptance. A stale rejected proposal stays retained and
+is included in the next replacement's captured ancestry. Never delete the old branch
+because a proposal was merely sent. Third-client alternatives outside a capture
+remain retained and require their own decision. Derive supersession from accepted resolution receipts so a previously captured proposal is never reopened. A late proposal against an already resolved root gets a new unresolved conflict identity so it can be inspected and proposed again.
+
+Automatic handlers run locally, are pure, and have no external effects. Proposals
+include the published immutable package revision and handler ID. The relay compares
+that revision with the workbench publication and checks all expected conflict/input
+revisions. It never runs extension code or trusts a local development override.
+Unavailable handlers leave the conflict inspectable. Explicit proposals use the
+same revision checks without requiring a handler field. Authorization and package
+lookup remain production responsibilities; the fixture uses a publication marker.
+
+## Replay, snapshots, retention and restore
+
+A checkpoint is `(epoch, sequence)`, scoped to one extension/workbench/account stream.
+Sequence increases on accepted publication. `Receipt.order` orders every retained
+attempt, including conflicts and pending dependencies. A snapshot contains a
+consistent accepted record set, tombstones, conflict alternatives, receipt index,
+published revision and checkpoint. Incremental production replay must frame whole
+groups and apply them atomically, then advance the local checkpoint in the same
+transaction. Never advance a cursor before its group is durable.
+
+`replaySchema` validates contiguous complete accepted groups in one scope and epoch, with matching receipt identities and checkpoints. `replayBoundary` requests a snapshot for a different epoch, an out-of-range cursor,
+or a cursor older than retained replay. Production content restore preserves scope
+IDs and creates a new epoch before exposing restored content. Sequence rollback
+inside the same epoch is invalid. Compacting replay entries does not change epoch.
+
+The following metadata must survive replay compaction and content cleanup:
+
+- Operation IDs, immutable digests, acceptance outcomes, ordering and checkpoints.
+- Parent edges, resolution captures and their supersession receipts, including nonaccepted ancestors needed to replay accepted resolutions.
+- Record revision lineage and tombstones, conflict revisions and unresolved alternatives.
+- Snapshot coverage, restore epoch lineage, and enough sealed payload/byte material to replay missing accepted local work and pending branches.
+
+The v0.1 reference retains all of this. Removing a replay entry must never remove
+the receipt index or imply that the operation was lost. A production compactor may
+replace history only with an explicit verifiable coverage checkpoint plus retained
+recovery material and ancestry that provides the same guarantees for returning
+environments. Until that design is proved, do not compact these receipts. No TTL,
+device-clock cutoff, or assumed maximum offline interval is specified here.
+
+On reconnect, compare retained accepted receipts with the incoming snapshot before
+replacing accepted local state. Compare immutable fingerprints as well as outcomes: a restored pending receipt does not acknowledge newer accepted local work. Requeue missing or rolled-back accepted operations and their
+nonaccepted captured ancestors in retained journal order, before pending mutations.
+Keep original IDs/digests and local bytes. Reconcile acknowledgments only against
+the current relay receipts. If recovered work now conflicts, retain it as an
+alternative; restore cannot silently reset it. A snapshot with truncated receipt
+coverage is invalid under this reference, not evidence of data loss to guess about.
+If required recovery material is unavailable, preserve local work and report that
+recovery is incomplete; never label it synchronized.
+
+Current authorization must succeed before a returning environment contributes work.
+Content snapshots never restore grants. Account-manager recovery and credential
+invalidation are separate PS-735 acceptance work.
+
+## Compatibility
+
+Peers advertise supported wire versions, supported features and required features.
+Release labels are diagnostic and do not select a protocol. Negotiate version 1 only
+when both support it and every required feature is supported in both directions.
+Optional features are ignored unless required; unknown mandatory structure and
+unknown envelope fields are rejected. This contract does not claim future version
+support merely because two peers advertise the same unknown number.
+
+An unsupported result is actionable and recoverable. Keep the original durable
+journal and bytes, do not send or rewrite queued envelopes, and retry after a local
+runtime or relay update. Schema evolution needs a separately versioned decoder and
+compatibility evidence before enabling a new wire version.
+
+## Executable evidence
+
+Run from the repository root after `bun install --frozen-lockfile`:
+
+```sh
+bun run --cwd packages/pstdio-sync-contracts test
+bun run --cwd packages/pstdio-sync-contracts typecheck
+bun run --cwd packages/pstdio-sync-contracts lint
+bun run --cwd packages/pstdio-sync-contracts test:conformance
+bun run verify:boundaries
+bun run verify:lockfile
+```
+
+`registerConformance` takes a structural adapter factory so later storage/relay
+implementations can reuse the scenarios. `createReferenceFixture` supplies disposable
+PGlite databases for three environments, PostgreSQL row transactions, and RustFS
+objects. The command creates a named Docker stack, exposes no database/object ports,
+mounts source/dependencies read-only, and removes its containers/network/volume in
+`finally`. The default test subnet is `10.254.236.0/24`; set `SYNC_TEST_SUBNET` to an
+unused subnet for concurrent stacks. It never opens the application's database.
+Its test tables and fault controls are not production migrations or service APIs.
+
+The source cases were inspected at WS-272 commit `565ceab57` in
+`infra/relay/prototype/src/{protocol,staging,client-model,recovery}.ts` and adjacent
+tests. That branch's `0026-cloud-sync-prototype.md` is evidence, not a merged
+prerequisite. The fixture ports the protocol failures and adds map/list, third-client,
+handler revision, compatibility, canonical fingerprint and resolution-restore cases.
+It uses throw-based faults immediately before commit and after commit/before receipt,
+and closes/reopens durable client stores. It does not establish OS-kill recovery,
+WebSocket delivery, revocation, production backups or Spaces behavior. Those original
+prototype and production acceptance cases remain with PS-735, not implicit claims
+of this suite. No production service from the prototype is imported.

@@ -11,7 +11,10 @@ const resolveCommand = `${extensionId}.command.resolve-note`;
 const page = { kind: "page" as const, extensionId, id: "note" };
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const openNoteWorkbench = (resolve: (resource: ResourceRef) => Promise<ResourceRef | null> | ResourceRef | null) => {
+const openNoteWorkbench = (
+  resolve: (resource: ResourceRef) => Promise<ResourceRef | null> | ResourceRef | null,
+  batchResolver = false,
+) => {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.views.registerView({ id: "note", title: "Note", body: { kind: "react", render: () => null } });
@@ -29,7 +32,16 @@ const openNoteWorkbench = (resolve: (resource: ResourceRef) => Promise<ResourceR
     projectId,
     metadata: {
       ...emptyDashboardExtensionMetadata,
-      resourceKinds: [{ id: "note", localId: "note", extensionId, resolveCommand, menuSlots: [] }],
+      resourceKinds: [
+        {
+          id: "note",
+          localId: "note",
+          extensionId,
+          resolveCommand,
+          ...(batchResolver ? { resolveManyCommand: `${extensionId}.command.resolve-links` } : {}),
+          menuSlots: [],
+        },
+      ],
     },
     executeCommand: async (_projectId, commandId, body) => {
       const resource = (body as { resource: ResourceRef }).resource;
@@ -159,4 +171,15 @@ test("same-kind open resources resolve through their own extension and refresh w
     expect(workbench.getPrimaryResource()?.label).toBe(extensionId + ".command.resolve");
   }
   expect(calls).toEqual(owners.map((owner) => owner + ".command.resolve"));
+});
+
+test("keeps the open-resource resolver when a kind also resolves linked-resource batches", async () => {
+  const { workbench, open, resolved } = openNoteWorkbench(
+    (resource) => ({ ...resource, label: "Current document" }),
+    true,
+  );
+  open({ type: "note", id: "n1", label: "Old document" });
+  await settle();
+  expect(resolved).toHaveLength(1);
+  expect(workbench.getPrimaryResource()?.label).toBe("Current document");
 });

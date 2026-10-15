@@ -1,3 +1,4 @@
+import { validatePageParamDefinitions } from "@pstdio/sdk/extensions";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
@@ -77,6 +78,7 @@ export const createWorkbenchPageRegistry = <Value>(
     store,
 
     registerPage(page) {
+      validatePageParamDefinitions(page.params);
       return registerWorkbenchPage({
         page,
         registryInput: input,

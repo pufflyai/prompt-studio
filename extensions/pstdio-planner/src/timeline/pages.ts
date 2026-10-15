@@ -14,7 +14,7 @@ export const timelineView = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./view/entry.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open", "files.upload"],
+    capabilities: ["commands.execute", "navigation.open", "files.upload", "preferences.get", "preferences.set"],
   },
 });
 

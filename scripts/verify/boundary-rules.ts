@@ -4,6 +4,7 @@
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-relay": [],
   "pstdio-api-contracts": [],
+  "pstdio-sync-contracts": [],
   "pstdio-file-types": [],
   "pstdio-paths": [],
   "pstdio-logging": ["pstdio-paths"],

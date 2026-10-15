@@ -6,6 +6,14 @@ import type { ResourceConstraint } from "./resource-binding";
 import type { ResourceRef } from "./resources";
 import type { PlacementItem, PlacementPresentation } from "./views";
 
+export type PageParamValue = string | number | boolean | readonly string[];
+export type PageParamDefinition =
+  | { readonly type: "string"; readonly default?: string; readonly values?: readonly string[] }
+  | { readonly type: "number"; readonly default?: number }
+  | { readonly type: "boolean"; readonly default?: boolean }
+  | { readonly type: "string[]"; readonly default?: readonly string[] };
+export type PageParams = Readonly<Record<string, PageParamValue>>;
+
 export type PageSlotRole = "primary" | "auxiliary";
 export type PageSlotCardinality = "one" | "many";
 export type PageOpenIntent = "preview" | "pin";
@@ -62,6 +70,7 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly parent?: PageRef;
   readonly resource?: ResourceConstraint;
   readonly document?: PageDocumentDeclaration;
+  readonly params?: Readonly<Record<string, PageParamDefinition>>;
   readonly main: PageMain;
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;
@@ -79,5 +88,7 @@ export interface PageLocation {
   readonly resource?: ResourceRef;
   readonly section?: FileRendererSectionTarget;
   readonly position?: FileSourcePosition;
+  /** Overrides that differ from declared defaults. */
+  readonly params?: PageParams;
   readonly parent?: PageLocation;
 }

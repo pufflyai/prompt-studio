@@ -1,18 +1,16 @@
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type {
-  NavigationTarget,
-  PreferenceScopeRef,
-  PreferenceValue,
-  WorkbenchCore,
-  WorkbenchPanelInstance,
-} from "../../core";
+import type { NavigationTarget, WorkbenchCore, WorkbenchPanelInstance } from "../../core";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
+import { createWebviewPreferencesCapabilities, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;
   workbench: WorkbenchCore;
   placement?: WorkbenchPanelInstance;
+  extensionId?: string;
+  ownedPreferences?: WebviewOwnedPreferences;
+  warn?: (message: string) => void;
   /** Event channel into the guest; terminal.session is only offered when present. */
   hostEvents?: HostEventPublisher;
 }
@@ -42,6 +40,14 @@ export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWeb
       const request = params as { commandId: string; params?: unknown };
       return input.workbench.commands.executeCommand(request.commandId, request.params);
     },
+    "page.params.update": (params: unknown) => {
+      const state = input.workbench.pages.store.getState();
+      if (!state.location) throw new Error("page_params_no_page");
+      if (!input.extensionId || input.extensionId !== state.location.page.extensionId)
+        throw new Error("page_params_not_owner");
+      const patch = (params as { params: Parameters<WorkbenchCore["pageLocations"]["updateParams"]>[0] }).params;
+      return { location: input.workbench.pageLocations.updateParams(patch) };
+    },
     "navigation.open": (params: unknown) => {
       const request = params as { target?: NavigationTarget };
       if (!request.target) throw new Error("navigation.open requires a target.");
@@ -55,15 +61,7 @@ export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWeb
         title: notification.title,
       });
     },
-    "preferences.get": (params: unknown) => {
-      const request = params as { name: string; scope?: PreferenceScopeRef };
-      return input.workbench.preferences.getValue(request.name, request.scope);
-    },
-    "preferences.set": (params: unknown) => {
-      const request = params as { name: string; scope?: PreferenceScopeRef; value: PreferenceValue };
-      input.workbench.preferences.setValue(request.name, request.value, request.scope ?? { scope: "user" });
-      return { name: request.name, value: request.value };
-    },
+    ...createWebviewPreferencesCapabilities(input),
     "host.dispatchKeyboardEvent": (params: unknown) =>
       (input.dispatchKeyboardEvent ?? dispatchDocumentKeyboardEvent)(params as KeyboardEventInit),
     ...(input.hostEvents

@@ -9,6 +9,14 @@ layer-map change.
 ## Layers
 
 1. **Contracts and utilities**
+   `pstdio-sync-contracts` defines private, versioned synchronization wire schemas,
+   fingerprint validation, compatibility checks, and proposed authoring inputs.
+   Its main export depends only on Zod and Web Crypto. Its separate `./conformance`
+   export is test-only and uses development dependencies for PGlite, PostgreSQL,
+   Yjs, and S3 test storage. It imports no host, SDK, UI, database implementation,
+   or provider code. Future runtime and relay consumers must declare their own
+   dependency and layer-map edge when they integrate it; none is added speculatively.
+
    `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
    `pstdio-storage` define stable contracts, file-type metadata, paths, logging,

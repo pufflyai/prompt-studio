@@ -23,6 +23,7 @@ import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { BrowserSignInRequired } from "@/shared/components/browser-sign-in-required";
 
+import { DashboardHostPreferences } from "./shared/workbench/dashboard-host-preferences";
 import { createDashboardWorkbench } from "./workbench";
 import "./i18n";
 
@@ -102,6 +103,7 @@ const renderDashboard = async () => {
               themeStorage={storage}
               titleBar={
                 <>
+                  <DashboardHostPreferences workbench={dashboardWorkbench} />
                   {projectTabs && <DesktopProjectTabs workbench={dashboardWorkbench} {...projectTabs} />}
                   {desktopLifecycle && <DesktopStartupAppearance bridge={desktopLifecycle} />}
                   {desktopLifecycle && <DesktopQuitConfirmation bridge={desktopLifecycle} />}

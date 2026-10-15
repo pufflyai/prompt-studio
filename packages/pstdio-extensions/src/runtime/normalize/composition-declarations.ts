@@ -1,5 +1,5 @@
 import { extensionPanelRegions } from "@pstdio/sdk/extensions";
-import { localizableStringSchema, regionSettingsSchema } from "pstdio-api-contracts";
+import { localizableStringSchema, pageParamDefinitionsSchema, regionSettingsSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 import { localRefSchema, navigationDeclarationSchema } from "./navigation-declaration";
 
@@ -53,6 +53,7 @@ export const pageDeclarationSchema = z
     title: localizableStringSchema,
     icon: z.string().optional(),
     path: z.string(),
+    params: pageParamDefinitionsSchema.optional(),
     mode: localRefSchema("mode"),
     parent: localRefSchema("page").optional(),
     resource: resource.optional(),

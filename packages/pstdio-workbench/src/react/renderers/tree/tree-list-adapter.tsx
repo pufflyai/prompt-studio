@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Badge, Box } from "@chakra-ui/react";
 import type { PageLocation, PageRef } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
@@ -187,6 +187,13 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
 };
 const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined) => {
   if (node.endContent !== undefined) return node.endContent as ReactNode;
+  if (node.badge) {
+    return (
+      <Badge size="sm" variant="subtle" colorPalette={node.badge.color ?? "gray"} flexShrink={0}>
+        {node.badge.label}
+      </Badge>
+    );
+  }
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
   if (resource?.type !== "workspace" || typeof additions !== "number" || typeof deletions !== "number") {

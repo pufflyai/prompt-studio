@@ -7,10 +7,10 @@ import {
   type ResourceAnchor,
 } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendAttemptEvent, putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
-import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
 import type { HumanRequestReason } from "../data/review-request-types";
@@ -18,6 +18,7 @@ import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness } from "./attempt-readiness";
+import { prepareDependencyBase } from "./dependency-base";
 import {
   createAnchoredWorkspace,
   harnessInput,
@@ -28,7 +29,6 @@ import {
 
 const humanReadinessReasons = new Set<HumanRequestReason>([
   "ambiguous-dependency-attempt",
-  "divergent-dependency-attempts",
   "dependency-cycle",
   "dependency-missing",
 ]);
@@ -79,10 +79,11 @@ export async function startAttempt(
     }
     throw new Error(message);
   }
+  const dependencyBase = await prepareDependencyBase(ctx, readiness);
   const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
     ctx,
     commandParams,
-    readiness.baseHeadSha,
+    dependencyBase.headSha,
     async () => {
       await options.beforeDispatch?.(readiness.baseHeadSha);
     },
@@ -111,7 +112,7 @@ export async function startAttempt(
       }),
       ...(readiness.mode === "stacked"
         ? [
-            `This workspace starts at dependency commit ${readiness.baseHeadSha}. Stack your changes on this work; do not reset to the project base or discard dependency changes. Dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}.`,
+            `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request human review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
           ]
         : []),
     ].join("\n\n"),
@@ -125,7 +126,7 @@ export async function startAttempt(
     ticketShorthand: anchor.label ?? ticketIdentity.shorthand,
     implementationSessionId: session.id,
     state: "implementing",
-    base: { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha },
+    base: dependencyBase,
     revisions: [],
     implementationDisconnectRetries: 0,
     reviewDisconnectRetries: 0,
@@ -143,10 +144,11 @@ export async function startAttempt(
     reportId: null,
     reviewId: null,
     threadId: null,
-    commitSha: readiness.baseHeadSha,
+    commitSha: dependencyBase.headSha,
     metadata: { mode: readiness.mode, dependencyAttemptIds: readiness.dependencyAttemptIds },
   });
-  await moveTicketToInProgress(ctx, ticket.id);
+  // A short session can finish before its attempt is saved and miss the completion hook.
+  if ("title" in ticket) await rollUpAttemptTicket(ctx, ticket.id);
   return {
     decision: "started" as const,
     mode,

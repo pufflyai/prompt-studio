@@ -3,7 +3,8 @@ import type { AutomationRun } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "../commands/auto-build-mode";
 import { makeCommandContext } from "../commands/command-context.fixture";
-import { enqueueAutoBuild } from "./auto-build";
+import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { autoBuildSessionCompletedHook, enqueueAutoBuild } from "./auto-build";
 
 function fixture() {
   const runs: AutomationRun[] = [];
@@ -66,6 +67,26 @@ test("turning off saves the project mode and events no longer queue checks", asy
   await enqueueAutoBuild(ctx);
   expect(runs).toHaveLength(1);
   expect(await readAutoBuildCommand.run(ctx, {})).toMatchObject({ enabled: false });
+});
+
+test("supervisor completion does not enqueue another supervisor check", async () => {
+  const { ctx, runs } = fixture();
+  await configureAutoBuildCommand.run(ctx, { enabled: true, prompt: "Choose relevant work." });
+  await saveAutoBuildSupervisor(ctx, { sessionId: "supervisor" });
+  runs[0]!.status = "succeeded";
+  const eventContext = { ...ctx, eventId: "pstdio.event.session.completed", deliveryId: "completion" };
+  await autoBuildSessionCompletedHook.run(eventContext, {
+    sessionId: "supervisor",
+    projectId: "proj-1",
+    sessionStatus: "completed",
+  });
+  expect(runs).toHaveLength(1);
+  await autoBuildSessionCompletedHook.run(eventContext, {
+    sessionId: "implementation",
+    projectId: "proj-1",
+    sessionStatus: "completed",
+  });
+  expect(runs).toHaveLength(2);
 });
 
 test("shows background launch errors from the host run", async () => {

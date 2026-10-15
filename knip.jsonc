@@ -38,6 +38,8 @@
         "src/extension-kernel/workbench-targets.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        // Isolated integration tests are launched by scripts with explicit paths.
+        "src/**/*.integration.ts",
         // Tests spawn fixtures by path, so nothing imports them.
         "src/**/*.fixture.ts",
         "src/**/*.typecheck.ts",

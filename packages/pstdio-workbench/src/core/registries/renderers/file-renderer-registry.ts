@@ -52,7 +52,11 @@ export interface FileRendererContribution {
   resourceKind?: string;
 
   /** Resolve the file's content (and identity) for the bound resource. */
-  load(resource: ResourceRef | undefined, signal: AbortSignal): Promise<FileRendererContent> | FileRendererContent;
+  load(
+    resource: ResourceRef | undefined,
+    signal: AbortSignal,
+    pageParams?: import("@pstdio/sdk/extensions").PageParams,
+  ): Promise<FileRendererContent> | FileRendererContent;
   /** Persist edited text. Absent ⇒ read-only. Never called for images. */
   save?(
     resource: ResourceRef | undefined,

@@ -27,11 +27,10 @@ import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPl
 import { CodeHighlightingPlugin } from "../shared/plugins/CodePlugin/CodeHighlightingPlugin";
 import { EquationPlugin } from "../shared/plugins/EquationPlugin/EquationPlugin";
 import { ListMarkerWidthPlugin } from "../shared/plugins/list-marker-width-plugin";
-import StateUpdatePlugin from "../shared/plugins/StateUpdatePlugin";
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
-import { importStreamingMarkdownToLexical } from "../shared/streaming-markdown";
 import { splitFrontmatter } from "../utils/markdown";
+import { RichMessageStatePlugin, SOURCE_IMPORT_TAG } from "./rich-message-state-plugin";
 
 export interface RichMessageProps extends ChatLinkProps {
   debug?: boolean;
@@ -43,7 +42,6 @@ export interface RichMessageProps extends ChatLinkProps {
   onChange?: (value: string) => void;
 }
 
-const SOURCE_IMPORT_TAG = "markdown-source-import";
 const CHAT_TABLE_SETTINGS = { rowNumbers: false, wrapRows: true };
 
 export function RichMessage(props: RichMessageProps) {
@@ -70,15 +68,17 @@ function RichMessageContent(props: RichMessageProps) {
   const motion = useRecipe({ key: "streamingText" });
   const loadedRef = useRef({ body, resolver: resolveMarkdownUrl });
   const sourceDocumentRef = useRef<ReturnType<typeof createMarkdownSourceDocument> | null>(null);
-  sourceDocumentRef.current ??= createMarkdownSourceDocument(body, resolveMarkdownUrl);
 
   const initialConfig = {
     namespace: "RICH_MESSAGE",
     nodes: [...editorNodes, ChatCodeLinkNode],
     editorState: () => {
       $addUpdateTag(SOURCE_IMPORT_TAG);
-      if (isEditable) sourceDocumentRef.current?.importToLexical();
-      else importMarkdownToLexical(body, resolveMarkdownUrl);
+      if (isEditable) {
+        const document = createMarkdownSourceDocument(body, resolveMarkdownUrl);
+        sourceDocumentRef.current = document;
+        document.importToLexical();
+      } else importMarkdownToLexical(body, resolveMarkdownUrl);
     },
     onError: (error: Error) => console.error(error),
     editable: isEditable,
@@ -101,35 +101,23 @@ function RichMessageContent(props: RichMessageProps) {
       <MarkdownUrlProvider resolver={resolveMarkdownUrl}>
         <MarkdownTableSettingsContext value={CHAT_TABLE_SETTINGS}>
           <LexicalComposer initialConfig={initialConfig}>
-            <StateUpdatePlugin
-              value={body}
-              onUpdate={(value: string) => {
-                const previous = loadedRef.current;
-                if (previous.body === value && previous.resolver === resolveMarkdownUrl) return;
-                $addUpdateTag(SOURCE_IMPORT_TAG);
-                if (isEditable) {
-                  const sourceDocument = createMarkdownSourceDocument(value, resolveMarkdownUrl);
-                  sourceDocumentRef.current = sourceDocument;
-                  sourceDocument.importToLexical();
-                } else {
-                  importStreamingMarkdownToLexical(
-                    value,
-                    resolveMarkdownUrl,
-                    streaming && value.startsWith(previous.body),
-                  );
-                }
-                loadedRef.current = { body: value, resolver: resolveMarkdownUrl };
-              }}
+            <RichMessageStatePlugin
+              body={body}
+              resolver={resolveMarkdownUrl}
+              isEditable={isEditable}
+              streaming={streaming}
+              loadedRef={loadedRef}
+              sourceDocumentRef={sourceDocumentRef}
             />
-            <LinkPlugin />
+            {isEditable ? <LinkPlugin /> : null}
             <ChatLinkPlugin />
             <ClickableLinkPlugin newTab />
-            <ListPlugin />
+            {isEditable ? <ListPlugin /> : null}
             <ListMarkerWidthPlugin />
             {isEditable ? <TabIndentationPlugin maxIndent={7} /> : null}
-            <HorizontalRulePlugin />
+            {isEditable ? <HorizontalRulePlugin /> : null}
             {!streaming ? <CodeHighlightingPlugin /> : null}
-            <ImportCodeBlocksPlugin />
+            {isEditable ? <ImportCodeBlocksPlugin /> : null}
             <EquationPlugin />
             <RichTextPlugin
               contentEditable={<ContentEditable fullWidth={fullWidth} isRichMessage />}

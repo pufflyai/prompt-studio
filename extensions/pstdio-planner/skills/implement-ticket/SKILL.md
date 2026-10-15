@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.15
+  version: 0.0.17
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
@@ -18,6 +18,18 @@ Always work in a Prompt Studio workspace. Never use `git worktree add` or your a
 
 Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. The Planner derives its ticket status from the attempt and review verdicts; do not set that status directly. In any other workspace, skip step 5, update the ticket status after fixing review findings, and give the user the workspace ID, commit SHA, and report ID.
 
+### Branches and dependency code
+
+Your working branch, dependency base, and delivery target have different roles. Keep the working branch assigned to your workspace. The attempt's recorded base is the code your change builds on. The delivery target comes from the implementation policy; it is not a command to check out that branch or reset your workspace to it.
+
+Before editing a managed attempt:
+
+1. Read `pst pstdio-planner read-attempt-history --workspace-id <workspace-id>`. Keep the owner session ID, recorded base, and latest revision number.
+2. Read the ticket's dependencies and inspect the required files in this workspace. A submitted prerequisite can exist only on its own branch. A Done ticket or an answered human request does not prove that its commits reached the target branch or your workspace.
+3. For dependent work, verify the base with `pst pstdio-planner update-stack --workspace-id <workspace-id> --implementation-session-id <owner-session-id> --expected-head-sha <git-rev-parse-HEAD>`. Commit your existing changes first if the workspace is dirty. Planner combines compatible submitted dependency branches into a base and integrates it in this same workspace. Check its result and the required files before continuing.
+
+Dependency integration is part of implementing this ticket. This assignment authorizes stack updates in your assigned workspace; run them without asking for another confirmation. It does not approve another ticket, merge into the project target, or move a ticket to Done. Do not recreate prerequisite code, create a replacement attempt, or use Done status to bypass missing code. Reconcile Git conflicts yourself in this workspace: inspect both revisions, preserve their required behavior and your ticket's changes, resolve the files, commit the merge, and retry `update-stack`. Run the affected tests before submitting. Do not request human review or confirmation merely because Git reports conflicts. Ask only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. Explain that semantic conflict and the exact choice needed; a conflicting file alone is not a human decision.
+
 ## Workflow
 
 1. Identify the ticket. Pass its shorthand, such as `PS-12`, to `--id`. If it is missing or ambiguous, ask the user to confirm it.
@@ -28,8 +40,8 @@ Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>
 3. Run the required validation, follow the adversarial review step below, and commit the finished change in the managed workspace.
 4. Create the change request report described below.
 5. Keep the `reportId` returned by `pst reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
-   - `pst pstdio-planner submit-change-request --workspace-id <workspace-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-attempt-state implementing`
-   - After requested changes, use `changes_requested` as the expected state.
+   - `pst pstdio-planner submit-change-request --workspace-id <workspace-id> --implementation-session-id <owner-session-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-revision <last-revision-number>`
+   - Read the owner session ID and last revision number with `pst pstdio-planner read-attempt-history --workspace-id <workspace-id>`. Use revision 0 before the first submission. A later correction can be submitted after passed review; old reviews remain on their original commits.
 6. Follow the completion steps below.
 
 ## When stuck
@@ -45,9 +57,9 @@ pst pstdio-planner request-human --ticket PS-12 \
   --request '{"kind":"decision","questions":[{"id":"behavior","label":"Which behavior is required?","required":true,"input":{"kind":"text"}}]}'
 ```
 
-For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. In a managed attempt, also pass `--workspace-id <workspace-id> --expected-attempt-state implementing`, or `changes_requested` after review. Pass `--session-id <implementation-session-id>` when known so Planner can reuse the linked conversation.
+For a concrete action that needs confirmation, use `--request '{"kind":"task"}'`. In a managed workspace, pass `--workspace-id <workspace-id>` and `--session-id <implementation-session-id>` so Planner can reuse the linked conversation. Optional expected state and status guards must use values read from the latest record. Do not guess a phase or change it to permit a request.
 
-Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the requested action or decision, then resume. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
+Keep the returned request ID. Stop work that depends on the answer. After the person answers, read `pst pstdio-planner review-requests read --request-id <request-id>`, verify the requested action or decision against the actual files and Git history, then resume. "Completion confirmed" records an answer; it does not integrate code. If the same blocker remains, inspect and repair the dependency base before requesting the same action again. Describe unchanged evidence clearly instead of treating repeated resumes as progress. Never answer your own request for the person. `run-review` is for reviewing code, not requesting human help.
 
 ## Adversarial review
 
@@ -60,6 +72,7 @@ Use an independent reviewer when available. Fix the findings before handoff.
 Read `pst pstdio-planner implementation-policy` again before handoff so changes to the settings take effect.
 
 - When `openPr` is enabled and validation has passed, push the implementation branch and open a draft PR against `defaultTargetBranch` from the policy, or the repository's default branch when unset. A value such as `origin/main` selects `main` on `origin`. Reuse an existing PR for that branch. Follow the repository's PR title rules. Write the description with the sections of the repository's PR template, such as `.github/pull_request_template.md`, in the same order, and include the ticket shorthand. Without a template, include the ticket shorthand, a summary, and validation results. With GitHub CLI, use `gh pr create --draft --base <target-branch> --title <title> --body-file <path>`. The body file replaces the template, so copy its headings into the file.
+  - Inspect the diff against that target. A stacked branch can include prerequisite changes that have not reached the target yet. Name those dependencies and their PRs in the description. Do not claim they are merged or change a configured PR target to hide them.
 - Read the ticket's `reviewLinks` with `pst tickets panel --id <shorthand>`. If the PR URL is not already linked, run `pst tickets link-review --id <shorthand> --url <pr-url>`. Include the PR URL in the handoff. If pushing, creating, or linking the PR fails, report the blocker without claiming that step succeeded.
 - When `openPr` is disabled, skip PR creation and linking unless the user requested them.
 
@@ -75,7 +88,7 @@ The report must explain the change and include outputs that a reviewer can inspe
 6. Complete the report at the returned `path`.
 7. Run `pst reports save --name <returned-name>` and keep its `reportId` for revision submission.
 
-Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/reports/change_request/report_01.md`.
+Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/extension-storage/pstdio-reports/reports/change_request/report_01.md`.
 
 Only an independent reviewer creates a review report. The implementation agent uses a change request report.
 
@@ -89,3 +102,8 @@ Report evidence includes:
 - Any file needed to prove the ticket is implemented correctly
 
 Use concrete artifacts that another person or agent can inspect and reproduce.
+
+
+### Repair a changed dependency base
+
+For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. Read the ticket and existing review findings. Run `pst pstdio-planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.

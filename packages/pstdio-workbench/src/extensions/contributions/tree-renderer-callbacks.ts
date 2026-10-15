@@ -33,6 +33,7 @@ export const createQueryParams = (
   return {
     renderer: {
       rendererId: record.id,
+      ...(ctx.pageParams ? { pageParams: ctx.pageParams } : {}),
       projectId: input.projectId,
       ...(modeId ? { modeId } : {}),
       ...(resource ? { resource } : {}),
