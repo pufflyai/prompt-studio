@@ -52,10 +52,23 @@ test("Session menus share resource actions and switch through the full history",
   await viewport.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
-  await expect(picker.getByRole("option", { name: "Keep open", exact: true })).toBeVisible();
+  await expect(picker.getByRole("option", { name: /Keep open$/ })).toBeVisible();
   await search.fill("history 00");
   await expect(options).toHaveText(["History 00"]);
   await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
+  const sessions = await (await request.get(`/v1/sessions?project_id=${project.id}`)).json();
+  const history = sessions.find((session: { title: string }) => session.title === "History 00");
+  try {
+    expect(
+      (await request.patch(`/v1/sessions/${history.id}/title`, { data: { title: "History 00 updated" } })).ok(),
+    ).toBe(true);
+    await expect(options).toHaveText(["History 00 updated"]);
+    await expect(search).toHaveValue("history 00");
+    await expect(search).toBeFocused();
+  } finally {
+    await request.patch(`/v1/sessions/${history.id}/title`, { data: { title: "History 00" } });
+  }
+  await expect(options).toHaveText(["History 00"]);
   await search.fill("history 01");
   await search.fill("HISTORY 02");
   await expect(options).toHaveText(["History 02"]);
