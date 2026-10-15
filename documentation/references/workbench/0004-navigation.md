@@ -36,7 +36,7 @@ The host exposes `getPanelDestinations(instanceId)` and `movePanel(instanceId, r
 
 A closed declared preset reopens at its authored destination. An open or moved preset keeps its existing instance and destination. Resource presets retain their exact canonical binding with the declaring owner after movement, closure, and reload. Reset creates a resource through the declaration’s add command only when no valid bound instance exists. Closing a tab does not end its session. Both reset methods return a promise so callers can await resource creation. `onDidResetLayout` receives `"page"` or `"mode"`, allowing hosts to clear preferences only for that owner.
 
-Async preset creation keeps the page or mode that started the reset. Navigating elsewhere while creation is pending does not attach that preset to the new owner or change the current page.
+Async preset creation keeps the page or mode that started the reset. Navigating elsewhere within the same project while creation is pending does not attach presets to the new owner or change the current page. The reset finishes all missing presets for its initiating owner before its promise resolves. Leaving the project stops later creation commands; pending results do not attach to the newly selected project.
 
 Restoration removes duplicate saved instances and corrects unavailable or disallowed regions, forbidden visibility or floating choices, fixed geometry, and size bounds before publishing the restored layout. A moved tab returns to an allowed destination if its saved panel no longer accepts incoming tabs. Content declared in that panel stays there.
 

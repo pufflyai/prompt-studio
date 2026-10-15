@@ -42,7 +42,15 @@ const PanelCard = (props: PanelCardProps) => {
 const meta = {
   title: "Components/Layout/Resizable Split Layout",
   component: ResizableSplitLayout,
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Drag below half the panel minimum to preview closing. Release closes; Escape or pointer cancel restores the size before the drag. Drag, double-click, and Home preserve the saved size for reopening. Set collapsible=false for panels that must stay open.",
+      },
+    },
+  },
   args: {
     resizablePanel: (
       <PanelCard title="Sidenav" description="Drag the grip. Double-click or press Home to collapse." bg="bg.subtle" />

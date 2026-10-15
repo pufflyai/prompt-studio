@@ -16,9 +16,14 @@ export const resetMissingPresets = async (core: WorkbenchCore, owner: "page" | "
   const modeDeclarations = core.modePlacements
     .listPlacements(state.activeModeId ?? core.modes.getActiveModeId())
     .map((p) => ({ ...p, panelId: modePlacementContributionId(p.id) }));
-  const declarations = owner === "page" ? pageDeclarations : modeDeclarations;
+  // Resolve availability before commands can navigate away from the initiating owner.
+  const declarations = (owner === "page" ? pageDeclarations : modeDeclarations).filter((declaration) =>
+    core.composition
+      .panelsFor(declaration.region as "main" | "side" | "secondary" | "aside" | "bottom")
+      .addable.some((panel) => panel.panelId === declaration.panelId),
+  );
   for (const declaration of declarations) {
-    if (resetOwnerScope(core, owner) !== scope) return;
+    if (core.pages.store.getState().projectId !== state.projectId) return;
     if (
       declaration.item.kind !== "binding" ||
       declaration.item.binding.cardinality !== "one" ||
@@ -30,15 +35,12 @@ export const resetMissingPresets = async (core: WorkbenchCore, owner: "page" | "
     );
     if (
       open.some(
-        ({ tab, scope }) =>
+        ({ tab, scope: layoutScope }) =>
           tab.contributionId === declaration.panelId &&
-          (owner === "mode" || (tab.declarationScope ?? scope) === core.layout.getPersistenceScope()),
+          (owner === "mode" || (tab.declarationScope ?? layoutScope) === scope),
       )
     )
       continue;
-    const tool = core.composition
-      .panelsFor(declaration.region as "main" | "side" | "secondary" | "aside" | "bottom")
-      .addable.find((p) => p.panelId === declaration.panelId);
-    if (tool) await openPreset(declaration.item.binding.add);
+    await openPreset(declaration.item.binding.add);
   }
 };

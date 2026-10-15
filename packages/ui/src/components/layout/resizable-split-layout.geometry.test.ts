@@ -38,41 +38,28 @@ describe("ResizableSplitLayout geometry", () => {
     });
   });
 
-  test("closes a vertical panel at 72 px and keeps 73 px open at its configured minimum", () => {
-    const input = {
-      side: "bottom" as const,
-      startSize: 240,
-      minSize: 128,
-      maxSize: 420,
-      collapsible: true,
-    };
+  for (const side of ["left", "right", "top", "bottom"] as const) {
+    for (const minSize of [80, 128, 400]) {
+      test(`${side} closes only below half its ${minSize}px minimum`, () => {
+        const input = { side, startSize: 480, minSize, maxSize: 600, collapsible: true };
+        const deltaDirection = getResizableSplitAxis(side).deltaDirection;
+        const atSize = (size: number) =>
+          resolveDraggedPanelSize({ ...input, pointerDelta: (size - input.startSize) * deltaDirection });
 
-    expect(resolveDraggedPanelSize({ ...input, pointerDelta: 168 })).toEqual({
-      rawSize: 72,
-      size: 0,
-      collapsed: true,
+        expect(atSize(minSize / 2 - 1)).toEqual({ rawSize: minSize / 2 - 1, size: 0, collapsed: true });
+        expect(atSize(minSize / 2)).toEqual({ rawSize: minSize / 2, size: minSize, collapsed: false });
+      });
+    }
+    test(`${side} clamps a panel that cannot close`, () => {
+      const result = resolveDraggedPanelSize({
+        side,
+        startSize: 240,
+        pointerDelta: -480 * getResizableSplitAxis(side).deltaDirection,
+        minSize: 80,
+        maxSize: 420,
+        collapsible: false,
+      });
+      expect(result).toEqual({ rawSize: -240, size: 80, collapsed: false });
     });
-    expect(resolveDraggedPanelSize({ ...input, pointerDelta: 167 })).toEqual({
-      rawSize: 73,
-      size: 128,
-      collapsed: false,
-    });
-  });
-
-  test("preserves the existing horizontal collapse threshold", () => {
-    const input = {
-      side: "right" as const,
-      startSize: 320,
-      minSize: 320,
-      maxSize: 520,
-      collapsible: true,
-    };
-
-    expect(resolveDraggedPanelSize({ ...input, pointerDelta: 161 }).collapsed).toBe(true);
-    expect(resolveDraggedPanelSize({ ...input, pointerDelta: 159 })).toEqual({
-      rawSize: 161,
-      size: 320,
-      collapsed: false,
-    });
-  });
+  }
 });
