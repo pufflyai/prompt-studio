@@ -7,6 +7,7 @@ Prompt Studio is a workbench where people and agents build and use tools through
 - [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
+- [Build and smoke-test the relay](development/0006-relay.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)
@@ -142,10 +143,12 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0004 — Move to remote execution](extensions/0004-remote-execution-migration.md)
 - [0006 — Smoke checks](extensions/0006-smoke-checks.md)
 - [0007 — Make actions CLI-ready](extensions/0007-cli-ready-actions.md)
+- [0008 — Extension file storage](extensions/0008-extension-storage.md)
 
 ### Use the SDK
 
 - [0001 — Client](sdk/0001-client.md)
+- [0003 — Save related records](sdk/0003-storage.md)
 
 ## References
 
@@ -176,6 +179,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
 - [0024 — Extension API version checks](../references/architecture/0024-extension-api-version-checks.md)
 - [0025 — Database upgrades](../references/architecture/0025-database-upgrades.md)
+- [0026 — Synchronization contracts](../references/architecture/0026-synchronization-contracts.md)
 
 ### CLI
 
@@ -204,6 +208,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0011 — Notifications](../references/extensions/0011-notifications.md)
 - [0012 — Renderer edit and refresh](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
 - [0014 — API versioning](../references/extensions/0014-api-versioning.md)
+- [0018 — Data migrations](../references/extensions/0018-data-migrations.md)
 - [0015 — Harness commands and chat modes](../references/extensions/0015-harness-commands.md)
 - [0016 — Workflow status migration](../references/extensions/0016-workflow-status-migration.md)
 
@@ -212,6 +217,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0001 — Overview](../references/sdk/0001-overview.md)
 - [0002 — Resource types](../references/sdk/0002-resources.md)
 - [0003 — Method reference](../references/sdk/0003-api.md)
+- [0004 — Grouped storage](../references/sdk/0004-storage.md)
 
 ### Workbench
 
@@ -249,6 +255,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0003 — PRD: Real-time Updates](../requirements/platform/0003-realtime-updates.md)
 - [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
+- [0007 — PRD: Synchronization contracts v0.1](../requirements/platform/0007-synchronization-contracts.md)
 
 ## ADRs
 

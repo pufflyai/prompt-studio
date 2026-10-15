@@ -1,0 +1,160 @@
+import { expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type {
+  AssetReference,
+  StorageConflictInspection,
+  StorageRecord,
+  StorageSaveOutcome,
+} from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
+import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+
+export const registerGroupedStorageSmokeTests = () => {
+  test(
+    "packaged public storage preserves grouped conflicts and resolved branches across restarts",
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), "packaged-grouped-storage-"));
+      const source = join(root, "source");
+      mkdirSync(source);
+      const bundle = await Bun.build({
+        entrypoints: [join(import.meta.dir, "fixtures/grouped-storage-extension.ts")],
+        target: "bun",
+      });
+      if (!bundle.success) throw new AggregateError(bundle.logs, "Could not build the public SDK fixture");
+      await Bun.write(join(source, "extension.js"), bundle.outputs[0]!);
+      writeFileSync(
+        join(source, "package.json"),
+        JSON.stringify({
+          name: "shared-notes",
+          publisher: "example",
+          version: "1.0.0",
+          type: "module",
+          main: "extension.js",
+          engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+        }),
+      );
+      const env = { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]) };
+      let host = await startPackagedServe(root, env);
+      const post = (path: string, body: unknown) =>
+        fetch(`${host.baseUrl}/v1${path}`, {
+          method: "POST",
+          headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      const command = async <T>(projectId: string, id: string, params: unknown = {}) => {
+        const response = await post(
+          `/projects/${projectId}/extensions/commands/example.shared-notes.command.${id}/execute`,
+          { params },
+        );
+        expect(response.status).toBe(200);
+        const body = (await response.json()) as { outcome: { ok: boolean; value: T } };
+        expect(body.outcome.ok).toBe(true);
+        return body.outcome.value;
+      };
+      const read = (id: string) => command<{ note: StorageRecord; caption: StorageRecord }>(id, "read");
+      try {
+        const created = await post("/projects", folderProjectInput({ name: "Shared notes" }, root));
+        expect(created.status).toBe(201);
+        const project = (await created.json()) as { id: string };
+        const initial = await read(project.id);
+        const image = await command<AssetReference>(project.id, "stage", {
+          operationId: "image",
+          content: "first image",
+        });
+        const group = {
+          operationId: "first-caller",
+          edits: [
+            {
+              recordId: initial.note.recordId,
+              expectedRevision: initial.note.revision,
+              shared: [{ kind: "text.insert", index: 0, text: "First" }],
+              asset: image,
+            },
+            {
+              recordId: initial.caption.recordId,
+              expectedRevision: initial.caption.revision,
+              replace: "First caption",
+            },
+          ],
+        };
+        expect((await command<StorageSaveOutcome>(project.id, "commit", { group })).status).toBe("saved-locally");
+        expect((await command<StorageSaveOutcome>(project.id, "commit", { group })).status).toBe("saved-locally");
+        const replacement = await command<AssetReference>(project.id, "stage", {
+          operationId: "replacement",
+          content: "second image",
+        });
+        const stale = await command<StorageSaveOutcome>(project.id, "commit", {
+          group: {
+            operationId: "second-caller",
+            edits: [
+              {
+                recordId: initial.note.recordId,
+                expectedRevision: initial.note.revision,
+                shared: [{ kind: "text.insert", index: 0, text: "Second" }],
+                asset: replacement,
+              },
+              {
+                recordId: initial.caption.recordId,
+                expectedRevision: initial.caption.revision,
+                replace: "Second caption",
+              },
+            ],
+          },
+        });
+        expect(stale.status).toBe("conflict");
+        expect((await read(project.id)).caption.value).toBe("First caption");
+        await stopProcess(host.child);
+        host = await startPackagedServe(root, env);
+        expect(
+          (await command<StorageSaveOutcome>(project.id, "outcome", { operationId: "second-caller" })).status,
+        ).toBe("conflict");
+        const inspected = await command<StorageConflictInspection>(project.id, "inspect", {
+          conflictId: "second-caller",
+        });
+        expect(
+          inspected.alternatives[0]!.records.find(({ recordId }) => recordId === initial.caption.recordId)?.value,
+        ).toBe("Second caption");
+        const resolved = await command<StorageSaveOutcome>(project.id, "resolve", {
+          proposal: {
+            operationId: "resolve-caller",
+            conflictId: inspected.conflictId,
+            expectedConflicts: inspected.expectedConflicts,
+            capturedOperationIds: inspected.capturedOperationIds,
+            expectedInputs: inspected.expectedInputs,
+            choose: "local",
+          },
+        });
+        expect(resolved.status).toBe("saved-locally");
+        const final = await read(project.id);
+        expect(final.caption.value).toBe("Second caption");
+        expect(final.note.asset).toEqual(replacement);
+        expect(final.note.shared?.kind).toBe("text");
+        await stopProcess(host.child);
+        host = await startPackagedServe(root, env);
+        expect(await read(project.id)).toEqual(final);
+        const later = await command<StorageSaveOutcome>(project.id, "commit", {
+          group: {
+            operationId: "after-resolution",
+            edits: [
+              {
+                recordId: final.caption.recordId,
+                expectedRevision: final.caption.revision,
+                replace: "Caption after resolution",
+              },
+            ],
+          },
+        });
+        expect(later.status).toBe("saved-locally");
+        expect((await read(project.id)).caption.value).toBe("Caption after resolution");
+      } finally {
+        await stopProcess(host.child);
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+    PACKAGED_TEST_TIMEOUT,
+  );
+};

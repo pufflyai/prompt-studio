@@ -49,7 +49,7 @@ export const prepareInstallDependencies = async (input: {
     // Local dependencies belong to the source checkout. Bun resolves local
     // lockfile paths relative to that checkout. See ADR 0017 for the production case.
     await installDependencies(source.path, installInput);
-    copyUsableNodeModules(source.path, installPath);
+    await copyUsableNodeModules(source.path, installPath);
   } else {
     await installDependencies(installPath, { ...installInput, production: !installInput.reuseInstalledDependencies });
   }

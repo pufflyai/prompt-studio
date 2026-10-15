@@ -14,7 +14,11 @@ export default entries.map((entry) =>
     input: { [entry.replaceAll("/", "-")]: resolve(import.meta.dirname, `src/${entry}/index.ts`) },
     tsconfig,
     external: (id) =>
-      !id.startsWith(".") && !isAbsolute(id) && !id.startsWith("@/") && !id.startsWith("pstdio-api-contracts"),
+      !id.startsWith(".") &&
+      !isAbsolute(id) &&
+      !id.startsWith("@/") &&
+      !id.startsWith("pstdio-api-contracts") &&
+      !id.startsWith("pstdio-sync-contracts"),
     treeshake: { moduleSideEffects: "no-external" },
     plugins: [dts({ emitDtsOnly: true, tsconfig })],
     output: { dir: resolve(import.meta.dirname, ".api-report"), format: "es" },

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -97,7 +97,7 @@ const WorkspaceListStory = (props: WorkspaceListStoryProps) => {
   });
 
   return (
-    <QueryClientProvider client={dashboardQueryClient}>
+    <QueryClientProvider client={getDashboardQueryClient()}>
       <Box h="100dvh">
         <Workbench workbench={workbench} />
       </Box>

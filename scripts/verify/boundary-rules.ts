@@ -2,15 +2,25 @@
 // Workspace-internal dependencies each package may declare. Additions here are
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
-  "pstdio-api-contracts": [],
+  "pstdio-relay": ["pstdio-sync", "pstdio-sync-contracts"],
+  "pstdio-api-contracts": ["pstdio-sync-contracts"],
+  "pstdio-sync-contracts": [],
+  "pstdio-sync": ["pstdio-sync-contracts"],
   "pstdio-file-types": [],
   "pstdio-paths": [],
   "pstdio-logging": ["pstdio-paths"],
-  "pstdio-db": ["pstdio-api-contracts", "pstdio-paths"],
+  "pstdio-db": [
+    "pstdio-api-contracts",
+    "pstdio-paths",
+    "pstdio-storage",
+    "pstdio-sync",
+    "pstdio-sync-contracts",
+    "pstdio-relay",
+  ],
   "pstdio-scheduler": [],
   "pstdio-wt": ["pstdio-file-types"],
-  "pstdio-storage": ["pstdio-paths"],
-  "@pstdio/sdk": ["pstdio-api-contracts"],
+  "pstdio-storage": ["pstdio-paths", "pstdio-sync-contracts"],
+  "@pstdio/sdk": ["pstdio-api-contracts", "pstdio-sync", "pstdio-sync-contracts"],
   // pstdio-extensions also declares extension-lab, whose documented examples its tests load,
   // so changing an example marks pstdio-extensions as affected.
   "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "extension-lab"],
@@ -35,7 +45,13 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   ],
   pstdio: ["pstdio-extensions", "@pstdio/sdk", "pstdio-api", "pstdio-logging", "pstdio-paths", "pstdio-wt"],
   "@pstdio/ui": ["@pstdio/sdk", "pstdio-file-types"],
-  "@pstdio/workbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions"],
+  "@pstdio/workbench": [
+    "@pstdio/sdk",
+    "@pstdio/ui",
+    "pstdio-api-contracts",
+    "pstdio-extensions",
+    "pstdio-sync-contracts",
+  ],
   "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
   // The testbench also declares the extensions its tests load from source,
   // so changing one marks the testbench as affected.

@@ -52,7 +52,7 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 
 | Stage | Event | Runs | `ci_passed` requires |
 | --- | --- | --- | --- |
-| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI and license checks run when their files change. | No job failed |
+| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI, license and Docker checks run when their files change. | No job failed |
 | Merge queue | `merge_group` | Static checks and an unsigned build of every client. No tests and no lint. | The static check, client build and Docker jobs passed |
 | Full | A push to `main`, a manual run, or a pull request with the `ci:full` label | Every job, including Windows, e2e, the desktop tests and the packaged toolchain check | Every job passed |
 
@@ -66,9 +66,10 @@ The pull request stage is meant to finish in a few minutes, so it runs only Linu
 - `lint_and_test` builds, lints and tests the changed packages and the packages that depend on them. It compares the merge commit with the target branch.
 - `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
 - `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. `license_check` runs when a `package.json` or `bun.lock` changes.
-- A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the three checks above. Markdown files, files under `design/`, and `LICENSE` do not count.
+- `build_docker` builds both images when a `package.json`, `bun.lock`, or `Dockerfile` changes. This catches container install failures before the merge queue.
+- A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the checks above, including Docker builds. This covers `.dockerignore`, `bunfig.toml`, and `.npmrc`. Markdown files, files under `design/`, and `LICENSE` do not count.
 
-Windows, e2e, packaged, desktop, and Docker jobs do not run on a pull request. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
+Windows, e2e, packaged, and desktop jobs do not run in the scoped pull request stage. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
 
 ### Merge queue stage
 
@@ -97,7 +98,7 @@ The full stage adds:
 - `lint_and_test` and `database_tests` for every package, and the published extension, harness CLI, and license checks.
 - `windows_test_and_build` and `windows_database_tests`. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time.
 - `e2e` (three browser shards), `e2e_cli`, and `packaged_and_vite_e2e`.
-- The desktop source Electron specs and the packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow still runs the Intel tests and the desktop benchmarks.
+- The desktop source Electron specs, packaged renderer benchmarks, and packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow also runs the launch benchmarks and Intel tests against signed release artifacts.
 - `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows. Linux runs the full packaged suite. Intel macOS runs only the essential CLI, runtime, and extension page tests in `scripts/verify/packaged-runtime-smoke.ts`, as the desktop release runs only `@essential` tests there: slow Intel runners turned timing races in the large UI suite into release failures that other platforms did not have. Windows runs its own short list.
 
 `build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
@@ -155,7 +156,7 @@ Tests install local fixture extensions from `packages/e2e/src/default-extensions
 
 Playwright uses one worker and no retries. CI rejects focused Playwright tests (`test.only`). UI and Vite traces are recorded on the first run and retained on failure. This follows [Playwright's trace modes](https://playwright.dev/docs/test-use-options#recording-options).
 
-CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds run in the merge queue and full stages, next to the other jobs.
+CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds run in the merge queue and full stages, and on pull requests that change their inputs. Both images copy the root Bun configuration and every workspace manifest so frozen installs use the same workspace graph and linking rules as the checkout. Local extension source stays outside the build context.
 
 Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps the earlier evidence. UI shards upload `ui-e2e-results-<shard>-attempt-<run_attempt>`; packaged/Vite uploads `packaged-vite-e2e-results-attempt-<run_attempt>`. Desktop test rows upload `desktop-test-results-<target>-attempt-<run_attempt>`; release rows upload `test-results-desktop-<target>-attempt-<run_attempt>`. Windows update checks upload `windows-installation-readiness-attempt-<run_attempt>`. Failed native toolchain checks upload `packaged-toolchain-<platform_pkg>-attempt-<run_attempt>`, including a timestamped `verification.log`.
 
@@ -256,7 +257,7 @@ Each benchmark attaches `benchmark-<name>.json` before checking its budgets. It 
 | Sidecar crash recovery | Runtime kill to visible recovery heading | 500 ms |
 | Idle workbench, monitoring off or on | Renderer CPU share over 10 s after a 2 s settle | See the renderer table below; Electron main at most 10% of one core with monitoring on |
 | Idle extension preview | Workbench and Lab renderer CPU share over 10 s after a 2 s settle | See the renderer table below |
-| Long streaming replay | Renderer CPU share from Step 1 until the API reports completion | See the renderer table below |
+| Long streaming replay | Renderer CPU share from submitting the replay to an already open session until the API reports completion and Step 30 is visible | See the renderer table below |
 
 Renderer benchmarks took 10–17 seconds each on Apple Silicon, within the existing 30-second packaged test limit. Linux and Windows release runs have not been measured yet.
 
@@ -276,6 +277,8 @@ The idle benchmarks turn monitoring on and off through the Settings switch, so t
 `clients/desktop/src/e2e/packaged-performance-monitoring.spec.ts` covers the monitoring feature without budgets. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the status bar popover and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. A snapshot test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
 
 The fake agent replays the long conversation when a prompt contains `__fake_long_stream__`: 30 assistant turns, 8 text updates each at 25 ms intervals, and one tool result per turn.
+
+The streaming benchmark opens an empty session before submitting that prompt. Its counter interval covers the full replay, including the last rendered turn. It does not wait for Step 1 to be visible: auto-follow can move that row out of view before an assertion sees it.
 
 `packages/e2e/src/ui/performance-monitoring.spec.ts` covers the same feature in a browser tab. It turns on the Settings switch and checks that the status bar meter appears. It opens the popover, which shows the desktop-only CPU note and lists the fixture extension's open view. It pauses the extension, checks the placeholder, and resumes it. Last, it checks that the switch survives a reload and that **Show performance** opens the setting while monitoring is off. This spec has no time budget.
 

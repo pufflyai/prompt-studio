@@ -248,11 +248,32 @@ Package asset paths must be relative and stay inside the package.
 
 Command and hook handlers can read other packaged files through `ctx.packageFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
 
-Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/ext/<publisher>.<name>/`. The host adds an ignore entry on the first write unless `tracked` is true.
+Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files and ignore rules. The host adds an ignore entry for that publisher on the first write unless `tracked` is true.
 
 ## Artifact Mounts And Storage
 
+`ctx.storage.records` saves related records as one durable group using the revisions
+their caller observed. It supports shared text/list/map operations, JSON, immutable
+asset references, tombstones, durable outcomes, and retained conflict resolution.
+Local-only workbenches remain usable. See the [storage reference](../sdk/0004-storage.md)
+and [save workflow](../../guides/sdk/0003-storage.md). KV and collection replacement
+methods remain supported through the same owner and are deprecated in favor of
+guarded record commits.
+
+Commands and hooks also have `ctx.storage.assets` for immutable versioned bytes. `stage({ operationId, source })` accepts a `Blob` or `File`, resumes interrupted uploads, and returns `{ sha256, byteLength, mediaType }` only after verification. `getTransfer`, `cancel`, `read`, and `verifyComplete` expose progress, explicit cleanup, streamed reads, and reference verification. The owner is the current workbench and installed extension, shared across that extension's storage scopes. Completed versions remain retained. See the [asset guide](../../guides/sdk/0002-assets.md) and [public types](../../../packages/pstdio-api-contracts/src/extension-kernel/types/assets.ts).
+
+Existing `ctx.storage.files`, collection attachments, and webview file calls remain supported. Their HTTP bytes stream through local storage. `getBytes` still returns a full byte array by request. Blob IDs and asset references remain different contracts; no blob migration or API removal is required.
+
+Keep every extension-owned project file under `.pstdio/extension-storage/<package-name>/`,
+including configuration, caches, drafts, prototypes, evidence, and migration backups.
+Use `ctx.extensionFiles` or artifact mounts for these files. See
+[extension file storage](../../guides/extensions/0009-allocated-extension-files.md) for draft
+locations and how to move files from older layouts.
+
 Artifact mounts are constrained to a package-name root under each repo's extension storage directory:
+
+The first mount-path segment cannot be `.publishers`, including case variants.
+That directory is reserved for allocated `ctx.extensionFiles`.
 
 ```txt
 <repo>/.pstdio/extension-storage/<package-name>/...
@@ -264,7 +285,8 @@ For package `planner`, the default scoped root is:
 <repo>/.pstdio/extension-storage/planner/
 ```
 
-Extension storage is API-owned and scoped by extension instance. Project-owned storage also carries the project id.
+Structured records and immutable assets are API-owned by stable extension and
+workbench identity. Artifact mounts use the extension package's allocated file root.
 
 Artifact mounts create their directories on the first write. Before that, `exists()` returns false and `list()` returns an empty array.
 

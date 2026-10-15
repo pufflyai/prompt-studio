@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
-import { execFileSync } from "node:child_process";
 import { folderProjectInput } from "../helpers/folder-project";
+import { runTestCommand } from "../scripts/run-test-command";
 
 export async function expectBriefSupervisorWakes(input: { baseUrl: string; headers: Record<string, string> }) {
   const { baseUrl, headers } = input;
@@ -18,19 +18,23 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     agents: ["pstdio.workbench-fixture.harness.fake"],
   });
   const folder = projectInput.initial_workspace.params.path;
-  execFileSync("git", ["init", "-b", "main", folder]);
-  execFileSync("git", [
-    "-C",
-    folder,
-    "-c",
-    "user.name=Smoke",
-    "-c",
-    "user.email=smoke@example.com",
-    "commit",
-    "--allow-empty",
-    "-m",
-    "Initialize smoke repository",
-  ]);
+  await runTestCommand("git", ["init", "-b", "main", folder], {});
+  await runTestCommand(
+    "git",
+    [
+      "-C",
+      folder,
+      "-c",
+      "user.name=Smoke",
+      "-c",
+      "user.email=smoke@example.com",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "Initialize smoke repository",
+    ],
+    {},
+  );
   const project = await request("/projects", "POST", projectInput);
   const execute = async (name: string, params: unknown = {}) => {
     const result = await request(
@@ -90,6 +94,20 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     expect(text.length).toBeLessThan(prompts[0].length / 4);
     expect(await execute("auto-build.read")).toMatchObject({ prompt: updated.prompt, blockOnReview: false });
     await execute("auto-build.configure", { enabled: false });
+    const restartedBrief = "Start a fresh packaged Auto Build run.";
+    await execute("auto-build.configure", { enabled: true, prompt: restartedBrief });
+    const restarted = await completedSupervisor();
+    expect(restarted.id).not.toBe(session.id);
+    const restartedConversation = await request(`/sessions/${restarted.id}/conversation`);
+    const restartedPrompts = restartedConversation.messages.filter(
+      (message: { role: string }) => message.role === "user",
+    );
+    expect(restartedPrompts).toHaveLength(1);
+    expect(restartedPrompts[0].parts).toContainEqual(
+      expect.objectContaining({ text: expect.stringContaining(restartedBrief) }),
+    );
+    expect((await request(`/sessions/${session.id}/conversation`)).messages).toEqual(changed.messages);
+    await execute("auto-build.configure", { enabled: false });
     const ticket = await execute("create-ticket", { content: "# Short managed implementation", status: "Todo" });
     const { attempt } = await execute("run-attempt", { ticket: ticket.id });
     const expectStatus = async (statusId: string) => {
@@ -111,6 +129,7 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     });
     await expectStatus("blocked");
     await execute("review", { requestId: human.id, response: { confirmed: true } });
+    expect((await execute("get-ticket", { id: ticket.id })).statusId).toBe("ready");
     await expectStatus("ready");
     expect(
       (await execute("list-attempts")).filter((row: { ticketId: string }) => row.ticketId === ticket.id),

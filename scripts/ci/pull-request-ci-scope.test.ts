@@ -23,6 +23,8 @@ const pullRequest = (changedFiles: string[], labels: string[] = [], affectedPack
 
 const full = {
   stage: "full",
+  dockerBuild: true,
+  relaySmoke: true,
   lernaFilter: "",
   license: true,
   publishedExtensions: true,
@@ -34,6 +36,8 @@ const everyLinuxCheck = { ...full, stage: "pull_request" };
 
 const scoped = {
   stage: "pull_request",
+  dockerBuild: false,
+  relaySmoke: false,
   lernaFilter: "--since HEAD~1",
   license: false,
   publishedExtensions: false,
@@ -65,6 +69,8 @@ describe("CI stage", () => {
 
     expect(scope).toEqual({
       stage: "merge_queue",
+      dockerBuild: true,
+      relaySmoke: true,
       lernaFilter: "",
       license: false,
       publishedExtensions: false,
@@ -89,6 +95,21 @@ describe("pull request CI scope", () => {
 
   test("a manifest change runs the license check", () => {
     expect(pullRequest(["packages/ui/package.json"]).license).toBe(true);
+  });
+
+  test("container and dependency inputs build Docker images before entering the merge queue", () => {
+    for (const file of [
+      ".dockerignore",
+      "bunfig.toml",
+      "bun.lock",
+      "package.json",
+      "packages/ui/package.json",
+      "extensions/pstdio-planner/bun.lock",
+      "clients/landing-page/Dockerfile",
+      "packages/pstdio-api/Dockerfile",
+    ]) {
+      expect(pullRequest([file]).dockerBuild, file).toBe(true);
+    }
   });
 
   test("documentation outside packages runs no extra jobs", () => {
@@ -138,4 +159,24 @@ test("installed CLI checks run for harness changes", () => {
   expect(pullRequest(["extensions/harness-claude-code/src/spawn.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/harness-open-code/src/detection.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/pstdio-planner/extension.ts"]).harnessCli).toBe(false);
+});
+
+test("relay changes select the isolated container check", () => {
+  const scope = resolveCiScope({
+    event: "pull_request",
+    labels: [],
+    changedFiles: ["infra/relay/src/server.ts"],
+    packageDirs: [...packageDirs, "infra/relay"],
+    affectedPackages: ["pstdio-relay"],
+  });
+  expect(scope.lernaFilter).toBe("--since HEAD~1");
+  expect(scope).toHaveProperty("relaySmoke", true);
+  expect(pullRequest(["packages/ui/src/index.ts"])).toHaveProperty("relaySmoke", false);
+  expect(pullRequest(["bun.lock"])).toHaveProperty("relaySmoke", true);
+});
+
+test("local storage changes select production relay conformance", () => {
+  expect(
+    pullRequest(["packages/pstdio-db/src/services/extension-storage/grouped-storage.ts"], [], ["pstdio-db"]),
+  ).toHaveProperty("relaySmoke", true);
 });

@@ -12,8 +12,11 @@ test("opens chat workspace files and restores selected documents through history
 }) => {
   const root = createGitRepo("pstdio-chat-links-", "Workspace README\n");
   mkdirSync(join(root, "src", "nested"), { recursive: true });
-  mkdirSync(join(root, ".pstdio", "tickets", "PS-105"), { recursive: true });
-  writeFileSync(join(root, ".pstdio", "tickets", "PS-105", "ticket.md"), "Exact workspace draft bytes\n");
+  mkdirSync(join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", "PS-105"), { recursive: true });
+  writeFileSync(
+    join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", "PS-105", "ticket.md"),
+    "Exact workspace draft bytes\n",
+  );
   writeFileSync(
     join(root, "src", "nested", "app.ts"),
     "export const chatLinkedFile = true;\nexport const secondLine = 2;\n",
@@ -31,7 +34,7 @@ test("opens chat workspace files and restores selected documents through history
         workspace_id: workspaces[0].id,
         title: "Chat link review",
         prompt:
-          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts` and [Draft](.pstdio/tickets/PS-105/ticket.md).",
+          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts` and [Draft](.pstdio/extension-storage/pstdio-planner/tickets/PS-105/ticket.md).",
         agent: "pstdio.workbench-fixture.harness.fake",
       },
     });
@@ -65,7 +68,9 @@ test("opens chat workspace files and restores selected documents through history
     await page.goto(`/projects/${project.id}/session?resource=${encodeURIComponent(resource)}`);
     await page.getByRole("link", { name: "Draft", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
-    await expect(page).toHaveURL(/document=.pstdio%2Ftickets%2FPS-105%2Fticket.md/);
+    await expect(page).toHaveURL(
+      /document=.pstdio%2Fextension-storage%2Fpstdio-planner%2Ftickets%2FPS-105%2Fticket.md/,
+    );
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });
@@ -111,13 +116,12 @@ test("retains Side chat and the editor draft during repeated file-position navig
     const composerNode = await composer.elementHandle();
     const first = side.getByRole("link", { name: "First", exact: true }).last();
     await expect(first).toHaveAttribute("href", /document=src%2Fapp.ts/);
-    const popupPromise = page.waitForEvent("popup");
+    const newTabPromise = page.context().waitForEvent("page");
     await first.click({ modifiers: ["ControlOrMeta"] });
-    const popup = await popupPromise;
-    await popup.waitForLoadState();
-    expect(popup.url()).toContain("document=src%2Fapp.ts");
+    const newTab = await newTabPromise;
+    await expect(newTab).toHaveURL(/document=src%2Fapp\.ts/);
     expect(page.url()).not.toContain("document=");
-    await popup.close();
+    await newTab.close();
     await side.getByRole("link", { name: "Second", exact: true }).last().click();
     const editor = page.locator(".monaco-editor:visible");
     await expect(editor).toContainText("secondLine");
@@ -153,7 +157,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     await expect(page.getByText(/not found/i).first()).toBeVisible();
     await expect(floating.getByRole("link", { name: "First", exact: true }).last()).toBeVisible();
     const beforeInvalidPage = page.url();
-    await floating.getByRole("link", { name: "Invalid page", exact: true }).last().click();
+    await floating.getByRole("button", { name: "Invalid page", exact: true }).last().click();
     await expect(page.getByText(/unavailable in the conversation project/)).toBeVisible();
     expect(page.url()).toBe(beforeInvalidPage);
     await floating.getByRole("button", { name: "Invalid table", exact: true }).last().click();

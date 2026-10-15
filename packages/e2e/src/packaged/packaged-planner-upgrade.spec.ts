@@ -16,11 +16,12 @@ import { type Browser, chromium, expect, type Page, test } from "@playwright/tes
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
-import { buildBinary, runPackaged } from "./packaged-helpers";
+import { buildBinary, runPackagedAsync } from "./packaged-helpers";
 import {
   ACTIVE_CONFLICTS,
   ARCHIVED_CONFLICTS,
   type Execute,
+  moveLegacyPlannerDrafts,
   plannerCommands,
   seedTrackProject,
   timelinePlannerSource,
@@ -65,7 +66,7 @@ const createProject = async (host: Host, name: string) => {
 };
 
 const installPlanner = (host: Host, cwd: string, source: string, force: boolean) =>
-  runPackaged(`extensions add ${source} --name pstdio-planner${force ? " --force" : ""}`, cwd, {
+  runPackagedAsync(["extensions", "add", source, "--name", "pstdio-planner", ...(force ? ["--force"] : [])], cwd, {
     HOME: host.home,
     PSTDIO_HOME: host.home,
   });
@@ -98,6 +99,7 @@ const reloadPlanner = async (host: Host, projectId: string) => {
     method: "POST",
   });
   expect(response.status).toBe(200);
+  return response.json();
 };
 
 const plannerWebview = async (host: Host, projectId: string, localId: string) => {
@@ -156,14 +158,16 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     const conflicting = await createProject(host, "conflicting-track");
     const valid = await createProject(host, "valid-track");
 
-    installPlanner(host, conflicting.folder, join(home, "fixtures", "planner-before-timeline"), false);
+    await installPlanner(host, conflicting.folder, join(home, "fixtures", "planner-before-timeline"), false);
     await enablePlanner(host, valid.id);
     const conflictData = await seedTrackProject(conflicting.execute, "multi_select");
     await seedTrackProject(valid.execute, "single_select");
     expect(await plannerWebview(host, valid.id, "timeline")).toBeUndefined();
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
-    installPlanner(host, conflicting.folder, timelinePlannerSource, true);
+    moveLegacyPlannerDrafts(conflicting.folder);
+    moveLegacyPlannerDrafts(valid.folder);
+    await installPlanner(host, conflicting.folder, timelinePlannerSource, true);
 
     // A valid Track cannot hide a missing module behind a schema error.
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
@@ -271,7 +275,10 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
     const original = readFileSync(entry, "utf8");
     writeFileSync(entry, `${original}\nexport const broken = ;\n`);
-    await reloadPlanner(host, valid.id);
+    expect(await reloadPlanner(host, valid.id)).toMatchObject({
+      status: "error",
+      lastError: { code: "extension_webview_build_failed" },
+    });
     const webview = await plannerWebview(host, valid.id, "timeline");
     expect(await (await fetch(`${host.baseUrl}${webview!.moduleUrl}`)).text()).toContain(
       "Extension webview build failed",
@@ -279,7 +286,7 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     timeline = await openTimeline(page, host, valid.id);
     await expect(page.getByText(/Extension view failed to load/)).toBeVisible({ timeout: 30_000 });
     writeFileSync(entry, original);
-    await reloadPlanner(host, valid.id);
+    expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
   } finally {
     await browser?.close();

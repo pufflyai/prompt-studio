@@ -15,7 +15,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.0"
+    "pstdio": "^0.1.0 || ^0.2.0"
   },
   "pstdio": {
     "scope": "user"
@@ -120,6 +120,8 @@ Installs and updates are explicit. Source that appears in the extensions root is
   A webview request also rebuilds a bundle whose published module is missing, for example after its
   cache folder was removed. A webview request does not retry a failed build until the build's inputs
   change. Reload, a new install, or a change in the extension's folder builds it again.
+  Reload waits for the current result even when a watcher started the build. A failed current build
+  shows its error instead of the previous bundle. A result for a removed or replaced view is discarded.
 - Skill files are read from the installed folder. Editing a folder that ships skills or a
   `workspace.provision` hook re-provisions the workspaces of every project that runs it, so agent
   skill folders such as `.agents/skills` match the edit. A write that leaves the folder's content

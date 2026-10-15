@@ -132,6 +132,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     onOpenResourceError,
     onSidenavContextActionsChange,
   } = props;
+  const isSidenav = Boolean(onSidenavContextActionsChange);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeRenderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const [filter, setFilter] = useState("");
@@ -180,7 +181,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
       resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
     },
-    treeCustomizationOptions(body, Boolean(onSidenavContextActionsChange)),
+    treeCustomizationOptions(body, isSidenav),
   );
   useSidenavContextActions(backgroundContextActions, customizationRevision, onSidenavContextActionsChange);
   const activeNodeSelection = useTreeSelection(workbench, treeViewId, {
@@ -237,7 +238,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
               sections={visibleHeaderSections}
-              draggable={Boolean(onSidenavContextActionsChange)}
+              draggable={isSidenav}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={activeNodeSelection}
@@ -260,7 +261,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           value={filter}
           onChange={setFilter}
         />
-        {error ? <RendererReadNotice error={error} retry={retry} /> : null}
+        {error && !isSidenav ? <RendererReadNotice error={error} retry={retry} /> : null}
         <ScrollArea
           flex="1"
           minH="0"
@@ -280,9 +281,9 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               loading={loading}
               moduleLoading={treeState.loading}
               sections={visibleSections}
-              backgroundContextActions={onSidenavContextActionsChange ? undefined : backgroundContextActions}
-              draggable={Boolean(onSidenavContextActionsChange)}
-              customizationAvailable={Boolean(onSidenavContextActionsChange)}
+              backgroundContextActions={isSidenav ? undefined : backgroundContextActions}
+              draggable={isSidenav}
+              customizationAvailable={isSidenav}
               activeNodeId={activeNodeSelection}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
@@ -301,7 +302,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
               sections={visibleFooterSections}
-              draggable={Boolean(onSidenavContextActionsChange)}
+              draggable={isSidenav}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
               activeNodeId={activeNodeSelection}

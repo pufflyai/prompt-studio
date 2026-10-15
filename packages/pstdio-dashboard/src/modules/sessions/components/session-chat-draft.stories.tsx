@@ -7,11 +7,12 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
-import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "../bubble/module";
 import { openDashboardSidePanel } from "../bubble/open-side-panel";
 import { openSessionBubbleWidgets } from "../bubble/session-bubble";
+import { createSessionsModule } from "../module";
 
 const draftResource = {
   type: "session-draft",
@@ -33,14 +34,17 @@ const drafts: DashboardSessionDraftPersistence = {
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
-const SessionChatDraftStory = (props: { initiallyClosed?: boolean }) => {
-  const { initiallyClosed = false } = props;
+const SessionChatDraftStory = (props: { initiallyClosed?: boolean; showMain?: boolean }) => {
+  const { initiallyClosed = false, showMain = false } = props;
   const [workbench] = useState(() => {
     const workbench = createWorkbench({ initialSidePanelMode: initiallyClosed ? "closed" : "attached" });
     workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
+    if (showMain) workbench.registerModule(createSessionsModule({ sessionDraftPersistence: drafts }));
     selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
-    openWorkspacesPage(workbench);
+    if (showMain) openSessionsPage(workbench);
+    else openWorkspacesPage(workbench);
+    if (showMain) workbench.shell.setRegionOpen("secondary", false);
     if (!initiallyClosed) openSessionBubbleWidgets(workbench, { resource: draftResource });
     return workbench;
   });
@@ -60,6 +64,17 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const PreviewWithRestoredDraft: Story = {};
+export const MainAndSidePanels: Story = {
+  args: { showMain: true },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Main and side chat views share the same bottom inset, with no gap between workspace headers and inputs.",
+      },
+    },
+  },
+};
 export const OpenFromBubble: Story = {
   args: { initiallyClosed: true },
   play: async ({ canvasElement }) => {

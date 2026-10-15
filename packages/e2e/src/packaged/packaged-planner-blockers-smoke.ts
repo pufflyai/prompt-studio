@@ -1,6 +1,5 @@
 import { expect } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { runPackagedAsync } from "./packaged-helpers";
 
 export async function expectPackagedDependencyBlockers(input: {
   baseUrl: string;
@@ -34,20 +33,15 @@ export async function expectPackagedDependencyBlockers(input: {
     blockedReason: "Needs credentials",
     dependsOn: [parent.id],
   });
-  const cleared = spawnSync(
-    PACKAGED_BINARY_PATH,
+  const cleared = await runPackagedAsync(
     ["tickets", "update", "--project-id", input.projectId, "--id", child.id, "--blocked-reason", ""],
+    process.cwd(),
     {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        PSTDIO_API_URL: input.baseUrl,
-        PSTDIO_API_TOKEN: input.headers.authorization!.replace(/^Bearer /, ""),
-      },
+      PSTDIO_API_URL: input.baseUrl,
+      PSTDIO_API_TOKEN: input.headers.authorization!.replace(/^Bearer /, ""),
     },
   );
-  expect(cleared.status, cleared.stderr).toBe(0);
-  expect(JSON.parse(cleared.stdout)).toMatchObject({ blockedReason: null, dependsOn: [parent.id] });
+  expect(JSON.parse(cleared)).toMatchObject({ blockedReason: null, dependsOn: [parent.id] });
   await execute("delete-ticket", { id: child.id });
   await execute("delete-ticket", { id: parent.id });
 }

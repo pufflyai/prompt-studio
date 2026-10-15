@@ -1,6 +1,6 @@
 import { defineCommand, l10n, params, type ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
-import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
 import { readImplementationCapacity } from "./attempt-readiness";
@@ -54,19 +54,24 @@ export const configureAutoBuildCommand = defineCommand({
     blockOnReview: params.boolean({ label: "Block on review" }),
   },
   async run(ctx, { enabled, prompt, ignore, blockOnReview }) {
-    const mode = await withWriteGuard(ctx, "auto-build-mode", async () => {
-      const current = await readAutoBuildMode(ctx);
-      const nextPrompt = prompt?.trim() ?? current.prompt;
-      if (enabled && !nextPrompt) throw new Error("Enter a prompt for the Auto Build supervisor.");
-      return saveAutoBuildMode(ctx, {
-        ...current,
-        revision: crypto.randomUUID(),
-        enabled,
-        prompt: nextPrompt,
-        ignore: ignore ?? current.ignore,
-        blockOnReview: blockOnReview ?? current.blockOnReview,
+    const configure = () =>
+      withWriteGuard(ctx, "auto-build-mode", async () => {
+        const current = await readAutoBuildMode(ctx);
+        const nextPrompt = prompt?.trim() ?? current.prompt;
+        if (enabled && !nextPrompt) throw new Error("Enter a prompt for the Auto Build supervisor.");
+        if (enabled && !current.enabled) await saveAutoBuildSupervisor(ctx, {});
+        return saveAutoBuildMode(ctx, {
+          ...current,
+          revision: crypto.randomUUID(),
+          enabled,
+          prompt: nextPrompt,
+          ignore: ignore ?? current.ignore,
+          blockOnReview: blockOnReview ?? current.blockOnReview,
+        });
       });
-    });
+    // A previous wake must finish saving its session before a new run clears ownership.
+    // Stop stays available while a wake is starting a session.
+    const mode = enabled ? await withWriteGuard(ctx, "auto-build-supervisor", configure) : await configure();
     if (mode.enabled) await enqueueAutoBuild(ctx);
     return mode;
   },

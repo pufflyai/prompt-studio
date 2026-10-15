@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.0"
+    "pstdio": "^0.1.0 || ^0.2.0"
   },
   "private": true,
   "type": "module",
@@ -205,7 +205,7 @@ belong to the same extension and return a list of rows:
 
 The form shows a searchable dropdown. Clearing it removes the saved value, so the setting uses its `default`. Saved
 values are not checked against the options, and a saved value the command no longer lists stays selected. Check the
-value where the extension uses it. Setting `options` needs extension API 0.1.2, so declare `engines.pstdio: "^0.1.2"`.
+value where the extension uses it. Setting `options` was introduced in extension API 0.1.2. Declare `engines.pstdio: "^0.1.2 || ^0.2.0"` when supporting both API lines.
 
 ## Middlewares
 

@@ -1,5 +1,7 @@
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import type { FileRendererRefreshEnvelope } from "@pstdio/workbench";
+import { getRuntimeCollections } from "@/lib/sync/collections";
+import { createRuntimeFeed, createRuntimeState } from "@/lib/sync/runtime-state";
 
 export interface ExtensionCommandEvent {
   commandId: string;
@@ -8,56 +10,35 @@ export interface ExtensionCommandEvent {
   tick: number;
 }
 
-const subscribers = new Set<(event: ExtensionCommandEvent) => void>();
+const commandFeed = createRuntimeFeed<ExtensionCommandEvent>();
 export interface ExtensionRefreshEvent extends FileRendererRefreshEnvelope {
   id: string;
   projectId?: string;
 }
 
-const eventSubscribers = new Set<(event: ExtensionRefreshEvent) => void>();
-const resetSubscribers = new Set<() => void>();
-let tick = 0;
-
-export const subscribeToExtensionCommandFeed = (listener: (event: ExtensionCommandEvent) => void) => {
-  subscribers.add(listener);
-  return () => {
-    subscribers.delete(listener);
-  };
-};
-
-export const subscribeToExtensionEventFeed = (listener: (event: ExtensionRefreshEvent) => void) => {
-  eventSubscribers.add(listener);
-  return () => {
-    eventSubscribers.delete(listener);
-  };
-};
-
-export const publishExtensionEvent = (event: ExtensionRefreshEvent) => {
-  for (const listener of eventSubscribers) listener(event);
-};
-
-export const subscribeToExtensionEventReset = (listener: () => void) => {
-  resetSubscribers.add(listener);
-  return () => {
-    resetSubscribers.delete(listener);
-  };
-};
-
-export const publishExtensionEventReset = () => {
-  for (const listener of resetSubscribers) listener();
-};
+const eventFeed = createRuntimeFeed<ExtensionRefreshEvent>();
+const resetFeed = createRuntimeFeed<void>();
+const commandTicks = createRuntimeState(() => ({ tick: 0 }));
+export const subscribeToExtensionCommandFeed = commandFeed.subscribe;
+export const subscribeToExtensionEventFeed = eventFeed.subscribe;
+export const publishExtensionEvent = eventFeed.publish;
+export const subscribeToExtensionEventReset = resetFeed.subscribe;
+export const publishExtensionEventReset = (owner = getRuntimeCollections()) => resetFeed.publish(undefined, owner);
 
 export const publishExtensionCommandEvent = (
   response: CommandExecuteResponse,
   envelope: Omit<ExtensionRefreshEvent, "id"> & { projectId: string | undefined },
+  owner = getRuntimeCollections(),
 ) => {
-  tick += 1;
+  if (owner.isDisposed()) return;
+  const state = commandTicks(owner);
+  state.tick += 1;
   const event: ExtensionCommandEvent = {
     commandId: response.commandId,
     extensionId: response.extensionId,
     outcome: response.outcome,
-    tick,
+    tick: state.tick,
   };
-  for (const listener of subscribers) listener(event);
-  for (const eventId of new Set(response.eventIds ?? [])) publishExtensionEvent({ id: eventId, ...envelope });
+  commandFeed.publish(event, owner);
+  for (const eventId of new Set(response.eventIds ?? [])) publishExtensionEvent({ id: eventId, ...envelope }, owner);
 };

@@ -16,6 +16,7 @@ import { ChatCodeLinkNode } from "@/components/chat-ui/links/chat-code-link-node
 import type { ChatLinkProps } from "@/components/chat-ui/links/chat-link";
 import { ChatLinkProvider, useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context";
 import { ChatLinkPlugin } from "@/components/chat-ui/links/chat-link-plugin";
+import { ChatResourceLinkNode } from "@/components/chat-ui/links/chat-resource-link-node";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
 import { importMarkdownToLexical } from "../shared/markdown-import";
@@ -71,7 +72,7 @@ function RichMessageContent(props: RichMessageProps) {
 
   const initialConfig = {
     namespace: "RICH_MESSAGE",
-    nodes: [...editorNodes, ChatCodeLinkNode],
+    nodes: [...editorNodes, ChatCodeLinkNode, ChatResourceLinkNode],
     editorState: () => {
       $addUpdateTag(SOURCE_IMPORT_TAG);
       if (isEditable) {

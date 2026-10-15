@@ -1,13 +1,7 @@
 import type { BoardView, BoardViews } from "@pstdio/sdk/api";
 import type { CollectionViewsProvider, CollectionViewsSource } from "@pstdio/workbench";
-import { apiRequest } from "@/lib/api";
-import {
-  type CollectionChange,
-  getCollectionsVersion,
-  getIndexedRows,
-  isInitialCollectionsSyncComplete,
-  subscribeCollections,
-} from "@/lib/sync/collections";
+import { createApiRequest } from "@/lib/api";
+import { type CollectionChange, getRuntimeCollections } from "@/lib/sync/collections";
 import {
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
@@ -29,6 +23,8 @@ export const createSharedCollectionViews = <TSettings>(
   input: CollectionViewsInput,
 ): CollectionViewsProvider<TSettings> => {
   const { projectId, extensionInstanceId: instanceId, localId, record } = input;
+  const owner = getRuntimeCollections();
+  const apiRequest = createApiRequest(owner.connection);
   const path = `/v1/projects/${encodeURIComponent(projectId)}/boards/${encodeURIComponent(record.id)}/views`;
   const viewPath = (id: string) =>
     `/v1/projects/${encodeURIComponent(projectId)}/board-views/${encodeURIComponent(id)}`;
@@ -42,7 +38,7 @@ export const createSharedCollectionViews = <TSettings>(
   };
   const matches = (row: Record<string, unknown>) =>
     row.project_id === projectId && row.extension_instance_id === instanceId && row.board_id === localId;
-  const getSyncedRows = () => getIndexedRows("board_views", "project_id", projectId).filter(matches);
+  const getSyncedRows = () => owner.getIndexedRows("board_views", "project_id", projectId).filter(matches);
   const reconcilePendingOrder = (change: CollectionChange) => {
     if (change.table !== "board_views" || !pendingOrder) return;
     // A reconnect may replace a missed save with a newer server order.
@@ -106,8 +102,8 @@ export const createSharedCollectionViews = <TSettings>(
   };
   return {
     getSnapshot: () => {
-      if (!isInitialCollectionsSyncComplete()) return undefined;
-      const current = getCollectionsVersion();
+      if (!owner.isInitialCollectionsSyncComplete()) return undefined;
+      const current = owner.getCollectionsVersion();
       if (version === current && cached) return cached;
       const rows = getSyncedRows().sort(
         (a, b) =>
@@ -135,7 +131,9 @@ export const createSharedCollectionViews = <TSettings>(
         sorts: row.sorts as BoardView["sorts"],
         builtIn: false,
       }));
-      const chosen = getIndexedRows("board_default_views", "project_id", projectId).find(matches)?.default_view_id;
+      const chosen = owner
+        .getIndexedRows("board_default_views", "project_id", projectId)
+        .find(matches)?.default_view_id;
       const defaultViewId = [chosen, views[0]?.id].find((id) => views.some((view) => view.id === id)) as string;
       version = current;
       cached = { views, defaultViewId, ...actions };
@@ -143,7 +141,7 @@ export const createSharedCollectionViews = <TSettings>(
     },
     subscribe: (listener) => {
       listeners.add(listener);
-      const unsubscribe = subscribeCollections((change) => {
+      const unsubscribe = owner.subscribeCollections((change) => {
         if (change) reconcilePendingOrder(change);
         if (!change || change.table === "board_views" || change.table === "board_default_views") listener();
       });
@@ -158,8 +156,8 @@ export const createSharedCollectionViews = <TSettings>(
           (record.schemaRefreshEventIds ?? record.refreshEventIds)?.includes(event.id)
         )
           refresh();
-      });
-      const stopReset = subscribeToExtensionEventReset(refresh);
+      }, owner);
+      const stopReset = subscribeToExtensionEventReset(refresh, owner);
       refresh();
       return () => {
         listeners.delete(listener);

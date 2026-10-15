@@ -1,6 +1,7 @@
 import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { FileIconThemePreferenceOption, ThemePreferenceOption } from "@pstdio/ui";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import {
   localizeExtensionAppearance,
   type ResolvedWorkbenchExtensionAppearance,
@@ -37,9 +38,10 @@ const toFileIconThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["
 export const registerExtensionAppearance = (
   ctx: WorkbenchModuleContext,
   rawAppearance: ListExtensionAppearanceResponse,
+  owner = getRuntimeCollections(),
 ) => {
-  const translationDisposable = registerExtensionTranslationBundles(rawAppearance);
-  const appearance = localizeExtensionAppearance(rawAppearance);
+  const translationDisposable = registerExtensionTranslationBundles(rawAppearance, owner);
+  const appearance = localizeExtensionAppearance(rawAppearance, owner);
   const themeDisposable =
     appearance.themes.length > 0 ? ctx.themes.register(appearance.themes.map(toThemePreference)) : undefined;
   const fileIconThemeDisposable =

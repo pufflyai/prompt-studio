@@ -90,8 +90,8 @@ const unavailableViewsApi: ExtensionViewsApi = {
   setDefault: unavailableViews,
 };
 
-const buildEventsApi = (dispatcher: EventDispatcher, extensionId: string): ExtensionEventsApi => ({
-  emit: async (event, payload) => dispatcher.dispatch(refId(event, extensionId), payload as Struct),
+const buildEventsApi = (dispatcher: EventDispatcher, origin: BuildEnvironmentInput): ExtensionEventsApi => ({
+  emit: async (event, payload) => dispatcher.dispatch(refId(event, origin.extensionId), payload as Struct, origin),
 });
 
 const buildCommandsApi = (
@@ -171,7 +171,7 @@ export const createContextFactory = (
       sessions: hostApis.sessions,
       workspaces: hostApis.workspaces,
       commands: buildCommandsApi(createExecute, origin),
-      events: buildEventsApi(dispatcher, ids.extensionId),
+      events: buildEventsApi(dispatcher, ids),
       activity: env.activity,
       notify: env.notify,
       automation: env.automation,

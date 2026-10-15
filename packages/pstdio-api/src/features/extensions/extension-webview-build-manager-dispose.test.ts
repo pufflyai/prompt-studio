@@ -49,10 +49,21 @@ describe("createExtensionWebviewBuildManager dispose", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         runCount++;
         buildSignal = input.signal;
@@ -88,10 +99,21 @@ describe("createExtensionWebviewBuildManager dispose", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async () => {
         runCount++;
         return { success: true, details: "" };

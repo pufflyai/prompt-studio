@@ -107,7 +107,9 @@ describe("project-scoped session harness reads", () => {
     await createSessionScheduler(deps).recoverQueuedSessions();
 
     expect(get).not.toHaveBeenCalled();
-    expect(recoverQueuedDispatchClaim).toHaveBeenCalledWith(session.id, 4, session.last_request_started);
+    expect(recoverQueuedDispatchClaim).toHaveBeenCalledWith(session.id, 4, session.last_request_started, {
+      drainCapacity: false,
+    });
   });
 
   test("message reads fall back to persisted messages when the project harness is disabled", async () => {

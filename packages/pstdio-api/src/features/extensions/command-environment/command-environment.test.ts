@@ -149,8 +149,13 @@ describe("createCommandEnvironment host primitives", () => {
     expect(await env.packageFiles.readText("guide.md")).toBe("# Guide");
     expect("writeText" in env.packageFiles).toBe(false);
     await env.extensionFiles?.writeText("cache/index.json", "{}");
-    expect(readFileSync(join(repoPath, ".pstdio/ext/pstdio.extension-lab/cache/index.json"), "utf8")).toBe("{}");
-    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain("/ext/pstdio.extension-lab/");
+    expect(
+      readFileSync(
+        join(repoPath, ".pstdio/extension-storage/extension-lab/.publishers/pstdio/cache/index.json"),
+        "utf8",
+      ),
+    ).toBe("{}");
+    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain("/extension-storage/extension-lab/");
     await expect(env.extensionFiles?.readText("../secret.md")).rejects.toThrow("escapes");
   });
 
@@ -213,10 +218,17 @@ describe("createCommandEnvironment host primitives", () => {
     );
 
     if (!env.projectFiles) throw new Error("expected projectFiles to be present");
-    await env.projectFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# hi");
+    await env.projectFiles.writeText(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md", "# hi");
 
-    expect(readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# hi");
-    expect(await env.projectFiles.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hi");
+    expect(
+      readFileSync(
+        join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", "PS-1", "ticket.md"),
+        "utf8",
+      ),
+    ).toBe("# hi");
+    expect(await env.projectFiles.readText(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md")).toBe(
+      "# hi",
+    );
     await expect(env.projectFiles.writeText("../escape.md", "x")).rejects.toThrow(/escapes/);
   });
 
@@ -262,11 +274,21 @@ describe("createCommandEnvironment host primitives", () => {
     );
 
     if (!env.projectFiles) throw new Error("expected projectFiles to be present");
-    await env.projectFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# project");
-    await env.workspaceFiles!.writeText(".pstdio/tickets/PS-1/ticket.md", "# wt");
+    await env.projectFiles.writeText(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md", "# project");
+    await env.workspaceFiles!.writeText(".pstdio/extension-storage/pstdio-planner/tickets/PS-1/ticket.md", "# wt");
 
-    expect(readFileSync(join(worktreeRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# wt");
-    expect(readFileSync(join(repoRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# project");
+    expect(
+      readFileSync(
+        join(worktreeRoot, ".pstdio", "extension-storage", "pstdio-planner", "tickets", "PS-1", "ticket.md"),
+        "utf8",
+      ),
+    ).toBe("# wt");
+    expect(
+      readFileSync(
+        join(repoRoot, ".pstdio", "extension-storage", "pstdio-planner", "tickets", "PS-1", "ticket.md"),
+        "utf8",
+      ),
+    ).toBe("# project");
   });
 });
 

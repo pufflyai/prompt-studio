@@ -73,7 +73,8 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(editor).toBeFocused();
     await page.unroute("**/follow-up");
 
-    const equations = "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nEnd equations.";
+    const equations =
+      "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts. Open {{link('https://example.com')}}. End equations.";
     await editor.fill(equations);
     await editor.press("Enter");
     const reply = page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last();
@@ -81,6 +82,17 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(reply.locator(".katex")).toHaveCount(2);
     await expect(reply.locator(".katex-display")).toBeVisible();
     await expect(reply.locator(".katex-error")).toHaveCount(0);
+    const plainPath = reply.getByRole("link", { name: "src/app.ts", exact: true });
+    await expect(plainPath).toBeVisible();
+    await expect(plainPath.locator("svg.lucide-file-code")).toHaveCount(1);
+    const groupedPath = reply.getByRole("link", { name: "src/app/(dashboard)/page.ts", exact: true });
+    await expect(groupedPath).toBeVisible();
+    await expect(groupedPath).toHaveAttribute("href", /src%2Fapp%2F%28dashboard%29%2Fpage\.ts/);
+    await expect(reply.getByRole("link", { name: "/page.ts", exact: true })).toHaveCount(0);
+    const webReference = reply.getByRole("link", { name: "example.com", exact: true });
+    await expect(webReference).toHaveAttribute("href", "https://example.com");
+    await expect(webReference).toHaveAttribute("target", "_blank");
+    await expect(webReference.locator('[data-scope="tooltip"]')).toHaveCount(0);
 
     await editor.fill(
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",

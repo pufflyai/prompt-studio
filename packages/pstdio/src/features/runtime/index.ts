@@ -18,3 +18,4 @@ export {
   readRuntimeDescriptor,
   writeRuntimeDescriptor,
 } from "./runtime-descriptor";
+export { readRuntimeShutdown } from "./runtime-shutdown";

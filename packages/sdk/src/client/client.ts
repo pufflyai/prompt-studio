@@ -1,4 +1,5 @@
 import { type AgentClient, createAgentClient } from "./agents";
+import { type AssetsClient, createAssetsClient } from "./assets";
 import { type AutomationClient, createAutomationClient } from "./automation";
 import { type BoardViewsClient, createBoardViewsClient } from "./board-views";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
@@ -17,6 +18,7 @@ import { createSyncClient, type SyncClient } from "./sync";
 import { createWorkspaceClient, type WorkspaceClient } from "./workspaces";
 
 export type PstdioClient = {
+  assets: AssetsClient;
   resources: ResourceAnchorsClient;
   views: BoardViewsClient;
   projects: ProjectClient;
@@ -37,6 +39,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
   const request = createRequest(options);
   const streams = createSessionStreamTransport(request, options);
   return {
+    assets: createAssetsClient(request),
     resources: createResourceAnchorsClient(request),
     views: createBoardViewsClient(request),
     projects: createProjectClient(request),

@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promotePreparedSource } from "./promote-extension-source";
 
-test("keeps installed dependency links readable after their folder moves", () => {
+test("keeps installed dependency links readable after their folder moves", async () => {
   const root = mkdtempSync(join(tmpdir(), "extension-promotion-"));
   try {
     const prepared = join(root, "staging/tool");
@@ -36,7 +36,7 @@ test("keeps installed dependency links readable after their folder moves", () =>
     symlinkSync(join(prepared, "vendor/demo"), join(modules, last!), "junction");
     symlinkSync(provider, join(prepared, "node_modules/provider"), "junction");
 
-    promotePreparedSource(prepared, installed, false, false);
+    await promotePreparedSource(prepared, installed, false, false);
     rmSync(join(root, "staging"), { recursive: true });
 
     expect(readFileSync(join(installed, "node_modules/demo/index.ts"), "utf8")).toBe("export default 1;");

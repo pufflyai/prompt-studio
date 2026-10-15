@@ -16,6 +16,7 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
+import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 
 // Startup, warm attach, and recovery timings are benchmarks in packaged-launch.bench.ts.
 test("starts without editors and serves both authenticated transport paths", { tag: "@essential" }, async ({
@@ -42,6 +43,10 @@ test("starts without editors and serves both authenticated transport paths", { t
     ).toBe(403);
 
     await createPackagedProject(app, "Packaged transport project");
+    // A later project must discover the defaults installed for the first one too.
+    const nextProject = await createPackagedProject(app, "Packaged second project");
+    await openPackagedProject(app.page, nextProject);
+    await expect(app.page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
     expect(await app.page.evaluate(() => document.cookie)).toBe("");
     expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
     expect(app.page.url().includes(app.runtime.token)).toBe(false);
@@ -186,16 +191,18 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
   }
 });
 
-test("shows recovery after a sidecar crash and retries without relaunching Electron", async ({
+test("restarts a crashed sidecar once and offers Retry after another crash in the same Electron process", async ({
   browserName: _browserName,
 }) => {
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home);
-    const originalInstanceId = app.runtime.instanceId;
     const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
-    process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
+    crashPackagedRuntime(app.runtime.pid);
+    await waitForAutomaticRecovery(app);
+    const originalInstanceId = app.runtime.instanceId;
+    crashPackagedRuntime(app.runtime.pid);
     await expect(
       app.lifecyclePage.getByRole("alert").getByRole("heading", { name: "Prompt Studio needs attention", exact: true }),
     ).toBeVisible();

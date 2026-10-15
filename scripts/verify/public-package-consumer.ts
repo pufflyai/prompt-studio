@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { freshInstallArgs } from "./fresh-install";
 import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
+import { writeStoragePackageConsumer } from "./storage-package-consumer";
 
 const run = (cwd: string, args: string[]) => {
   const result = Bun.spawnSync(["bun", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
@@ -116,6 +117,7 @@ void [invalidAttribute, invalidColumn];
 `
         : ""),
   );
+  writeStoragePackageConsumer(directory);
   writeFileSync(
     join(directory, "tsconfig.json"),
     JSON.stringify({
@@ -130,7 +132,7 @@ void [invalidAttribute, invalidColumn];
         jsx: "react-jsx",
         types: react ? ["node"] : [],
       },
-      include: ["consumer.ts"],
+      include: ["consumer.ts", "storage-consumer.ts"],
     }),
   );
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
@@ -146,6 +148,8 @@ export default defineConfig({ build: { lib: { entry: "consumer.ts", formats: ["e
       console.log(`Resolved @pstdio/ui Monaco files with ${monaco.workers} workers and ${monaco.fonts} fonts.`);
     }
   } else {
+    run(directory, ["build", "storage-consumer.ts", "--target=browser", "--outdir=storage-browser"]);
+    run(directory, ["storage-consumer.ts"]);
     for (const condition of [[], ["--conditions=source"]]) {
       run(directory, [...condition, "consumer.ts"]);
     }

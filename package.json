@@ -57,6 +57,7 @@
     "packages/*",
     "extensions/*",
     "infra/local/extensions/*",
+    "infra/relay",
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-dev",
     "scripts",

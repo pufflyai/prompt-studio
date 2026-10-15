@@ -1,246 +1,85 @@
-import { and, eq } from "drizzle-orm";
+import {
+  type AssetStore,
+  createLegacyRecordStorage,
+  type StorageOwner,
+  scopeRecordStorage,
+  storageRecordId,
+} from "pstdio-sync";
+import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_collection_items, extension_kv } from "../../db/schemas.pg";
+import { readRetiredData } from "../../db/retired-data";
+import { createStorageMigrations } from "./data-migrations";
+import { createGroupedStorageDBService } from "./grouped-storage";
+import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
+import { getExtensionStorageOwner } from "./storage-owner";
 
-const nowTimestamp = () => new Date().toISOString();
-
-export type KvScope = {
-  extension_instance_id: string;
-  scope_type: string;
-  scope_id: string;
-};
-
-export type CollectionScope = KvScope & { collection: string };
-
-export type SetKvInput = KvScope & {
-  key: string;
-  value_json: unknown;
-  project_id?: string | null;
-};
-
-export type SetCollectionItemInput = CollectionScope & {
-  item_id: string;
-  value_json: unknown;
-  sort_order?: number | null;
-  project_id?: string | null;
-};
-
-const updateCollectionItem = async (db: DbClient, input: SetCollectionItemInput) => {
-  const updated = await db
-    .update(extension_collection_items)
-    .set({ value_json: input.value_json, updated_at: nowTimestamp() })
-    .where(
-      and(
-        eq(extension_collection_items.extension_instance_id, input.extension_instance_id),
-        eq(extension_collection_items.scope_type, input.scope_type),
-        eq(extension_collection_items.scope_id, input.scope_id),
-        eq(extension_collection_items.collection, input.collection),
-        eq(extension_collection_items.item_id, input.item_id),
-      ),
-    )
-    .returning({ item_id: extension_collection_items.item_id });
-  return updated.length === 1;
-};
+export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 
 export const createExtensionStorageDBService = (db: DbClient) => {
+  const grouped = createGroupedStorageDBService(db);
+  const scopeFor = async (scope: KvScope) => {
+    const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
+    if (!owner) return null;
+    const { environmentId } = await grouped.getEnvironment();
+    return createLegacyRecordStorage({ owner, environmentId, store: grouped }).scope(scope.scope_type, scope.scope_id);
+  };
+  const requireScope = async (scope: KvScope) => {
+    const storage = await scopeFor(scope);
+    if (!storage) throw new Error("Storage owner not found");
+    return storage;
+  };
+  const collectionFor = async (scope: CollectionScope) => (await requireScope(scope)).collection(scope.collection);
   const getKv = async (scope: KvScope, key: string) => {
-    const [row] = await db
-      .select()
-      .from(extension_kv)
-      .where(
-        and(
-          eq(extension_kv.extension_instance_id, scope.extension_instance_id),
-          eq(extension_kv.scope_type, scope.scope_type),
-          eq(extension_kv.scope_id, scope.scope_id),
-          eq(extension_kv.key, key),
-        ),
-      );
-    return row ?? null;
+    const value = await (await scopeFor(scope))?.kv.get(key);
+    return value === undefined ? null : { ...scope, key, value_json: value };
   };
-
-  const listKv = async (scope: KvScope) =>
-    db
-      .select()
-      .from(extension_kv)
-      .where(
-        and(
-          eq(extension_kv.extension_instance_id, scope.extension_instance_id),
-          eq(extension_kv.scope_type, scope.scope_type),
-          eq(extension_kv.scope_id, scope.scope_id),
-        ),
-      )
-      .orderBy(extension_kv.key);
-
-  const setKv = async (input: SetKvInput) => {
-    const timestamp = nowTimestamp();
-    const row = {
-      project_id: input.project_id ?? null,
-      extension_instance_id: input.extension_instance_id,
-      scope_type: input.scope_type,
-      scope_id: input.scope_id,
-      key: input.key,
-      value_json: input.value_json,
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-    const [stored] = await db
-      .insert(extension_kv)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [extension_kv.extension_instance_id, extension_kv.scope_type, extension_kv.scope_id, extension_kv.key],
-        set: { value_json: input.value_json, project_id: input.project_id ?? null, updated_at: timestamp },
-      })
-      .returning();
-    return stored;
-  };
-
-  const deleteKv = async (scope: KvScope, key: string) => {
-    const deleted = await db
-      .delete(extension_kv)
-      .where(
-        and(
-          eq(extension_kv.extension_instance_id, scope.extension_instance_id),
-          eq(extension_kv.scope_type, scope.scope_type),
-          eq(extension_kv.scope_id, scope.scope_id),
-          eq(extension_kv.key, key),
-        ),
-      )
-      .returning({ key: extension_kv.key });
-    return deleted.length > 0;
-  };
-
-  const listCollection = async (scope: CollectionScope) =>
-    db
-      .select()
-      .from(extension_collection_items)
-      .where(
-        and(
-          eq(extension_collection_items.extension_instance_id, scope.extension_instance_id),
-          eq(extension_collection_items.scope_type, scope.scope_type),
-          eq(extension_collection_items.scope_id, scope.scope_id),
-          eq(extension_collection_items.collection, scope.collection),
-        ),
-      )
-      .orderBy(extension_collection_items.sort_order, extension_collection_items.item_id);
-
   const getCollectionItem = async (scope: CollectionScope, itemId: string) => {
-    const [row] = await db
-      .select()
-      .from(extension_collection_items)
-      .where(
-        and(
-          eq(extension_collection_items.extension_instance_id, scope.extension_instance_id),
-          eq(extension_collection_items.scope_type, scope.scope_type),
-          eq(extension_collection_items.scope_id, scope.scope_id),
-          eq(extension_collection_items.collection, scope.collection),
-          eq(extension_collection_items.item_id, itemId),
-        ),
-      );
-    return row ?? null;
+    const item = await (await scopeFor(scope))?.collection(scope.collection).get(itemId);
+    return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
-
-  const setCollectionItem = async (input: SetCollectionItemInput) => {
-    const timestamp = nowTimestamp();
-    const row = {
-      project_id: input.project_id ?? null,
-      extension_instance_id: input.extension_instance_id,
-      scope_type: input.scope_type,
-      scope_id: input.scope_id,
-      collection: input.collection,
-      item_id: input.item_id,
-      sort_order: input.sort_order ?? null,
-      value_json: input.value_json,
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-    const [stored] = await db
-      .insert(extension_collection_items)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [
-          extension_collection_items.extension_instance_id,
-          extension_collection_items.scope_type,
-          extension_collection_items.scope_id,
-          extension_collection_items.collection,
-          extension_collection_items.item_id,
-        ],
-        set: {
-          value_json: input.value_json,
-          sort_order: input.sort_order ?? null,
-          project_id: input.project_id ?? null,
-          updated_at: timestamp,
-        },
-      })
-      .returning();
-    return stored;
-  };
-
-  const createCollectionItemIfAbsent = async (input: SetCollectionItemInput) => {
-    const timestamp = nowTimestamp();
-    const inserted = await db
-      .insert(extension_collection_items)
-      .values({
-        project_id: input.project_id ?? null,
-        extension_instance_id: input.extension_instance_id,
-        scope_type: input.scope_type,
-        scope_id: input.scope_id,
-        collection: input.collection,
-        item_id: input.item_id,
-        sort_order: input.sort_order ?? null,
-        value_json: input.value_json,
-        created_at: timestamp,
-        updated_at: timestamp,
-      })
-      .onConflictDoNothing()
-      .returning({ itemId: extension_collection_items.item_id });
-
-    return inserted.length === 1;
-  };
-
-  const deleteCollectionItem = async (scope: CollectionScope, itemId: string) => {
-    const deleted = await db
-      .delete(extension_collection_items)
-      .where(
-        and(
-          eq(extension_collection_items.extension_instance_id, scope.extension_instance_id),
-          eq(extension_collection_items.scope_type, scope.scope_type),
-          eq(extension_collection_items.scope_id, scope.scope_id),
-          eq(extension_collection_items.collection, scope.collection),
-          eq(extension_collection_items.item_id, itemId),
-        ),
-      )
-      .returning({ item_id: extension_collection_items.item_id });
-    return deleted.length > 0;
-  };
-
-  const deleteCollectionItemIfValue = async (scope: CollectionScope, itemId: string, value: unknown) => {
-    const deleted = await db
-      .delete(extension_collection_items)
-      .where(
-        and(
-          eq(extension_collection_items.extension_instance_id, scope.extension_instance_id),
-          eq(extension_collection_items.scope_type, scope.scope_type),
-          eq(extension_collection_items.scope_id, scope.scope_id),
-          eq(extension_collection_items.collection, scope.collection),
-          eq(extension_collection_items.item_id, itemId),
-          eq(extension_collection_items.value_json, value),
-        ),
-      )
-      .returning({ item_id: extension_collection_items.item_id });
-    return deleted.length > 0;
-  };
-
   return {
+    migrate: createStorageMigrations(db),
+    readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
+      readRetiredData(db, source, scope),
+    recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
+    open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {
+      const { environmentId } = await grouped.getEnvironment();
+      const storage = grouped.open({ ...input, environmentId });
+      return {
+        ...storage,
+        scopedRecords: (type: string, id: string) => scopeRecordStorage(storage.records, [type, id, "kv"]),
+      };
+    },
     getKv,
-    listKv,
-    setKv,
-    deleteKv,
-    listCollection,
+    listKv: async (scope: KvScope) =>
+      ((await (await scopeFor(scope))?.kv.list()) ?? []).map((record) => ({
+        ...scope,
+        key: record.recordId,
+        value_json: record.value,
+      })),
+    setKv: async (input: SetKvInput) => {
+      await (await requireScope(input)).kv.set(input.key, input.value_json as Json);
+      return getKv(input, input.key);
+    },
+    deleteKv: async (scope: KvScope, key: string) => (await scopeFor(scope))?.kv.delete(key) ?? false,
     getCollectionItem,
-    setCollectionItem,
-    updateCollectionItem: (input: SetCollectionItemInput) => updateCollectionItem(db, input),
-    createCollectionItemIfAbsent,
-    deleteCollectionItem,
-    deleteCollectionItemIfValue,
+    listCollection: async (scope: CollectionScope) =>
+      ((await (await scopeFor(scope))?.collection(scope.collection).list()) ?? []).map((item) => ({
+        ...scope,
+        item_id: item.id,
+        value_json: item.value,
+        sort_order: item.sortOrder,
+      })),
+    setCollectionItem: async (input: SetCollectionItemInput) => {
+      await (await collectionFor(input)).set(input.item_id, input.value_json as Json, input.sort_order);
+      return getCollectionItem(input, input.item_id);
+    },
+    updateCollectionItem: async (input: SetCollectionItemInput) =>
+      (await collectionFor(input)).update(input.item_id, input.value_json as Json),
+    createCollectionItemIfAbsent: async (input: SetCollectionItemInput) =>
+      (await collectionFor(input)).createIfAbsent(input.item_id, input.value_json as Json, input.sort_order),
+    deleteCollectionItem: async (scope: CollectionScope, itemId: string) => (await collectionFor(scope)).delete(itemId),
+    deleteCollectionItemIfValue: async (scope: CollectionScope, itemId: string, value: unknown) =>
+      (await collectionFor(scope)).deleteIfValue(itemId, value as Json),
   };
 };

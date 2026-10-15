@@ -1,72 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
-
-const writeExtension = (root: string) => {
-  mkdirSync(join(root, "src"), { recursive: true });
-  writeFileSync(
-    join(root, "package.json"),
-    JSON.stringify({
-      name: "lab",
-      version: "1.0.0",
-      displayName: "Lab",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-    }),
-  );
-  writeFileSync(join(root, "src/main.tsx"), "console.log('webview');");
-  writeFileSync(
-    join(root, "extension.ts"),
-    `export default {
-      views: [{
-        id: "labPage",
-        title: "labPage",
-        body: { kind: "webview", entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
-      }],
-    };`,
-  );
-};
-
-const writeTwoWebviewExtension = (root: string) => {
-  mkdirSync(join(root, "src"), { recursive: true });
-  writeFileSync(
-    join(root, "package.json"),
-    JSON.stringify({
-      name: "lab",
-      version: "1.0.0",
-      displayName: "Lab",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-    }),
-  );
-  writeFileSync(join(root, "src/first.tsx"), "console.log('first');");
-  writeFileSync(join(root, "src/second.tsx"), "console.log('second');");
-  writeFileSync(
-    join(root, "extension.ts"),
-    `export default {
-      views: [
-        { id: "first", title: "first", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/first.tsx", baseUrl: import.meta.url } } },
-        { id: "second", title: "second", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/second.tsx", baseUrl: import.meta.url } } },
-      ],
-    };`,
-  );
-};
-
-const writeManagedBuildOutput = (input: { outdir: string }) => {
-  mkdirSync(input.outdir, { recursive: true });
-  writeFileSync(join(input.outdir, "module.js"), "");
-};
+import { writeExtension, writeManagedBuildOutput } from "./test-utils/webview-build-fixture";
 
 describe("createExtensionWebviewBuildManager refresh scheduling", () => {
   test("builds an extension's webviews concurrently rather than one at a time", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-parallel-test-"));
     const sourcePath = join(root, "extension");
-    writeTwoWebviewExtension(sourcePath);
+    writeExtension(sourcePath, { first: "src/first.tsx", second: "src/second.tsx" });
 
     let concurrent = 0;
     let maxConcurrent = 0;
@@ -78,10 +21,21 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         concurrent++;
         maxConcurrent = Math.max(maxConcurrent, concurrent);
@@ -108,7 +62,7 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
   test("reports each successful rebuild without waiting for other managed webviews", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-success-barrier-test-"));
     const sourcePath = join(root, "extension");
-    writeTwoWebviewExtension(sourcePath);
+    writeExtension(sourcePath, { first: "src/first.tsx", second: "src/second.tsx" });
     const successes: string[] = [];
     const firstReported = Promise.withResolvers<void>();
     let firstStarted: () => void = () => {};
@@ -130,12 +84,22 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
       reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         successes.push(webviewId);
         if (webviewId === "pstdio.lab.view.first") firstReported.resolve();
+        return "reported";
       },
       buildWebview: async (input) => {
         const { entryPath } = input;
@@ -176,7 +140,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
   test("serializes overlapping refreshes so unchanged webviews are not rebuilt", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-refresh-race-test-"));
     const sourcePath = join(root, "extension");
-    writeExtension(sourcePath);
+    writeExtension(sourcePath, { labPage: "src/main.tsx" });
     let runCount = 0;
     const buildStarted = Promise.withResolvers<void>();
     let unblockBuild: () => void = () => {};
@@ -186,10 +150,21 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         runCount++;
         buildStarted.resolve();
@@ -219,7 +194,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
   test("does not report success for an obsolete build when newer build inputs are queued", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-obsolete-build-test-"));
     const sourcePath = join(root, "extension");
-    writeExtension(sourcePath);
+    writeExtension(sourcePath, { labPage: "src/main.tsx" });
     const successes: string[] = [];
     let sourceHash = "hash-1";
     let runCount = 0;
@@ -236,11 +211,21 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: sourceHash,
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
       reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         successes.push(webviewId);
+        return "reported";
       },
       buildWebview: async (input) => {
         runCount++;
@@ -282,7 +267,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
   test("drops build results that finish after dispose", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-refresh-dispose-test-"));
     const sourcePath = join(root, "extension");
-    writeExtension(sourcePath);
+    writeExtension(sourcePath, { labPage: "src/main.tsx" });
     const reports: string[] = [];
     const buildStarted = Promise.withResolvers<void>();
     let unblockBuild: () => void = () => {};
@@ -292,13 +277,22 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async () => {
         reports.push("failure");
+        return "reported";
       },
       reportBuildSuccess: async () => {
         reports.push("success");
+        return "reported";
       },
       buildWebview: async (input) => {
         buildStarted.resolve();

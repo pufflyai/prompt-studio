@@ -1,12 +1,12 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { createFileMount, createReadBoundary } from "pstdio-extensions";
+import { createFileMount, createReadBoundary, type ExtensionStorageOwner, extensionFilesPath } from "pstdio-extensions";
 
 import type { FileAccess } from "./workspace-files";
 
-const ignoreEntry = (extensionId: string) => `/ext/${extensionId}/`;
-const ignoreMarker = (extensionId: string) => `# pstdio:ignore-owned ${ignoreEntry(extensionId)}`;
+const ignoreEntry = (owner: ExtensionStorageOwner) => `${extensionFilesPath(owner).slice(".pstdio".length)}/`;
+const ignoreMarker = (owner: ExtensionStorageOwner) => `# pstdio:ignore-owned ${ignoreEntry(owner)}`;
 const ignoreUpdates = new Map<string, Promise<void>>();
 
 const serializeIgnoreUpdate = async (repoPath: string, update: () => Promise<void>) => {
@@ -35,7 +35,7 @@ const writeAtomic = async (path: string, content: string) => {
   }
 };
 
-const updateIgnore = async (repoPath: string, extensionId: string, tracked: boolean) => {
+const updateIgnore = async (repoPath: string, owner: ExtensionStorageOwner, tracked: boolean) => {
   await serializeIgnoreUpdate(repoPath, async () => {
     const path = join(repoPath, ".pstdio", ".gitignore");
     let lines: string[] = [];
@@ -45,15 +45,21 @@ const updateIgnore = async (repoPath: string, extensionId: string, tracked: bool
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       await mkdir(dirname(path), { recursive: true });
     }
-    const entry = ignoreEntry(extensionId);
-    const marker = ignoreMarker(extensionId);
+    const entry = ignoreEntry(owner);
+    const marker = ignoreMarker(owner);
     const markerIndex = lines.indexOf(marker);
     let next = lines;
     if (tracked && markerIndex >= 0) {
       next = lines.filter(
         (_, index) => index !== markerIndex && !(index === markerIndex + 1 && lines[index] === entry),
       );
-    } else if (!tracked && markerIndex < 0 && !lines.includes(entry)) {
+    } else if (
+      !tracked &&
+      markerIndex < 0 &&
+      !lines.includes(entry) &&
+      !lines.includes("/extension-storage") &&
+      !lines.includes("/extension-storage/")
+    ) {
       next = [...lines, marker, entry];
     }
     if (next.join("\n") === lines.join("\n")) return;
@@ -61,18 +67,19 @@ const updateIgnore = async (repoPath: string, extensionId: string, tracked: bool
   });
 };
 
-export const createExtensionFilesApi = (input: {
-  extensionId: string;
-  resolveRepoPath: (access: FileAccess) => Promise<string>;
-  tracked: boolean;
-  signal?: AbortSignal;
-}): ArtifactMount => {
+export const createExtensionFilesApi = (
+  input: ExtensionStorageOwner & {
+    resolveRepoPath: (access: FileAccess) => Promise<string>;
+    tracked: boolean;
+    signal?: AbortSignal;
+  },
+): ArtifactMount => {
   const mountFor = async (access: FileAccess) =>
-    createFileMount(join(await input.resolveRepoPath(access), ".pstdio", "ext", input.extensionId), input.signal);
+    createFileMount(join(await input.resolveRepoPath(access), extensionFilesPath(input)), input.signal);
   const readMount = () => createReadBoundary(input.signal)(() => mountFor("read"));
   const beforeWrite = async () => {
     const repoPath = await input.resolveRepoPath("write");
-    await updateIgnore(repoPath, input.extensionId, input.tracked);
+    await updateIgnore(repoPath, input, input.tracked);
     return mountFor("write");
   };
   return {

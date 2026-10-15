@@ -58,7 +58,7 @@ test("cancelling scoped reads leaves artifact, project and extension saves indep
     for (const path of [
       ".pstdio/extension-storage/example/docs/draft.md",
       "draft.md",
-      ".pstdio/ext/test.example/draft.md",
+      ".pstdio/extension-storage/example/.publishers/test/draft.md",
     ]) {
       expect(await readFile(join(root, path), "utf8")).toBe("Saved draft");
     }

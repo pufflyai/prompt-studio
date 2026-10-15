@@ -8,7 +8,7 @@ import type {
   UpgradeProjectExtensionResponse,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, createApiRequest } from "@/lib/api";
 import type { DashboardExtensionMetadata } from "./types";
 
 export const getProjectExtensionMetadata = (projectId: string) =>
@@ -50,14 +50,17 @@ export const executeExtensionCommandValue = async <T = unknown>(
 };
 
 export const uploadExtensionCommandFile = async (projectId: string, commandId: string, file: File) =>
-  apiRequest<{ id: string }>(`/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/files`, {
-    method: "POST",
-    body: await file.arrayBuffer(),
-    headers: {
-      "content-type": file.type || "application/octet-stream",
-      "x-file-name": encodeURIComponent(file.name),
+  createApiRequest()<{ id: string }>(
+    `/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/files`,
+    {
+      method: "POST",
+      body: await file.arrayBuffer(),
+      headers: {
+        "content-type": file.type || "application/octet-stream",
+        "x-file-name": encodeURIComponent(file.name),
+      },
     },
-  });
+  );
 
 export interface ExtensionArtifactFile {
   path: string;

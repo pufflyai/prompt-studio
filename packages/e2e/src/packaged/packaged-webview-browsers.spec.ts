@@ -178,7 +178,10 @@ test.describe("packaged extension webviews", () => {
           await expect(settingsFrame.getByText("Saved", { exact: true })).toBeVisible();
 
           await page.reload();
-          await page.getByText("Settings", { exact: true }).last().click();
+          await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
+          await page.keyboard.press("Escape");
+          await expect(page.getByRole("dialog")).toHaveCount(0);
+          await page.getByRole("option", { name: "Settings", exact: true }).click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
           await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
           await page.keyboard.press("Escape");

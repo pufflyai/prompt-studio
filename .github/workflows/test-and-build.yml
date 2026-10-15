@@ -25,11 +25,13 @@ jobs:
     timeout-minutes: 5
     outputs:
       stage: ${{ steps.scope.outputs.stage }}
+      docker_build: ${{ steps.scope.outputs.dockerBuild }}
       lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
       database_tests: ${{ steps.scope.outputs.databaseTests }}
       license: ${{ steps.scope.outputs.license }}
       published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
       harness_cli: ${{ steps.scope.outputs.harnessCli }}
+      relay_smoke: ${{ steps.scope.outputs.relaySmoke }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -136,6 +138,39 @@ jobs:
         # Stream failures as they happen; buffered task output can be lost when the runner exits.
         # The API and database suites take minutes, so database_tests runs them in shards.
         run: bunx lerna run test --ignore e2e --ignore pstdio-api --ignore pstdio-db ${{ needs.scope.outputs.lerna_filter }} --stream
+
+      - name: Test synchronization protocol with isolated storage
+        run: bunx lerna run test:conformance ${{ needs.scope.outputs.lerna_filter }} --stream
+
+  relay_smoke:
+    needs: scope
+    if: needs.scope.outputs.relay_smoke == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Test built relay with disposable PostgreSQL and object storage
+        run: bun run --cwd infra/relay test:isolated
+
+      - name: Install dependencies for storage conformance
+        run: bun install --frozen-lockfile
+
+      - name: Test PostgreSQL publication and process recovery
+        run: bun run --cwd infra/relay test:storage
+
+      - name: Test durable streaming assets and object storage contract
+        run: bun run --cwd infra/relay test:assets
+
+      - name: Test production relay with real local stores
+        env:
+          SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
+        run: bun run --cwd packages/pstdio-sync-contracts test:conformance
 
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
@@ -598,6 +633,11 @@ jobs:
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
 
+      - name: Benchmark packaged renderers
+        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        working-directory: clients/desktop
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.benchmark.config.ts packaged-renderer.bench.ts
+
       # A source failure must not hide the packaged results for the same build. The job still fails.
       - name: Smoke packaged desktop app
         if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
@@ -616,7 +656,7 @@ jobs:
 
   build_docker:
     needs: scope
-    if: needs.scope.outputs.stage != 'pull_request'
+    if: needs.scope.outputs.docker_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -666,6 +706,7 @@ jobs:
       - scope
       - static_checks
       - lint_and_test
+      - relay_smoke
       - database_tests
       - published_extensions
       - harness_cli_support

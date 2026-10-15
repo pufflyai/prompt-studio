@@ -33,8 +33,8 @@ import { registerSessionResourceActions } from "./session-resource-actions";
 import { registerSessionResourceSync } from "./session-resource-sync";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
 
-const SessionViewWidget = lazy(() =>
-  import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionViewWidget })),
+const SessionWidget = lazy(() =>
+  import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
 );
 
 const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
@@ -46,7 +46,7 @@ const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardS
         kind: "react",
         render: (input) => (
           <Suspense fallback={<Spinner />}>
-            <SessionViewWidget input={input} drafts={drafts} />
+            <SessionWidget input={input} drafts={drafts} />
           </Suspense>
         ),
       },

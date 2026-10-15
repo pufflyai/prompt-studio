@@ -30,6 +30,7 @@ export type RequestOptions = {
   signal?: AbortSignal;
   headers?: HeadersInit;
   cache?: RequestCache;
+  response?: "stream";
 };
 
 export type RequestFn = <T>(path: string, options?: RequestOptions) => Promise<T>;
@@ -119,6 +120,16 @@ const serializeRequestBody = (body: unknown) => {
   return JSON.stringify(body);
 };
 
+const responseError = async (response: Response) => {
+  const errorBody: unknown = await response.json().catch(() => null);
+  const message = readErrorMessage(errorBody, response.status);
+  const code =
+    errorBody && typeof errorBody === "object" && "code" in errorBody && typeof errorBody.code === "string"
+      ? errorBody.code
+      : undefined;
+  return new PstdioApiError(message, response.status, code);
+};
+
 export const createRequest = (options: ClientOptions): RequestFn => {
   const baseUrl = resolveBaseUrl(options);
   const fetchFn = resolveFetch(options);
@@ -140,17 +151,10 @@ export const createRequest = (options: ClientOptions): RequestFn => {
     };
     try {
       const response = await fetchFn(url, requestInit);
-      if (!response.ok) {
-        const errorBody: unknown = await response.json().catch(() => null);
-        const message = readErrorMessage(errorBody, response.status);
-        const code =
-          errorBody && typeof errorBody === "object" && "code" in errorBody && typeof errorBody.code === "string"
-            ? errorBody.code
-            : undefined;
-        throw new PstdioApiError(message, response.status, code);
-      }
+      if (!response.ok) throw await responseError(response);
 
       if (response.status === 204) return undefined as T;
+      if (reqOpts.response === "stream") return response.body as T;
       return (await response.json()) as T;
     } catch (error) {
       reqOpts.signal?.throwIfAborted();

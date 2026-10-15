@@ -10,6 +10,8 @@ export interface SearchModalContentProps {
   searchIcon?: ReactNode;
   searchInputRef?: Ref<HTMLInputElement>;
   searchAutoFocus?: boolean;
+  showSearch?: boolean;
+  title?: string;
   showCloseButton?: boolean;
   closeButtonLabel?: string;
   bodyBefore?: ReactNode;
@@ -37,6 +39,8 @@ export const SearchModalContent = (props: SearchModalContentProps) => {
     searchIcon,
     searchInputRef,
     searchAutoFocus,
+    showSearch = true,
+    title,
     showCloseButton = false,
     closeButtonLabel = "Close",
     bodyBefore,
@@ -52,22 +56,29 @@ export const SearchModalContent = (props: SearchModalContentProps) => {
 
   return (
     <>
-      <Dialog.Header px="0" py="0" borderBottomWidth="1px" borderBottomColor="border.subtle">
-        <InputGroup startElement={searchIcon} width="full">
-          <Input
-            ref={searchInputRef}
-            value={searchValue}
-            placeholder={searchPlaceholder}
-            aria-label={searchAriaLabel}
-            autoComplete="off"
-            autoFocus={searchAutoFocus}
-            mx="xs"
-            h="3rem"
-            variant="borderless"
-            onChange={(event) => onSearchChange(event.target.value)}
-            onKeyDown={onSearchKeyDown}
-          />
-        </InputGroup>
+      <Dialog.Header px="0" py="0" minH="3rem" borderBottomWidth="1px" borderBottomColor="border.subtle">
+        {title && (
+          <Dialog.Title srOnly={showSearch} px="sm" py="sm">
+            {title}
+          </Dialog.Title>
+        )}
+        {showSearch && (
+          <InputGroup startElement={searchIcon} width="full">
+            <Input
+              ref={searchInputRef}
+              value={searchValue}
+              placeholder={searchPlaceholder}
+              aria-label={searchAriaLabel}
+              autoComplete="off"
+              autoFocus={searchAutoFocus}
+              mx="xs"
+              h="3rem"
+              variant="borderless"
+              onChange={(event) => onSearchChange(event.target.value)}
+              onKeyDown={onSearchKeyDown}
+            />
+          </InputGroup>
+        )}
         {showCloseButton ? (
           <Dialog.CloseTrigger asChild>
             <CloseButton aria-label={closeButtonLabel} size="sm" mr="2" />

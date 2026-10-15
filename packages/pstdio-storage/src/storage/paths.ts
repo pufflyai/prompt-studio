@@ -11,8 +11,12 @@ export const ensureStorageRoot = (storageRoot: string) => {
 };
 
 export const ensureProjectStorageRoot = (storageRoot: string, projectId: string) => {
-  fs.mkdirSync(path.join(storageRoot, projectId), { recursive: true });
+  fs.mkdirSync(projectStorageRoot(storageRoot, projectId), { recursive: true });
 };
 
+const segment = (value: string) => Buffer.from(value).toString("base64url");
+const projectStorageRoot = (storageRoot: string, projectId: string) =>
+  path.join(storageRoot, "files", segment(projectId));
+
 export const resolveFileStoragePath = (storageRoot: string, projectId: string, fileId: string) =>
-  path.join(storageRoot, projectId, fileId);
+  path.join(projectStorageRoot(storageRoot, projectId), segment(fileId));

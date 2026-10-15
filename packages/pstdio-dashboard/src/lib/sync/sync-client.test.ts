@@ -1,7 +1,23 @@
 import { describe, expect, it } from "bun:test";
 import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
+import { createRuntimeCollections } from "./collections";
 import { createDashboardSyncWriterProvider, parseSyncDeleteEvent } from "./sync-client";
+
+it("delivers resource events only to subscribers of the originating runtime", async () => {
+  const first = createRuntimeCollections();
+  const second = createRuntimeCollections();
+  const received: unknown[] = [];
+  const unsubscribe = subscribeToResourceRemovals((resource) => received.push(resource), first);
+  const resource = { type: "note", id: "same", extensionId: "notes", projectId: "shared" };
+  createDashboardSyncWriterProvider(second).getWriter("resource_events")!.upsert({ id: "event", resource });
+  expect(received).toEqual([]);
+  createDashboardSyncWriterProvider(first).getWriter("resource_events")!.upsert({ id: "event", resource });
+  expect(received).toEqual([resource]);
+  unsubscribe();
+  await first.dispose();
+  await second.dispose();
+});
 
 it("delivers resource removal facts without a command response", () => {
   const received: unknown[] = [];
