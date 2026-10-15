@@ -46,7 +46,7 @@ export const verifyPackagedSessionMenus = async (
       headers: { ...authorization, "content-type": "application/json" },
       body: JSON.stringify({ title }),
     });
-    expect(updated.ok()).toBe(true);
+    expect(updated.ok).toBe(true);
     await expect(picker.getByRole("option")).toHaveText([title]);
     await expect(picker.getByRole("textbox")).toHaveValue("Packaged session actions");
   }
