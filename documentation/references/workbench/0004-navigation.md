@@ -36,6 +36,8 @@ Tree selection follows the active resource and page. A node's declared `selected
 
 Tree reads belong to the mounted placement. Changing its resource or navigation level refreshes its data while keeping the current rows until the complete replacement arrives. Rows with the same identity keep their DOM, focus, and scroll position. A changed read scope cancels older reads and ignores their late results. Opening a different tree or project starts a new snapshot. A changed search filter also starts a new snapshot, so results from the previous query cannot be clicked while its replacement loads.
 
+Navigation trees in the sidenav keep their available rows when a read fails. They do not show an inline load-error notice or Retry button, including on the initial load. Later data refreshes and connection recovery load the tree again. Trees in other panels keep their load-error notices and Retry controls.
+
 ## Resource actions on navigation rows
 
 Set `TreeNode.resource` to the subject of row actions. `target` remains the normal-click destination. Session rows in the Sessions level, workspace group, and Planner ticket section use the same session reference for both. The shared tree resolves resource menu contributions and keeps the clicked resource in command context, including parameter dialogs. Opening or dismissing a menu does not navigate.
