@@ -59,6 +59,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+// Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.

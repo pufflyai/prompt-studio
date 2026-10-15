@@ -14,6 +14,8 @@ Each harness reports its CLI as not installed below its supported minimum. See [
 
 Submitting `/goal <objective>` during an owned Codex operation replaces the native objective in the same thread. The current turn continues, and subsequent autonomous turns follow the new goal. Resume and Edit use the same live control path. The operation stays alive while the native mutation is pending, including when its current turn finishes before acknowledgement. If that owner finishes before invocation, no mutation is sent; submitting again uses the idle exclusive path. Explicit rejection releases the hold. Unknown delivery disconnects the owning operation without replay and preserves its native identity for readback. A shared transport loss disconnects all attached operations; each reconciles its native history before new work. Local cancellation does not kill the shared server. Native hangs have a wider failure domain, and cancellation before acknowledgement waits for the native reply or transport recovery.
 
+A follow-up can steer an already running Codex goal turn without starting a new turn. Stop and project disposal interrupt that observed turn after acknowledgement, without waiting for another start notification. Cancellation of a new turn still waits for its native start or terminal event.
+
 Codex reports a status dot with native state: active is green, paused/blocked/usage or budget limited is amber, and complete is blue. It supplies Pause/Resume, Edit, and Clear icons. Unavailable status is neutral. Claude and OpenCode retain their native capabilities; the host does not infer a Goal mode or live replacement from a command spelling.
 
 ## Composer controls

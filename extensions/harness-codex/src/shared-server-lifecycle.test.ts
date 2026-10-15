@@ -246,6 +246,43 @@ test("terminal delivery releases cancellation without a turn start notification"
 });
 
 test.each([
+  [false, false],
+  [false, true],
+  [true, false],
+  [true, true],
+])("cancellation interrupts an already started goal turn (scope=%s, paused=%s)", async (scope, paused) => {
+  const p = peer({ delayTurnStarted: true });
+  peers.push(p);
+  const a = input("a", "p");
+  const threadId = await p.runtime.worker(a).load(a);
+  p.children[0].emit({
+    method: "turn/started",
+    params: { threadId, turn: { id: "turn-1", status: "inProgress" } },
+  });
+  // turn/start steers this existing turn without another start notification.
+  const session = await p.runtime.run(a);
+  const other = await p.runtime.run(input("b", "q"));
+  p.children[0].emit({
+    method: "thread/goal/updated",
+    params: { threadId, goal: { status: paused ? "paused" : "active" } },
+  });
+  const stopping = scope ? p.runtime.disposeScope("p") : session.stop();
+  const outcome = await Promise.race([stopping.then(() => "stopped"), Bun.sleep(100).then(() => "pending")]);
+  expect(outcome).toBe("stopped");
+  expect(await session.done).toEqual({ status: "cancelled" });
+  expect(p.calls.filter((call) => call.method === "turn/interrupt").map((call) => call.params)).toEqual([
+    { threadId, turnId: "turn-1" },
+  ]);
+  if (!scope && !paused)
+    expect(p.calls.some((call) => call.method === "thread/goal/set" && call.params.status === "paused")).toBe(true);
+  p.children[0].emit({
+    method: "turn/completed",
+    params: { threadId: other.agentSessionId, turn: { id: "turn-2", status: "completed" } },
+  });
+  expect(await other.done).toEqual({ status: "completed" });
+});
+
+test.each([
   "thread/goal/get",
   "thread/unsubscribe",
 ])("scope cleanup releases a transport lost during %s", async (method) => {
