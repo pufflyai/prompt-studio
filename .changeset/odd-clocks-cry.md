@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Add resource menu list sections and disabled action contracts.
+Add labeled resource menu sections and disabled action contracts.
