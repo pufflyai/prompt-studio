@@ -17,6 +17,7 @@ import { exerciseWebview } from "./webview-playwright";
 import { windowingInteractions } from "./workbench-windowing-interactions";
 
 const storyIds = [
+  "drag-close-fullscreen-cancel",
   "fullscreen-attached",
   "fullscreen-floating",
   "fullscreen-empty-open",

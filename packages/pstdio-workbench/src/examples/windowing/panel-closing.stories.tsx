@@ -120,3 +120,28 @@ export const DragFixedPanel: Story = {
     await expect(side.getBoundingClientRect().width).toBeGreaterThanOrEqual(320);
   },
 };
+
+export const DragCloseFullscreenCancel: Story = {
+  args: { createFixture: () => createWindowingFixture("windowing", { pagePanels: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    await user.click(canvas.getByRole("button", { name: "Expand page" }));
+    const separator = canvas.getByRole("separator", { name: "Resize page bottom" });
+    const bottom = canvasElement.querySelector<HTMLElement>('[data-workbench-panel="bottom"]')!;
+    const previousSize = bottom.getBoundingClientRect().height;
+    const rect = separator.getBoundingClientRect();
+    await user.pointer([
+      { target: separator, keys: "[MouseLeft>]", coords: { clientX: rect.x, clientY: rect.y } },
+      { target: separator, coords: { clientX: rect.x, clientY: rect.y + 600 } },
+    ]);
+    await expect(separator.parentElement!).toHaveAttribute("data-closing", "true");
+    await user.keyboard("{Escape}");
+    await expect(canvas.getByRole("button", { name: "Exit fullscreen" })).toBeVisible();
+    await expect(separator.parentElement!).toHaveAttribute("data-closing", "false");
+    await waitFor(() => expect(bottom.getBoundingClientRect().height).toBe(previousSize));
+    await user.pointer({ target: separator, keys: "[/MouseLeft]" });
+    await user.keyboard("{Escape}");
+    await expect(canvas.getByRole("button", { name: "Expand page" })).toHaveFocus();
+  },
+};

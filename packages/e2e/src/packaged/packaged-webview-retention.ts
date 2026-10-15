@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { verifyFullscreenWebviewEscape } from "../helpers/fullscreen-webview-escape";
+import { verifyPackagedFullscreenResizeCancellation } from "./packaged-fullscreen-resize";
 
 export const verifyPackagedWebviewRetention = async (page: Page) => {
   const iframe = page.locator('iframe[title="Lab"]');
@@ -11,6 +12,7 @@ export const verifyPackagedWebviewRetention = async (page: Page) => {
   expect(frame!.isDetached()).toBe(false);
   await page.goBack();
   await expect(iframe).toBeVisible();
+  await verifyPackagedFullscreenResizeCancellation(page);
   await verifyFullscreenWebviewEscape(page, frame!);
   expect(frame!.isDetached()).toBe(false);
   expect(await frame!.evaluate(() => Reflect.get(window, "packagedRetentionMarker"))).toBe("original context");

@@ -116,7 +116,7 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", cancel);
       window.removeEventListener("blur", cancel);
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
       if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
@@ -167,6 +167,7 @@ export const createResizeStartHandler = (input: ResizeStartHandlerInput) => {
     window.addEventListener("pointerup", handlePointerUp, { once: true });
     window.addEventListener("pointercancel", cancel, { once: true });
     window.addEventListener("blur", cancel, { once: true });
-    window.addEventListener("keydown", handleKeyDown);
+    // The active gesture consumes Escape before app-level window shortcuts.
+    window.addEventListener("keydown", handleKeyDown, true);
   };
 };

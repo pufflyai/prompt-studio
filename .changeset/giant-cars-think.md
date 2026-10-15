@@ -4,4 +4,4 @@
 "pstdio": patch
 ---
 
-Preview panel closing below half the minimum and restore the saved size when reopened.
+Preview panel closing below half the minimum, preserve reopened sizes, and let Escape cancel resizing before leaving fullscreen.
