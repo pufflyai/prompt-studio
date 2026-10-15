@@ -1,5 +1,5 @@
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { createMemoryResources } from "@pstdio/sdk/testing";
+import { createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 
 export type BenchStorageSeed = {
@@ -77,6 +77,7 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
+    assets: createMemoryStorage().assets,
     files: createStorageFiles(seed.blobs),
     scope: () => api,
     async get(key) {
