@@ -44,7 +44,10 @@ export const switchSession = async (page: Page, title: string) => {
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
   await picker.getByRole("textbox").fill(title);
-  await picker.getByRole("option", { name: title, exact: true }).click();
+  await picker
+    .getByRole("option")
+    .filter({ has: page.getByText(title, { exact: true }) })
+    .click();
 };
 
 export const openSessionSidePanel = async (page: Page, title: string) => {
