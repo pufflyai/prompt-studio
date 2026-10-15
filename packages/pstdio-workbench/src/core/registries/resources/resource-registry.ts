@@ -90,6 +90,7 @@ export interface ResourceKindContribution {
 export interface RegisteredResourceKind extends ResourceKindContribution, RegisteredContributionMetadata {}
 export interface ResourceBrowseEntry {
   resource: ResourceRef;
+  indicator?: { icon: string; color?: string; label?: string };
   searchText?: string;
   description?: string;
   group?: string;

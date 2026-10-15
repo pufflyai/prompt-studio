@@ -1,4 +1,3 @@
-import { resolveSessionIndicatorColor, type SessionCompletionStatus } from "@pstdio/ui";
 import type { WorkbenchModuleContext, WorkbenchPanelInstance, WorkbenchWidgetTab } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
@@ -6,20 +5,11 @@ import { createDashboardResource } from "@/shared/app/resources";
 import { resolveDashboardWorkspaceIcon } from "@/shared/workspaces/dashboard-workspaces";
 import { findDashboardSession, resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { subscribeSessionListData } from "../data/session-data-subscription";
+import { createSessionIndicator } from "../session-indicator";
 
-const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
-  if (status === "in_progress") return "LoaderCircle";
-  if (status === "completed") return "CircleCheck";
-  if (status === "failed") return "CircleAlert";
-  if (status === "cancelled") return "CircleStop";
-  if (status === "disconnected") return "CirclePause";
-  if (status === "queued") return "ClockAlert";
-  if (status === "awaiting_input") return "CircleDot";
-  return "CircleDashed";
-};
 const sessionStatus = (instance: WorkbenchPanelInstance, status: string | undefined) => {
   const value = status ?? instance.resource?.metadata?.status;
-  return typeof value === "string" ? (value as SessionCompletionStatus) : undefined;
+  return typeof value === "string" ? value : undefined;
 };
 const workspaceResource = (input: {
   projectId: string | undefined;
@@ -64,11 +54,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
     const workspace = resolveWorkspace(ctx, instance);
     return {
       label: selected?.title ?? instance.resource?.label ?? "New session",
-      indicator: {
-        icon: sessionStatusIcon(status),
-        color: resolveSessionIndicatorColor(status),
-        label: status ? `Session status: ${status}` : "Session status",
-      },
+      indicator: createSessionIndicator(status),
       menu: [
         {
           id: "sessions",

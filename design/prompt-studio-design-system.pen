@@ -189390,13 +189390,15 @@
               "content": "Sessions"
             },
             "Vpiod/UEgTp": {
-              "icon": "message-circle"
+              "icon": "circle-check",
+              "fill": "$ds-success"
             },
             "Vpiod/UTbhN": {
               "content": "Current session"
             },
             "uicCl/UEgTp": {
-              "icon": "message-circle"
+              "icon": "circle-alert",
+              "fill": "$ds-error"
             },
             "uicCl/UTbhN": {
               "content": "Older session"
