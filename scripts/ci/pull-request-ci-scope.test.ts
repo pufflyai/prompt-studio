@@ -23,6 +23,7 @@ const pullRequest = (changedFiles: string[], labels: string[] = [], affectedPack
 
 const full = {
   stage: "full",
+  relaySmoke: true,
   lernaFilter: "",
   license: true,
   publishedExtensions: true,
@@ -34,6 +35,7 @@ const everyLinuxCheck = { ...full, stage: "pull_request" };
 
 const scoped = {
   stage: "pull_request",
+  relaySmoke: false,
   lernaFilter: "--since HEAD~1",
   license: false,
   publishedExtensions: false,
@@ -65,6 +67,7 @@ describe("CI stage", () => {
 
     expect(scope).toEqual({
       stage: "merge_queue",
+      relaySmoke: true,
       lernaFilter: "",
       license: false,
       publishedExtensions: false,
@@ -138,4 +141,18 @@ test("installed CLI checks run for harness changes", () => {
   expect(pullRequest(["extensions/harness-claude-code/src/spawn.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/harness-open-code/src/detection.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/pstdio-planner/extension.ts"]).harnessCli).toBe(false);
+});
+
+test("relay changes select the isolated container check", () => {
+  const scope = resolveCiScope({
+    event: "pull_request",
+    labels: [],
+    changedFiles: ["infra/relay/src/server.ts"],
+    packageDirs: [...packageDirs, "infra/relay"],
+    affectedPackages: ["pstdio-relay"],
+  });
+  expect(scope.lernaFilter).toBe("--since HEAD~1");
+  expect(scope).toHaveProperty("relaySmoke", true);
+  expect(pullRequest(["packages/ui/src/index.ts"])).toHaveProperty("relaySmoke", false);
+  expect(pullRequest(["bun.lock"])).toHaveProperty("relaySmoke", true);
 });

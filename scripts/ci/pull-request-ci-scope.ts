@@ -34,6 +34,7 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
   if (event === "merge_group") {
     return {
       stage: "merge_queue",
+      relaySmoke: true,
       lernaFilter: "",
       license: false,
       publishedExtensions: false,
@@ -42,6 +43,7 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
     };
   }
   const everyCheck = {
+    relaySmoke: true,
     lernaFilter: "",
     license: true,
     publishedExtensions: true,
@@ -58,6 +60,7 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
   return {
     stage: "pull_request",
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
+    relaySmoke: affectedPackages.includes("pstdio-relay"),
     databaseTests: affectedPackages.some((name) => SHARDED_TEST_PACKAGES.includes(name)),
     publishedExtensions: changedFiles.some((file) =>
       ["extensions", "packages/sdk", "packages/ui", "packages/pstdio-api-contracts"].some((dir) => isInside(file, dir)),

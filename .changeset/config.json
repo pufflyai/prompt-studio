@@ -52,7 +52,8 @@
     "motion-lab",
     "social-radar",
     "pstdio-shader-lab",
-    "shape-art"
+    "shape-art",
+    "pstdio-relay"
   ],
   "snapshot": {
     "useCalculatedVersion": true,
