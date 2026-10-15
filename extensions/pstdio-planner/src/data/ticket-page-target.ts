@@ -50,3 +50,10 @@ export const ticketRequestsTarget = (resource: ResourceRef): NavigationTargetPag
   resource: { ...resource, metadata: { ...resource.metadata, documentId: REVIEW_REQUESTS_DOCUMENT } },
   parent: ticketPageTarget(resource),
 });
+
+export const ticketFileTarget = (resource: ResourceRef, file: { id: string; name: string }, icon = "FileText") => ({
+  kind: "page" as const,
+  page: ticketDocumentPage.ref,
+  resource: { ...resource, label: file.name, icon, metadata: { ...resource.metadata, documentId: file.id } },
+  parent: ticketPageTarget(resource),
+});
