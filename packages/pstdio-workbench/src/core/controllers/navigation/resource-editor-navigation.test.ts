@@ -327,7 +327,7 @@ test("moving the last Main editor immediately shows the collection fallback", as
   w.movePanel(editor.widgetId, "side");
   expect(w.layout.getLayout().regions.main.widgets.map((t) => t.viewId)).toEqual(["empty"]);
   expect(w.layout.getLayout().activeWidgetId).toBe(editor.widgetId);
-  w.resetLayout();
+  w.resetPageLayout();
   expect(
     tabs(w)
       .filter((t) => t.resource?.id === "a")

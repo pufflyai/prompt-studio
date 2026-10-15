@@ -11,14 +11,14 @@ const file = (id: string, open: "pin" | "preview" = "pin") => ({
   resource: { type: "file", id, label: id },
   open,
 });
-const harness = (saved: Map<string | undefined, WorkbenchLayout>, fixedFiles = false) => {
+const harness = (saved: Map<string | undefined, WorkbenchLayout>, fixedFiles = false, withoutSide = false) => {
   const workbench = createWorkbench({
     layoutPersistence: {
       getLayout: (scope) => saved.get(scope),
       setLayout: (layout, scope) => saved.set(scope, layout),
     },
   });
-  workbench.modes.registerMode({ id: "edit", activate() {} });
+  workbench.modes.registerMode({ id: "edit", panels: withoutSide ? ["main", "secondary"] : undefined, activate() {} });
   for (const id of ["empty", "editor", "inspector"])
     workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
@@ -106,4 +106,46 @@ test("legacy restoration applies fixed panel declarations to its cached layout",
     }),
   ]);
   restored.pageLocations.dispose();
+});
+
+test("reload corrects a saved tab region that no longer allows the declaration", async () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const create = (restricted: boolean) => {
+    const core = harness(saved);
+    core.modePlacements.registerPlacement({
+      id: "player",
+      ref: { kind: "placement", extensionId: "test", id: "player" },
+      modeId: "edit",
+      region: "secondary",
+      tabLocks: "legacy",
+      movableTo: restricted ? ["secondary"] : ["secondary", "side"],
+      item: { kind: "view", presence: "open", view: { kind: "view", id: "editor" } },
+    });
+    return core;
+  };
+  const first = create(false);
+  await first.navigation.openTarget(target("alpha"));
+  const tab = first.layout.getLayout().regions.secondary.widgets[0]!;
+  first.movePanel(tab.widgetId, "side");
+  await first.dispose();
+  const restored = create(true);
+  await restored.navigation.openTarget(target("alpha"));
+  expect(restored.layout.getLayout().regions.secondary.widgets.map((t) => t.widgetId)).toContain(tab.widgetId);
+  expect(restored.layout.getLayout().regions.side.widgets.map((t) => t.widgetId)).not.toContain(tab.widgetId);
+  await restored.dispose();
+});
+
+test("reload relocates a tab from an unavailable panel without losing its binding", async () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const first = harness(saved);
+  await first.navigation.openTarget(target("alpha"));
+  const inspector = first.layout.getLayout().regions.side.widgets[0]!;
+  await first.dispose();
+  const restored = harness(saved, false, true);
+  await restored.navigation.openTarget(target("alpha"));
+  expect(restored.layout.getLayout().regions.side.widgets).toEqual([]);
+  expect(restored.layout.getLayout().regions.main.widgets).toContainEqual(
+    expect.objectContaining({ widgetId: inspector.widgetId, resource: inspector.resource }),
+  );
+  await restored.dispose();
 });

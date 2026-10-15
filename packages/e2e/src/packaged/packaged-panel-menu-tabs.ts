@@ -39,4 +39,9 @@ export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, pr
   await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/cameras`);
   await expect(moved).toBeVisible();
   await expect(header.getByRole("tab", { name: "Cams", exact: true })).toHaveCount(0);
+  await pagePanels.click();
+  await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
+  await expect(moved).toBeVisible();
+  await expect(moved.locator("..")).toHaveAttribute("data-workbench-tab", instanceId!);
+  await expect(header.getByRole("tab", { name: "Cams", exact: true })).toHaveCount(0);
 };

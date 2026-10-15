@@ -12,6 +12,7 @@ import {
   workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
+import { isPageRegion } from "../../core/registries/layout/owner-region-state";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
@@ -75,9 +76,11 @@ export const useWorkbenchRegionTabsState = (
   const storageKey = visibilityStorageKey ?? `${workbench.layout.getPersistenceScope() ?? "unscoped"}/${region}`;
   const tabStore = useTabVisibilityStore(storageKey, (state) => state);
   useEffect(() => {
-    const subscription = workbench.onDidResetLayout(() => getTabVisibilityStore(storageKey).getState().reset());
+    const subscription = workbench.onDidResetLayout((owner) => {
+      if (isPageRegion(region) === (owner === "page")) getTabVisibilityStore(storageKey).getState().reset();
+    });
     return () => subscription.dispose();
-  }, [workbench, storageKey]);
+  }, [workbench, storageKey, region]);
   const regionState = layoutState.layout.regions[region];
   const policy = usePanelPolicy(workbench, region);
   const subPanelPlacements = regionState.widgets.filter(

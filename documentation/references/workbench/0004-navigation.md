@@ -28,7 +28,17 @@ Visited registered views remain mounted when navigation hides them. Returning to
 
 A resource binding with `cardinality: "one"` keeps one placement when its resource changes. The host updates that live view's resource and attached menus. A binding with `cardinality: "many"` gives each open resource its own placement.
 
-The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the tab's resource and live view. Moving a document out of Main selects its adjacent document or parent/collection fallback. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
+The host exposes `getPanelDestinations(instanceId)` and `movePanel(instanceId, region, position?)`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the tab’s resource and live view. Moving within Main’s page side or bottom keeps the page route. Moving to a mode panel selects the adjacent document or parent/collection fallback. `workbench.movePanel` exposes the same operation to commands and agents.
+
+`workbench.resetPageLayout` (host method `resetPageLayout()`) restores the current page’s declared tools, panel edges and sizes, menu visibility, headers, and automatic visibility intent. It preserves open tabs and moved presets, including sessions from another workspace. Reset layout in the page panels menu runs this command. View state such as file tree expansion stays intact.
+
+`workbench.resetModeLayout` (host method `resetModeLayout()`) restores the active mode’s Side and Secondary presets, sizes, headers, floating presentation, bubble anchor, panel arrangement, and action-bar edge. Page choices stay intact. Both named commands appear in the command palette. Tab menus contain Pin/Unpin and Close only.
+
+A closed declared preset reopens at its authored destination. An open or moved preset keeps its existing instance and destination. Resource presets retain their exact canonical binding with the declaring owner after movement, closure, and reload. Reset creates a resource through the declaration’s add command only when no valid bound instance exists. Closing a tab does not end its session. Both reset methods return a promise so callers can await resource creation. `onDidResetLayout` receives `"page"` or `"mode"`, allowing hosts to clear preferences only for that owner.
+
+Async preset creation keeps the page or mode that started the reset. Navigating elsewhere while creation is pending does not attach that preset to the new owner or change the current page.
+
+Restoration removes duplicate saved instances and corrects unavailable or disallowed regions, forbidden visibility or floating choices, fixed geometry, and size bounds before publishing the restored layout. A moved tab returns to an allowed destination if its saved panel no longer accepts incoming tabs. Content declared in that panel stays there.
 
 ## Panel arrangement
 

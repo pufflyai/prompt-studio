@@ -72,7 +72,7 @@ export const WindowingRemovalControls = (props: { fixture: WindowingFixture }) =
       >
         Try Workspace 1
       </Button>
-      <Button size="xs" variant="outline" onClick={() => workbench.resetLayout()}>
+      <Button size="xs" variant="outline" onClick={() => workbench.resetPageLayout()}>
         Reset layout
       </Button>
       <Text aria-label="Removal result" textStyle="paragraph/XS/regular">

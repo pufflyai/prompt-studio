@@ -22,6 +22,7 @@ export interface WorkbenchPanelMenuStateController {
   isOpen(menuId: string): boolean;
   setOpen(menuId: string, open: boolean): void;
   toggle(menuId: string): void;
+  reset(menuIds: readonly string[]): void;
   setPersistenceScope(scope: string | undefined): void;
   getPersistenceScope(): string | undefined;
   onDidChange(listener: WorkbenchPanelMenuStateChangeListener): Disposable;
@@ -71,6 +72,13 @@ export const createWorkbenchPanelMenuStateController = (
         false,
         "setMenuOpen",
       );
+      persistState();
+    },
+
+    reset(menuIds) {
+      const openByMenuId = { ...store.getState().openByMenuId };
+      for (const id of menuIds) delete openByMenuId[id];
+      store.setState({ openByMenuId }, false, "resetMenus");
       persistState();
     },
 

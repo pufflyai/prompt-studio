@@ -15,7 +15,7 @@ import {
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { locatePreparedPageState } from "../page-runtime/page-placement-location";
-import { activateNavigationPlacement, commitPreparedNavigation } from "./navigation-commit";
+import { activateNavigationPlacement, commitPreparedNavigation, publishPreparedNavigation } from "./navigation-commit";
 import { type PreparedPanelTarget, validatePanelNavigation } from "./panel-navigation-policy";
 import { prepareEditorOpen } from "./prepared-editor-open";
 import { prepareExistingResourceEditor } from "./resource-editor-resolver";
@@ -294,25 +294,33 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
       valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
     }),
   };
+  const publication = {
+    core,
+    state: final,
+    applyOwners: () => {
+      mode.apply(modeState);
+      shell.apply(shellState);
+    },
+    publishOwners: () => {
+      pages.persistPreparedOwners(stages);
+      if (modeState !== originalMode) mode.notifySubscribers();
+      if (shellState !== originalShell) shell.notifySubscribers();
+      for (const editor of updates) {
+        if (editor.tab.declarationIdentity) editor.applyIntent();
+        else editor.applySourceTarget();
+      }
+    },
+  };
   return {
+    publish: () =>
+      publishPreparedNavigation({
+        ...publication,
+        state: { ...final, reconciliation: { ...final.reconciliation, activate: [] } },
+      }),
     commit: () =>
       commitPreparedNavigation({
-        core,
-        state: final,
-        applyOwners: () => {
-          mode.apply(modeState);
-          shell.apply(shellState);
-        },
-        publishOwners: () => {
-          pages.persistPreparedOwners(stages);
-          if (modeState !== originalMode) mode.notifySubscribers();
-          if (shellState !== originalShell) shell.notifySubscribers();
-        },
+        ...publication,
         activateTargets: () => {
-          for (const editor of updates) {
-            if (editor.tab.declarationIdentity) editor.applyIntent();
-            else editor.applySourceTarget();
-          }
           for (const activation of activations.values()) {
             if ("editor" in activation) {
               if (activation.editor.isInOwner(final)) activation.editor.activate();

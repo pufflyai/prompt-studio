@@ -5,6 +5,7 @@ import { boomboxTheme, kilnTheme } from "../showcases/themes";
 import { createWindowingFixture, type WindowingFixture, type WindowingMode } from "./fixture";
 import { WindowingModeControls } from "./page-mode-controls";
 import { WindowingRemovalControls } from "./removal-controls";
+import { WindowingResetControls } from "./reset-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
 import { WindowingSessionStartControls } from "./session-start-controls";
 
@@ -29,6 +30,7 @@ const WindowingControls = (props: ControlsProps) => {
       borderBottomWidth="1px"
       borderColor="border.subtle"
     >
+      {fixture.resetControls && <WindowingResetControls workbench={workbench} />}
       {fixture.removalControls && <WindowingRemovalControls fixture={fixture} />}
       {fixture.sessionStarts && <WindowingSessionStartControls fixture={fixture} />}
       {fixture.pageModes && <WindowingModeControls workbench={workbench} />}
@@ -121,6 +123,7 @@ const ShowcaseControls = (props: ControlsProps) => {
   return (
     <HStack p="sm">
       <Text textStyle="label/S/semibold">{fixture.mode}</Text>
+      {fixture.resetControls && <WindowingResetControls workbench={fixture.workbench} />}
       <Button size="xs" onClick={() => void reload()}>
         New fixture
       </Button>

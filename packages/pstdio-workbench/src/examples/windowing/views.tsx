@@ -87,6 +87,9 @@ export const WindowingTerminalView = (props: TerminalViewProps) => {
   return (
     <Stack p="md" gap="sm">
       <Text textStyle="heading/S/semibold">{resource.label}</Text>
+      <Text aria-label="Terminal resource" textStyle="paragraph/S/regular">
+        {resource.id}
+      </Text>
       <Text aria-label="Terminal binding" textStyle="paragraph/S/regular">
         {String(resource.metadata?.workspaceId)}
       </Text>

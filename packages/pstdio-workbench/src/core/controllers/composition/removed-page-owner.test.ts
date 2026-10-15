@@ -99,7 +99,7 @@ test("Reset preserves a reopened foreign session once without restoring its dele
   });
   const tab = tabs(fixture).find((tab) => tab.resource?.id === session.id)!;
   workbench.movePanel(tab.widgetId, "bottom");
-  workbench.resetLayout();
+  workbench.resetPageLayout();
   expect(
     tabs(fixture)
       .filter((item) => item.resource?.id === session.id)
@@ -141,7 +141,7 @@ test("reload does not restore deleted owners or navigate to their stale saved lo
   expect(workbench.pageLocations.navigate({ kind: "page", page: windowingPages.workspace, resource: deleted }).ok).toBe(
     false,
   );
-  workbench.resetLayout();
+  workbench.resetPageLayout();
   expect(tabs(fixture).some((item) => item.resource?.id === session.id)).toBe(false);
   expect(probe.store.getState().sessions[resourceKey(session)]).toEqual({ starts: 1, stops: 0, running: true });
 });

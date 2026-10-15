@@ -44,6 +44,7 @@ import { reuseSingleMainView } from "./reuse-single-main-view";
 import { prepareRuntimeLayout } from "./runtime-layout-preparation";
 import { syncOwnedPanelMenus } from "./runtime-panel-menus";
 export interface ConnectWorkbenchPageRuntimeInput {
+  restoreTabRegions?(layout: WorkbenchLayout): WorkbenchLayout;
   hasDeclaration?(identity: PlacementIdentity): boolean;
   existingEditor?: Parameters<typeof resolveOwnerPlacements>[0]["existingEditor"];
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
@@ -129,7 +130,8 @@ const applyPageState = (
       activated.map((placement) => placement.region),
     );
     const mode = latest.activeModeId ? input.modes.getMode(latest.activeModeId) : undefined;
-    const composed = mode ? applyModePanelAvailability(restored, panelsForMode(mode)) : restored;
+    const placed = input.restoreTabRegions?.(restored) ?? restored;
+    const composed = mode ? applyModePanelAvailability(placed, panelsForMode(mode)) : placed;
     const available = enforceFixedGeometry(
       {
         ...composed,
@@ -210,6 +212,7 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  restoreTabRegions?: ConnectWorkbenchPageRuntimeInput["restoreTabRegions"];
   existingEditor?: ConnectWorkbenchPageRuntimeInput["existingEditor"];
   persistPreparedOwners?: ConnectWorkbenchPageRuntimeInput["persistPreparedOwners"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
@@ -265,6 +268,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    restoreTabRegions: input.restoreTabRegions,
     existingEditor: input.existingEditor,
     hasDeclaration: (identity) =>
       hasPlacementDeclaration(

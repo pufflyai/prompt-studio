@@ -205,6 +205,8 @@ export interface WorkbenchWidgetPlacement {
   placementIdentity?: PlacementIdentity;
   /** The declaration that created a tab transferred to another layout owner. */
   declarationIdentity?: PlacementIdentity;
+  /** Canonical owner scope of a transferred declaration. */
+  declarationScope?: string;
   viewId?: string;
   ownerId?: string;
   source?: ContributionSource;
@@ -266,6 +268,8 @@ export interface WorkbenchRegionState {
 }
 
 export interface WorkbenchLayout {
+  /** Closed declared presets retain their canonical binding with this layout owner. */
+  closedPresets?: WorkbenchWidgetPlacement[];
   modeLayout?: ModeLayout;
   pageLayout?: PagePanelLayout;
   actionBarEdge?: PanelEdge;

@@ -36,12 +36,12 @@ import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { registerPanelCommands } from "./controllers/shell/panel-commands";
 import { restorePanelPolicy } from "./controllers/shell/restore-panel-policy";
+import { restoreTabRegions } from "./controllers/shell/restore-tab-regions";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
 import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
 import { createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
-import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -63,6 +63,7 @@ import {
   activeWorkbenchResource,
   connectWorkbenchCoreState,
   createCoreCompositionController,
+  disposeWorkbenchCore,
   primaryWorkbenchResource,
 } from "./workbench-core-connections";
 import { navigateCoreMode } from "./workbench-core-modes";
@@ -98,12 +99,6 @@ const createPageLocations = (
         requested ? { ...requested, resource: location.resource } : { ...pageLocationTarget(location), open },
       ]),
   });
-
-const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefined) => {
-  // Save pending writes before the adapter releases its resources.
-  persistence?.flush?.();
-  persistence?.dispose?.();
-};
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const context = createContextKeyService();
@@ -196,6 +191,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const fullscreen = createMainFullscreenController(() => core);
 
   const modes = createWorkbenchModeRegistry({
+    restoreTabRegions: (layout) => (core ? restoreTabRegions(core, layout) : layout),
     regionSettings: input.regionSettings,
     navigateMode: (modeId) => navigateCoreMode(core, modeId),
     establishLocation,
@@ -206,6 +202,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const { shell, sidePanel } = createCoreShell(() => core, input, layout, modes, layoutCache);
 
   const pages = createLiveWorkbenchPageRegistry({
+    restoreTabRegions: (layout) => (core ? restoreTabRegions(core, layout) : layout),
     existingEditor: (placement, state) => findOtherOwnedResourceEditor(core, placement, state),
     persistPreparedOwners: createPreparedOwnerLayoutSaver({ cache: layoutCache, layout, resolveCore: () => core }),
     loadModeLayout: layoutCache.readMode,
@@ -291,11 +288,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       return activeWorkbenchResource(core);
     },
 
-    async dispose() {
-      fullscreen.dispose();
-      disposeLayoutPersistence(layoutCache.layout);
-      await Promise.all([views.reads.dispose(), core.terminal.dispose()]);
-    },
+    dispose: () => disposeWorkbenchCore(core, layoutCache.layout),
 
     onDidChangeActiveResource(listener) {
       return createDisposable(

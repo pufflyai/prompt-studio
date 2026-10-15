@@ -74,3 +74,23 @@ test("page navigation restores a shared mode layout written before page bottom e
   expect(w.layout.getLayout().regions.bottom.widgets).toEqual([]);
   await w.dispose();
 });
+
+test("reload repairs duplicate saved instances before restoring owner state", async () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const first = harness(saved);
+  await first.navigation.openTarget(navigate("alpha"));
+  const scope = first.layout.getPersistenceScope();
+  await first.dispose();
+  const layout = saved.get(scope)!;
+  const tab = layout.regions.main.widgets[0]!;
+  layout.regions.main.widgets.push({ ...tab });
+  layout.regions.side.widgets.push({ ...tab });
+  const restored = harness(saved);
+  await restored.navigation.openTarget(navigate("alpha"));
+  expect(
+    Object.values(restored.layout.getLayout().regions)
+      .flatMap((r) => r.widgets)
+      .filter((t) => t.widgetId === tab.widgetId),
+  ).toHaveLength(1);
+  await restored.dispose();
+});

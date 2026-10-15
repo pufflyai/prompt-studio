@@ -108,8 +108,9 @@ export interface WorkbenchCoreContributionContext {
     region: import("./registries/layout/layout-types").WorkbenchPanelRegion,
     position?: import("./registries/layout/layout-types").WorkbenchTabPosition,
   ): void;
-  resetLayout(): void;
-  onDidResetLayout(listener: () => void): Disposable;
+  resetPageLayout(): void | Promise<void>;
+  resetModeLayout(): void | Promise<void>;
+  onDidResetLayout(listener: (owner: "page" | "mode") => void): Disposable;
   closePlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void;
   breadcrumbs: WorkbenchBreadcrumbController;
   commandPalette: WorkbenchCommandPaletteController;

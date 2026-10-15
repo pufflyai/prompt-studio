@@ -32,13 +32,14 @@ export const activateNavigationPlacement = (
   }
 };
 
-export const commitPreparedNavigation = (input: {
+interface PreparedNavigationPublication {
   core: WorkbenchCore;
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
   applyOwners(): void;
   publishOwners(): void;
-  activateTargets(): void;
-}) =>
+}
+
+export const publishPreparedNavigation = (input: PreparedNavigationPublication) =>
   batchWorkbenchChanges(() => {
     const { core, state } = input;
     const pages = getWorkbenchPageRegistryInternals(core.pages);
@@ -49,6 +50,13 @@ export const commitPreparedNavigation = (input: {
     };
     const result = state.location ? locations.commit(state, input.applyOwners) : withoutLocation();
     input.publishOwners();
+    return result;
+  });
+
+export const commitPreparedNavigation = (input: PreparedNavigationPublication & { activateTargets(): void }) =>
+  batchWorkbenchChanges(() => {
+    const result = publishPreparedNavigation(input);
+    const { core } = input;
     // Owner publication reconciles saved selection; the explicit open chooses the final selection.
     input.activateTargets();
     const layout = core.layout.getLayout();

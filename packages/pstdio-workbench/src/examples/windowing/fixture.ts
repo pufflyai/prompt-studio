@@ -13,6 +13,19 @@ import { createWindowingResources, windowingExtensionId, windowingPages } from "
 
 export type WindowingMode = "windowing" | "boombox" | "kiln";
 
+const seedTerminalPreset = (
+  workbench: ReturnType<typeof createWorkbench>,
+  resources: ReturnType<typeof createWindowingResources>,
+  restored: boolean,
+) => {
+  if (restored) return;
+  void workbench.navigation.openTarget({
+    kind: "panel",
+    panel: { kind: "page-slot", page: windowingPages.workspace, id: "terminal" },
+    resource: resources.terminals[0],
+  });
+};
+
 export const createWindowingFixture = (mode: WindowingMode = "windowing", options: WindowingFixtureOptions = {}) => {
   const resources = createWindowingResources();
   const persistence = createWindowingPersistence();
@@ -63,6 +76,7 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
         page: windowingPages.workspace,
         resource: resources.workspaces[0],
       });
+    if (options.terminalPreset) seedTerminalPreset(workbench, resources, Boolean(savedLocation));
     return workbench;
   };
   let workbench = create();
@@ -71,6 +85,7 @@ export const createWindowingFixture = (mode: WindowingMode = "windowing", option
     pageModes: options.pageModes,
     contextNavigation: options.contextNavigation,
     sessionStarts: options.sessionStarts,
+    resetControls: options.resetControls,
     resources,
     persistence,
     probe,

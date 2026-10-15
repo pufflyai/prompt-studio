@@ -10,10 +10,12 @@ import {
 } from "../../registries/layout/layout-types";
 import { isPageRegion, restorePageGeometry } from "../../registries/layout/owner-region-state";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { uniqueSavedInstances } from "../../registries/layout/saved-layout-instances";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 import { projectResourceKey, projectResourceReferences } from "../../registries/resources/project-resource-identity";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput } from "../../workbench-core-types";
+import { createClosedPresetCache } from "./closed-preset-cache";
 import { modeLayoutScope, pageGeometryScope, pageLayoutScope, pageOwnerFromLayoutScope } from "./owner-layout-scope";
 import { retireSingleResourceAliases } from "./owner-layout-widgets";
 
@@ -67,6 +69,7 @@ const updateSavedPlacements = (input: SavedPlacementUpdate) => {
 
 const selectPanelChoices = (layout: WorkbenchLayout, owner: "page" | "mode" | "geometry") => ({
   ...layout,
+  closedPresets: owner === "geometry" ? undefined : layout.closedPresets,
   regions: Object.fromEntries(
     workbenchRegions.map((id) => {
       const region = layout.regions[id];
@@ -95,7 +98,9 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     const snapshot = adapter
       ? runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope))
       : memory.get(scope);
-    return snapshot ? mergeWithDefaultRegions(snapshot, input.defaultPanelOpenByRegionId) : undefined;
+    return snapshot
+      ? uniqueSavedInstances(mergeWithDefaultRegions(snapshot, input.defaultPanelOpenByRegionId))
+      : undefined;
   };
   const persist = (layout: WorkbenchLayout, scope?: string) => {
     scopes.add(scope);
@@ -116,6 +121,7 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
     return persist(layout, scope);
   };
   return {
+    ...createClosedPresetCache(read, persist),
     removeOwner(kind: "page" | "mode", id: string, projectId?: string) {
       const owner = `/owner/${kind}/${encodeURIComponent(id)}`;
       const matches = (scope?: string) => Boolean(scope && (scope.endsWith(owner) || scope.includes(`${owner}/`)));
@@ -248,7 +254,7 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
       write(
         selectPanelChoices(
           selectPlacements(
-            layout,
+            { ...layout, closedPresets: read(modeLayoutScope(projectId, modeId))?.closedPresets },
             (p) => p.placementIdentity?.kind === "mode" && p.placementIdentity.modeId === modeId,
           ),
           "mode",

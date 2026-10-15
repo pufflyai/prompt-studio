@@ -91,7 +91,7 @@ export const PagePanelsMenu = (props: { workbench: WorkbenchCore }) => {
                 value="reset-layout"
                 onClick={() =>
                   void runUserAction(workbench, "Reset layout", () =>
-                    workbench.commands.executeCommand("workbench.resetLayout"),
+                    workbench.commands.executeCommand("workbench.resetPageLayout"),
                   )
                 }
               >

@@ -84,7 +84,7 @@ test("history and reset resolve moved editors without duplicating or moving them
       .map((t) => t.widgetId),
   ).toEqual([a.widgetId]);
   expect(w.layout.getLayout().regions.main.widgets.some((t) => t.resource?.id === "a")).toBe(false);
-  w.resetLayout();
+  w.resetPageLayout();
   expect(
     w.layout
       .getLayout()
