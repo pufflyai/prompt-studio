@@ -80,6 +80,13 @@ export const KeyboardReordering: Story = {
       "Docs",
       "Agentic design",
     ]);
+    await expect(docs).not.toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard(" {ArrowLeft} ");
+    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Docs",
+      "Agentic kanban",
+      "Agentic design",
+    ]);
   },
 };
 export const FullScreen: Story = {

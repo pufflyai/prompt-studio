@@ -7,8 +7,7 @@ Use these general UX and UI patterns across the app and its extensions.
 ## Hover
 
 - Show hover feedback immediately when the pointer enters.
-- Delay hover exit by 150 ms so controls do not flicker as the pointer moves. Use the same timing across shared components.
-- Keep revealed controls visible while the pointer or keyboard focus is inside them. Cancel a pending exit when the pointer returns.
+- Keep revealed controls visible while the pointer or keyboard focus is inside them.
 - Make hover actions available through keyboard focus and touch too.
 
 ## Tooltips
@@ -121,7 +120,7 @@ Use the shared `@pstdio/ui` motion tokens and recipes. These values adopt the Na
 - Enter with `cubic-bezier(0.33, 1, 0.68, 1)`. Exit with `cubic-bezier(0.32, 0, 0.67, 0)`. Reversing continues from the current value.
 - Reveal tree children from the top. Clip panels while their contents keep their saved size. Divider dragging follows the pointer directly. Virtualized trees change instantly.
 - Anchor the floating panel at its bottom right. Start at 96% scale and 8 px below its final position. The launcher leaves at 90% scale.
-- Hover actions appear immediately and hide after 150 ms. Reserve their space so the label stays still.
+- Hover actions appear immediately. Reserve their space so the label stays still.
 - Fade only new response chunks. Earlier text keeps its DOM. Loaded history appears immediately. Incomplete Markdown may reinterpret the affected structure as syntax finishes.
 - Follow the operating system's reduced motion setting. Tree reveals, chevrons, panel sizes, and streamed text become instant. The floating panel and launcher keep opacity fades with no position or scale change.
 - Motion ends without background work. Hidden panels remain mounted to preserve their state and live connections. Exiting content becomes inert immediately.
