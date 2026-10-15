@@ -1,6 +1,6 @@
-import { Menu, Portal } from "@chakra-ui/react";
+import { Menu, Portal, VisuallyHidden } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceMenuItems } from "@pstdio/ui";
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
@@ -9,7 +9,7 @@ import { WorkbenchIcon } from "../shared/icon";
 import { getPanelLabel } from "./panel-widget-open";
 
 interface RegionTabMenuProps {
-  anchor: { x: number; y: number; width: number; height: number };
+  anchor: { x: number; y: number; width: number; height: number; triggerId: string };
   label: string;
   open: boolean;
   setOpen(open: boolean): void;
@@ -19,6 +19,7 @@ interface RegionTabMenuProps {
 }
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { anchor, label, open, setOpen, groups, placement, workbench } = props;
+  const labelId = useId();
   useWorkbenchResourceActionResolver(workbench);
   const pending = useRef<ResourceContextAction | null>(null);
   const currentRegion = findPlacementByWidgetId(workbench.layout.getLayout(), placement.widgetId)?.regionId;
@@ -54,6 +55,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
   ];
   return (
     <Menu.Root
+      ids={{ trigger: anchor.triggerId }}
       open={open}
       onOpenChange={(details) => setOpen(details.open)}
       onExitComplete={() => {
@@ -65,7 +67,8 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     >
       <Portal>
         <Menu.Positioner>
-          <Menu.Content aria-label={`${label} context menu`}>
+          <Menu.Content aria-labelledby={labelId}>
+            <VisuallyHidden id={labelId}>{label} context menu</VisuallyHidden>
             {open ? (
               <ResourceMenuItems
                 actions={actions}

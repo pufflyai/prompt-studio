@@ -1,6 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbench, resourceContextMenuPath } from "../../core";
 import { PaletteParamsDialog } from "../command-palette/palette-params-dialog";
@@ -10,7 +10,8 @@ import { RegionTabMenu } from "./region-tab-menu";
 const NoteTabActions = () => {
   const [result, setResult] = useState("No action run");
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const triggerId = useId();
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0, triggerId });
   const [workbench] = useState(() => {
     const instance = createWorkbench();
     const noteId = { type: "text" as const, label: "Note", required: true, resolvedFrom: "resource" as const };
@@ -42,8 +43,9 @@ const NoteTabActions = () => {
   return (
     <Stack>
       <Button
+        id={triggerId}
         onClick={(event) => {
-          setAnchor(event.currentTarget.getBoundingClientRect().toJSON());
+          setAnchor({ ...event.currentTarget.getBoundingClientRect().toJSON(), triggerId });
           setOpen(true);
         }}
       >

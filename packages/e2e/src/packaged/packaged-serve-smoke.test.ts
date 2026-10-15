@@ -87,6 +87,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Its native Notes editor persists Select All heading changes across preserved blank lines and reload.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
+// The paired session-menu browser check restores focus to its tab after Escape.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 

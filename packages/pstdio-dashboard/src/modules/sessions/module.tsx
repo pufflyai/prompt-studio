@@ -255,7 +255,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         order: 30,
       });
       const unsubscribeDashboardData = subscribeSessionListData(() => syncSessionsPageSelection(ctx));
-      // Workspaces and extension-owned resources can carry a conversation; opening one brings it along.
+      // Workspace navigation can preview its conversation; anchored resources require an explicit open.
       ctx.onDidChangePrimaryResource((resource) => {
         if (resource) openResourceSessionPreview(ctx, resource);
       });
