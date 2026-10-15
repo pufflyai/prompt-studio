@@ -3,6 +3,8 @@ export {
   createArtifactMount,
   createFileMount,
   createWorkspaceFilesMount,
+  type ExtensionStorageOwner,
+  extensionFilesPath,
   isPackageAssetDescriptor,
   normalizeArtifactMountPath,
   normalizeCliPath,

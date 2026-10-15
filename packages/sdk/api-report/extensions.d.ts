@@ -2770,7 +2770,7 @@ interface StatusBarItemContribution extends ContributionDefinition<"status-bar-i
   readonly order?: number;
   readonly when?: WhenExpression;
 }
-export declare const EXTENSION_API_VERSION = "0.1.7";
+export declare const EXTENSION_API_VERSION = "0.2.0";
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Record<string, never>;
 interface WorkspaceProviderRef {
   version: number;

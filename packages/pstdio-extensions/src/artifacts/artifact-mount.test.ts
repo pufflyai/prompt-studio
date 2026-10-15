@@ -18,6 +18,18 @@ afterEach(() => {
 });
 
 describe("createArtifactMount", () => {
+  test.each([
+    ".publishers",
+    ".publishers/alice",
+    ".publishers./alice",
+    ".publishers /alice",
+    ".PUBLISHERS/alice",
+    "runs/../.Publishers/alice",
+    ".publishers\\alice",
+  ])("keeps the allocated-file namespace reserved for %s", (mountPath) => {
+    expect(() => createArtifactMount({ repoRoot: "/repo", name: "tools", mountPath })).toThrow();
+  });
+
   test("rejects mount root that escapes .pstdio/extension-storage/<package-name>", () => {
     expect(() => createArtifactMount({ repoRoot: "/repo", name: "planner", mountPath: "../escape" })).toThrow();
     expect(() => createArtifactMount({ repoRoot: "/repo", name: "planner", mountPath: "/abs" })).toThrow();

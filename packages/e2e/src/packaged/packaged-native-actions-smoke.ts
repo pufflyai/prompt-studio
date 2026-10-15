@@ -1,16 +1,16 @@
 import { expect } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
-export const writeNativeActionsExtension = (root: string) => {
+export const writeNativeActionsExtension = (root: string, publisher = "test") => {
   const source = join(root, "extension-sources", "native-actions");
   mkdirSync(source, { recursive: true });
   writeFileSync(
     join(source, "package.json"),
     JSON.stringify({
       name: "native-actions",
-      publisher: "test",
+      publisher,
       version: "1.0.0",
       main: "./extension.ts",
       type: "module",
@@ -25,6 +25,7 @@ const run = {kind:"command",id:"run"};
 const input = {value:{type:"select",options:{command:choices,valueField:"id",labelField:"name"}}};
 export default {
   commands:[
+    {id:"store",ref:{kind:"command",id:"store"},title:"Store",params:{},run:async(ctx)=>{await ctx.extensionFiles.writeText("draft.txt",${JSON.stringify(`Stored draft for ${publisher}`)});return await ctx.extensionFiles.readText("draft.txt");}},
     {id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{throw new Error("Native action failed");}},
     {id:"choices",ref:choices,title:"Choices",params:{},run:()=>[{id:"one",name:"One"}]},
     {id:"run",ref:run,title:"Run",params:input,run:(_ctx:unknown,params:unknown)=>params},
@@ -50,6 +51,7 @@ export default {
 export const expectPackagedNativeActions = async (input: {
   baseUrl: string;
   projectId: string;
+  projectFolder: string;
   headers: Record<string, string>;
 }) => {
   const root = `${input.baseUrl}/v1/projects/${input.projectId}/extensions`;
@@ -93,6 +95,27 @@ export const expectPackagedNativeActions = async (input: {
       headers: { ...input.headers, "content-type": "application/json" },
       body: JSON.stringify({ source: "cli", params }),
     });
+  expect(await (await execute("store", {})).json()).toMatchObject({
+    outcome: { ok: true, value: "Stored draft for test" },
+  });
+  const otherStore = await fetch(`${root}/commands/other.native-actions.command.store/execute`, {
+    method: "POST",
+    headers: { ...input.headers, "content-type": "application/json" },
+    body: JSON.stringify({ source: "cli", params: {} }),
+  });
+  expect(await otherStore.json()).toMatchObject({ outcome: { ok: true, value: "Stored draft for other" } });
+  expect(
+    readFileSync(
+      join(input.projectFolder, ".pstdio/extension-storage/native-actions/.publishers/test/draft.txt"),
+      "utf8",
+    ),
+  ).toBe("Stored draft for test");
+  expect(
+    readFileSync(
+      join(input.projectFolder, ".pstdio/extension-storage/native-actions/.publishers/other/draft.txt"),
+      "utf8",
+    ),
+  ).toBe("Stored draft for other");
   const agentView = body.views.find(
     (entry: { extensionId: string; localId: string }) =>
       entry.extensionId === "test.native-actions" && entry.localId === "agent",

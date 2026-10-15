@@ -38,7 +38,7 @@ Do not:
 ## Extension storage
 
 - All extension-owned project files live under `.pstdio/extension-storage/<package-name>/`. This includes configuration, caches, drafts, prototypes, screenshots, ticket checkouts, report checkouts, and migration backups.
-- Use declared artifact mounts for extension files and `ctx.storage` for structured project data. Artifact mounts use the extension's package-name directory.
+- Use `ctx.extensionFiles` or declared artifact mounts for extension files, and `ctx.storage` for structured project data. Both file APIs live inside the extension's package-name directory. Allocated files use the reserved `.publishers/<publisher>/` child so different publishers stay separate.
 - Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
 - Do not create extension data folders directly under `.pstdio/` or store runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
 - Files an extension deliberately edits as project source, such as the UI icon fonts, stay at their configured project paths. The extension's own settings and working files still belong in extension storage.

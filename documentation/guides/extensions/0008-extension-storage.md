@@ -5,7 +5,11 @@ This includes configuration, caches, drafts, prototypes, screenshots, ticket che
 report checkouts, and migration backups. Keep this directory out of Git unless the
 project deliberately tracks a specific extension's files.
 
-Use declared artifact mounts for extension files, view access, and change events.
+Use `ctx.extensionFiles` for allocated extension files. Use declared artifact mounts
+for view access and change events. Both stay inside the package-name directory.
+Allocated files use its reserved `.publishers/<publisher>/` child so publishers with
+the same package name keep separate data. Read the
+[API 0.2 migration guide](0009-allocated-extension-files.md) before upgrading.
 Use `ctx.storage` for structured project data. Read the
 [storage API](../../references/extensions/0005-webview-and-storage-api.md) for details.
 
