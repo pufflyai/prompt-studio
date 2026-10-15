@@ -57,6 +57,31 @@ describe("page breadcrumbs", () => {
     expect(items.at(-1)?.icon).toBe("message-circle-warning");
   });
 
+  test("names a selected file below its ticket and returns the parent to the body", () => {
+    const tickets = page("tickets", "Tickets");
+    const ticket = { ...page("ticket", "Ticket"), document: { metadataKey: "documentId" }, icon: "component" };
+    const resource = { type: "ticket", id: "PS-1", label: "PS-1 Add tags", icon: "component" };
+    const targets: NavigationTargetPage[] = [];
+    const parent = { page: ticket.ref, resource, parent: { page: tickets.ref } };
+    const items = createWorkbenchPageBreadcrumbItems({
+      location: {
+        page: ticket.ref,
+        resource: { ...resource, label: "notes.md", icon: "file-text", metadata: { documentId: "notes" } },
+        parent,
+      },
+      pages: [tickets, ticket],
+      navigationTrees,
+      modes,
+      resources,
+      navigate: (target) => targets.push(target),
+    });
+    expect(items.map((item) => item.title)).toEqual(["Tickets", "PS-1 Add tags", "notes.md"]);
+    expect(items.map((item) => item.icon)).toEqual([undefined, "component", "file-text"]);
+    items[1]?.onClick?.();
+    expect(targets).toEqual([
+      { kind: "page", page: ticket.ref, resource, parent: { kind: "page", page: tickets.ref } },
+    ]);
+  });
   test("keeps the current resource breadcrumb focused on the resource", () => {
     const workspace: WorkbenchPageContribution = {
       ...page("workspace", "Workspace"),

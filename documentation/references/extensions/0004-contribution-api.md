@@ -222,6 +222,13 @@ Workspace resources use the host project mode. Target workspace actions with
 The host adds **Copy link** to the breadcrumb menu on every page. It copies the page URL, including the selected
 document. Do not add a separate copy-link action or view to an extension.
 
+A resource kind's `resolveMany` command returns current `ResourceResolution` records with owner page targets.
+The dashboard also uses this resolver for the open resource after navigation and owner events. When the target
+matches the open page, resource, and selected document, its parent chain restores the breadcrumb ancestry.
+The open page keeps its params, section, and source position. Keep document-selection metadata in the returned
+reference. For a file inside another resource, return a file-labeled target with the resource's body target as
+its parent. This keeps copied links and renamed files consistent with sidebar navigation.
+
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
 
 ## Native view toolbar actions

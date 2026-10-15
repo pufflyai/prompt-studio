@@ -1,3 +1,9 @@
+import {
+  isNavigationTarget,
+  type PageLocation,
+  qualifyNavigationTarget,
+  type ResourceResolution,
+} from "@pstdio/sdk/extensions";
 import type { Disposable, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
@@ -20,6 +26,38 @@ const sameReference = (left: ResourceRef, right: ResourceRef) =>
   left.shorthand === right.shorthand &&
   JSON.stringify(left.metadata ?? {}) === JSON.stringify(right.metadata ?? {});
 
+const resolutionFromResult = (
+  value: unknown,
+  input: {
+    batch: boolean;
+    identityOf(resource: ResourceRef | undefined): string | undefined;
+    open: ResourceRef;
+  },
+) => {
+  if (!input.batch) return { resource: value };
+  if (!Array.isArray(value)) return undefined;
+  return (value as ResourceResolution[]).find(
+    (entry) => entry?.resource && input.identityOf(entry.resource) === input.identityOf(input.open),
+  );
+};
+
+const ownerPageTarget = (input: {
+  target?: ResourceResolution["target"];
+  extensionId: string;
+  projectId: string;
+  location?: PageLocation;
+}) => {
+  if (!input.target || !input.location || !isNavigationTarget(input.target)) return undefined;
+  const target = qualifyNavigationTarget(input.target, input.extensionId, input.projectId);
+  if (
+    target.kind !== "page" ||
+    target.page.id !== input.location.page.id ||
+    target.page.extensionId !== input.location.page.extensionId
+  )
+    return undefined;
+  return target;
+};
+
 // A page keeps the reference captured when it opened, and a pasted link carries only the
 // identity. The owning extension knows the current reference, so the host asks it again
 // when another resource opens and after the extension reports a change. Replaying the
@@ -30,11 +68,15 @@ export const watchOpenExtensionResource = (
 ): Disposable => {
   const resolvers = new Map(
     input.metadata.resourceKinds.flatMap((kind) =>
-      kind.resolveCommand
+      (kind.resolveCommand ?? kind.resolveManyCommand)
         ? [
             [
               JSON.stringify([kind.extensionId, kind.id]),
-              { kind: kind.id, commandId: kind.resolveCommand, extensionId: kind.extensionId },
+              {
+                commandId: (kind.resolveCommand ?? kind.resolveManyCommand)!,
+                extensionId: kind.extensionId,
+                batch: !kind.resolveCommand,
+              },
             ] as const,
           ]
         : [],
@@ -55,8 +97,56 @@ export const watchOpenExtensionResource = (
           resource.id,
         ])
       : undefined;
+  const documentKey = () => {
+    const state = ctx.pages.store.getState();
+    return state.activePageId ? state.pages[state.activePageId]?.document?.metadataKey : undefined;
+  };
+  const routeOf = (resource: ResourceRef | undefined) => {
+    const page = ctx.pages.store.getState().location?.page;
+    const key = documentKey();
+    return JSON.stringify([identityOf(resource), page, key ? resource?.metadata?.[key] : undefined]);
+  };
   let openIdentity: string | undefined;
   let pending: AbortController | undefined;
+
+  const applyResolution = (
+    value: unknown,
+    open: ResourceRef,
+    resolver: NonNullable<ReturnType<typeof resolverOf>>,
+    route: string,
+  ) => {
+    const resolution = resolutionFromResult(value, { batch: resolver.batch, identityOf, open });
+    const resolved = toDashboardExtensionResource(resolution?.resource, input.projectId, input.metadata.resourceKinds);
+    const latest = ctx.getPrimaryResource();
+    if (
+      !resolved ||
+      !latest ||
+      routeOf(latest) !== route ||
+      routeOf({ ...resolved, extensionId: resolved.extensionId ?? resolver.extensionId }) !== route
+    )
+      return;
+    // The resolver describes the resource; the open page keeps its identity and route.
+    const current = {
+      ...canonicalDashboardResource(latest, input.projectId, input.metadata.resourceKinds),
+      label: resolved.label,
+      icon: resolved.icon,
+      shorthand: resolved.shorthand,
+      metadata: resolved.metadata,
+    };
+    const location = ctx.pages.store.getState().location;
+    const target = ownerPageTarget({
+      target: resolution && "target" in resolution ? resolution.target : undefined,
+      extensionId: resolver.extensionId,
+      projectId: input.projectId,
+      location,
+    });
+    if (target && location && routeOf(target.resource) === route) {
+      // The owner supplies ancestry. The current location keeps its source position and page state.
+      ctx.pageLocations.replay({ ...location, resource: current, parent: target.parent });
+    } else if (!sameReference(latest, current)) {
+      setResourceBreadcrumb(ctx, current);
+    }
+  };
 
   const resolveOpenResource = async () => {
     pending?.abort();
@@ -64,39 +154,24 @@ export const watchOpenExtensionResource = (
     const open = ctx.getPrimaryResource();
     const resolver = resolverOf(open);
     if (!open || !resolver) return;
+    const route = routeOf(open);
     const request = new AbortController();
     pending = request;
     try {
       const response = await input.executeCommand(
         input.projectId,
         resolver.commandId,
-        { projectId: input.projectId, resource: open, source: "dashboard" },
+        {
+          projectId: input.projectId,
+          resource: open,
+          source: "dashboard",
+          ...(resolver.batch ? { params: { resources: [open] } } : {}),
+        },
         request.signal,
       );
       if (request.signal.aborted) return;
       if (response.outcome.status !== "success") throw new Error(response.outcome.reason ?? "Resolver failed.");
-      const resolved = toDashboardExtensionResource(
-        response.outcome.value,
-        input.projectId,
-        input.metadata.resourceKinds,
-      );
-      const latest = ctx.getPrimaryResource();
-      if (
-        !resolved ||
-        !latest ||
-        identityOf({ ...resolved, extensionId: resolved.extensionId ?? resolver.extensionId }) !== identityOf(latest)
-      )
-        return;
-      // The resolver describes the resource; the open page keeps its identity and route.
-      const current = {
-        ...canonicalDashboardResource(latest, input.projectId, input.metadata.resourceKinds),
-        label: resolved.label,
-        icon: resolved.icon,
-        shorthand: resolved.shorthand,
-        metadata: resolved.metadata,
-      };
-      if (sameReference(latest, current)) return;
-      setResourceBreadcrumb(ctx, current);
+      applyResolution(response.outcome.value, open, resolver, route);
     } catch (error) {
       if (request.signal.aborted) return;
       console.warn(`Could not resolve ${identityOf(open)} with ${resolver.commandId}`, error);
@@ -104,7 +179,7 @@ export const watchOpenExtensionResource = (
   };
 
   const onPrimaryResourceChange = () => {
-    const identity = identityOf(ctx.getPrimaryResource());
+    const identity = routeOf(ctx.getPrimaryResource());
     if (identity === openIdentity) return;
     openIdentity = identity;
     void resolveOpenResource();
@@ -112,6 +187,7 @@ export const watchOpenExtensionResource = (
 
   onPrimaryResourceChange();
   const primarySubscription = ctx.onDidChangePrimaryResource(onPrimaryResourceChange);
+  const unsubscribePages = ctx.pages.store.subscribe(onPrimaryResourceChange);
   const unsubscribeEvents = subscribeToExtensionEventFeed((event) => {
     const open = ctx.getPrimaryResource();
     const resolver = resolverOf(open);
@@ -122,6 +198,7 @@ export const watchOpenExtensionResource = (
     dispose() {
       pending?.abort();
       primarySubscription.dispose();
+      unsubscribePages();
       unsubscribeEvents();
     },
   };

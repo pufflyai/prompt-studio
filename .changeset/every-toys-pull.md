@@ -5,4 +5,4 @@
 "pstdio": patch
 ---
 
-Add count badges and page links to extension navigation and collection badges
+Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
