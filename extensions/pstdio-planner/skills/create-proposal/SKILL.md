@@ -21,7 +21,7 @@ A proposal is a Planner ticket built from the `proposal` template. Use the `pst 
 
 ## Ticket files
 
-Put planning material in `.pstdio/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in workspace reports instead.
+Put planning material in `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in workspace reports instead.
 
 - Create a file as soon as one trigger matches. Do not ask first.
 - Keep each file focused. Do not put every detail in `ticket.md`.

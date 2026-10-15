@@ -1,6 +1,15 @@
 import { expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -62,6 +71,8 @@ export const registerExtensionInstallSmokeTests = () => {
       expect(existsSync(join(target, "ignored.txt"))).toBe(false);
       expect(existsSync(join(target, "node_modules"))).toBe(false);
       expect(existsSync(join(cliHome, "extensions"))).toBe(false);
+      mkdirSync(join(target, "node_modules/previous-only/lib"), { recursive: true });
+      writeFileSync(join(target, "node_modules/previous-only/lib/index.js"), "old dependency");
       const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
       manifest.dependencies = { demo: "file:./vendor/demo" };
       writeFileSync(join(source, "package.json"), JSON.stringify(manifest));
@@ -84,6 +95,8 @@ export const registerExtensionInstallSmokeTests = () => {
       rmSync(source, { recursive: true });
       expect(readFileSync(join(target, "node_modules/demo/index.ts"), "utf8")).toContain("Packaged dependency");
       expect(existsSync(join(target, "node_modules/ignored.txt"))).toBe(false);
+      expect(existsSync(join(target, "node_modules/previous-only"))).toBe(false);
+      expect(readdirSync(hostHome).filter((name) => name.startsWith(".extension-install-"))).toEqual([]);
       const checked = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", "--scope", "user", "--json"], {
         cwd: repo,
         env,

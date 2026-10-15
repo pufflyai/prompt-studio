@@ -25,13 +25,20 @@
         "{workspaceRoot}/scripts/test-setup.ts",
         "{workspaceRoot}/bunfig.toml",
         "{workspaceRoot}/bun.lock",
-        { "runtime": "bun --version" }
+        {
+          "runtime": "bun --version"
+        }
       ]
     },
     "lint": {
       "cache": true,
       "dependsOn": ["^build"],
       "inputs": ["default", "^production", "{workspaceRoot}/biome.json"]
+    },
+    "typecheck": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^production", "{workspaceRoot}/tsconfig.base.json"]
     }
   }
 }

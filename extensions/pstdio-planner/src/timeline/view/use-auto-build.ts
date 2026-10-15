@@ -43,5 +43,6 @@ export function useAutoBuild(client: PlanClient) {
       setSaving(false);
     }
   };
-  return { mode, saving, error: error ?? readError ?? mode?.error, configure, refresh };
+  // Saved run failures belong to the status popover, not a new configuration attempt.
+  return { mode, saving, error: error ?? readError, configure, refresh };
 }

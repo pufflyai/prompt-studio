@@ -7,6 +7,7 @@ Prompt Studio is a workbench where people and agents build and use tools through
 - [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
+- [Build and smoke-test the relay](development/0006-relay.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)
@@ -142,6 +143,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0004 — Move to remote execution](extensions/0004-remote-execution-migration.md)
 - [0006 — Smoke checks](extensions/0006-smoke-checks.md)
 - [0007 — Make actions CLI-ready](extensions/0007-cli-ready-actions.md)
+- [0008 — Extension file storage](extensions/0008-extension-storage.md)
 
 ### Use the SDK
 

@@ -12,14 +12,14 @@ export class ExtensionAlreadyInstalledError extends Error {
   }
 }
 
-export const promotePreparedSource = (
+export const promotePreparedSource = async (
   preparedPath: string,
   targetPath: string,
   replaceExisting: boolean,
   preserveDependencies: boolean,
 ) => {
   const backupPath = join(dirname(preparedPath), ".previous");
-  const relocateNodeModules = prepareNodeModulesRelocation(preparedPath, targetPath);
+  const relocateNodeModules = await prepareNodeModulesRelocation(preparedPath, targetPath);
 
   if (existsSync(targetPath)) {
     if (!replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);

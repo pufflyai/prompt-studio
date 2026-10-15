@@ -3,6 +3,7 @@ import { open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/pr
 import { join, posix, relative, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { createReadBoundary } from "../runtime/read-boundary";
+import { ARTIFACT_MOUNT_ROOT } from "./extension-storage-path";
 import { normalizeArtifactMountPath } from "./path-normalization";
 import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
 import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
@@ -241,7 +242,7 @@ export const createWorkspaceFilesMount = (
 // Mounts live under a dedicated extension-storage root so extension package
 // names can never collide with host-owned `.pstdio/` entries such as docs,
 // reports, extensions, or config.json.
-export const ARTIFACT_MOUNT_ROOT = ".pstdio/extension-storage";
+export { ARTIFACT_MOUNT_ROOT } from "./extension-storage-path";
 
 /** The absolute folder of a mount in one workspace root. */
 export const resolveArtifactMountRoot = (input: ArtifactMountLocation) => {
