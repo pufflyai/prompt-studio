@@ -79,8 +79,13 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     await expect(page.getByText("Saved body bytes", { exact: false })).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath("unavailable-document.png") });
 
-    mkdirSync(join(root, ".pstdio", "tickets", ticket.shorthand), { recursive: true });
-    writeFileSync(join(root, ".pstdio", "tickets", ticket.shorthand, "ticket.md"), "Exact unsaved draft bytes");
+    mkdirSync(join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", ticket.shorthand), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(root, ".pstdio", "extension-storage", "pstdio-planner", "tickets", ticket.shorthand, "ticket.md"),
+      "Exact unsaved draft bytes",
+    );
     const [workspace] = await (await request.get(`${apiBase}/v1/workspaces?project_id=${project.id}`)).json();
     const session = await (
       await request.post(`${apiBase}/v1/sessions`, {
@@ -89,7 +94,7 @@ test("saved ticket document links survive copy, reload, history and rename", asy
           workspace_id: workspace.id,
           title: "Draft and saved links",
           agent: "pstdio.workbench-fixture.harness.fake",
-          prompt: `[Draft](.pstdio/tickets/${ticket.shorthand}/ticket.md) and [Saved](${bodyLink.href})`,
+          prompt: `[Draft](.pstdio/extension-storage/pstdio-planner/tickets/${ticket.shorthand}/ticket.md) and [Saved](${bodyLink.href})`,
         },
       })
     ).json();

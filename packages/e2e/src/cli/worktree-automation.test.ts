@@ -60,7 +60,15 @@ describe("workspace provisioning", () => {
 
       const worktreePath = workspace.root_path!;
       expect(await waitForPath(join(worktreePath, ".pstdio", "config.json"))).toBe(true);
-      const ticketPath = join(worktreePath, ".pstdio", "tickets", ticketShorthand, "ticket.md");
+      const ticketPath = join(
+        worktreePath,
+        ".pstdio",
+        "extension-storage",
+        "pstdio-planner",
+        "tickets",
+        ticketShorthand,
+        "ticket.md",
+      );
       expect(await waitForPath(ticketPath)).toBe(true);
       expect(readFileSync(ticketPath, "utf8")).toContain("Hook test ticket");
     },

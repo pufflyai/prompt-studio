@@ -2,6 +2,8 @@
 
 Artifacts lets agents publish self-contained HTML pages, such as reports, charts, or small tools, and lets you browse every saved version in Prompt Studio.
 
+Keep draft HTML, prototype sources, and screenshots under `.pstdio/extension-storage/pstdio-artifacts/drafts/<name>/`. Published snapshots use this extension's storage too. See [extension file storage](../../documentation/guides/extensions/0008-extension-storage.md).
+
 Install Artifacts once for your user, then turn it on in each project that should use it. Installing from a project turns it on there. Each project has its own library. Published versions are snapshots; publishing again adds a version instead of changing an old one.
 
 ## Install

@@ -33,7 +33,7 @@ metadata:
    - Use `viewMenus` to attach one view to another. Use `settingsPanels` and `statusBarItems` to place existing view refs in host chrome.
    - Use `statuses` for workflow status providers shared by Kanban views and the host settings editor.
    - Use built-in refs from `workbenchModes`, `workbenchPages`, `workbenchPanels`, and `workbenchSlots` when targeting host-owned contributions.
-   - Use artifact mounts for files under `.pstdio/<extension-package-name>/`.
+   - Keep every extension-owned project file under `.pstdio/extension-storage/<package-name>/`. Use declared artifact mounts. This includes configuration, caches, drafts, prototypes, evidence, and backups; never create another data folder directly under `.pstdio/`.
    - Use Harnesses and workspace types only when adding a new execution or workspace provider.
 3. Implement the smallest useful extension change.
    - For custom UI, read [references/webviews.md](references/webviews.md) for shared UI, sizing, resource rebinding, and event subscriptions. Prefer native controls for standard forms.

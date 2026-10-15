@@ -142,6 +142,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0004 — Move to remote execution](extensions/0004-remote-execution-migration.md)
 - [0006 — Smoke checks](extensions/0006-smoke-checks.md)
 - [0007 — Make actions CLI-ready](extensions/0007-cli-ready-actions.md)
+- [0008 — Extension file storage](extensions/0008-extension-storage.md)
 
 ### Use the SDK
 
