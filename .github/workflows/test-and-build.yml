@@ -137,6 +137,9 @@ jobs:
         # The API and database suites take minutes, so database_tests runs them in shards.
         run: bunx lerna run test --ignore e2e --ignore pstdio-api --ignore pstdio-db ${{ needs.scope.outputs.lerna_filter }} --stream
 
+      - name: Test synchronization protocol with isolated storage
+        run: bunx lerna run test:conformance ${{ needs.scope.outputs.lerna_filter }} --stream
+
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
   database_tests:

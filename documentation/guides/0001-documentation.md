@@ -176,6 +176,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0023 — Worktrees and Git operations](../references/architecture/0023-worktrees.md)
 - [0024 — Extension API version checks](../references/architecture/0024-extension-api-version-checks.md)
 - [0025 — Database upgrades](../references/architecture/0025-database-upgrades.md)
+- [0026 — Synchronization contracts](../references/architecture/0026-synchronization-contracts.md)
 
 ### CLI
 
@@ -249,6 +250,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0003 — PRD: Real-time Updates](../requirements/platform/0003-realtime-updates.md)
 - [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
+- [0007 — PRD: Synchronization contracts v0.1](../requirements/platform/0007-synchronization-contracts.md)
 
 ## ADRs
 
