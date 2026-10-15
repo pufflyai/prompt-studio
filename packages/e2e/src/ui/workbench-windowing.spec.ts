@@ -17,6 +17,8 @@ import { exerciseWebview } from "./webview-playwright";
 import { windowingInteractions } from "./workbench-windowing-interactions";
 
 const storyIds = [
+  "integrated-light",
+  "integrated-dark",
   "fullscreen-attached",
   "fullscreen-floating",
   "fullscreen-empty-open",

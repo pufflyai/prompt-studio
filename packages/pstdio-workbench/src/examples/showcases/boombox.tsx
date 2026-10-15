@@ -185,8 +185,7 @@ const Player = (props: { workbench: WorkbenchCore }) => {
     </HStack>
   );
 };
-export const createBoomboxWorkbench = () => {
-  const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "attached" });
+export const registerBoomboxExample = (workbench: WorkbenchCore) => {
   workbench.themes.register([boomboxTheme]);
   workbench.modes.registerMode({
     id: "boombox",
@@ -280,6 +279,11 @@ export const createBoomboxWorkbench = () => {
     regionSettings: { main: { showHeader: false } },
     slots: [],
   });
+};
+
+export const createBoomboxWorkbench = () => {
+  const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "attached" });
+  registerBoomboxExample(workbench);
   workbench.pageLocations.switchProject("storybook-boombox");
   workbench.pageLocations.navigate({ kind: "page", page, resource: resource(boomboxTracks[0]) });
   return workbench;
