@@ -57,6 +57,8 @@ The workbench owns persistence scope selection. Hosts supply the storage adapter
 
 Saved owner records are authoritative. Declarations seed new owners. Returning to a saved page does not recreate a tab that moved out. Mode tabs and their bindings remain available across ordinary page navigation. Page side, page bottom, and mode Secondary save and restore independently.
 
+When a saved tab's panel no longer permits it, restore prefers an allowed panel within the same owner. If no such panel exists, moving across the page boundary transfers ownership with the tab. Its instance and resource stay the same. Moved tabs cannot restore into fixed-hidden panels. Content authored directly in a panel keeps its declared destination even when that panel refuses additional tabs or is fixed hidden.
+
 Mode snapshots store the tabs that still belong to the mode. After a mode tool moves into a page, switching resources restores the remaining mode tabs, including an empty set. It does not replay the mode's default declarations. Returning to the destination page restores the moved tool there. New mode tools can be opened explicitly into an existing saved mode layout.
 
 A Main view with `cardinality: "many"` keeps one collection of resource tabs. Its routed resource selects a tab in that collection; it does not create another layout owner. Leaving the page and returning, or reloading, restores its pinned tabs. A single-resource Main keeps its live view while rebinding to another resource, but each resource owner restores its own optional tabs and selections. Transferring that view changes its owner and preserves its resource binding.

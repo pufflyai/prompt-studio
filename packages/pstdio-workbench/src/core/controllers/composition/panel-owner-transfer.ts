@@ -1,5 +1,6 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { modeLayoutScope } from "../page-runtime/owner-layout-scope";
 
@@ -9,7 +10,8 @@ export const transferPanelOwner = (
   destination: WorkbenchPanelRegion,
 ) => {
   const identity = placement.placementIdentity;
-  const state = core.pages.store.getState();
+  // Restore can transfer a tab before the destination page is published.
+  const state = getWorkbenchPageRegistryInternals(core.pages).getPublishingState();
   const pageDestination = destination === "main" || destination === "bottom" || destination === "aside";
   if (pageDestination && !state.activePageId) return placement;
   if (!pageDestination && !state.activeModeId) return placement;
