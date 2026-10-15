@@ -4,6 +4,7 @@ import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { StatusRef } from "./contribution-identity";
 import type { Struct } from "./json";
+import type { NavigationTargetPage } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase, RendererEventReference } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -35,6 +36,9 @@ export interface CollectionBadgeItem {
   id: string;
   label: string;
   icon?: string;
+  color?: string;
+  tooltip?: string;
+  target?: NavigationTargetPage;
   resource?: ResourceRef;
 }
 

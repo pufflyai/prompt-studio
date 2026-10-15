@@ -180,6 +180,10 @@ Rows without a resource or navigation target keep their declared selection.
 
 Set `tooltip` to show text while the pointer rests on a row or the row has keyboard focus, such as the full path of a file whose row shows only its name. `iconTooltip` shows text only over the row icon. Use one of the two on a row, not both.
 
+Set `badge: { label: "3", color: "orange" }` for a trailing count beside a tree row. It uses the notification count badge style. Omit it when there is no count to show.
+
+Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and page `target`. A target makes that badge a direct link without activating the card. Page and resource references are scoped to the contributing extension and project.
+
 Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.

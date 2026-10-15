@@ -1001,6 +1001,9 @@ interface CollectionBadgeItem {
   id: string;
   label: string;
   icon?: string;
+  color?: string;
+  tooltip?: string;
+  target?: NavigationTargetPage;
   resource?: ResourceRef;
 }
 type KanbanRendererAttributeDisplay = {
@@ -1885,6 +1888,10 @@ interface TreeNode {
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  badge?: {
+    label: string;
+    color?: string;
+  };
   iconTooltip?: string;
   tooltip?: string;
   resource?: TreeRendererResourceRef;

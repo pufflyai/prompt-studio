@@ -42,6 +42,7 @@ export interface ExtensionTreeNode {
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  badge?: import("@pstdio/sdk/extensions").TreeNode["badge"];
   iconTooltip?: string;
   tooltip?: string;
   resource?: ExtensionTreeResource;

@@ -6,7 +6,8 @@ import { expect, fireEvent, userEvent, within } from "storybook/test";
 import { createWorkbench } from "../../../core";
 import { WorkbenchStory } from "../../../examples/workbench-story";
 
-const TreeGroups = () => {
+const TreeGroups = (props: { counts?: boolean }) => {
+  const { counts } = props;
   const [fixture] = useState(() => {
     const values = new Map<string, string>();
     const storage = {
@@ -25,7 +26,29 @@ const TreeGroups = () => {
           { id: "header", moveScope: "project", nodes: [{ id: "search", label: "Search", canHide: true }] },
         ],
         getBody: () => [
-          { id: "navigation", moveScope: "project", nodes: [{ id: "tickets", label: "Tickets", canHide: true }] },
+          {
+            id: "navigation",
+            moveScope: "project",
+            nodes: [
+              { id: "tickets", label: "Tickets", canHide: true },
+              ...(counts
+                ? [
+                    {
+                      id: "requests",
+                      label: "Review requests",
+                      icon: "message-circle-warning",
+                      badge: { label: "3", color: "orange" },
+                    },
+                    {
+                      id: "resolved",
+                      label: "Resolved requests",
+                      icon: "message-circle-warning",
+                      badge: { label: "3", color: "green" },
+                    },
+                  ]
+                : []),
+            ],
+          },
         ],
         getChildren: () => [],
       },
@@ -76,6 +99,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
+export const CountBadges: Story = { args: { counts: true } };
 export const CreateAndRename: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

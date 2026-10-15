@@ -35,6 +35,28 @@ const page = (id: string, title: string): WorkbenchPageContribution => ({
   slots: [],
 });
 describe("page breadcrumbs", () => {
+  test("names a child page when it shares its parent's resource", () => {
+    const tickets = page("tickets", "Tickets");
+    const ticket = { ...page("ticket", "Ticket"), parentId: tickets.id };
+    const requests = { ...page("requests", "Review requests"), parentId: ticket.id, icon: "message-circle-warning" };
+    const resource = { type: "ticket", id: "PS-1", label: "PS-1 Add tags", icon: "component" };
+    const items = createWorkbenchPageBreadcrumbItems({
+      location: {
+        page: requests.ref,
+        resource: { ...resource, metadata: { documentId: "review-requests" } },
+        parent: { page: ticket.ref, resource, parent: { page: tickets.ref } },
+      },
+      pages: [tickets, ticket, requests],
+      navigationTrees,
+      modes,
+      resources,
+      navigate: () => undefined,
+    });
+    expect(items.map((item) => item.title)).toEqual(["Tickets", "PS-1 Add tags", "Review requests"]);
+    expect(items.at(-1)?.resource?.id).toBe("PS-1");
+    expect(items.at(-1)?.icon).toBe("message-circle-warning");
+  });
+
   test("keeps the current resource breadcrumb focused on the resource", () => {
     const workspace: WorkbenchPageContribution = {
       ...page("workspace", "Workspace"),
