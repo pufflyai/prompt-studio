@@ -22,7 +22,10 @@ export const normalizeArtifactMountPath = (path: string) => {
   if (normalized === "" || normalized === ".") return null;
   if (normalized === ".." || normalized.startsWith("../")) return null;
   if (normalized === ".pstdio" || normalized.startsWith(".pstdio/")) return null;
-  const firstSegment = normalized.split("/")[0]?.replace(/[. ]+$/, "").toLowerCase();
+  const firstSegment = normalized
+    .split("/")[0]
+    ?.replace(/[. ]+$/, "")
+    .toLowerCase();
   if (firstSegment === EXTENSION_PUBLISHERS_DIR) return null;
 
   return normalized;
