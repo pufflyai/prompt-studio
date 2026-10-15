@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unsaved editor tabs · PS-705</title><style>
+:root{--unsaved-dot:#A74810;color-scheme:light dark}
+:root[data-theme="dark"]{--unsaved-dot:#FFAD57}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--unsaved-dot:#FFAD57}}
+*{box-sizing:border-box}body{margin:0;background:var(--artifact-bg);color:var(--artifact-fg);font-family:var(--artifact-font,system-ui)}
+main{max-width:1080px;margin:auto;padding:32px 24px}h1{font-size:28px;font-weight:500;margin:8px 0 12px}p{color:var(--artifact-muted);line-height:1.5;max-width:760px}.eyebrow{font-size:12px;color:var(--artifact-muted)}
+button{font:inherit;color:inherit;cursor:pointer}button:disabled{opacity:.45;cursor:default}button:focus-visible,textarea:focus-visible{outline:2px solid var(--artifact-fg);outline-offset:3px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 16px}.controls button,.editor-toolbar button{background:var(--artifact-surface);border:1px solid var(--artifact-border);border-radius:4px;padding:6px 10px;font-size:12px}
+.workbench{border:1px solid var(--artifact-border);border-radius:4px;overflow:hidden}.owners{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.65fr)}.owner{min-width:0;padding:12px}.owner+.owner{border-left:1px solid var(--artifact-border)}.owner-label{font-size:12px;color:var(--artifact-muted);margin-bottom:10px}
+.tabs{display:flex;gap:4px;overflow:auto;min-height:26px}.tab{display:flex;align-items:center;gap:4px;border:1px solid var(--artifact-border);border-radius:4px;flex-shrink:0;height:24px;padding:0 4px;color:var(--artifact-muted);font-size:12px}.tab[data-active="true"],.tab:hover{background:var(--artifact-surface);color:var(--artifact-fg)}.tab>button[role="tab"]{display:flex;gap:4px;align-items:center;min-width:0;border:0;background:none;padding:0}.icon{font-size:14px;flex-shrink:0}.label{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dot{width:6px;height:6px;flex-shrink:0;border-radius:50%;background:var(--unsaved-dot)}.close{border:0;background:none;padding:0;width:16px;height:16px;flex-shrink:0;opacity:0;font-size:18px;line-height:1}.tab[data-active="true"] .close,.tab:hover .close,.tab:focus-within .close{opacity:1}
+.empty{color:var(--artifact-muted);font-size:12px;padding:8px 0}.editor{border-top:1px solid var(--artifact-border);padding:20px}.editor-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:12px}.editor-title{font-size:14px;flex:1}.owner-badge{font-size:12px;color:var(--artifact-muted)}textarea{font:inherit;font-size:14px;line-height:1.6;width:100%;min-height:180px;resize:vertical;border:1px solid var(--artifact-border);border-radius:4px;padding:12px;background:var(--artifact-bg);color:var(--artifact-fg)}.save-state{font-size:12px;min-height:20px;margin-top:10px;color:var(--artifact-muted)}.save-state[data-error="true"]{color:var(--unsaved-dot)}[hidden]{display:none!important}.footnote{font-size:12px;margin-top:18px}
+@media(max-width:700px){main{padding:20px 16px}.owners{grid-template-columns:minmax(0,1fr)}.owner+.owner{border-left:0;border-top:1px solid var(--artifact-border)}.editor-toolbar{flex-wrap:wrap}.editor-title{flex-basis:100%}}
+</style></head><body><main>
+<div class="eyebrow">PS-705 · Interactive example</div><h1>Know which editor has unsaved changes</h1>
+<p>Edit a document, switch tabs, or move it to the Sidebar. Its dot stays with that editor. Save clears the dot. The existing context indicator stays visible too.</p>
+<div class="controls" aria-label="Example actions"><button id="move">Move to Sidebar</button><button id="reopen">Reopen closed editor</button><button id="rebind">Open a different document</button></div>
+<section class="workbench" aria-label="Editor tab example"><div class="owners">
+<div class="owner"><div class="owner-label">Editor</div><div id="main-tabs" class="tabs" role="tablist" aria-label="Editor tabs"></div><div id="main-empty" class="empty">No editor tabs here.</div></div>
+<div class="owner"><div class="owner-label">Sidebar</div><div id="side-tabs" class="tabs" role="tablist" aria-label="Sidebar tabs"></div><div id="side-empty" class="empty">Move a tab here to keep it alongside your page.</div></div></div>
+<div id="editor" class="editor"><div class="editor-toolbar"><span id="editor-title" class="editor-title"></span><span id="owner" class="owner-badge"></span><button id="save">Save</button><button id="fail-save">Try a failed save</button></div><textarea id="draft" aria-label="Document text"></textarea><div id="save-state" class="save-state" role="status" aria-live="polite"></div></div>
+<div id="closed" class="editor" hidden>Reopen a closed editor to continue.</div></section>
+<p class="footnote">This is a preview. Edits stay here. Closing or opening a different document starts clean; moving a live editor keeps its draft.</p>
+</main><script type="module">const documents = [
+  { id: "roadmap", label: "Product roadmap.pen", saved: "Make the next step clear.", draft: "Make the next step clear.", owner: "main", open: true },
+  { id: "notes", label: "Meeting notes.md", saved: "Keep the decisions together.", draft: "Keep the decisions together.", owner: "main", outside: true, open: true }
+];
+let selected = "roadmap";
+let failure = "";
+const element = (id) => document.getElementById(id);
+const current = () => documents.find((item) => item.id === selected);
+const dirty = (item) => item.draft !== item.saved;
+function renderTabs() {
+  for (const owner of ["main", "side"]) {
+    const list = element(owner + "-tabs");
+    list.replaceChildren();
+    const owned = documents.filter((item) => item.open && item.owner === owner);
+    for (const item of owned) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "tab";
+      wrapper.dataset.active = String(selected === item.id);
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.role = "tab";
+      tab.setAttribute("aria-selected", String(selected === item.id));
+      tab.setAttribute("aria-label", item.label + (item.outside ? " · Outside this workspace" : "") + (dirty(item) ? " · Unsaved changes" : ""));
+      const icon = document.createElement("span");
+      icon.className = "icon";
+      icon.textContent = item.outside ? "↗" : "▧";
+      icon.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = "label";
+      label.textContent = item.label;
+      tab.append(icon, label);
+      if (dirty(item)) {
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        dot.setAttribute("aria-hidden", "true");
+        tab.append(dot);
+      }
+      tab.onclick = () => {
+        selected = item.id;
+        failure = "";
+        render();
+      };
+      const close = document.createElement("button");
+      close.className = "close";
+      close.type = "button";
+      close.textContent = "×";
+      close.setAttribute("aria-label", "Close " + item.label);
+      close.onclick = () => {
+        item.open = false;
+        item.draft = item.saved;
+        selected = documents.find((candidate) => candidate.open)?.id ?? item.id;
+        failure = "";
+        render();
+      };
+      wrapper.append(tab, close);
+      list.append(wrapper);
+    }
+    element(owner + "-empty").hidden = owned.length > 0;
+  }
+}
+function render() {
+  renderTabs();
+  const item = current();
+  element("editor").hidden = !item.open;
+  element("closed").hidden = documents.some((candidate) => candidate.open);
+  element("editor-title").textContent = item.label;
+  element("owner").textContent = item.owner === "main" ? "Editor" : "Sidebar";
+  element("draft").value = item.draft;
+  element("save").disabled = !dirty(item);
+  element("fail-save").disabled = !dirty(item);
+  element("move").disabled = !item.open;
+  element("rebind").disabled = !item.open;
+  element("move").textContent = item.owner === "main" ? "Move to Sidebar" : "Move to Editor";
+  element("save-state").textContent = failure || (dirty(item) ? "Unsaved changes" : "Changes saved");
+  element("save-state").dataset.error = String(Boolean(failure));
+  element("reopen").disabled = documents.every((candidate) => candidate.open);
+}
+element("draft").oninput = (event) => {
+  current().draft = event.target.value;
+  failure = "";
+  renderTabs();
+  element("save").disabled = !dirty(current());
+  element("fail-save").disabled = !dirty(current());
+  element("save-state").textContent = dirty(current()) ? "Unsaved changes" : "Changes saved";
+  element("save-state").dataset.error = "false";
+};
+element("save").onclick = () => {
+  current().saved = current().draft;
+  failure = "";
+  render();
+};
+element("fail-save").onclick = () => {
+  failure = "Save failed. Your edits are still here.";
+  render();
+};
+element("move").onclick = () => {
+  current().owner = current().owner === "main" ? "side" : "main";
+  render();
+};
+element("reopen").onclick = () => {
+  const item = documents.find((candidate) => !candidate.open);
+  item.open = true;
+  item.draft = item.saved;
+  selected = item.id;
+  render();
+};
+element("rebind").onclick = () => {
+  const item = current();
+  item.label = item.label === "Product roadmap.pen" ? "Website wireframe.pen" : "Product roadmap.pen";
+  item.saved = "A different document starts clean.";
+  item.draft = item.saved;
+  failure = "";
+  render();
+};
+render();
+</script></body></html>

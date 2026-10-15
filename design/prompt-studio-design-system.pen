@@ -191709,6 +191709,674 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "N75vr",
+      "x": 23000,
+      "y": 5978,
+      "name": "PS-705 · Unsaved editor tabs · light",
+      "theme": {
+        "mode": "light"
+      },
+      "clip": true,
+      "width": 960,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "lDeTT",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Editor tabs · Unsaved changes",
+          "fontFamily": "$font-body",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "eQ66c",
+          "name": "Composition rule",
+          "fill": "$ds-fg-muted",
+          "content": "Keep the existing tab presentation. Show the 6 px Modified dot before Close.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "aT4Wm",
+          "name": "Saved editor",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Y6SoYA",
+              "name": "Saved editor label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Saved editor",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "c7eKa",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Saved editor tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "active"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": false
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "M6zdZQ",
+          "name": "Active editor with unsaved changes",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Vtu6x",
+              "name": "Active editor with unsaved changes label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Active editor with unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "mSa2B",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Active editor with unsaved changes tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "active"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "FC7dm",
+          "name": "Inactive editor with unsaved changes",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "yQDae",
+              "name": "Inactive editor with unsaved changes label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Inactive editor with unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "k40Dlr",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Inactive editor with unsaved changes tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "default"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true,
+                  "opacity": 0
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "dTbvR",
+          "name": "Inactive hover or focus",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "agil5",
+              "name": "Inactive hover or focus label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Inactive hover or focus with unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "FESWs",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Inactive hover or focus tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "hover"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "I5daX5",
+          "name": "Existing context indicator and unsaved changes",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "rVmwW",
+              "name": "Existing context indicator and unsaved changes label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Existing context indicator and unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "Z5HjR",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Existing context indicator and unsaved changes tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "default"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "link-2"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true,
+                  "opacity": 0
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "C80M0",
+          "name": "Moved editor keeps its unsaved state",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "y4znf",
+              "name": "Moved editor keeps its unsaved state label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Moved editor keeps its unsaved state",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "rDR7L",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Moved editor keeps its unsaved state tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "active"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "B0tycr",
+          "name": "Accessible behavior",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The tab name includes Unsaved changes. Saving clears the dot. Closing or rebinding clears the report; a move preserves it.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "K5sNGh",
+      "x": 24040,
+      "y": 5978,
+      "name": "PS-705 · Unsaved editor tabs · dark",
+      "theme": {
+        "mode": "dark"
+      },
+      "clip": true,
+      "width": 960,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 20,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "n7pJ0p",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Editor tabs · Unsaved changes",
+          "fontFamily": "$font-body",
+          "fontSize": 24,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "text",
+          "id": "AruvE",
+          "name": "Composition rule",
+          "fill": "$ds-fg-muted",
+          "content": "Keep the existing tab presentation. Show the 6 px Modified dot before Close.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "U6sCqT",
+          "name": "Saved editor",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Dh75J",
+              "name": "Saved editor label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Saved editor",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "AsbSZ",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Saved editor tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "active"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": false
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "sRhdc",
+          "name": "Active editor with unsaved changes",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Plq4Y",
+              "name": "Active editor with unsaved changes label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Active editor with unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "PjIUK",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Active editor with unsaved changes tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "active"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "UCv4T",
+          "name": "Inactive editor with unsaved changes",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "LOR8M",
+              "name": "Inactive editor with unsaved changes label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Inactive editor with unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "mh4FE",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Inactive editor with unsaved changes tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "default"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true,
+                  "opacity": 0
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Die7F",
+          "name": "Inactive hover or focus",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "AglmJ",
+              "name": "Inactive hover or focus label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Inactive hover or focus with unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "EssXW",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Inactive hover or focus tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "hover"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "i9rosK",
+          "name": "Existing context indicator and unsaved changes",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "jIchk",
+              "name": "Existing context indicator and unsaved changes label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Existing context indicator and unsaved changes",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "uJGs6",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Existing context indicator and unsaved changes tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "default"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "link-2"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true,
+                  "opacity": 0
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mtNS0",
+          "name": "Moved editor keeps its unsaved state",
+          "width": "fill_container",
+          "gap": 24,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "PBdpg",
+              "name": "Moved editor keeps its unsaved state label",
+              "fill": "$ds-fg-muted",
+              "textGrowth": "fixed-width",
+              "width": 330,
+              "content": "Moved editor keeps its unsaved state",
+              "fontFamily": "$font-body",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "CjgLf",
+              "type": "ref",
+              "ref": "TwCXd",
+              "name": "Moved editor keeps its unsaved state tab",
+              "height": 24,
+              "theme": {
+                "size": "sm",
+                "tab": "active"
+              },
+              "descendants": {
+                "w7NkD3": {
+                  "icon": "file-pen-line"
+                },
+                "k9XlqC": {
+                  "content": "Product roadmap.pen"
+                },
+                "D7RWr": {
+                  "enabled": true
+                },
+                "g1LJJh": {
+                  "enabled": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "R87Qbw",
+          "name": "Accessible behavior",
+          "fill": "$ds-fg-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "The tab name includes Unsaved changes. Saving clears the dot. Closing or rebinding clears the report; a move preserves it.",
+          "fontFamily": "$font-body",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
     }
   ],
   "themes": {
