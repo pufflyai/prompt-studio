@@ -2,6 +2,7 @@
 // Workspace-internal dependencies each package may declare. Additions here are
 // intentional architecture changes — update the docs when this map changes.
 export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
+  "pstdio-relay": [],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-sync-contracts": [],
   "pstdio-file-types": [],

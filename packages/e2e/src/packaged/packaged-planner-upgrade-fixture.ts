@@ -1,6 +1,6 @@
 // Pinned Planner revisions and project data for the packaged Planner upgrade check (PS-626).
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
@@ -19,6 +19,17 @@ export const writePreTimelinePlanner = (target: string) => {
     maxBuffer: 64 * 1024 * 1024,
   });
   execFileSync("tar", ["-x", "--strip-components=2", "-C", target], { input: archive });
+  const path = join(target, "package.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8"));
+  // This historical fixture does not use ctx.extensionFiles. Its relative file APIs still work on 0.2.
+  manifest.engines.pstdio += " || ^0.2.0";
+  writeFileSync(path, JSON.stringify(manifest));
+};
+
+export const moveLegacyPlannerDrafts = (projectFolder: string) => {
+  const owner = join(projectFolder, ".pstdio/extension-storage/pstdio-planner");
+  mkdirSync(owner, { recursive: true });
+  renameSync(join(projectFolder, ".pstdio/tickets"), join(owner, "tickets"));
 };
 
 // Most seeding commands return the stored record with its id.

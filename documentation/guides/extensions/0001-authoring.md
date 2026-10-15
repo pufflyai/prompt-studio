@@ -31,7 +31,7 @@ Add a `package.json`:
   "main": "./extension.ts",
   "type": "module",
   "engines": {
-    "pstdio": "^0.1.0"
+    "pstdio": "^0.1.0 || ^0.2.0"
   }
 }
 ```

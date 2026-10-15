@@ -1,13 +1,5 @@
-import {
-  cpSync,
-  existsSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-  symlinkSync,
-  unlinkSync,
-} from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync, symlinkSync, unlinkSync } from "node:fs";
+import { cp, readdir, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { mirrorNodeModules } from "pstdio-extensions";
 
@@ -63,15 +55,21 @@ export const linkUsableNodeModules = (sourcePath: string, targetPath: string) =>
   mirrorNodeModules(sourceNodeModules, targetNodeModules);
 };
 
-const rebaseCopiedLink = (copied: string, source: string, target: string, sourcePath: string, targetPath: string) => {
+const rebaseCopiedLink = async (
+  copied: string,
+  source: string,
+  target: string,
+  sourcePath: string,
+  targetPath: string,
+) => {
   const original = join(source, relative(target, copied));
 
   let destination: string;
   try {
-    destination = realpathSync.native(original);
+    destination = await realpath(original);
   } catch {
     // The workspace link vanished between the copy and this pass. Keep the
-    // verbatim link cpSync already wrote rather than aborting the install.
+    // verbatim link the copy already wrote rather than aborting the install.
     return;
   }
 
@@ -85,7 +83,7 @@ const rebaseCopiedLink = (copied: string, source: string, target: string, source
 
   let isDirectory = true;
   try {
-    isDirectory = statSync(original).isDirectory();
+    isDirectory = (await stat(original)).isDirectory();
   } catch {
     // Windows can refuse to follow a store symlink reached through a junction.
     // Assume a package directory (the common case) so the rebased junction still
@@ -98,27 +96,27 @@ const rebaseCopiedLink = (copied: string, source: string, target: string, source
 
 // Junctions store absolute destinations on Windows. Update links into the moved
 // install while retaining links to dependencies owned by a sibling checkout.
-export const prepareNodeModulesRelocation = (sourcePath: string, targetPath: string) => {
+export const prepareNodeModulesRelocation = async (sourcePath: string, targetPath: string) => {
   const nodeModules = join(sourcePath, "node_modules");
   const canonicalSource = realpathSync.native(sourcePath);
   const canonicalTarget = join(realpathSync.native(dirname(targetPath)), basename(targetPath));
   const links: { path: string; destination: string; directory: boolean }[] = [];
-  const collect = (directory: string) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+  const collect = async (directory: string) => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
-      if (entry.isDirectory()) collect(path);
+      if (entry.isDirectory()) await collect(path);
       if (!entry.isSymbolicLink()) continue;
-      const destination = realpathSync.native(path);
+      const destination = await realpath(path);
       const within = relative(canonicalSource, destination);
       if (within.startsWith("..") || isAbsolute(within)) continue;
       links.push({
         path: join(canonicalTarget, relative(sourcePath, path)),
         destination: join(canonicalTarget, within),
-        directory: statSync(path).isDirectory(),
+        directory: (await stat(path)).isDirectory(),
       });
     }
   };
-  if (existsSync(nodeModules)) collect(nodeModules);
+  if (existsSync(nodeModules)) await collect(nodeModules);
   return () => {
     for (const { path, destination, directory } of links) {
       unlinkSync(path);
@@ -127,7 +125,7 @@ export const prepareNodeModulesRelocation = (sourcePath: string, targetPath: str
   };
 };
 
-export const copyUsableNodeModules = (sourcePath: string, targetPath: string) => {
+export const copyUsableNodeModules = async (sourcePath: string, targetPath: string) => {
   const usable = findUsableNodeModules(sourcePath);
   if (!usable) return;
   // Native realpath expands Windows short names such as RUNNER~1. The JS
@@ -136,13 +134,13 @@ export const copyUsableNodeModules = (sourcePath: string, targetPath: string) =>
   const extensionSource = realpathSync.native(sourcePath);
   const target = join(targetPath, "node_modules");
   if (existsSync(target) && realpathSync.native(target) === source) return;
-  cpSync(source, target, { recursive: true, verbatimSymlinks: true });
-  const rebaseLinks = (directory: string) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+  await cp(source, target, { recursive: true, verbatimSymlinks: true });
+  const rebaseLinks = async (directory: string) => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
       const copied = join(directory, entry.name);
-      if (entry.isDirectory()) rebaseLinks(copied);
-      if (entry.isSymbolicLink()) rebaseCopiedLink(copied, source, target, extensionSource, targetPath);
+      if (entry.isDirectory()) await rebaseLinks(copied);
+      if (entry.isSymbolicLink()) await rebaseCopiedLink(copied, source, target, extensionSource, targetPath);
     }
   };
-  rebaseLinks(target);
+  await rebaseLinks(target);
 };

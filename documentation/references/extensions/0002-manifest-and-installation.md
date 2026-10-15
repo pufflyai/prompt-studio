@@ -15,7 +15,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.0"
+    "pstdio": "^0.1.0 || ^0.2.0"
   },
   "pstdio": {
     "scope": "user"

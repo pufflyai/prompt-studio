@@ -4,7 +4,7 @@ import type { ArtifactMount, ExtensionContextBase } from "@pstdio/sdk/extensions
 import { applyFrontmatter, buildReportFrontmatter } from "./frontmatter";
 import type { StoredReport } from "./types";
 
-export const REPORTS_DIR = ".pstdio/reports";
+export const REPORTS_DIR = ".pstdio/extension-storage/pstdio-reports/reports";
 
 const layout = createDraftLayout(REPORTS_DIR, "report");
 export const reportDir = layout.directory;

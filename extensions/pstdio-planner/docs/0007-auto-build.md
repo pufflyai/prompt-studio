@@ -42,7 +42,7 @@ Auto Build keeps working when you close the timeline and resumes its checks afte
 
 ## When work needs attention
 
-If the supervisor cannot start or resume, Auto Build turns off and shows the error. Resolve the problem and start it again. Existing attempts remain available.
+If the supervisor cannot start or resume, Auto Build turns off. Its header indicator turns red, and its popover shows the error. The saved failure does not appear as a timeline error or in a new start form. Resolve the problem and start it again. Existing attempts remain available.
 
 The popover shows a small banner when the supervisor fails or needs input, all running ticket sessions need input, or no work can run because of dependencies, blockers, or review requests. A finished board does not show a blocker banner.
 

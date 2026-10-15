@@ -30,6 +30,7 @@ jobs:
       license: ${{ steps.scope.outputs.license }}
       published_extensions: ${{ steps.scope.outputs.publishedExtensions }}
       harness_cli: ${{ steps.scope.outputs.harnessCli }}
+      relay_smoke: ${{ steps.scope.outputs.relaySmoke }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -139,6 +140,22 @@ jobs:
 
       - name: Test synchronization protocol with isolated storage
         run: bunx lerna run test:conformance ${{ needs.scope.outputs.lerna_filter }} --stream
+
+  relay_smoke:
+    needs: scope
+    if: needs.scope.outputs.relay_smoke == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Test built relay with disposable PostgreSQL and object storage
+        run: bun run --cwd infra/relay test:isolated
 
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
@@ -669,6 +686,7 @@ jobs:
       - scope
       - static_checks
       - lint_and_test
+      - relay_smoke
       - database_tests
       - published_extensions
       - harness_cli_support

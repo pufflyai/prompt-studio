@@ -367,6 +367,13 @@
         "@pstdio/sdk": "^0.25.0",
       },
     },
+    "infra/relay": {
+      "name": "pstdio-relay",
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "typescript": "6.0.2",
+      },
+    },
     "packages/e2e": {
       "name": "e2e",
       "devDependencies": {
@@ -4166,6 +4173,8 @@
     "pstdio-paths": ["pstdio-paths@workspace:packages/pstdio-paths"],
 
     "pstdio-planner": ["pstdio-planner@workspace:extensions/pstdio-planner"],
+
+    "pstdio-relay": ["pstdio-relay@workspace:infra/relay"],
 
     "pstdio-reports": ["pstdio-reports@workspace:extensions/pstdio-reports"],
 

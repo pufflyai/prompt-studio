@@ -194,10 +194,15 @@ packages/pstdio/.readme.generated
 .publish/
 
 # pstdio
-.pstdio/tickets
-.pstdio/reports
 .pstdio/extension-storage
 .pstdio/config.json
 
 # Shape Art drafts. A page keeps its own copy of each piece it uses.
 design/art
+
+# Relay infrastructure state and local inputs
+infra/relay/terraform/.terraform/
+infra/relay/terraform/*.tfstate*
+infra/relay/terraform/*.tfvars
+infra/relay/terraform/*.tfvars.json
+infra/relay/terraform/crash*.log

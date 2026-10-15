@@ -49,6 +49,6 @@ export const installLocalExtensionFolder = async (input: {
     }
     return await (input.install ?? installExtensionSource)({ ...input.options, source });
   } finally {
-    removePathBestEffort(uploadRoot);
+    await removePathBestEffort(uploadRoot);
   }
 };

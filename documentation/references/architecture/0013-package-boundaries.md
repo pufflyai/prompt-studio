@@ -98,6 +98,16 @@ layer-map change.
    Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.
 
+## Shared relay
+
+The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
+service, not part of the local API host or the CLI bundle. Its scaffold declares
+no workspace dependencies. It must not import the API host, UI, clients, or
+prototype implementation. The shared synchronization contract is owned separately
+by PS-744. Future Terraform configuration belongs under `infra/relay/terraform/`,
+separate from relay source. See the [relay development guide](../../guides/development/0006-relay.md)
+for isolated storage fixtures and container checks.
+
 ## Rules
 
 - No workspace package cycles.
