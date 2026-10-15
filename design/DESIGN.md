@@ -52,6 +52,6 @@ Appearance belongs in [Pencil](prompt-studio-design-system.pen), component APIs 
 
 ## 9. Chat composer
 
-1. The chat input and its surrounding workspace container have no borders.
+1. The chat input is borderless at rest and shows an accent highlight while focus is inside it. Its surrounding workspace container stays borderless.
 2. The workspace container uses the same background as a selected tab.
 3. Main and side chat views fill their panels with the same composer inset. The workspace header touches the input without an extra gap.

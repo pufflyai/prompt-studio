@@ -10,6 +10,7 @@ export const chatComposerRecipe = defineSlotRecipe({
       padding: "xs",
       bg: "bg",
       borderRadius: "xs",
+      _focusWithin: { outline: "{borders.accent-light}", outlineOffset: "-1px" },
     },
     workspace: { display: "flex", flexDirection: "column", gap: "0" },
   },

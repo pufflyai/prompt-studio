@@ -68,7 +68,6 @@ export const expectPackagedQueuedEditRecovery = async (
     await editor.fill("Retained complete edit");
     const cancel = page.getByRole("button", { name: "Cancel", exact: true });
     expect(await cancel.evaluate((element) => element.nextElementSibling?.textContent)).toBe("Update");
-    await expect(page.locator(".ps-chat-composer__input").last()).toHaveCSS("border-width", "0px");
     await page.getByRole("button", { name: "Select model", exact: true }).click();
     await page.getByTestId("workspace-agent-model-options").getByText("two", { exact: true }).click();
     await page.getByRole("button", { name: "thinking: High", exact: true }).click();

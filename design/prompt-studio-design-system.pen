@@ -28114,7 +28114,7 @@
                       "type": "frame",
                       "id": "TDV8W",
                       "name": "cmp/ChatInput",
-                      "context": "ChatInput (@pstdio/ui). Editor above one toolbar row; attachments are optional. All composer controls and mode tags are 28px high. Root padding and gap are 8px. Toolbar: Attach, model parameter controls, optional closable mode tags, spacer, Send. Attach and parameter buttons use ghost styling. Send uses the implemented primary IconButton with a 16px arrow or filled pause. Mode tags use the shared subtle ticket tag pill styling at 28px. Send swaps arrow-up for pause while streaming. Preserve disabled control styling. Model selection uses the shared SelectorTrigger with ghost styling; the harness belongs in its menu header. Mode tags sit immediately right of all model parameters and use cmp/ComposerModeTag. Selecting /goal at the caret removes only the slash fragment and keeps the objective text. Close removes a draft intent or requests native clear/leave for a submitted mode. Keep the draft and retain native state until acknowledgement. Submitted goal tags keep the objective visible; details and actions depend on provider capabilities. Multiple new intents require verified composition. Use the shared Menu surface with icon-free SearchableMenuItem rows for slash completion. Do not show mode status cards or argument dialogs.",
+                      "context": "ChatInput (@pstdio/ui). Editor above one toolbar row; attachments are optional. All composer controls and mode tags are 28px high. Root padding and gap are 8px. Toolbar: Attach, model parameter controls, optional closable mode tags, spacer, Send. Attach and parameter buttons use ghost styling. Send uses the implemented primary IconButton with a 16px arrow or filled pause. Mode tags use the shared subtle ticket tag pill styling at 28px. Send swaps arrow-up for pause while streaming. Preserve disabled control styling. Model selection uses the shared SelectorTrigger with ghost styling; the harness belongs in its menu header. Mode tags sit immediately right of all model parameters and use cmp/ComposerModeTag. Selecting /goal at the caret removes only the slash fragment and keeps the objective text. Close removes a draft intent or requests native clear/leave for a submitted mode. Keep the draft and retain native state until acknowledgement. Submitted goal tags keep the objective visible; details and actions depend on provider capabilities. Multiple new intents require verified composition. Use the shared Menu surface with icon-free SearchableMenuItem rows for slash completion. Do not show mode status cards or argument dialogs. The input is borderless at rest. While focus is inside the input, show a 1px inner ds-focus outline without changing its size or spacing.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-bg",
@@ -28520,7 +28520,7 @@
                       "type": "frame",
                       "id": "JGKK1",
                       "name": "cmp/ChatWorkspaceHub",
-                      "context": "Workspace container around the chat input. Borderless shell and input; the shell uses ds-surface, matching the selected tab background. Keep the workspace identity, diff counts or setup status, and open action above the input. Shell padding is 4px, with no gap between header and input. The open action has a tooltip and accessible name.",
+                      "context": "Workspace container around the chat input. The shell stays borderless and uses ds-surface, matching the selected tab background. The input is borderless at rest and shows a 1px inner ds-focus outline while focus is inside it. Keep the workspace identity, diff counts or setup status, and open action above the input. Shell padding is 4px, with no gap between header and input. The open action has a tooltip and accessible name.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-surface",
@@ -43883,7 +43883,8 @@
                               "name": "Input",
                               "width": "fill_container",
                               "stroke": "$ds-focus",
-                              "strokeWidth": 0,
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
                               "descendants": {
                                 "scrOP": {
                                   "theme": {
