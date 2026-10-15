@@ -1,5 +1,6 @@
 import { Box, Stack, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
+import { chatComposerRecipe } from "@/theme/recipes/chat-composer";
 import { queuedFollowUpRecipe } from "@/theme/recipes/queued-follow-up";
 import type { useQueuedFollowUpComposer } from "./use-queued-follow-up-composer";
 
@@ -70,22 +71,14 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     workspaceHub,
   } = props;
   const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
+  const composerStyles = useSlotRecipe({ recipe: chatComposerRecipe })({ workspace: hasWorkspaceHub });
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
   const editing = queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision;
   const editor = <QueuedComposerInput {...props} editing={editing} hasQueuedFollowUps={hasQueuedFollowUps} />;
   return (
     <Stack p="xs" gap="0">
-      {/* Concentric hierarchy: the hub shell owns the visible border so the session reads
-          as living inside the workspace; the nested input recedes to border.subtle. */}
-      <Stack
-        gap={hasWorkspaceHub ? "2xs" : "0"}
-        p={hasWorkspaceHub ? "2xs" : undefined}
-        borderWidth={hasWorkspaceHub ? "1px" : undefined}
-        borderColor={hasWorkspaceHub ? "border" : undefined}
-        borderRadius={hasWorkspaceHub ? "xs" : undefined}
-        bg={hasWorkspaceHub ? "bg.subtle" : undefined}
-      >
+      <Stack className="ps-chat-composer__workspace" css={composerStyles.workspace}>
         {workspaceHub}
         {composerHeader}
         <QueuedFollowUpList

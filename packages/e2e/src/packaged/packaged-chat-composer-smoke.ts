@@ -37,6 +37,8 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     });
     const prompt = "Packaged composer first message";
     await editor.fill(prompt);
+    await expect(page.locator(".ps-chat-composer__input").last()).toHaveCSS("border-width", "0px");
+    await expect(page.locator(".ps-chat-composer__workspace").last()).toHaveCSS("border-width", "0px");
     // Sending stays blocked until the project's agents and models load.
     await expect(send).toBeEnabled();
     await editor.press("Enter");

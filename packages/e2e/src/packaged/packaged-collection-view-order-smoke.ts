@@ -16,6 +16,8 @@ const verifyOrder = async (page: Page, projectId: string, boardId: string) => {
   await expect(add).toBeEnabled();
   await add.click();
   await expect(tabs).toHaveCount(2);
+  await expect(tabs.first()).toHaveCSS("border-width", "0px");
+  await expect(tabs.last()).toHaveCSS("border-width", "0px");
   await expect(add).toBeEnabled();
   await add.click();
   await expect(tabs).toHaveCount(3);
