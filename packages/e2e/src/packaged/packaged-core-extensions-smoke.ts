@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { expectExtensionDraftStorage } from "./packaged-extension-storage-smoke";
 import { expectNotesResources } from "./packaged-notes-resources-smoke";
 import { expectPlannerCommands } from "./packaged-planner-commands-smoke";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
@@ -71,6 +72,45 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
         expect.objectContaining({ path: "references/pages.md" }),
         expect.objectContaining({ path: "references/validation.md" }),
         expect.objectContaining({ path: "references/webviews.md" }),
+      ]),
+    }),
+  );
+};
+
+const expectReportTemplates = async (
+  metadata: WorkbenchExtensionMetadata,
+  baseUrl: string,
+  projectId: string,
+  headers: Record<string, string>,
+) => {
+  const reportType = metadata.templateTypes.find((type) => type.localId === "report");
+  expect(reportType?.commands).toEqual(
+    expect.objectContaining({
+      list: "pstdio.pstdio-reports.command.templates.list",
+      read: "pstdio.pstdio-reports.command.templates.read",
+      save: "pstdio.pstdio-reports.command.templates.save",
+      delete: "pstdio.pstdio-reports.command.templates.delete",
+    }),
+  );
+
+  const listTemplatesRes = await fetch(
+    `${baseUrl}/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(reportType!.commands!.list)}/execute`,
+    {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ source: "api", params: {} }),
+    },
+  );
+  expect(listTemplatesRes.status).toBe(200);
+  const listTemplates = (await listTemplatesRes.json()) as {
+    outcome: { ok: boolean; value?: Array<{ name: string; type: string }> };
+  };
+  expect(listTemplates.outcome).toEqual(
+    expect.objectContaining({
+      ok: true,
+      value: expect.arrayContaining([
+        expect.objectContaining({ name: "review", type: "report" }),
+        expect.objectContaining({ name: "change-request", type: "report" }),
       ]),
     }),
   );
@@ -239,37 +279,13 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
             join(tempRoot, "project"),
           );
-          const reportType = metadata.templateTypes.find((type) => type.localId === "report");
-          expect(reportType?.commands).toEqual(
-            expect.objectContaining({
-              list: "pstdio.pstdio-reports.command.templates.list",
-              read: "pstdio.pstdio-reports.command.templates.read",
-              save: "pstdio.pstdio-reports.command.templates.save",
-              delete: "pstdio.pstdio-reports.command.templates.delete",
-            }),
-          );
-
-          const listTemplatesRes = await fetch(
-            `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/${encodeURIComponent(reportType!.commands!.list)}/execute`,
-            {
-              method: "POST",
-              headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-              body: JSON.stringify({ source: "api", params: {} }),
-            },
-          );
-          expect(listTemplatesRes.status).toBe(200);
-          const listTemplates = (await listTemplatesRes.json()) as {
-            outcome: { ok: boolean; value?: Array<{ name: string; type: string }> };
-          };
-          expect(listTemplates.outcome).toEqual(
-            expect.objectContaining({
-              ok: true,
-              value: expect.arrayContaining([
-                expect.objectContaining({ name: "review", type: "report" }),
-                expect.objectContaining({ name: "change-request", type: "report" }),
-              ]),
-            }),
-          );
+          await expectExtensionDraftStorage({
+            baseUrl: started.baseUrl,
+            projectId: project.id,
+            projectFolder,
+            headers: runtimeAuthorization(started.descriptor),
+          });
+          await expectReportTemplates(metadata, started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
           const settingsPanel = metadata.settingsPanels.find((panel) => panel.view);
           const settingsViewId = settingsPanel
             ? `${settingsPanel.view.extensionId}.view.${settingsPanel.view.id}`

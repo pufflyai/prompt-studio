@@ -71,7 +71,7 @@ Run `pst --help` to see every command. `pst agents setup <agent-id>` installs th
 
 `pst serve` accepts connections only through its authenticated loopback URL. Open the exact `127.0.0.1` URL it prints. It rejects other hosts and LAN origins.
 
-Prompt Studio keeps project data in `.pstdio/`. Add `.pstdio/tickets` and `.pstdio/config.json` to `.gitignore` if you do not want it in your repository.
+Prompt Studio keeps extension-owned project files in `.pstdio/extension-storage/<package-name>/`, including drafts, prototypes, configuration, tickets, and reports. Keep `.pstdio/extension-storage` and the host project link `.pstdio/config.json` in `.gitignore`. See [extension file storage](documentation/guides/extensions/0008-extension-storage.md).
 
 ## Build an extension
 

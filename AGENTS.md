@@ -35,6 +35,14 @@ Do not:
 - Deep relative imports across packages
 - Importing from `clients/*`
 
+## Extension storage
+
+- All extension-owned project files live under `.pstdio/extension-storage/<package-name>/`. This includes configuration, caches, drafts, prototypes, screenshots, ticket checkouts, report checkouts, and migration backups.
+- Use declared artifact mounts for extension files and `ctx.storage` for structured project data. Artifact mounts use the extension's package-name directory.
+- Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
+- Do not create extension data folders directly under `.pstdio/` or store runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
+- Files an extension deliberately edits as project source, such as the UI icon fonts, stay at their configured project paths. The extension's own settings and working files still belong in extension storage.
+
 ## Extension API changes
 
 Extensions outside this repo depend on the extension API: the public `@pstdio/sdk/extensions` types, manifest rules, bridge capabilities, and event payloads. For this API only, old APIs stay for a while. This overrides "Add backward compatibility only when it is specifically requested" and "Always remove old or unused code".

@@ -35,7 +35,7 @@ blocked_reason: ""
 
 ## Evidence
 
-Attach bug-reproduction planning files under this ticket's files, then link them here. Put validation output from implementation or review in a workspace report under `.pstdio/reports/<name>/`.
+Attach bug-reproduction planning files under this ticket's files, then link them here. Put validation output from implementation or review in a workspace report under `.pstdio/extension-storage/pstdio-reports/reports/<name>/`.
 
 - Screenshot: [file name or link]
 - Screen recording: [file name or link]

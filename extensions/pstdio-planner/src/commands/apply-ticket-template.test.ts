@@ -29,6 +29,5 @@ describe("applyTicketTemplateCommand", () => {
 
     expect(result).toEqual({ shorthand: "PS-1", path: join(defaultProjectRoot, ticketMarkdownPath("PS-1")) });
     expect(await projectFiles.readText(ticketMarkdownPath("PS-1"))).toBe("# Existing title\n\nPS-1 kept");
-    expect(await projectFiles.readText(".pstdio/.gitignore")).toBe("/tickets\n");
   });
 });
