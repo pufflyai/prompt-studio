@@ -49,6 +49,11 @@ export const UndeclaredPagePanels: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await waitFor(() => {
+      const main = panel(canvasElement, "main");
+      const editor = main.querySelector("[data-workbench-editor]")!;
+      expect(editor.getBoundingClientRect().width).toBeGreaterThanOrEqual(main.clientWidth - 1);
+    });
     await userEvent.click(canvas.getByRole("button", { name: "Sessions panels" }));
     await userEvent.click(await within(document.body).findByRole("menuitemcheckbox", { name: "Side panel" }));
     await expect(panel(canvasElement, "aside")).toBeVisible();
