@@ -14,6 +14,7 @@ import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/docu
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
 import { listTicketReviewRequests } from "../data/review-request-storage";
+import { REVIEW_REQUEST_ICON, reviewRequestSummary } from "../data/review-request-summary";
 import { REVIEW_REQUESTS_DOCUMENT, ticketPageTarget, ticketRequestsTarget } from "../data/ticket-page-target";
 import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
@@ -205,16 +206,16 @@ export const listTicketFilesTree = async (
     });
 
   const reviewRequests = await listTicketReviewRequests(ctx.storage, ticket.id);
-  const openRequests = reviewRequests.requests.filter((request) => request.state === "open").length;
+  const summary = reviewRequestSummary(reviewRequests);
   const reviewRequestsNode: TreeNode = {
     id: REVIEW_REQUESTS_DOCUMENT,
     label: l10n("requests.navigation.label", "Review requests"),
-    icon: "MessageSquare",
-    description: openRequests > 0 ? `${openRequests} open` : undefined,
+    icon: REVIEW_REQUEST_ICON,
+    badge: summary ? { label: String(summary.count), color: summary.color } : undefined,
+    tooltip: summary?.tooltip,
     target: ticketRequestsTarget(ticketResource),
     selected: selectedDocument === REVIEW_REQUESTS_DOCUMENT,
   };
-  const hasReviewRequests = reviewRequests.requests.length > 0 || reviewRequests.errors.length > 0;
 
   const ticketSection: TreeViewSection = {
     id: "ticket",
@@ -228,7 +229,7 @@ export const listTicketFilesTree = async (
         target: selectTarget(TICKET_BODY_ID),
         selected: selectedDocument === TICKET_BODY_ID,
       },
-      ...(hasReviewRequests ? [reviewRequestsNode] : []),
+      ...(summary ? [reviewRequestsNode] : []),
     ],
   };
 

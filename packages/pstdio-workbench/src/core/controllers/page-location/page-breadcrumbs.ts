@@ -48,7 +48,7 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
         input.resources.toUri(input.resources.normalize(parentResource));
     const item: WorkbenchBreadcrumbItem = {
       title: (!sharesParentResource && location.resource?.label) || (page ? pageTitle(page) : location.page.id),
-      icon: location.resource?.icon ?? page?.icon,
+      icon: sharesParentResource ? (page?.icon ?? location.resource?.icon) : (location.resource?.icon ?? page?.icon),
       ...(leavesProjectNavigation(location, input) ? { startsLevel: true } : {}),
       ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };

@@ -10,6 +10,7 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { useEffect, useState } from "react";
+import { ticketRequestsTarget } from "../../data/ticket-page-target";
 import { stepReview } from "../model/review";
 import { AutoBuildButton } from "./auto-build-button";
 import { AutoBuildDialog } from "./auto-build-dialog";
@@ -139,7 +140,13 @@ function PlanContent(props: PlanContentProps) {
       ))}
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
-          <PlanGraph {...viewProps} today={plan.today} />
+          <PlanGraph
+            {...viewProps}
+            today={plan.today}
+            onOpenRequests={(row) => {
+              void host.call("navigation.open", { target: ticketRequestsTarget(row.target.resource!) });
+            }}
+          />
         </Box>
         {selected ? (
           <Details

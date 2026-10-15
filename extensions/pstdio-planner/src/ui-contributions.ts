@@ -25,6 +25,7 @@ import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
+import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { ticketBoard, timelineBoard } from "./data/ticket-board";
 import {
   ticketDocumentPage,
@@ -90,6 +91,7 @@ export const createPlannerUi = (baseUrl: string) => {
   const requests = defineView({
     id: "ticket-requests",
     title: l10n("requests.view.title", "Review requests"),
+    icon: REVIEW_REQUEST_ICON,
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/ticket-review-requests.tsx", baseUrl),
@@ -99,6 +101,7 @@ export const createPlannerUi = (baseUrl: string) => {
   const requestsPage = definePage({
     id: ticketRequestsPage.id,
     title: l10n("requests.page.title", "Review requests"),
+    icon: REVIEW_REQUEST_ICON,
     parent: { kind: "page", id: "tickets" },
     path: "ticket-requests",
     mode: workbenchModes.project,
@@ -145,7 +148,7 @@ export const createPlannerUi = (baseUrl: string) => {
         columnGrouping: "status",
         rowGrouping: "none",
         ordering: { attributeId: "created", direction: "desc" },
-        displayProperties: ["id", "workspace", "type", "priority"],
+        displayProperties: ["id", "workspace", "type", "priority", "needsAttention"],
       },
       emptyTitle: l10n("kanbanRenderers.tickets.emptyTitle", "No tickets yet"),
       emptyDescription: l10n(
