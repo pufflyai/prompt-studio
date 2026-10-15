@@ -44,6 +44,9 @@ export interface MenuContribution<TSlotContext extends Struct = Struct, TParams 
   placement?: "first" | "default" | "last";
   icon?: string;
   when?: WhenExpression;
+  /** Keep the action visible but unavailable when this condition matches its subject. */
+  disabledWhen?: WhenExpression;
+  disabledReason?: Localizable<string>;
   params?: Partial<TParams>;
   presentation?: "menu-item" | "button" | "icon-button";
 }

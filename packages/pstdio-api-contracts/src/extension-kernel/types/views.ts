@@ -86,6 +86,7 @@ export interface PlacementTabMenuRow {
 
 export interface PlacementTabMenuGroup {
   readonly id: string;
+  readonly label?: Localizable<string>;
   readonly rows: readonly PlacementTabMenuRow[];
 }
 
