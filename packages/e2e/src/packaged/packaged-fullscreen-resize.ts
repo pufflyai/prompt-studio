@@ -20,7 +20,7 @@ export const verifyPackagedFullscreenResizeCancellation = async (page: Page) => 
   const box = (await handle.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + 600, { steps: 8 });
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + previousSize - 10, { steps: 8 });
   await expect(handle).toHaveAttribute("data-closing", "true");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Exit fullscreen", exact: true })).toBeVisible();
