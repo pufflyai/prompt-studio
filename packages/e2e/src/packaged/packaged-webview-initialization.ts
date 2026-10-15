@@ -4,6 +4,10 @@ import { expect, type Page } from "@playwright/test";
 export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: string) => {
   const probe = await page.context().newPage();
   try {
+    // Keep the authenticated origin without starting a second Workbench on the same project storage.
+    await probe.route(page.url(), (route) =>
+      route.fulfill({ contentType: "text/html", body: "<!doctype html><html><body></body></html>" }),
+    );
     await probe.goto(page.url());
     await probe.evaluate((url) => {
       const frame = document.createElement("iframe");

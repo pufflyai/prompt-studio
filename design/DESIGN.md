@@ -120,6 +120,7 @@ Use the shared `@pstdio/ui` motion tokens and recipes. These values adopt the Na
 
 - Enter with `cubic-bezier(0.33, 1, 0.68, 1)`. Exit with `cubic-bezier(0.32, 0, 0.67, 0)`. Reversing continues from the current value.
 - Reveal tree children from the top. Clip panels while their contents keep their saved size. Divider dragging follows the pointer directly. Virtualized trees change instantly.
+- Dragging below half a panel's minimum size previews closing on every edge. Keep the panel visible at its minimum, fade it to 40% opacity, and highlight the separator with `fg.warning`. Moving back removes the preview. Release closes; Escape or pointer cancel restores the size before the drag. Drag, double-click, and Home keep the saved size for reopening. Panels that cannot close only clamp.
 - Anchor the floating panel at its bottom right. Start at 96% scale and 8 px below its final position. The launcher leaves at 90% scale.
 - Hover actions appear immediately and hide after 150 ms. Reserve their space so the label stays still.
 - Fade only new response chunks. Earlier text keeps its DOM. Loaded history appears immediately. Incomplete Markdown may reinterpret the affected structure as syntax finishes.

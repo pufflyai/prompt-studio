@@ -143,7 +143,8 @@ test.describe("packaged extension webviews", () => {
 
           const frame = page.frameLocator('iframe[title="Lab"]');
           await frame.getByRole("heading", { name: "Sandbox webview" }).waitFor({ timeout: 30_000 });
-          await verifyPackagedViewInitialization(page, labWebview!.webview.runtimeUrl);
+          await test.step("Initialize the packaged guest repeatedly", () =>
+            verifyPackagedViewInitialization(page, labWebview!.webview.runtimeUrl));
           await frame.getByRole("button", { name: "Say hello" }).click();
           await page.getByText("Hello from Extension Lab").waitFor({ timeout: 10_000 });
 
@@ -159,13 +160,15 @@ test.describe("packaged extension webviews", () => {
           });
           await page.reload();
           await expect(frame.getByText("1", { exact: true })).toBeVisible();
-          await verifyPackagedWebviewRetention(page);
-          await verifyPackagedShortcutReference(
-            page,
-            started.baseUrl,
-            project.id,
-            runtimeAuthorization(started.descriptor),
-          );
+          await test.step("Retain the webview and cancel resizing before leaving fullscreen", () =>
+            verifyPackagedWebviewRetention(page));
+          await test.step("Show assigned keyboard shortcuts", () =>
+            verifyPackagedShortcutReference(
+              page,
+              started.baseUrl,
+              project.id,
+              runtimeAuthorization(started.descriptor),
+            ));
 
           await page.getByRole("option", { name: "Settings", exact: true }).click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
@@ -188,21 +191,20 @@ test.describe("packaged extension webviews", () => {
           await expect(frame.getByText("8", { exact: true })).toBeVisible();
 
           if (browserCase.name === "Chromium") {
-            await verifyPackagedTerminal(page, started.baseUrl, project.id, started.descriptor.token);
-            await verifyPackagedSessionMenus(
-              page,
-              started.baseUrl,
-              project.id,
-              runtimeAuthorization(started.descriptor),
-            );
-            await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
-            await verifyPackagedCollectionBreadcrumb(
-              page,
-              started.baseUrl,
-              project.id,
-              projectFolder,
-              runtimeAuthorization(started.descriptor),
-            );
+            await test.step("Move and retain a live terminal", () =>
+              verifyPackagedTerminal(page, started.baseUrl, project.id, started.descriptor.token));
+            await test.step("Float, restore and reopen session panels", () =>
+              verifyPackagedSessionMenus(page, started.baseUrl, project.id, runtimeAuthorization(started.descriptor)));
+            await test.step("Reset page panels and preserve their tabs", () =>
+              verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id));
+            await test.step("Keep a collection breadcrumb when opening an artifact", () =>
+              verifyPackagedCollectionBreadcrumb(
+                page,
+                started.baseUrl,
+                project.id,
+                projectFolder,
+                runtimeAuthorization(started.descriptor),
+              ));
             await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
             const sidenav = page.locator('[data-workbench-region="sidenav"]');
             await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));

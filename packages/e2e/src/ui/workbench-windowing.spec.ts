@@ -17,6 +17,7 @@ import { exerciseWebview } from "./webview-playwright";
 import { windowingInteractions } from "./workbench-windowing-interactions";
 
 const storyIds = [
+  "drag-close-fullscreen-cancel",
   "fullscreen-attached",
   "fullscreen-floating",
   "fullscreen-empty-open",
@@ -104,6 +105,11 @@ const storyIds = [
   "removed-owner-forbidden-reopen",
   "foreign-context",
   "page-availability",
+  "drag-close-page-bottom",
+  "drag-close-side",
+  "drag-close-page-side",
+  "drag-close-secondary",
+  "drag-fixed-panel",
 ].map((name) => `pstdio-workbench-guides-windowing--${name}`);
 storyIds.push(
   ...[

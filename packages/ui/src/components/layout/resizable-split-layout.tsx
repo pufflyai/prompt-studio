@@ -69,6 +69,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const [panelSize, setPanelSize] = useState(defaultSizePx);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [closing, setClosing] = useState(false);
   const collapsed = controlledCollapsed ?? internalCollapsed;
   const bounds = resolveResizableBounds({
     rootSize,
@@ -143,6 +144,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     commitPanelSize,
     setCollapsed,
     setDragging,
+    setClosing,
   });
 
   const handleCollapse = () => {
@@ -169,12 +171,14 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       style={sizeStyle}
       data-collapsed={collapsed}
       data-dragging={dragging}
+      data-closing={closing}
     >
       <ResizableSplitPanels
         styles={styles}
         axis={axis}
         bounds={bounds}
         collapsed={collapsed}
+        closing={closing}
         collapsible={collapsible}
         resizable={resizable && bounds.minSize < bounds.maxSize}
         contentPanel={contentPanel}
