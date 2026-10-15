@@ -7,6 +7,7 @@ Prompt Studio is a workbench where people and agents build and use tools through
 - [Install Prompt Studio](getting-started/0001-install.md)
 - [Set up repository development](development/0001-setup.md)
 - [Run tests and validate changes](development/0002-testing.md)
+- [Build and smoke-test the relay](development/0006-relay.md)
 - [Write an extension](extensions/0001-authoring.md)
 - [Look up SDK methods](../references/sdk/0003-api.md)
 - [Check lessons when stuck](../lessons-learned)

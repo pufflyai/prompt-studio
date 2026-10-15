@@ -1,0 +1,17 @@
+{
+  "name": "pstdio-relay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/server.ts --target bun --outdir dist",
+    "start": "bun ./dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run typecheck && biome check .",
+    "test": "bun test src",
+    "test:isolated": "bun scripts/test-isolated.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "typescript": "6.0.2"
+  }
+}
