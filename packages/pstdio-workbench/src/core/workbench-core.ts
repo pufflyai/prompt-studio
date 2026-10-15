@@ -42,7 +42,6 @@ import { createCommandPaletteResourceRegistry } from "./registries/command-palet
 import { createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
-import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
@@ -64,6 +63,7 @@ import {
   activeWorkbenchResource,
   connectWorkbenchCoreState,
   createCoreCompositionController,
+  disposeWorkbenchCore,
   primaryWorkbenchResource,
 } from "./workbench-core-connections";
 import { navigateCoreMode } from "./workbench-core-modes";
@@ -99,12 +99,6 @@ const createPageLocations = (
         requested ? { ...requested, resource: location.resource } : { ...pageLocationTarget(location), open },
       ]),
   });
-
-const disposeLayoutPersistence = (persistence: LayoutPersistenceAdapter | undefined) => {
-  // Save pending writes before the adapter releases its resources.
-  persistence?.flush?.();
-  persistence?.dispose?.();
-};
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const context = createContextKeyService();
@@ -294,11 +288,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       return activeWorkbenchResource(core);
     },
 
-    async dispose() {
-      fullscreen.dispose();
-      disposeLayoutPersistence(layoutCache.layout);
-      await Promise.all([views.reads.dispose(), core.terminal.dispose()]);
-    },
+    dispose: () => disposeWorkbenchCore(core, layoutCache.layout),
 
     onDidChangeActiveResource(listener) {
       return createDisposable(

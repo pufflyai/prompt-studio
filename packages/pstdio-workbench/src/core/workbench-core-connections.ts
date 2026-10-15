@@ -1,6 +1,7 @@
 import { createWorkbenchCompositionController } from "./controllers/composition/composition-controller";
 import { createOwnedAddablePanels } from "./controllers/composition/owned-addable-panels";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
+import type { LayoutPersistenceAdapter } from "./registries/layout/layout-model-types";
 import { workbenchViewIdContextKey } from "./registries/views/view-registry";
 import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
@@ -47,6 +48,14 @@ export const connectWorkbenchCoreState = (core: WorkbenchCore, input: createWork
     isInScope: input.isInScope ?? createScopedIsInScope(core.resources),
   });
   registerWorkbenchBuiltIns(core);
+};
+
+export const disposeWorkbenchCore = async (core: WorkbenchCore, persistence: LayoutPersistenceAdapter | undefined) => {
+  core.fullscreen.dispose();
+  // Save pending writes before the adapter releases its resources.
+  persistence?.flush?.();
+  persistence?.dispose?.();
+  await Promise.all([core.views.reads.dispose(), core.terminal.dispose()]);
 };
 
 export const activeWorkbenchResource = (core: WorkbenchCore) => {
