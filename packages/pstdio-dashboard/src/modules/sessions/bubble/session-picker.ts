@@ -4,6 +4,7 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardSessions } from "../data/dashboard-sessions";
 import { subscribeSessionListData } from "../data/session-data-subscription";
+import { createSessionIndicator } from "../session-indicator";
 
 export const registerSessionPicker = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
@@ -26,7 +27,12 @@ export const registerSessionPicker = (ctx: WorkbenchModuleContext) => {
             placeholder: "Search sessions",
             subscribe: subscribeSessionListData,
             // Sessions are already synced. Palette virtualizes rows, so long histories render on demand.
-            list: () => createDashboardSessions(projectId).map(({ resource }) => ({ resource, activate })),
+            list: () =>
+              createDashboardSessions(projectId).map(({ resource, status }) => ({
+                resource,
+                indicator: createSessionIndicator(status),
+                activate,
+              })),
           },
         });
       },

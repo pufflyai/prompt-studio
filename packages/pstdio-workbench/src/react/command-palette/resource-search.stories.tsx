@@ -51,3 +51,32 @@ export const FullHistory: StoryObj<typeof meta> = {
 export const Empty: StoryObj<typeof meta> = {
   args: { request: { label: "Switch session", placeholder: "Search sessions", list: () => [] } },
 };
+
+export const StatusIndicators: StoryObj<typeof meta> = {
+  args: {
+    request: {
+      label: "Switch session",
+      placeholder: "Search sessions",
+      list: () =>
+        [
+          { label: "Running", icon: "LoaderCircle", color: "fg.info" },
+          { label: "Waiting for input", icon: "CircleDot", color: "fg.warning" },
+          { label: "Queued", icon: "ClockAlert", color: "fg.info" },
+          { label: "Completed", icon: "CircleCheck", color: "fg.success" },
+          { label: "Failed", icon: "CircleAlert", color: "fg.error" },
+          { label: "Cancelled", icon: "CircleStop", color: "fg.warning" },
+          { label: "Disconnected", icon: "CirclePause", color: "fg.warning" },
+          { label: "Unknown", icon: "CircleDashed", color: "fg.muted" },
+        ].map(({ label, icon, color }) => ({
+          resource: { type: "session", id: label, label: `${label} session`, icon: "MessageCircle" },
+          indicator: { icon, color, label: `Session status: ${label}` },
+          activate() {},
+        })),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "Switch session" });
+    await expect(within(dialog).getByRole("img", { name: "Session status: Completed" })).toBeVisible();
+    await expect(within(dialog).getByRole("img", { name: "Session status: Failed" })).toBeVisible();
+  },
+};

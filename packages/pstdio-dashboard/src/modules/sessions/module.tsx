@@ -28,6 +28,7 @@ import { createSessionTabPresentation } from "./bubble/session-tab-presentation"
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { openResourceSessionPreview } from "./session-auto-open";
+import { createSessionIndicator } from "./session-indicator";
 import { registerSessionResourceActions } from "./session-resource-actions";
 import { registerSessionResourceSync } from "./session-resource-sync";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
@@ -265,8 +266,9 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         id: "dashboard-workbench.sessions",
         kind: "session",
         list: () =>
-          createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource }) => ({
+          createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource, status }) => ({
             resource,
+            indicator: createSessionIndicator(status),
             group: "Sessions",
             activate: () =>
               ctx.navigation.openTarget({
