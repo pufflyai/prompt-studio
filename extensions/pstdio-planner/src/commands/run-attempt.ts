@@ -18,6 +18,7 @@ import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness } from "./attempt-readiness";
+import { adoptDraftWorkspace } from "./attempt-workspace";
 import { prepareDependencyBase } from "./dependency-base";
 import {
   createAnchoredWorkspace,
@@ -45,6 +46,7 @@ export async function startAttempt(
   options: {
     beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
     dependencyReview?: "approved" | "submitted";
+    workspaceId?: string;
   } = {},
 ) {
   const { agent } = commandParams;
@@ -80,14 +82,13 @@ export async function startAttempt(
     throw new Error(message);
   }
   const dependencyBase = await prepareDependencyBase(ctx, readiness);
-  const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
-    ctx,
-    commandParams,
-    dependencyBase.headSha,
-    async () => {
-      await options.beforeDispatch?.(readiness.baseHeadSha);
-    },
-  );
+  const beforeDispatch = async () => options.beforeDispatch?.(readiness.baseHeadSha);
+  const { anchor, mode, ticket, workspace, headSha } = options.workspaceId
+    ? await adoptDraftWorkspace(ctx, ticketRef, options.workspaceId, beforeDispatch)
+    : {
+        ...(await createAnchoredWorkspace(ctx, commandParams, dependencyBase.headSha, beforeDispatch)),
+        headSha: dependencyBase.headSha,
+      };
   const attemptAnchor: ResourceAnchor = {
     type: "planner-attempt",
     id: workspace.id,
@@ -110,7 +111,12 @@ export async function startAttempt(
         ticket: anchor.label ?? ticketIdentity.shorthand,
         workspaceId: workspace.id,
       }),
-      ...(readiness.mode === "stacked"
+      ...(options.workspaceId
+        ? [
+            `Continue the existing draft in this workspace on its assigned branch. Its current HEAD is ${headSha}; its required dependency base is ${dependencyBase.headSha}. Preserve all uncommitted work. Commit the draft first, then run update-stack with your implementation session ID and the exact current HEAD before continuing. Validate the integration before submitting. The delivery target for this work is ${typeof chosenBase === "string" ? chosenBase : dependencyBase.headSha}.`,
+          ]
+        : []),
+      ...(!options.workspaceId && readiness.mode === "stacked"
         ? [
             `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request human review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
           ]
@@ -144,7 +150,7 @@ export async function startAttempt(
     reportId: null,
     reviewId: null,
     threadId: null,
-    commitSha: dependencyBase.headSha,
+    commitSha: headSha,
     metadata: { mode: readiness.mode, dependencyAttemptIds: readiness.dependencyAttemptIds },
   });
   // A short session can finish before its attempt is saved and miss the completion hook.

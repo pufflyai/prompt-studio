@@ -163,5 +163,36 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     } finally {
       await rename(`${path}.missing`, path);
     }
+    git(folder, "branch", "feature/acceptance", updated.headSha);
+    const draftTicket = await execute("create-ticket", { content: "# Continue a feature draft", status: "Todo" });
+    const draft = await execute("create-workspace", {
+      ticket: draftTicket.id,
+      provider_id: "pstdio.worktree",
+      params: { base: original },
+    });
+    const draftPath = draft.workspace.root_path;
+    const draftHead = git(draftPath, "rev-parse", "HEAD");
+    await Bun.write(join(draftPath, "draft.ts"), "export const preserved = true;\n");
+    git(draftPath, "add", "draft.ts");
+    const status = git(draftPath, "status", "--porcelain");
+    const mode = await execute("auto-build.configure", { enabled: true, prompt: "Continue the feature draft." });
+    try {
+      const feature = await execute("next-tickets", { base: "feature/acceptance" });
+      expect(feature.tickets).toContainEqual(
+        expect.objectContaining({ id: draftTicket.id, baseHeadSha: updated.headSha }),
+      );
+      const adopted = await execute("auto-build.dispatch", {
+        ticket: draftTicket.id,
+        revision: mode.revision,
+        base: "feature/acceptance",
+        workspaceId: draft.workspace.id,
+      });
+      expect(adopted).toMatchObject({ decision: "started", workspaceId: draft.workspace.id });
+      await stop(adopted.sessionId);
+      expect(git(draftPath, "rev-parse", "HEAD")).toBe(draftHead);
+      expect(git(draftPath, "status", "--porcelain")).toBe(status);
+    } finally {
+      await execute("auto-build.configure", { enabled: false });
+    }
   }
 }

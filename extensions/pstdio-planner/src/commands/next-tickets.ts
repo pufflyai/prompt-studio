@@ -46,7 +46,7 @@ async function appendStackRepair(
 export async function readNextTickets(
   ctx: CommandContext,
   mode: AutoBuildMode,
-  input: NextTicketQuery = {},
+  input: NextTicketQuery & { base?: string } = {},
   scope?: NextTicketQuery[],
 ) {
   const [plan, attempts, tickets, resumptions, capacity, assignments, requests] = await Promise.all([
@@ -78,7 +78,7 @@ export async function readNextTickets(
   );
   const next: NextTicket[] = [];
   const waiting: WaitingTicket[] = [];
-  let base: string | undefined;
+  let base = input.base;
   for (const row of selected) {
     const summary = { id: row.id, ticket: row.shorthand, title: row.title };
     const pending = findPendingPrerequisites(byRef.get(row.id)!, byRef, requests);
@@ -98,9 +98,12 @@ export async function readNextTickets(
       waiting.push({ ...summary, ...wait });
       continue;
     }
-    base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
+    const resumption = resumptions.get(row.id);
+    const recordedBase =
+      resumption && attempts.find(({ workspaceId }) => workspaceId === resumption.workspaceId)?.base.headSha;
+    if (!recordedBase) base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
     const { readiness } = await loadAttemptReadiness(ctx, row.id, {
-      base,
+      base: recordedBase ?? base,
       dependencyReview: mode.blockOnReview ? "approved" : "submitted",
     });
     if (readiness.decision === "wait") {
@@ -131,7 +134,13 @@ export const nextTicketsCommand = defineCommand({
     description: "Query launchable tickets and waiting reasons using current Auto Build rules.",
     examples: ["pst tickets next --track Workbench", "pst tickets next --status Todo --tags High"],
   },
-  params: { track: params.text(), status: params.text(), tags: params.list(), parent: params.text() },
+  params: {
+    track: params.text(),
+    status: params.text(),
+    tags: params.list(),
+    parent: params.text(),
+    base: params.text({ label: "Root target branch" }),
+  },
   async run(ctx, input) {
     const mode = await readAutoBuildMode(ctx);
     const { tickets, waiting, capacity } = await readNextTickets(ctx, mode, input);

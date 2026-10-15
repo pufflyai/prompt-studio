@@ -117,7 +117,7 @@ const ticketTemplateVars = (ticket: string, template: string | undefined) => ({
 export const harnessInput = (agent: { harnessId: string; model?: string } | undefined) =>
   agent ? { harness: agent } : {};
 
-const requireReadyWorkspace = async (ctx: Pick<CommandContext, "workspaces">, workspace: ExtensionWorkspace) => {
+export const requireReadyWorkspace = async (ctx: Pick<CommandContext, "workspaces">, workspace: ExtensionWorkspace) => {
   if (workspace.setup_error) throw new Error(workspace.setup_error);
   if (workspace.provider_state && workspace.provider_state !== "ready") {
     const result = await ctx.workspaces.resolve(workspace.id);

@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Verify merged dependency replacements and isolate missing workspaces during Planner dispatch.
+Repair dependency delivery checks and preserve feature-branch drafts during Planner dispatch.
