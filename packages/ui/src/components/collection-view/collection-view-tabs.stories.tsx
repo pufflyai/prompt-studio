@@ -144,3 +144,17 @@ export const ManyViews: Story = {
     await expect(canvas.getByRole("button", { name: "Add view" })).toBeVisible();
   },
 };
+
+export const FullTitle: Story = {
+  render: () => <CrowdedTabs />,
+  play: async ({ canvasElement }) => {
+    const tab = within(canvasElement).getByRole("tab", { name: "Team view 1", exact: true });
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.hover(tab);
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Team view 1");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.unhover(tab);
+    tab.focus();
+    await expect(await page.findByRole("tooltip")).toHaveTextContent("Team view 1");
+  },
+};

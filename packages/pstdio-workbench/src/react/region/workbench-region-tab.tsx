@@ -1,5 +1,5 @@
-import { Box, CloseButton, Tabs, Text } from "@chakra-ui/react";
-import { DropIndicator } from "@pstdio/ui";
+import { Box, CloseButton, Tabs, Text, useTabsContext } from "@chakra-ui/react";
+import { DropIndicator, Tooltip } from "@pstdio/ui";
 import { WorkbenchIcon } from "../shared/icon";
 import { RegionTabMenu } from "./region-tab-menu";
 import { resolveTabIconName } from "./region-tabs-visibility";
@@ -22,6 +22,7 @@ const TabIcon = (props: { indicator?: import("../../core").WorkbenchTabSnapshot[
 
 export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const { workbench, placement, activeWidgetId, disabled = false, sortable = false } = props;
+  const tabs = useTabsContext();
   const behavior = useRegionTab(props);
   const { snapshot, drag, target, drop } = behavior;
   const label = snapshot.label ?? placement.resource?.label ?? placement.title ?? placement.contributionId;
@@ -49,61 +50,63 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         maxW="fit-content"
         className="group"
       >
-        <Tabs.Trigger
-          value={placement.widgetId}
-          title={label}
-          aria-labelledby={labelId}
-          disabled={disabled}
-          aria-haspopup="menu"
-          aria-expanded={behavior.open}
-          aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight Shift+F10" : "Shift+F10"}
-          fontStyle={placement.tabRetention === "preview" ? "italic" : undefined}
-          opacity={drag.isDragging ? 0.5 : undefined}
-          w="full"
-          {...drag.listeners}
-          onKeyDown={behavior.onKeyDown}
-          onContextMenu={behavior.onContextMenu}
-          onPointerDown={behavior.onPointerDown}
-          onPointerMove={behavior.onPointerMove}
-          onPointerUp={behavior.onPointerUp}
-          onPointerCancel={behavior.onPointerCancel}
-          onClickCapture={behavior.onClick}
-        >
-          <TabIcon indicator={snapshot.indicator} icon={icon} />
-          <Text as="span" id={labelId} data-tab-label>
-            {label}
-          </Text>
-          {placement.closable ? (
-            <CloseButton
-              as="span"
-              role="button"
-              aria-label={`Close ${label}`}
-              aria-disabled={disabled}
-              data-tab-close
-              size="2xs"
-              boxSize="4"
-              minW="4"
-              p="0"
-              borderRadius="2xs"
-              flexShrink={0}
-              me="-1"
-              opacity={active ? 1 : 0}
-              pointerEvents={active ? "auto" : "none"}
-              color="fg.muted"
-              _groupHover={{ opacity: 1, pointerEvents: "auto" }}
-              _groupFocusWithin={{ opacity: 1, pointerEvents: "auto" }}
-              onPointerDown={(event) => event.stopPropagation()}
-              onMouseDown={(event) => event.stopPropagation()}
-              onTouchStart={(event) => event.stopPropagation()}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (disabled) return;
-                if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
-                else workbench.layout.closePanel(placement.widgetId);
-              }}
-            />
-          ) : null}
-        </Tabs.Trigger>
+        <Tooltip content={label} openDelay={300} closeDelay={150} positioning={{ placement: "bottom" }}>
+          <Tabs.Trigger
+            id={tabs.getTriggerProps({ value: placement.widgetId }).id}
+            value={placement.widgetId}
+            aria-labelledby={labelId}
+            disabled={disabled}
+            aria-haspopup="menu"
+            aria-expanded={behavior.open}
+            aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight Shift+F10" : "Shift+F10"}
+            fontStyle={placement.tabRetention === "preview" ? "italic" : undefined}
+            opacity={drag.isDragging ? 0.5 : undefined}
+            w="full"
+            {...drag.listeners}
+            onKeyDown={behavior.onKeyDown}
+            onContextMenu={behavior.onContextMenu}
+            onPointerDown={behavior.onPointerDown}
+            onPointerMove={behavior.onPointerMove}
+            onPointerUp={behavior.onPointerUp}
+            onPointerCancel={behavior.onPointerCancel}
+            onClickCapture={behavior.onClick}
+          >
+            <TabIcon indicator={snapshot.indicator} icon={icon} />
+            <Text as="span" id={labelId} data-tab-label>
+              {label}
+            </Text>
+            {placement.closable ? (
+              <CloseButton
+                as="span"
+                role="button"
+                aria-label={`Close ${label}`}
+                aria-disabled={disabled}
+                data-tab-close
+                size="2xs"
+                boxSize="4"
+                minW="4"
+                p="0"
+                borderRadius="2xs"
+                flexShrink={0}
+                me="-1"
+                opacity={active ? 1 : 0}
+                pointerEvents={active ? "auto" : "none"}
+                color="fg.muted"
+                _groupHover={{ opacity: 1, pointerEvents: "auto" }}
+                _groupFocusWithin={{ opacity: 1, pointerEvents: "auto" }}
+                onPointerDown={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onTouchStart={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (disabled) return;
+                  if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
+                  else workbench.layout.closePanel(placement.widgetId);
+                }}
+              />
+            ) : null}
+          </Tabs.Trigger>
+        </Tooltip>
         {drop ? (
           <DropIndicator
             orientation="vertical"

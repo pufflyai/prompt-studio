@@ -22,6 +22,9 @@ Runnable examples live in the workbench's Storybook stories under `packages/pstd
 
 ## Tabs
 
+Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
+The tooltip appears below the tab after 300 ms.
+
 When a panel menu shows an opener in the header, the panel also shows its tab,
 even for a single fixed panel. The tab keeps its existing close behavior.
 
