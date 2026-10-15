@@ -10,6 +10,14 @@ import {
 } from "./command-palette-params";
 
 describe("command palette params", () => {
+  test("prefills an owned rename label from the explicit resource without overriding input", () => {
+    const schema = { name: { type: "text", required: true } };
+    const mutation = { kind: "rename" as const, resourceType: "artifact", idParam: "artifactId", labelParam: "name" };
+    const context = { resource: { type: "artifact", id: "b", label: "Current B" } };
+    expect(buildCommandParamInitialValues(schema, undefined, context, mutation)).toEqual({ name: "Current B" });
+    expect(buildCommandParamInitialValues(schema, { name: "" }, context, mutation)).toEqual({ name: "" });
+    expect(buildCommandParamInitialValues(schema, { artifactId: "a" }, context, mutation)).toEqual({ name: "" });
+  });
   test("detects commands with declared params", () => {
     expect(hasCommandParameters(undefined)).toBe(false);
     expect(hasCommandParameters({})).toBe(false);

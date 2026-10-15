@@ -27,6 +27,14 @@ const metadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("buildWorkbenchExtensionMenuRegistrations", () => {
+  test("retains resource mutation semantics on contributed command aliases", () => {
+    const mutation = { kind: "rename" as const, resourceType: "note", idParam: "noteId", labelParam: "title" };
+    const result = buildWorkbenchExtensionMenuRegistrations({
+      metadata: { ...metadata, commands: [{ ...metadata.commands[0], resourceMutation: mutation }] },
+      menuSlotsById: new Map([["note.headerPrimary", { menuPath: ["header"] }]]),
+    });
+    expect(result.registrations[0]?.command.resourceMutation).toEqual(mutation);
+  });
   test("keeps each declaration's identity when another declaration is inserted", () => {
     const original = metadata.menuContributions[0];
     const build = (contributions: typeof metadata.menuContributions) =>
