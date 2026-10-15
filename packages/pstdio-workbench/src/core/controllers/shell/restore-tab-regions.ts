@@ -14,16 +14,21 @@ const restoredTabDestination = (
   source: WorkbenchPanelRegion,
   available: WorkbenchPanelRegion[],
 ) => {
-  if (!core.layout.getWidget(tab.contributionId)) return undefined;
+  const widget = core.layout.getWidget(tab.contributionId);
+  if (!widget) return undefined;
   const identity = tab.declarationIdentity ?? tab.placementIdentity;
   const declaration = identity && presetDeclaration(core, identity);
+  const authored = declaration?.region ?? widget.region;
   const movableTo =
     identity?.kind === "mode"
       ? core.modePlacements.listPlacements(identity.modeId).find((p) => p.id === identity.placementId)?.movableTo
       : undefined;
-  const allowed = available.filter((region) => !movableTo || movableTo.some((candidate) => candidate === region));
+  const allowed = available.filter(
+    (region) =>
+      (!movableTo || movableTo.some((candidate) => candidate === region)) &&
+      (authored === region || core.shell.getPanelPolicy(region).acceptsTabs),
+  );
   if (allowed.includes(source)) return undefined;
-  const authored = declaration?.region;
   return allowed.find((region) => region === authored) ?? allowed[0];
 };
 

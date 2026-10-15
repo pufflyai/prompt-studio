@@ -1,0 +1,69 @@
+import { expect, test } from "bun:test";
+import type { WorkbenchLayout } from "../../registries/layout/layout-types";
+import { createWorkbench } from "../../workbench-core";
+import { harness, navigate, openFile, panel, resource } from "../composition/placement-lifecycle-test-support";
+
+test("restore moves a tab out of a destination that no longer accepts moved tabs", async () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const first = harness(saved);
+  await first.navigation.openTarget(navigate("alpha"));
+  await first.navigation.openTarget(openFile("readme"));
+  const tab = first.layout.getLayout().regions.main.widgets[0]!;
+  first.movePanel(tab.widgetId, "side");
+  await first.dispose();
+  const restored = harness(saved, { regionSettings: { side: { acceptsTabs: false } } });
+  try {
+    await restored.navigation.openTarget(navigate("alpha"));
+    expect(restored.getPanelDestinations(tab.widgetId)).not.toContain("side");
+    expect(restored.layout.getLayout().regions.side.widgets.map((item) => item.widgetId)).not.toContain(tab.widgetId);
+    expect(restored.layout.getLayout().regions.main.widgets).toContainEqual(
+      expect.objectContaining({ widgetId: tab.widgetId, resource: tab.resource }),
+    );
+  } finally {
+    await restored.dispose();
+  }
+});
+
+test("restore retains content authored in a panel that refuses additional tabs", async () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const first = harness(saved);
+  await first.navigation.openTarget(navigate("alpha"));
+  await first.navigation.openTarget({ kind: "panel", panel, resource: resource("session") });
+  const tab = first.layout.getLayout().regions.side.widgets[0]!;
+  await first.dispose();
+  const restored = harness(saved, { regionSettings: { side: { acceptsTabs: false } } });
+  try {
+    await restored.navigation.openTarget(navigate("alpha"));
+    expect(restored.layout.getLayout().regions.side.widgets).toContainEqual(
+      expect.objectContaining({ widgetId: tab.widgetId, resource: tab.resource }),
+    );
+  } finally {
+    await restored.dispose();
+  }
+});
+
+test("restore retains a legacy panel's authored content when it refuses incoming tabs", async () => {
+  const core = createWorkbench({ regionSettings: { secondary: { acceptsTabs: false } } });
+  core.modes.registerMode({
+    id: "legacy",
+    panelHeaders: "legacy",
+    panels: ["main", "secondary"],
+    activate() {},
+  });
+  core.modes.setActiveMode("legacy");
+  core.layout.registerPanel({
+    id: "player",
+    title: "Player",
+    region: "secondary",
+    rendererId: "player",
+    singleton: true,
+    closable: false,
+  });
+  try {
+    core.layout.openWidget("player");
+    core.layout.restoreLayout(core.layout.getLayout());
+    expect(core.layout.getLayout().regions.secondary.widgets.map((tab) => tab.contributionId)).toEqual(["player"]);
+  } finally {
+    await core.dispose();
+  }
+});

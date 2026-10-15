@@ -3,9 +3,11 @@ import { modePlacementContributionId, pagePlacementContributionId } from "../../
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { openOwnerLayouts } from "../page-runtime/open-owner-layouts";
 import { resetOwnerScope } from "./reset-preset-bindings";
+import { createResetPresetNavigation } from "./reset-preset-navigation";
 
 export const resetMissingPresets = async (core: WorkbenchCore, owner: "page" | "mode") => {
   const scope = resetOwnerScope(core, owner);
+  const openPreset = createResetPresetNavigation(core, owner);
   const state = core.pages.store.getState();
   const page = state.activePageId ? state.pages[state.activePageId] : undefined;
   const pageDeclarations = page
@@ -37,6 +39,6 @@ export const resetMissingPresets = async (core: WorkbenchCore, owner: "page" | "
     const tool = core.composition
       .panelsFor(declaration.region as "main" | "side" | "secondary" | "aside" | "bottom")
       .addable.find((p) => p.panelId === declaration.panelId);
-    await tool?.open?.();
+    if (tool) await openPreset(declaration.item.binding.add);
   }
 };
