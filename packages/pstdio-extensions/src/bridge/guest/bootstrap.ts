@@ -116,23 +116,12 @@ const start = async () => {
     const host = createGuestHost((request) => connection.remote.call(request), subscribeHostEvent, message.extensionId);
     return await view.mount(ensureMount(), host, propsStore);
   });
-  let keyboardForwarderInstalled = false;
-
   const connection = await guest.connect({
     init: async (message: InitMessage) => {
       try {
         applyTheme(message.theme, message.themeVariables);
         propsStore.set(message.props);
         await viewLifecycle.initialize(message);
-
-        if (!keyboardForwarderInstalled) {
-          keyboardForwarderInstalled = true;
-          installGuestKeyboardForwarder(
-            document,
-            (params) => connection.remote.call({ method: "host.dispatchKeyboardEvent", params }),
-            isEditableTarget,
-          );
-        }
       } catch (error) {
         const payload = normalizeRuntimeError(error);
         connection.remote.runtimeError(payload);
@@ -150,6 +139,11 @@ const start = async () => {
     },
   } satisfies HostApi);
 
+  installGuestKeyboardForwarder(
+    document,
+    (params) => connection.remote.call({ method: "host.dispatchKeyboardEvent", params }),
+    isEditableTarget,
+  );
   connection.remote.ready({});
 
   window.addEventListener("beforeunload", () => {

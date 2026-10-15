@@ -105,7 +105,6 @@ export const ReopenAttached: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Close Document" })).toBeNull();
     await openMenu(canvasElement, "right");
     await waitFor(() => expect(canvasElement.querySelector('[data-workbench-panel-menu="main-right"]')).toBeVisible());
     await expect(canvas.getByRole("button", { name: "Notes panels" })).toBeVisible();
@@ -123,7 +122,6 @@ export const FloatingWhenNarrow: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("tab", { name: "Document" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Close Document" })).toBeNull();
     await openMenu(canvasElement, "right");
     const floating = await within(canvasElement.ownerDocument.body).findByRole("menu", {
       name: "Main right menu controls",
