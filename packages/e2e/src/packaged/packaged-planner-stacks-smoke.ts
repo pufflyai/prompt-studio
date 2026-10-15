@@ -168,7 +168,10 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
       expect(recovery.decision).toBe("started");
       expect(recovery.workspaceId).not.toBe(started.workspace.id);
       await stop(recovery.sessionId);
-      const recoveredWorkspace = await request(`/workspaces/${recovery.workspaceId}`);
+      const recoveredWorkspace = (await request(`/workspaces?project_id=${project.id}`)).find(
+        (workspace: { id: string }) => workspace.id === recovery.workspaceId,
+      );
+      expect(recoveredWorkspace).toBeDefined();
       expect(git(recoveredWorkspace.root_path, "show", "HEAD:child.ts")).toContain("true");
       expect((await execute("read-attempt-history", { workspaceId: started.workspace.id })).attempt.state).toBe(
         "abandoned",
