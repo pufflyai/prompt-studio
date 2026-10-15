@@ -1,92 +1,39 @@
 ---
 user_prompt: "{{USER_PROMPT}}"
-status: "draft"
+status: "proposed"
 created: "{{CREATED_AT}}"
 ---
 
 # Product requirements
 
-## Summary
+<!-- Describe what the product does and why, not how it is built. Ask open questions in a review request on the ticket, not here. -->
 
-[What are we building, for whom, and why now?]
+[One or two sentences: what users can do, and who they are.]
 
-## Problem
+## Why
 
-[What user or business problem exists today? Include the current pain or missed opportunity.]
+[What is broken or missing today, and why it matters. At most three sentences.]
 
-## Goals
+## Scenarios
 
-- [Goal]
+### Scenario: [Title] (Priority: P1)
 
-## Non-goals
+> **Given** [state], **When** [action], **Then** [outcome]
 
-- [Out of scope item]
+Repeat the scenario section for each distinct behavior.
 
-## Overview
+## Rules
 
-[High-level description of the feature/system and how it should work.]
-
-## Concepts
-
-| Term   | Definition                              |
-| ------ | --------------------------------------- |
-| [Term] | [What this term means in this context.] |
-
-## Users
-
-| User / Segment | Need   | Current Workaround |
-| -------------- | ------ | ------------------ |
-| [User]         | [Need] | [Workaround]       |
-
-## Requirements
-
-### Functional requirements
-
-[List each testable requirement.]
-
-### UX requirements
-
-- [Interaction, content, accessibility, or platform requirement]
-
-### Operational requirements
-
-- [Logging, rollout, support, compliance, or analytics requirement]
-
-## Behavior
-
-[Describe the successful user flow in order.]
+- [A rule that must always hold, written so a test can check it]
 
 ## Interface
 
-[Describe the public interface: API endpoints, CLI commands, function signatures, component props, events, or request/response formats.]
-
-### Example
+<!-- Only for features that people or extensions call directly. Delete this section otherwise. -->
 
 ```text
-[Example usage or request/response]
+[CLI command, API request and response, or event, with a short example]
 ```
 
-## Success measures
+## Not doing
 
-| Metric   | Baseline  | Target | How It Is Measured |
-| -------- | --------- | ------ | ------------------ |
-| [Metric] | [Current] | [Goal] | [Method]           |
-
-## Rules and constraints
-
-- [Rule or invariant that must hold.]
-- [Constraint or limitation.]
-
-## Errors
-
-| Error             | Cause                     |
-| ----------------- | ------------------------- |
-| `"Error message"` | [When this error occurs.] |
-
-## Risks and open questions
-
-- [Risk or unresolved question]
-
-## Rollout plan
-
-[List milestones or phases in order.]
+- [What these requirements leave out]

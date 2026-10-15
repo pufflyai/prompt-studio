@@ -16,6 +16,7 @@ interface GraphCardProps {
   relation?: Relation;
   dropBefore: boolean;
   onSelect: (id: string) => void;
+  onOpenRequests?: (row: PlanRow) => void;
   onDragStart: (id: string) => void;
   onDragOver: () => void;
   onDrop: () => void;
@@ -65,7 +66,11 @@ export function GraphCard(props: GraphCardProps) {
         isSelected={relation === "selected"}
         customSlots={[
           <StatusIcon key="status" row={row} />,
-          <ReviewStatusIcon key="review" row={row} />,
+          <ReviewStatusIcon
+            key="review"
+            row={row}
+            onOpen={actions.onOpenRequests ? () => actions.onOpenRequests?.(row) : undefined}
+          />,
           row.gate ? <GateMark key="gate" /> : null,
         ]}
         onClick={() => actions.onSelect(row.id)}

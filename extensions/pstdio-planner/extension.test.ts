@@ -265,7 +265,7 @@ describe("pstdio planner workspace contributions", () => {
       viewMode: "board",
       columnGrouping: "status",
       ordering: { attributeId: "created", direction: "desc" },
-      displayProperties: ["id", "workspace", "type", "priority"],
+      displayProperties: ["id", "workspace", "type", "priority", "needsAttention"],
     });
     expect(tickets.body.onColumnAction).toBeFunction();
     expect(tickets.body.onRowActivate).toBeFunction();

@@ -53,6 +53,7 @@ The ticket page has three parts: the ticket's sidebar, the editor, and the Prope
 The sidebar lists, from top to bottom:
 
 - The ticket itself. Select it to edit the ticket's description.
+- **Review requests** appears when the ticket has review requests. It shows how many are open. Select it to answer them while the sidebar stays visible. See [Review requests](0006-review-requests.md).
 - The **Files** section lists extra Markdown files that belong to the ticket, and its image attachments. Choose **New file** to add a file. Right-click a file to rename or delete it. Images open in a read-only preview.
 - The **Sub-tickets** section appears when the ticket has sub-tickets.
 - The **Workspaces** section lists the project workspace and every workspace linked to the ticket. Choose **Create workspace** to add one. See [Attempts](0002-attempts.md#workspaces-on-a-ticket).

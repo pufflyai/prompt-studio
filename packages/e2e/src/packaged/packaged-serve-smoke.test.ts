@@ -20,7 +20,7 @@ import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-ext
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
-// ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
+// ticket cleanup/merge settings, image save/pull round trips, saved document links with file ancestry, and ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
@@ -44,7 +44,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
-// Planner checks dependency-only blockers, empty CLI clears, request-owned indicators, and protected tag edits.
+// Planner checks dependency-only blockers, empty CLI clears, linked review counts and resolved colors, and protected tag edits.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 // Timeline coverage checks Auto Build scope, short wakes, managed status, and owner reconciliation of Done dependency branches, including Git conflicts.
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";

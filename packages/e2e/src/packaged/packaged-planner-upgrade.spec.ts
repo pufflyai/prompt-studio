@@ -17,13 +17,13 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { buildBinary, runPackaged } from "./packaged-helpers";
+import { preparePlannerSource } from "./packaged-planner-source";
 import {
   ACTIVE_CONFLICTS,
   ARCHIVED_CONFLICTS,
   type Execute,
   plannerCommands,
   seedTrackProject,
-  timelinePlannerSource,
   writePreTimelinePlanner,
 } from "./packaged-planner-upgrade-fixture";
 import {
@@ -148,9 +148,14 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
   const home = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-upgrade-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
+  const runtimeOutput: string[] = [];
   try {
     const started = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" });
     child = started.child;
+    child.stderr?.on("data", (chunk) => {
+      runtimeOutput.push(String(chunk));
+      if (runtimeOutput.length > 100) runtimeOutput.shift();
+    });
     const host = { baseUrl: started.baseUrl, descriptor: started.descriptor, home };
     writePreTimelinePlanner(join(home, "fixtures", "planner-before-timeline"));
     const conflicting = await createProject(host, "conflicting-track");
@@ -163,7 +168,8 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     expect(await plannerWebview(host, valid.id, "timeline")).toBeUndefined();
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
-    installPlanner(host, conflicting.folder, timelinePlannerSource, true);
+    const currentPlanner = await preparePlannerSource(join(home, "fixtures", "current-planner"));
+    installPlanner(host, conflicting.folder, currentPlanner, true);
 
     // A valid Track cannot hide a missing module behind a schema error.
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
@@ -281,6 +287,10 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     writeFileSync(entry, original);
     await reloadPlanner(host, valid.id);
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
+  } catch (error) {
+    console.error(`Planner upgrade runtime: exit=${child?.exitCode}, signal=${child?.signalCode}`);
+    console.error(runtimeOutput.join("").slice(-12000));
+    throw error;
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

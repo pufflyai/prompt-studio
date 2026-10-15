@@ -11,35 +11,19 @@ blocked_reason: ""
 
 [What this ticket accomplishes, in one paragraph.]
 
-## References
-
-[Link to relevant docs when available. If none exist, note the gap.]
-
-- [Reference link or note]
-
 ## Scope
 
-### In scope
+- **In**: [Included work]
+- **Out**: [Excluded work]
 
-- [Included work]
-- [Tests required to validate work (or explicitly "none")]
-- [Documentation updates required or explicitly none]
+## Approach
 
-### Out of scope
+<!-- Add a code snippet only when the snippet is the decision. -->
 
-- [Explicitly excluded work]
+- `[path/to/file]`: [What changes and why]
+- [Related docs, tickets, or ADRs]
 
-## Implementation notes
+## Done when
 
-[Describe the approach, key files/modules, assumptions, and include code snippets.]
-
-- [Key files/modules to touch]
-- [Assumptions or gaps]
-
-```ts
-[Insert relevant planned code changes.]
-```
-
-## Documentation
-
-[Describe documentation updates required or state "No documentation updates required."]
+- [ ] [The tests or checks that prove the work]
+- [ ] [Documentation to update, or "No documentation changes"]

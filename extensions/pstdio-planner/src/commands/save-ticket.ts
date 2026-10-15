@@ -17,20 +17,21 @@ import {
 import { assertSingleSelectTagIds } from "../data/tag-cardinality";
 import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
 import { validateTicketFileName } from "../data/ticket-file-name";
+import { writeTicketImageCheckout } from "../data/ticket-image-checkout";
+import { isImagePath, saveTicketImages } from "../data/ticket-images";
 import type { StoredTicket, StoredTicketFile } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
 
-// Reads the local `files/` directory back into stored ticket files, preserving a
+// Reads the local text files back into stored ticket files, preserving a
 // file's id across saves when its name is unchanged.
-const readTicketFiles = async (projectFiles: ArtifactMount, ticket: StoredTicket) => {
+const readTicketFiles = async (projectFiles: ArtifactMount, ticket: StoredTicket, paths: string[]) => {
   const now = new Date().toISOString();
   const previous = new Map((ticket.files ?? []).map((file) => [file.name, file]));
-  const entries = await projectFiles.list(ticketFilesPattern(ticket.shorthand));
 
   return Promise.all(
-    entries.map(async (entry): Promise<StoredTicketFile> => {
-      const name = validateTicketFileName(fileNameFromPath(ticket.shorthand, entry.path));
-      const content = await projectFiles.readText(entry.path);
+    paths.map(async (path): Promise<StoredTicketFile> => {
+      const name = validateTicketFileName(fileNameFromPath(ticket.shorthand, path));
+      const content = await projectFiles.readText(path);
       const existing = previous.get(name);
       return existing
         ? { ...existing, content, updatedAt: now }
@@ -87,7 +88,13 @@ export const saveTicketCommand = defineCommand({
       frontmatter.parentShorthand !== undefined
         ? await resolveTicketId(ctx.storage, frontmatter.parentShorthand)
         : ticket.parentId;
-    const files = await readTicketFiles(projectFiles, ticket);
+    const paths = (await projectFiles.list(ticketFilesPattern(ticket.shorthand))).map((entry) => entry.path);
+    const files = await readTicketFiles(
+      projectFiles,
+      ticket,
+      paths.filter((path) => !isImagePath(path)),
+    );
+    const images = await saveTicketImages(ctx.storage, projectFiles, ticket, paths.filter(isImagePath));
 
     const next: StoredTicket = {
       ...ticket,
@@ -97,6 +104,7 @@ export const saveTicketCommand = defineCommand({
       tagIds,
       parentId,
       files,
+      attachments: images.attachments,
       userPrompt: frontmatter.userPrompt ?? ticket.userPrompt ?? null,
       dependsOn,
       blockedReason: frontmatter.blockedReason ?? null,
@@ -104,6 +112,9 @@ export const saveTicketCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     await putTicket(ctx.storage, next);
+    await writeTicketImageCheckout(projectFiles, ticket.shorthand, images.checkout);
+    // Delete replaced images only after the ticket stops pointing at them.
+    for (const id of images.replacedIds) await ctx.storage.files.delete(id);
 
     return { shorthand: ticket.shorthand, files: files.length };
   },
