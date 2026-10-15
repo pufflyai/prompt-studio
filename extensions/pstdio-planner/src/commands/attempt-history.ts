@@ -15,6 +15,7 @@ import {
 import type { ReviewComment } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
 import { readReviewRequest } from "../data/review-request-storage";
+import { withWriteGuard } from "../data/write-guard";
 
 export const readAttemptHistoryCommand = defineCommand({
   id: "read-attempt-history",
@@ -155,42 +156,47 @@ export const dismissReviewCommand = defineCommand({
     reason: params.longText({ required: true }),
   },
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
-    const revision = attempt.revisions.find((candidate) =>
-      candidate.reviews.some((review) => review.id === commandParams.reviewId),
-    );
-    const review = revision?.reviews.find((candidate) => candidate.id === commandParams.reviewId);
-    if (!revision || !review) throw new Error(`Unknown review "${commandParams.reviewId}"`);
-    const nextRevision = {
-      ...revision,
-      reviews: revision.reviews.map((candidate) =>
-        candidate.id === review.id ? { ...candidate, state: "dismissed" as const } : candidate,
-      ),
-    };
-    const verdict = deriveRevisionVerdict(nextRevision);
-    let state: "review_ready" | "approved" | "changes_requested" = "review_ready";
-    if (verdict === "passed") state = "approved";
-    if (verdict === "changes_requested") state = "changes_requested";
-    const revisions = attempt.revisions.map((candidate) =>
-      candidate.revision === revision.revision ? nextRevision : candidate,
-    );
-    const next = await putAttempt(ctx.storage, { ...attempt, state, revisions, updatedAt: new Date().toISOString() });
-    await appendAttemptEvent(ctx.storage, {
-      workspaceId: attempt.workspaceId,
-      revision: revision.revision,
-      type: "review_dismissed",
-      actor: actorFromSource(ctx.source, ctx.invocationId),
-      sessionId: review.sessionId,
-      reportId: review.reportId,
-      reviewId: review.id,
-      threadId: null,
-      commitSha: review.reviewedHeadSha,
-      metadata: { reason: commandParams.reason },
+    return withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, async () => {
+      const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+      if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+      const revision = attempt.revisions.find((candidate) =>
+        candidate.reviews.some((review) => review.id === commandParams.reviewId),
+      );
+      const review = revision?.reviews.find((candidate) => candidate.id === commandParams.reviewId);
+      if (!revision || !review) throw new Error(`Unknown review "${commandParams.reviewId}"`);
+      const nextRevision = {
+        ...revision,
+        reviews: revision.reviews.map((candidate) =>
+          candidate.id === review.id ? { ...candidate, state: "dismissed" as const } : candidate,
+        ),
+      };
+      const currentRevision = attempt.revisions.at(-1)!;
+      const verdict = deriveRevisionVerdict(
+        currentRevision.revision === nextRevision.revision ? nextRevision : currentRevision,
+      );
+      let state: "review_ready" | "approved" | "changes_requested" = "review_ready";
+      if (verdict === "passed") state = "approved";
+      if (verdict === "changes_requested") state = "changes_requested";
+      const revisions = attempt.revisions.map((candidate) =>
+        candidate.revision === revision.revision ? nextRevision : candidate,
+      );
+      const next = await putAttempt(ctx.storage, { ...attempt, state, revisions, updatedAt: new Date().toISOString() });
+      await appendAttemptEvent(ctx.storage, {
+        workspaceId: attempt.workspaceId,
+        revision: revision.revision,
+        type: "review_dismissed",
+        actor: actorFromSource(ctx.source, ctx.invocationId),
+        sessionId: review.sessionId,
+        reportId: review.reportId,
+        reviewId: review.id,
+        threadId: null,
+        commitSha: review.reviewedHeadSha,
+        metadata: { reason: commandParams.reason },
+      });
+      await reviewLaunchClaimsCollection(ctx.storage).delete(`${attempt.workspaceId}:${revision.revision}`);
+      await rollUpAttemptTicket(ctx, attempt.ticketId);
+      return next;
     });
-    await reviewLaunchClaimsCollection(ctx.storage).delete(`${attempt.workspaceId}:${revision.revision}`);
-    await rollUpAttemptTicket(ctx, attempt.ticketId);
-    return next;
   },
 });
 

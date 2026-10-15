@@ -1,6 +1,7 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type HostStorage, HostStorageProvider } from "@pstdio/ui";
 import {
   type CollectionViewsSource,
   filterRowsByView,
@@ -8,7 +9,7 @@ import {
   useCollectionViewStore,
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { stepReview } from "../model/review";
 import { AutoBuildButton } from "./auto-build-button";
 import { AutoBuildDialog } from "./auto-build-dialog";
@@ -20,6 +21,7 @@ import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
 import { PlanUnavailable } from "./plan-unavailable";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
+import { createTimelineStorage } from "./timeline-storage";
 import { useAutoBuild } from "./use-auto-build";
 import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
@@ -35,11 +37,29 @@ export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
   const { client, plan, error } = usePlan(host);
   const { source: viewsSource, error: viewsError } = useTimelineViews(client);
-  const loadError = error ?? viewsError;
-  if (!plan && loadError) return <PlanUnavailable message={loadError} t={t} />;
-  if (!plan || !viewsSource) return <Text p="md">{t("timeline.loading", "Loading tickets…")}</Text>;
+  const [storage, setStorage] = useState<HostStorage>();
+  const [storageError, setStorageError] = useState<string>();
+  useEffect(() => {
+    let active = true;
+    const reportError = (reason: unknown) => {
+      if (active) setStorageError(String(reason));
+    };
+    void createTimelineStorage(host, reportError)
+      .then((next) => {
+        if (active) setStorage(next);
+      })
+      .catch(reportError);
+    return () => {
+      active = false;
+    };
+  }, [host]);
+  const loadError = error ?? viewsError ?? storageError;
+  if ((!plan || !viewsSource || !storage) && loadError) return <PlanUnavailable message={loadError} t={t} />;
+  if (!plan || !viewsSource || !storage) return <Text p="md">{t("timeline.loading", "Loading tickets…")}</Text>;
   return (
-    <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} error={error ?? viewsError} />
+    <HostStorageProvider storage={storage}>
+      <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} error={loadError} />
+    </HostStorageProvider>
   );
 }
 

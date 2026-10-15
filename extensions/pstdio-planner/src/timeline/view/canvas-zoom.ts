@@ -3,7 +3,14 @@ export const minimumZoom = 0.25;
 export const maximumZoom = 1;
 
 export function clampZoom(value: number) {
-  return Math.min(maximumZoom, Math.max(minimumZoom, Math.round(value * 100) / 100));
+  return Math.min(maximumZoom, Math.max(minimumZoom, value));
+}
+
+export interface ZoomOrigin {
+  zoom: number;
+  left: number;
+  top: number;
+  anchor: { x: number; y: number };
 }
 
 export function wheelZoom(zoom: number, delta: { y: number; mode: number; pageHeight: number }) {
@@ -20,11 +27,13 @@ export function zoomOffset(viewport: {
   from: number;
   to: number;
   anchor?: { x: number; y: number };
+  targetAnchor?: { x: number; y: number };
 }) {
   const ratio = viewport.to / viewport.from;
   const anchor = viewport.anchor ?? { x: viewport.width / 2, y: viewport.height / 2 };
+  const target = viewport.targetAnchor ?? anchor;
   return {
-    left: Math.max(0, (viewport.left + anchor.x) * ratio - anchor.x),
-    top: Math.max(0, (viewport.top + anchor.y) * ratio - anchor.y),
+    left: Math.max(0, (viewport.left + anchor.x) * ratio - target.x),
+    top: Math.max(0, (viewport.top + anchor.y) * ratio - target.y),
   };
 }

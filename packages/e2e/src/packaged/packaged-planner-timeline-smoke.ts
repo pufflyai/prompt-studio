@@ -1,5 +1,9 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { expectPackagedDependencyBlockers } from "./packaged-planner-blockers-smoke";
+import { expectPackagedDependencyStacks } from "./packaged-planner-stacks-smoke";
+import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
+import { expectBriefSupervisorWakes } from "./packaged-planner-wakes-smoke";
 
 // Run a Planner command through the packaged HTTP API and return its value.
 const commandRunner =
@@ -54,6 +58,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
+  await expectIndependentPlannerViews({ ...input, execute });
   // Empty ready work exercises the shipped action without starting real agents.
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
@@ -64,16 +69,24 @@ export async function expectPackagedPlannerTimeline(input: {
     blockOnReview: false,
   });
   expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
+  expect(await execute("next-tickets", {})).toMatchObject({ enabled: true, tickets: [], waiting: [] });
+  // An idle project without actionable work must not start a supervisor on repeated background checks.
+  for (let check = 0; check < 3; check++) expect(await execute("auto-build", {})).toEqual({ prompted: false });
   expect(await execute("auto-build.read", {})).toMatchObject({
     enabled: true,
     prompt: "Choose valid tasks.",
     blockOnReview: false,
     stuck: false,
+    supervisor: null,
   });
+  await expectScopedAutoBuild(execute);
   expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
     enabled: false,
   });
   expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  await expectPackagedDependencyBlockers({ ...input, execute });
+  await expectBriefSupervisorWakes(input);
+  await expectPackagedDependencyStacks(input);
   await expectImplementationStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
@@ -98,6 +111,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(plan.sections).toContainEqual(
     expect.objectContaining({
       deadline: expect.objectContaining({ id: deadline.id }),
+      eta: null,
       rows: expect.arrayContaining([expect.objectContaining({ id: result.ticket.id })]),
     }),
   );
@@ -143,6 +157,25 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 
 type Execute = ReturnType<typeof commandRunner>;
 const reviewNeeded = "default-human-requested-true";
+
+async function expectScopedAutoBuild(execute: Execute) {
+  const { revision } = await execute("auto-build.read", {});
+  expect(await execute("auto-build.scope", { revision, queries: [{ status: "Blocked" }] })).toMatchObject({
+    tickets: [],
+  });
+  const outside = await execute("create-ticket", {
+    content: "# Ready work outside the supervisor scope",
+    status: "Todo",
+  });
+  expect(await execute("next-tickets", {})).toMatchObject({ tickets: [], waiting: [] });
+  for (let check = 0; check < 3; check++) expect(await execute("auto-build", {})).toEqual({ prompted: false });
+  expect(await execute("auto-build.dispatch", { revision, ticket: outside.id })).toMatchObject({
+    decision: "wait",
+    reason: "ticket-not-ready",
+  });
+  expect(await execute("auto-build.read", {})).toMatchObject({ supervisor: null });
+  await execute("delete-ticket", { id: outside.id });
+}
 
 async function expectImplementationStatus(execute: Execute) {
   const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });

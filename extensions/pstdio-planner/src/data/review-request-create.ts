@@ -30,10 +30,13 @@ export const handoffRequest = {
   questions: [{ id: "result", label: "Decision and completed action", required: true, input: { kind: "text" } }],
 } as const;
 
-const readExpectedAttempt = async (ctx: CommandContext, input: CreateReviewRequestInput, ticketId: string) => {
-  if (!input.workspaceId || !input.expectedAttemptState) return null;
+const readHandoffAttempt = async (ctx: CommandContext, input: CreateReviewRequestInput, ticketId: string) => {
+  if (!input.workspaceId) return null;
   const attempt = await readAttempt(ctx.storage, input.workspaceId);
-  if (!attempt || attempt.ticketId !== ticketId || attempt.state !== input.expectedAttemptState) {
+  if (!attempt || attempt.ticketId !== ticketId) {
+    throw new Error("The workspace does not own this ticket handoff.");
+  }
+  if (input.expectedAttemptState !== undefined && attempt.state !== input.expectedAttemptState) {
     throw new Error("Attempt state changed before the handoff.");
   }
   if (input.revision !== undefined && attempt.revisions.at(-1)?.revision !== input.revision) {
@@ -98,7 +101,7 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
   if (input.expectedTicketStatusId !== undefined && ticket.statusId !== input.expectedTicketStatusId) {
     throw new Error("Ticket status changed before the handoff.");
   }
-  const attempt = await readExpectedAttempt(ctx, input, ticket.id);
+  const attempt = await readHandoffAttempt(ctx, input, ticket.id);
   const body = parseRequestBody(input.request);
   if (!input.title.trim() || !input.instructions.trim()) throw new Error("A title and instructions are required.");
 

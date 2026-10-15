@@ -44,11 +44,11 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
-// Planner checks request-owned indicators, protected generic tag edits, and the request page.
+// Planner checks dependency-only blockers, empty CLI clears, request-owned indicators, and protected tag edits.
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
+// Timeline coverage checks Auto Build scope, short wakes, managed status, and owner reconciliation of Done dependency branches, including Git conflicts.
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
-// Timeline coverage configures Auto build mode and checks implementation status in both Planner views.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
@@ -190,6 +190,7 @@ test(
           "extension-lab",
           "pstdio-artifacts",
           "pstdio-planner",
+          "pstdio-reports",
         ),
         // This check exercises metadata and commands; browser suites cover webview builds.
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
@@ -234,6 +235,33 @@ test(
         metadata,
       });
       expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "auto-build-resume.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "auto-build-candidates.ts")),
+      ).toBe(true);
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "next-tickets.ts"))).toBe(
+        true,
+      );
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "update-stack.ts"))).toBe(
+        true,
+      );
+      expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "stack-validation.ts"))).toBe(
+        true,
+      );
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "model", "milestone-eta.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "milestone-eta.tsx")),
+      ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-canvas-pan.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "timeline", "view", "use-canvas-zoom.ts")),
+      ).toBe(true);
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

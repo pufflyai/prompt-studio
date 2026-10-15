@@ -6,6 +6,7 @@ import { useState } from "react";
 import { isComplete } from "../model/filter";
 import { formatDay } from "./flags";
 import { InlineText } from "./inline-edit";
+import { MilestoneEta } from "./milestone-eta";
 import type { PlanViewProps, ViewSection } from "./plan-view";
 
 type Props = Pick<PlanViewProps, "onToggle" | "onDelete" | "onRenameDeadline" | "onReview"> & {
@@ -112,6 +113,7 @@ export function SectionHeader(props: Props) {
         </Tooltip>
       ) : null}
       <Box flex="1" minW="16px" h="1px" bg="border" mx="xs" />
+      {deadline ? <MilestoneEta eta={entry.section.eta} /> : null}
       <Progress entry={entry} />
       {deadline ? <DeleteButton deadlineId={deadline.id} label={label} onDelete={onDelete} /> : null}
     </Flex>

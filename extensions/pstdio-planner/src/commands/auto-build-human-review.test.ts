@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { listAttempts } from "../data/attempt-storage";
+import { listAttempts, putAttempt } from "../data/attempt-storage";
 import { putTicket } from "../data/collections";
 import { fixture } from "./auto-build.fixture";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
@@ -133,7 +133,7 @@ test("a resolved implementation waits until another running ticket frees a slot"
   });
   await reviewCommand.run(ctx, { requestId: request.id, response: { confirmed: true } });
   const other = await ticket("Running ticket");
-  await runAttemptCommand.run(ctx, { ticket: other.id });
+  const otherAttempt = await runAttemptCommand.run(ctx, { ticket: other.id });
   const followups: string[] = [];
   ctx.sessions.followup = async ({ sessionId }) => {
     followups.push(sessionId);
@@ -145,6 +145,7 @@ test("a resolved implementation waits until another running ticket frees a slot"
     reason: "capacity-full",
   });
   occupied = false;
+  await putAttempt(ctx.storage, { ...otherAttempt.attempt, state: "review_ready" });
   expect((await dispatchCandidates(ctx)).started).toEqual([first]);
   expect(followups).toEqual([first.sessionId]);
   expect(await listAttempts(ctx.storage)).toHaveLength(2);

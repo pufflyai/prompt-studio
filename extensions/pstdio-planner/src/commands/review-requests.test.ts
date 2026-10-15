@@ -351,7 +351,7 @@ describe("attempt handoffs", () => {
     expect(created).toHaveLength(0);
   });
 
-  test("an open request pauses attempt status updates even when its flag write was lost", async () => {
+  test("an open request marks the attempt ticket Blocked even when its flag write was lost", async () => {
     const { storage, context } = await setupAttempt();
     await requestHumanCommand.run(context("automation"), handoff as never);
     await putTicket(storage, { ...ticket("ps-1"), tagIds: [] });
@@ -360,6 +360,6 @@ describe("attempt handoffs", () => {
 
     await rollUpAttemptTicket(context(), "ps-1");
 
-    expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("in-review");
+    expect((await ticketsCollection(storage).get("ps-1"))?.statusId).toBe("blocked");
   });
 });

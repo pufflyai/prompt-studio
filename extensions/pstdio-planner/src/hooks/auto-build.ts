@@ -9,7 +9,9 @@ import {
   sessionEvents,
 } from "@pstdio/sdk/extensions";
 import { autoBuildCommand } from "../commands/auto-build";
+import { refreshAttemptTickets } from "../data/attempt-rollup";
 import { readAutoBuildMode } from "../data/auto-build-mode";
+import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withWriteGuard } from "../data/write-guard";
 import { plannerTicketsChanged } from "../events";
 import { planChanged } from "../timeline/contracts";
@@ -35,6 +37,7 @@ export const checkAutoBuildCommand = defineCommand({
   id: "auto-build.check",
   title: "Check Auto build",
   async run(ctx: CommandContext) {
+    await refreshAttemptTickets(ctx);
     await enqueueAutoBuild(ctx);
   },
 });
@@ -55,9 +58,18 @@ const checkAfter = <T extends object>(id: string, event: EventRef<T>) =>
     },
   });
 
+export const autoBuildSessionCompletedHook = defineHook({
+  id: "auto-build.session-completed",
+  event: sessionEvents.completed,
+  async run(ctx, { sessionId }) {
+    if ((await readAutoBuildSupervisor(ctx)).sessionId === sessionId) return;
+    await enqueueAutoBuild(ctx);
+  },
+});
+
 export const autoBuildHooks = [
   checkAfter("tickets-changed", plannerTicketsChanged),
   checkAfter("plan-changed", planChanged),
-  checkAfter("session-completed", sessionEvents.completed),
+  autoBuildSessionCompletedHook,
   checkAfter("project-opened", projectEvents.opened),
 ];

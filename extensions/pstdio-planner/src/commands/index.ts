@@ -15,6 +15,7 @@ import { autoBuildCommand } from "./auto-build";
 import { autoBuildCandidatesCommand } from "./auto-build-candidates";
 import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand, readAutoBuildCommand } from "./auto-build-mode";
+import { autoBuildScopeCommand } from "./auto-build-scope";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
@@ -32,6 +33,7 @@ import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
 import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
 import { newTicketCommand } from "./new-ticket";
+import { nextTicketsCommand } from "./next-tickets";
 import { openTicketsCommand } from "./open-tickets";
 import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
@@ -102,6 +104,7 @@ import {
   ticketWorktreesRemoveAllCommand,
 } from "./ticket-workspaces";
 import { unarchiveTicketCommand } from "./unarchive-ticket";
+import { updateStackCommand } from "./update-stack";
 import { updateTicketCommand } from "./update-ticket";
 import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
@@ -110,6 +113,7 @@ export const plannerCommands = [
   autoBuildCommand,
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,
+  autoBuildScopeCommand,
   configureAutoBuildCommand,
   readAutoBuildCommand,
   checkAutoBuildCommand,
@@ -155,6 +159,8 @@ export const plannerCommands = [
   queryTicketsCommand,
   readTicketsCommand,
   listTicketsCommand,
+  nextTicketsCommand,
+  updateStackCommand,
   createTicketCommand,
   newTicketCommand,
   attachTicketFileCommand,

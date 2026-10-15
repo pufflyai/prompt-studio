@@ -1,5 +1,5 @@
 // Bring a selected review card into view beyond scaled pinned dates, columns, and milestone headers.
-import { type RefObject, useEffect } from "react";
+import { type RefObject, useEffect, useEffectEvent } from "react";
 import { type geometry, gutterWidth, headerHeight, padding, trackHeaderHeight } from "./graph-geometry";
 
 export function useRevealCard(props: {
@@ -11,18 +11,20 @@ export function useRevealCard(props: {
   const { ref, selectedId, box, zoom } = props;
   const position = selectedId ? box.positions.get(selectedId) : undefined;
   const { x, y, width, height } = position ?? {};
+  const currentZoom = useEffectEvent(() => zoom);
   useEffect(() => {
     const viewport = ref.current;
     if (!selectedId || !viewport || x === undefined || y === undefined || width === undefined || height === undefined) {
       return;
     }
 
-    const left = Math.min(viewport.scrollLeft, (x - gutterWidth - padding) * zoom);
-    const top = Math.min(viewport.scrollTop, (y - headerHeight - padding) * zoom);
+    const scale = currentZoom();
+    const left = Math.min(viewport.scrollLeft, (x - gutterWidth - padding) * scale);
+    const top = Math.min(viewport.scrollTop, (y - headerHeight - padding) * scale);
     viewport.scrollTo({
-      left: Math.max(left, (x + width + padding) * zoom - viewport.clientWidth),
-      top: Math.max(top, (y + height + trackHeaderHeight + padding) * zoom - viewport.clientHeight),
+      left: Math.max(left, (x + width + padding) * scale - viewport.clientWidth),
+      top: Math.max(top, (y + height + trackHeaderHeight + padding) * scale - viewport.clientHeight),
       behavior: "smooth",
     });
-  }, [selectedId, x, y, width, height, zoom, ref]);
+  }, [selectedId, x, y, width, height, ref]);
 }

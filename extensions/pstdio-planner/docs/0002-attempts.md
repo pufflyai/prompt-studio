@@ -52,25 +52,13 @@ If two implementation sessions are already running in the project, Run attempt d
 
 `pst tickets implement` is a lighter option. It moves the ticket to In Progress and starts one agent session with the implement-ticket prompt. It does not create a worktree, a managed attempt, or a review.
 
-## Auto build
+## Auto Build
 
-Open **Project Timeline** and select **Auto Build**. Set **Maximum parallel tasks** and confirm with **Auto Build**. This edits the same limit as **Maximum in-progress tickets** in Settings. From the CLI, configure the mode:
+Auto Build uses a supervisor to query work with `pst tickets next` and dispatch matching tickets through the same readiness checks as manual implementation. It reuses stopped implementation owners when they can continue and assigns changed-stack repair in their existing workspaces. It does not approve or merge PRs.
 
-```sh
-pst pstdio-planner auto-build configure --enabled true
-pst pstdio-planner auto-build read
-pst pstdio-planner auto-build configure --enabled false
-```
+With **Block on review** off, submitted revisions can provide dependency bases before review finishes. Missing, ambiguous, actively replaced, and human-blocked dependencies still wait. Independent dependency branches can be combined when their changes merge cleanly. Independent tickets can run together up to the implementation session limit. Stop prevents future prompts and dispatches while running work continues.
 
-Planner starts eligible Todo tickets across the project in timeline order until **Maximum in-progress tickets** is reached. Existing running implementations count toward this limit. Auto build uses the project's default agent and target branch. It reacts to ticket, timeline, and session changes and rechecks once per minute to recover after restarts or settings changes. The mode works while the timeline is closed.
-
-The selected view, filters, and search only affect the display. Use **Stop Auto Build** to stop future launches; already dispatched work continues. A launch failure turns the mode off and shows the error. Resolve it before turning the mode on again.
-
-Dependencies decide which tickets can run together. Independent tickets in the same track can start in parallel, and dependencies in other tracks still apply. Approved or explicitly selected dependency revisions can provide a stacked base, as with Run attempt.
-
-The mode skips gates, blocked work, tickets that need human input, and tickets with an existing attempt other than an abandoned attempt.
-
-When an agent cannot continue without a person, the implementation skill tells it to use `pst pstdio-planner request-human` with a concrete task or decision. This creates a review request and sets Review Needed. The agent reads the saved response before resuming.
+See [Auto Build](0007-auto-build.md) for scope filters, recovery, CLI commands, and settings.
 
 ## Dependencies
 
@@ -78,22 +66,47 @@ A ticket can depend on other tickets. Set dependencies with `--depends-on` on [`
 
 Before an attempt starts, Planner checks every ticket the ticket depends on, directly or through other tickets:
 
-- A dependency in the Done status is finished.
-- When no dependencies are left, the attempt starts from the commit you chose, or from the project folder's current commit.
-- An unfinished dependency needs exactly one approved attempt, or the attempt selected for that ticket. The new attempt then starts from that attempt's latest commit, so it builds on the work that is not merged yet. With several unfinished dependencies, one of their attempts must already contain the others' commits.
+- Done describes ticket completion. It does not prove that a managed dependency's code reached the chosen base. Planner checks whether that base contains the submitted commit or its recorded merge commit. A completed human task with no managed attempt needs no Git integration.
+- When all dependency code is integrated, the attempt starts from the commit you chose, or from the project folder's current commit.
+- An unfinished dependency needs exactly one approved attempt, or the attempt selected for that ticket. A Done managed dependency can use its submitted revision. The new attempt starts from a dependency tip that contains all required code and the chosen base. Otherwise, Planner combines the submitted branches into an attempt base without changing the target branch. If those branches conflict, the implementation owner starts from a clean base and reconciles them in its assigned workspace.
 - If a dependency has no approved or selected attempt yet, Run attempt cannot start.
 
 When Run attempt cannot start, its dialog and command show the blocker and the next step. A missing dependency, a dependency loop, or ambiguous attempts also ask a person to fix the ticket graph or choose an attempt. Run attempt also refuses a second start while another start for the same ticket is still running. `attempt-readiness` returns a structured `reason` for agents and the CLI.
 
+## Updating a dependency stack
+
+An upstream revision can change after a child starts. The child must contain the current selected dependency commits before submitting another revision. Planner checks actual Git ancestry at submission and again before recording it. A changed HEAD, changed dependency base, detached implementation session, or concurrent revision write causes submission to fail with a retry instruction.
+
+Use the same implementation owner and workspace:
+
+```sh
+pst pstdio-planner update-stack --workspace-id <workspace> --implementation-session-id <owner> --expected-head-sha <head>
+```
+
+The command requires committed changes and no other live workspace session. It integrates the current dependency base with a Git merge so existing published history remains intact. If the merge conflicts, resolve and commit it, then retry. Run the affected checks, save a fresh change request report, and submit the exact resulting HEAD with `--expected-revision <last-revision-number>`. Updating the base does not submit or validate a revision by itself.
+
+Git conflicts are the implementation owner's work. It must preserve the required behavior from both sides, reconcile the files, commit the resolution, and validate. Planner does not create a human request for conflicting code. Ask for human input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. When dependency branches need reconciliation, the recorded base stays on the original clean commit and the submitted revision includes the dependency integration and resolution. Submission checks that its HEAD contains every required dependency commit. Describe those prerequisite changes in the change request report.
+
+An attempt with no submitted revision can also need this repair. Keep its existing workspace and implementation owner, commit any work in progress, and run `update-stack`. This is authorized dependency integration; it does not approve work, merge into the delivery target, or mark prerequisites Done. The assigned branch is where the agent edits. The dependency base supplies prerequisite code. The delivery target is the branch where reviewed work will eventually be merged.
+
+Answering a human request does not change Git. After an answer, the owner must check the actual files and dependency commits. If the same missing-code blocker remains, repair the stack before resuming implementation rather than repeating the request.
+
+For a root ticket deliberately moved to another target branch, pass `--base <target-branch>` to align its recorded base. Dependencies whose code is absent still determine a dependent ticket's base; this option cannot bypass them.
+
+A revision identifies both its base and HEAD. Correcting a recorded base can create a fresh revision with the same HEAD and a fresh report; prior review evidence remains on the original base/HEAD pair. Even retrying an existing submission rechecks current dependency ancestry.
+
+An owner can submit a later correction after a passed review. Earlier review evidence stays attached to its original commit. The optional `--expected-attempt-state` parameter is deprecated; ownership, exact HEAD, and the revision counter protect submission. No extra mandatory managed review is introduced by stack repair. A live implementation owner cannot supply a dependency revision while replacing that work.
+
 ## How Planner sets the ticket status
 
-Planner sets the ticket status from its attempts:
+Planner sets managed ticket status from its attempts, sessions, and human requests:
 
-1. If any attempt is being implemented or has changes requested, the ticket is In Progress.
-2. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
-3. Otherwise, if every attempt is blocked, the ticket is Blocked.
+1. An open or unreadable human request makes the ticket Blocked.
+2. An implementation or changes-requested attempt is In Progress while its session is queued or running. It is Blocked while its session awaits input, and Todo after its session stops so unfinished work can resume in the same attempt.
+3. Otherwise, if any attempt waits for review, is being reviewed, or is approved, the ticket is In Review.
+4. Otherwise, if every attempt is blocked, the ticket is Blocked.
 
-Planner leaves tickets in Done alone. Planner pauses status changes while any review request is open or unreadable. Attempt readiness uses the same rule for the target and all its prerequisites, including completed ones. Automation extensions, including Auto build, must use `attempt-readiness` before `run-attempt`. A manual or stale tag alone does not pause status changes or prevent launch. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
+Planner leaves tickets in Done alone. Session lifecycle events and request changes refresh managed ticket status. Background checks also repair stale status, including when Auto Build is off. Attempt readiness waits for open or unreadable requests on the target and all its prerequisites, including completed ones. Automation extensions, including Auto build, must use `attempt-readiness` before `run-attempt`. A manual or stale tag alone does not block launch. The flag clears when a person or an agent answers or cancels the last open request. Automations cannot answer or cancel requests. See [Review requests](0006-review-requests.md).
 
 ## When a session disconnects
 

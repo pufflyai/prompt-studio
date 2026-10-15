@@ -64,8 +64,8 @@ function useGraphBox(
 export function PlanGraph(props: PlanViewProps) {
   const { sections, tracks, selectedId, ...actions } = props;
   const { ref, width, height } = useSize();
-  const { panning, handlers } = useCanvasPan(ref);
   const { zoom, change } = useCanvasZoom(ref);
+  const { panning, handlers } = useCanvasPan(ref, zoom, change);
   const [scrollLeft, setScrollLeft] = useState(0);
   const { collapsed, toggle } = useCollapsedTracks();
   const { box, trackAt, rows } = useGraphBox(sections, tracks, collapsed, ref);

@@ -188473,6 +188473,321 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "M6hUI2",
+      "x": 0,
+      "y": 33254,
+      "name": "Planner milestone ETA · PS-713",
+      "theme": {
+        "mode": "light"
+      },
+      "width": 720,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 16,
+      "children": [
+        {
+          "type": "text",
+          "id": "GvyHX",
+          "name": "Milestone ETA specification",
+          "fill": "$ds-fg",
+          "content": "Project Timeline · Milestone ETA",
+          "fontFamily": "$font-label",
+          "fontSize": 14,
+          "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "HZNVR",
+          "name": "Preview milestone header",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "rNTSP",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Expand milestone",
+              "theme": {
+                "btn": "ghost",
+                "size": "2xs"
+              },
+              "width": 24,
+              "height": 24,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "chevrons-down-up",
+                  "width": 12,
+                  "height": 12
+                }
+              }
+            },
+            {
+              "type": "text",
+              "id": "rdP99",
+              "name": "Milestone name",
+              "fill": "$ds-fg-muted",
+              "content": "Preview",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "rectangle",
+              "id": "W5VwEr",
+              "name": "Header rule",
+              "fill": "$ds-border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "fgab5",
+              "name": "Milestone estimate",
+              "context": "label/XS/medium fg.muted; estimate before ticket-count progress. Tooltip explains whole-milestone complexity-weighted pace from first managed attempt. No pace: ETA —.",
+              "fill": "$ds-fg-muted",
+              "content": "ETA ~6h",
+              "fontFamily": "$font-label",
+              "fontSize": 10,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "XlTGq",
+              "name": "Milestone ticket progress",
+              "clip": true,
+              "width": 64,
+              "height": 4,
+              "fill": "$ds-bg-emphasized",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "Tcqt2",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Completed tickets",
+                  "fill": "$ds-success",
+                  "width": 16,
+                  "height": 4
+                }
+              ]
+            },
+            {
+              "id": "sDxdS",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Delete milestone",
+              "theme": {
+                "btn": "destructive-ghost",
+                "size": "2xs"
+              },
+              "width": 24,
+              "height": 24,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "trash-2",
+                  "width": 12,
+                  "height": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "fT0dE",
+          "name": "Launch milestone header",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "rlfL6",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Expand milestone",
+              "theme": {
+                "btn": "ghost",
+                "size": "2xs"
+              },
+              "width": 24,
+              "height": 24,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "chevrons-down-up",
+                  "width": 12,
+                  "height": 12
+                }
+              }
+            },
+            {
+              "type": "text",
+              "id": "Of1nj",
+              "name": "Milestone name",
+              "fill": "$ds-fg-muted",
+              "content": "Launch",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "rectangle",
+              "id": "i0FAG",
+              "name": "Header rule",
+              "fill": "$ds-border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "wrHWB",
+              "name": "Milestone estimate",
+              "context": "label/XS/medium fg.muted; estimate before ticket-count progress. Tooltip explains whole-milestone complexity-weighted pace from first managed attempt. No pace: ETA —.",
+              "fill": "$ds-fg-muted",
+              "content": "ETA —",
+              "fontFamily": "$font-label",
+              "fontSize": 10,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "wnFmH",
+              "name": "Milestone ticket progress",
+              "clip": true,
+              "width": 64,
+              "height": 4,
+              "fill": "$ds-bg-emphasized",
+              "layout": "none"
+            },
+            {
+              "id": "xrtXv",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Delete milestone",
+              "theme": {
+                "btn": "destructive-ghost",
+                "size": "2xs"
+              },
+              "width": 24,
+              "height": 24,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "trash-2",
+                  "width": 12,
+                  "height": 12
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "tCfY4",
+          "name": "Released milestone header",
+          "width": "fill_container",
+          "height": 28,
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "y5wYkt",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Expand milestone",
+              "theme": {
+                "btn": "ghost",
+                "size": "2xs"
+              },
+              "width": 24,
+              "height": 24,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "chevrons-down-up",
+                  "width": 12,
+                  "height": 12
+                }
+              }
+            },
+            {
+              "type": "text",
+              "id": "Gsstv",
+              "name": "Milestone name",
+              "fill": "$ds-fg-muted",
+              "content": "Released",
+              "fontFamily": "$font-label",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "type": "rectangle",
+              "id": "wxK7H",
+              "name": "Header rule",
+              "fill": "$ds-border",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "text",
+              "id": "yrn1p",
+              "name": "Milestone estimate",
+              "context": "label/XS/medium fg.muted; estimate before ticket-count progress. Tooltip explains whole-milestone complexity-weighted pace from first managed attempt. No pace: ETA —.",
+              "fill": "$ds-fg-muted",
+              "content": "Done",
+              "fontFamily": "$font-label",
+              "fontSize": 10,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "H1kqo6",
+              "name": "Milestone ticket progress",
+              "clip": true,
+              "width": 64,
+              "height": 4,
+              "fill": "$ds-bg-emphasized",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "fPvSJ",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Completed tickets",
+                  "fill": "$ds-success",
+                  "width": 64,
+                  "height": 4
+                }
+              ]
+            },
+            {
+              "id": "vcYfN",
+              "type": "ref",
+              "ref": "nvvgg",
+              "name": "Delete milestone",
+              "theme": {
+                "btn": "destructive-ghost",
+                "size": "2xs"
+              },
+              "width": 24,
+              "height": 24,
+              "descendants": {
+                "k7mgm": {
+                  "icon": "trash-2",
+                  "width": 12,
+                  "height": 12
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

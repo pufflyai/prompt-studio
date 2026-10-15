@@ -175,6 +175,39 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
 
+    const focusedView = await valid.execute<{ id: string }>("timeline.views.create", {
+      value: {
+        title: "Timeline focus",
+        filter: {
+          conjunction: "and",
+          rules: [{ attributeId: "title", condition: "contains", value: "Seeded ticket 0" }],
+        },
+      },
+    });
+    const selectionSaved = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname.endsWith("/preferences/timelineViewState") &&
+        response.request().method() === "PUT" &&
+        Boolean(response.request().postData()?.includes(focusedView.id)) &&
+        response.ok(),
+    );
+    const focusedTab = timeline.getByRole("tab", { name: "Timeline focus", exact: true });
+    await focusedTab.click();
+    await expect(focusedTab).toHaveAttribute("aria-selected", "true");
+    await selectionSaved;
+    await page.goto(`${host.baseUrl}/projects/${valid.id}/extensions/pstdio.pstdio-planner/tickets`);
+    await expect(page.getByRole("tab", { name: "Timeline focus", exact: true })).toHaveCount(0);
+    timeline = await openTimeline(page, host, valid.id);
+    await page.reload();
+    await expect(timeline.getByRole("tab", { name: "Timeline focus", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(timeline.getByRole("button", { name: /Seeded ticket 0$/ })).toBeVisible();
+    await expect(timeline.getByRole("button", { name: /Seeded ticket 1$/ })).toHaveCount(0);
+    await timeline.getByRole("tab", { name: "All", exact: true }).click();
+    await valid.execute("timeline.views.delete", { id: focusedView.id });
+
     // Exercise the generated control against Planner's installed runtime dependencies.
     await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
     const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });

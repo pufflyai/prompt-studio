@@ -57,7 +57,7 @@ const DEFAULT_TAG_ATTRIBUTE_IDS: Record<string, string> = {
 };
 const CIRCLE_ICON = "circle";
 
-export const ticketTagAttributeId = (tag: StoredTag) => DEFAULT_TAG_ATTRIBUTE_IDS[tag.id] ?? tag.id;
+export const ticketTagAttributeId = (tag: Pick<StoredTag, "id">) => DEFAULT_TAG_ATTRIBUTE_IDS[tag.id] ?? tag.id;
 
 export const createTicketParentLookup = (tickets: StoredTicket[]) =>
   new Map(tickets.map((ticket) => [ticket.id, ticket]));
