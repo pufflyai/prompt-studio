@@ -3,4 +3,4 @@
 "@pstdio/sdk": minor
 ---
 
-Move allocated extension files to the shared extension-storage root in extension API 0.2.
+Move allocated files to publisher-isolated extension storage in extension API 0.2.

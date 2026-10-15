@@ -121,4 +121,4 @@ The optional `HarnessSession.steer` capability and host-provided `ctx.sessions` 
 
 ## Extension file storage in API 0.2
 
-API 0.2 moves the documented `ctx.extensionFiles` root from `.pstdio/ext/<publisher>.<name>/` to `.pstdio/extension-storage/<package-name>/`. This is a breaking filesystem layout change; relative file operations stay the same. Move existing local files using the [storage migration guide](../../guides/extensions/0009-allocated-extension-files.md). Extensions that work with both layouts can declare `^0.1.0 || ^0.2.0`.
+API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files. Artifact mount paths cannot start with the reserved `.publishers` segment, including case variants. This is a breaking filesystem layout change; relative file operations stay the same. Move existing allocated files using the [storage migration guide](../../guides/extensions/0009-allocated-extension-files.md). Extensions that work with both layouts can declare `^0.1.0 || ^0.2.0`.

@@ -42,6 +42,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
+// Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
@@ -119,12 +120,14 @@ test(
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
       const nativeActions = writeNativeActionsExtension(tempRoot);
+      const otherNativeActions = writeNativeActionsExtension(join(tempRoot, "other-source"), "other");
       const started = await startPackagedServe(tempRoot, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
           { source: nativeActions, installName: "native-actions" },
+          { source: otherNativeActions, installName: "other-native-actions" },
         ]),
         HTTPS_PROXY: "http://127.0.0.1:9",
         NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",

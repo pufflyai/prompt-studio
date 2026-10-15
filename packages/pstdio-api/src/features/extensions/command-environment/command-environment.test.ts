@@ -149,7 +149,12 @@ describe("createCommandEnvironment host primitives", () => {
     expect(await env.packageFiles.readText("guide.md")).toBe("# Guide");
     expect("writeText" in env.packageFiles).toBe(false);
     await env.extensionFiles?.writeText("cache/index.json", "{}");
-    expect(readFileSync(join(repoPath, ".pstdio/extension-storage/extension-lab/cache/index.json"), "utf8")).toBe("{}");
+    expect(
+      readFileSync(
+        join(repoPath, ".pstdio/extension-storage/extension-lab/.publishers/pstdio/cache/index.json"),
+        "utf8",
+      ),
+    ).toBe("{}");
     expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain("/extension-storage/extension-lab/");
     await expect(env.extensionFiles?.readText("../secret.md")).rejects.toThrow("escapes");
   });

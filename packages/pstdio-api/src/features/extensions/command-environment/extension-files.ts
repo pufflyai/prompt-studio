@@ -1,12 +1,12 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { ARTIFACT_MOUNT_ROOT, createFileMount, createReadBoundary } from "pstdio-extensions";
+import { createFileMount, createReadBoundary, type ExtensionStorageOwner, extensionFilesPath } from "pstdio-extensions";
 
 import type { FileAccess } from "./workspace-files";
 
-const ignoreEntry = (name: string) => `/extension-storage/${name}/`;
-const ignoreMarker = (name: string) => `# pstdio:ignore-owned ${ignoreEntry(name)}`;
+const ignoreEntry = (owner: ExtensionStorageOwner) => `${extensionFilesPath(owner).slice(".pstdio".length)}/`;
+const ignoreMarker = (owner: ExtensionStorageOwner) => `# pstdio:ignore-owned ${ignoreEntry(owner)}`;
 const ignoreUpdates = new Map<string, Promise<void>>();
 
 const serializeIgnoreUpdate = async (repoPath: string, update: () => Promise<void>) => {
@@ -35,7 +35,7 @@ const writeAtomic = async (path: string, content: string) => {
   }
 };
 
-const updateIgnore = async (repoPath: string, name: string, tracked: boolean) => {
+const updateIgnore = async (repoPath: string, owner: ExtensionStorageOwner, tracked: boolean) => {
   await serializeIgnoreUpdate(repoPath, async () => {
     const path = join(repoPath, ".pstdio", ".gitignore");
     let lines: string[] = [];
@@ -45,8 +45,8 @@ const updateIgnore = async (repoPath: string, name: string, tracked: boolean) =>
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       await mkdir(dirname(path), { recursive: true });
     }
-    const entry = ignoreEntry(name);
-    const marker = ignoreMarker(name);
+    const entry = ignoreEntry(owner);
+    const marker = ignoreMarker(owner);
     const markerIndex = lines.indexOf(marker);
     let next = lines;
     if (tracked && markerIndex >= 0) {
@@ -61,18 +61,19 @@ const updateIgnore = async (repoPath: string, name: string, tracked: boolean) =>
   });
 };
 
-export const createExtensionFilesApi = (input: {
-  name: string;
-  resolveRepoPath: (access: FileAccess) => Promise<string>;
-  tracked: boolean;
-  signal?: AbortSignal;
-}): ArtifactMount => {
+export const createExtensionFilesApi = (
+  input: ExtensionStorageOwner & {
+    resolveRepoPath: (access: FileAccess) => Promise<string>;
+    tracked: boolean;
+    signal?: AbortSignal;
+  },
+): ArtifactMount => {
   const mountFor = async (access: FileAccess) =>
-    createFileMount(join(await input.resolveRepoPath(access), ARTIFACT_MOUNT_ROOT, input.name), input.signal);
+    createFileMount(join(await input.resolveRepoPath(access), extensionFilesPath(input)), input.signal);
   const readMount = () => createReadBoundary(input.signal)(() => mountFor("read"));
   const beforeWrite = async () => {
     const repoPath = await input.resolveRepoPath("write");
-    await updateIgnore(repoPath, input.name, input.tracked);
+    await updateIgnore(repoPath, input, input.tracked);
     return mountFor("write");
   };
   return {

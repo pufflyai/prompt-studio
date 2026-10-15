@@ -30,7 +30,11 @@ beforeEach(async () => {
     setup_error: null,
     provider_capabilities_json: { ...folderWorkspaceCapabilities },
   };
-  for (const path of ["", ".pstdio/extension-storage/tools", ".pstdio/extension-storage/tools/reports"]) {
+  for (const path of [
+    "",
+    ".pstdio/extension-storage/tools/.publishers/example",
+    ".pstdio/extension-storage/tools/reports",
+  ]) {
     await mkdir(join(root, path), { recursive: true });
     await writeFile(join(root, path, "notes.txt"), "keep");
   }

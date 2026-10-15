@@ -248,7 +248,7 @@ Package asset paths must be relative and stay inside the package.
 
 Command and hook handlers can read other packaged files through `ctx.packageFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
 
-Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/extension-storage/<package-name>/`, alongside that extension's artifact mounts. The host adds an ignore entry on the first write unless `tracked` is true.
+Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files and ignore rules. The host adds an ignore entry for that publisher on the first write unless `tracked` is true.
 
 ## Artifact Mounts And Storage
 
@@ -259,6 +259,9 @@ Use `ctx.extensionFiles` or artifact mounts for these files. See
 locations and how to move files from older layouts.
 
 Artifact mounts are constrained to a package-name root under each repo's extension storage directory:
+
+The first mount-path segment cannot be `.publishers`, including case variants.
+That directory is reserved for allocated `ctx.extensionFiles`.
 
 ```txt
 <repo>/.pstdio/extension-storage/<package-name>/...

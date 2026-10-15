@@ -1,17 +1,23 @@
 # Allocated extension files in API 0.2
 
 Extension API 0.2 moves the documented `ctx.extensionFiles` root from
-`.pstdio/ext/<publisher>.<name>/` to `.pstdio/extension-storage/<package-name>/`.
-Artifact mounts already use this package-name root. The relative file methods stay
-unchanged. This is a breaking filesystem layout change.
+`.pstdio/ext/<publisher>.<name>/` to
+`.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`.
+Publishers with the same package name keep separate files and ignore rules, including
+after disable, reload, and uninstall. The relative file methods stay unchanged.
+This is a breaking filesystem layout change.
+
+Declared artifact mounts keep their existing paths under the package-name root.
+They cannot start with the reserved `.publishers` segment, including case variants.
+Rename any existing mount that uses that segment before upgrading.
 
 Update an extension's `engines.pstdio` declaration after checking its file paths.
 An extension that works on both API lines can declare `^0.1.0 || ^0.2.0`.
 
 ## Move existing files
 
-Stop commands that write extension files. Create the owning package's directory under
-`.pstdio/extension-storage/`, then move the contents of its old
+Stop commands that write extension files. Create
+`.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`, then move the contents of the old
 `.pstdio/ext/<publisher>.<name>/` directory there. If the destination already exists,
 compare and merge files without overwriting either copy. Preserve unsaved data.
 
