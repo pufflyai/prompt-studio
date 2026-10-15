@@ -61,7 +61,6 @@ export type {
   WorkbenchRegionState,
   WorkbenchTabAction,
   WorkbenchTabMenuGroup,
-  WorkbenchTabMenuList,
   WorkbenchTabMenuRow,
   WorkbenchTabPosition,
   WorkbenchTabRetention,

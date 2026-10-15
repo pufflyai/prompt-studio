@@ -165,7 +165,7 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await row("Session A").click();
   const sessionUrl = page.url();
   await row("Session B").click({ button: "right" });
-  await expectResourceMenuItems(page, ["Open session panel"]);
+  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
   await expect(page.getByRole("menu")).toHaveCount(1);
   await expect(page).toHaveURL(sessionUrl);
   await page.keyboard.press("Escape");
@@ -173,15 +173,13 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await expect(row("Session A")).toHaveAttribute("aria-selected", "true");
   await row("Session B").focus();
   await page.keyboard.press("Shift+F10");
-  await expectResourceMenuItems(page, ["Open session panel"]);
+  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
   await page.keyboard.press("Escape");
   await expect(row("Session B")).toBeFocused();
   await page.keyboard.press("ContextMenu");
-  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
-  await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
-  ).toHaveAttribute("aria-selected", "true");
-  await expect(page).toHaveURL(sessionUrl);
+  await page.keyboard.press("Escape");
+  await row("Session B").click();
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Session B");
 
   await page.goto(`/projects/${project.id}/`);
   await showSidenavEntry(page, "Workspaces");
@@ -190,15 +188,16 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await row("Session A").click();
   const workspaceUrl = page.url();
   await row("Session B").dispatchEvent("pointerdown", { pointerType: "touch", clientX: 80, clientY: 200 });
-  await expectResourceMenuItems(page, ["Open session panel"]);
+  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
   await row("Session B").dispatchEvent("pointerup", { pointerType: "touch" });
   await expect(page.getByRole("menu")).toHaveCount(1);
   await expect(page).toHaveURL(workspaceUrl);
   await page.keyboard.press("Escape");
   await row("Session B").click({ button: "right" });
-  await expectResourceMenuItems(page, ["Open session panel"]);
+  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
   await page.screenshot({ path: testInfo.outputPath("workspace-session-menu.png"), animations: "disabled" });
-  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await row("Session B").click();
   await expect(
     page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
   ).toHaveAttribute("aria-selected", "true");
@@ -214,10 +213,11 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await expect(row("Session B")).toBeVisible();
   const ticketUrl = page.url();
   await row("Session B").click({ button: "right" });
-  await expectResourceMenuItems(page, ["Open session panel"]);
+  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
   await expect(page.getByRole("menu")).toHaveCount(1);
   await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
-  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await row("Session B").click();
   await expect(
     page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
   ).toHaveAttribute("aria-selected", "true");
@@ -225,5 +225,4 @@ test("session row menus keep their subject across Sessions, workspace and ticket
   await row("Search").click({ button: "right" });
   await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
   await expect(page.getByRole("menuitem", { name: "Reset to default", exact: true })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Open session panel", exact: true })).toHaveCount(0);
 });

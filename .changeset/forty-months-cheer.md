@@ -4,4 +4,4 @@
 "pstdio": patch
 ---
 
-Share resource actions across navigation, tabs, and breadcrumbs and add searchable lazy session menus.
+Share resource actions across navigation, tabs, and breadcrumbs and add a searchable session picker.

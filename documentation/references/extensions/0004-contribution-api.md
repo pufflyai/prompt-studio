@@ -194,25 +194,17 @@ Use `disabledWhen` with the same subject conditions as `when` to keep an unavail
 
 ### Custom menu sections
 
-Use placement `tab` presentation for view-specific navigation or controls. It supplements resource actions and does not choose the action subject. A group has `id`, optional localized `label`, `rows`, optional `list`, and optional `trailingRows`. Tab controls follow custom groups; breadcrumbs add location actions instead.
-
-For a searchable lazy list, return a `list` descriptor with `command`, `searchLabel`, and `emptyLabel`. The host calls the command with `query` and an optional `cursor`, with the placement's resource in `ctx.resource`. Return a `PlacementTabMenuPage`: `{ rows, nextCursor? }`. Omit `nextCursor` when there are no more matching rows. Search must cover the full eligible source, including rows beyond the current page. Keep identity stable across pages. The host cancels obsolete reads, preserves loaded results on a page error, and offers Retry.
+Use placement `tab` presentation for view-specific navigation or controls. It supplements resource actions and does not choose the action subject. A group has `id`, an optional localized `label`, and `rows`. Tab controls follow custom groups; breadcrumbs add location actions instead.
 
 ```ts
 menu: [{
-  id: "quick-access",
-  label: l10n("menus.quickAccess", "Quick access"),
-  rows: [newDocumentRow],
-  list: {
-    command: searchDocuments.ref,
-    searchLabel: l10n("menus.searchDocuments", "Search documents"),
-    emptyLabel: l10n("menus.noDocuments", "No documents yet"),
-  },
-  trailingRows: [viewAllDocumentsRow],
+  id: "documents",
+  label: l10n("menus.documents", "Documents"),
+  rows: [newDocumentRow, switchDocumentRow, viewAllDocumentsRow],
 }]
 ```
 
-The list is read only while its menu is open and scrolls in a bounded area. A placement's existing refresh events invalidate its presentation and list. Existing tab rows remain supported for custom actions; move resource operations to resource-owned slots rather than copying them into every menu.
+Use custom rows for view-specific controls and navigation. Move resource operations to resource-owned slots rather than copying them into each menu.
 
 The host refreshes the tree after a section or row action runs. An action command calls
 `ctx.navigation.open(target)` to move the page, for example back to the ticket body after deleting an open
@@ -513,7 +505,7 @@ A level page without a declared parent, such as Notes, has nothing outside the l
 
 For example, Notes contributes one mode-owned navigation item opening its Notes page. Its note-list tree is owned by that page. Notes are top-level rows in a section with a New note action. A compound target opens the Notes page and pins the chosen note panel; the location remains in the Notes level. To add sections at the main level, own them with the mode instead of a page.
 
-Session commands contributed through `sessionSlots.headerPrimary` or `sessionSlots.headerOverflow` also appear in shared session resource menus. Session tree rows must set `resource` explicitly, even when `target.resource` already names the session. Visibility and execution use the clicked session; opening a different resource first is not required. Host session rows expose the existing Open session panel action without tab placement arguments.
+Session commands contributed through `sessionSlots.headerPrimary` or `sessionSlots.headerOverflow` also appear in shared session resource menus. Session tree rows must set `resource` explicitly, even when `target.resource` already names the session. Visibility and execution use the clicked session; opening a different resource first is not required. Open session panel remains a host command for other callers; it is not contributed to session item menus. Session tab and current-page breadcrumb menus add the Sessions group with New session, Switch session, and View all sessions. Switch session opens a scoped resource search modal.
 
 ## Queued conversation requests
 

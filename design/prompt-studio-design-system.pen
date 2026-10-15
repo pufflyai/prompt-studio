@@ -188796,7 +188796,7 @@
       "y": 0,
       "name": "Resource-owned menus · PS-652",
       "width": 940,
-      "height": 680,
+      "height": 960,
       "fill": "$ds-bg-subtle",
       "layout": "vertical",
       "gap": 16,
@@ -189010,7 +189010,7 @@
                 {
                   "type": "frame",
                   "id": "SMRR8",
-                  "name": "Quick access group label",
+                  "name": "Sessions group label",
                   "width": "fill_container",
                   "padding": [
                     6,
@@ -189024,7 +189024,7 @@
                       "id": "fV3Tl",
                       "name": "Label",
                       "fill": "$ds-fg-muted",
-                      "content": "Quick access",
+                      "content": "Sessions",
                       "fontFamily": "$font-label",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -189050,145 +189050,22 @@
                   }
                 },
                 {
-                  "type": "frame",
-                  "id": "omu2J",
-                  "name": "Search sessions",
+                  "id": "Y54wld",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Switch session",
                   "width": "fill_container",
-                  "height": 32,
-                  "stroke": "$ds-border-subtle",
-                  "strokeWidth": {
-                    "bottom": 1
+                  "theme": {
+                    "menu": "default"
                   },
-                  "strokeAlignment": "inner",
-                  "gap": 8,
-                  "padding": [
-                    0,
-                    12
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "id": "oWJ7d",
-                      "name": "Icon",
-                      "width": 14,
-                      "height": 14,
-                      "icon": "search",
-                      "library": "lucide",
-                      "fill": "$ds-fg-muted"
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "search"
                     },
-                    {
-                      "type": "text",
-                      "id": "h67UK",
-                      "name": "Placeholder",
-                      "fill": "$ds-fg-subtle",
-                      "content": "Search sessions…",
-                      "fontFamily": "$font-label",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
+                    "UTbhN": {
+                      "content": "Switch session"
                     }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "UCkZp",
-                  "name": "Lazy session list · 192px scroll viewport",
-                  "clip": true,
-                  "width": "fill_container",
-                  "height": 192,
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "QMlvk",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Review API changes",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Review API changes"
-                        }
-                      }
-                    },
-                    {
-                      "id": "eydJd",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Fix build pipeline",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Fix build pipeline"
-                        }
-                      }
-                    },
-                    {
-                      "id": "O9GsMC",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Explore a new tool",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Explore a new tool"
-                        }
-                      }
-                    },
-                    {
-                      "id": "xGpvC",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Document the release",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Document the release"
-                        }
-                      }
-                    },
-                    {
-                      "id": "dwCXY",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Plan next week",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Plan next week"
-                        }
-                      }
-                    },
-                    {
-                      "id": "XaNVv",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Older sessions load on scroll",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Older sessions load on scroll"
-                        }
-                      }
-                    }
-                  ]
+                  }
                 },
                 {
                   "id": "DyWHj",
@@ -189396,7 +189273,7 @@
                 {
                   "type": "frame",
                   "id": "W50erG",
-                  "name": "Quick access group label",
+                  "name": "Sessions group label",
                   "width": "fill_container",
                   "padding": [
                     6,
@@ -189410,7 +189287,7 @@
                       "id": "EUXxn",
                       "name": "Label",
                       "fill": "$ds-fg-muted",
-                      "content": "Quick access",
+                      "content": "Sessions",
                       "fontFamily": "$font-label",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -189436,145 +189313,22 @@
                   }
                 },
                 {
-                  "type": "frame",
-                  "id": "r1FJ3",
-                  "name": "Search sessions",
+                  "id": "QNUqS",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Switch session",
                   "width": "fill_container",
-                  "height": 32,
-                  "stroke": "$ds-border-subtle",
-                  "strokeWidth": {
-                    "bottom": 1
+                  "theme": {
+                    "menu": "default"
                   },
-                  "strokeAlignment": "inner",
-                  "gap": 8,
-                  "padding": [
-                    0,
-                    12
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "id": "hadug",
-                      "name": "Icon",
-                      "width": 14,
-                      "height": 14,
-                      "icon": "search",
-                      "library": "lucide",
-                      "fill": "$ds-fg-muted"
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "search"
                     },
-                    {
-                      "type": "text",
-                      "id": "jNMBg",
-                      "name": "Placeholder",
-                      "fill": "$ds-fg-subtle",
-                      "content": "Search sessions…",
-                      "fontFamily": "$font-label",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
+                    "UTbhN": {
+                      "content": "Switch session"
                     }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "hv9tf",
-                  "name": "Lazy session list · 192px scroll viewport",
-                  "clip": true,
-                  "width": "fill_container",
-                  "height": 192,
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "OMBu3",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Review API changes",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Review API changes"
-                        }
-                      }
-                    },
-                    {
-                      "id": "s5Ua9",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Fix build pipeline",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Fix build pipeline"
-                        }
-                      }
-                    },
-                    {
-                      "id": "Dg3qy",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Explore a new tool",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Explore a new tool"
-                        }
-                      }
-                    },
-                    {
-                      "id": "xsPfj",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Document the release",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Document the release"
-                        }
-                      }
-                    },
-                    {
-                      "id": "r6SE3",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Plan next week",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Plan next week"
-                        }
-                      }
-                    },
-                    {
-                      "id": "BTqpU",
-                      "type": "ref",
-                      "ref": "sgbRV",
-                      "name": "Older sessions load on scroll",
-                      "width": "fill_container",
-                      "descendants": {
-                        "UEgTp": {
-                          "icon": "message-square"
-                        },
-                        "UTbhN": {
-                          "content": "Older sessions load on scroll"
-                        }
-                      }
-                    }
-                  ]
+                  }
                 },
                 {
                   "id": "h7IQ6Y",
@@ -189647,6 +189401,53 @@
               ]
             }
           ]
+        },
+        {
+          "id": "X1yy9T",
+          "type": "ref",
+          "ref": "hkUeJ",
+          "name": "Switch session resource search",
+          "width": 704,
+          "descendants": {
+            "MKGHO": {
+              "content": "Search sessions"
+            },
+            "b23sVw": {
+              "content": "Sessions"
+            },
+            "Vpiod/UEgTp": {
+              "icon": "message-circle"
+            },
+            "Vpiod/UTbhN": {
+              "content": "Current session"
+            },
+            "uicCl/UEgTp": {
+              "icon": "message-circle"
+            },
+            "uicCl/UTbhN": {
+              "content": "Older session"
+            },
+            "SLgIG": {
+              "enabled": false,
+              "width": 704
+            },
+            "rqxtp": {
+              "enabled": false,
+              "width": 704
+            },
+            "eElns": {
+              "enabled": false,
+              "width": 704
+            },
+            "u6OHt": {
+              "enabled": false,
+              "width": 704
+            },
+            "TK6pL": {
+              "enabled": false,
+              "width": 704
+            }
+          }
         }
       ]
     }

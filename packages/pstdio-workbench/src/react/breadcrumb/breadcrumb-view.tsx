@@ -95,7 +95,6 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
               workbench,
               item.resource,
               resource && resourceKey(item.resource) === resourceKey(resource) ? snapshot : {},
-              placement,
             )
           : undefined,
       )}

@@ -2,6 +2,7 @@ export const dashboardCommandIds = {
   clearSelectedProject: "dashboard.clearSelectedProject",
   copyPerformanceSnapshot: "dashboard.copyPerformanceSnapshot",
   createProject: "dashboard.createProject",
+  switchSession: "dashboard.switchSession",
   createSession: "dashboard.createSession",
   renameSession: "dashboard.renameSession",
   archiveSession: "dashboard.archiveSession",

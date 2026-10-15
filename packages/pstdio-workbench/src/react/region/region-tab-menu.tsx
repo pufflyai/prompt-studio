@@ -40,7 +40,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     onClick,
   });
   const actions = [
-    ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }, placement),
+    ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }),
     ...(placement.tabRetention
       ? [tabAction("pin", placement.tabRetention === "preview" ? "Pin tab" : "Unpin tab", "pin", pin)]
       : []),
