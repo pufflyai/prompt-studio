@@ -71,6 +71,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
+// The paired session-menu browser check restores focus to its tab after Escape.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 

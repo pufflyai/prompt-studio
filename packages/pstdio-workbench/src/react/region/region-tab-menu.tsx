@@ -1,6 +1,6 @@
-import { Box, Menu, Portal } from "@chakra-ui/react";
+import { Box, Menu, Portal, VisuallyHidden } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import type { WorkbenchCommandParamsRequest } from "../../core/controllers/command-palette/command-palette-controller";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
@@ -23,7 +23,7 @@ const SharedAction = (props: { value: string; label: string; icon: string; onAct
   );
 };
 interface RegionTabMenuProps {
-  anchor: { x: number; y: number; width: number; height: number };
+  anchor: { x: number; y: number; width: number; height: number; triggerId: string };
   label: string;
   open: boolean;
   setOpen(open: boolean): void;
@@ -33,6 +33,7 @@ interface RegionTabMenuProps {
 }
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { anchor, label, open, setOpen, groups, placement, workbench } = props;
+  const labelId = useId();
   const pendingRequest = useRef<WorkbenchCommandParamsRequest | null>(null);
   const currentRegion = findPlacementByWidgetId(workbench.layout.getLayout(), placement.widgetId)?.regionId;
   const destinations = workbench.getPanelDestinations(placement.widgetId).filter((region) => region !== currentRegion);
@@ -47,6 +48,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
   };
   return (
     <Menu.Root
+      ids={{ trigger: anchor.triggerId }}
       open={open}
       onOpenChange={(details) => setOpen(details.open)}
       onExitComplete={() => {
@@ -59,7 +61,8 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     >
       <Portal>
         <Menu.Positioner>
-          <Menu.Content aria-label={`${label} context menu`} minW="64" bg="bg">
+          <Menu.Content aria-labelledby={labelId} minW="64" bg="bg">
+            <VisuallyHidden id={labelId}>{label} context menu</VisuallyHidden>
             {groups
               .filter((group) => group.rows.length)
               .map((group, index) => (

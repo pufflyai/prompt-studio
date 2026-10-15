@@ -2,6 +2,8 @@
 
 Manage saved conversations from the session breadcrumb or its row in the Sessions or workspace navigation.
 
+Choosing **New session** opens its composer. Navigating to a ticket leaves your session panel unchanged; open a related session explicitly from the ticket's navigation. Opening a workspace still previews its latest linked session.
+
 ## Open session actions
 
 Select a session, then open the arrow beside its name in the breadcrumb. You can also right-click its navigation row, press Shift+F10 or the Context Menu key, or use the row's touch menu.

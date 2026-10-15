@@ -30,11 +30,15 @@ export const verifyPackagedSessionMenus = async (
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
   await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
-  await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
-      name: /Packaged session actions/,
-    }),
-  ).toBeVisible();
+  const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
+    name: /Packaged session actions/,
+  });
+  await expect(tab).toBeVisible();
+  await tab.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menu", { name: "Packaged session actions context menu", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(tab).toBeFocused();
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();

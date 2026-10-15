@@ -2,15 +2,16 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource } from "@/shared/app/resources";
+import { createDashboardResource, createDashboardSessionResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
+import { openDashboardSessionPanel } from "./bubble/session-bubble";
 import { createSessionsModule } from "./module";
-import { openResourceSessionPreview } from "./session-auto-open";
 
 const workspaceRow = (overrides: Record<string, unknown> = {}) => ({
   id: "workspace-1",
@@ -124,7 +125,7 @@ describe("session auto-open", () => {
       resourceKey({ type: "session", id: "session-older", extensionId: "pstdio", projectId: "project-1" }),
     );
   });
-  test("opens a ticket's session as a preview, including sessions of its workspaces", async () => {
+  test("ticket navigation keeps the session panel empty until an explicit session action", async () => {
     const workbench = createSessionWorkbench();
     const ticketPage = registerTicketPage(workbench);
     getWriter("workspaces")?.truncateAndWrite([
@@ -142,10 +143,13 @@ describe("session auto-open", () => {
     ]);
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "component", "project-1");
     await workbench.navigation.openTarget({ kind: "page", page: ticketPage, resource: ticket });
-    expect(sidePanelSession(workbench, "session-refine")?.tabRetention).toBe("preview");
-    expect(sidePanelSession(workbench, "session-unrelated")).toBeUndefined();
+    expect(workbench.getPrimaryResource()).toMatchObject(ticket);
+    expect(workbench.layout.listPanelInstances("side")).toEqual([]);
+    await workbench.commands.executeCommand(dashboardCommandIds.createSession);
+    expect(workbench.layout.getActivePanel()?.resource?.type).toBe("session-draft");
+    expect(workbench.sidePanel.getMode()).not.toBe("closed");
   });
-  test("returns focus to the Location when an active session preview is replaced", async () => {
+  test("ticket navigation preserves the explicitly selected conversation", async () => {
     const workbench = createSessionWorkbench();
     const ticketPage = registerTicketPage(workbench);
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "component", "project-1");
@@ -154,8 +158,12 @@ describe("session auto-open", () => {
         anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307" }],
       }),
     ]);
-    await workbench.navigation.openTarget({ kind: "page", page: ticketPage, resource: ticket });
-    workbench.layout.activateWidget(sidePanelSession(workbench, "session-old")!.instanceId);
+    openWorkspacesPage(workbench);
+    await openDashboardSessionPanel(workbench, {
+      resource: createDashboardSessionResource("session-old", "Session session-old", "project-1"),
+      tabRetention: "persistent",
+    });
+    const previous = sidePanelSession(workbench, "session-old");
     getWriter("sessions")?.truncateAndWrite([
       sessionRow("session-new", "2026-05-22T09:45:00Z", {
         anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307" }],
@@ -164,9 +172,9 @@ describe("session auto-open", () => {
         anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307" }],
       }),
     ]);
-    openResourceSessionPreview(workbench, ticket);
-    expect(sidePanelSession(workbench, "session-old")).toBeUndefined();
-    expect(sidePanelSession(workbench, "session-new")?.tabRetention).toBe("preview");
+    await workbench.navigation.openTarget({ kind: "page", page: ticketPage, resource: ticket });
+    expect(sidePanelSession(workbench, "session-old")?.instanceId).toBe(previous?.instanceId);
+    expect(workbench.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toEqual(["session-old"]);
     expect(workbench.layout.getLayout().activeWidgetId).toBe(workbench.layout.getLayout().activeLocationWidgetId);
   });
   test("leaves the Side Panel alone for a resource without sessions", async () => {
