@@ -46,6 +46,11 @@ export const verifyPackagedSessionMenus = async (
     await side.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
   }
   const sessionTab = page.getByRole("tab", { name: /Packaged session actions/ });
+  await sessionTab.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menu", { name: /Packaged session actions context menu/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sessionTab).toBeFocused();
   const instanceId = await sessionTab.locator("..").getAttribute("data-workbench-tab");
   await side.getByRole("button", { name: "Float Side Panel", exact: true }).click();
   const bubble = page.getByRole("button", { name: "Close Side Panel", exact: true });

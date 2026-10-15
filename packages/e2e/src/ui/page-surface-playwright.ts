@@ -28,7 +28,8 @@ export const exercisePageSurface = async (page: Page) => {
     main.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Changes", exact: true }),
   ).toBeVisible();
   await expect(draft).toHaveValue("Keep the draft when moving into page bottom");
-  await page.getByRole("button", { name: "Session 1", exact: true }).click();
+  // Let the pointer release pass dnd-kit's 50 ms post-drag click guard.
+  await page.getByRole("button", { name: "Session 1", exact: true }).click({ delay: 60 });
   const sessionTab = page.locator('[data-workbench-panel="side"]').getByRole("tab", { name: /^Session 1/ });
   await movePanelTab(page, sessionTab, bottom);
   await page.getByRole("button", { name: "Sessions", exact: true }).click();

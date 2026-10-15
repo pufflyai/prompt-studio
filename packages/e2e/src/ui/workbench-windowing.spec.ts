@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { checkFloatingBubblePointer } from "./floating-bubble-interactions";
 import { exerciseForeignContext } from "./foreign-context-playwright";
 import { exerciseFullscreenEdgeDrop, exerciseFullscreenWebview } from "./fullscreen-webview-playwright";
+import { exerciseIntegratedWindowing } from "./integrated-windowing-playwright";
 import {
   STORY_RENDER_TIMEOUT_MS,
   startStorybook,
@@ -180,15 +181,33 @@ test.describe("Workbench windowing stories", () => {
       "pstdio-workbench-reference-core-api-visual-states--page-composition",
       "pstdio-workbench",
     ));
+    const index = (await (await fetch(`${baseUrl}/index.json`)).json()) as {
+      entries: Record<string, { id: string; type: string }>;
+    };
+    const windowingIds = Object.values(index.entries)
+      .filter((entry) => entry.type === "story" && entry.id.startsWith("pstdio-workbench-guides-windowing--"))
+      .map((entry) => entry.id)
+      .sort();
+    expect(storyIds.filter((id) => id.startsWith("pstdio-workbench-guides-windowing--")).sort()).toEqual(windowingIds);
   });
 
   test.afterAll(async () => {
     await stopStorybook(storybook);
   });
 
-  for (const storyId of storyIds) {
-    test(`${storyId} completes its interactions`, async ({ page }) => {
-      await page.setViewportSize({ width: 1440, height: 960 });
+  const cases = storyIds.flatMap((storyId) => {
+    const viewports = storyId.includes("--integrated-")
+      ? [
+          { width: 1440, height: 900 },
+          { width: 900, height: 700 },
+          { width: 700, height: 600 },
+        ]
+      : [{ width: 1440, height: 960 }];
+    return viewports.map((viewport) => ({ storyId, viewport }));
+  });
+  for (const { storyId, viewport } of cases) {
+    test(`${storyId} at ${viewport.width}x${viewport.height} completes its interactions`, async ({ page }) => {
+      await page.setViewportSize(viewport);
       await page.goto(storyUrl(baseUrl, storyId));
       await page
         .locator("#storybook-root > *")
@@ -213,6 +232,7 @@ test.describe("Workbench windowing stories", () => {
       if (storyId.endsWith("--fullscreen-nested-escape")) await exerciseFullscreenWebview(page);
       if (storyId.endsWith("--fullscreen-rearranged")) await exerciseFullscreenEdgeDrop(page);
       await windowingInteractions[storyId]?.(page);
+      if (storyId.includes("--integrated-")) await exerciseIntegratedWindowing(page);
       if (
         /--(?:fullscreen|foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page|session-start)/.test(
           storyId,

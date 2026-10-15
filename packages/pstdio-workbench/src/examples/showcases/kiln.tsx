@@ -122,29 +122,10 @@ export const registerKilnExample = (workbench: WorkbenchCore) => {
       },
       cardinality: "one",
     },
-    slots: [
-      {
-        id: "inspector",
-        region: "side",
-        openOn: "page-resource",
-        item: {
-          kind: "binding",
-          binding: {
-            kinds: [
-              {
-                kind: "resource-kind",
-                id: "kiln.object",
-              },
-            ],
-            view: {
-              kind: "view",
-              id: "kiln.inspector",
-            },
-            cardinality: "one",
-          },
-        },
-      },
-    ],
+    panelMenus: {
+      right: { view: { kind: "view", id: "kiln.inspector" }, size: { defaultPx: 300 } },
+    },
+    slots: [],
   });
 };
 

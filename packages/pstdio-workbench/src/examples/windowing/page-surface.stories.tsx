@@ -16,7 +16,8 @@ export const PageSurface: Story = {
   args: { createFixture: () => createWindowingFixture("windowing", { pagePanels: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByLabelText("Inspector binding")).toHaveTextContent("Workspace 1");
+    const inspectorBinding = await canvas.findByLabelText("Inspector binding");
+    await expect(inspectorBinding).toHaveTextContent("Workspace 1");
     const main = canvasElement.querySelector('[data-workbench-panel="main"]')!;
     const bottom = main.querySelector('[data-workbench-panel="bottom"]')!;
     await expect(bottom).toBeVisible();
@@ -41,7 +42,7 @@ export const PageSurface: Story = {
       ),
     );
     await userEvent.click(await popup.findByRole("menuitemcheckbox", { name: "Inspector" }));
-    await waitFor(() => expect(visibleWindowingLabel(canvasElement, "Inspector binding")).not.toBeVisible());
+    await waitFor(() => expect(inspectorBinding).not.toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "Workspace panels" }));
     await userEvent.click(await popup.findByRole("menuitemcheckbox", { name: "Inspector" }));
     await waitFor(() => expect(visibleWindowingLabel(canvasElement, "Inspector binding")).toBeVisible());

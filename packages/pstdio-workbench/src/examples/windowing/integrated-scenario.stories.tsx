@@ -4,6 +4,7 @@ import { IntegratedWindowingControls } from "./integrated-controls";
 import { createIntegratedWindowingFixture } from "./integrated-fixture";
 import { exerciseIntegratedOwnership } from "./integrated-ownership-play";
 import { exerciseIntegratedModes, exerciseIntegratedResources } from "./integrated-resources-play";
+import { exerciseIntegratedShell } from "./integrated-shell-play";
 import { WindowingStory } from "./windowing-story";
 
 const meta = {
@@ -31,7 +32,8 @@ const args = {
 };
 const play: Story["play"] = async ({ canvasElement }) => {
   await exerciseIntegratedOwnership(canvasElement, fixture);
-  await exerciseIntegratedResources(canvasElement);
+  await exerciseIntegratedShell(canvasElement, fixture);
+  await exerciseIntegratedResources(canvasElement, fixture);
   await exerciseIntegratedModes(canvasElement, fixture);
 };
 

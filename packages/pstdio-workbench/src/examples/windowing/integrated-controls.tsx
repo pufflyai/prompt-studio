@@ -1,7 +1,7 @@
 import { Button, HStack } from "@chakra-ui/react";
 import { useSyncExternalStore } from "react";
 import { kilnObjects, kilnPage, kilnResource } from "../showcases/kiln-data";
-import { integratedLongNote } from "./integrated-fixture";
+import { integratedLongNote, integratedTicketPage, integratedTickets } from "./integrated-fixture";
 import { windowingExtensionId, windowingPages } from "./resources";
 import type { WindowingControlsProps } from "./windowing-story";
 
@@ -55,9 +55,16 @@ export const IntegratedWindowingControls = (props: WindowingControlsProps) => {
       <Button size="xs" variant="outline" onClick={() => navigate("windowing.sessions")}>
         Sessions
       </Button>
-      <Button size="xs" variant="outline" onClick={() => navigate("windowing.ticket")}>
-        Ticket
-      </Button>
+      {integratedTickets.map((resource) => (
+        <Button
+          key={resource.id}
+          size="xs"
+          variant="outline"
+          onClick={() => workbench.pageLocations.navigate({ kind: "page", page: integratedTicketPage, resource })}
+        >
+          {resource.label}
+        </Button>
+      ))}
       <Button size="xs" variant="outline" onClick={() => navigate("windowing.webview")}>
         Webview
       </Button>

@@ -50,7 +50,10 @@ export const ForeignContext: Story = {
     );
     await expect(breadcrumb).toHaveTextContent(original!);
     await user.click(canvas.getByRole("button", { name: "Session 1" }));
-    await expect(canvas.getByRole("tab", { name: /^Session 1(?: · .*)?$/ })).toBeVisible();
+    const local = canvas.getByRole("tab", { name: "Session 1" });
+    await expect(local).toBeVisible();
+    await expect(local).toHaveAccessibleName("Session 1");
+    await expect(local.querySelector('[aria-label*="Outside this workspace"]')).toBeNull();
     await expect(breadcrumb).toHaveTextContent(original!);
   },
 };
