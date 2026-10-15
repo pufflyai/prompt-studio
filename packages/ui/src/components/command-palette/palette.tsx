@@ -236,18 +236,17 @@ export const Palette = <T extends PaletteEntry>(props: PaletteProps<T>) => {
       runActiveEntry();
       return;
     }
-
-    if (event.key !== "Escape") return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    handleEscape();
   };
 
   return (
     <Dialog.Root
       open={open}
       initialFocusEl={() => (searchAutoFocus ? inputRef.current : contentRef.current)}
+      onEscapeKeyDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        handleEscape();
+      }}
       onOpenChange={(details) => !details.open && closePalette()}
     >
       <Dialog.Backdrop />

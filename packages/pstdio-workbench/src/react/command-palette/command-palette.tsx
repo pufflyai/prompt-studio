@@ -180,8 +180,9 @@ export const createWorkbenchCommandPaletteEntries = (input: {
 };
 
 export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => {
-  const request = useWorkbenchStore(props.workbench.commandPalette.store, (state) => state.resourceSearch);
-  if (request) return <WorkbenchResourceSearch workbench={props.workbench} request={request} onClose={props.onClose} />;
+  const { workbench, open, onClose } = props;
+  const request = useWorkbenchStore(workbench.commandPalette.store, (state) => state.resourceSearch);
+  if (request && open) return <WorkbenchResourceSearch workbench={workbench} request={request} onClose={onClose} />;
   return <WorkbenchMainCommandPalette {...props} />;
 };
 

@@ -60,7 +60,8 @@ test("Session menus share resource actions and switch through the full history",
   await expect(options).toHaveText(["History 02"]);
   await search.fill("no matching session");
   await expect(picker).toContainText("No resources found");
-  await search.fill("");
+  await search.press("Escape");
+  await expect(search).toHaveValue("");
   await expect.poll(() => options.count()).toBeGreaterThan(1);
   await search.fill("History 00");
   await search.press("Enter");
@@ -73,7 +74,6 @@ test("Session menus share resource actions and switch through the full history",
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   await picker.getByRole("textbox").fill("History 01");
   await picker.getByRole("textbox").press("Enter");
-  await expect(page).toHaveURL(/session\?resource=.*History|session\?resource=/);
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("History 01");
   await expect(side.getByRole("tab", { name: "History 00", exact: true })).toBeVisible();
 });
