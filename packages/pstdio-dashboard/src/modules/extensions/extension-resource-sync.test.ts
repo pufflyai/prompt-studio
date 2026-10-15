@@ -12,7 +12,11 @@ const resolveCommand = `${extensionId}.command.resolve-note`;
 const page = { kind: "page" as const, extensionId, id: "note" };
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const openNoteWorkbench = (resolve: (resource: ResourceRef) => Promise<ResourceRef | null> | ResourceRef | null) => {
+const openNoteWorkbench = (
+  resolve: (resource: ResourceRef) => Promise<ResourceRef | null> | ResourceRef | null,
+  batchResolver = false,
+  batchOnly = false,
+) => {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.views.registerView({ id: "note", title: "Note", body: { kind: "react", render: () => null } });
@@ -30,15 +34,25 @@ const openNoteWorkbench = (resolve: (resource: ResourceRef) => Promise<ResourceR
     projectId,
     metadata: {
       ...emptyDashboardExtensionMetadata,
-      resourceKinds: [{ id: "note", localId: "note", extensionId, resolveCommand, menuSlots: [] }],
+      resourceKinds: [
+        {
+          id: "note",
+          localId: "note",
+          extensionId,
+          resolveCommand: batchOnly ? undefined : resolveCommand,
+          ...(batchResolver || batchOnly ? { resolveManyCommand: `${extensionId}.command.resolve-links` } : {}),
+          menuSlots: [],
+        },
+      ],
     },
     executeCommand: async (_projectId, commandId, body) => {
       const resource = (body as { resource: ResourceRef }).resource;
       resolved.push(resource);
+      const value = await resolve(resource);
       return {
         commandId,
         extensionId,
-        outcome: { ok: true, status: "success", value: await resolve(resource) },
+        outcome: { ok: true, status: "success", value: batchOnly ? [{ resource: value }] : value },
       } as CommandExecuteResponse;
     },
   });
@@ -87,9 +101,16 @@ describe("open extension resource sync", () => {
     expect(workbench.layout.getLayout().activeWidgetId).toBe(selected);
     expect(workbench.getPrimaryResource()?.id).toBe("a");
   });
-  test("refreshes an inactive resource tab without selecting it", async () => {
+  test.each([
+    false,
+    true,
+  ])("refreshes an inactive resource tab without selecting it (batch only: %s)", async (batchOnly) => {
     let writable = true;
-    const { workbench, open } = openNoteWorkbench((resource) => ({ ...resource, metadata: { writable } }));
+    const { workbench, open } = openNoteWorkbench(
+      (resource) => ({ ...resource, metadata: { writable } }),
+      false,
+      batchOnly,
+    );
     workbench.modePlacements.registerPlacement({
       id: "notes",
       ref: { kind: "placement", id: "notes", extensionId },
@@ -238,4 +259,15 @@ test("same-kind open resources resolve through their own extension and refresh w
     expect(workbench.getPrimaryResource()?.label).toBe(`${extensionId}.command.resolve`);
   }
   expect(calls).toEqual(owners.map((owner) => `${owner}.command.resolve`));
+});
+
+test("keeps the open-resource resolver when a kind also resolves linked-resource batches", async () => {
+  const { workbench, open, resolved } = openNoteWorkbench(
+    (resource) => ({ ...resource, label: "Current document" }),
+    true,
+  );
+  open({ type: "note", id: "n1", label: "Old document" });
+  await settle();
+  expect(resolved).toHaveLength(1);
+  expect(workbench.getPrimaryResource()?.label).toBe("Current document");
 });

@@ -222,20 +222,7 @@ export const activateInLayout = (
   const region = layout.regions[regionId];
   if (isLocationPlacement(placement)) {
     const selections = layout.locationSubPanelSelections?.[locationWorkspaceKey(placement)] ?? {};
-    const regions = Object.fromEntries(
-      Object.entries(layout.regions).map(([id, panel]) => [
-        id,
-        {
-          ...panel,
-          widgets: panel.widgets.map((candidate) => {
-            if (!placement.resource || candidate.widgetId === placement.widgetId) return candidate;
-            if (candidate.ownerResourceKey !== placement.resourceKey) return candidate;
-            if (candidate.resourceKey !== placement.resourceKey) return candidate;
-            return { ...candidate, resource: placement.resource };
-          }),
-        },
-      ]),
-    ) as WorkbenchLayout["regions"];
+    const regions = { ...layout.regions };
     for (const panelRegion of workbenchPanelRegions) {
       const panel = regions[panelRegion];
       const selectedId = selections[panelRegion];

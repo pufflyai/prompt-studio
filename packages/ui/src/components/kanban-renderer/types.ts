@@ -68,6 +68,8 @@ export interface CollectionBadgeItem {
   id: string;
   label: string;
   icon?: string;
+  color?: string;
+  tooltip?: string;
   resource?: CollectionBadgeResource;
 }
 

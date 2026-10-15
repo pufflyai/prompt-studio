@@ -139,6 +139,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(node.label),
       icon: node.icon,
       iconColor: node.iconColor,
+      badge: node.badge,
       iconTooltip: node.iconTooltip,
       tooltip: node.tooltip,
       resource: node.resource ? resolveResource(node.resource) : undefined,

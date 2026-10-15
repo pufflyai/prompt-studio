@@ -1,4 +1,3 @@
-import { Badge } from "@chakra-ui/react";
 import type { Disposable, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { subscribeCollections } from "@/lib/sync/collections";
@@ -21,12 +20,7 @@ const createNotificationNode = (ctx: WorkbenchModuleContext): TreeNode => {
     id: "dashboard.notifications.sidenav",
     label: "Notifications",
     icon: "Inbox",
-    endContent:
-      count > 0 ? (
-        <Badge size="sm" variant="subtle" colorPalette="blue" flexShrink={0}>
-          {count}
-        </Badge>
-      ) : undefined,
+    badge: count > 0 ? { label: String(count), color: "blue" } : undefined,
     target: { kind: "command", commandId: dashboardCommandIds.openNotifications },
   };
 };
