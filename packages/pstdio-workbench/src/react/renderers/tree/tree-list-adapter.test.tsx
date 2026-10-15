@@ -4,6 +4,18 @@ import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 
+test("a navigation-specific menu supplements the resource's registered actions", () => {
+  const workbench = createWorkbench();
+  workbench.commands.registerCommand({ id: "note.rename", label: "Rename" }, { execute() {} });
+  workbench.layout.registerMenuItem(resourceContextMenuPath("note"), { commandId: "note.rename" });
+  const section = toTreeListSection(
+    { id: "notes", nodes: [{ id: "b", label: "B", resource: { type: "note", id: "b" }, contextMenuPath: ["custom"] }] },
+    {},
+    { workbench },
+  );
+  expect(section.nodes[0]?.contextMenuItems?.map((item) => item.label)).toEqual(["Rename"]);
+});
+
 describe("resolveTreeListSelection", () => {
   test("follows a page target's resource when another view changes the route", () => {
     const page = { kind: "page", id: "notes", extensionId: "author.notes" } as const;
@@ -192,9 +204,9 @@ describe("toTreeListSection", () => {
     );
     const overflowLabels = section.nodes[0]?.menuItems?.map((item) => item.label);
     const contextLabels = section.nodes[0]?.contextMenuItems?.map((item) => item.label);
-    expect(overflowLabels).toEqual(["Run review", "Archive workspace"]);
+    expect(overflowLabels).toEqual(["Archive workspace", "Run review"]);
     expect(contextLabels).toEqual(overflowLabels);
-    expect(section.nodes[0]?.menuItems?.[1]).toMatchObject({ separatorBefore: true });
+    expect(section.nodes[0]?.menuItems?.[0]?.group).toBeDefined();
   });
   test("renders workspace diff metadata as trailing content", () => {
     const workbench = createWorkbench();

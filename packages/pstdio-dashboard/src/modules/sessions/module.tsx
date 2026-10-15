@@ -24,6 +24,7 @@ import {
 } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { createSessionTabPresentation } from "./bubble/session-tab-presentation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { openResourceSessionPreview } from "./session-auto-open";
@@ -89,6 +90,7 @@ const registerSessionsPage = (ctx: WorkbenchModuleContext) => {
         id: dashboardWidgetIds.session,
       },
       cardinality: "one",
+      tab: createSessionTabPresentation(ctx),
     },
     slots: [],
   });
@@ -119,6 +121,7 @@ const registerSessionsPage = (ctx: WorkbenchModuleContext) => {
         id: dashboardWidgetIds.session,
       },
       cardinality: "one",
+      tab: createSessionTabPresentation(ctx),
     },
     slots: [],
   });
@@ -208,8 +211,14 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
   ({
     id: "dashboard.sessions",
     activate(ctx) {
-      ctx.resources.registerKind({ kind: "session", label: "Session", icon: "MessageCircle" });
-      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "PenBox" });
+      ctx.resources.registerKind({
+        kind: "session",
+        label: "Session",
+        icon: "MessageCircle",
+        resolve: (resource) => findDashboardSession(resource.id)?.resource,
+        subscribe: subscribeSessionListData,
+      });
+      ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "MessageSquarePlus" });
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
       registerSessionsPage(ctx);
       registerSidenavSessions(ctx);

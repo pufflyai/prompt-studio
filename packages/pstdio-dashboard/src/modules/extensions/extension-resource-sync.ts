@@ -7,6 +7,11 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-e
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { toDashboardExtensionResource } from "./extension-kanban-adapter";
+import {
+  isResourceRefreshEvent,
+  refreshWorkbenchResource,
+  watchExtensionPlacementResources,
+} from "./extension-placement-resource-sync";
 
 interface WatchOpenExtensionResourceInput {
   executeCommand: ExecuteDashboardExtensionCommand;
@@ -129,6 +134,7 @@ export const watchOpenExtensionResource = (
       shorthand: resolved.shorthand,
       metadata: resolved.metadata,
     };
+    refreshWorkbenchResource(ctx, current);
     const location = ctx.pages.store.getState().location;
     const target = ownerPageTarget({
       target: resolution && "target" in resolution ? resolution.target : undefined,
@@ -187,10 +193,12 @@ export const watchOpenExtensionResource = (
     const open = ctx.getPrimaryResource();
     const resolver = resolverOf(open);
     if (event.projectId !== input.projectId || !resolver) return;
-    if (event.id.startsWith(`${resolver.extensionId}.event.`)) void resolveOpenResource();
+    if (isResourceRefreshEvent(event.id, resolver.extensionId)) void resolveOpenResource();
   });
+  const placementResources = watchExtensionPlacementResources(ctx, input);
   return {
     dispose() {
+      placementResources.dispose();
       pending?.abort();
       primarySubscription.dispose();
       unsubscribePages();

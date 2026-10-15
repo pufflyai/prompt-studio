@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { CommandRef } from "./commands";
 import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
 import type { ContributionDefinition, ModeRef, PageRef, ResourceKindRef, ViewRef } from "./contribution-identity";
@@ -88,6 +89,20 @@ export interface PlacementTabMenuGroup {
   readonly id: string;
   readonly label?: Localizable<string>;
   readonly rows: readonly PlacementTabMenuRow[];
+  /** Searchable, paged custom section. The command receives query and cursor with the placement resource. */
+  readonly list?: PlacementTabMenuList;
+  readonly trailingRows?: readonly PlacementTabMenuRow[];
+}
+
+export interface PlacementTabMenuList {
+  readonly command: CommandRef;
+  readonly searchLabel: Localizable<string>;
+  readonly emptyLabel: Localizable<string>;
+}
+
+export interface PlacementTabMenuPage {
+  readonly rows: readonly PlacementTabMenuRow[];
+  readonly nextCursor?: string;
 }
 
 export interface PlacementTabSnapshot extends Struct {

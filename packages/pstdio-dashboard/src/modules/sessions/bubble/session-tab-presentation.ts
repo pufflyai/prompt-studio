@@ -1,13 +1,23 @@
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { resolveSessionIndicatorColor, type SessionCompletionStatus } from "@pstdio/ui";
-import type { WorkbenchModuleContext, WorkbenchPanelInstance, WorkbenchWidgetTab } from "@pstdio/workbench";
+import type {
+  ResourceRef,
+  WorkbenchModuleContext,
+  WorkbenchPanelInstance,
+  WorkbenchWidgetTab,
+} from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { resolveDashboardWorkspaceIcon } from "@/shared/workspaces/dashboard-workspaces";
-import { createDashboardSessions, resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
+import {
+  createDashboardSessions,
+  findDashboardSession,
+  resolveDashboardSessionViewForPlacement,
+} from "../data/dashboard-sessions";
 import { subscribeSessionListData } from "../data/session-data-subscription";
+import { sessionMenuPage } from "./session-menu-page";
 
-const maxSessionsInMenu = 5;
 const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
   if (status === "in_progress") return "LoaderCircle";
   if (status === "completed") return "CircleCheck";
@@ -17,6 +27,15 @@ const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
   if (status === "queued") return "ClockAlert";
   if (status === "awaiting_input") return "CircleDot";
   return "CircleDashed";
+};
+const sessionOpenAction = (instance: WorkbenchPanelInstance, resource: ResourceRef) => {
+  if (instance.placementIdentity?.kind === "page")
+    return { kind: "navigation" as const, target: { kind: "page" as const, page: workbenchPages.session, resource } };
+  return {
+    kind: "command" as const,
+    commandId: dashboardCommandIds.openSessionPanel,
+    args: { resource, replacePanel: instance.placementIdentity },
+  };
 };
 const sessionStatus = (instance: WorkbenchPanelInstance, status: string | undefined) => {
   const value = status ?? instance.resource?.metadata?.status;
@@ -45,8 +64,8 @@ const workspaceResource = (input: {
 };
 const resolveWorkspace = (ctx: WorkbenchModuleContext, instance: WorkbenchPanelInstance) => {
   const primary = ctx.getPrimaryResource();
-  if (primary?.type === "workspace") return primary;
   const view = resolveDashboardSessionViewForPlacement(instance);
+  if (!view.workspaceId && primary?.type === "workspace") return primary;
   const projectId = ctx.context.get(dashboardSelectedProjectIdContextKey);
   return workspaceResource({
     projectId: typeof projectId === "string" ? projectId : undefined,
@@ -62,25 +81,9 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
     const projectIdValue = ctx.context.get(dashboardSelectedProjectIdContextKey);
     const projectId = typeof projectIdValue === "string" ? projectIdValue : undefined;
     const view = resolveDashboardSessionViewForPlacement(instance);
-    const sessions = createDashboardSessions(projectId);
-    const selected = sessions.find((session) => session.id === view.sessionId);
+    const selected = findDashboardSession(view.sessionId);
     const status = sessionStatus(instance, selected?.status);
     const workspace = resolveWorkspace(ctx, instance);
-    const recentRows = sessions.slice(0, maxSessionsInMenu).map((session) => ({
-      id: session.id,
-      label: session.title,
-      icon: sessionStatusIcon(session.status as SessionCompletionStatus),
-      iconColor: resolveSessionIndicatorColor(session.status as SessionCompletionStatus),
-      selected: session.id === view.sessionId,
-      action: {
-        kind: "command" as const,
-        commandId: dashboardCommandIds.openSessionPanel,
-        args: {
-          resource: session.resource,
-          replacePanel: instance.placementIdentity,
-        },
-      },
-    }));
     return {
       label: selected?.title ?? instance.resource?.label ?? "New session",
       indicator: {
@@ -90,26 +93,13 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
       },
       menu: [
         {
-          id: "create",
+          id: "quick-access",
+          label: "Quick access",
           rows: [
-            ...(selected
-              ? [
-                  {
-                    id: "rename-session",
-                    label: "Rename session",
-                    icon: "Pencil",
-                    action: {
-                      kind: "command" as const,
-                      commandId: dashboardCommandIds.renameSession,
-                      args: { sessionId: selected.id },
-                    },
-                  },
-                ]
-              : []),
             {
               id: "new-session",
               label: "New session",
-              icon: "PenBox",
+              icon: "MessageSquarePlus",
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.createSession,
@@ -117,17 +107,26 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
               },
             },
           ],
-        },
-        {
-          id: "recent",
-          rows:
-            recentRows.length > 0
-              ? recentRows
-              : [{ id: "empty", label: "No sessions yet", icon: "MessageCircle", disabled: true }],
-        },
-        {
-          id: "all",
-          rows: [
+          list: {
+            searchLabel: "Search sessions",
+            emptyLabel: "No sessions yet",
+            loadPage: async (request) => {
+              const sessions = createDashboardSessions(projectId);
+              const page = sessionMenuPage(sessions, request);
+              return {
+                nextCursor: page.nextCursor,
+                rows: page.rows.map((session) => ({
+                  id: session.id,
+                  label: session.title,
+                  icon: sessionStatusIcon(session.status as SessionCompletionStatus),
+                  iconColor: resolveSessionIndicatorColor(session.status as SessionCompletionStatus),
+                  selected: session.id === view.sessionId,
+                  action: sessionOpenAction(instance, session.resource),
+                })),
+              };
+            },
+          },
+          trailingRows: [
             {
               id: "view-all-sessions",
               label: "View all sessions",

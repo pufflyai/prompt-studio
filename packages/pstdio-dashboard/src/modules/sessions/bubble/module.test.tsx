@@ -48,7 +48,7 @@ test("opens the session supplied by a resource menu execution context", async ()
 
 describe("createSessionBubbleModule", () => {
   for (const retention of ["preview", "persistent"] as const) {
-    test(`replaces the originating ${retention} draft through its recent-session action`, async () => {
+    test(`replaces the originating ${retention} draft through its session-list action`, async () => {
       const workbench = createWorkbench();
       workbench.registerModule(createSessionBubbleModule());
       await activateProjectPage(workbench);
@@ -70,9 +70,10 @@ describe("createSessionBubbleModule", () => {
       const snapshot = origin.tab!.getSnapshot!(
         workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
       );
-      const action = snapshot
-        .menu!.find((group) => group.id === "recent")!
-        .rows.find((row) => row.id === "menu-session")!.action!;
+      const page = await snapshot
+        .menu!.find((group) => group.id === "quick-access")!
+        .list!.loadPage({ query: "", signal: new AbortController().signal });
+      const action = page.rows.find((row) => row.id === "menu-session")!.action!;
       if (action.kind !== "command") throw new Error("Expected a session command");
       await workbench.commands.executeCommand(action.commandId, action.args);
       const after = sessionPlacements(workbench);
@@ -88,7 +89,7 @@ describe("createSessionBubbleModule", () => {
     });
   }
   for (const retention of ["preview", "persistent"] as const) {
-    test(`replaces the originating ${retention} session through its recent-session action`, async () => {
+    test(`replaces the originating ${retention} session through its session-list action`, async () => {
       const workbench = createWorkbench();
       workbench.registerModule(createSessionBubbleModule());
       await activateProjectPage(workbench);
@@ -110,9 +111,10 @@ describe("createSessionBubbleModule", () => {
       const snapshot = origin.tab!.getSnapshot!(
         workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
       );
-      const action = snapshot
-        .menu!.find((group) => group.id === "recent")!
-        .rows.find((row) => row.id === "menu-session")!.action!;
+      const page = await snapshot
+        .menu!.find((group) => group.id === "quick-access")!
+        .list!.loadPage({ query: "", signal: new AbortController().signal });
+      const action = page.rows.find((row) => row.id === "menu-session")!.action!;
       if (action.kind !== "command") throw new Error("Expected a session command");
       await workbench.commands.executeCommand(action.commandId, action.args);
       const after = sessionPlacements(workbench);
@@ -143,7 +145,7 @@ describe("createSessionBubbleModule", () => {
       const snapshot = origin.tab!.getSnapshot!(
         workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
       );
-      const action = snapshot.menu!.find((group) => group.id === "create")!.rows[0]!.action!;
+      const action = snapshot.menu!.find((group) => group.id === "quick-access")!.rows[0]!.action!;
       if (action.kind !== "command") throw new Error("Expected a session command");
       await workbench.commands.executeCommand(action.commandId, action.args);
       const after = sessionPlacements(workbench);

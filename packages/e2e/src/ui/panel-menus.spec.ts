@@ -135,7 +135,9 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   await expect(menu.getByRole("menuitem").first()).toContainText("New session");
   await expect(menu.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Reset layout", exact: true })).toBeVisible();
-  await expect(menu.getByRole("separator")).toHaveCount(3);
+  await expect(menu.getByRole("group", { name: "Quick access", exact: true })).toBeVisible();
+  await expect(menu.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
+  await expect(newSession.locator("svg")).toHaveClass(/lucide-message-square-plus/);
   await expect(viewAllSessions.locator("svg")).toHaveClass(/lucide-arrow-up-right/);
 
   await menu.getByRole("menuitem", { name: "First context session" }).click();

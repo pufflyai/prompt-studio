@@ -15,9 +15,13 @@ Workspace Changes and Files use fixed static slots. They receive the page's work
 A page target changes location and selects its mode. A panel target preserves location and requires an active owner. A compound target prepares its page and panel steps against proposed state, then commits once. A failed preparation changes no history, breadcrumbs, page instances, shared placements, selection, or region visibility. Commands and external links are standalone actions.
 
 On a collection page with panels, the rendered breadcrumb also shows the selected panel's
-resource. Its label and context actions use the same tab snapshot as that panel, including
-updates after renaming. Selecting another tab changes this crumb without changing the
-page URL or history. Right-click, the Context Menu key, or Shift+F10 opens its actions.
+resource. Its label follows that panel's presentation, including updates after renaming.
+Every resource crumb resolves its own resource-owned actions. The current view's crumb
+also receives that view's custom menu groups; parent crumbs do not inherit them.
+The trailing dropdown uses the current placement's resource, or the page resource when
+there is no resource placement, and adds current-page actions such as Copy link.
+Selecting another tab changes the collection crumb without changing the page URL or
+history. Right-click, the Context Menu key, or Shift+F10 opens its actions.
 
 An explicit target parent supplies contextual breadcrumbs. Without one, navigation uses the page's declared parent. Closing the last routed resource view follows that declared parent. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding during page navigation; closing it keeps it closed until another navigation.
 

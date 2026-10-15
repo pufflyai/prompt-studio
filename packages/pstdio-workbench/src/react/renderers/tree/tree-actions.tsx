@@ -1,8 +1,10 @@
-import { Box, HStack, Image, Text } from "@chakra-ui/react";
-import { PaletteShortcut, Tooltip, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
+import { createMenuItemGroups, createMenuItems, withLeadingSeparator } from "../../menus/command-menu-items";
+export const createTreeMenuItems = createMenuItems;
+
+import { HStack, Text } from "@chakra-ui/react";
+import { PaletteShortcut, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
 import type {
   ContextKeyValue,
-  KeybindingSequence,
   MenuPath,
   RegisteredCommand,
   TreeAction,
@@ -23,14 +25,6 @@ export interface TreeActionParamsRequest {
 interface CreateTreeActionItemsInput {
   actions?: TreeAction[];
   workbench: WorkbenchCoreContributionContext;
-  context?: WorkbenchCommandExecutionContext;
-  onCommandError?: (error: unknown) => void;
-  onRequestParams?: (request: TreeActionParamsRequest) => void;
-}
-
-interface CreateTreeMenuItemsInput {
-  workbench: WorkbenchCoreContributionContext;
-  menuPath: MenuPath;
   context?: WorkbenchCommandExecutionContext;
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
@@ -57,9 +51,10 @@ const isRegisteredCommandVisible = (
   record: RegisteredCommand,
   args: unknown,
   contextValues: Record<string, ContextKeyValue>,
+  context?: WorkbenchCommandExecutionContext,
 ) => {
   if (!matchesContextExpression(contextValues, record.command.when)) return false;
-  return record.handler.isVisible?.(args) !== false;
+  return record.handler.isVisible?.(args, context) !== false;
 };
 
 const executeTreeAction = async (input: {
@@ -102,150 +97,25 @@ const isTreeActionVisible = (
   workbench: WorkbenchCoreContributionContext,
   action: TreeAction,
   contextValues: Record<string, ContextKeyValue>,
+  context?: WorkbenchCommandExecutionContext,
 ) => {
   if (!matchesContextExpression(contextValues, action.when)) return false;
 
   const record = resolveTreeActionCommand(workbench, action);
   if (action.commandId && !record) return false;
 
-  return record ? isRegisteredCommandVisible(record, action.args, contextValues) : true;
+  return record ? isRegisteredCommandVisible(record, action.args, contextValues, context) : true;
 };
 
-const isTreeActionEnabled = (workbench: WorkbenchCoreContributionContext, action: TreeAction) => {
+const isTreeActionEnabled = (
+  workbench: WorkbenchCoreContributionContext,
+  action: TreeAction,
+  context?: WorkbenchCommandExecutionContext,
+) => {
   if (action.disabled) return false;
 
   const record = resolveTreeActionCommand(workbench, action);
-  return record ? workbench.commands.isCommandEnabled(record.command.id, action.args) : true;
-};
-
-const createMenuIcon = (input: { icon?: string; iconSrc?: string }) => {
-  const { icon, iconSrc } = input;
-  if (iconSrc) {
-    return (
-      <Box boxSize="16px" bg="white" borderRadius="4px" p="1px" display="grid" placeItems="center">
-        <Image
-          src={iconSrc}
-          alt=""
-          aria-hidden="true"
-          htmlWidth={14}
-          htmlHeight={14}
-          display="block"
-          w="full"
-          h="full"
-          fit="contain"
-        />
-      </Box>
-    );
-  }
-
-  return icon ? <WorkbenchIcon name={icon} /> : undefined;
-};
-
-const createMenuEndContent = (input: {
-  external?: boolean;
-  binding?: KeybindingSequence;
-  disabledReason?: string;
-  readOnly?: boolean;
-}) => {
-  const { binding, external, disabledReason, readOnly } = input;
-  if (readOnly && disabledReason)
-    return (
-      <Tooltip content={disabledReason} openDelay={300}>
-        <Box as="span" tabIndex={0} aria-label={disabledReason}>
-          <WorkbenchIcon name="Info" />
-        </Box>
-      </Tooltip>
-    );
-  if (external) return <WorkbenchIcon name="ArrowUpRight" size={14} color="fg.muted" />;
-  if (binding) return <PaletteShortcut binding={binding} />;
-  return undefined;
-};
-
-const withLeadingSeparator = <T extends TreeListActionMenuItem>(items: T[], enabled: boolean) => {
-  if (!enabled || items.length === 0) return items;
-  const [first, ...rest] = items;
-  return [{ ...first, separatorBefore: true }, ...rest];
-};
-
-const isKernelMenuAction = (group: string | undefined) => group === "kernel";
-
-const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
-  const { context, menuPath, onCommandError, onRequestParams, workbench } = input;
-  const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
-  const regularItems: TreeListActionMenuItem[] = [];
-  const kernelItems: TreeListActionMenuItem[] = [];
-
-  for (const [index, action] of workbench.layout.listMenuItems(menuPath).entries()) {
-    if (!matchesContextExpression(contextValues, action.when)) continue;
-
-    const record = workbench.commands.getCommand(action.commandId);
-    if (!record) continue;
-
-    const args = action.args;
-    if (!isRegisteredCommandVisible(record, args, contextValues)) continue;
-
-    const icon = action.icon ?? record.command.icon;
-    const binding = shortcuts.get(record.command.id);
-    const readOnly = action.readOnly === true;
-    const label = action.label ?? record.command.label;
-    const requestParams =
-      hasCommandParameters(record.command.params) && onRequestParams
-        ? () =>
-            onRequestParams({
-              request: {
-                record: { command: record.command },
-                label,
-                args,
-                context,
-              },
-              run: async (nextArgs) => {
-                await workbench.commands.executeCommand(record.command.id, nextArgs, context);
-              },
-            })
-        : undefined;
-    const item = {
-      id: `${action.commandId}:${index}`,
-      label,
-      commandId: action.sourceCommandId ?? record.command.id,
-      description: action.description ?? record.command.description,
-      icon: createMenuIcon({ icon, iconSrc: action.iconSrc }),
-      endContent: createMenuEndContent({
-        external: action.external,
-        binding,
-        disabledReason: action.description,
-        readOnly,
-      }),
-      disabled: readOnly || !workbench.commands.isCommandEnabled(record.command.id, args),
-      readOnly,
-      separatorBefore: action.separatorBefore,
-      onAction: readOnly
-        ? undefined
-        : () => {
-            if (requestParams) {
-              requestParams();
-              return;
-            }
-            void workbench.commands.executeCommand(record.command.id, args, context).catch((error) => {
-              if (onCommandError) onCommandError(error);
-              else reportUserActionError(workbench, label, error);
-            });
-          },
-    };
-
-    if (isKernelMenuAction(action.group)) {
-      kernelItems.push(item);
-    } else {
-      regularItems.push(item);
-    }
-  }
-
-  return { regularItems, kernelItems };
-};
-
-export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
-  const { regularItems, kernelItems } = createTreeMenuItemGroups(input);
-  return [...regularItems, ...withLeadingSeparator(kernelItems, regularItems.length > 0)];
+  return record ? workbench.commands.isCommandEnabled(record.command.id, action.args, context) : true;
 };
 
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
@@ -255,14 +125,14 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   const items: TreeListActionMenuItem[] = [];
 
   for (const action of actions) {
-    if (!isTreeActionVisible(workbench, action, contextValues)) continue;
+    if (!isTreeActionVisible(workbench, action, contextValues, context)) continue;
 
     const record = resolveTreeActionCommand(workbench, action);
     const label = action.label ?? record?.command.label;
     if (!label) continue;
 
     const icon = action.icon ?? record?.command.icon;
-    const disabled = !isTreeActionEnabled(workbench, action);
+    const disabled = !isTreeActionEnabled(workbench, action, context);
     const binding = action.commandId ? shortcuts.get(action.commandId) : undefined;
     const requestParams =
       hasCommandParameters(action.params) && onRequestParams
@@ -309,7 +179,7 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
 export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   const actionItems = createTreeActionMenuItems(input);
   const { regularItems, kernelItems } = input.menuPath
-    ? createTreeMenuItemGroups({ ...input, menuPath: input.menuPath })
+    ? createMenuItemGroups({ ...input, menuPath: input.menuPath })
     : { regularItems: [], kernelItems: [] };
   const visibleRegularItems = [...actionItems, ...regularItems];
 
@@ -323,7 +193,11 @@ export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const items: TreeListAction[] = [];
 
   for (const action of actions) {
-    if (!isTreeActionVisible(workbench, action, contextValues) || !isTreeActionEnabled(workbench, action)) continue;
+    if (
+      !isTreeActionVisible(workbench, action, contextValues, context) ||
+      !isTreeActionEnabled(workbench, action, context)
+    )
+      continue;
 
     const record = resolveTreeActionCommand(workbench, action);
     const label = action.label ?? record?.command.label;

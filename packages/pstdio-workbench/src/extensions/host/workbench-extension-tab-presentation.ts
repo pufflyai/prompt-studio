@@ -1,7 +1,7 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { isNavigationTarget, resourceKey } from "@pstdio/sdk/extensions";
+import { commandRefId, isNavigationTarget, resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
-import type { Disposable, WorkbenchPanelTab, WorkbenchTabSnapshot } from "../../core";
+import type { Disposable, WorkbenchPanelTab, WorkbenchTabMenuList, WorkbenchTabSnapshot } from "../../core";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
@@ -17,7 +17,50 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 const navigationAction = (value: unknown, extensionId: string, projectId: string) =>
   isNavigationTarget(value) ? toWorkbenchNavigationTarget(value, { extensionId, projectId }) : undefined;
-const toSnapshot = (value: unknown, extensionId: string, projectId: string): WorkbenchTabSnapshot => {
+const toRows = (value: unknown, extensionId: string, projectId: string) =>
+  Array.isArray(value)
+    ? value.flatMap((row) => {
+        if (!isRecord(row) || typeof row.id !== "string") return [];
+        const target = navigationAction(row.action, extensionId, projectId);
+        return [
+          {
+            id: row.id,
+            label: text(row.label as Parameters<typeof text>[0], row.id),
+            icon: typeof row.icon === "string" ? row.icon : undefined,
+            iconColor: typeof row.iconColor === "string" ? row.iconColor : undefined,
+            selected: row.selected === true,
+            disabled: row.disabled === true,
+            action: target ? { kind: "navigation" as const, target } : undefined,
+          },
+        ];
+      })
+    : [];
+type LoadMenuPage = (
+  commandId: string,
+  request: Parameters<WorkbenchTabMenuList["loadPage"]>[0],
+) => ReturnType<WorkbenchTabMenuList["loadPage"]>;
+const toMenuList = (value: unknown, owner: string, loadPage: LoadMenuPage) => {
+  if (!isRecord(value) || !isRecord(value.command) || typeof value.command.id !== "string") return undefined;
+  const command = value.command;
+  const id = commandRefId({
+    id: command.id as string,
+    extensionId: typeof command.extensionId === "string" ? command.extensionId : owner,
+  });
+  return {
+    searchLabel: text(value.searchLabel as Parameters<typeof text>[0], "Search"),
+    emptyLabel: text(value.emptyLabel as Parameters<typeof text>[0], "No results"),
+    loadPage: (request: Parameters<WorkbenchTabMenuList["loadPage"]>[0]) => loadPage(id, request),
+  };
+};
+const toSnapshot = (
+  value: unknown,
+  extensionId: string,
+  projectId: string,
+  loadPage: (
+    commandId: string,
+    request: Parameters<WorkbenchTabMenuList["loadPage"]>[0],
+  ) => ReturnType<WorkbenchTabMenuList["loadPage"]>,
+): WorkbenchTabSnapshot => {
   if (!isRecord(value)) return {};
   const indicator = isRecord(value.indicator)
     ? {
@@ -32,21 +75,10 @@ const toSnapshot = (value: unknown, extensionId: string, projectId: string): Wor
         return [
           {
             id: candidate.id,
-            rows: candidate.rows.flatMap((row) => {
-              if (!isRecord(row) || typeof row.id !== "string") return [];
-              const target = navigationAction(row.action, extensionId, projectId);
-              return [
-                {
-                  id: row.id,
-                  label: text(row.label as Parameters<typeof text>[0], row.id),
-                  icon: typeof row.icon === "string" ? row.icon : undefined,
-                  iconColor: typeof row.iconColor === "string" ? row.iconColor : undefined,
-                  selected: row.selected === true,
-                  disabled: row.disabled === true,
-                  action: target ? { kind: "navigation" as const, target } : undefined,
-                },
-              ];
-            }),
+            label: text(candidate.label as Parameters<typeof text>[0]),
+            rows: toRows(candidate.rows, extensionId, projectId),
+            trailingRows: toRows(candidate.trailingRows, extensionId, projectId),
+            list: toMenuList(candidate.list, extensionId, loadPage),
           },
         ];
       })
@@ -93,7 +125,21 @@ export const createWorkbenchExtensionTabPresentation = (
           await load(instance);
           return;
         }
-        snapshots.set(instance.instanceId, toSnapshot(value, metadata.extensionId, input.projectId));
+        snapshots.set(
+          instance.instanceId,
+          toSnapshot(value, metadata.extensionId, input.projectId, async (commandId, request) => {
+            const page = await executeWorkbenchExtensionCommand(input, commandId, {
+              resource,
+              params: { query: request.query, ...(request.cursor ? { cursor: request.cursor } : {}) },
+              signal: request.signal,
+            });
+            if (!isRecord(page) || !Array.isArray(page.rows)) throw new Error("Invalid menu list page.");
+            return {
+              rows: toRows(page.rows, metadata.extensionId, input.projectId),
+              nextCursor: typeof page.nextCursor === "string" ? page.nextCursor : undefined,
+            };
+          }),
+        );
         for (const listener of listeners) listener();
       })
       .finally(() => {

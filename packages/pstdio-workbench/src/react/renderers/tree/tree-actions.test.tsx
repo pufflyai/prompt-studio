@@ -21,9 +21,9 @@ describe("createTreeContextMenuItems", () => {
       workbench,
     });
 
-    expect(items.map((item) => ({ id: item.id, label: item.label, disabled: item.disabled }))).toEqual([
-      { id: "archive", label: "Archive", disabled: false },
-      { id: "resource.copy:0", label: "Copy resource", disabled: true },
+    expect(items.map((item) => ({ label: item.label, disabled: item.disabled }))).toEqual([
+      { label: "Archive", disabled: false },
+      { label: "Copy resource", disabled: true },
     ]);
 
     items[0]?.onAction?.();
@@ -82,7 +82,6 @@ describe("createTreeContextMenuItems", () => {
     const items = createTreeMenuItems({ menuPath, workbench });
 
     expect(items[0]).toMatchObject({
-      id: "app.info:0",
       label: "Prompt Studio",
       description: "v1.2.3",
       disabled: true,

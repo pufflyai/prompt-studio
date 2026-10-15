@@ -11,6 +11,8 @@ import type { CommandRegistry } from "../commands/command-registry";
 export type MenuPath = readonly string[];
 
 export interface MenuItem {
+  /** Stable identity of this contribution, independent of its position or command arguments. */
+  id?: string;
   commandId: string;
   sourceCommandId?: string;
   label?: string;
@@ -19,7 +21,10 @@ export interface MenuItem {
   iconSrc?: string;
   overflowLabel?: string;
   when?: string;
+  disabledWhen?: string;
+  disabledReason?: string;
   group?: string;
+  resourceGroup?: { id: string; label: string };
   order?: number;
   args?: unknown;
   readOnly?: boolean;
@@ -29,6 +34,7 @@ export interface MenuItem {
 }
 
 export interface RegisteredMenuItem extends MenuItem, RegisteredContributionMetadata {
+  id: string;
   path: MenuPath;
 }
 
@@ -49,6 +55,7 @@ export interface MenuRegistry {
 }
 
 export const createMenuRegistry = (deps: MenuRegistryDeps): MenuRegistry => {
+  let nextId = 0;
   const menuStore = createWorkbenchStore<MenuRegistryStoreState>({
     name: "workbench.menus",
     initialState: { itemsByPath: {} },
@@ -64,6 +71,7 @@ export const createMenuRegistry = (deps: MenuRegistryDeps): MenuRegistry => {
       const record: RegisteredMenuItem = {
         ...normalizeContributionMetadata(metadata),
         ...item,
+        id: item.id ?? `${metadata?.ownerId ?? "workbench.core"}:${key}:${nextId++}`,
         path,
       };
       const snapshot = menuStore.getState();

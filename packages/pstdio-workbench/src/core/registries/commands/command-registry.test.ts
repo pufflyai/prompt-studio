@@ -4,6 +4,19 @@ import type { ResourceRef } from "../resources/resource-registry";
 import { createCommandRegistry } from "./command-registry";
 
 describe("createCommandRegistry", () => {
+  test("checks availability against the same subject used for execution", async () => {
+    const commands = createCommandRegistry();
+    const context = { resource: { type: "note", id: "b" } };
+    commands.registerCommand(
+      { id: "rename", label: "Rename" },
+      {
+        execute: (_args, execution) => execution?.resource?.id,
+        isEnabled: (_args, execution) => execution?.resource?.id === "b",
+      },
+    );
+    expect(commands.isCommandEnabled("rename", undefined, context)).toBe(true);
+    await expect(commands.executeCommand("rename", undefined, context)).resolves.toBe("b");
+  });
   test("executes registered commands and exposes contribution metadata", async () => {
     const commands = createCommandRegistry();
     commands.registerCommand(
