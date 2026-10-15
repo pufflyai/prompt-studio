@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { getWriter } from "@/lib/sync/collections";
+import { getRuntimeCollections, getWriter } from "@/lib/sync/collections";
 import { subscribeWorkspaceDataChanges } from "./workspace-data-subscription";
 
 test("workspace views refresh only for changes owned by the selected project", () => {
@@ -44,5 +44,37 @@ test("workspace views refresh only for changes owned by the selected project", (
     expect(calls).toBe(6);
   } finally {
     dispose();
+  }
+});
+
+test("workspace subscriptions resolve linked rows in their original runtime", async () => {
+  const config = Object.getOwnPropertyDescriptor(globalThis, "__PSTDIO_CONFIG__");
+  const select = (name: string) => {
+    Object.defineProperty(globalThis, "__PSTDIO_CONFIG__", {
+      configurable: true,
+      value: { apiBaseUrl: `http://${name}.invalid` },
+    });
+    const owner = getRuntimeCollections();
+    owner.getWriter("workspaces")!.upsert({ id: "same", project_id: name });
+    owner.getWriter("sessions")!.upsert({ id: "same", project_id: name });
+    return owner;
+  };
+  const first = select("selected");
+  let calls = 0;
+  const unsubscribe = subscribeWorkspaceDataChanges(
+    () => "selected",
+    () => calls++,
+  );
+  const second = select("other");
+  try {
+    first.getWriter("workspace_sessions")!.upsert({ id: "link", workspace_id: "same", session_id: "same" });
+    expect(calls).toBe(1);
+    second.getWriter("workspace_sessions")!.upsert({ id: "link", workspace_id: "same", session_id: "same" });
+    expect(calls).toBe(1);
+  } finally {
+    unsubscribe();
+    await Promise.all([first.dispose(), second.dispose()]);
+    if (config) Object.defineProperty(globalThis, "__PSTDIO_CONFIG__", config);
+    else Reflect.deleteProperty(globalThis, "__PSTDIO_CONFIG__");
   }
 });

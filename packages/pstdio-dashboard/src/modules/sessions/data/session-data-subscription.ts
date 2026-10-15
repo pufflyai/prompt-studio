@@ -1,4 +1,4 @@
-import { getIndexedRows, subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import {
   getDashboardWorkspaceDiffSummary,
   subscribeDashboardWorkspaceDiffSummaries,
@@ -23,13 +23,14 @@ const coalescedListener = (listener: () => void) => {
 };
 
 export const subscribeSessionData = (sessionId: string | undefined, listener: () => void) => {
+  const owner = getRuntimeCollections();
   const notification = coalescedListener(listener);
   const workspaces = () =>
-    getIndexedRows("workspace_sessions", "session_id", sessionId).map((row) => String(row.workspace_id));
+    owner.getIndexedRows("workspace_sessions", "session_id", sessionId).map((row) => String(row.workspace_id));
   let workspaceIds = workspaces();
-  const summaries = () => workspaceIds.map((workspaceId) => getDashboardWorkspaceDiffSummary(workspaceId));
+  const summaries = () => workspaceIds.map((workspaceId) => getDashboardWorkspaceDiffSummary(workspaceId, owner));
   let previousSummaries = summaries();
-  const unsubscribe = subscribeCollections((change) => {
+  const unsubscribe = owner.subscribeCollections((change) => {
     if (!sessionId) return;
     if (!change) {
       workspaceIds = workspaces();
@@ -52,7 +53,7 @@ export const subscribeSessionData = (sessionId: string | undefined, listener: ()
       previousSummaries = next;
       notification.notify();
     }
-  });
+  }, owner);
   return () => {
     notification.dispose();
     unsubscribe();
@@ -62,7 +63,7 @@ export const subscribeSessionData = (sessionId: string | undefined, listener: ()
 
 export const subscribeSessionListData = (listener: () => void) => {
   const notification = coalescedListener(listener);
-  const unsubscribe = subscribeCollections((change) => {
+  const unsubscribe = getRuntimeCollections().subscribeCollections((change) => {
     if (!change || ["sessions", "workspaces", "workspace_sessions"].includes(change.table)) notification.notify();
   });
   return () => {
