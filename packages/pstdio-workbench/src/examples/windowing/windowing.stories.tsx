@@ -73,11 +73,20 @@ export const Kiln: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.queryByRole("button", { name: "Open Side Panel" })).toBeNull();
-    const position = await canvas.findByRole("spinbutton", { name: "Cube position X" });
+    const inspector = canvasElement.querySelector<HTMLElement>('[data-workbench-panel-menu="main-right"]');
+    await expect(inspector).not.toBeNull();
+    const position = await within(inspector!).findByRole("spinbutton", { name: "Cube position X" });
     const initialValue = (position as HTMLInputElement).valueAsNumber;
     await userEvent.clear(position);
     await userEvent.type(position, "2.5");
     await expect(position).toHaveValue(2.5);
+    await userEvent.click(canvas.getByRole("button", { name: "Select Sphere animation" }));
+    await expect(await within(inspector!).findByRole("spinbutton", { name: "Sphere position X" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Hide Sidebar" }));
+    await expect(within(inspector!).getByRole("spinbutton", { name: "Sphere position X" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Play animation" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Show Sidebar" }));
+    await expect(canvasElement.querySelector('[data-workbench-panel="side"]')).not.toContainElement(inspector);
     await userEvent.click(canvas.getByRole("button", { name: "New fixture" }));
     await expect(await canvas.findByRole("spinbutton", { name: "Cube position X" })).toHaveValue(initialValue);
   },

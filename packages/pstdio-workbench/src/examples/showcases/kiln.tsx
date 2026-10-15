@@ -1,4 +1,4 @@
-import { createWorkbench } from "../../core";
+import { createWorkbench, type WorkbenchCore } from "../../core";
 import { KilnNav, KilnStatus } from "./kiln-chrome";
 import { kilnObjects, kilnPage, kilnResource } from "./kiln-data";
 import { KilnInspector, KilnNavigation } from "./kiln-inspector";
@@ -8,12 +8,7 @@ import { KilnViewport } from "./kiln-viewport";
 import { kilnTheme } from "./themes";
 
 const homePage = { ...kilnPage, id: "kiln" };
-export const createKilnWorkbench = () => {
-  const workbench = createWorkbench({
-    startPage: homePage,
-    initialSidePanelMode: "attached",
-    defaultPanelOpenByRegionId: { secondary: true },
-  });
+export const registerKilnExample = (workbench: WorkbenchCore) => {
   workbench.themes.register([kilnTheme]);
   workbench.modes.registerMode({
     id: "kiln",
@@ -127,30 +122,20 @@ export const createKilnWorkbench = () => {
       },
       cardinality: "one",
     },
-    slots: [
-      {
-        id: "inspector",
-        region: "side",
-        openOn: "page-resource",
-        item: {
-          kind: "binding",
-          binding: {
-            kinds: [
-              {
-                kind: "resource-kind",
-                id: "kiln.object",
-              },
-            ],
-            view: {
-              kind: "view",
-              id: "kiln.inspector",
-            },
-            cardinality: "one",
-          },
-        },
-      },
-    ],
+    panelMenus: {
+      right: { view: { kind: "view", id: "kiln.inspector" }, size: { defaultPx: 300 } },
+    },
+    slots: [],
   });
+};
+
+export const createKilnWorkbench = () => {
+  const workbench = createWorkbench({
+    startPage: homePage,
+    initialSidePanelMode: "attached",
+    defaultPanelOpenByRegionId: { secondary: true },
+  });
+  registerKilnExample(workbench);
   workbench.pageLocations.switchProject("storybook-kiln");
   workbench.pageLocations.navigate({ kind: "page", page: kilnPage, resource: kilnResource(kilnObjects[0]) });
   registerKilnSessions(workbench);

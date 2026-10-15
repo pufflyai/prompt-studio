@@ -1,5 +1,6 @@
 import { Box, Button, HStack, Stack, type StackProps, Text } from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import type { ThemePreference } from "@pstdio/ui";
+import { type ComponentType, useEffect, useState } from "react";
 import { useWorkbenchStore, useWorkbenchThemePreferences, Workbench, WorkbenchThemeProvider } from "../../react";
 import { boomboxTheme, kilnTheme } from "../showcases/themes";
 import { createWindowingFixture, type WindowingFixture, type WindowingMode } from "./fixture";
@@ -9,14 +10,14 @@ import { WindowingResetControls } from "./reset-controls";
 import { windowingExtensionId, windowingPages } from "./resources";
 import { WindowingSessionStartControls } from "./session-start-controls";
 
-interface ControlsProps {
+export interface WindowingControlsProps {
   fixture: WindowingFixture;
   reload(): Promise<void>;
 }
 
 const initialThemePreferences = { windowing: undefined, boombox: boomboxTheme.id, kiln: kilnTheme.id };
 
-const WindowingControls = (props: ControlsProps) => {
+const WindowingControls = (props: WindowingControlsProps) => {
   const { fixture, reload } = props;
   const { workbench, resources } = fixture;
   const size = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
@@ -118,7 +119,7 @@ const WindowingControls = (props: ControlsProps) => {
   );
 };
 
-const ShowcaseControls = (props: ControlsProps) => {
+const ShowcaseControls = (props: WindowingControlsProps) => {
   const { fixture, reload } = props;
   return (
     <HStack p="sm">
@@ -136,10 +137,19 @@ interface WindowingStoryProps {
   initialPage?: "workspace" | "webview";
   mode?: WindowingMode;
   createFixture?: () => WindowingFixture;
+  controls?: ComponentType<WindowingControlsProps>;
+  initialThemePreference?: ThemePreference;
 }
 
 export const WindowingStory = (props: WindowingStoryProps) => {
-  const { width, initialPage = "workspace", mode = "windowing", createFixture } = props;
+  const {
+    width,
+    initialPage = "workspace",
+    mode = "windowing",
+    createFixture,
+    controls,
+    initialThemePreference,
+  } = props;
   const [fixture] = useState(() => {
     const next = createFixture ? createFixture() : createWindowingFixture(mode);
     if (initialPage === "webview")
@@ -150,6 +160,7 @@ export const WindowingStory = (props: WindowingStoryProps) => {
   const workbench = fixture.workbench;
   const themePreferences = useWorkbenchThemePreferences(workbench);
   const [error, setError] = useState("");
+  const Controls = controls ?? (fixture.mode === "windowing" ? WindowingControls : ShowcaseControls);
   useEffect(
     () => () => {
       void fixture.dispose();
@@ -166,15 +177,11 @@ export const WindowingStory = (props: WindowingStoryProps) => {
   };
   return (
     <WorkbenchThemeProvider
-      initialThemePreference={initialThemePreferences[fixture.mode]}
+      initialThemePreference={initialThemePreference ?? initialThemePreferences[fixture.mode]}
       themePreferences={themePreferences}
     >
       <Stack key={generation} w={width} h="100dvh" gap="0" overflow="hidden">
-        {fixture.mode === "windowing" ? (
-          <WindowingControls fixture={fixture} reload={reload} />
-        ) : (
-          <ShowcaseControls fixture={fixture} reload={reload} />
-        )}
+        <Controls fixture={fixture} reload={reload} />
         {error && (
           <Text role="alert" color="fg.error">
             {error}

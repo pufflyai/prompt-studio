@@ -40,7 +40,7 @@ The [windowing fixture](../../../packages/pstdio-workbench/src/examples/windowin
 
 The in-memory adapters clone layout and page-location data. Reload disposes the old workbench and creates a new one from those saved values. View drafts and mount counters expose remounts. The sandboxed iframe has its own draft and mount identity. The terminal-like view attaches to a separate fixture resource runtime with start/stop counters. These counters prove fixture adapter behavior only; they do not prove backend session or PTY continuity.
 
-`packages/e2e/src/ui/workbench-windowing.spec.ts` runs the windowing stories in the existing UI e2e job. Add each later windowing story ID to its list. The spec waits for playback, rejects render and play error events, and checks the `storyFinished` success result. A finished render alone can include a render or play failure. It also edits the sandboxed iframe through Playwright's frame locator.
+`packages/e2e/src/ui/workbench-windowing.spec.ts` runs the windowing stories in the existing UI e2e job. Add each later windowing story ID to its list. The runner compares that list with the live Storybook index, so a missing story fails the gate. The spec waits for playback, rejects render and play error events, and checks the `storyFinished` success result. A finished render alone can include a render or play failure. It also edits the sandboxed iframe through Playwright's frame locator.
 
 ```sh
 bun run --cwd packages/pstdio-workbench lint
@@ -48,12 +48,28 @@ bun run --cwd packages/pstdio-workbench build-storybook
 bun run --cwd packages/e2e test:ui -- src/ui/workbench-windowing.spec.ts
 ```
 
+For the database-free windowing gate alone, use the same spec with its focused configuration:
+
+```sh
+bun run --cwd packages/e2e test:ui -- --config playwright.windowing.config.ts --trace on
+```
+
+This configuration starts only Workbench Storybook. It keeps the existing test limits and assertions. Traces and screenshots are written under the run's `packages/e2e/test-results/` folder. Keep report attachments flat when saving them through `pst reports save`.
+
+IntegratedLight and IntegratedDark run one continuous journey through both workspaces, moved Files and Notes, foreign sessions, real Main fullscreen, session starts, reset, reload, two bound tickets with Inspector menus, Boombox, and Kiln. Playwright runs each at 1440×900, 900×700, and 700×600. It then checks long-tab keyboard menus, touch long press, an opaque iframe's draft and identity through a pointer move, pointer and keyboard resize, focus return, and restored ownership. The separate focused stories cover policy combinations, floating anchors, closed-edge drops, removal, and legacy extension declarations.
+
 The fixture uses the current workbench APIs. The Storybook itself has no database; the UI runner uses its existing isolated test runtime and shared Storybooks. A fresh checkout needs built SDK, UI, and workbench dependencies before running it.
 
 SessionStartEmpty, SessionStartClosed, SessionStartVisible, SessionStartFixed, and SessionStartInactive start a session through the resource adapter. They check unchanged tab membership, selection, panel visibility, location, and focus even with `reveal: "always"`. Reload creates no session tab. Sessions lists the started resource, and a later explicit Open binds one editor to it without another start or stop. Their Playwright checks attach screenshots. This fixture does not test dashboard event wiring or real agent execution.
 
 See [design rules](../../../design/DESIGN.md), [UI package guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
 
-The windowing PageSurface story adds page-owned left/right menus and a bottom panel inside Main. Its play function checks menu visibility, workspace rebinding, header placement, and reload. The windowing spec also drags a React draft into bottom and moves it back through the keyboard menu, checking that the draft and mount identity survive.
+The windowing PageSurface story adds page-owned left/right menus and a bottom panel inside Main. Its play function checks menu visibility, workspace rebinding, header placement, and reload. The windowing spec also drags a React draft into bottom and back, checking that the draft and mount identity survive. Tab context menus contain Pin/Unpin and Close. Moving uses dragging or the workbench command API.
 
 OwnerTransfer and FilesTransfer move workspace views into Side. They check the original resource binding, draft, mount count, and the view's internal file selection across workspace navigation. OwnerTransfer also moves the same tab into another workspace's bottom, checks separate page and mode bottom panels, and reloads the saved owner layout. Labels in retained views must be queried through the visible instance; hidden views keep their DOM and state.
+
+## Desktop control host contract
+
+The later desktop migration puts mode panel toggles in the top application header next to the project tabs. Render the exported `WorkbenchPanelToggles` and set `Workbench.panelTogglesInHost` so the status bar does not repeat them. That component uses the same `resolvePanelToggles` policy and placement resolver as the web status bar, including placement order, availability, concrete labels, and the Navigation `list-tree` icon. Do not build a second desktop capability table.
+
+The page header stays inside the editor and keeps its project segment, breadcrumb, page panels control, and expansion control. The desktop project segment shows the project without a project switcher. The DesktopPanelControls story checks this composition with the real Workbench. It does not prove native desktop window behavior; that remains part of the desktop migration.

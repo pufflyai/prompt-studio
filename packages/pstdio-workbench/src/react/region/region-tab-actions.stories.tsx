@@ -16,6 +16,11 @@ export const PinAndClose: StoryObj<typeof meta> = {
     const body = within(document.body);
     await userEvent.click(canvas.getAllByRole("button", { name: "Note A" })[0]);
     const tab = canvas.getByRole("tab", { name: "Note A" });
+    tab.focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    await body.findByRole("menu", { name: "Note A context menu" });
+    await userEvent.keyboard("{Escape}");
+    await expect(tab).toHaveFocus();
     for (const name of ["Unpin tab", "Pin tab", "Close tab"]) {
       tab.focus();
       await userEvent.keyboard("{Shift>}{F10}{/Shift}");

@@ -18,15 +18,21 @@ export const exerciseTabAndHeaderTouchMenus = async (page: Page) => {
   await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
-  const header = (await page.locator('[data-workbench-panel-header="main"]').boundingBox())!;
+  await page.getByLabel("main header", { exact: true }).focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Hide header", exact: true }).click();
+  const edge = page.getByLabel("main header edge", { exact: true });
+  const header = (await edge.boundingBox())!;
   await client.send("Input.dispatchTouchEvent", {
     type: "touchStart",
     touchPoints: [{ x: header.x + header.width / 2, y: header.y + header.height / 2 }],
   });
-  await expect(page.getByRole("menuitem", { name: "Hide header", exact: true })).toBeVisible();
+  const show = page.getByRole("menuitem", { name: "Show header", exact: true });
+  await expect(show).toBeVisible();
   await expect(page.getByRole("menu")).toHaveCount(1);
   await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await page.keyboard.press("Escape");
+  await show.click();
+  await expect(page.locator('[data-workbench-panel-header="main"]')).toBeVisible();
   await client.detach();
 };
 

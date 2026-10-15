@@ -1,5 +1,6 @@
-import { Menu, Portal } from "@chakra-ui/react";
+import { Menu, Portal, VisuallyHidden } from "@chakra-ui/react";
 import { ListRow } from "@pstdio/ui";
+import { useId } from "react";
 import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 
@@ -19,7 +20,7 @@ const TabAction = (props: { value: string; label: string; icon: string; onActiva
 };
 
 interface RegionTabMenuProps {
-  anchor: { x: number; y: number; width: number; height: number };
+  anchor: { x: number; y: number; width: number; height: number; triggerId: string };
   label: string;
   open: boolean;
   setOpen(open: boolean): void;
@@ -29,6 +30,7 @@ interface RegionTabMenuProps {
 
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { anchor, label, open, setOpen, placement, workbench } = props;
+  const labelId = useId();
   const pin = () => {
     const pinned = placement.tabRetention === "preview";
     if (placement.placementIdentity) workbench.pinPlacement(placement.placementIdentity, pinned);
@@ -40,13 +42,15 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
   };
   return (
     <Menu.Root
+      ids={{ trigger: anchor.triggerId }}
       open={open}
       onOpenChange={(details) => setOpen(details.open)}
       positioning={{ placement: "bottom-start", getAnchorRect: () => anchor, offset: { mainAxis: 0 } }}
     >
       <Portal>
         <Menu.Positioner>
-          <Menu.Content aria-label={`${label} context menu`} minW="64" bg="bg">
+          <Menu.Content aria-labelledby={labelId} minW="64" bg="bg">
+            <VisuallyHidden id={labelId}>{label} context menu</VisuallyHidden>
             {placement.tabRetention ? (
               <TabAction
                 value="pin"
