@@ -14,9 +14,9 @@ interface NativeCall {
   params: { config?: Record<string, unknown>; threadId?: string };
 }
 export const registerSharedCodexSmokeTests = () => {
-  test(
-    "packaged Codex sessions share a server across projects and stop independently",
-    async () => {
+  test.each([false, true])(
+    "packaged Codex sessions stop independently and quit (existing goal turn=%s)",
+    async (existingGoalTurn) => {
       const root = mkdtempSync(join(tmpdir(), "packaged-shared-codex-"));
       let runtime: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
       const evidence = join(root, "calls.jsonl");
@@ -39,6 +39,7 @@ export const registerSharedCodexSmokeTests = () => {
         runtime = await startPackagedServe(root, {
           PATH: `${bin}${delimiter}${process.env.PATH}`,
           PSTDIO_CODEX_PEER_LOG: evidence,
+          PSTDIO_CODEX_PEER_STEER_GOAL: existingGoalTurn ? "1" : "0",
           PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("harness-codex"),
         });
         const headers = { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" };
@@ -90,8 +91,16 @@ export const registerSharedCodexSmokeTests = () => {
         await request(`/sessions/${sessions[0].id}/status`, "PATCH", { status: "cancelled" });
         expect((await request(`/sessions/${sessions[1].id}`)).status).toBe("in_progress");
         expect(calls().filter((call) => call.method === "turn/interrupt")).toHaveLength(1);
-        await request(`/sessions/${sessions[1].id}/status`, "PATCH", { status: "cancelled" });
+        const exited = new Promise<number | null>((resolve) => runtime!.child.once("exit", resolve));
+        const shutdown = await fetch(`${runtime.baseUrl}/runtime/shutdown`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ instanceId: runtime.descriptor.instanceId, force: true }),
+        });
+        expect(shutdown.status).toBe(202);
+        expect(await exited).toBe(0);
         expect(calls().filter((call) => call.method === "turn/interrupt")).toHaveLength(2);
+        if (existingGoalTurn) expect(calls().filter((call) => call.method === "thread/goal/set")).toHaveLength(2);
       } finally {
         if (runtime) await stopProcess(runtime.child);
         rmSync(root, { recursive: true, force: true });
