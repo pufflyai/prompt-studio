@@ -28520,7 +28520,7 @@
                       "type": "frame",
                       "id": "JGKK1",
                       "name": "cmp/ChatWorkspaceHub",
-                      "context": "Workspace container around the chat input. Borderless shell and input; the shell uses ds-surface, matching the selected tab background. Keep the workspace identity, diff counts or setup status, and open action above the input. Shell padding and gap are 4px. The open action has a tooltip and accessible name.",
+                      "context": "Workspace container around the chat input. Borderless shell and input; the shell uses ds-surface, matching the selected tab background. Keep the workspace identity, diff counts or setup status, and open action above the input. Shell padding is 4px, with no gap between header and input. The open action has a tooltip and accessible name.",
                       "reusable": true,
                       "width": "fill_container",
                       "fill": "$ds-surface",
@@ -28528,7 +28528,6 @@
                       "stroke": "$ds-border",
                       "strokeAlignment": "inner",
                       "layout": "vertical",
-                      "gap": 4,
                       "padding": 4,
                       "children": [
                         {
@@ -150746,7 +150745,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -151067,7 +151065,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -151483,7 +151480,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -152131,7 +152127,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -152516,7 +152511,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -152996,7 +152990,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -153501,7 +153494,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -153918,7 +153910,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -154477,7 +154468,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -164729,7 +164719,6 @@
               "stroke": "$ds-border",
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 4,
               "padding": 4,
               "children": [
                 {
@@ -185108,7 +185097,7 @@
       "x": 46942,
       "y": 0,
       "name": "ChatPanel · Content width and pane scrollbar · PS-656",
-      "context": "ChatPanel fills its parent pane. Transcript content and the composer share a centered maximum width of 832px (52rem), shrinking to the available pane width. The vertical scrollbar remains at the trailing edge of the full pane. Implement with the shared chatContent layer style and chat-content size token. Empty states, notices, approvals, the working indicator, workspace hub, and queued messages use the same content column.",
+      "context": "ChatPanel fills its parent pane in both main and side regions, with no placement-specific vertical padding. Transcript content and the composer share a centered maximum width of 832px (52rem), shrinking to the available pane width. Main and side composer bottom insets are equal. The vertical scrollbar remains at the trailing edge of the full pane. Implement with the shared chatContent layer style and chat-content size token. Empty states, notices, approvals, the working indicator, workspace hub, and queued messages use the same content column.",
       "width": 1780,
       "fill": "$ds-bg",
       "layout": "vertical",

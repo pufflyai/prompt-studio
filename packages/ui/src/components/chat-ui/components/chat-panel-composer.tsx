@@ -78,7 +78,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   const editor = <QueuedComposerInput {...props} editing={editing} hasQueuedFollowUps={hasQueuedFollowUps} />;
   return (
     <Stack p="xs" gap="0">
-      <Stack className="ps-chat-composer__workspace" css={composerStyles.workspace}>
+      <Box className="ps-chat-composer__workspace" css={composerStyles.workspace}>
         {workspaceHub}
         {composerHeader}
         <QueuedFollowUpList
@@ -104,7 +104,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
         ) : (
           editor
         )}
-      </Stack>
+      </Box>
     </Stack>
   );
 };

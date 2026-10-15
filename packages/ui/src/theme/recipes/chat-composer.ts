@@ -11,7 +11,7 @@ export const chatComposerRecipe = defineSlotRecipe({
       bg: "bg",
       borderRadius: "xs",
     },
-    workspace: { gap: "0" },
+    workspace: { display: "flex", flexDirection: "column", gap: "0" },
   },
   variants: {
     attachedToTop: {
@@ -20,7 +20,6 @@ export const chatComposerRecipe = defineSlotRecipe({
     workspace: {
       true: {
         workspace: {
-          gap: "2xs",
           padding: "2xs",
           borderRadius: "xs",
           bg: "bg.muted",
