@@ -193,3 +193,39 @@ export const LongMenuScrolls: Story = {
     await expect(screen.getByRole("menuitem", { name: "Sidenav entry 60" })).toBeInTheDocument();
   },
 };
+
+export const ResourceGroupsAndLazySearch: StoryObj<typeof meta> = {
+  args: {
+    children: menuTarget,
+    actions: [
+      { key: "rename", label: "Rename session", group: { id: "resource", label: "Session" } },
+      { key: "archive", label: "Archive session", group: { id: "resource", label: "Session" } },
+      { key: "new", label: "New session", group: { id: "quick", label: "Quick access" } },
+      {
+        key: "sessions",
+        label: "Search sessions",
+        group: { id: "quick", label: "Quick access" },
+        list: {
+          id: "project:sessions",
+          searchLabel: "Search sessions",
+          emptyLabel: "No sessions yet",
+          loadPage: async ({ query, cursor, signal }) => {
+            if (signal.aborted) throw new Error("Cancelled");
+            if (query === "error") throw new Error("Could not load sessions. Try again.");
+            const entries = Array.from({ length: 120 }, (_, index) => ({
+              key: `session-${index}`,
+              label: `Conversation ${index + 1}`,
+            })).filter((item) => item.label.toLowerCase().includes(query.toLowerCase()));
+            const offset = Number(cursor ?? 0);
+            return {
+              items: entries.slice(offset, offset + 20),
+              nextCursor: offset + 20 < entries.length ? String(offset + 20) : undefined,
+            };
+          },
+        },
+      },
+      { key: "all", label: "View all sessions", group: { id: "quick", label: "Quick access" } },
+      { key: "pin", label: "Pin tab", group: { id: "tab", label: "Tab" } },
+    ],
+  },
+};

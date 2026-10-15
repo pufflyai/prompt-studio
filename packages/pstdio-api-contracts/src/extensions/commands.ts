@@ -71,6 +71,8 @@ export const extensionMenuContributionSchema = z.object({
   presentation: z.enum(["menu-item", "button", "icon-button"]).optional(),
   params: jsonObjectSchema.optional(),
   when: extensionWhenExpressionSchema.optional(),
+  disabledWhen: extensionWhenExpressionSchema.optional(),
+  disabledReason: localizableStringSchema.optional(),
 });
 
 export const extensionCommandPaletteContributionSchema = z.object({

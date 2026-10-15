@@ -1,6 +1,9 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  resourceMenuList: {
+    value: { maxHeight: "48", overflowY: "auto", minHeight: "0" },
+  },
   chatContent: {
     value: {
       width: "full",

@@ -178,6 +178,7 @@ const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionContribu
   input.metadata.resourceKinds.map((kind) =>
     input.workbench.resources.registerKind({
       kind: kind.id,
+      extensionId: kind.extensionId,
       label: text(kind.label, kind.id),
       icon: kind.icon ?? "FileText",
     }),

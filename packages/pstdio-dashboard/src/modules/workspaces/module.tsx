@@ -3,6 +3,7 @@ import { type CreateWorkspaceCommandParams, resourceKey, workbenchPages } from "
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
+import { subscribeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
@@ -213,6 +214,14 @@ export const createWorkspacesModule = () =>
         kind: "workspace",
         label: "Workspace",
         icon: dashboardViews.workspaces.icon,
+        resolve: (resource) =>
+          createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).find(
+            (workspace) => workspace.id === resource.id,
+          )?.resource ?? resource,
+        subscribe: (listener) =>
+          subscribeCollections((change) => {
+            if (!change || change.table === "workspaces") listener();
+          }),
       });
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",

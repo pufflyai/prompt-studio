@@ -35,6 +35,18 @@ export const verifyPackagedSessionMenus = async (
       name: /Packaged session actions/,
     }),
   ).toBeVisible();
+  await page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { name: /Packaged session actions/ })
+    .click({ button: "right" });
+  await expect(page.getByRole("group", { name: "Session", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Quick access", exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "Search sessions", exact: true }).fill("Packaged session actions");
+  await expect(page.getByRole("group", { name: "Search sessions", exact: true }).getByRole("menuitem")).toHaveText([
+    "Packaged session actions",
+  ]);
+  await page.keyboard.press("Escape");
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();

@@ -19,6 +19,7 @@ import type {
   WorkbenchPageRegistryStoreState,
   WorkbenchPageResourceCodec,
 } from "./page-registry-types";
+import { refreshPageResources, refreshResourceLocation } from "./page-resource-refresh";
 import { pageStateKey } from "./page-state-key";
 
 export type {
@@ -95,6 +96,16 @@ export const createWorkbenchPageRegistry = <Value>(
 
     listPages() {
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
+    },
+
+    refreshResource(resource) {
+      const state = store.getState();
+      commit({
+        ...state,
+        location: refreshResourceLocation(state.location, resource),
+        pageStates: refreshPageResources(state.pageStates, resource),
+        action: "refreshPageResource",
+      });
     },
 
     pinPlacement(identity, open) {

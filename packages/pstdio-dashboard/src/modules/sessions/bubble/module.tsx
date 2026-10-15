@@ -51,7 +51,7 @@ const createNewSessionDraftResource = (workspace: ResourceRef | undefined): Reso
     type: "session-draft",
     id,
     label: "New session",
-    icon: "PenBox",
+    icon: "MessageSquarePlus",
     metadata: {
       ...(workspaceId ? { workspaceId } : {}),
       ...(workspaceTitle ? { workspaceTitle } : {}),
@@ -194,7 +194,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     },
   );
   ctx.commands.registerCommand(
-    { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "PenBox" },
+    { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "MessageSquarePlus" },
     {
       execute: async (args, context) => {
         const {

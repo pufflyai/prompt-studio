@@ -3,7 +3,7 @@ import type { WorkbenchLayout } from "../layout/layout-types";
 import type { WorkbenchPageContribution } from "./page-registry";
 
 export const resolvePageActivePlacement = (layout: WorkbenchLayout, page?: WorkbenchPageContribution) => {
-  if (page?.main.kind !== "panels") return;
+  if (!page) return;
   const selected = workbenchPanelRegions
     .flatMap((id) => {
       const region = layout.regions[id];

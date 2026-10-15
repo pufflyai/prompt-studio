@@ -71294,7 +71294,7 @@
                   "id": "RUsGm",
                   "name": "Title",
                   "fill": "$ds-fg",
-                  "content": "Tab click and right-click open different menus",
+                  "content": "Resource actions compose with custom sections and Tab controls",
                   "fontFamily": "$font-heading",
                   "fontSize": 13,
                   "fontWeight": "600"
@@ -71304,7 +71304,7 @@
                   "id": "R3GmEk",
                   "name": "Rule",
                   "fill": "$ds-fg-muted",
-                  "content": "Click an inactive tab to activate it. Click the active tab again to open its custom menu. Right-click opens the generic tab context menu; a preview offers Keep Open there. The two menus are never composed.",
+                  "content": "Click selects. Right-click and keyboard context keys open resource-owned actions, custom view sections, then Tab controls. Breadcrumbs and navigation resolve the same resource actions.",
                   "fontFamily": "$font-body",
                   "fontSize": 11,
                   "fontWeight": "normal"
@@ -155706,7 +155706,7 @@
                   "id": "L2c7D",
                   "name": "Recent sessions",
                   "fill": "$ds-fg",
-                  "content": "Recent sessions",
+                  "content": "Search all sessions · load more on scroll",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -188784,6 +188784,867 @@
                   "height": 12
                 }
               }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "HLtyb",
+      "x": 49482,
+      "y": 0,
+      "name": "Resource-owned menus · PS-652",
+      "width": 940,
+      "height": 680,
+      "fill": "$ds-bg-subtle",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "f06ImQ",
+          "name": "Title",
+          "fill": "$ds-fg",
+          "content": "Resource actions everywhere",
+          "fontFamily": "$font-body",
+          "fontSize": 20,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "mmsbd",
+          "name": "Menu surfaces",
+          "width": "fill_container",
+          "gap": 20,
+          "children": [
+            {
+              "type": "frame",
+              "id": "zctm1",
+              "name": "Navigation menu",
+              "width": 280,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "stroke": "$ds-border-subtle",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "wG3oC",
+                  "name": "Session group label",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    12,
+                    2,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "M5G2p1",
+                      "name": "Label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Session",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "syxoZ",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Rename session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "pencil"
+                    },
+                    "UTbhN": {
+                      "content": "Rename session"
+                    }
+                  }
+                },
+                {
+                  "id": "Ghy3p",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Archive session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "archive"
+                    },
+                    "UTbhN": {
+                      "content": "Archive session"
+                    }
+                  }
+                },
+                {
+                  "id": "nhMUA",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Delete session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "trash-2"
+                    },
+                    "UTbhN": {
+                      "content": "Delete session"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "v3ELVH",
+              "name": "Tab menu",
+              "width": 280,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "stroke": "$ds-border-subtle",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "aFe2q",
+                  "name": "Session group label",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    12,
+                    2,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WI2CQ",
+                      "name": "Label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Session",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "hmDdL",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Rename session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "pencil"
+                    },
+                    "UTbhN": {
+                      "content": "Rename session"
+                    }
+                  }
+                },
+                {
+                  "id": "w9SsN",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Archive session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "archive"
+                    },
+                    "UTbhN": {
+                      "content": "Archive session"
+                    }
+                  }
+                },
+                {
+                  "id": "vfn6o",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Delete session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "trash-2"
+                    },
+                    "UTbhN": {
+                      "content": "Delete session"
+                    }
+                  }
+                },
+                {
+                  "type": "rectangle",
+                  "id": "RAMhL",
+                  "name": "Group separator",
+                  "fill": "$ds-border-subtle",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "SMRR8",
+                  "name": "Quick access group label",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    12,
+                    2,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fV3Tl",
+                      "name": "Label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Quick access",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "Hmcwg",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "New session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "message-square-plus"
+                    },
+                    "UTbhN": {
+                      "content": "New session"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "omu2J",
+                  "name": "Search sessions",
+                  "width": "fill_container",
+                  "height": 32,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "oWJ7d",
+                      "name": "Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "h67UK",
+                      "name": "Placeholder",
+                      "fill": "$ds-fg-subtle",
+                      "content": "Search sessions…",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UCkZp",
+                  "name": "Lazy session list · 192px scroll viewport",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 192,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "id": "QMlvk",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Review API changes",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Review API changes"
+                        }
+                      }
+                    },
+                    {
+                      "id": "eydJd",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Fix build pipeline",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Fix build pipeline"
+                        }
+                      }
+                    },
+                    {
+                      "id": "O9GsMC",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Explore a new tool",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Explore a new tool"
+                        }
+                      }
+                    },
+                    {
+                      "id": "xGpvC",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Document the release",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Document the release"
+                        }
+                      }
+                    },
+                    {
+                      "id": "dwCXY",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Plan next week",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Plan next week"
+                        }
+                      }
+                    },
+                    {
+                      "id": "XaNVv",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Older sessions load on scroll",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Older sessions load on scroll"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "DyWHj",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "View all sessions",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "arrow-up-right"
+                    },
+                    "UTbhN": {
+                      "content": "View all sessions"
+                    }
+                  }
+                },
+                {
+                  "type": "rectangle",
+                  "id": "aNQ5b",
+                  "name": "Surface separator",
+                  "fill": "$ds-border-subtle",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "kYze1",
+                  "name": "Tab group label",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    12,
+                    2,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dGRbN",
+                      "name": "Label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Tab",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "oBTMu",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Pin tab",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "link"
+                    },
+                    "UTbhN": {
+                      "content": "Pin tab"
+                    }
+                  }
+                },
+                {
+                  "id": "W8cC9",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Move to Side",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "link"
+                    },
+                    "UTbhN": {
+                      "content": "Move to Side"
+                    }
+                  }
+                },
+                {
+                  "id": "GyNqi",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Close tab",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "link"
+                    },
+                    "UTbhN": {
+                      "content": "Close tab"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "F4NN6G",
+              "name": "Breadcrumb menu",
+              "width": 280,
+              "fill": "$ds-bg",
+              "cornerRadius": 4,
+              "stroke": "$ds-border-subtle",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "GerNM",
+                  "name": "Session group label",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    12,
+                    2,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "oro2r",
+                      "name": "Label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Session",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "t6u4ll",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Rename session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "pencil"
+                    },
+                    "UTbhN": {
+                      "content": "Rename session"
+                    }
+                  }
+                },
+                {
+                  "id": "BVlZ2",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Archive session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "archive"
+                    },
+                    "UTbhN": {
+                      "content": "Archive session"
+                    }
+                  }
+                },
+                {
+                  "id": "BQ2g9",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Delete session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "trash-2"
+                    },
+                    "UTbhN": {
+                      "content": "Delete session"
+                    }
+                  }
+                },
+                {
+                  "type": "rectangle",
+                  "id": "H3DuPl",
+                  "name": "Group separator",
+                  "fill": "$ds-border-subtle",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "W50erG",
+                  "name": "Quick access group label",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    12,
+                    2,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "EUXxn",
+                      "name": "Label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Quick access",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "ugPbO",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "New session",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "message-square-plus"
+                    },
+                    "UTbhN": {
+                      "content": "New session"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "r1FJ3",
+                  "name": "Search sessions",
+                  "width": "fill_container",
+                  "height": 32,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "hadug",
+                      "name": "Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$ds-fg-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jNMBg",
+                      "name": "Placeholder",
+                      "fill": "$ds-fg-subtle",
+                      "content": "Search sessions…",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "hv9tf",
+                  "name": "Lazy session list · 192px scroll viewport",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 192,
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "id": "OMBu3",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Review API changes",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Review API changes"
+                        }
+                      }
+                    },
+                    {
+                      "id": "s5Ua9",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Fix build pipeline",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Fix build pipeline"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Dg3qy",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Explore a new tool",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Explore a new tool"
+                        }
+                      }
+                    },
+                    {
+                      "id": "xsPfj",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Document the release",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Document the release"
+                        }
+                      }
+                    },
+                    {
+                      "id": "r6SE3",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Plan next week",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Plan next week"
+                        }
+                      }
+                    },
+                    {
+                      "id": "BTqpU",
+                      "type": "ref",
+                      "ref": "sgbRV",
+                      "name": "Older sessions load on scroll",
+                      "width": "fill_container",
+                      "descendants": {
+                        "UEgTp": {
+                          "icon": "message-square"
+                        },
+                        "UTbhN": {
+                          "content": "Older sessions load on scroll"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "h7IQ6Y",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "View all sessions",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "arrow-up-right"
+                    },
+                    "UTbhN": {
+                      "content": "View all sessions"
+                    }
+                  }
+                },
+                {
+                  "type": "rectangle",
+                  "id": "d9iRJc",
+                  "name": "Surface separator",
+                  "fill": "$ds-border-subtle",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "CxNFf",
+                  "name": "Location group label",
+                  "width": "fill_container",
+                  "padding": [
+                    6,
+                    12,
+                    2,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "t6VcN",
+                      "name": "Label",
+                      "fill": "$ds-fg-muted",
+                      "content": "Location",
+                      "fontFamily": "$font-label",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "OjV04",
+                  "type": "ref",
+                  "ref": "sgbRV",
+                  "name": "Copy link",
+                  "width": "fill_container",
+                  "theme": {
+                    "menu": "default"
+                  },
+                  "descendants": {
+                    "UEgTp": {
+                      "icon": "link"
+                    },
+                    "UTbhN": {
+                      "content": "Copy link"
+                    }
+                  }
+                }
+              ]
             }
           ]
         }

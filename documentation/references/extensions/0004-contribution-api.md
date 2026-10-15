@@ -184,6 +184,32 @@ Tree rows use `resource` as their action subject and `target` as their normal-cl
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.
 
+Declare resource operations once through a menu slot on the resource kind. The same contributions appear in navigation, tab, and breadcrumb resource menus. Owner-only slots keep their existing access rules; public slots accept other extensions' contributions. The host preserves the subject for visibility, parameters, confirmation, and execution. A command can have several distinct menu contributions with different parameters.
+
+Use `disabledWhen` with the same subject conditions as `when` to keep an unavailable action visible. Supply a localized `disabledReason` for its explanation. For example, `disabledWhen: { metadata: { writable: false } }` disables a note mutation when its owner reports read-only access. The command must still check current permissions before writing.
+
+### Custom menu sections
+
+Use placement `tab` presentation for view-specific navigation or controls. It supplements resource actions and does not choose the action subject. A group has `id`, optional localized `label`, `rows`, optional `list`, and optional `trailingRows`. Tab controls follow custom groups; breadcrumbs add location actions instead.
+
+For a searchable lazy list, return a `list` descriptor with `command`, `searchLabel`, and `emptyLabel`. The host calls the command with `query` and an optional `cursor`, with the placement's resource in `ctx.resource`. Return a `PlacementTabMenuPage`: `{ rows, nextCursor? }`. Omit `nextCursor` when there are no more matching rows. Search must cover the full eligible source, including rows beyond the current page. Keep identity stable across pages. The host cancels obsolete reads, preserves loaded results on a page error, and offers Retry.
+
+```ts
+menu: [{
+  id: "quick-access",
+  label: l10n("menus.quickAccess", "Quick access"),
+  rows: [newDocumentRow],
+  list: {
+    command: searchDocuments.ref,
+    searchLabel: l10n("menus.searchDocuments", "Search documents"),
+    emptyLabel: l10n("menus.noDocuments", "No documents yet"),
+  },
+  trailingRows: [viewAllDocumentsRow],
+}]
+```
+
+The list is read only while its menu is open and scrolls in a bounded area. A placement's existing refresh events invalidate its presentation and list. Existing tab rows remain supported for custom actions; move resource operations to resource-owned slots rather than copying them into every menu.
+
 The host refreshes the tree after a section or row action runs. An action command calls
 `ctx.navigation.open(target)` to move the page, for example back to the ticket body after deleting an open
 document. The host applies explicit requests once after a successful command. Returned values remain data.
