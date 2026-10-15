@@ -19,8 +19,11 @@ test("migration renumbers saved tickets, backs up local files, refreshes anchors
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
   });
-  await projectFiles.writeText(".pstdio/tickets/T-9/ticket.md", "Unsaved local content");
-  await projectFiles.writeText(".pstdio/tickets/T-8/ticket.md", "Orphan");
+  await projectFiles.writeText(
+    ".pstdio/extension-storage/pstdio-planner/tickets/T-9/ticket.md",
+    "Unsaved local content",
+  );
+  await projectFiles.writeText(".pstdio/extension-storage/pstdio-planner/tickets/T-8/ticket.md", "Orphan");
   const anchors: unknown[] = [];
   const context = makeCommandContext({
     storage,
@@ -52,12 +55,16 @@ test("migration renumbers saved tickets, backs up local files, refreshes anchors
     identities: [{ id: original.id, previousShorthand: "T-9", shorthand: "T-1" }],
   });
   expect((await ticketsCollection(storage).get(original.id))?.shorthand).toBe("T-1");
-  expect(await projectFiles.exists(".pstdio/tickets/T-9/ticket.md")).toBe(false);
-  expect(await projectFiles.exists(".pstdio/tickets/T-8/ticket.md")).toBe(false);
-  expect(await projectFiles.readText(".pstdio/ticket-identity-migration/.pstdio/tickets/T-9/ticket.md")).toBe(
-    "Unsaved local content",
+  expect(await projectFiles.exists(".pstdio/extension-storage/pstdio-planner/tickets/T-9/ticket.md")).toBe(false);
+  expect(await projectFiles.exists(".pstdio/extension-storage/pstdio-planner/tickets/T-8/ticket.md")).toBe(false);
+  expect(
+    await projectFiles.readText(
+      ".pstdio/extension-storage/pstdio-planner/ticket-identity-migration/.pstdio/extension-storage/pstdio-planner/tickets/T-9/ticket.md",
+    ),
+  ).toBe("Unsaved local content");
+  expect(await projectFiles.readText(".pstdio/extension-storage/pstdio-planner/tickets/T-1/ticket.md")).toContain(
+    "# Ticket",
   );
-  expect(await projectFiles.readText(".pstdio/tickets/T-1/ticket.md")).toContain("# Ticket");
   expect(anchors).toContainEqual(expect.objectContaining({ id: original.id, shorthand: "T-1" }));
   expect(await migrateTicketIdentitiesCommand.run(context, {})).toMatchObject({ migrated: 0 });
   const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "New" } }));
@@ -78,7 +85,7 @@ test("interrupted file rewrite resumes with the original allocation and backup",
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
   });
-  await projectFiles.writeText(".pstdio/tickets/T-8/ticket.md", "local edit");
+  await projectFiles.writeText(".pstdio/extension-storage/pstdio-planner/tickets/T-8/ticket.md", "local edit");
   let fail = true;
   const ctx = makeCommandContext({
     storage,
@@ -103,9 +110,11 @@ test("interrupted file rewrite resumes with the original allocation and backup",
   ).rejects.toThrow("migrate-ticket-identities");
   await migrateTicketIdentitiesCommand.run(ctx, {});
   expect((await ticketsCollection(storage).get("original"))?.shorthand).toBe("T-1");
-  expect(await projectFiles.readText(".pstdio/ticket-identity-migration/.pstdio/tickets/T-8/ticket.md")).toBe(
-    "local edit",
-  );
+  expect(
+    await projectFiles.readText(
+      ".pstdio/extension-storage/pstdio-planner/ticket-identity-migration/.pstdio/extension-storage/pstdio-planner/tickets/T-8/ticket.md",
+    ),
+  ).toBe("local edit");
   expect((await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Next" } }))).shorthand).toBe(
     "T-2",
   );
@@ -129,7 +138,9 @@ test("migration completes for a project that has no local ticket drafts", async 
 
   expect(await migrateTicketIdentitiesCommand.run(context, {})).toMatchObject({ complete: true, migrated: 1 });
   expect((await ticketsCollection(storage).get(original.id))?.shorthand).toBe("T-1");
-  expect(await projectFiles.readText(".pstdio/tickets/T-1/ticket.md")).toContain("# Created from the dashboard");
+  expect(await projectFiles.readText(".pstdio/extension-storage/pstdio-planner/tickets/T-1/ticket.md")).toContain(
+    "# Created from the dashboard",
+  );
   expect((await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "New" } }))).shorthand).toBe(
     "T-2",
   );

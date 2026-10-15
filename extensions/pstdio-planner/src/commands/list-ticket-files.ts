@@ -4,7 +4,7 @@ import { findTicket } from "../data/resolve";
 import { validateTicketFileName } from "../data/ticket-file-name";
 
 // `pst tickets files`: compare a ticket's stored files against the local
-// `.pstdio/tickets/<shorthand>/files/` directory so the user can see what is and
+// `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/` directory so the user can see what is and
 // isn't synced.
 export const listTicketFilesCommand = defineCommand({
   id: "list-ticket-files",

@@ -70,7 +70,7 @@ Keep the source images in `documentation/images/` with descriptive kebab-case na
 For example, from a guide in `guides/getting-started/`:
 
 ```md
-![Workbench showing the project sidebar and the Start page.](../../images/workbench.png)
+![Workbench showing the project sidebar and the Start page.](../images/workbench.png)
 ```
 
 Capture the real app with `bun run dev:playwright`, using its printed dashboard URL. Use a disposable project and sample content. Capture both light and dark themes for UX GIFs; choose the clearest theme for still screenshots. Do not include credentials, private paths, or personal conversations. Stop the capture stack afterward with `bun run dev:playwright:down`.
@@ -142,6 +142,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0004 — Move to remote execution](extensions/0004-remote-execution-migration.md)
 - [0006 — Smoke checks](extensions/0006-smoke-checks.md)
 - [0007 — Make actions CLI-ready](extensions/0007-cli-ready-actions.md)
+- [0008 — Extension file storage](extensions/0008-extension-storage.md)
 
 ### Use the SDK
 

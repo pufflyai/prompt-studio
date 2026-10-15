@@ -194,8 +194,6 @@ packages/pstdio/.readme.generated
 .publish/
 
 # pstdio
-.pstdio/tickets
-.pstdio/reports
 .pstdio/extension-storage
 .pstdio/config.json
 

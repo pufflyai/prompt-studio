@@ -30,7 +30,7 @@ A project opens one folder and groups its tickets, documentation, templates, wor
 
 A ticket is a bug, feature, proposal, or other work item owned by the `pstdio-planner` extension. Each ticket has a shorthand such as `PS-12`, a status, and a separate `draft` flag.
 
-The extension store holds the saved ticket. `pst tickets write` or `pst tickets pull` creates a local checkout under `.pstdio/tickets/<shorthand>/` in the default project folder. Use the returned absolute `path`, even when working in another workspace, then run `pst tickets save` to persist it.
+The extension store holds the saved ticket. `pst tickets write` or `pst tickets pull` creates a local checkout under `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/` in the default project folder. Use the returned absolute `path`, even when working in another workspace, then run `pst tickets save` to persist it.
 
 ### Skills
 
@@ -52,17 +52,15 @@ A session records a conversation with an agent. It can belong to a workspace and
 
 ```
 .pstdio/
-├── config.json           # Link to the Prompt Studio project
-├── tickets/              # Local ticket files
-│   └── <id>_<slug>/
-│       ├── ticket.md     # Ticket content (YAML frontmatter + markdown)
-│       └── files/        # Planning files for the ticket
-├── reports/              # Agent reports and evidence
-│   └── <name>/
-│       ├── report*.md    # Numbered report content created with pst reports write
-│       └── files*/       # Test output, logs, screenshots, and other evidence
-└── skills/               # Project-level skill overrides
+├── config.json                  # Host project link
+├── extensions/                  # Repo-local extension source
+└── extension-storage/           # All extension-owned project files
+    ├── pstdio-planner/tickets/  # ticket.md and planning files
+    ├── pstdio-reports/reports/  # report*.md and files*/ evidence
+    └── pstdio-artifacts/        # Published snapshots, drafts, prototypes
 ```
+
+Keep extension configuration, caches, drafts, prototypes, evidence, and backups in the owning package's directory under `extension-storage/`. Use the paths returned by extension commands.
 
 ## Set up a project
 
