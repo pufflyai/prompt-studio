@@ -58,3 +58,24 @@ test("JSON values preserve special property names and reject non-JSON values", a
   cyclic.self = cyclic;
   expect(jsonSchema.safeParse(cyclic).success).toBe(false);
 });
+
+test("map keys retain empty JSON property names through wire validation", async () => {
+  const { sealMutation, validateMutation } = await import("./fingerprint");
+  const mutation = await sealMutation({
+    ...valid(),
+    protocolVersion: 1,
+    changes: [
+      {
+        recordId: "map",
+        expectedRevision: 0,
+        baseDeleted: false,
+        shared: {
+          kind: "map",
+          entries: [{ key: "", expected: "0".repeat(64), next: { kind: "set", value: "retained" } }],
+        },
+      },
+    ],
+  });
+  const received = await validateMutation(JSON.parse(JSON.stringify(mutation)));
+  expect(received.changes[0].shared).toEqual(mutation.changes[0].shared);
+});

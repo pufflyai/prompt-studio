@@ -14,7 +14,7 @@ export interface SyncOptions {
 async function upload(state: LocalState, mutation: Mutation, objects: TestObjects) {
   for (const change of mutation.changes) {
     const asset = change.asset?.next;
-    if (asset && state.blobs[asset.sha256])
+    if (asset && Object.hasOwn(state.blobs, asset.sha256))
       await objects.put(mutation.scope, asset, Buffer.from(state.blobs[asset.sha256], "base64"));
   }
 }

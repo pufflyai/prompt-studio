@@ -25,7 +25,7 @@ export const sharedSchema = z.discriminatedUnion("kind", [
     entries: z
       .array(
         z.strictObject({
-          key: identitySchema,
+          key: z.string(),
           expected: fingerprintSchema,
           next: z.discriminatedUnion("kind", [
             z.strictObject({ kind: z.literal("set"), value: jsonSchema }),

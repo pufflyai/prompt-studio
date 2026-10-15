@@ -103,3 +103,51 @@ export function registerDictionaryCase(factory: ConformanceFactory) {
     expect(own((await relay.snapshot(scope)).receipts, "constructor")!.operationId).toBe("constructor");
   });
 }
+
+export function registerMapAuthoringCases(factory: ConformanceFactory) {
+  test("repeated map edits synchronize their final values with original cell preconditions", async () => {
+    const {
+      clients: [a, b],
+    } = factory();
+    await a.edit([
+      {
+        recordId: "map",
+        shared: [
+          { kind: "map.set", key: "replace", value: "original" },
+          { kind: "map.set", key: "remove", value: "original" },
+        ],
+      },
+    ]);
+    await a.sync();
+    await b.sync();
+    await a.edit([
+      {
+        recordId: "map",
+        shared: [
+          { kind: "map.set", key: "replace", value: "first" },
+          { kind: "map.set", key: "replace", value: "last" },
+          { kind: "map.set", key: "remove", value: "temporary" },
+          { kind: "map.delete", key: "remove" },
+          { kind: "map.delete", key: "restore" },
+          { kind: "map.set", key: "restore", value: "restored" },
+        ],
+      },
+    ]);
+    expect((await a.sync()).status).toBe("synchronized");
+    await b.sync();
+    expect((await b.state()).records.map.map).toEqual({ replace: "last", restore: "restored" });
+  });
+  test("empty map keys survive synchronization and deletion", async () => {
+    const {
+      clients: [a, b],
+    } = factory();
+    await a.edit([{ recordId: "map", shared: [{ kind: "map.set", key: "", value: { retained: true } }] }]);
+    expect((await a.sync()).status).toBe("synchronized");
+    await b.sync();
+    expect((await b.state()).records.map.map).toEqual({ "": { retained: true } });
+    await b.edit([{ recordId: "map", shared: [{ kind: "map.delete", key: "" }] }]);
+    expect((await b.sync()).status).toBe("synchronized");
+    await a.sync();
+    expect((await a.state()).records.map.map).toEqual({});
+  });
+}

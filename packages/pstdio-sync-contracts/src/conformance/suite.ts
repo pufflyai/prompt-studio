@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { TestClient } from "./client";
 import type { ConformanceFactory } from "./reference";
-import { registerCollectionCases, registerDictionaryCase } from "./suite-collections";
+import { registerCollectionCases, registerDictionaryCase, registerMapAuthoringCases } from "./suite-collections";
 import { registerReceiptRollbackCase, registerRecoveryCases } from "./suite-recovery";
 import {
   registerJoinedResolutionCase,
@@ -110,6 +110,24 @@ export function registerConformance(factory: ConformanceFactory) {
     expect((await a.state()).records.two.text).toBe("second");
     expect(new TextDecoder().decode((await objects.get(scope, asset))!)).toBe("missing bytes");
   });
+  test("zero-byte assets publish the complete group and reach another client", async () => {
+    const {
+      clients: [a, b],
+      objects,
+      scope,
+    } = factory();
+    const asset = await a.asset("");
+    await a.edit([{ ...textEdit("one", "first"), asset }, textEdit("two", "second")]);
+    expect((await a.sync()).status).toBe("synchronized");
+    expect((await a.state()).pending).toHaveLength(0);
+    await b.sync();
+    const state = await b.state();
+    expect(state.records.one.text).toBe("first");
+    expect(state.records.two.text).toBe("second");
+    expect(Object.hasOwn(state.blobs, asset.sha256)).toBe(true);
+    expect(state.blobs[asset.sha256]).toBe("");
+    expect(await objects.get(scope, asset)).toEqual(new Uint8Array());
+  });
   test("duplicate delivery retries safely and changed identity content is rejected", async () => {
     const {
       clients: [a],
@@ -175,6 +193,7 @@ export function registerConformance(factory: ConformanceFactory) {
     expect(state.pending).toHaveLength(1);
   });
   registerCollectionCases(factory);
+  registerMapAuthoringCases(factory);
   registerDictionaryCase(factory);
   registerResolutionCases(factory);
   registerJoinedResolutionCase(factory);

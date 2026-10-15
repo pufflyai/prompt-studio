@@ -34,7 +34,7 @@ export function visible(record: StoredRecord) {
 
 export async function sharedChange(record: StoredRecord, edits: SharedEdit[]) {
   const doc = decode(record.shared?.update);
-  const mapEntries: Extract<NonNullable<Change["shared"]>, { kind: "map" }>["entries"] = [];
+  const mapEntries = new Map<string, Extract<NonNullable<Change["shared"]>, { kind: "map" }>["entries"][number]>();
   let kind: "text" | "list" | "map" | undefined;
   try {
     for (const edit of edits) {
@@ -43,7 +43,7 @@ export async function sharedChange(record: StoredRecord, edits: SharedEdit[]) {
       kind = nextKind;
       applySharedEdit(doc, edit);
       if (edit.kind === "map.set" || edit.kind === "map.delete") {
-        mapEntries.push({
+        mapEntries.set(edit.key, {
           key: edit.key,
           expected: await cellFingerprint(record.map, edit.key),
           next: edit.kind === "map.set" ? { kind: "set", value: edit.value } : { kind: "delete" },
@@ -51,7 +51,7 @@ export async function sharedChange(record: StoredRecord, edits: SharedEdit[]) {
       }
     }
     if (!kind) throw new Error("Empty shared edit");
-    if (kind === "map") return { kind, entries: mapEntries };
+    if (kind === "map") return { kind, entries: [...mapEntries.values()] };
     return { kind, update: encode(doc) };
   } finally {
     doc.destroy();

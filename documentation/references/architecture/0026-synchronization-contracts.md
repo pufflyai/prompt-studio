@@ -66,9 +66,9 @@ and extensions without exposing Yjs documents.
 | --- | --- |
 | `text.insert`, `text.delete` | Translate indices from the current local view into stable Yjs sequence operations. Concurrent inserts survive; overlapping deletes are idempotent. No whole-document replacement during remote delivery. |
 | `list.insert`, `list.delete` | Insert JSON elements or delete existing sequence elements. Concurrent insertions survive. Deleting an observed element cannot delete an unseen concurrent insertion. List elements are atomic JSON; nested edits and moves are not inferred. |
-| `map.set`, `map.delete` | Changes to different explicit keys commute. Each key checks the captured cell fingerprint, including whether the key exists. Same-key divergence preserves alternatives. Values are atomic JSON, not recursively merged. |
+| `map.set`, `map.delete` | Changes to different explicit keys commute. Each key checks the captured cell fingerprint, including whether the key exists. Repeated edits to a key within one local group use the final edit and the original cell fingerprint. Keys can be any string, including an empty string. Same-key divergence preserves alternatives. Values are atomic JSON, not recursively merged. |
 | `replace` | Replace an arbitrary JSON value only when its captured value fingerprint matches. Different JSON fields do not establish semantic compatibility. |
-| `asset` | Versioned immutable `{sha256, byteLength, mediaType}` reference. Compare the captured base or identical next reference. Competing replacements preserve bytes and alternatives. |
+| `asset` | Versioned immutable `{sha256, byteLength, mediaType}` reference, including zero-byte content. Compare the captured base or identical next reference. Competing replacements preserve bytes and alternatives. |
 | `deleted` | Tombstone or explicit restore. Check the deletion state and exact record revision. Never silently resurrect an offline edit. |
 
 Each record has one shared primitive kind once established. Primitive conversion
