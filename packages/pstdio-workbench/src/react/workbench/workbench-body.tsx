@@ -36,6 +36,7 @@ const resolveRegionSize = (
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench, breadcrumbHeader } = props;
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const edge = useWorkbenchStore(workbench.layout.store, () => workbench.getPanelEdge("secondary"));
   const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
@@ -119,8 +120,12 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minW="0"
       resizableSide={edge === "top" ? "top" : "bottom"}
       contentPanel={mainContent}
-      resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
-      collapsed={!secondaryPanel.has || secondaryPanel.collapsed}
+      resizablePanel={
+        <Box h="full" inert={fullscreen}>
+          <WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />
+        </Box>
+      }
+      collapsed={fullscreen || !secondaryPanel.has || secondaryPanel.collapsed}
       collapsible={secondaryPanel.collapsible}
       resizable={secondaryPanel.resizable}
       defaultSizePx={secondaryPanelSize.defaultPx}

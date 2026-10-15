@@ -28,6 +28,7 @@ import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchThemeScope } from "../theme/workbench-theme-scope";
 import { WorkbenchOverlayLayer } from "./overlay-layer";
+import { useEffectiveSideMode, useMainFullscreen } from "./use-main-fullscreen";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 import { WorkbenchBody } from "./workbench-body";
 import { resolvePanelCollapsible } from "./workbench-panel-state";
@@ -94,6 +95,7 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore, panelTogglesInHost: b
 
 const WorkbenchContent = (props: WorkbenchProps) => {
   const { workbench, renderParamField, sidePanelBubbleIcon, titleBar, panelTogglesInHost = false } = props;
+  const { active: fullscreen, root } = useMainFullscreen(workbench);
   const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
@@ -113,12 +115,12 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sidenavOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.visible);
   const sidePolicy = usePanelPolicy(workbench, "side");
   const hasSidePanelHeader = useWorkbenchPanelHeaderVisible(workbench, "side");
-  const sidePanelMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const sidePanelMode = useEffectiveSideMode(workbench);
 
   const { hasActivityBarWidgets, hasNavWidgets, hasSideHeaderWidgets, hasSidenavWidgets, hasStatusWidgets } =
     useWorkbenchLayoutFlags(workbench, panelTogglesInHost);
   const hasSidePanel = sidePolicy.provided;
-  const showSidenav = hasSidenavWidgets;
+  const showSidenav = hasSidenavWidgets && !fullscreen;
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
@@ -170,7 +172,11 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       flex="1"
       minH="0"
       minW="0"
-      resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
+      resizablePanel={
+        <Flex h="full" inert={fullscreen}>
+          <WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />
+        </Flex>
+      }
       contentPanel={contentWithSide}
       resizableSide={sidenavEdge === "left" ? "left" : "right"}
       collapsed={!showSidenav || !sidenavOpen}
@@ -199,7 +205,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       bg={workbenchBackgrounds.main}
       color="fg"
     >
-      <WorkbenchActivityBar workbench={workbench} visible={hasActivityBarWidgets} />
+      <Flex display={fullscreen ? "none" : "contents"} inert={fullscreen}>
+        <WorkbenchActivityBar workbench={workbench} visible={hasActivityBarWidgets} />
+      </Flex>
       <Flex flex="1" minH="0" minW="0" overflow="hidden" position="relative">
         {contentWithSidenav}
       </Flex>
@@ -211,7 +219,16 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
   return (
     <WorkbenchThemeScope h="full" minH="0" minW="0" w="full">
-      <Flex direction="column" h="full" minH="0" minW="0" position="relative" w="full">
+      <Flex
+        ref={root}
+        data-workbench-fullscreen={fullscreen || undefined}
+        direction="column"
+        h="full"
+        minH="0"
+        minW="0"
+        position="relative"
+        w="full"
+      >
         {titleBar}
         <Flex
           flex="1"
@@ -221,9 +238,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           overflow="hidden"
           pt="panel-gap"
           // The status bar owns the space under the panels, so its items center in it.
-          pb={hasStatusWidgets ? "0" : "panel-gap"}
+          pb={hasStatusWidgets && !fullscreen ? "0" : "panel-gap"}
           pr="panel-gap"
-          pl={hasActivityBarWidgets ? "0" : "panel-gap"}
+          pl={hasActivityBarWidgets && !fullscreen ? "0" : "panel-gap"}
         >
           {contentFrame}
           <WorkbenchFloatingSidePanel
@@ -234,7 +251,13 @@ const WorkbenchContent = (props: WorkbenchProps) => {
             header={sideHeader}
           />
         </Flex>
-        <WorkbenchStatusBar workbench={workbench} visible={hasStatusWidgets} panelTogglesInHost={panelTogglesInHost} />
+        <Flex display={fullscreen ? "none" : "contents"} inert={fullscreen}>
+          <WorkbenchStatusBar
+            workbench={workbench}
+            visible={hasStatusWidgets}
+            panelTogglesInHost={panelTogglesInHost}
+          />
+        </Flex>
         <WorkbenchCommandPalette
           workbench={workbench}
           open={paletteOpen}

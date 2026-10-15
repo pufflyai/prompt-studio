@@ -35,6 +35,7 @@ export interface WorkbenchPageContribution {
   title?: Localizable<string>;
   icon?: string;
   path: string;
+  expandable?: boolean;
   modeId: string;
   /** Authoritative availability. Absent means legacy singleton navigation. */
   modeIds?: readonly string[];

@@ -2747,6 +2747,7 @@ interface PageContribution extends ContributionDefinition<"page"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly path: string;
+  readonly expandable?: boolean;
   /** @deprecated */
   readonly mode: ModeRef;
   readonly modes?: readonly ModeRef[];

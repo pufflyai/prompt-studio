@@ -237,6 +237,7 @@ export const createBoomboxWorkbench = () => {
   registerBoomboxPlacements(workbench);
   workbench.pages.registerPage({
     id: "boombox.home",
+    expandable: false,
     ref: homePage,
     title: "Lazy Sunday",
     path: "boombox",
@@ -254,6 +255,7 @@ export const createBoomboxWorkbench = () => {
   });
   workbench.pages.registerPage({
     id: "boombox.resource",
+    expandable: false,
     ref: page,
     title: "Lazy Sunday",
     path: "boombox/resource",

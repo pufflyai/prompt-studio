@@ -190,6 +190,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
   } = props;
   const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
+  useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);

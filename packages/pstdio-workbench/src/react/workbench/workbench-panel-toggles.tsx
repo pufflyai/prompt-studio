@@ -28,8 +28,9 @@ export const useWorkbenchPanelToggles = (workbench: WorkbenchCore) => {
 /** Host-owned controls shared by the web status bar and desktop title bar. */
 export const WorkbenchPanelToggles = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const toggles = useWorkbenchPanelToggles(workbench);
-  if (!toggles.length) return null;
+  if (fullscreen || !toggles.length) return null;
   return (
     <HStack role="group" aria-label="Panel toggles" data-workbench-panel-toggles="" gap="2xs" flexShrink={0}>
       {toggles.map((toggle) => (

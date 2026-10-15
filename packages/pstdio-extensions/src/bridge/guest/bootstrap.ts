@@ -2,6 +2,7 @@ import { guest } from "rimless";
 import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
+import { installGuestKeyboardForwarder } from "./keyboard-forwarder";
 import { createViewLifecycle } from "./view-lifecycle";
 
 const MOUNT_ID = "pstdio-extension-mount";
@@ -126,28 +127,10 @@ const start = async () => {
 
         if (!keyboardForwarderInstalled) {
           keyboardForwarderInstalled = true;
-          document.addEventListener(
-            "keydown",
-            (event) => {
-              if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
-              if (isEditableTarget(event.target) && !event.shiftKey) return;
-
-              connection.remote
-                .call({
-                  method: "host.dispatchKeyboardEvent",
-                  params: {
-                    key: event.key,
-                    code: event.code,
-                    ctrlKey: event.ctrlKey,
-                    metaKey: event.metaKey,
-                    altKey: event.altKey,
-                    shiftKey: event.shiftKey,
-                    repeat: event.repeat,
-                  },
-                })
-                .catch(() => {});
-            },
-            true,
+          installGuestKeyboardForwarder(
+            document,
+            (params) => connection.remote.call({ method: "host.dispatchKeyboardEvent", params }),
+            isEditableTarget,
           );
         }
       } catch (error) {

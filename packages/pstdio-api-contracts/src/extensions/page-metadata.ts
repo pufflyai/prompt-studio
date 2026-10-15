@@ -43,6 +43,7 @@ export const workbenchExtensionPageRecordSchema = z
     title: localizableStringSchema,
     icon: z.string().optional(),
     path: z.string(),
+    expandable: z.boolean().optional(),
     document: z.object({ metadataKey: z.string().refine((key) => key.trim().length > 0) }).optional(),
     mode: modeRefSchema,
     modes: z.array(modeRefSchema).min(1).optional(),
