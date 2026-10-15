@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -19,6 +19,7 @@ import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
+// Core extension checks cover extension-owned draft storage and allocated file roots.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -133,10 +134,12 @@ test(
       });
       child = started.child;
 
+      const projectFolder = join(tempRoot, "project");
+      mkdirSync(projectFolder, { recursive: true });
       const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" })),
+        body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" }, projectFolder)),
       });
       expect(createRes.status).toBe(201);
 
@@ -156,6 +159,7 @@ test(
         name: "dep-ext",
       });
       await expectPackagedNativeActions({
+        projectFolder,
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),
