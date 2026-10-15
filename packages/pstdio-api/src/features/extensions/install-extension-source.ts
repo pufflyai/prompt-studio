@@ -1,4 +1,5 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, statSync, unlinkSync } from "node:fs";
+import { cp, rm } from "node:fs/promises";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
@@ -126,10 +127,10 @@ const assertCanCopy = (sourcePath: string, targetPath: string) => {
   }
 };
 
-const copyExtensionSource = (sourcePath: string, targetPath: string) => {
+const copyExtensionSource = async (sourcePath: string, targetPath: string) => {
   mkdirSync(dirname(targetPath), { recursive: true });
   const matcher = createExtensionIgnoreMatcher(sourcePath, { ignoreGit: false });
-  cpSync(sourcePath, targetPath, {
+  await cp(sourcePath, targetPath, {
     filter: (path) => {
       const rel = relative(sourcePath, path).replaceAll("\\", "/");
       if (!rel) return true;
@@ -142,12 +143,15 @@ const copyExtensionSource = (sourcePath: string, targetPath: string) => {
   });
 };
 
-const removeDirectory = (path: string) => rmSync(path, { recursive: true, force: true });
+const removeDirectory = (path: string) => rm(path, { recursive: true, force: true });
 
 // Cleanup must not replace a completed install or the error that caused an install to fail.
-export const removePathBestEffort = (path: string, remove: (path: string) => void = removeDirectory) => {
+export const removePathBestEffort = async (
+  path: string,
+  remove: (path: string) => void | Promise<void> = removeDirectory,
+) => {
   try {
-    remove(path);
+    await remove(path);
   } catch {}
 };
 
@@ -266,7 +270,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       mkdirSync(extensionsRoot, { recursive: true });
       stagingRoot = mkdtempSync(join(dirname(extensionsRoot), ".extension-install-"));
       installPath = join(stagingRoot, installName);
-      copyExtensionSource(resolvedSource.path, installPath);
+      await copyExtensionSource(resolvedSource.path, installPath);
     }
 
     const linkedInstalledDependencies = await prepareInstallDependencies({
@@ -288,7 +292,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     if (installPath !== targetPath) {
       const preserveDependencies = linkedInstalledDependencies;
       if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
-      promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
+      await promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
       for (const extension of check.extensions) extension.sourcePath = targetPath;
     }
 
@@ -305,7 +309,7 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       targetPath,
     };
   } finally {
-    if (stagingRoot) removePathBestEffort(stagingRoot);
-    removePathBestEffort(tempDir);
+    if (stagingRoot) await removePathBestEffort(stagingRoot);
+    await removePathBestEffort(tempDir);
   }
 };

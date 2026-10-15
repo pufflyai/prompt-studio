@@ -80,6 +80,7 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerSharedCodexSmokeTests();
+// Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
