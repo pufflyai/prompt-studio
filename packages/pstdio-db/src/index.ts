@@ -6,6 +6,7 @@ export { resolveDbPath } from "./db/paths";
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
 export { createActivityEventsDBService } from "./services/activity-events/activity-events";
+export { createAssetTransfersDBService } from "./services/asset-transfers/asset-transfers";
 export { createAutomationDBService } from "./services/automation/automation";
 export { createBoardViewsDBService, LastBoardViewError } from "./services/board-views/board-views";
 export type { ValidColor } from "./services/colors";

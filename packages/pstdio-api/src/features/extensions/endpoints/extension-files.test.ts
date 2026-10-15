@@ -201,14 +201,15 @@ describe("extension file endpoints", () => {
     expect(response.status).toBe(404);
   });
 
-  test("applies the extension file size limit to command uploads", async () => {
+  test("uploads a large command attachment with the existing blob API", async () => {
     const response = await uploadCommandFile(
       projectId,
       "pstdio.lab.command.read-upload",
-      Buffer.alloc(25 * 1024 * 1024 + 1),
+      new Blob([new Uint8Array(26 * 1024 * 1024)]).stream(),
     );
 
-    expect(response.status).toBe(413);
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ size: 26 * 1024 * 1024 });
   });
 
   test("uploads, lists, and downloads files owned by an extension scope", async () => {

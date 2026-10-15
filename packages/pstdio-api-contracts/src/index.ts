@@ -1,5 +1,6 @@
 export * from "./activity";
 export * from "./agents";
+export * from "./assets";
 export * from "./automation";
 export * from "./board-views";
 export * from "./environment";

@@ -25,6 +25,10 @@ const mockFilesDBService = () =>
 const mockFilesStorageService = () =>
   ({
     writeFile: mock((_pid: string, _fid: string, _data: Buffer) => "/tmp/p1/file-id"),
+    writeStream: mock(async (_pid: string, _fid: string, data: ReadableStream<Uint8Array>) => {
+      const bytes = await new Response(data).arrayBuffer();
+      return { storagePath: "/tmp/p1/file-id", byteLength: bytes.byteLength, hash: "fakehash" };
+    }),
     deleteFile: mock(() => {}),
     removeProjectStorage: mock(() => {}),
     computeHash: mock(() => "fakehash"),
@@ -66,8 +70,7 @@ describe("FileService", () => {
       mime_type: "text/plain",
     });
 
-    expect(storage.writeFile).toHaveBeenCalled();
-    expect(storage.computeHash).toHaveBeenCalledWith(data);
+    expect(storage.writeStream).toHaveBeenCalled();
     expect(db.insert).toHaveBeenCalled();
     expect(result.file_name).toBe("note.txt");
     expect(result.project_id).toBe("p1");

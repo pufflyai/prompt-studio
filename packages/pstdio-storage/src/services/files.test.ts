@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -80,4 +81,49 @@ test("computeHash returns a consistent sha256 hex digest", () => {
 
   expect(hash1).toBe(hash2);
   expect(hash1).toHaveLength(64);
+});
+
+test("legacy file uploads persist one chunk before requesting the next and return verified metadata", async () => {
+  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(storageRoot);
+  const service = createFilesStorageService(storageRoot);
+  let chunks = 0;
+  const data = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        if (chunks++ === 0) controller.enqueue(new TextEncoder().encode("first"));
+        else {
+          expect(readFileSync(join(storageRoot, "project", "file"), "utf8")).toBe("first");
+          controller.enqueue(new TextEncoder().encode("second"));
+          controller.close();
+        }
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  const stored = await service.writeStream("project", "file", data);
+  expect(stored).toEqual({
+    storagePath: join(storageRoot, "project", "file"),
+    byteLength: 11,
+    hash: createHash("sha256").update("firstsecond").digest("hex"),
+  });
+});
+
+test("failed legacy file streams remove temporary bytes", async () => {
+  const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
+  roots.push(storageRoot);
+  const service = createFilesStorageService(storageRoot);
+  let chunks = 0;
+  const data = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        if (chunks++ === 0) controller.enqueue(new TextEncoder().encode("partial"));
+        else controller.error(new Error("Source disconnected"));
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  const error = await service.writeStream("project", "file", data).catch((error: unknown) => error);
+  expect(error).toBeInstanceOf(Error);
+  expect(existsSync(join(storageRoot, "project", "file"))).toBe(false);
 });

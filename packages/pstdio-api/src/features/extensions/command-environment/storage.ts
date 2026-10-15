@@ -1,5 +1,6 @@
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
+import { createExtensionAssetsApi } from "./assets";
 import { createExtensionBlobsApi } from "./blobs";
 
 type StorageApiInput = {
@@ -36,6 +37,7 @@ export const createStorageApi = (
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
+    assets: createExtensionAssetsApi(deps, input),
     files: createExtensionBlobsApi(deps, {
       extensionInstanceId: input.extensionInstanceId,
       signal: input.signal,

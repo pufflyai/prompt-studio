@@ -3,9 +3,10 @@ import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
 import { createMemoryResources } from "@pstdio/sdk/testing";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
-import { stubEnvironment } from "./test-helpers.test";
+import { makeStorage, stubEnvironment } from "./test-helpers.test";
 
 const storage: CommandRunnerEnvironment["storage"] = {
+  assets: makeStorage().api.assets,
   scope: () => storage,
   files: {
     put: async () => ({}) as never,

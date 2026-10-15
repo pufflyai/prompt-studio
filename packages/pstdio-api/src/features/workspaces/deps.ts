@@ -4,6 +4,7 @@ import type { WorkspaceProviderRuntime } from "./workspace-provider-runtime";
 export type WorkspacesRouteDeps = Pick<
   RouteDeps,
   | "artifactMountWrites"
+  | "assetTransferService"
   | "automationService"
   | "activityEventsService"
   | "eventBus"

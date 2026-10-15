@@ -10,7 +10,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-db": ["pstdio-api-contracts", "pstdio-paths"],
   "pstdio-scheduler": [],
   "pstdio-wt": ["pstdio-file-types"],
-  "pstdio-storage": ["pstdio-paths"],
+  "pstdio-storage": ["pstdio-paths", "pstdio-sync-contracts"],
   "@pstdio/sdk": ["pstdio-api-contracts", "pstdio-sync-contracts"],
   // pstdio-extensions also declares extension-lab, whose documented examples its tests load,
   // so changing an example marks pstdio-extensions as affected.
