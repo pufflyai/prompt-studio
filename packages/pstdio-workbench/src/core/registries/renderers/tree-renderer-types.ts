@@ -62,6 +62,7 @@ export interface TreeNode {
   icon?: string;
   iconElement?: unknown;
   iconColor?: string;
+  badge?: { label: string; color?: string };
   iconTooltip?: string;
   tooltip?: string;
   endContent?: unknown;

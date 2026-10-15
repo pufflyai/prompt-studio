@@ -66,6 +66,8 @@ export interface TreeNode {
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  /** Trailing count, using the same badge as notification counts. */
+  badge?: { label: string; color?: string };
   iconTooltip?: string;
   /** Shown while the pointer rests on the row or the row has keyboard focus. `iconTooltip` covers only the icon. */
   tooltip?: string;

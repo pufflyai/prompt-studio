@@ -1,10 +1,13 @@
 import { Badge, Icon, Text } from "@chakra-ui/react";
 import type { LucideIcon } from "lucide-react";
 import * as lucideIcons from "lucide-react";
+import { Tooltip } from "../primitives/tooltip";
 
-interface CollectionBadgeProps {
+export interface CollectionBadgeProps {
   label: string;
   icon?: string;
+  color?: string;
+  tooltip?: string;
   onClick?: () => void;
 }
 
@@ -28,13 +31,13 @@ const resolveIcon = (name: string | undefined) => {
 };
 
 export const CollectionBadge = (props: CollectionBadgeProps) => {
-  const { label, icon, onClick } = props;
+  const { label, icon, color, tooltip, onClick } = props;
   const BadgeIcon = resolveIcon(icon);
 
   const content = (
     <>
       {BadgeIcon ? <Icon as={BadgeIcon} boxSize="3.5" flexShrink={0} aria-hidden="true" /> : null}
-      <Text as="span" textStyle="label/XS/medium" color="fg.muted" minW="0" maxW="10rem" truncate>
+      <Text as="span" textStyle="label/XS/medium" minW="0" maxW="10rem" truncate>
         {label}
       </Text>
     </>
@@ -46,32 +49,30 @@ export const CollectionBadge = (props: CollectionBadgeProps) => {
     alignItems: "center",
     minW: "0",
     maxW: "100%",
-    variant: "subtle",
-    bg: { _light: "bg.muted", _dark: "bg.subtle" },
-    color: "fg.muted",
+    variant: color ? "subtle" : "ticket",
+    colorPalette: color ?? "gray",
+    size: "sm",
     textStyle: "label/XS/medium",
     "data-testid": "collection-badge",
   } as const;
 
-  if (onClick) {
-    return (
-      <Badge asChild {...sharedProps} cursor="pointer">
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onClick();
-          }}
-        >
-          {content}
-        </button>
-      </Badge>
-    );
-  }
-
-  return (
+  const badge = onClick ? (
+    <Badge asChild {...sharedProps} cursor="pointer">
+      <button
+        type="button"
+        aria-label={tooltip}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClick();
+        }}
+      >
+        {content}
+      </button>
+    </Badge>
+  ) : (
     <Badge as="span" {...sharedProps} cursor="default">
       {content}
     </Badge>
   );
+  return tooltip ? <Tooltip content={tooltip}>{badge}</Tooltip> : badge;
 };

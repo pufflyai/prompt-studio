@@ -1,6 +1,7 @@
 import { Box, Stack, Text, Wrap } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { CollectionBadge } from "./collection-badge";
 import { renderBadgeListDisplay } from "./kanban-renderer-helpers";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
@@ -50,4 +51,32 @@ type Story = StoryObj<typeof meta>;
 
 export const LinkedResources: Story = {
   render: () => <LinkedBadgeList />,
+};
+
+export const ReviewRequestCounts: Story = {
+  render: () => (
+    <Wrap p="lg" gap="sm">
+      <CollectionBadge
+        label="1"
+        icon="message-circle-warning"
+        color="orange"
+        tooltip="1 open review request"
+        onClick={() => {}}
+      />
+      <CollectionBadge
+        label="3"
+        icon="message-circle-warning"
+        color="orange"
+        tooltip="3 open review requests"
+        onClick={() => {}}
+      />
+      <CollectionBadge
+        label="3"
+        icon="message-circle-warning"
+        color="green"
+        tooltip="All 3 review requests resolved"
+        onClick={() => {}}
+      />
+    </Wrap>
+  ),
 };
