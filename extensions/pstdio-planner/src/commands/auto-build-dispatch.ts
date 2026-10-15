@@ -1,4 +1,5 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { readAttempt } from "../data/attempt-storage";
 import { readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { resolveImplementationBase } from "../data/implementation-targets";
@@ -15,13 +16,39 @@ async function dispatchNext(
   beforeDispatch: (head?: string) => Promise<void>,
   input: { base?: string; workspaceId?: string },
 ) {
-  if (candidate.action !== "start" && (input.base || input.workspaceId))
+  if (candidate.action !== "start" && candidate.action !== "recover-workspace" && (input.base || input.workspaceId))
     throw new Error(
       "Existing attempts keep their workspace and base. Dispatch without overrides, then use update-stack to change the base.",
     );
   if (candidate.action === "resume") return resumeAutoBuildAttempt(ctx, candidate.id, beforeDispatch);
   if (candidate.action === "update-stack" && candidate.workspaceId)
     return resumeStackRepair(ctx, candidate.workspaceId, beforeDispatch);
+  if (candidate.action === "recover-workspace") {
+    if (input.workspaceId) throw new Error("Recovery creates a fresh managed workspace. Omit workspace-id.");
+    const previous = await readAttempt(ctx.storage, candidate.workspaceId!);
+    if (!previous || !candidate.recoveryHeadSha) throw new Error("The recovery attempt changed. Query again.");
+    const started = await startAttempt(
+      ctx,
+      {
+        ticket: candidate.id,
+        workspace: {
+          providerId: "pstdio.worktree",
+          params: { base: candidate.recoveryBaseSha ?? previous.base.headSha },
+        },
+      },
+      {
+        beforeDispatch,
+        dependencyReview: (await readAutoBuildMode(ctx)).blockOnReview ? "approved" : "submitted",
+        recovery: { previous, headSha: candidate.recoveryHeadSha, detail: candidate.detail ?? "Workspace unavailable" },
+      },
+    );
+    return {
+      decision: "started" as const,
+      ticket: candidate.ticket,
+      workspaceId: started.workspace.id,
+      sessionId: started.session.id,
+    };
+  }
   const base = input.base ?? (await resolveImplementationBase(ctx, await ctx.settings.all()));
   const mode = await readAutoBuildMode(ctx);
   const started = await startAttempt(

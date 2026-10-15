@@ -19,7 +19,7 @@ export async function readSelectedStackRepair(
     return await readStackRepair(ctx, chosen);
   } catch (error) {
     if (!(error instanceof WorkspaceUnavailableError)) throw error;
-    return { unavailableWorkspaceId: chosen.workspaceId, detail: error.message };
+    return { unavailableWorkspaceId: chosen.workspaceId, detail: error.message, attempt: chosen };
   }
 }
 

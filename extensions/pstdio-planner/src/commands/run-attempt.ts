@@ -27,6 +27,12 @@ import {
   resolveTicketIdentity,
   ticketActionParams,
 } from "./ticket-actions";
+import {
+  finishWorkspaceRecovery,
+  recoveryPrompt,
+  recoverySessionInput,
+  type WorkspaceRecovery,
+} from "./workspace-recovery";
 
 const humanReadinessReasons = new Set<HumanRequestReason>([
   "ambiguous-dependency-attempt",
@@ -47,6 +53,7 @@ export async function startAttempt(
     beforeDispatch?: (baseHeadSha?: string) => Promise<void>;
     dependencyReview?: "approved" | "submitted";
     workspaceId?: string;
+    recovery?: WorkspaceRecovery;
   } = {},
 ) {
   const { agent } = commandParams;
@@ -82,12 +89,13 @@ export async function startAttempt(
     throw new Error(message);
   }
   const dependencyBase = await prepareDependencyBase(ctx, readiness);
+  const startingHead = options.recovery?.headSha ?? dependencyBase.headSha;
   const beforeDispatch = async () => options.beforeDispatch?.(readiness.baseHeadSha);
   const { anchor, mode, ticket, workspace, headSha } = options.workspaceId
     ? await adoptDraftWorkspace(ctx, ticketRef, options.workspaceId, beforeDispatch)
     : {
-        ...(await createAnchoredWorkspace(ctx, commandParams, dependencyBase.headSha, beforeDispatch)),
-        headSha: dependencyBase.headSha,
+        ...(await createAnchoredWorkspace(ctx, commandParams, startingHead, beforeDispatch)),
+        headSha: startingHead,
       };
   const attemptAnchor: ResourceAnchor = {
     type: "planner-attempt",
@@ -111,17 +119,19 @@ export async function startAttempt(
         ticket: anchor.label ?? ticketIdentity.shorthand,
         workspaceId: workspace.id,
       }),
+      ...(await recoveryPrompt(ctx, options.recovery, dependencyBase.headSha)),
       ...(options.workspaceId
         ? [
             `Continue the existing draft in this workspace on its assigned branch. Its current HEAD is ${headSha}; its required dependency base is ${dependencyBase.headSha}. Preserve all uncommitted work. Commit the draft first, then run update-stack with your implementation session ID and the exact current HEAD before continuing. Validate the integration before submitting. The delivery target for this work is ${typeof chosenBase === "string" ? chosenBase : dependencyBase.headSha}.`,
           ]
         : []),
-      ...(!options.workspaceId && readiness.mode === "stacked"
+      ...(!options.workspaceId && !options.recovery && readiness.mode === "stacked"
         ? [
             `This workspace starts at base ${dependencyBase.headSha}. Required dependency workspaces: ${readiness.dependencyAttemptIds.join(", ")}. Keep the assigned branch. Verify the submitted dependency commits are present and use update-stack if needed. If their automatic combination conflicts, reconcile the code in this workspace, commit, and retry update-stack. Do not request human review for Git conflicts; ask only if features, concepts, plans, requirements, or architecture conflict. Do not reset to the target branch, recreate dependency code, approve work, or mark a ticket Done to repair its base.`,
           ]
         : []),
     ].join("\n\n"),
+    ...(await recoverySessionInput(ctx, options.recovery, beforeDispatch)),
   });
   const timestamp = new Date().toISOString();
   const attempt: AttemptRecord = {
@@ -141,6 +151,7 @@ export async function startAttempt(
     updatedAt: timestamp,
   };
   await putAttempt(ctx.storage, attempt);
+  if (options.recovery) await finishWorkspaceRecovery(ctx, options.recovery.previous, attempt);
   await appendAttemptEvent(ctx.storage, {
     workspaceId: workspace.id,
     revision: null,
@@ -151,7 +162,11 @@ export async function startAttempt(
     reviewId: null,
     threadId: null,
     commitSha: headSha,
-    metadata: { mode: readiness.mode, dependencyAttemptIds: readiness.dependencyAttemptIds },
+    metadata: {
+      mode: readiness.mode,
+      dependencyAttemptIds: readiness.dependencyAttemptIds,
+      ...(options.recovery ? { recoveredFromWorkspaceId: options.recovery.previous.workspaceId } : {}),
+    },
   });
   // A short session can finish before its attempt is saved and miss the completion hook.
   if ("title" in ticket) await rollUpAttemptTicket(ctx, ticket.id);

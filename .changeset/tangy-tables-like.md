@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Repair dependency delivery checks and preserve feature-branch drafts during Planner dispatch.
+Repair dependency readiness and resume missing workspaces through informed recovery agents.

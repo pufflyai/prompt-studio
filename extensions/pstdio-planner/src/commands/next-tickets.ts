@@ -19,6 +19,7 @@ import { type NextTicketQuery, selectNextTicketRows, selectNextTicketScopeRows }
 import type { NextTicket, WaitingTicket } from "./next-ticket-types";
 import { nextTicketWait } from "./next-ticket-wait";
 import { nextWorkSnapshot } from "./next-work-snapshot";
+import { readRecoveryBase, readRecoverySeed } from "./workspace-recovery";
 
 async function appendStackRepair(
   ctx: CommandContext,
@@ -27,11 +28,29 @@ async function appendStackRepair(
   selections: TicketAttemptSelection[],
   next: NextTicket[],
   waiting: WaitingTicket[],
+  mode: AutoBuildMode,
+  base?: string,
 ) {
   const repair = await readSelectedStackRepair(ctx, summary.id, attempts, selections);
   if (!repair) return false;
   if ("unavailableWorkspaceId" in repair) {
-    waiting.push({ ...summary, reason: "workspace-unavailable", dependencyIds: [], detail: repair.detail });
+    const recoveryBase = await readRecoveryBase(ctx, repair.attempt, base);
+    const { readiness } = await loadAttemptReadiness(ctx, summary.id, {
+      base: recoveryBase,
+      dependencyReview: mode.blockOnReview ? "approved" : "submitted",
+    });
+    if (readiness.decision === "wait")
+      waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
+    else
+      next.push({
+        ...summary,
+        action: "recover-workspace",
+        recoveryBaseSha: recoveryBase,
+        workspaceId: repair.unavailableWorkspaceId,
+        baseHeadSha: readiness.baseHeadSha,
+        recoveryHeadSha: await readRecoverySeed(ctx, repair.attempt, readiness.baseHeadSha),
+        detail: repair.detail,
+      });
   } else {
     next.push({
       ...summary,
@@ -91,7 +110,7 @@ export async function readNextTickets(
     });
     if (
       canOfferStackRepair(wait?.reason, resumptions.has(row.id), capacity) &&
-      (await appendStackRepair(ctx, summary, attempts, selections, next, waiting))
+      (await appendStackRepair(ctx, summary, attempts, selections, next, waiting, mode, input.base))
     )
       continue;
     if (wait) {

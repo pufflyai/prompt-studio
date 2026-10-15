@@ -155,13 +155,27 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
       status: "Todo",
     });
     const path = started.workspace.root_path;
+    const recoveryMode = await execute("auto-build.configure", {
+      enabled: true,
+      prompt: "Recover the missing workspace.",
+    });
     await rename(path, `${path}.missing`);
     try {
       const next = await execute("next-tickets");
       expect(next.tickets).toContainEqual(expect.objectContaining({ id: ready.id, action: "start" }));
-      expect(next.waiting).toContainEqual(expect.objectContaining({ id: child.id, reason: "workspace-unavailable" }));
+      expect(next.tickets).toContainEqual(expect.objectContaining({ id: child.id, action: "recover-workspace" }));
+      const recovery = await execute("auto-build.dispatch", { ticket: child.id, revision: recoveryMode.revision });
+      expect(recovery.decision).toBe("started");
+      expect(recovery.workspaceId).not.toBe(started.workspace.id);
+      await stop(recovery.sessionId);
+      const recoveredWorkspace = await request(`/workspaces/${recovery.workspaceId}`);
+      expect(git(recoveredWorkspace.root_path, "show", "HEAD:child.ts")).toContain("true");
+      expect((await execute("read-attempt-history", { workspaceId: started.workspace.id })).attempt.state).toBe(
+        "abandoned",
+      );
     } finally {
       await rename(`${path}.missing`, path);
+      await execute("auto-build.configure", { enabled: false });
     }
     git(folder, "branch", "feature/acceptance", updated.headSha);
     const draftTicket = await execute("create-ticket", { content: "# Continue a feature draft", status: "Todo" });

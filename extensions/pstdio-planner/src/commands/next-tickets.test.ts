@@ -86,7 +86,9 @@ test.each([
 
   const next = await nextTicketsCommand.run(result.ctx, { track: "Workbench" });
   expect(next.tickets).toContainEqual(expect.objectContaining({ id: ready.id, action: "start" }));
-  expect(next.waiting).toContainEqual(expect.objectContaining({ id: old.id, reason: "workspace-unavailable" }));
+  expect(next.tickets).toContainEqual(
+    expect.objectContaining({ id: old.id, action: "recover-workspace", workspaceId: started.workspace.id }),
+  );
   expect(await autoBuildDispatchCommand.run(result.ctx, { ticket: ready.id, revision: "test" })).toMatchObject({
     decision: "started",
     ticket: ready.shorthand,
