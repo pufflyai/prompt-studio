@@ -19,6 +19,22 @@ const createRepo = async () => {
 };
 
 describe("extension files ignore ownership", () => {
+  test.each(["/extension-storage", "/extension-storage/"])("keeps an existing %s rule unchanged", async (rule) => {
+    const repo = await createRepo();
+    const ignorePath = join(repo, ".pstdio/.gitignore");
+    writeFileSync(ignorePath, `${rule}\n`);
+    const files = createExtensionFilesApi({
+      name: "first",
+      extensionId: "pstdio.first",
+      resolveRepoPath: async () => repo,
+      tracked: false,
+    });
+
+    await files.writeText("one.txt", "1");
+
+    expect(readFileSync(ignorePath, "utf8")).toBe(`${rule}\n`);
+  });
+
   test("keeps files and tracking separate for publishers with the same package name", async () => {
     const repo = await createRepo();
     const files = (publisher: string, tracked: boolean) =>

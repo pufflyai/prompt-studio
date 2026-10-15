@@ -53,7 +53,13 @@ const updateIgnore = async (repoPath: string, owner: ExtensionStorageOwner, trac
       next = lines.filter(
         (_, index) => index !== markerIndex && !(index === markerIndex + 1 && lines[index] === entry),
       );
-    } else if (!tracked && markerIndex < 0 && !lines.includes(entry)) {
+    } else if (
+      !tracked &&
+      markerIndex < 0 &&
+      !lines.includes(entry) &&
+      !lines.includes("/extension-storage") &&
+      !lines.includes("/extension-storage/")
+    ) {
       next = [...lines, marker, entry];
     }
     if (next.join("\n") === lines.join("\n")) return;
