@@ -76,7 +76,8 @@ import { expectPackagedWebviewRuntime } from "./packaged-webview-runtime-smoke";
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 
-// verify:packages also checks packed workbench owner removal and Reset uniqueness.
+// verify:packages also checks packed workbench owner removal, Reset uniqueness,
+// all initiating-owner presets after async navigation, and legacy restoration destinations.
 const BUILD_TIMEOUT = 180_000;
 
 beforeAll(() => {
