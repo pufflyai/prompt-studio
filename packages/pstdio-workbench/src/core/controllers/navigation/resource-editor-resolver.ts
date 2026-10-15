@@ -143,6 +143,7 @@ export const prepareEditorActivation = (
       const tab = liveEditorPlacement(core, editor);
       if (!tab) throw new Error(`Editor is no longer open: ${editor.tab.widgetId}`);
       applyResourceEditorIntent(core, editor.tab, editor.scope, tab, { ...intent, resource });
+      core.fullscreen.beforeReveal(editor.region);
       revealPanelRegion(core, editor.region);
       core.layout.activatePanel(tab.widgetId);
       core.focus.setActiveRegion(

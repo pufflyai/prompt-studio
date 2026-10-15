@@ -2,6 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { checkFloatingBubblePointer } from "./floating-bubble-interactions";
 import { exerciseForeignContext } from "./foreign-context-playwright";
+import { exerciseFullscreenEdgeDrop, exerciseFullscreenWebview } from "./fullscreen-webview-playwright";
 import {
   STORY_RENDER_TIMEOUT_MS,
   startStorybook,
@@ -16,6 +17,20 @@ import { exerciseWebview } from "./webview-playwright";
 import { windowingInteractions } from "./workbench-windowing-interactions";
 
 const storyIds = [
+  "fullscreen-attached",
+  "fullscreen-floating",
+  "fullscreen-empty-open",
+  "fullscreen-non-floatable",
+  "fullscreen-fixed-side",
+  "fullscreen-no-side",
+  "fullscreen-navigation",
+  "fullscreen-reload",
+  "fullscreen-rearranged",
+  "fullscreen-nested-escape",
+  "fullscreen-focus-fallbacks",
+  "fullscreen-close-only-side",
+  "fullscreen-exit-binding",
+  "fullscreen-hidden-navigation",
   "panel-toggles-default",
   "panel-toggles-side-left",
   "panel-toggles-navigation-right",
@@ -181,9 +196,11 @@ test.describe("Workbench windowing stories", () => {
       };
       await interactions[storyId.split("--").at(-1)!]?.();
       await checkFloatingBubblePointer(page, storyId);
+      if (storyId.endsWith("--fullscreen-nested-escape")) await exerciseFullscreenWebview(page);
+      if (storyId.endsWith("--fullscreen-rearranged")) await exerciseFullscreenEdgeDrop(page);
       await windowingInteractions[storyId]?.(page);
       if (
-        /--(?:foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page|session-start)/.test(
+        /--(?:fullscreen|foreign-context|page-availability|page-side|undeclared-page|ticket-panel|page-panel|narrow-page|session-start)/.test(
           storyId,
         )
       ) {

@@ -24,6 +24,7 @@ export const activateNavigationPlacement = (
         core.movePanel(tab.widgetId, destination);
         return;
       }
+      core.fullscreen.beforeReveal(region.id);
       revealPanelRegion(core, region.id);
       core.layout.activatePanel(tab.widgetId);
       return;

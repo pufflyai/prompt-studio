@@ -29,6 +29,16 @@ export const createCoreShell = (
     layout,
     sidePanel,
     getPolicy,
+    beforeOpen: (region, presentation) => {
+      const fullscreen = resolve()?.fullscreen;
+      if (region === "side" && presentation === "attached") fullscreen?.exit();
+      else fullscreen?.beforeReveal(region);
+    },
+    getOpenSidePresentation: () =>
+      resolve()?.fullscreen.store.getState().active
+        ? (layout.getLayout().regions.side.presentation ??
+          (input.initialSidePanelMode === "attached" ? "attached" : "floating"))
+        : undefined,
     getOwnerKey: (region) => {
       const state = resolve()?.pages.store.getState();
       const modeId = modes.getActiveModeId();
@@ -38,7 +48,7 @@ export const createCoreShell = (
     getDefaultTarget: (region, presentation) => {
       const modeId = modes.getActiveModeId();
       const mode = modeId ? modes.getMode(modeId) : undefined;
-      return presentation === "floating"
+      return presentation === "floating" || (region === "side" && resolve()?.fullscreen.store.getState().active)
         ? (mode?.floating?.defaultTab ?? input.floating?.defaultTab ?? getPolicy(region).defaultTab)
         : getPolicy(region).defaultTab;
     },

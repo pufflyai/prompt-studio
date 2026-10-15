@@ -85,6 +85,7 @@ export const PanelEdgeTargets = (props: { workbench: WorkbenchCore; inner?: bool
   const { workbench, inner = false, content = false } = props;
   const { activeId, panel, destinations } = useTabDrag();
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   if (panel) {
     const local = panel === "aside" || panel === "bottom";
     const onMain = panel === "side" || panel === "main" || panel === "secondary";
@@ -97,7 +98,7 @@ export const PanelEdgeTargets = (props: { workbench: WorkbenchCore; inner?: bool
   if (content) return null;
   const regions: WorkbenchPanelRegion[] = inner ? ["aside", "bottom"] : ["side", "secondary"];
   return regions
-    .filter((region) => destinations?.includes(region) && !workbench.shell.getPanelPolicy(region).open)
+    .filter((region) => destinations?.includes(region) && !workbench.fullscreen.isRegionVisible(region))
     .map((region) => (
       <EdgeTarget
         key={region}

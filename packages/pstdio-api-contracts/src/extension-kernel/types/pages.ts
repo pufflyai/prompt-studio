@@ -70,6 +70,8 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
   readonly path: string;
+  /** Allows Main fullscreen. Omission allows expansion. */
+  readonly expandable?: boolean;
   /** @deprecated Use modes for page availability. Without modes, keeps singleton navigation. */
   readonly mode: ModeRef;
   /** Non-empty, unique list of allowed modes. Authoritative when supplied. */

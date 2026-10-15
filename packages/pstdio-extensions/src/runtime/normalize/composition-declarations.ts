@@ -71,6 +71,7 @@ export const pageDeclarationSchema = z
     title: localizableStringSchema,
     icon: z.string().optional(),
     path: z.string(),
+    expandable: z.boolean().optional(),
     mode: localRefSchema("mode"),
     modes: z.array(localRefSchema("mode")).min(1).optional(),
     parent: localRefSchema("page").optional(),

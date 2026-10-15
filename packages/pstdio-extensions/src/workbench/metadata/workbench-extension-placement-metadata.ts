@@ -44,6 +44,7 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
     title: page.contribution.title,
     icon: page.contribution.icon,
     path: page.contribution.path,
+    expandable: page.contribution.expandable,
     document: page.contribution.document,
     panelMenus: page.contribution.panelMenus
       ? {

@@ -11,6 +11,7 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { PagePanelsMenu } from "../workbench/page-panels-menu";
 import { WorkbenchHeaderActions } from "./header-actions";
+import { MainFullscreenControls } from "./main-fullscreen-controls";
 import { WorkbenchBreadcrumbActions } from "./resource-actions";
 
 interface WorkbenchNavChromeProps {
@@ -56,13 +57,15 @@ const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) =>
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const { workbench, hasNav } = props;
-  const chrome = useModeChrome(workbench, "nav");
+  const modeChrome = useModeChrome(workbench, "nav");
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
+  const chrome = fullscreen ? undefined : modeChrome;
 
   return (
     <PanelDragArea workbench={workbench} panel="main" asChild>
       <Header
         data-workbench-region="nav"
-        display={chrome === false ? "none" : "flex"}
+        display={chrome === false && !fullscreen ? "none" : "flex"}
         variant="main"
         padding={chrome ? "0" : undefined}
         bg={workbenchBackgrounds.main}
@@ -77,7 +80,9 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
           <WorkbenchNavigationControls workbench={workbench} />
         </Box>
         <Box
-          display={hasNav ? "block" : "none"}
+          data-workbench-mode-nav=""
+          display={hasNav && !fullscreen ? "block" : "none"}
+          inert={fullscreen}
           flex={chrome ? "1" : undefined}
           h="full"
           minW="0"
@@ -87,7 +92,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
           <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" />
         </Box>
         <Box display={chrome ? "none" : "contents"}>
-          {!hasNav ? (
+          {!hasNav || fullscreen ? (
             <Box data-workbench-breadcrumb h="full" minW="0" maxW="60%" overflow="hidden">
               <WorkbenchBreadcrumbView workbench={workbench} />
             </Box>
@@ -106,7 +111,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
           <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
         </Box>
         <PagePanelsMenu workbench={workbench} />
-        <Box data-workbench-expand-view-slot="" />
+        <MainFullscreenControls workbench={workbench} />
       </Header>
     </PanelDragArea>
   );

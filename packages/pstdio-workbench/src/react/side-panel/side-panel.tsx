@@ -13,6 +13,7 @@ import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { useEffectiveSideMode } from "../workbench/use-main-fullscreen";
 import { FloatingBubble } from "./floating-bubble";
 
 interface WorkbenchSidePanelProps {
@@ -110,7 +111,8 @@ interface WorkbenchFloatingSidePanelProps extends WorkbenchSidePanelProps {
 
 export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProps) => {
   const { workbench, contentSlotRef, header, bubbleIcon, available = true } = props;
-  const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const mode = useEffectiveSideMode(workbench);
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && mode === "floating";
@@ -122,7 +124,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
 
   return (
     <>
-      {available && canFloat && policy.floatingBubble && policy.canOpen && mode !== "attached" ? (
+      {!fullscreen && available && canFloat && policy.floatingBubble && policy.canOpen && mode !== "attached" ? (
         <FloatingBubble
           key={modeId}
           workbench={workbench}
@@ -146,7 +148,9 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           bg: workbenchBackgrounds.widget,
         }}
         popOutLabel="Reattach Side Panel"
-        onPopOut={() => workbench.sidePanel.setMode("attached")}
+        onPopOut={fullscreen ? undefined : () => workbench.sidePanel.setMode("attached")}
+        closeLabel="Hide Sidebar"
+        onClose={fullscreen && policy.canClose ? () => workbench.fullscreen.hideSide() : undefined}
         menu={
           visible ? (
             <PanelHeaderContextMenu workbench={workbench} region="side">

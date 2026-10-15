@@ -108,9 +108,12 @@ export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatch
   );
   useEffect(() => {
     const refresh = () => setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
-    const subscriptions = [workbench.keybindings.store, workbench.context.store, workbench.commands.store].map(
-      (store) => store.subscribe(refresh),
-    );
+    const subscriptions = [
+      workbench.keybindings.store,
+      workbench.context.store,
+      workbench.commands.store,
+      workbench.fullscreen.store,
+    ].map((store) => store.subscribe(refresh));
     refresh();
     return () => {
       for (const unsubscribe of subscriptions) unsubscribe();

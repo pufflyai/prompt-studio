@@ -32,6 +32,20 @@ The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, regi
 
 ## Panel arrangement
 
+### Main fullscreen
+
+`workbench.enterMainFullscreen` expands the whole page, including its header, menus, side panel, and bottom panel. `workbench.exitMainFullscreen` returns to the current saved layout. Both are idempotent. This is workbench presentation, independent of browser and operating-system fullscreen.
+
+`workbench.showFullscreenSide` and `workbench.hideFullscreenSide` open or close the floating Sidebar while fullscreen is active. The mode must provide a floatable Side and allow the requested visibility action. These commands use the same saved visibility intent as ordinary Side Open/Close. Entry and exit preserve saved attachment, panel geometry, tab identities, and running sessions. A Side that cannot float stays hidden; fixed-visible floating Side has no visibility controls.
+
+The page breadcrumb header keeps Expand/Exit after Page panels, with a permitted Sidebar toggle before Exit. Mode chrome, status controls, Navigation, and Secondary are hidden and inert. Page-local panel controls keep working. An unhandled Escape exits after nested menus, dialogs, and embedded views handle it. Closing the overlay focuses its reopen control. Exit focuses Expand, or Main when that control is unavailable.
+
+Page navigation and Back/Forward keep fullscreen unless the destination declares `expandable: false`. That optional page field defaults to allowed. An opted-out page has no Expand control and refuses entry with `{ ok: false, message: "This page cannot expand" }`. Mode changes, project changes, disposal, and reload leave fullscreen. Explicit opens into Secondary or a non-floatable Side, and attached mode-edge drops, exit first. Quiet resource creation does not reveal panels or change fullscreen. No fullscreen state enters layout persistence or route history.
+
+Host callers use `workbench.fullscreen.enter()`, `exit()`, `showSide()`, and `hideSide()`. `store` publishes the temporary active flag; `getSideMode()` derives effective Side presentation from the mode rules and saved intent.
+
+### Placement
+
 `workbench.repositionPanel({ panel, edge })` moves a whole panel within its owner. Side accepts left/right beside the Main/Secondary column. Sidenav accepts far left/right outside all panels. Main and Secondary accept top/bottom and reverse their shared vertical split. Page `aside` accepts left/right inside Main; page `bottom` accepts top/bottom around the editor. Panel identity, tabs, resources, and retained views do not change. A panel with `movable: false` rejects the command. Either fixed leaf prevents flipping Main and Secondary.
 
 `workbench.setActionBarPosition({ edge })` accepts `left`, `right`, `top`, or `bottom`. The host methods are `repositionPanel(panel, edge)`, `getPanelPositions(panel)`, `getPanelEdge(panel)`, and `setActionBarPosition(edge)`. Both commands save mode geometry per project/mode. Page panel geometry saves per project/page type. Existing region sizes remain the single source of panel dimensions. The constrained trees store panel order, with no separate saved direction flags.

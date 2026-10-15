@@ -38,6 +38,7 @@ export const toInternalWorkbenchPages = (
     ref: { extensionId: page.extensionId, kind: "page", id: page.localId },
     title: page.title,
     path: page.path,
+    expandable: page.expandable,
     document: page.document,
     panelMenus: page.panelMenus,
     regionSettings: adaptPanelSettings(page.regionSettings, page.extensionId),

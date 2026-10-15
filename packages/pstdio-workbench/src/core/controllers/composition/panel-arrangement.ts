@@ -35,6 +35,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => {
     destination: WorkbenchPanelRegion,
     position: WorkbenchTabPosition,
     presentation?: "attached",
+    beforeCommit?: () => void,
   ) => {
     const core = resolve();
     const layout = core.layout.getLayout();
@@ -83,6 +84,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => {
     };
     getShellNavigationScope(core.shell).run(() => {
       batchWorkbenchChanges(() => {
+        beforeCommit?.();
         // Moving selects the instance directly; navigation owns auxiliary-selection restoration.
         const selected =
           found.placement.role === "location"
@@ -105,6 +107,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => {
           activeLocationWidgetId: movesLocation ? final.regions.main.activeWidgetId : final.activeLocationWidgetId,
         });
         core.layout.reconcilePanelMenus();
+        core.fullscreen.beforeReveal(destination);
         revealPanelRegion(core, destination);
         core.focus.setActiveRegion(destination);
         core.focus.requestPanelFocus(instanceId);
@@ -123,7 +126,13 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => {
     dropPanelOnEdge(instanceId: string, destination: WorkbenchPanelRegion) {
       if (destination === "main") throw new Error("Main has no closed panel edge");
       const attach = destination === "side" && !resolve().shell.getPanelPolicy("side").open;
-      move(instanceId, destination, "end", attach ? "attached" : undefined);
+      move(
+        instanceId,
+        destination,
+        "end",
+        attach ? "attached" : undefined,
+        destination === "side" || destination === "secondary" ? resolve().fullscreen.exit : undefined,
+      );
     },
   };
 };

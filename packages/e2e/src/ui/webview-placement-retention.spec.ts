@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { verifyFullscreenWebviewEscape } from "../helpers/fullscreen-webview-escape";
 import { movePanelTab } from "../helpers/move-panel-tab";
 import { uiOrigin } from "../ui-server";
 
@@ -44,6 +45,10 @@ test("moving a webview between panels preserves its browsing context", async ({ 
         expect(await frame!.evaluate(() => Reflect.get(window, "placementMarker"))).toBe("original context");
       }
     }
+    await page.getByRole("button", { name: "Close Side Panel", exact: true }).click();
+    await verifyFullscreenWebviewEscape(page, frame!);
+    expect(frame!.isDetached()).toBe(false);
+    expect(await frame!.evaluate(() => Reflect.get(window, "placementMarker"))).toBe("original context");
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }
