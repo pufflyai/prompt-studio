@@ -3,6 +3,7 @@ import type { ControlValueMap } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
+import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { WorkbenchControlsView } from "./controls-view";
 
 function ApplyControlsPreview() {
@@ -38,6 +39,13 @@ function ApplyControlsPreview() {
 const meta: Meta<typeof ApplyControlsPreview> = {
   title: "Workbench/Controls/Apply drafts",
   component: ApplyControlsPreview,
+  decorators: [
+    (Story) => (
+      <WorkbenchThemeProvider>
+        <Story />
+      </WorkbenchThemeProvider>
+    ),
+  ],
 };
 export default meta;
 type Story = StoryObj<typeof ApplyControlsPreview>;

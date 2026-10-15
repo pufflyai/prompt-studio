@@ -57,7 +57,13 @@ const WindowTabItem = (props: WindowTabItemProps) => {
       transform={CSS.Translate.toString(transform)}
       transition={transition}
     >
-      <Tooltip content={tab.label} openDelay={300} closeDelay={150} positioning={{ placement: "bottom" }}>
+      <Tooltip
+        content={tab.label}
+        open={isSorting ? false : undefined}
+        openDelay={300}
+        closeDelay={150}
+        positioning={{ placement: "bottom" }}
+      >
         <Trigger
           {...(reorderable ? attributes : {})}
           {...listeners}
