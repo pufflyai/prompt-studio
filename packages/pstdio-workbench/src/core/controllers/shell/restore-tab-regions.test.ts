@@ -3,6 +3,43 @@ import type { WorkbenchLayout } from "../../registries/layout/layout-types";
 import { createWorkbench } from "../../workbench-core";
 import { harness, navigate, openFile, panel, resource } from "../composition/placement-lifecycle-test-support";
 
+test("restore respects a legacy panel's allowed regions", async () => {
+  const core = createWorkbench();
+  core.modes.registerMode({
+    id: "legacy",
+    panels: ["main", "secondary", "side"],
+    activate() {},
+    listAddablePanels: () => [{ panelId: "player", region: "secondary", allowedRegions: ["secondary"] }],
+  });
+  core.modes.setActiveMode("legacy");
+  core.layout.registerPanel({
+    id: "player",
+    title: "Player",
+    region: "secondary",
+    rendererId: "player",
+    singleton: true,
+    closable: true,
+  });
+  try {
+    core.layout.openWidget("player");
+    const layout = core.layout.getLayout();
+    const tab = layout.regions.secondary.widgets[0]!;
+    core.layout.restoreLayout({
+      ...layout,
+      regions: {
+        ...layout.regions,
+        secondary: { ...layout.regions.secondary, widgets: [] },
+        side: { ...layout.regions.side, widgets: [tab] },
+      },
+    });
+    expect(core.getPanelDestinations(tab.widgetId)).toEqual(["secondary"]);
+    expect(core.layout.getLayout().regions.secondary.widgets).toContainEqual(tab);
+    expect(core.layout.getLayout().regions.side.widgets).toEqual([]);
+  } finally {
+    await core.dispose();
+  }
+});
+
 for (const destination of ["secondary", "main"] as const) {
   test(`restore repairs a moved tab into ${destination} with matching ownership across navigation and reload`, async () => {
     const saved = new Map<string | undefined, WorkbenchLayout>();

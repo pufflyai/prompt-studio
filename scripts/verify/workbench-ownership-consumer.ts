@@ -43,4 +43,74 @@ pageRegistrations.get("workspace")!.dispose();
 await workbench.navigation.openTarget(openSession);
 assertOwner(allTabs().filter((tab) => tab.resource?.id === session.id).length === 1, "An unregistered owner claimed the foreign editor");
 await workbench.dispose();
+
+for (const leaveProject of [false, true]) {
+  const resetWorkbench = createWorkbench();
+  resetWorkbench.modes.registerMode({ id: "reset-tools", activate() {} });
+  resetWorkbench.views.registerView({ id: "tool", title: "Tool", body: { kind: "react", render: () => null } });
+  const resetPage = packagePage("reset-tools");
+  resetWorkbench.pages.registerPage({
+    id: "reset-tools", ref: resetPage, path: "reset-tools", modeId: "reset-tools",
+    resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
+    main: { kind: "panels", empty: { kind: "view", id: "tool" } },
+    slots: ["one", "two"].map((id) => ({
+      id, region: "bottom",
+      item: { kind: "binding", binding: {
+        kinds: [{ kind: "resource-kind", id: "session" }], view: { kind: "view", id: "tool" }, cardinality: "one",
+        add: { kind: "command", target: { command: { kind: "command", id: "create-" + id } } },
+      } },
+    })),
+  });
+  let releaseCreation!: () => void;
+  let signalCreation!: () => void;
+  const creationReady = new Promise<void>((resolve) => { releaseCreation = resolve; });
+  const creationStarted = new Promise<void>((resolve) => { signalCreation = resolve; });
+  const creationOwners: string[] = [];
+  for (const id of ["one", "two"]) resetWorkbench.commands.registerCommand({ id: "create-" + id, label: id }, {
+    execute: async (_args, context) => {
+      creationOwners.push(resetWorkbench.pages.store.getState().projectId + ":" + id);
+      signalCreation();
+      await creationReady;
+      await context!.navigation!.openPanel({
+        panel: { kind: "page-slot", page: resetPage, id }, resource: { type: "session", id: id + "-" + context!.resource!.id },
+      });
+    },
+  });
+  resetWorkbench.pageLocations.setProject("package-project");
+  const visitResetOwner = (id: string) => resetWorkbench.navigation.openPage({ page: resetPage, resource: { type: "workspace", id } });
+  await visitResetOwner("alpha");
+  const resetCompletion = resetWorkbench.resetPageLayout();
+  await creationStarted;
+  if (leaveProject) resetWorkbench.pageLocations.setProject("other-project");
+  await visitResetOwner("beta");
+  releaseCreation();
+  await resetCompletion;
+  assertOwner(resetWorkbench.layout.getLayout().regions.bottom.widgets.length === 0, "Reset created tools in the new owner");
+  if (leaveProject) {
+    assertOwner(creationOwners.join(",") === "package-project:one", "Reset launched another producer in the newly selected project");
+  } else {
+    await visitResetOwner("alpha");
+    const resetResources = resetWorkbench.layout.getLayout().regions.bottom.widgets.map((tab) => tab.resource?.id);
+    assertOwner(resetResources.join(",") === "one-alpha,two-alpha", "Reset skipped an initiating-owner preset after navigation");
+  }
+  await resetWorkbench.dispose();
+}
+
+const legacyWorkbench = createWorkbench();
+legacyWorkbench.modes.registerMode({
+  id: "legacy", panels: ["main", "secondary", "side"], activate() {},
+  listAddablePanels: () => [{ panelId: "player", region: "secondary", allowedRegions: ["secondary"] }],
+});
+legacyWorkbench.modes.setActiveMode("legacy");
+legacyWorkbench.layout.registerPanel({ id: "player", title: "Player", region: "secondary", rendererId: "player", singleton: true });
+legacyWorkbench.layout.openWidget("player");
+const legacyLayout = legacyWorkbench.layout.getLayout();
+const legacyTab = legacyLayout.regions.secondary.widgets[0]!;
+legacyWorkbench.layout.restoreLayout({ ...legacyLayout, regions: { ...legacyLayout.regions,
+  secondary: { ...legacyLayout.regions.secondary, widgets: [] },
+  side: { ...legacyLayout.regions.side, widgets: [legacyTab] },
+} });
+assertOwner(legacyWorkbench.layout.getLayout().regions.secondary.widgets.some((tab) => tab.widgetId === legacyTab.widgetId), "Restoration ignored legacy allowedRegions");
+assertOwner(legacyWorkbench.layout.getLayout().regions.side.widgets.length === 0, "Restoration retained an illegal legacy destination");
+await legacyWorkbench.dispose();
 `;
