@@ -38,8 +38,7 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
         );
       const replyToCall = (event: MessageEvent) => {
         const data = event.data;
-        if (data.callName !== "call") return;
-        if (data.args[0]?.method === "host.dispatchKeyboardEvent") {
+        if (data.callName === "call" && data.args[0]?.method === "host.dispatchKeyboardEvent") {
           frame.dataset.forwardedKey = data.args[0].params.key;
         }
         frame.contentWindow?.postMessage(
@@ -47,7 +46,8 @@ export const verifyPackagedViewInitialization = async (page: Page, runtimeUrl: s
             action: "RIMLESS/RPC_RESOLVE",
             connectionID: "mount-probe",
             callID: data.callID,
-            value: undefined,
+            callName: data.callName,
+            result: undefined,
           },
           "*",
         );
