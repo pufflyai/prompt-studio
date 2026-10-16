@@ -30,7 +30,7 @@ export const createRelatedResourcePreferences = (ctx: WorkbenchModuleContext, ch
     const destination = scope();
     const queued = writes.get(destination.scopeId);
     const save = () => ctx.preferences.setOwnedValue("workbench.related-resources", "panels", value, destination);
-    const result = queued ? queued.promise.then(save) : save();
+    const result = queued ? queued.promise.then(save, save) : save();
     if (!(result instanceof Promise)) return;
     const pending = { value, promise: result };
     writes.set(destination.scopeId, pending);
@@ -40,23 +40,30 @@ export const createRelatedResourcePreferences = (ctx: WorkbenchModuleContext, ch
       })
       .catch((error) => console.warn("Could not save resource page choices", error));
   };
-  const removedOwner = (before: WorkbenchRegionState, after: WorkbenchRegionState) =>
+  const removedOwner = (
+    before: WorkbenchRegionState,
+    after: WorkbenchRegionState,
+    widgets: ReturnType<typeof ctx.layout.store.getState>["widgets"],
+  ) =>
     before.widgets.some(
       (panel) =>
         !after.widgets.some((next) => next.widgetId === panel.widgetId) &&
-        (!ctx.layout.getWidget(panel.contributionId) || (panel.viewId && !ctx.views.getView(panel.viewId))),
+        (!ctx.layout.getWidget(panel.contributionId) ||
+          widgets[panel.contributionId] !== ctx.layout.getWidget(panel.contributionId) ||
+          (panel.viewId && !ctx.views.getView(panel.viewId))),
     );
   const forSource = (source: ResourceRef) =>
     resourceKey(source) === resourceKey(ctx.pages.store.getState().location?.resource) ? read() : {};
   const isResourcePage = () => {
     const source = ctx.pages.store.getState().location?.resource;
     const owner = source && ctx.resources.getKind(source.type);
-    return source && owner?.extensionId === source.extensionId && Boolean(owner.relatedOpenings);
+    return source && owner?.extensionId === source.extensionId && Boolean(owner?.relatedOpenings);
   };
   const snapshot = () => ({
     key: relatedResourcePageKey(ctx),
     scope: ctx.layout.getPersistenceScope(),
     layout: ctx.layout.getLayout(),
+    widgets: ctx.layout.store.getState().widgets,
   });
   let previous = snapshot();
   let observing: string | undefined;
@@ -86,7 +93,7 @@ export const createRelatedResourcePreferences = (ctx: WorkbenchModuleContext, ch
       const old = before.layout.regions[id];
       const region = previous.layout.regions[id];
       const panel = selected(region);
-      if (removedOwner(old, region) || !choiceChanged(old, region)) continue;
+      if (removedOwner(old, region, before.widgets) || !choiceChanged(old, region)) continue;
       choices[id] = {
         visible: region.visible,
         resource: panel?.resource,
