@@ -1,4 +1,3 @@
-import { Flex } from "@chakra-ui/react";
 import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
@@ -54,15 +53,5 @@ export const SessionWidget = (props: SessionWidgetProps) => {
         view.workspaceId && !isWorkspaceOpen ? <ReviewChangesAction input={input} view={view} /> : undefined
       }
     />
-  );
-};
-
-export const SessionViewWidget = (props: SessionWidgetProps) => {
-  const { input, drafts } = props;
-
-  return (
-    <Flex h="full" minH="0" w="full" bg="bg" overflow="hidden" py="sm">
-      <SessionWidget input={input} drafts={drafts} />
-    </Flex>
   );
 };

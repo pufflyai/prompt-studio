@@ -1,6 +1,7 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Box, Flex, Text, useSlotRecipe } from "@chakra-ui/react";
 import { type MouseEvent, type ReactNode, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { chatComposerRecipe } from "@/theme/recipes/chat-composer";
 import { type PromptCommand, PromptEditor } from "../../rich-text";
 import type { PromptSelectionSnapshot } from "../../rich-text/prompt-input/plugins/preserve-selection-plugin";
 import { createSerializedPromptState } from "../utils/editor-state";
@@ -52,8 +53,6 @@ export interface ChatInputProps {
   /** Attachment controls shown only while editing a message draft. */
   attachmentActions?: ReactNode;
   attachedToTop?: boolean;
-  /** Recede the resting border to border.subtle when nested inside a stronger shell (the workspace hub). */
-  recessed?: boolean;
   questionPrompt?: ChatInputQuestionPrompt;
   decision?: ComposerDecision;
   autoFocus?: boolean;
@@ -78,8 +77,6 @@ const ChatInputPlaceholder = (props: { placeholder?: string }) => {
   );
 };
 
-const selectedChatInputBorderColor = "border.accent-light";
-
 export const ChatInput = (props: ChatInputProps) => {
   const {
     defaultState,
@@ -101,7 +98,6 @@ export const ChatInput = (props: ChatInputProps) => {
     submitActions,
     attachmentActions,
     attachedToTop = false,
-    recessed = false,
     questionPrompt,
     decision,
     autoFocus = false,
@@ -118,7 +114,7 @@ export const ChatInput = (props: ChatInputProps) => {
   const request = useComposerRequest(questionPrompt, decision);
   const occupied = Boolean(request);
 
-  const restingBorderColor = recessed ? "border.subtle" : "border";
+  const styles = useSlotRecipe({ recipe: chatComposerRecipe })({ attachedToTop });
   const [submitting, setSubmitting] = useState(false);
   const { editorKey, editorState, remountEditor, setEditorState, setText, text } = useChatInputText(defaultState);
   const focus = useComposerFocus(autoFocus, focusSignal);
@@ -190,24 +186,8 @@ export const ChatInput = (props: ChatInputProps) => {
 
   return (
     <Box
-      position="relative"
-      width="100%"
-      paddingX="xs"
-      paddingY="xs"
-      mt={attachedToTop ? "-1px" : undefined}
-      bg="bg"
-      borderRadius="xs"
-      borderTopRadius={attachedToTop ? "0" : undefined}
-      borderWidth="1px"
-      borderStyle="solid"
-      borderColor={restingBorderColor}
-      zIndex={0}
-      transition="border-color 0.2s ease-in-out"
-      _hover={{ zIndex: 1 }}
-      _focusWithin={{
-        borderColor: selectedChatInputBorderColor,
-        zIndex: 1,
-      }}
+      className="ps-chat-composer__input"
+      css={styles.input}
       onPasteCapture={occupied ? undefined : attachmentEventHandlers.onPasteCapture}
       onDropCapture={occupied ? undefined : attachmentEventHandlers.onDropCapture}
       onDragOver={occupied ? undefined : attachmentEventHandlers.onDragOver}

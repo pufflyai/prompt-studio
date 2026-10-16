@@ -33,7 +33,7 @@ export const toInstallInput = (entry: DefaultExtensionEntry, releaseRef?: string
 
 export const sourceFor = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? entry : entry.source);
 
-const sourceModeDefaultEntry = async (
+export const sourceModeDefaultEntry = async (
   entry: DefaultExtensionEntry,
   force: boolean,
   catalog?: ExtensionCatalog,
