@@ -25,3 +25,5 @@ Extensions run these helpers at their own data entry points. Core readiness neve
 First-party and external extensions use the same public contract. Domain mappings and merge rules live in extensions. A migration failure affects the invoking extension operation and remains retryable. Migration callbacks must not recursively enter migration on the same scope.
 
 SDK preparation ships first. Extension adoption then removes the old template migration and installation repair. The existing 90-day upgrade window governs later removal of retained sources; this change does not delete them.
+
+The temporary Drizzle selection adapter is isolated under [ADR 0078](0078-temporary-drizzle-migration-selection.md).

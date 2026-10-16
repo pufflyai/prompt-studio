@@ -1,5 +1,5 @@
-import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { createMemoryResources } from "@pstdio/sdk/testing";
+import type { ExtensionWorkspace, StorageScope } from "@pstdio/sdk/extensions";
+import { createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 
 export type BenchStorageSeed = {
@@ -60,7 +60,10 @@ const createStorageFiles = (seedBlobs?: BenchStorageSeed["blobs"]): CommandRunne
   };
 };
 
-const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["storage"] => {
+const createScopedStorage = (
+  seed: BenchStorageSeed,
+  resolveScope: (scope: StorageScope) => CommandRunnerEnvironment["storage"],
+): CommandRunnerEnvironment["storage"] => {
   const kv = new Map(Object.entries(seed.kv ?? {}));
   const collections = new Map<string, Map<string, unknown>>();
 
@@ -76,9 +79,12 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
     return next;
   };
 
+  const { migrate, readLegacy } = createMemoryStorage();
   const api: CommandRunnerEnvironment["storage"] = {
+    migrate,
+    readLegacy,
     files: createStorageFiles(seed.blobs),
-    scope: () => api,
+    scope: resolveScope,
     async get(key) {
       return kv.get(key) as never;
     },
@@ -129,6 +135,26 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
   };
 
   return api;
+};
+
+const createStorage = (seed: BenchStorageSeed = {}) => {
+  const scopes = new Map<string, CommandRunnerEnvironment["storage"]>();
+  const resolveScope: CommandRunnerEnvironment["storage"]["scope"] = (scope) => {
+    let key = "project";
+    if (scope.type !== "project") {
+      let id: string | undefined;
+      if ("resource" in scope) id = scope.resource.id;
+      else if ("id" in scope) id = scope.id;
+      if (!id) throw new Error("Storage scope requires an id.");
+      key = JSON.stringify([scope.type, id]);
+    }
+    const existing = scopes.get(key);
+    if (existing) return existing;
+    const storage = createScopedStorage(key === "project" ? seed : {}, resolveScope);
+    scopes.set(key, storage);
+    return storage;
+  };
+  return resolveScope({ type: "project" });
 };
 
 export const createBenchEnvironment = (
