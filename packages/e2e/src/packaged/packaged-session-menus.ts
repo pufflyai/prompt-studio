@@ -44,6 +44,18 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
+  await page.keyboard.press("ControlOrMeta+Alt+s");
+  const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
+  await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
+  const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
+  await editor.fill("Packaged created session");
+  const created = page.waitForResponse(
+    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/sessions",
+  );
+  await editor.press("Enter");
+  expect((await created).status()).toBe(201);
+  await expect(sideTabs.filter({ hasText: "Packaged created session" })).toHaveAttribute("aria-selected", "true");
+  expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",

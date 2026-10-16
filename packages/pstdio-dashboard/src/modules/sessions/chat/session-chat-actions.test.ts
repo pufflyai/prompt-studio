@@ -98,6 +98,7 @@ describe("openCreatedSessionFromDraft", () => {
     );
     expect(opened?.resource?.type).toBe("session");
     expect(opened?.title).toBe("Start the project plan");
+    expect(workbench.layout.getActivePanel()?.resource?.id).toBe("session-created-from-draft");
   });
   test("leaves a placement the user moved to another session while the request was open", () => {
     const { input, workbench } = openDraftInSidePanel();

@@ -68,6 +68,7 @@ export const openCreatedSessionFromDraft = (args: {
   const identity = args.input.instance.placementIdentity;
   if (identity?.kind === "mode") {
     args.input.workbench.modePlacements.updatePlacement(identity, { resource, title });
+    args.input.workbench.layout.activatePanel(args.input.instance.instanceId);
     return identity;
   }
   if (identity?.kind === "page") {
