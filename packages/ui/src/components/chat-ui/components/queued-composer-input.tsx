@@ -20,7 +20,6 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
     chatInputQuestionPrompt,
     composerDecision,
     chatInputCommands,
-    hasWorkspaceHub,
     inputDisabled,
     submitDisabled,
     onAttachFiles,
@@ -85,7 +84,6 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
         isDisabled={inputDisabled || queuedComposer.updating}
         submitDisabled={submitDisabled || (editing && queuedComposer.stale)}
         attachedToTop={!editing && hasQueuedFollowUps}
-        recessed={hasWorkspaceHub}
         questionPrompt={chatInputQuestionPrompt}
         decision={composerDecision}
         autoFocus={chatInputAutoFocus}

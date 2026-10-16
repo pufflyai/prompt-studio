@@ -97,7 +97,6 @@ test("long tool-heavy stream stays within budget", async () => {
     const launched = await launchProject("Streaming");
     app = launched.app;
     await setMonitoring(app.page, true);
-    const workbench = await openRendererSession(app.page);
     const session = await app.page.evaluate(async (projectId) => {
       const response = await fetch("/v1/sessions", {
         method: "POST",
@@ -108,14 +107,15 @@ test("long tool-heavy stream stays within budget", async () => {
         body: JSON.stringify({
           project_id: projectId,
           title: "Long replay",
-          prompt: "Replay __fake_long_stream__",
           agent: "pstdio.workbench-fixture.harness.fake",
         }),
       });
+      if (!response.ok) throw new Error(await response.text());
       return (await response.json()) as { id: string };
     }, launched.project.id);
     await app.page.getByRole("button", { name: "Long replay", exact: true }).click();
-    await expect(app.page.getByText(/^Step 1\./).first()).toBeVisible();
+    await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+    const workbench = await openRendererSession(app.page);
 
     const status = async () => {
       const response = await fetch(`${app!.runtime.origin}/v1/sessions/${session.id}`, {
@@ -124,17 +124,25 @@ test("long tool-heavy stream stays within budget", async () => {
       expect(response.ok).toBe(true);
       return ((await response.json()) as { status: string }).status;
     };
-    const measured = await measureRenderers("streaming-replay", { workbench }, () =>
-      expect.poll(status, { intervals: [250], timeout: 15_000 }).toBe("completed"),
-    );
-    await expect(app.page.getByText(/^Step 30\./).first()).toBeVisible();
+    // Start only after the session is open. Auto-follow can hide Step 1 before a
+    // locator sees it, so measure the entire replay rather than racing that row.
+    const measured = await measureRenderers("streaming-replay", { workbench }, async () => {
+      const response = await fetch(`${app!.runtime.origin}/v1/sessions/${session.id}/follow-up`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${app!.runtime.token}`, "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "Replay __fake_long_stream__" }),
+      });
+      expect(response.ok).toBe(true);
+      await expect.poll(status, { intervals: [250], timeout: 15_000 }).toBe("completed");
+      await expect(app!.page.getByText(/^Step 30\./).first()).toBeVisible();
+    });
     await recordBenchmark({
       name: "streaming-replay",
       scenario: "Open session receiving the fake agent's long replay with monitoring on",
       workload: "30 assistant turns, 8 text updates each at 25 ms intervals, one tool result per turn",
       measuredProcess: "Workbench renderer main thread (CDP)",
-      start: "Step 1 is visible",
-      end: "The API reports the session completed (250 ms polling)",
+      start: "The replay prompt is submitted with its session already visible",
+      end: "The API reports completion (250 ms polling) and Step 30 is visible",
       metrics: rendererMetrics(measured, STREAMING_BUDGET),
     });
   } finally {

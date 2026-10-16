@@ -97,7 +97,7 @@ The full stage adds:
 - `lint_and_test` and `database_tests` for every package, and the published extension, harness CLI, and license checks.
 - `windows_test_and_build` and `windows_database_tests`. Database and API tests run on a separate runner because their PGlite setup dominates the serial test time.
 - `e2e` (three browser shards), `e2e_cli`, and `packaged_and_vite_e2e`.
-- The desktop source Electron specs and the packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow still runs the Intel tests and the desktop benchmarks.
+- The desktop source Electron specs, packaged renderer benchmarks, and packaged desktop smoke tests in the Linux, macOS arm64, and Windows rows of `build_clients`, run against the unsigned app from the same row. Linux runs them under `xvfb-run`. The Intel macOS row only builds. The release workflow also runs the launch benchmarks and Intel tests against signed release artifacts.
 - `packaged_toolchain`, which calls `verify-packaged-toolchain.yml` for the commit to check the compiled CLI on Linux, Intel macOS, and Windows. Linux runs the full packaged suite. Intel macOS runs only the essential CLI, runtime, and extension page tests in `scripts/verify/packaged-runtime-smoke.ts`, as the desktop release runs only `@essential` tests there: slow Intel runners turned timing races in the large UI suite into release failures that other platforms did not have. Windows runs its own short list.
 
 `build_clients` sets `PSTDIO_EXTENSION_RELEASE_REF` to the run's commit, so the packaged apps install that commit's core extensions instead of those of the last release tag.
@@ -256,7 +256,7 @@ Each benchmark attaches `benchmark-<name>.json` before checking its budgets. It 
 | Sidecar crash recovery | Runtime kill to visible recovery heading | 500 ms |
 | Idle workbench, monitoring off or on | Renderer CPU share over 10 s after a 2 s settle | See the renderer table below; Electron main at most 10% of one core with monitoring on |
 | Idle extension preview | Workbench and Lab renderer CPU share over 10 s after a 2 s settle | See the renderer table below |
-| Long streaming replay | Renderer CPU share from Step 1 until the API reports completion | See the renderer table below |
+| Long streaming replay | Renderer CPU share from submitting the replay to an already open session until the API reports completion and Step 30 is visible | See the renderer table below |
 
 Renderer benchmarks took 10–17 seconds each on Apple Silicon, within the existing 30-second packaged test limit. Linux and Windows release runs have not been measured yet.
 
@@ -276,6 +276,8 @@ The idle benchmarks turn monitoring on and off through the Settings switch, so t
 `clients/desktop/src/e2e/packaged-performance-monitoring.spec.ts` covers the monitoring feature without budgets. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the status bar popover and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. A snapshot test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
 
 The fake agent replays the long conversation when a prompt contains `__fake_long_stream__`: 30 assistant turns, 8 text updates each at 25 ms intervals, and one tool result per turn.
+
+The streaming benchmark opens an empty session before submitting that prompt. Its counter interval covers the full replay, including the last rendered turn. It does not wait for Step 1 to be visible: auto-follow can move that row out of view before an assertion sees it.
 
 `packages/e2e/src/ui/performance-monitoring.spec.ts` covers the same feature in a browser tab. It turns on the Settings switch and checks that the status bar meter appears. It opens the popover, which shows the desktop-only CPU note and lists the fixture extension's open view. It pauses the extension, checks the placeholder, and resumes it. Last, it checks that the switch survives a reload and that **Show performance** opens the setting while monitoring is off. This spec has no time budget.
 

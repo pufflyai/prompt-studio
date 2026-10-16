@@ -39,6 +39,10 @@ export const landingAssemblySlotRecipe = defineSlotRecipe({
       overflow: "hidden",
       pointerEvents: "none",
       "[data-assembly-area]:has([data-assembly-ready=true]) &": { visibility: "hidden" },
+      [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: {
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+      },
     },
     framePreview: { display: "block", width: "full", height: "auto", aspectRatio: "5 / 3" },
     frameTray: { height: "78px", borderTopWidth: "1px", borderColor: "border.subtle" },

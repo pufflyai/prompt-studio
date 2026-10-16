@@ -12,7 +12,15 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Desktop: Story = {};
+export const Desktop: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: "The download copy and editor stay vertically centered in the main area on wide desktops.",
+      },
+    },
+  },
+};
 export const CompactDesktop: Story = {
   parameters: {
     docs: {
