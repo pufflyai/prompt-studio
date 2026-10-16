@@ -72,7 +72,15 @@ export const createLayoutRegionContentMethods = (
 
       const cleared: WorkbenchLayout = {
         ...layout,
-        regions: { ...layout.regions, [regionId]: { ...region, widgets: [], activeWidgetId: undefined } },
+        regions: {
+          ...layout.regions,
+          [regionId]: {
+            ...region,
+            widgets: [],
+            activeWidgetId: undefined,
+            visible: regionId === "side" || regionId === "secondary" ? false : region.visible,
+          },
+        },
       };
       let next =
         activeWidgetId && layout.activeWidgetId === activeWidgetId

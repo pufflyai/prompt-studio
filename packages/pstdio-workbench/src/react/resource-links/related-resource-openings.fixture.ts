@@ -14,7 +14,7 @@ export const opening = (id: string, region: "side" | "secondary" | "main" = "sid
   autoOpen: true,
   region,
 });
-export const setup = (initial: RelatedResourceOpenings = []) => {
+export const setup = (initial: RelatedResourceOpenings = [], options: Parameters<typeof createWorkbench>[0] = {}) => {
   let saved: import("../../core").PersistedWorkbenchPageLocation | undefined;
   const workbench = createWorkbench({
     initialSidePanelMode: "closed",
@@ -24,6 +24,7 @@ export const setup = (initial: RelatedResourceOpenings = []) => {
         saved = value;
       },
     },
+    ...options,
   });
   workbench.modes.registerMode({ id: "project", label: "Project", activate() {} });
   workbench.views.registerView({ id: "document", title: "Document", body: { kind: "react", render: () => null } });

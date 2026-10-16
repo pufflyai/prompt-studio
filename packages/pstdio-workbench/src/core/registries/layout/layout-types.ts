@@ -185,6 +185,8 @@ export type RegisteredPlaceholderContribution = Omit<PlaceholderContribution, "p
   RegisteredContributionMetadata;
 
 export interface WorkbenchWidgetPlacement {
+  /** Page identity that opened this tab automatically. Manual opening or pinning clears it. */
+  relatedSource?: string;
   widgetId: string;
   contributionId: string;
   // Owner-scoped composition uses this canonical identity. Widget IDs remain renderer keys

@@ -42,6 +42,26 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
+  const leaveWorkspace = () =>
+    page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Workspaces", exact: true })
+      .click();
+  const reopenWorkspace = () => page.goBack();
+  await leaveWorkspace();
+  await expect(preview).toBeHidden();
+  await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  await reopenWorkspace();
+  await expect(preview).toBeVisible();
+  await preview.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+  await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await leaveWorkspace();
+  await reopenWorkspace();
+  await expect(preview).toBeVisible();
+  await preview.focus();
   await page.keyboard.press("ControlOrMeta+Alt+s");
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
@@ -61,6 +81,17 @@ export const verifyPackagedSessionMenus = async (
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
+  const refresh = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
+    method: "PATCH",
+    headers: { ...authorization, "content-type": "application/json" },
+    body: JSON.stringify({ title: "Packaged session actions" }),
+  });
+  expect(refresh.ok).toBe(true);
+  await leaveWorkspace();
+  await reopenWorkspace();
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveAttribute("aria-selected", "false");
+  await expect(createdTab).toHaveAttribute("aria-selected", "true");
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",

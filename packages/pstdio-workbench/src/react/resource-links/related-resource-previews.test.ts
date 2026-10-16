@@ -169,7 +169,7 @@ test("related openings never evict their initiating preview", async () => {
   s.controller.dispose();
 });
 
-test("selects the related resource inside an existing mode tray while retaining source focus", async () => {
+test("opens a related resource behind the selected mode tab while retaining source focus", async () => {
   const s = setup([opening("new")]);
   const panel = { kind: "placement", extensionId: "example", id: "documents" } as const;
   s.workbench.modePlacements.registerPlacement({
@@ -194,7 +194,8 @@ test("selects the related resource inside an existing mode tray while retaining 
       target: { kind: "panel", panel, resource },
     }));
   await s.controller.open(s.source);
-  expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("new");
+  expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("old");
+  expect(s.workbench.layout.listPanelInstances("side").map((p) => p.resource?.id)).toEqual(["new", "old"]);
   expect(s.workbench.layout.getLayout().activeWidgetId).toBe(active);
   s.controller.dispose();
 });

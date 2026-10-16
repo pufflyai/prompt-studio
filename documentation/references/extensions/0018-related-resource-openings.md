@@ -64,7 +64,11 @@ Targets use their normal resource-owner resolver. A source does not need to know
 
 An already open target keeps its tray and pin state. New previews replace the eligible preview in their requested tray and stay leftmost. Each tray has at most one preview. Results apply in order, so the last eligible preview for a tray remains. The initiating source preview is protected.
 
-Automatic openings keep the source route and focus. They do not recursively open more resources. Source or project changes, disabling the existing Open related resources switch, and owner removal discard pending results. Restoring layout and refreshing resource metadata do not reopen closed related tabs.
+Automatic openings keep the source route, global focus, and the selected tab in each populated tray. A new related tab opens in the background; if it replaces the selected preview, it takes that preview's place. They do not recursively open more resources.
+
+Leaving the source page closes an automatically opened preview when it is the only tab in its tray. Pinned tabs, manually opened tabs, and previews sharing a tray with other tabs stay open. Selecting a related tab or refreshing resource metadata does not leave the source page. Closing the last tab in Side or Bottom also closes that panel.
+
+Source or project changes, disabling the existing Open related resources switch, and owner removal discard pending results. Restoring layout and refreshing resource metadata do not reopen closed related tabs.
 
 Kinds without a command open nothing automatically. Existing manual links still work. Returning an entry does not store a relationship or add a manual action. There is no per-kind customization UI or new preference store.
 
