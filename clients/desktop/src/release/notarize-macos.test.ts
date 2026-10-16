@@ -6,6 +6,34 @@ import { runMacCommand } from "./stapler";
 
 const credentials = { appleApiKey: "/keys/key.p8", appleApiKeyId: "KEY", appleApiIssuer: "ISSUER" };
 
+test("resumes the same notarization submission after a status request loses its connection", async () => {
+  const commands: string[][] = [];
+  const pauses: number[] = [];
+  let statusRequests = 0;
+  await notarizeMacApp(
+    "/app",
+    credentials,
+    async (command, args) => {
+      commands.push([command, ...args]);
+      if (args[1] === "submit") return { code: 0, stdout: JSON.stringify({ id: "uploaded" }), stderr: "" };
+      if (args[1] === "wait") {
+        statusRequests += 1;
+        if (statusRequests === 1) return { code: 1, stdout: "", stderr: "Error Domain=NSURLErrorDomain Code=-1001" };
+        return { code: 0, stdout: JSON.stringify({ id: "uploaded", status: "Accepted" }), stderr: "" };
+      }
+      return { code: 0, stdout: "", stderr: "" };
+    },
+    async (milliseconds) => {
+      pauses.push(milliseconds);
+    },
+  );
+  expect(commands.filter((call) => call[2] === "submit")).toHaveLength(1);
+  expect(commands.filter((call) => call[2] === "wait").map((call) => call[3])).toEqual(["uploaded", "uploaded"]);
+  expect(commands.find((call) => call[2] === "submit")).not.toContain("--wait");
+  expect(commands.at(-1)?.slice(0, 3)).toEqual(["xcrun", "stapler", "staple"]);
+  expect(pauses).toEqual([1000]);
+});
+
 test("notarization submits the archive once and staples only after acceptance", async () => {
   const commands: string[][] = [];
   let archive = "";
@@ -19,10 +47,11 @@ test("notarization submits the archive once and staples only after acceptance", 
     const stdout = args[0] === "notarytool" ? JSON.stringify({ id: "submission", status: "Accepted" }) : "";
     return { code: 0, stdout, stderr: "" };
   });
-  expect(commands).toHaveLength(3);
+  expect(commands).toHaveLength(4);
   expect(commands[1]?.slice(0, 3)).toEqual(["xcrun", "notarytool", "submit"]);
-  expect(commands[1]).toContain("--wait");
-  expect(commands[2]).toEqual(["xcrun", "stapler", "staple", "-v", "/Applications/Prompt Studio.app"]);
+  expect(commands[1]).not.toContain("--wait");
+  expect(commands[2]?.slice(0, 4)).toEqual(["xcrun", "notarytool", "wait", "submission"]);
+  expect(commands[3]).toEqual(["xcrun", "stapler", "staple", "-v", "/Applications/Prompt Studio.app"]);
   expect(existsSync(dirname(archive))).toBe(false);
 });
 

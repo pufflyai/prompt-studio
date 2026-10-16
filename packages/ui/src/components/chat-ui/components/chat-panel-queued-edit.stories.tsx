@@ -41,6 +41,19 @@ const meta = { title: "Patterns/Chat/Queued follow-up edit", component: QueuedEd
 >;
 export default meta;
 
+export const EditingSurface: StoryObj<typeof meta> = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: /^Edit queued message:/ }));
+    const editor = canvas.getAllByTestId("content-editable").at(-1)!;
+    await userEvent.click(editor);
+    const input = editor.closest(".ps-chat-composer__input");
+    await expect(input).toHaveStyle({ borderWidth: "0px", outlineStyle: "solid", outlineWidth: "1px" });
+    await userEvent.click(canvas.getByText("Agent is working"));
+    await expect(input).toHaveStyle({ borderWidth: "0px", outlineStyle: "none" });
+  },
+};
+
 export const KeepDraftAfterQueuedEdit: StoryObj<typeof meta> = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

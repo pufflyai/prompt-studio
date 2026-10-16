@@ -52,8 +52,6 @@ export const windowTabsRecipe = defineSlotRecipe({
       height: "window-tab",
       maxWidth: "fit-content",
       borderRadius: "xs",
-      borderWidth: "1px",
-      borderColor: "border",
       color: "fg.muted",
       bg: "transparent",
       _selected: { bg: "bg.muted", color: "fg" },

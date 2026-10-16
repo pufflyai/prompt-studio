@@ -632,6 +632,11 @@ jobs:
         working-directory: clients/desktop
         run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.config.ts
 
+      - name: Benchmark packaged renderers
+        if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'
+        working-directory: clients/desktop
+        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bunx playwright test --config playwright.benchmark.config.ts packaged-renderer.bench.ts
+
       # A source failure must not hide the packaged results for the same build. The job still fails.
       - name: Smoke packaged desktop app
         if: needs.scope.outputs.stage == 'full' && matrix.tests && !cancelled() && steps.desktop.outcome == 'success'

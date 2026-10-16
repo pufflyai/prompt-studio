@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { cleanupDirs } from "./helpers";
 import { createInitializedRepo, createRun, getProjectId, type HookTestContext, waitFor } from "./hooks-infra";
@@ -97,6 +99,18 @@ describe("planner attempt workspaces", () => {
       const repo = createInitializedRepo(ctx, "planner-attempt-workspaces");
       const projectId = getProjectId(repo);
 
+      const template = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.templates.read", {
+        source: "api",
+        params: { name: "implement-ticket" },
+      });
+      expect(template.outcome.ok).toBe(true);
+      const prompt = template.outcome.value as { name: string; title: string; type: string; content: string };
+      const saved = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.templates.save", {
+        source: "api",
+        params: { ...prompt, content: `${prompt.content}\n__fake_hold__` },
+      });
+      expect(saved.outcome.ok).toBe(true);
+
       const ticket = JSON.parse(run(`tickets create --content "# Workspace activity proof"`, repo)) as {
         id: string;
         shorthand: string;
@@ -143,8 +157,14 @@ describe("planner attempt workspaces", () => {
         };
       };
 
-      // The fake harness session finishes on its own; activity flips to inactive
-      // with the completed session still listed.
+      // The default fake run ends after 50 ms and can finish before the command returns.
+      // Hold it until both ticket status and workspace activity have been observed.
+      expect(await readActivity()).toMatchObject({ active: true });
+      const sessionResponse = await fetch(`${api.url}/v1/sessions/${value.session!.id}`);
+      expect(sessionResponse.status).toBe(200);
+      const session = (await sessionResponse.json()) as { cwd: string };
+      writeFileSync(join(session.cwd, ".fake-hold-release"), "");
+
       const settled = await waitFor(async () => {
         const activity = await readActivity();
         return !activity.active && activity.sessions.some((session) => session.status === "completed");
