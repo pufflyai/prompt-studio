@@ -1,3 +1,4 @@
+import { createWorkbenchEvent } from "../../shared/workbench-event";
 import type { LayoutModel } from "./layout-model-types";
 import { closeWidgetInLayout, findPlacementByWidgetId } from "./layout-operations";
 import {
@@ -5,6 +6,7 @@ import {
   type RegisteredWidgetContribution,
   type WorkbenchLayout,
   type WorkbenchLayoutStoreState,
+  type WorkbenchPanelInstance,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
   workbenchPanelRegions,
@@ -31,71 +33,77 @@ interface CreatePanelLayoutMethodsInput {
   widgetOpeners: Pick<LayoutModel, "openWidget">;
 }
 
-export const createPanelLayoutMethods = (input: CreatePanelLayoutMethodsInput) => ({
-  getPanel(id: string) {
-    const widget = input.getWidgets()[id];
-    return widget ? toPanelContribution(widget) : undefined;
-  },
+export const createPanelLayoutMethods = (input: CreatePanelLayoutMethodsInput) => {
+  const activated = createWorkbenchEvent<WorkbenchPanelInstance>("panel activation subscriber");
+  return {
+    onDidActivatePanel: activated.subscribe,
+    getPanel(id: string) {
+      const widget = input.getWidgets()[id];
+      return widget ? toPanelContribution(widget) : undefined;
+    },
 
-  listPanels: () => input.listWidgets().map(toPanelContribution),
+    listPanels: () => input.listWidgets().map(toPanelContribution),
 
-  listPanelInstances(region?: WorkbenchRegion) {
-    const placements = region
-      ? input.getLayout().regions[region].widgets
-      : Object.values(input.getLayout().regions).flatMap((candidate) => candidate.widgets);
-    return placements.map(toPanelInstance);
-  },
+    listPanelInstances(region?: WorkbenchRegion) {
+      const placements = region
+        ? input.getLayout().regions[region].widgets
+        : Object.values(input.getLayout().regions).flatMap((candidate) => candidate.widgets);
+      return placements.map(toPanelInstance);
+    },
 
-  getActivePanel(region?: WorkbenchRegion) {
-    if (region) {
-      const state = input.getLayout().regions[region];
-      const placement =
-        state.widgets.find((candidate) => candidate.widgetId === state.activeWidgetId) ?? state.widgets[0];
-      return placement ? toPanelInstance(placement) : undefined;
-    }
-    const activeInstanceId = input.getLayout().activeWidgetId;
-    if (!activeInstanceId) return undefined;
-    const found = findPlacementByWidgetId(input.getLayout(), activeInstanceId);
-    return found ? toPanelInstance(found.placement) : undefined;
-  },
+    getActivePanel(region?: WorkbenchRegion) {
+      if (region) {
+        const state = input.getLayout().regions[region];
+        const placement =
+          state.widgets.find((candidate) => candidate.widgetId === state.activeWidgetId) ?? state.widgets[0];
+        return placement ? toPanelInstance(placement) : undefined;
+      }
+      const activeInstanceId = input.getLayout().activeWidgetId;
+      if (!activeInstanceId) return undefined;
+      const found = findPlacementByWidgetId(input.getLayout(), activeInstanceId);
+      return found ? toPanelInstance(found.placement) : undefined;
+    },
 
-  openPanel(id: string, openInput: OpenWorkbenchPanelInput = {}) {
-    const widget = input.getWidgets()[id];
-    if (!widget) throw new Error(`Panel not registered: ${id}`);
-    return toPanelInstance(
-      input.widgetOpeners.openWidget(id, toOpenWidgetInput(openInput, defaultPanelTabRetention(widget, openInput))),
-    );
-  },
+    openPanel(id: string, openInput: OpenWorkbenchPanelInput = {}) {
+      const widget = input.getWidgets()[id];
+      if (!widget) throw new Error(`Panel not registered: ${id}`);
+      return toPanelInstance(
+        input.widgetOpeners.openWidget(id, toOpenWidgetInput(openInput, defaultPanelTabRetention(widget, openInput))),
+      );
+    },
 
-  updatePanel(instanceId: string, update: OpenWorkbenchPanelInput) {
-    if (!findPlacementByWidgetId(input.getLayout(), instanceId)) {
-      throw new Error(`Panel instance not found: ${instanceId}`);
-    }
-    return toPanelInstance(input.placementMethods.updateWidgetPlacement(instanceId, toOpenWidgetInput(update)));
-  },
+    updatePanel(instanceId: string, update: OpenWorkbenchPanelInput) {
+      if (!findPlacementByWidgetId(input.getLayout(), instanceId)) {
+        throw new Error(`Panel instance not found: ${instanceId}`);
+      }
+      return toPanelInstance(input.placementMethods.updateWidgetPlacement(instanceId, toOpenWidgetInput(update)));
+    },
 
-  reorderPanel(instanceId: string, position: Parameters<LayoutModel["reorderPanel"]>[1]) {
-    if (!findPlacementByWidgetId(input.getLayout(), instanceId)) {
-      throw new Error(`Panel instance not found: ${instanceId}`);
-    }
-    input.placementMethods.reorderWidget(instanceId, position);
-  },
+    reorderPanel(instanceId: string, position: Parameters<LayoutModel["reorderPanel"]>[1]) {
+      if (!findPlacementByWidgetId(input.getLayout(), instanceId)) {
+        throw new Error(`Panel instance not found: ${instanceId}`);
+      }
+      input.placementMethods.reorderWidget(instanceId, position);
+    },
 
-  activatePanel(instanceId: string) {
-    if (!findPlacementByWidgetId(input.getLayout(), instanceId)) {
-      throw new Error(`Panel instance not found: ${instanceId}`);
-    }
-    return toPanelInstance(input.placementMethods.activateWidget(instanceId));
-  },
+    activatePanel(instanceId: string) {
+      if (!findPlacementByWidgetId(input.getLayout(), instanceId)) {
+        throw new Error(`Panel instance not found: ${instanceId}`);
+      }
+      const panel = toPanelInstance(input.placementMethods.activateWidget(instanceId));
+      activated.notify(panel);
+      return panel;
+    },
 
-  closePanel(instanceId: string) {
-    const found = findPlacementByWidgetId(input.getLayout(), instanceId);
-    if (!found) throw new Error(`Panel instance not found: ${instanceId}`);
-    if (found.placement.closable !== true) throw new Error(`Panel cannot be closed: ${instanceId}`);
-    const active = closeWidgetInLayout(input.getLayout(), instanceId);
-    if (!active) throw new Error(`Panel instance not found: ${instanceId}`);
-    input.setLayout(active.layout);
-    input.persistLayout();
-    return active.activePlacement ? toPanelInstance(active.activePlacement) : undefined;
-  },
-});
+    closePanel(instanceId: string) {
+      const found = findPlacementByWidgetId(input.getLayout(), instanceId);
+      if (!found) throw new Error(`Panel instance not found: ${instanceId}`);
+      if (found.placement.closable !== true) throw new Error(`Panel cannot be closed: ${instanceId}`);
+      const active = closeWidgetInLayout(input.getLayout(), instanceId);
+      if (!active) throw new Error(`Panel instance not found: ${instanceId}`);
+      input.setLayout(active.layout);
+      input.persistLayout();
+      return active.activePlacement ? toPanelInstance(active.activePlacement) : undefined;
+    },
+  };
+};

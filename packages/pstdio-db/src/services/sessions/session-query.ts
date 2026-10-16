@@ -5,17 +5,23 @@ import type { DbClient } from "../../db/connection.pglite";
 import { resource_anchors, sessions, workspace_sessions } from "../../db/schemas.pg";
 import { sessionColumns } from "../legacy-resource-links";
 
-const decodeCursor = (value: string, projectId: string) => {
+const activityTime = sql<string>`greatest(${sessions.last_request_ended}, ${sessions.last_request_started}, ${sessions.updated_at}, ${sessions.created_at})`;
+const queryOrder = (input: ExtensionSessionQuery) =>
+  input.orderBy === "lastActivity" ? activityTime : sql<string>`${sessions.created_at}`;
+
+const decodeCursor = (value: string, projectId: string, orderBy: ExtensionSessionQuery["orderBy"]) => {
   try {
     const cursor = JSON.parse(Buffer.from(value, "base64url").toString());
+    const timestamp = orderBy === "lastActivity" ? cursor.activityAt : cursor.createdAt;
     if (
       cursor?.projectId === projectId &&
-      typeof cursor.createdAt === "string" &&
-      Number.isFinite(Date.parse(cursor.createdAt)) &&
+      (cursor.orderBy ?? "created") === (orderBy ?? "created") &&
+      typeof timestamp === "string" &&
+      Number.isFinite(Date.parse(timestamp)) &&
       typeof cursor.id === "string" &&
       cursor.id.length > 0
     ) {
-      return cursor as { createdAt: string; id: string };
+      return { timestamp, id: cursor.id as string };
     }
   } catch {
     /* Invalid cursors restart at the first page. */
@@ -66,17 +72,19 @@ const queryConditions = (db: DbClient, projectId: string, input: ExtensionSessio
               eq(resource_anchors.source_id, sessions.id),
               eq(resource_anchors.target_kind, input.anchor.type),
               eq(resource_anchors.target_id, input.anchor.id),
+              input.anchor.extensionId ? eq(resource_anchors.target_owner, input.anchor.extensionId) : undefined,
+              input.anchor.projectId ? eq(resource_anchors.project_id, input.anchor.projectId) : undefined,
             ),
           ),
       ),
     );
   }
-  const cursor = input.cursor ? decodeCursor(input.cursor, projectId) : null;
+  const cursor = input.cursor ? decodeCursor(input.cursor, projectId, input.orderBy) : null;
   if (cursor)
     conditions.push(
       or(
-        lt(sessions.created_at, cursor.createdAt),
-        and(eq(sessions.created_at, cursor.createdAt), lt(sessions.id, cursor.id)),
+        lt(queryOrder(input), cursor.timestamp),
+        and(eq(queryOrder(input), cursor.timestamp), lt(sessions.id, cursor.id)),
       )!,
     );
 
@@ -95,10 +103,10 @@ export const createSessionQuery =
     ${input.workspaceId ? sql`and ws.workspace_id = ${input.workspaceId}` : sql``}
     order by ws.created_at, ws.id limit 1)`.as("workspace_id");
     const query = db
-      .select({ ...sessionColumns, workspace_id: workspaceId })
+      .select({ ...sessionColumns, workspace_id: workspaceId, activity_at: activityTime.as("activity_at") })
       .from(sessions)
       .where(and(...conditions))
-      .orderBy(desc(sessions.created_at), desc(sessions.id))
+      .orderBy(desc(queryOrder(input)), desc(sessions.id))
       .$dynamic();
     const result = await (options.unpaged ? query : query.limit(limit + 1));
     const hasMore = !options.unpaged && result.length > limit;
@@ -106,7 +114,15 @@ export const createSessionQuery =
     const last = rows.at(-1);
     const nextCursor =
       hasMore && last
-        ? Buffer.from(JSON.stringify({ projectId, createdAt: last.created_at, id: last.id })).toString("base64url")
+        ? Buffer.from(
+            JSON.stringify({
+              projectId,
+              id: last.id,
+              ...(input.orderBy === "lastActivity"
+                ? { orderBy: "lastActivity", activityAt: last.activity_at }
+                : { createdAt: last.created_at }),
+            }),
+          ).toString("base64url")
         : null;
     return { rows, nextCursor };
   };

@@ -3,7 +3,7 @@ import { createWorkbench, type WorkbenchModuleContext } from "@pstdio/workbench"
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { relatedTerminalResources } from "./terminal-related-resources";
+import { workspaceTerminalResources } from "./workspace-terminal-resources";
 
 afterEach(() => getWriter("workspaces")?.truncateAndWrite([]));
 const setup = () => {
@@ -25,18 +25,18 @@ const setup = () => {
 };
 test("a workspace offers a stable terminal preview with its effective directory", () => {
   const { ctx, resource } = setup();
-  const [candidate] = relatedTerminalResources(ctx, resource);
+  const [candidate] = workspaceTerminalResources(ctx, resource);
   expect(candidate?.resource.metadata).toMatchObject({ workspaceId: "workspace", workspacePath: "/repo" });
   expect(candidate?.target.panel.kind).toBe("shell-placement");
-  expect(relatedTerminalResources(ctx, resource)[0]?.resource.id).toBe(candidate?.resource.id);
-  expect(relatedTerminalResources(ctx, { ...resource, projectId: "other" })).toEqual([]);
+  expect(workspaceTerminalResources(ctx, resource)[0]?.resource.id).toBe(candidate?.resource.id);
+  expect(workspaceTerminalResources(ctx, { ...resource, projectId: "other" })).toEqual([]);
 });
 test("a workspace offers its last live terminal without making another terminal", () => {
   const { ctx, workbench, resource } = setup();
-  const terminalResource = relatedTerminalResources(ctx, resource)[0]!.resource;
+  const terminalResource = workspaceTerminalResources(ctx, resource)[0]!.resource;
   openWorkbenchTerminal(ctx, { resource: terminalResource });
   const last = openWorkbenchTerminal(ctx, { resource: terminalResource });
-  const related = relatedTerminalResources(ctx, resource);
+  const related = workspaceTerminalResources(ctx, resource);
   expect(related[0]?.resource.id).toBe(last.resource!.id);
   expect(workbench.layout.listPanelInstances("secondary")).toHaveLength(2);
 });

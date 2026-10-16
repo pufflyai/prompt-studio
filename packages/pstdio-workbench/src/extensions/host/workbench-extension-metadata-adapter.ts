@@ -225,6 +225,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     panels: adaptedPanels,
     resourceKinds: metadata.resourceKinds.map((kind) => ({
       id: kind.id,
+      relatedOpeningsCommand: kind.relatedOpeningsCommand,
       extensionId: kind.extensionId,
       label: kind.label,
       icon: kind.icon,

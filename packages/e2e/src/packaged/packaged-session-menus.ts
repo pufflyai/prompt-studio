@@ -33,8 +33,6 @@ export const verifyPackagedSessionMenus = async (
     resource: { type: "workspace", id: workspace.id },
   });
   await page.goto(new URL(workspaceUrl, baseUrl).href);
-  const showSide = page.getByRole("button", { name: "Show Side Panel", exact: true });
-  if (await showSide.isVisible()) await showSide.click();
   const preview = page
     .locator('[data-workbench-panel-header="side"]')
     .getByRole("tab", { name: /Packaged session actions/ });

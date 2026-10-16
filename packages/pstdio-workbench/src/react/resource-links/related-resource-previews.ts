@@ -1,46 +1,12 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
-import type { NavigationTarget, WorkbenchModuleContext } from "../../core";
+import type { NavigationTarget, RegisteredResourceKind, WorkbenchModuleContext } from "../../core";
 import type { WorkbenchResourceLinksOptions } from "./resource-links-module";
-import type { ResourceLinkCandidate } from "./resource-links-types";
 import { createResourcePreviewOpener } from "./resource-preview-opener";
 
 export const openRelatedResourcesPreference = "workbench.openRelatedResources";
 const targetResource = (target: NavigationTarget): ResourceRef | undefined => {
   if (target.kind === "compound") return target.targets.map(targetResource).find(Boolean);
   return target.kind === "page" || target.kind === "panel" ? target.resource : undefined;
-};
-const linkedCandidates = async (options: WorkbenchResourceLinksOptions, resource: ResourceRef, signal: AbortSignal) => {
-  const service = options.createService(resource);
-  const key = resourceKey(resource);
-  const linked = new Map<string, ResourceRef>();
-  let cursor: string | undefined;
-  do {
-    const page = await service.list({ resource, direction: "both", limit: 100, cursor });
-    signal.throwIfAborted();
-    for (const edge of page.items) {
-      const ref = resourceKey(edge.source) === key ? edge.target : edge.source;
-      if (resourceKey(ref) !== key) linked.set(resourceKey(ref), ref);
-    }
-    cursor = page.nextCursor;
-  } while (cursor);
-  return service.resolve([...linked.values()], signal);
-};
-const openCandidates = (
-  ctx: WorkbenchModuleContext,
-  source: ResourceRef,
-  candidates: readonly ResourceLinkCandidate[],
-  opener: ReturnType<typeof createResourcePreviewOpener>,
-) => {
-  const active = ctx.layout.getLayout().activeWidgetId;
-  const selectedKinds = new Set<string>();
-  for (const candidate of candidates) {
-    const kind = JSON.stringify([candidate.resource.extensionId, candidate.resource.type]);
-    if (!candidate.target || selectedKinds.has(kind) || resourceKey(candidate.resource) === resourceKey(source))
-      continue;
-    if (opener.open(candidate.target, source)) selectedKinds.add(kind);
-  }
-  if (active && ctx.layout.listPanelInstances().some((panel) => panel.instanceId === active))
-    ctx.layout.activatePanel(active);
 };
 
 export const registerRelatedResourcePreviews = (
@@ -51,50 +17,80 @@ export const registerRelatedResourcePreviews = (
     properties: { [openRelatedResourcesPreference]: { type: "boolean", scope: "user", default: true } },
   });
   const opener = createResourcePreviewOpener(ctx);
-  let pending: { key: string; controller: AbortController; promise: Promise<void> } | undefined;
+  let pending:
+    | {
+        key: string;
+        owner: RegisteredResourceKind;
+        controller: AbortController;
+        promise: Promise<void>;
+      }
+    | undefined;
   let openingPreviews = false;
   const enabled = () => ctx.preferences.getValue(openRelatedResourcesPreference) !== false;
-  const load = async (resource: ResourceRef, controller: AbortController) => {
-    const candidates = [...ctx.resources.listRelatedResources(resource)];
+  const load = async (resource: ResourceRef, owner: RegisteredResourceKind, controller: AbortController) => {
+    const current = () => !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type) === owner;
     try {
-      candidates.push(...(await linkedCandidates(options, resource, controller.signal)));
-    } catch {
-      /* Unavailable owners must not block native related resources. */
-    }
-    if (!controller.signal.aborted && enabled()) {
+      const entries = await owner.relatedOpenings!(resource, controller.signal);
+      if (!current()) return;
+      const openings = entries.filter(
+        (entry) =>
+          entry.autoOpen === true &&
+          entry.resource.projectId === resource.projectId &&
+          resourceKey(entry.resource) !== resourceKey(resource),
+      );
+      if (!openings.length) return;
+      const resolved = await options.createService(resource).resolve(
+        openings.map((entry) => entry.resource),
+        controller.signal,
+      );
+      if (!current()) return;
+      const targets = new Map(resolved.map((entry) => [resourceKey(entry.resource), entry.target]));
+      const active = ctx.layout.getLayout().activeWidgetId;
       openingPreviews = true;
       try {
-        openCandidates(ctx, resource, candidates, opener);
+        for (const entry of openings) {
+          const target = targets.get(resourceKey(entry.resource));
+          if (target) opener.open(target, resource, entry);
+        }
       } finally {
+        if (active && ctx.layout.listPanelInstances().some((panel) => panel.instanceId === active))
+          ctx.layout.activatePanel(active);
         openingPreviews = false;
       }
+    } catch (error) {
+      if (current()) console.warn("Could not open related resources", error);
     }
   };
   const open = (source: ResourceRef) => {
     const resource = options.canonicalize(source) ?? (source.projectId && source.extensionId ? source : undefined);
-    if (!enabled() || !resource) {
+    const owner = resource && ctx.resources.getKind(resource.type);
+    if (!enabled() || !resource || !owner?.relatedOpenings || owner.extensionId !== resource.extensionId) {
       pending?.controller.abort();
       return Promise.resolve();
     }
     const key = resourceKey(resource);
-    if (pending?.key === key && !pending.controller.signal.aborted) return pending.promise;
+    if (pending?.key === key && pending.owner === owner && !pending.controller.signal.aborted) return pending.promise;
     pending?.controller.abort();
     const controller = new AbortController();
-    const promise = load(resource, controller).finally(() => {
+    const promise = load(resource, owner, controller).finally(() => {
       if (pending?.controller === controller) pending = undefined;
     });
-    pending = { key, controller, promise };
+    pending = { key, owner, controller, promise };
     return promise;
   };
-  const primary = ctx.pages.store.subscribeSelector(
+  const primary = ctx.pageLocations.onDidNavigate((location) => {
+    if (openingPreviews) return;
+    if (location.resource) void open(location.resource);
+    else pending?.controller.abort();
+  });
+  const primaryState = ctx.pages.store.subscribeSelector(
     (state) => state.location?.resource && resourceKey(state.location.resource),
-    () => {
-      const resource = ctx.getPrimaryResource();
-      if (resource) void open(resource);
-      else pending?.controller.abort();
+    (key) => {
+      if (!openingPreviews && pending?.key !== key) pending?.controller.abort();
     },
   );
   const navigation = ctx.navigation.onDidOpenTarget((target) => {
+    if (openingPreviews) return;
     const resource = targetResource(target);
     if (resource) void open(resource);
     else if (target.kind === "page" || target.kind === "panel" || target.kind === "compound")
@@ -104,27 +100,40 @@ export const registerRelatedResourcePreviews = (
     (state) => state.projectId,
     () => pending?.controller.abort(),
   );
+  const owners = ctx.resources.store.subscribe(() => {
+    if (pending && ctx.resources.getKind(pending.owner.kind) !== pending.owner) pending.controller.abort();
+  });
   const preference = ctx.preferences.onDidChangeValue((name) => {
     if (name === openRelatedResourcesPreference && !enabled()) pending?.controller.abort();
   });
-  const selection = ctx.layout.store.subscribeSelector(
-    () => ctx.layout.getActivePanel()?.resource,
-    (resource) => {
-      if (openingPreviews) return;
-      if (resource) void open(resource);
-      else pending?.controller.abort();
+  const selection = ctx.layout.onDidActivatePanel((panel) => {
+    if (openingPreviews) return;
+    if (panel.resource) void open(panel.resource);
+    else pending?.controller.abort();
+  });
+  const selectionState = ctx.layout.store.subscribeSelector(
+    () => {
+      const resource = ctx.layout.getActivePanel()?.resource;
+      return resource && resourceKey(resource);
     },
-    { equalityFn: (a, b) => a === b || Boolean(a && b && resourceKey(a) === resourceKey(b)) },
+    (key) => {
+      if (!openingPreviews && pending?.key !== key) pending?.controller.abort();
+    },
   );
+  const restoration = ctx.layout.onWillRestoreLayout(() => pending?.controller.abort());
   return {
     open,
     dispose() {
       pending?.controller.abort();
-      primary();
+      primary.dispose();
+      primaryState();
       navigation.dispose();
       project();
+      owners();
       preference.dispose();
-      selection();
+      selection.dispose();
+      selectionState();
+      restoration.dispose();
       opener.dispose();
       schema.dispose();
     },

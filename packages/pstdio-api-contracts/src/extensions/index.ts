@@ -18,6 +18,7 @@ export * from "./kanban-renderer";
 export * from "./keybindings";
 export { navigationTargetSchema } from "./navigation-target-metadata";
 export * from "./placement-metadata";
+export * from "./related-resource-opening";
 export * from "./renderers";
 export * from "./settings";
 export * from "./targets";

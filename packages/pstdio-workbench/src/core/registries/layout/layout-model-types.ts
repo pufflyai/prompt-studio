@@ -70,6 +70,9 @@ export interface LayoutModel {
   openPanel(id: string, input?: OpenWorkbenchPanelInput): WorkbenchPanelInstance;
   updatePanel(instanceId: string, input: OpenWorkbenchPanelInput): WorkbenchPanelInstance;
   reorderPanel(instanceId: string, position: WorkbenchTabPosition): void;
+  /** Explicit panel selection, excluding automatic focus after closing or restoring. */
+  onDidActivatePanel(listener: (panel: WorkbenchPanelInstance) => void): { dispose(): void };
+  onWillRestoreLayout(listener: () => void): { dispose(): void };
   activatePanel(instanceId: string): WorkbenchPanelInstance;
   closePanel(instanceId: string): WorkbenchPanelInstance | undefined;
   updateWidgetPlacement(widgetId: string, input: OpenWidgetInput): WorkbenchWidgetPlacement;
