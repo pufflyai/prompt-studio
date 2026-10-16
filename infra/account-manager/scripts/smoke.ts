@@ -75,11 +75,35 @@ try {
     };
     const session = await login();
     assert.deepEqual(await reopened.authorizeSession(session.token), { accountId });
+    const access = reopened.forOwnerSession(session.token);
+    const ownerIntent = {
+      requestId: "owner-registration",
+      workbenchId: "owner-workbench",
+      environmentId: "owner-environment",
+      expiresAt,
+    };
+    await assert.rejects(access.register({ ...ownerIntent, ...{ accountId: "another-account" } }));
+    const ownerGrant = await access.register(ownerIntent);
+    assert.ok(ownerGrant.token);
+    assert.equal(ownerGrant.accountId, accountId);
+    assert.deepEqual(await access.register(ownerIntent), { ...ownerGrant, token: null });
+    assert.ok((await access.environments()).some((entry) => entry.id === ownerGrant.id));
+    const replacement = { ...ownerIntent, requestId: "owner-replacement", replacesId: ownerGrant.id };
+    const replaced = await access.replace(replacement);
+    assert.ok(replaced.token);
+    assert.deepEqual(await access.replace(replacement), { ...replaced, token: null });
+    assert.equal(await reopened.authorize(ownerGrant.token, ownerGrant.workbenchId), null);
+    const revoke = { requestId: "owner-revocation", environmentId: ownerIntent.environmentId };
+    await access.revoke(revoke);
+    await access.revoke(revoke);
+    assert.equal(await reopened.authorize(replaced.token, replaced.workbenchId), null);
     const pendingLogin = await reopened.beginLogin({ expiresAt });
     const loginSnapshot = await reopened.snapshot();
     assert.ok(!JSON.stringify(loginSnapshot).includes(session.token));
     await reopened.restore("restore-owner-sessions", loginSnapshot);
     assert.equal(await reopened.authorizeSession(session.token), null);
+    await assert.rejects(access.environments());
+    await assert.rejects(access.register(ownerIntent));
     assert.equal(await reopened.loginChallenge(pendingLogin.state, pendingLogin.binding), null);
     await reopened.reconcile({
       requestId: "current-owner-for-login",
@@ -88,14 +112,21 @@ try {
       state: "active",
     });
     const currentSession = await login();
+    const currentAccess = reopened.forOwnerSession(currentSession.token);
+    const currentIntent = { ...ownerIntent, requestId: "fresh-owner-registration" };
+    const currentGrant = await currentAccess.register(currentIntent);
+    assert.ok(currentGrant.token);
     await reopened.restore("restore-owner-sessions", loginSnapshot);
     assert.deepEqual(await reopened.authorizeSession(currentSession.token), { accountId });
+    assert.ok(await reopened.authorize(currentGrant.token, currentGrant.workbenchId));
     await reopened.logout(currentSession.token);
     assert.equal(await reopened.authorizeSession(currentSession.token), null);
+    await assert.rejects(currentAccess.environments());
+    await assert.rejects(currentAccess.register(currentIntent));
   } finally {
     await google.close();
   }
-  console.log("Built private manager authority, recovery, Google identity and owner login passed");
+  console.log("Built private manager authority, recovery, Google identity, owner login and environment access passed");
 } finally {
   await Promise.all(owners.map((owner) => owner.close()));
   await fixture.close();

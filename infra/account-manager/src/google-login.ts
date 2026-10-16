@@ -69,18 +69,3 @@ export const logout = (db: ManagerDatabase, token: string) =>
   withManagerTransaction(db, async (transaction) => {
     await transaction.delete(ownerSessions).where(eq(ownerSessions.digest, digestCredential(token)));
   });
-
-export const authorizeSession = async (db: ManagerDatabase, token: string) =>
-  (
-    await db
-      .select({ accountId: ownerSessions.accountId })
-      .from(ownerSessions)
-      .innerJoin(accounts, eq(accounts.id, ownerSessions.accountId))
-      .where(
-        and(
-          eq(ownerSessions.digest, digestCredential(token)),
-          gt(ownerSessions.expiresAt, sql`clock_timestamp()`),
-          eq(accounts.state, "active"),
-        ),
-      )
-  )[0] ?? null;

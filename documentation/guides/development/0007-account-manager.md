@@ -28,6 +28,14 @@ Only a session digest, account reference and expiry persist. `authorizeSession(t
 
 These are private data-owner methods. Never pass raw callback claims as the verified owner or take expiries from an untrusted body. The later HTTP handler owns secure cookies, CSRF transport, signup/account selection and public route permissions. Session persistence does not itself complete browser login.
 
+## Owner environment management
+
+Use `manager.forOwnerSession(token)` for the later owner's environment operations. Its `register`, `replace`, `revoke` and `environments` methods check the live session on every call. Creating this object does not retain permission after logout, expiry, lifecycle invalidation or restore. The inputs omit account identity and reject extra account/owner claims. The store derives scope from the session, acquires the account lock and rechecks current session authority inside the shared restore boundary before reading a saved result or changing grants.
+
+Registration takes request/workbench/environment identity and explicit trusted expiry. Replacement also names `replacesId`; revocation takes request/environment identity and affects that account across workbenches. Listing takes no account argument and returns only safe grant metadata. These operations reuse the operator path's grant and immutable request logic. A new valid owner session can retry the same domain intent, returning metadata with `token: null`; the session bearer is never part of the receipt fingerprint or result. A logged-out or expired session cannot recover even a historical result.
+
+The later trusted handler must supply expiry policy and protect the session transport. Do not implement owner management by calling `authorizeSession` and then a privileged account method: an intervening ownership change would leave the earlier permission stale. Already authorized operations may finish; subsequent calls must pass the current check. This API does not grant owner access to account provisioning, disable/reconciliation or snapshot restore. The existing direct account methods remain privileged operator interfaces. HTTP permissions/cookies/CSRF and active relay subscription closure remain separate work.
+
 ## Internal operations
 
 | Method | Behavior |
@@ -45,6 +53,7 @@ These are private data-owner methods. Never pass raw callback claims as the veri
 | `completeLogin(intent)` | Consume a challenge once and create a session for the current active matching account owner. The caller supplies verified identity and trusted expiry. |
 | `authorizeSession(token)` | Return current account identity for a live owner session, or `null`. |
 | `logout(token)` | Remove that owner session idempotently. |
+| `forOwnerSession(token)` | Return session-scoped environment operations; recheck current authority inside each operation and derive its account. |
 | `snapshot()` | Capture a consistent, versioned private manager snapshot. It excludes credential rows and digests. |
 | `restore(requestId, snapshot)` | Import missing history, preserve known identities and receipts, remove every credential and disable all accounts atomically. An exact completed retry preserves authority established afterward; changed input cannot reuse its ID. |
 | `close()` | Close this owner's PostgreSQL connections. |

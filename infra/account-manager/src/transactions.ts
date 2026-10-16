@@ -16,6 +16,9 @@ export const withAccountTransaction = <T>(
   apply: (transaction: ManagerTransaction) => Promise<T>,
 ) =>
   withManagerTransaction(db, async (transaction) => {
-    await transaction.execute(sql`SELECT pg_advisory_xact_lock(1, hashtext(${accountId}))`);
+    await lockAccount(transaction, accountId);
     return apply(transaction);
   });
+
+export const lockAccount = (transaction: ManagerTransaction, accountId: string) =>
+  transaction.execute(sql`SELECT pg_advisory_xact_lock(1, hashtext(${accountId}))`);
