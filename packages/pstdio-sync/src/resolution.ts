@@ -2,30 +2,15 @@ import { type Change, fingerprint, type StoredRecord } from "pstdio-sync-contrac
 import { inputFingerprint, recordVersion } from "./authoring";
 import { readBranch } from "./branches";
 import { captureBranch } from "./capture";
-import { encodeText } from "./encoding";
 import { projectGroups } from "./projection";
-import { applyRecordChange, blankRecord, publicRecord } from "./records";
+import { applyRecordChange } from "./records";
+import { resolutionGuards } from "./resolution-preflight";
 import type { GroupedState, LocalOperation, ResolutionCommit } from "./types";
-
-const acceptedVersion = (state: GroupedState, recordId: string) => {
-  const record = state.accepted?.records[recordId] ?? blankRecord(recordId);
-  const operations = Object.values(state.accepted?.receipts ?? {})
-    .filter(
-      (receipt) =>
-        receipt.status === "accepted" && receipt.mutation.changes.some((change) => change.recordId === recordId),
-    )
-    .sort((a, b) => a.checkpoint!.sequence - b.checkpoint!.sequence)
-    .map((receipt) => receipt.operationId);
-  return {
-    ...publicRecord(record),
-    revision: encodeText(JSON.stringify({ owner: state.owner, recordId, operations })),
-  };
-};
 
 export const inspectConflict = async (state: GroupedState, environmentId: string, conflictId: string) => {
   const known = state.accepted?.conflicts[conflictId];
   const view = await projectGroups(state, environmentId);
-  const conflict = known ?? view.conflicts.find((entry) => entry.conflictId === conflictId);
+  const conflict = view.conflicts.find((entry) => entry.conflictId === conflictId);
   if (!conflict || ("resolvedBy" in conflict && conflict.resolvedBy)) throw new Error("No unresolved conflict");
   const published = new Set(
     [...view.outcomes].filter(([, outcome]) => outcome.status !== "conflict").map(([id]) => id),
@@ -33,11 +18,11 @@ export const inspectConflict = async (state: GroupedState, environmentId: string
   const branch = captureBranch(state, environmentId, conflictId, known ? undefined : published);
   const captured = new Set(branch.map((mutation) => mutation.operationId));
   const ids = [...new Set(branch.flatMap((mutation) => mutation.changes.map((change) => change.recordId)))];
-  const accepted = ids.map((recordId) => (known ? acceptedVersion(state, recordId) : view.read(recordId)));
+  const accepted = ids.map(view.read);
   return {
     conflictId,
     revision: conflict.revision,
-    expectedConflicts: (known ? Object.values(state.accepted!.conflicts) : view.conflicts)
+    expectedConflicts: [...resolutionGuards(state, view.conflicts).values()]
       .filter((entry) => entry.alternativeOperationIds.some((id) => captured.has(id)))
       .map((entry) => ({ conflictId: entry.conflictId, revision: entry.revision })),
     capturedOperationIds: [...captured],

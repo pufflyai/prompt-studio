@@ -80,6 +80,11 @@ bytes must be complete before a group can publish any member. Use
 
 Use `inspect` when a person or command is ready to choose a complete branch. Pass
 its `expectedConflicts`, `capturedOperationIds`, and `expectedInputs` back unchanged.
+The inspection includes valid pending local saves and their current conflict
+revisions, even when the relay first reported the conflict. A fresh choice uses
+the same local view as its validation.
+Revision guards also retain resolved ancestors required by the captured branch.
+Those historical guards do not appear as active conflicts.
 Choose `local` for the captured alternative or `remote` for current values.
 Text/list changes from the captured branch still merge when choosing current JSON
 and assets. A primitive-kind collision must keep the established primitive.
