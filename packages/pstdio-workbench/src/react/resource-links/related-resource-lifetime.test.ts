@@ -217,6 +217,36 @@ test("leaving a persisted resource page removes every automatic preview from tha
   s.controller.dispose();
 });
 
+test.each([
+  "side",
+  "secondary",
+] as const)("page cleanup keeps manual %s tabs carried to the next page", async (region) => {
+  const layouts = new Map<string | undefined, WorkbenchLayout>();
+  const s = setup([opening("automatic", region)], {
+    layoutPersistence: {
+      getLayout: (scope) => layouts.get(scope),
+      setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
+    },
+    resolvePagePersistenceScope: ({ resource, pageId }) => ({
+      scope: resource?.id ?? pageId,
+      carryRegions: ["side", "secondary"],
+    }),
+  });
+  registerTray(s, region);
+  await s.controller.open(s.source);
+  const manual = s.workbench.shellPlacements.openPlacement({
+    placementId: "manual",
+    resource: ref("document", "manual"),
+    open: "pin",
+  });
+  leavePage(s);
+  expect(s.workbench.layout.listPanelInstances(region).map((panel) => panel.resource?.id)).toEqual(["manual"]);
+  expect(s.workbench.shell.getRegionState(region).open).toBe(true);
+  s.workbench.closePlacement(manual);
+  expect(s.workbench.shell.getRegionState(region).open).toBe(false);
+  s.controller.dispose();
+});
+
 test("restored native tabs keep their automatic source after the opening controller restarts", async () => {
   const s = setup([opening("related")]);
   registerTray(s);
