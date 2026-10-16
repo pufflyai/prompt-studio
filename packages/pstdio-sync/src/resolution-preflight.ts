@@ -11,8 +11,9 @@ export const resolutionGuards = (state: GroupedState, current: Iterable<Snapshot
   return conflicts;
 };
 
-export const resolutionProblem = (view: Projection, state: GroupedState, mutation: LocalOperation) =>
-  validateResolution(
+export const resolutionProblem = (view: Projection, state: GroupedState, mutation: LocalOperation) => {
+  if (mutation.resolution && !view.conflicts.has(mutation.resolution.conflictId)) return "stale conflict revision";
+  return validateResolution(
     {
       records: view.records,
       conflicts: resolutionGuards(state, view.conflicts.values()),
@@ -29,6 +30,7 @@ export const resolutionProblem = (view: Projection, state: GroupedState, mutatio
     },
     mutation,
   );
+};
 
 export const retainAfterResolution = (view: Projection, mutation: LocalOperation) => {
   const proposal = mutation.resolution!;
