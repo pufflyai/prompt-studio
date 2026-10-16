@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { createAuthorityFixture, provisionAccount, registration } from "../src/authority.fixture";
 import { createGoogleCodeFixture } from "../src/google-code.fixture";
 import { createGoogleFixture } from "../src/google-identity.fixture";
+import { smokeEnvironmentAuthority } from "./smoke-authority";
 
 const implementation: typeof import("../src/index") = await import(new URL("./authority.js", import.meta.url).href);
 const fixture = createAuthorityFixture(implementation);
@@ -180,6 +181,7 @@ try {
   } finally {
     await codeProvider.close();
   }
+  await smokeEnvironmentAuthority(implementation, reopened);
   console.log("Built private manager authority, recovery, Google code login and environment access passed");
 } finally {
   await Promise.all(owners.map((owner) => owner.close()));
