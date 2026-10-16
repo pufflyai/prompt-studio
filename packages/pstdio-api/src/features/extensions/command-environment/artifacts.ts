@@ -38,7 +38,7 @@ export const createArtifactsApi = (
       mountPaths: (input.artifactMounts ?? [])
         .filter((candidate) => candidate.extensionId === input.extensionId)
         .map((candidate) => candidate.relativePath),
-      signal: input.signal,
+      signal: access === "read" ? input.signal : undefined,
       onWrite: input.onWrite,
       resolveWriteRoot: () => resolveProjectPath("write"),
     });

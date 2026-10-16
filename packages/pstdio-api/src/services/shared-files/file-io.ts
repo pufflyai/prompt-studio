@@ -1,5 +1,5 @@
 import { mkdir, rename, rm, rmdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { createSafeFileRoot } from "pstdio-extensions";
@@ -75,7 +75,7 @@ export const createFileProjectionIO = (input: {
     const destination = await scoped.safe.resolveForWrite(scoped.path);
     if (target.kind === "directory") await mkdir(destination.operationPath, { recursive: true });
     else if (temporary) await rename(temporary, destination.realPath);
-    input.onWrite?.(destination.operationPath);
+    input.onWrite?.(join(input.root, path, relative(destination.operationPath, destination.realPath)));
   };
   const install = async (
     path: string,

@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { artifactFilesFixture } from "./artifact-files.fixture";
+import { createSharedArtifactMount } from "./artifact-mount";
 
 const fixtures: Awaited<ReturnType<typeof artifactFilesFixture>>[] = [];
 afterEach(async () => {
@@ -114,4 +115,19 @@ test("replacing a tracked file with an allowed symlink preserves the link target
   await f.mount().refresh();
   expect(await f.mount().readText("note.md")).toBe("linked edit");
   expect(await readFile(f.pathFor("documents/target.md"), "utf8")).toBe("linked edit");
+});
+
+test("write notifications keep the workspace path used by filesystem watchers", async () => {
+  const f = await fixture();
+  await mkdir(f.input.repoRoot, { recursive: true });
+  const alias = join(f.root, "workspace-link");
+  await symlink(f.input.repoRoot, alias, "junction");
+  const writes: string[] = [];
+  const mount = createSharedArtifactMount(f.deps, {
+    ...f.input,
+    repoRoot: alias,
+    onWrite: (path) => writes.push(path),
+  });
+  await mount.writeText("note.md", "saved through linked workspace");
+  expect(writes).toContain(join(alias, ".pstdio/extension-storage/example-documents/documents/note.md"));
 });
