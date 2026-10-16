@@ -37,7 +37,7 @@ const sessionActivityAt = (session: TicketSession) =>
   session.last_request_ended ?? session.last_request_started ?? session.updated_at ?? "";
 
 const sessionNode = (session: TicketSession): TreeNode => {
-  const resource = { type: "session", id: session.id, label: session.title };
+  const resource = { type: "session", extensionId: "pstdio", id: session.id, label: session.title };
   return {
     id: `session-${session.id}`,
     label: session.title,
