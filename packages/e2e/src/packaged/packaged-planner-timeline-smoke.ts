@@ -116,6 +116,7 @@ export async function expectPackagedPlannerTimeline(input: {
     }),
   );
   const rows = plan.sections.flatMap((section: { rows: unknown[] }) => section.rows);
+  expect(rows).toContainEqual(expect.objectContaining({ id: result.ticket.id, instructions: "" }));
   expect(rows).toContainEqual(
     expect.objectContaining({
       id: waiting.ticket.id,

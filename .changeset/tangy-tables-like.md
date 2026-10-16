@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Repair dependency readiness, preserve selected variants, share delivery checks per query, and resume missing workspaces through informed recovery agents.
+Repair dependency readiness and workspace recovery, and reduce Timeline loading, refresh, and rendering work.

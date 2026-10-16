@@ -7,8 +7,52 @@ import { putAttempt } from "../../data/attempt-storage";
 import { putTicket, statusesCollection, ticketsCollection } from "../../data/collections";
 import { DEFAULT_STATUSES } from "../../data/seed";
 import { createDeadlineCommand } from "./deadline-commands";
+import { registerGate } from "./gate-store";
 import { moveTicketCommand } from "./move-ticket";
 import { readPlanCommand } from "./read-plan";
+
+test("the timeline carries gate instructions without copying ordinary ticket documents", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const ordinary = await createTicketCommand.run(ctx, {
+    content: `# Work\n\n${"Detailed ticket notes. ".repeat(1000)}`,
+  });
+  const gate = await createTicketCommand.run(ctx, { content: "# Review\n\nInspect the result." });
+  await registerGate(ctx, gate.id);
+  const rows = (await readPlanCommand.run(ctx, {})).sections.flatMap(({ rows }) => rows);
+  expect(rows.find(({ id }) => id === ordinary.id)?.instructions).toBe("");
+  expect(rows.find(({ id }) => id === gate.id)?.instructions).toBe(gate.content);
+});
+
+test("the plan reads one ticket snapshot without loading workspace session histories", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const ticket = await createTicketCommand.run(ctx, { title: "Visible work", statusId: "ready" });
+  let ticketReads = 0;
+  let sessionReads = 0;
+  const collection = storage.collection.bind(storage);
+  storage.collection = <T>(name: string) => {
+    const items = collection<T>(name);
+    return {
+      ...items,
+      list: async () => {
+        if (name === "tickets") ticketReads++;
+        return items.list();
+      },
+    };
+  };
+  ctx.workspaces.list = async () => [
+    { id: "workspace", anchors_json: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }] } as never,
+  ];
+  ctx.sessions.listByWorkspace = async () => {
+    sessionReads++;
+    return [];
+  };
+  const plan = await readPlanCommand.run(ctx, {});
+  expect(plan.ticketRows).toContainEqual(expect.objectContaining({ id: ticket.id }));
+  expect(ticketReads).toBe(1);
+  expect(sessionReads).toBe(0);
+});
 
 test("the plan query derives milestone ETA from saved complexity and observed attempt starts", async () => {
   const storage = createMemoryStorage();

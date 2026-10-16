@@ -27,6 +27,6 @@ const planEvents = [plannerTicketsChanged, planChanged];
 
 export function usePlan(host: GuestHost) {
   const [client] = useState(() => createWebviewClient<PlanCommands>(host));
-  const { value: plan, error } = useLiveValue(client, readPlan, planEvents);
-  return { client, plan, error };
+  const { value: plan } = useLiveValue(client, readPlan, planEvents);
+  return { client, plan };
 }

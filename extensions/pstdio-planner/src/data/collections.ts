@@ -38,12 +38,18 @@ export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
   return tag;
 };
 
-export const readTicketsWithReviewState = async (storage: ExtensionStorageApi) => {
+export const readTicketSnapshot = async (storage: ExtensionStorageApi) => {
   const [tickets, requests] = await Promise.all([ticketsCollection(storage).list(), readTicketReviewRequests(storage)]);
-  return withIndependentBlockers(tickets).map((ticket) =>
-    withReviewNeededFlag(ticket, requests.get(ticket.id) ?? { requests: [], errors: [] }),
-  );
+  return {
+    tickets: withIndependentBlockers(tickets).map((ticket) =>
+      withReviewNeededFlag(ticket, requests.get(ticket.id) ?? { requests: [], errors: [] }),
+    ),
+    requests,
+  };
 };
+
+export const readTicketsWithReviewState = async (storage: ExtensionStorageApi) =>
+  (await readTicketSnapshot(storage)).tickets;
 
 const withIndependentBlocker = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
   if (!dependencyBlockerRefs(ticket.blockedReason)) return ticket;

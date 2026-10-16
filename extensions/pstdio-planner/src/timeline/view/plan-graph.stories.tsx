@@ -32,18 +32,39 @@ const plan = buildPlan({
   },
 });
 
+const densePlan = buildPlan({
+  statuses: [],
+  tags: [],
+  today: "2026-10-10",
+  tickets: Array.from({ length: 1000 }, (_, index) => ({
+    id: String(index),
+    shorthand: `P-${index + 1}`,
+    title: index % 7 === 0 ? "A long work item title that wraps across several lines of the shared card" : "Work item",
+    content: "",
+    statusId: null,
+    dependsOn: index ? [String(index - 1)] : [],
+  })),
+  plan: { deadlines: [], order: [] },
+});
+
 // Drops only reset the preview here; the story has no plan to move tickets in.
 const storyClient = {
   commands: { "timeline.track.assign": async () => {}, "timeline.plan.move": async () => {} },
 } as unknown as PlanClient;
 
-function TimelineGraphStory(props: { filtered?: boolean; preview?: { dragId: string; dropTarget: DropTarget } }) {
-  const { filtered, preview } = props;
-  const { sections, toggle } = useViewSections(plan, new Set(filtered ? ["preview"] : ["preview", "launch"]));
-  const drag = useDragAndDrop(storyClient, () => {});
+function TimelineGraphStory(props: {
+  dense?: boolean;
+  filtered?: boolean;
+  preview?: { dragId: string; dropTarget: DropTarget };
+}) {
+  const { dense, filtered, preview } = props;
+  const shown = dense ? densePlan : plan;
+  const ids = shown.sections.flatMap(({ rows }) => rows.map(({ id }) => id));
+  const { sections, toggle } = useViewSections(shown, new Set(filtered ? ["preview"] : ids));
+  const drag = useDragAndDrop(storyClient);
   const tracks = buildTracks(
-    plan.trackProperty,
-    plan.sections.flatMap(({ rows }) => rows),
+    shown.trackProperty,
+    shown.sections.flatMap(({ rows }) => rows),
   );
   return (
     <Box h="600px">
@@ -79,6 +100,7 @@ const meta: Meta<typeof TimelineGraphStory> = {
 export default meta;
 type Story = StoryObj<typeof TimelineGraphStory>;
 export const AllMilestones: Story = {};
+export const LargePlan: Story = { args: { dense: true } };
 export const FilteredMilestone: Story = { args: { filtered: true } };
 export const DropPreview: Story = {
   args: { preview: { dragId: "launch", dropTarget: { deadlineId: "preview", beforeId: "preview", trackId: null } } },

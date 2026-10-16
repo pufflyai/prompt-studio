@@ -3,13 +3,14 @@ import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensio
 import { setTicketAttribute } from "../../commands/set-ticket-attribute";
 import { findTicket } from "../../data/resolve";
 import { createTagOption, createTicketTag, readTicketTags, updateTagOption } from "../../data/tag-operations";
+import type { StoredTag } from "../../data/types";
 import { withWriteGuard } from "../../data/write-guard";
 import { plannerTicketsChanged } from "../../events";
 import { trackProperty } from "../model/tracks";
 import type { PlannerTicket } from "../planner";
 
-export async function readTrack(ctx: CommandContext) {
-  const { tags } = await readTicketTags(ctx.storage);
+export async function readTrack(ctx: CommandContext, tags?: StoredTag[]) {
+  tags ??= (await readTicketTags(ctx.storage)).tags;
   const binding = await ctx.storage.get<string>("timeline.track-property-id");
   if (!binding) {
     return trackProperty(tags);

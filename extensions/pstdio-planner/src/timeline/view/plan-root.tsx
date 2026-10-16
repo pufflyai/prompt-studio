@@ -19,7 +19,7 @@ import { PlanEditor } from "./plan-editor";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
-import { PlanUnavailable } from "./plan-unavailable";
+import { reportTimelineError } from "./timeline-notice";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
 import { useAutoBuild } from "./use-auto-build";
@@ -35,14 +35,13 @@ interface PlanRootProps {
 
 export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
-  const { client, plan, error } = usePlan(host);
-  const { source: viewsSource, error: viewsError } = useTimelineViews(client);
+  const { client, plan } = usePlan(host);
+  const { source: viewsSource } = useTimelineViews(client);
   const [storage, setStorage] = useState<HostStorage>();
-  const [storageError, setStorageError] = useState<string>();
   useEffect(() => {
     let active = true;
     const reportError = (reason: unknown) => {
-      if (active) setStorageError(String(reason));
+      if (active) void reportTimelineError(host, reason);
     };
     void createTimelineStorage(host, reportError)
       .then((next) => {
@@ -53,12 +52,10 @@ export function PlanRoot(props: PlanRootProps) {
       active = false;
     };
   }, [host]);
-  const loadError = error ?? viewsError ?? storageError;
-  if ((!plan || !viewsSource || !storage) && loadError) return <PlanUnavailable message={loadError} t={t} />;
   if (!plan || !viewsSource || !storage) return <Text p="md">{t("timeline.loading", "Loading tickets…")}</Text>;
   return (
     <HostStorageProvider storage={storage}>
-      <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} error={loadError} />
+      <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
     </HostStorageProvider>
   );
 }
@@ -67,11 +64,10 @@ interface PlanContentProps extends PlanRootProps {
   client: PlanClient;
   plan: Awaited<ReturnType<PlanClient["commands"]["timeline.plan.read"]>>;
   viewsSource: CollectionViewsSource<KanbanRendererSettings>;
-  error?: string;
 }
 
 function PlanContent(props: PlanContentProps) {
-  const { host, t, client, plan, viewsSource, error } = props;
+  const { host, t, client, plan, viewsSource } = props;
   const [search, setSearch] = useState("");
   const autoBuild = useAutoBuild(client);
   const [autoBuildOpen, setAutoBuildOpen] = useState(false);
@@ -81,19 +77,8 @@ function PlanContent(props: PlanContentProps) {
   const matching = searchRows(filtered, search, (row) => [row.title, String(row.attributes.id)]);
   const tracks = visibleTracks(plan, filter, queryData.attributes);
   const { sections, toggle } = useViewSections(plan, new Set(matching.map(({ id }) => id)));
-  const {
-    viewProps,
-    selected,
-    open,
-    review,
-    editor,
-    context,
-    actionError,
-    setSelectedId,
-    setContext,
-    setEditor,
-    done,
-  } = usePlanActions({ host, client, plan, sections, tracks, toggle });
+  const { viewProps, selected, open, review, editor, context, setSelectedId, setContext, setEditor, done } =
+    usePlanActions({ host, client, plan, sections, tracks, toggle });
   return (
     <Flex direction="column" h="full" minH="0" minW="0">
       <PlanHeader
@@ -132,11 +117,6 @@ function PlanContent(props: PlanContentProps) {
           />
         }
       />
-      {[error, actionError, autoBuildOpen ? undefined : autoBuild.error].filter(Boolean).map((message) => (
-        <Text key={message} role="alert" color="fg.error" px="md" pt="sm" flexShrink="0">
-          {message}
-        </Text>
-      ))}
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
           <PlanGraph {...viewProps} today={plan.today} />

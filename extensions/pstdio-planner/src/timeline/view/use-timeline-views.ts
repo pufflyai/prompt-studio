@@ -9,7 +9,7 @@ const viewEvents = [viewDataEvents.boardViewsChanged];
 const ticketView = (view: BoardView) => ({ ...view, settings: view.settings as KanbanRendererSettings });
 
 export function useTimelineViews(client: PlanClient) {
-  const { value, error } = useLiveValue(client, readViews, viewEvents);
+  const { value } = useLiveValue(client, readViews, viewEvents);
   const source: CollectionViewsSource<KanbanRendererSettings> | undefined = value && {
     views: value.views.map(ticketView),
     defaultViewId: value.defaultViewId,
@@ -24,5 +24,5 @@ export function useTimelineViews(client: PlanClient) {
       await client.commands["timeline.views.default"]({ id: id ?? undefined });
     },
   };
-  return { source, error };
+  return { source };
 }
