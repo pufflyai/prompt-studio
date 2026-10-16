@@ -162,8 +162,8 @@ export const createRelayAssets = (config: AssetConfig) => {
         await database.lock(lockKey(key), signal, async (db) => {
           const row = (await db.select().from(assetUploads).where(uploadWhere(key)))[0];
           if (row?.status !== "cancelled") return;
-          await objects.discard(row.objectKey, row.multipartId);
-          await objects.remove(row.objectKey);
+          await objects.discard(row.objectKey, row.multipartId, signal);
+          await objects.remove(row.objectKey, signal);
           await db.delete(assetParts).where(partWhere(key));
         });
       });

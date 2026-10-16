@@ -24,12 +24,13 @@ export const synchronize = async (
   if (compatibility.status !== "compatible") return { ...compatibility, outcomes: [] };
   await input.store.transaction(input.owner, async (state) => checkScope(state, adapter.scope));
   const receive = async () => {
+    const observed = await input.store.transaction(input.owner, async (state) => state.accepted);
     const snapshot = snapshotSchema.parse(await adapter.snapshot());
     if (canonicalJson(snapshot.scope) !== canonicalJson(adapter.scope))
       throw new Error("Relay snapshot scope differs from its adapter");
     for (const receipt of Object.values(snapshot.receipts)) await validateMutation(receipt.mutation);
     await downloadSnapshotAssets(input.assets, adapter, snapshot);
-    await input.store.transaction(input.owner, (state) => receiveSnapshot(state, snapshot));
+    await input.store.transaction(input.owner, (state) => receiveSnapshot(state, snapshot, observed));
   };
   await receive();
   const pending = await input.store.transaction(input.owner, async (state) =>

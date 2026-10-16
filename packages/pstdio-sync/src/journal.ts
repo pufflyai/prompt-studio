@@ -38,8 +38,19 @@ export const sealOperation = async (state: GroupedState, operation: LocalOperati
   return sealMutation({ ...operation, protocolVersion: 1, scope: state.accepted.scope });
 };
 
-export const receiveSnapshot = async (state: GroupedState, snapshot: Snapshot) => {
+const snapshotVersion = (snapshot: Snapshot | null) => snapshot && canonicalJson(snapshot);
+
+export const receiveSnapshot = async (state: GroupedState, snapshot: Snapshot, observed: Snapshot | null) => {
   checkScope(state, snapshot.scope);
+  // A response cannot replace state advanced by another sync while it was in flight.
+  // Epochs are opaque, so compare the request's observed version across restores.
+  if (snapshotVersion(state.accepted) !== snapshotVersion(observed)) return;
+  if (
+    state.accepted?.checkpoint.epoch === snapshot.checkpoint.epoch &&
+    (snapshot.journalSequence < state.accepted.journalSequence ||
+      snapshot.checkpoint.sequence < state.accepted.checkpoint.sequence)
+  )
+    return;
   for (const receipt of Object.values(snapshot.receipts)) {
     let entry = state.journal.find((entry) => entry.mutation.operationId === receipt.operationId);
     if (entry) {

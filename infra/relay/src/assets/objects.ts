@@ -42,9 +42,11 @@ export const createAssetObjects = (config: ObjectConfig) => {
     if (!result.Body) throw new Error("Object storage returned no body");
     return result.Body.transformToWebStream();
   };
-  const abort = async (key: string, uploadId: string) => {
+  const abort = async (key: string, uploadId: string, signal?: AbortSignal) => {
     try {
-      await client.send(new AbortMultipartUploadCommand({ ...target(key), UploadId: uploadId }));
+      await client.send(new AbortMultipartUploadCommand({ ...target(key), UploadId: uploadId }), {
+        abortSignal: signal,
+      });
     } catch (error) {
       if (!missing(error)) throw error;
     }
@@ -70,7 +72,7 @@ export const createAssetObjects = (config: ObjectConfig) => {
     async begin(key: string, asset: Asset, signal?: AbortSignal) {
       // A lost Create response can leave an empty multipart upload before its ID is saved.
       const [recovered, ...duplicates] = await uploads(key, signal);
-      for (const duplicate of duplicates) await abort(key, duplicate);
+      for (const duplicate of duplicates) await abort(key, duplicate, signal);
       if (recovered) return recovered;
       const result = await client.send(
         new CreateMultipartUploadCommand({ ...target(key), ContentType: asset.mediaType, ChecksumAlgorithm: "SHA256" }),
@@ -146,13 +148,13 @@ export const createAssetObjects = (config: ObjectConfig) => {
       }
       return metadata.ETag;
     },
-    async discard(key: string, uploadId: string | null) {
+    async discard(key: string, uploadId: string | null, signal?: AbortSignal) {
       // The writer lock has drained in-flight parts before this cleanup starts.
-      const ids = new Set([...(uploadId ? [uploadId] : []), ...(await uploads(key))]);
+      const ids = new Set([...(uploadId ? [uploadId] : []), ...(await uploads(key, signal))]);
       for (const id of ids) {
-        await abort(key, id);
+        await abort(key, id, signal);
         try {
-          await client.send(new ListPartsCommand({ ...target(key), UploadId: id }));
+          await client.send(new ListPartsCommand({ ...target(key), UploadId: id }), { abortSignal: signal });
         } catch (error) {
           if (missing(error)) continue;
           throw error;
@@ -160,7 +162,8 @@ export const createAssetObjects = (config: ObjectConfig) => {
         throw new Error("Object storage retained an aborted multipart upload");
       }
     },
-    remove: (key: string) => client.send(new DeleteObjectCommand(target(key))),
+    remove: (key: string, signal?: AbortSignal) =>
+      client.send(new DeleteObjectCommand(target(key)), { abortSignal: signal }),
     close: () => client.destroy(),
   };
 };
