@@ -42,6 +42,10 @@ test("starts without editors and serves both authenticated transport paths", { t
     ).toBe(403);
 
     await createPackagedProject(app, "Packaged transport project");
+    // A later project must discover the defaults installed for the first one too.
+    const nextProject = await createPackagedProject(app, "Packaged second project");
+    await openPackagedProject(app.page, nextProject);
+    await expect(app.page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
     expect(await app.page.evaluate(() => document.cookie)).toBe("");
     expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
     expect(app.page.url().includes(app.runtime.token)).toBe(false);

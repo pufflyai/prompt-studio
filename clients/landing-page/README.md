@@ -30,6 +30,8 @@ continuous surface with the tool assembly scene, without a divider or resize han
 The layout places one tool editor beside the copy when the main area is at least
 1200 pixels wide and below it in narrower containers, including windowed mode.
 The copy, initial outline, shape pile, and live editor share this breakpoint.
+On wide layouts, the copy and editor are vertically centered in the main area.
+The static outline and live editor keep the same position when the page hydrates.
 Other pages use the full content area beside the navigation.
 
 The download column retains its original 480-pixel width and horizontal padding on desktop.
