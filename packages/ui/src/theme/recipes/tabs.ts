@@ -44,27 +44,22 @@ export const tabsSlotRecipe = defineSlotRecipe({
       },
       py: "0",
       borderRadius: "xs",
-      borderWidth: "1px",
-      borderColor: "border",
+      borderWidth: "0",
       color: "fg.muted",
       bg: "transparent",
       _selected: {
         color: "fg",
         bg: "bg.muted",
-        borderColor: "border",
       },
       _hover: {
         bg: "bg.hover",
-        borderColor: "border",
         color: "fg",
       },
       _disabled: {
         color: "fg.subtle",
-        borderColor: "border",
         bg: "transparent",
         _hover: {
           color: "fg.subtle",
-          borderColor: "border",
           bg: "transparent",
         },
       },
@@ -132,21 +127,17 @@ export const tabsSlotRecipe = defineSlotRecipe({
           _selected: {
             color: "fg",
             bg: "bg.muted",
-            borderColor: "border",
           },
           _hover: {
             bg: "bg.hover",
-            borderColor: "border",
             color: "fg",
           },
           _disabled: {
             bg: "transparent",
             color: "fg.subtle",
-            borderColor: "border",
             _hover: {
               bg: "transparent",
               color: "fg.subtle",
-              borderColor: "border",
             },
           },
         },
