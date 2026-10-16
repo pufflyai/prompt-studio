@@ -39,10 +39,11 @@ export const DesktopStartupProgress = (props: DesktopStartupProgressProps) => {
 };
 
 export const DesktopStartingState = (props: { phase: DesktopStartupPhase }) => {
+  const { phase } = props;
   const [takingLonger, setTakingLonger] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setTakingLonger(true), 20_000);
     return () => clearTimeout(timer);
   }, []);
-  return <DesktopStartupProgress phase={props.phase} takingLonger={takingLonger} />;
+  return <DesktopStartupProgress phase={phase} takingLonger={takingLonger} />;
 };

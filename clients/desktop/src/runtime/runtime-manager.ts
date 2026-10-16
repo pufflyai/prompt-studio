@@ -96,6 +96,7 @@ const terminateSpawnedRuntime = async (
 
 export class DesktopRuntimeManager {
   #startupAbort: AbortController | null = null;
+  #startupTask: Promise<ManagedRuntime> | null = null;
   #eventAbort: AbortController | null = null;
   #intentional = false;
   #readOutput = () => "";
@@ -139,15 +140,15 @@ export class DesktopRuntimeManager {
     return redactSensitiveText(this.#readOutput(), token ? [token] : []);
   }
 
-  async start() {
+  start() {
     const startup = new AbortController();
     this.#startupAbort = startup;
-    try {
-      return await this.#start(startup.signal);
-    } finally {
+    this.#startupTask = this.#start(startup.signal).finally(() => {
       startup.abort();
       this.#startupAbort = null;
-    }
+      this.#startupTask = null;
+    });
+    return this.#startupTask;
   }
 
   async #start(signal: AbortSignal) {
@@ -246,10 +247,11 @@ export class DesktopRuntimeManager {
     });
   }
 
-  detach() {
+  async detach() {
     this.#intentional = true;
     this.#startupAbort?.abort();
     this.#eventAbort?.abort();
+    await this.#startupTask?.catch(() => {});
   }
 
   // A runtime that is gone has nothing left to shut down, so quitting must not wait for it.

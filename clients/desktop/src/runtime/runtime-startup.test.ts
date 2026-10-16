@@ -45,11 +45,11 @@ for (const externalRuntime of [false, true]) {
     try {
       const startup = manager.start().catch((error) => error);
       await requested.promise;
-      manager.detach();
+      await manager.detach();
       expect(await startup).toBeInstanceOf(Error);
       expect(readFileSync(descriptorPath, "utf8")).toBe(originalDescriptor);
     } finally {
-      manager.detach();
+      await manager.detach();
       server.stop(true);
       rmSync(home, { recursive: true, force: true });
     }

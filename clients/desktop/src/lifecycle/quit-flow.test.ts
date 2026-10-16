@@ -36,7 +36,7 @@ const createHarness = (input: {
       waitForExit: async () => {
         calls.push("waitForExit");
       },
-      detach: () => {
+      detach: async () => {
         calls.push("detach");
       },
     },
