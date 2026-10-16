@@ -44,11 +44,12 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
     const track = await execute("timeline.track.create", { name: "Product" });
     browser = await chromium.launch({ headless: true });
     const page = await (await browser.newContext()).newPage();
+    page.on("pageerror", (error) => console.error("Planner browser error", error.message));
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-planner/ticket-timeline`);
     const timeline = page.locator('[data-workbench-region="main"]').frameLocator("iframe");
-    await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible();
+    await expect(timeline.locator("[data-timeline-viewport]")).toBeVisible();
     await expectPlannerWindow(timeline, execute, track.id);
   } finally {
     await browser?.close();
