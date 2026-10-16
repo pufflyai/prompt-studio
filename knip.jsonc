@@ -58,6 +58,8 @@
         "src/**/*.perf.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
+        // Packaged smoke tests bundle these extension entries by path.
+        "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts"
       ],
@@ -96,7 +98,15 @@
       ]
     },
     "packages/pstdio-db": {
-      "entry": ["drizzle.config.ts", "scripts/**/*.ts", "src/index.ts", "src/**/*.test.ts"],
+      "entry": [
+        "drizzle.config.ts",
+        "scripts/**/*.ts",
+        "src/index.ts",
+        "src/**/*.test.ts",
+        // The isolated conformance runner and durability tests launch these by path.
+        "src/**/*.integration.ts",
+        "src/**/*.fixture.ts"
+      ],
       "project": ["drizzle.config.ts", "scripts/**/*.ts", "src/**/*.ts"],
       "ignore": ["dist/**", "vendor/**"]
     },
