@@ -60,7 +60,7 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
   return {
     stage: "pull_request",
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
-    relaySmoke: affectedPackages.some((name) => ["pstdio-relay", "pstdio-db"].includes(name)),
+    relaySmoke: affectedPackages.some((name) => ["pstdio-relay", "pstdio-account-manager", "pstdio-db"].includes(name)),
     databaseTests: affectedPackages.some((name) => SHARDED_TEST_PACKAGES.includes(name)),
     publishedExtensions: changedFiles.some((file) =>
       ["extensions", "packages/sdk", "packages/ui", "packages/pstdio-api-contracts"].some((dir) => isInside(file, dir)),

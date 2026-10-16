@@ -54,7 +54,8 @@
     "social-radar",
     "pstdio-shader-lab",
     "shape-art",
-    "pstdio-relay"
+    "pstdio-relay",
+    "pstdio-account-manager"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

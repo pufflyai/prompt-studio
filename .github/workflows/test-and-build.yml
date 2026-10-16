@@ -173,6 +173,8 @@ jobs:
         env:
           SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
         run: bun run --cwd packages/pstdio-sync-contracts test:conformance
+      - name: Test private account authority and its built image with disposable PostgreSQL
+        run: bun run --cwd infra/account-manager test:isolated
 
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
