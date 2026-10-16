@@ -116,8 +116,8 @@ layer-map change.
 The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
 service, not part of the local API host or the CLI bundle. It consumes the private
 `pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas. Its production
-authority checks use only the dedicated `pstdio-account-manager/client` transport entry;
-the relay never receives the manager database role. Isolated integration fixtures may
+access verification uses only the database-free `pstdio-account-manager/access` entry;
+the relay receives public issuer/audience/JWKS trust, without the manager database role, signing secret or renewal grants. Isolated integration fixtures may
 use the manager's operator exports to create disposable accounts and grants. Production
 modules never import the test-only conformance export. It must not import the API
 host, UI, clients, database implementation, or prototype. PostgreSQL persistence
