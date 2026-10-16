@@ -117,12 +117,12 @@ export const ResourceBubbles: Story = {
     return (
       <>
         <RichMessage
-          defaultState="Review [ticket](tickets/T-1/ticket.md), `tickets/T-1/ticket.md`, and {{link('tickets/T-1/ticket.md')}}. [Website](https://example.com) stays a web link."
+          defaultState="Review [ticket](tickets/T-1/ticket.md), `tickets/T-1/ticket.md`, and {{link('tickets/T-1/ticket.md')}}. Read [notes](tickets/T-1/files/notes.md). [Website](https://example.com) stays a web link."
           linkHandler={{
             resolveHref: () => null,
-            resolveResource: async () => ({
-              label: "T-1 Fix resource links",
-              icon: "component",
+            resolveResource: async (candidate) => ({
+              label: candidate.source.endsWith("notes.md") ? "notes.md" : "T-1 Fix resource links",
+              icon: candidate.source.endsWith("notes.md") ? "file-text" : "component",
               href: "/projects/demo/ticket/T-1",
             }),
             open: (candidate) => setOpened(candidate.source),
@@ -136,6 +136,15 @@ export const ResourceBubbles: Story = {
     const canvas = within(canvasElement);
     const links = await canvas.findAllByRole("link", { name: "T-1 Fix resource links" });
     await expect(links).toHaveLength(3);
+    for (const link of links) {
+      await expect(link.querySelector("svg.lucide-component")).not.toBeNull();
+      await expect(link.querySelector('[data-scope="tooltip"]')).toBeNull();
+      await expect(link.closest('[data-scope="tooltip"]')).toBeNull();
+    }
+    const document = await canvas.findByRole("link", { name: "notes.md" });
+    await expect(document.querySelector("svg.lucide-file-text")).not.toBeNull();
+    await userEvent.hover(links[0]!);
+    await expect(getComputedStyle(links[0]!).textDecorationLine).toBe("none");
     links[0]!.focus();
     await userEvent.keyboard("{Enter}");
     await expect(canvas.getByText("tickets/T-1/ticket.md")).toBeVisible();

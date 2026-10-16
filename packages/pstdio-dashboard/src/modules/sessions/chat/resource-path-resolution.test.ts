@@ -5,6 +5,7 @@ const extensionId = "acme.planner";
 const kind = {
   id: "ticket",
   extensionId,
+  icon: "component",
   paths: [{ prefix: "tickets/", resolveCommand: "acme.planner.command.open-path" }],
 };
 const resolution = {
@@ -28,9 +29,20 @@ test("a claimed path resolves to its owner's resource and qualified destination"
     { command: kind.paths[0]!.resolveCommand, params: { path: "tickets/T-1/ticket.md", workspaceId: "workspace" } },
   ]);
   expect(result).toMatchObject({
-    resource: { ...resolution.resource, extensionId, projectId: "project" },
+    resource: { ...resolution.resource, icon: "component", extensionId, projectId: "project" },
     target: { page: { extensionId, id: "ticket" }, resource: { extensionId, projectId: "project" } },
   });
+});
+
+test("a resource icon overrides its kind's default icon", async () => {
+  const result = await resolveResourcePath({
+    projectId: "project",
+    workspaceId: "workspace",
+    path: "tickets/T-1/files/notes.md",
+    kinds: [kind],
+    execute: async () => ({ ...resolution, resource: { ...resolution.resource, icon: "file-text" } }),
+  });
+  expect(result?.resource.icon).toBe("file-text");
 });
 
 test("the most specific prefix wins and unrelated paths do not invoke a handler", async () => {

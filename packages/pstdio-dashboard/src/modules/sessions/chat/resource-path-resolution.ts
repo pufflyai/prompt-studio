@@ -4,6 +4,7 @@ import { extensionResourceRefSchema } from "pstdio-api-contracts";
 interface ResourcePathKind {
   id: string;
   extensionId: string;
+  icon?: string;
   paths?: Array<{ prefix: string; resolveCommand: string }>;
 }
 
@@ -41,7 +42,12 @@ export const resolveResourcePath = async (input: ResourcePathInput) => {
   )
     throw new Error("The path handler did not return a resource destination.");
   return {
-    resource: { ...resource, extensionId: handler.kind.extensionId, projectId: input.projectId },
+    resource: {
+      ...resource,
+      icon: resource.icon ?? handler.kind.icon,
+      extensionId: handler.kind.extensionId,
+      projectId: input.projectId,
+    },
     target: qualifyNavigationTarget(result.target, handler.kind.extensionId, input.projectId),
   };
 };

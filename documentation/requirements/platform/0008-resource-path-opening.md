@@ -26,6 +26,8 @@ labels, icons, and destinations. The host must not contain ticket-specific routi
   Report resolver failures when the link is opened.
 - Render local links in read-only rich messages as resource bubbles. Resolve owner
   labels, icons, and page URLs without changing the stored message.
+- Use the shared resource icon registry, with the resource kind's icon as the default.
+  Show the icon with the resolved label. Bubbles have no tooltip or underline, including on hover.
 - Support Markdown links, inline-code file references, and explicit reference links.
   Preserve keyboard activation, web links, source positions, and editable Markdown.
 - Keep completed bubbles stable while more text streams. Ignore late presentation
