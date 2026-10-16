@@ -64,7 +64,7 @@ bun run --cwd packages/e2e playwright install chromium
 bun run test:planner-stress
 ```
 
-The check confirms all 1,000 tickets are loaded, exactly 25 match the saved filter, and the full plan keeps its card window bounded. It exercises three switches between the saved filter and All. The JSON report includes first timeline open, plan read time, uncompressed response bytes, mounted cards, filter-switch times, and page JavaScript heap use. The first open includes any on-demand webview build. Heap use includes the host and iframe. These are observed measurements, not timing budgets.
+The check confirms all 1,000 tickets are loaded, exactly 25 match the saved filter, and the full plan keeps its card window bounded. It exercises three switches between the saved filter and All, then opens the deferred details, track form, and Auto Build editor without saving changes. The JSON report includes first timeline open, plan read time, uncompressed response bytes, iframe JavaScript and stylesheet transfer bytes before first render, mounted cards, filter-switch times, and page JavaScript heap use before opening editors. The first open includes any on-demand webview build. Heap use includes the host and iframe. These are observed measurements, not timing budgets.
 
 Use `--name my-stress` with both commands for another independent stack. Follow logs or remove the default fixture with:
 

@@ -9,13 +9,10 @@ import {
   useCollectionViewStore,
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { stepReview } from "../model/review";
 import { AutoBuildButton } from "./auto-build-button";
-import { AutoBuildDialog } from "./auto-build-dialog";
 import { BackgroundMenu } from "./background-menu";
-import { Details } from "./details";
-import { PlanEditor } from "./plan-editor";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
 import { useViewSections } from "./plan-state";
@@ -27,6 +24,12 @@ import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
 import { useTimelineViews } from "./use-timeline-views";
 import { visibleTracks } from "./visible-tracks";
+
+const Details = lazy(() => import("./details").then((module) => ({ default: module.Details })));
+const PlanEditor = lazy(() => import("./plan-editor").then((module) => ({ default: module.PlanEditor })));
+const AutoBuildDialog = lazy(() =>
+  import("./auto-build-dialog").then((module) => ({ default: module.AutoBuildDialog })),
+);
 
 interface PlanRootProps {
   host: GuestHost;
@@ -122,49 +125,55 @@ function PlanContent(props: PlanContentProps) {
           <PlanGraph {...viewProps} today={plan.today} />
         </Box>
         {selected ? (
-          <Details
-            key={selected.id}
-            row={selected}
-            plan={plan}
-            client={client}
-            onOpen={open}
-            onSelect={setSelectedId}
-            onClose={() => setSelectedId(undefined)}
-            review={
-              review?.includes(selected.id)
-                ? {
-                    position: review.indexOf(selected.id) + 1,
-                    total: review.length,
-                    onStep: (direction) => setSelectedId(stepReview(review, selected.id, direction)),
-                  }
-                : undefined
-            }
-          />
+          <Suspense fallback={null}>
+            <Details
+              key={selected.id}
+              row={selected}
+              plan={plan}
+              client={client}
+              onOpen={open}
+              onSelect={setSelectedId}
+              onClose={() => setSelectedId(undefined)}
+              review={
+                review?.includes(selected.id)
+                  ? {
+                      position: review.indexOf(selected.id) + 1,
+                      total: review.length,
+                      onStep: (direction) => setSelectedId(stepReview(review, selected.id, direction)),
+                    }
+                  : undefined
+              }
+            />
+          </Suspense>
         ) : null}
       </Flex>
       {editor ? (
-        <PlanEditor
-          key={JSON.stringify(editor)}
-          host={host}
-          t={t}
-          editor={editor}
-          client={client}
-          plan={plan}
-          onDone={done}
-        />
+        <Suspense fallback={null}>
+          <PlanEditor
+            key={JSON.stringify(editor)}
+            host={host}
+            t={t}
+            editor={editor}
+            client={client}
+            plan={plan}
+            onDone={done}
+          />
+        </Suspense>
       ) : null}
       {autoBuildOpen ? (
-        <AutoBuildDialog
-          prompt={autoBuild.mode!.prompt}
-          ignore={autoBuild.mode!.ignore}
-          blockOnReview={autoBuild.mode!.blockOnReview}
-          data={queryData}
-          saving={autoBuild.saving}
-          error={autoBuild.error}
-          onEnable={(prompt, ignore, blockOnReview) => autoBuild.configure(true, prompt, ignore, blockOnReview)}
-          onClose={() => setAutoBuildOpen(false)}
-          t={t}
-        />
+        <Suspense fallback={null}>
+          <AutoBuildDialog
+            prompt={autoBuild.mode!.prompt}
+            ignore={autoBuild.mode!.ignore}
+            blockOnReview={autoBuild.mode!.blockOnReview}
+            data={queryData}
+            saving={autoBuild.saving}
+            error={autoBuild.error}
+            onEnable={(prompt, ignore, blockOnReview) => autoBuild.configure(true, prompt, ignore, blockOnReview)}
+            onClose={() => setAutoBuildOpen(false)}
+            t={t}
+          />
+        </Suspense>
       ) : null}
       {context ? (
         <BackgroundMenu

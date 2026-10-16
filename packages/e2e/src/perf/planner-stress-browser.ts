@@ -23,6 +23,20 @@ async function selectView(page: Page, timeline: FrameLocator, title: string, edg
   return elapsed;
 }
 
+async function checkDeferredViews(timeline: FrameLocator) {
+  await timeline.locator("[data-ticket]").first().click();
+  await expect(timeline.getByRole("button", { name: "Open ticket", exact: true })).toBeVisible();
+  await timeline.getByRole("button", { name: "Close details", exact: true }).click();
+  await timeline.getByRole("button", { name: "New track", exact: true }).click();
+  const track = timeline.getByRole("dialog", { name: "New feature track", exact: true });
+  await expect(track.getByRole("textbox", { name: "Feature track name", exact: true })).toBeVisible();
+  await track.press("Escape");
+  await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
+  const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
+  await expect(autoBuild.locator('[contenteditable="true"]')).toBeVisible();
+  await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
+}
+
 export async function checkPlannerStress(
   fixture: Fixture,
   connection: { apiPort: number; apiToken: string; dashboardUrl: string },
@@ -42,6 +56,20 @@ export async function checkPlannerStress(
     }
     const session = await page.context().newCDPSession(page);
     await session.send("Performance.enable");
+    await session.send("Network.enable");
+    const assets = new Map<string, { type: string; bytes: number }>();
+    session.on("Network.requestWillBeSent", ({ requestId, request, type }) => {
+      if (
+        type &&
+        new URL(request.url).pathname.includes("/extensions/webviews/") &&
+        ["Script", "Stylesheet"].includes(type)
+      )
+        assets.set(requestId, { type, bytes: 0 });
+    });
+    session.on("Network.loadingFinished", ({ requestId, encodedDataLength }) => {
+      const asset = assets.get(requestId);
+      if (asset) asset.bytes = encodedDataLength;
+    });
     const started = performance.now();
     const [response] = await Promise.all([
       page.waitForResponse((reply) => reply.url().includes(".command.timeline.plan.read/execute")),
@@ -64,6 +92,11 @@ export async function checkPlannerStress(
     await cards.first().waitFor();
     await expect(timeline.locator("[data-edge-layer] g")).toHaveCount(20);
     const firstOpenMs = Math.round(performance.now() - started);
+    const startupAssets = [...assets.values()];
+    const webviewStartupTransferBytes = {
+      javascript: startupAssets.filter(({ type }) => type === "Script").reduce((sum, { bytes }) => sum + bytes, 0),
+      stylesheets: startupAssets.filter(({ type }) => type === "Stylesheet").reduce((sum, { bytes }) => sum + bytes, 0),
+    };
     const initiallyMounted = await cards.count();
     expect(initiallyMounted).toBeGreaterThan(0);
     expect(initiallyMounted).toBeLessThanOrEqual(25);
@@ -84,6 +117,8 @@ export async function checkPlannerStress(
     expect(errors).toEqual([]);
     const metrics = await session.send("Performance.getMetrics");
     const heap = metrics.metrics.find(({ name }) => name === "JSHeapUsedSize")?.value;
+    await checkDeferredViews(timeline);
+    expect(errors).toEqual([]);
     return {
       tickets: fixture.tickets,
       filteredTickets: fixture.matching,
@@ -93,6 +128,7 @@ export async function checkPlannerStress(
       firstOpenMs,
       planReadMs: Math.round(response.request().timing().responseEnd),
       planResponseBytes: body.byteLength,
+      webviewStartupTransferBytes,
       initiallyMounted,
       zoomedOutMatchingCards: 25,
       switches,
