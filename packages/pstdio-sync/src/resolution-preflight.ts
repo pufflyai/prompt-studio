@@ -1,15 +1,21 @@
+import type { Snapshot } from "pstdio-sync-contracts";
 import type { Projection } from "./projection";
 import { validateResolution } from "./resolution-validation";
 import type { GroupedState, LocalOperation } from "./types";
+
+export const resolutionGuards = (state: GroupedState, current: Iterable<Snapshot["conflicts"][string]>) => {
+  const conflicts = new Map(
+    Object.values(state.accepted?.conflicts ?? {}).map((conflict) => [conflict.conflictId, conflict]),
+  );
+  for (const conflict of current) conflicts.set(conflict.conflictId, conflict);
+  return conflicts;
+};
 
 export const resolutionProblem = (view: Projection, state: GroupedState, mutation: LocalOperation) =>
   validateResolution(
     {
       records: view.records,
-      conflicts: new Map([
-        ...Object.values(state.accepted?.conflicts ?? {}).map((conflict) => [conflict.conflictId, conflict] as const),
-        ...view.conflicts,
-      ]),
+      conflicts: resolutionGuards(state, view.conflicts.values()),
       operations: new Map(state.journal.map((entry) => [entry.mutation.operationId, entry.mutation])),
       acceptedOperationIds: new Set(
         Object.values(state.accepted?.receipts ?? {})

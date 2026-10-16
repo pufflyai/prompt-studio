@@ -16,7 +16,7 @@ const services = await createConformanceServices(
 );
 const root = await mkdtemp(join(tmpdir(), "grouped-adapter-"));
 const stores = await Promise.all(
-  ["a", "b"].map(async (environmentId) => ({
+  ["a", "b", "c"].map(async (environmentId) => ({
     environmentId,
     bytes: createAssetBytesStorage(join(root, "assets", environmentId)),
     connection: await createDb({ path: join(root, environmentId) }),
@@ -239,4 +239,63 @@ test("a dependent edit cannot expose a foreign group's text before its complete 
   expect(complete.asset).toEqual(asset);
   expect(complete.shared).toEqual({ kind: "text", value: "parent child" });
   expect((await second.records.read("dependent")).value).toBe("with the child");
+});
+
+test("overlapping sync responses cannot temporarily hide another environment's retained conflict", async () => {
+  const { scope, client, adapter } = await setup();
+  const first = client(0);
+  const second = client(1);
+  const observer = client(2);
+  await first.records.commit({
+    operationId: "seed",
+    edits: [{ recordId: "note", expectedRevision: (await first.records.read("note")).revision, replace: "base" }],
+  });
+  await first.synchronize(adapter());
+  await second.synchronize(adapter());
+  await observer.synchronize(adapter());
+  const firstBase = await first.records.read("note");
+  const secondBase = await second.records.read("note");
+  const captured = Promise.withResolvers<void>();
+  const deliver = Promise.withResolvers<void>();
+  const finalRead = Promise.withResolvers<void>();
+  const finish = Promise.withResolvers<void>();
+  let reads = 0;
+  const slow = observer.synchronize({
+    ...adapter(),
+    async snapshot() {
+      const value = await services.relay.snapshot(scope);
+      if (++reads === 1) {
+        captured.resolve();
+        await deliver.promise;
+      } else {
+        finalRead.resolve();
+        await finish.promise;
+      }
+      return value;
+    },
+  });
+  void slow.catch(() => {});
+  try {
+    await captured.promise;
+    await first.records.commit({
+      operationId: "winner",
+      edits: [{ recordId: "note", expectedRevision: firstBase.revision, replace: "winner" }],
+    });
+    await second.records.commit({
+      operationId: "foreign-branch",
+      edits: [{ recordId: "note", expectedRevision: secondBase.revision, replace: "retained" }],
+    });
+    await first.synchronize(adapter());
+    await second.synchronize(adapter());
+    await client(2).synchronize(adapter());
+    expect((await observer.records.conflicts()).map((conflict) => conflict.conflictId)).toEqual(["foreign-branch"]);
+    deliver.resolve();
+    await finalRead.promise;
+    expect((await observer.records.conflicts()).map((conflict) => conflict.conflictId)).toEqual(["foreign-branch"]);
+    expect((await observer.records.read("note")).value).toBe("winner");
+  } finally {
+    deliver.resolve();
+    finish.resolve();
+    await slow;
+  }
 });
