@@ -53,11 +53,11 @@ export const createOwnerAccess = (
   const replacement = replacementSchema.omit({ accountId: true });
   const revocation = revokeSchema.omit({ accountId: true });
   return {
-    register: (input: typeof registration._input) =>
+    register: (input: unknown) =>
       apply((transaction) => registerCredentialInTransaction(transaction, { ...registration.parse(input), accountId })),
-    replace: (input: typeof replacement._input) =>
+    replace: (input: unknown) =>
       apply((transaction) => replaceCredentialInTransaction(transaction, { ...replacement.parse(input), accountId })),
-    revoke: (input: typeof revocation._input) =>
+    revoke: (input: unknown) =>
       apply((transaction) => revokeCredentialsInTransaction(transaction, { ...revocation.parse(input), accountId })),
     environments: () => apply((transaction) => listEnvironments(transaction, accountId)),
   };

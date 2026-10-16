@@ -4,7 +4,7 @@ import type { createManagerAuthentication } from "./manager-authentication";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
 const renewal = z.strictObject({ workbenchId: identitySchema });
-const json = (body: unknown, status = 200, headers?: HeadersInit) =>
+const json = (body: unknown, status = 200, headers?: ConstructorParameters<typeof Headers>[0]) =>
   Response.json(body, {
     status,
     headers: { ...Object.fromEntries(new Headers(headers)), "cache-control": "no-store" },
