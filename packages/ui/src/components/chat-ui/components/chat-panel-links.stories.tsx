@@ -102,6 +102,7 @@ export const FileLinks: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const source = await canvas.findByRole("link", { name: "Source" });
+    await expect(source.querySelector("svg.lucide-file-code")).not.toBeNull();
     source.focus();
     await expect(source).toHaveFocus();
     await userEvent.keyboard("{Enter}");
