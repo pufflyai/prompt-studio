@@ -173,3 +173,41 @@ test("losing cancellation notifications interrupts work and rejects later admiss
   expect(source.cancelled()).toBe(true);
   await expect(owner.service.begin(scope, "after-loss", reference(bytes))).rejects.toThrow();
 });
+
+for (const stage of ["list uploads", "abort multipart", "check aborted parts", "delete object"]) {
+  test(`closing an owner interrupts cancellation during ${stage}`, async () => {
+    const ready = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    releases.push(release.resolve);
+    let cancelling = false;
+    const proxy = fixture.proxy(async (request, response) => {
+      const url = new URL(request.url);
+      const multipart = url.searchParams.has("uploadId");
+      const matches =
+        (stage === "list uploads" && request.method === "GET" && url.searchParams.has("uploads")) ||
+        (stage === "abort multipart" && request.method === "DELETE" && multipart) ||
+        (stage === "check aborted parts" && request.method === "GET" && multipart) ||
+        (stage === "delete object" && request.method === "DELETE" && !multipart);
+      if (cancelling && matches) {
+        ready.resolve();
+        await release.promise;
+      }
+      return response;
+    });
+    const owner = owned(proxy.owner);
+    shutdown.push(proxy.close);
+    const scope = newScope();
+    const asset = reference(new TextEncoder().encode("interrupted cancellation"));
+    await owner.service.begin(scope, "cleanup", asset);
+    cancelling = true;
+    const cancellation = watch(owner.service.cancel(scope, "cleanup"));
+    await ready.promise;
+    await owner.close();
+    expect(await cancellation).toBeInstanceOf(Error);
+    release.resolve();
+    const recovery = owned();
+    await recovery.service.cancel(scope, "cleanup");
+    expect(await recovery.service.complete(scope, asset)).toBe(false);
+    await expect(recovery.service.begin(scope, "cleanup", asset)).rejects.toThrow("cancelled");
+  });
+}

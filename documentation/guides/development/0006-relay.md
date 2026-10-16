@@ -68,6 +68,11 @@ Disconnection retains acknowledged parts and immutable intent. Explicit cancella
 
 Short metadata operations use a separate PostgreSQL pool so paused streams and queued retries cannot block cancellation. Each owner subscribes to PostgreSQL cancellation notifications before admitting operations. The cancelled row and notification commit together; the payload is a hash of the scoped upload identity. Writers register before reading the durable row. The row remains the authority when a writer starts after a notification. Losing the notification connection interrupts the owner's work and rejects new operations until a new owner starts. Shutdown closes admission before aborting both active transfers and lock waiters.
 
+Cancellation cleanup also carries the owner's abort signal through multipart
+listing, abort, part verification and object deletion. Shutdown can interrupt a
+paused cleanup response, drain that operation and close its clients. Another owner
+can repeat cancellation to finish cleanup from the durable cancelled row.
+
 Run real-store coverage with the existing test allowances:
 
 ```sh
