@@ -11,16 +11,17 @@ import {
   waitForRuntimeExit,
 } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
+import type { DesktopStartupPhase } from "../lifecycle/lifecycle-machine";
 import {
   classifyRuntimeFailure,
   createSidecarLaunchArguments,
-  DESKTOP_RUNTIME_TIMEOUT_MS,
   reconcileRuntimeOwnership,
   verifyExternalRuntime,
   waitForDesktopRuntime,
 } from "./runtime-controller";
 import { resolveRuntimeEnvironment } from "./runtime-environment";
 import { spawnRuntimeProcess } from "./runtime-process";
+import { observeRuntimeStartup } from "./runtime-startup-progress";
 
 const SIDECAR_TERMINATION_GRACE_MS = 2_000;
 
@@ -35,7 +36,7 @@ type RuntimeManagerOptions = {
   resolveSidecarPath: (signal: AbortSignal) => string | Promise<string>;
   onIntentionalShutdown: () => void;
   onUnexpectedExit: (detail: string) => void;
-  onPhase: (phase: "discovery" | "spawning" | "readiness") => void;
+  onPhase: (phase: DesktopStartupPhase) => void;
 };
 
 type RuntimeProcess = {
@@ -94,6 +95,8 @@ const terminateSpawnedRuntime = async (
 };
 
 export class DesktopRuntimeManager {
+  #startupAbort: AbortController | null = null;
+  #startupTask: Promise<ManagedRuntime> | null = null;
   #eventAbort: AbortController | null = null;
   #intentional = false;
   #readOutput = () => "";
@@ -137,14 +140,15 @@ export class DesktopRuntimeManager {
     return redactSensitiveText(this.#readOutput(), token ? [token] : []);
   }
 
-  async start() {
-    const signal = AbortSignal.timeout(DESKTOP_RUNTIME_TIMEOUT_MS);
-    try {
-      return await this.#start(signal);
-    } catch (error) {
-      if (signal.aborted) throw new Error("runtime_timeout: Runtime readiness timed out.");
-      throw error;
-    }
+  start() {
+    const startup = new AbortController();
+    this.#startupAbort = startup;
+    this.#startupTask = this.#start(startup.signal).finally(() => {
+      startup.abort();
+      this.#startupAbort = null;
+      this.#startupTask = null;
+    });
+    return this.#startupTask;
   }
 
   async #start(signal: AbortSignal) {
@@ -164,8 +168,10 @@ export class DesktopRuntimeManager {
     if (discovery.state === "unsafe") {
       throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
     }
+    this.#options.onPhase("verification");
     const sidecarPath = await this.#options.resolveSidecarPath(signal);
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
+    this.#options.onPhase("environment");
     const env = await this.#deps.resolveEnvironment(signal);
     signal.throwIfAborted();
     // Agents inherit this PATH, so they can run the bundled pst even when the person never installed the
@@ -204,11 +210,12 @@ export class DesktopRuntimeManager {
     });
 
     this.#options.onPhase("readiness");
+    const stopProgress = observeRuntimeStartup(child.readOutput, this.#options.onPhase);
     try {
       const descriptor = await Promise.race([
         waitForDesktopRuntime(this.#options.descriptorPath, instanceId, {
           discover,
-          now: Date.now,
+          signal,
           sleep: this.#deps.sleep,
         }),
         childExit,
@@ -220,6 +227,8 @@ export class DesktopRuntimeManager {
       const detail = child.readOutput() || (error instanceof Error ? error.message : String(error));
       const failure = classifyRuntimeFailure(detail);
       throw new Error(`${failure.code}: ${failure.message}`);
+    } finally {
+      stopProgress();
     }
   }
 
@@ -238,9 +247,11 @@ export class DesktopRuntimeManager {
     });
   }
 
-  detach() {
+  async detach() {
     this.#intentional = true;
+    this.#startupAbort?.abort();
     this.#eventAbort?.abort();
+    await this.#startupTask?.catch(() => {});
   }
 
   // A runtime that is gone has nothing left to shut down, so quitting must not wait for it.
