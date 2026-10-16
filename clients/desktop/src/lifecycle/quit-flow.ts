@@ -8,7 +8,10 @@ import {
 } from "./lifecycle-machine";
 
 type QuitFlowDeps = {
-  runtimeManager: Pick<DesktopRuntimeManager, "detach" | "refreshRuntime" | "requestShutdown" | "waitForExit">;
+  runtimeManager: Pick<
+    DesktopRuntimeManager,
+    "cancelStart" | "detach" | "refreshRuntime" | "requestShutdown" | "waitForExit"
+  >;
   getState: () => DesktopState;
   setState: (state: DesktopState) => void;
   showLifecycle: () => Promise<void>;
@@ -39,6 +42,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
   };
 
   const stopRuntimeAndQuit = async () => {
+    await deps.runtimeManager.cancelStart();
     const runtime = await deps.runtimeManager.refreshRuntime();
     if (!runtime || runtime.external || runtime.descriptor.ownerType === "persistent") {
       await deps.runtimeManager.detach();
@@ -109,5 +113,12 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     }
   };
 
-  return { cancelQuit, confirmQuit, finishQuit, isQuitAllowed: () => quitAllowed, requestQuit };
+  return {
+    cancelQuit,
+    confirmQuit,
+    finishQuit,
+    isQuitAllowed: () => quitAllowed,
+    isQuitting: () => quitting || quitAllowed,
+    requestQuit,
+  };
 };

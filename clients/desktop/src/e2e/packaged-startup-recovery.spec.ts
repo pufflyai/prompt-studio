@@ -16,6 +16,7 @@ import {
   waitForDescriptor,
   waitForExit,
 } from "./packaged-app-helpers";
+import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 import { waitForVisibleElement } from "./visible-element-timing";
 
 test("keeps waiting for a slow runtime and opens automatically without replacing its owner", async ({
@@ -127,6 +128,8 @@ test("quits from recovery after the runtime crashes", async () => {
   try {
     const launched = await launchPackagedApp(home);
     app = launched;
+    crashPackagedRuntime(launched.runtime.pid);
+    await waitForAutomaticRecovery(launched);
     process.kill(launched.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
     await waitForVisibleElement(app.lifecyclePage, '[role="alert"] :is(h1, h2, h3)', "Prompt Studio needs attention");
 

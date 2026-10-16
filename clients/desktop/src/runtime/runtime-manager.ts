@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import {
   discoverRuntime,
+  isRuntimePidAlive,
   observeRuntimeShutdown,
   type RuntimeDescriptor,
   readRuntimeDescriptor,
@@ -54,6 +55,7 @@ type RuntimeManagerDeps = {
   createInstanceId: () => string;
   discoverRuntime: typeof discoverRuntime;
   existsSync: typeof existsSync;
+  isRuntimePidAlive: typeof isRuntimePidAlive;
   observeRuntimeShutdown: typeof observeRuntimeShutdown;
   readRuntimeDescriptor: typeof readRuntimeDescriptor;
   resolveEnvironment: typeof resolveRuntimeEnvironment;
@@ -68,6 +70,7 @@ const defaultDeps: RuntimeManagerDeps = {
   createInstanceId: randomUUID,
   discoverRuntime,
   existsSync,
+  isRuntimePidAlive,
   observeRuntimeShutdown,
   readRuntimeDescriptor,
   resolveEnvironment: resolveRuntimeEnvironment,
@@ -141,6 +144,7 @@ export class DesktopRuntimeManager {
   }
 
   start() {
+    if (this.#startupTask) return this.#startupTask;
     const startup = new AbortController();
     this.#startupAbort = startup;
     this.#startupTask = this.#start(startup.signal).finally(() => {
@@ -151,6 +155,11 @@ export class DesktopRuntimeManager {
     return this.#startupTask;
   }
 
+  async cancelStart() {
+    this.#startupAbort?.abort();
+    await this.#startupTask?.catch(() => {});
+  }
+
   async #start(signal: AbortSignal) {
     this.#intentional = false;
     this.#eventAbort?.abort();
@@ -159,10 +168,16 @@ export class DesktopRuntimeManager {
       const descriptor = this.#deps.readRuntimeDescriptor(this.#options.descriptorPath);
       if (!descriptor) throw new Error("External runtime descriptor is missing or invalid");
       await this.#deps.verifyExternalRuntime(descriptor, signal);
+      signal.throwIfAborted();
       return this.#attach(descriptor, true);
     }
 
-    const discover = (path: string) => this.#deps.discoverRuntime(path, { signal });
+    const discover = async (path: string) => {
+      signal.throwIfAborted();
+      const discovery = await this.#deps.discoverRuntime(path, { signal });
+      signal.throwIfAborted();
+      return discovery;
+    };
     const discovery = await discover(this.#options.descriptorPath);
     if (discovery.state === "healthy") return this.#attach(discovery.descriptor, false);
     if (discovery.state === "unsafe") {
@@ -170,6 +185,7 @@ export class DesktopRuntimeManager {
     }
     this.#options.onPhase("verification");
     const sidecarPath = await this.#options.resolveSidecarPath(signal);
+    signal.throwIfAborted();
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
     this.#options.onPhase("environment");
     const env = await this.#deps.resolveEnvironment(signal);
@@ -220,8 +236,9 @@ export class DesktopRuntimeManager {
         }),
         childExit,
       ]);
+      signal.throwIfAborted();
       ready = true;
-      return this.#attach(descriptor, false);
+      return this.#attach(descriptor, false, false);
     } catch (error) {
       await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
       const detail = child.readOutput() || (error instanceof Error ? error.message : String(error));
@@ -249,9 +266,8 @@ export class DesktopRuntimeManager {
 
   async detach() {
     this.#intentional = true;
-    this.#startupAbort?.abort();
     this.#eventAbort?.abort();
-    await this.#startupTask?.catch(() => {});
+    await this.cancelStart();
   }
 
   // A runtime that is gone has nothing left to shut down, so quitting must not wait for it.
@@ -266,12 +282,29 @@ export class DesktopRuntimeManager {
     this.#options.onIntentionalShutdown();
   }
 
-  #attach(descriptor: RuntimeDescriptor, external: boolean) {
+  #attach(descriptor: RuntimeDescriptor, external: boolean, observeProcessExit = true) {
     this.#runtime = { descriptor, external };
     this.#lastDescriptor = descriptor;
     this.#eventAbort = new AbortController();
+    const signal = this.#eventAbort.signal;
+    const disconnected = () => {
+      // Spawned children have an exit event, including their clean-exit status. An attached
+      // backend needs a PID check: a broken connection alone must never replace a live owner.
+      if (external || !observeProcessExit || signal.aborted || this.#intentional) return;
+      if (this.#deps.isRuntimePidAlive(descriptor.pid)) return;
+      this.#forgetRuntime();
+      this.#options.onUnexpectedExit("The attached backend process exited unexpectedly.");
+    };
     void this.#deps
-      .observeRuntimeShutdown(descriptor, () => this.#handleIntentionalShutdown(), fetch, this.#eventAbort.signal)
+      .observeRuntimeShutdown(
+        descriptor,
+        () => {
+          if (!signal.aborted) this.#handleIntentionalShutdown();
+        },
+        fetch,
+        signal,
+        disconnected,
+      )
       .catch(() => {});
     return this.#runtime;
   }
