@@ -1,6 +1,15 @@
+import type { Snapshot } from "pstdio-sync-contracts";
 import type { Projection } from "./projection";
 import { blankRecord } from "./records";
 import type { GroupedState, LocalOperation } from "./types";
+
+export const resolutionGuards = (state: GroupedState, current: Iterable<Snapshot["conflicts"][string]>) => {
+  const conflicts = new Map(
+    Object.values(state.accepted?.conflicts ?? {}).map((conflict) => [conflict.conflictId, conflict]),
+  );
+  for (const conflict of current) conflicts.set(conflict.conflictId, conflict);
+  return conflicts;
+};
 
 const parentProblem = (view: Projection, operation: LocalOperation, captured: Set<string>, visited: Set<string>) => {
   for (const parent of operation.parents) {
@@ -53,10 +62,11 @@ export const resolutionProblem = (view: Projection, state: GroupedState, mutatio
   const proposal = mutation.resolution!;
   const root = view.conflicts.get(proposal.conflictId);
   if (!root) return "Stale conflict revision";
+  const conflicts = resolutionGuards(state, view.conflicts.values());
   for (const expected of proposal.expectedConflicts)
-    if (view.conflicts.get(expected.conflictId)?.revision !== expected.revision) return "Stale conflict revision";
+    if (conflicts.get(expected.conflictId)?.revision !== expected.revision) return "Stale conflict revision";
   const captured = new Set(proposal.capturedOperationIds);
-  const affected = [...view.conflicts.values()].filter((conflict) =>
+  const affected = [...conflicts.values()].filter((conflict) =>
     conflict.alternativeOperationIds.some((id) => captured.has(id)),
   );
   if (
@@ -81,7 +91,9 @@ export const retainAfterResolution = (view: Projection, mutation: LocalOperation
   const captured = new Set(proposal.capturedOperationIds);
   for (const id of captured) view.completed.add(id);
   for (const expected of proposal.expectedConflicts) {
-    const conflict = view.conflicts.get(expected.conflictId)!;
+    const conflict = view.conflicts.get(expected.conflictId);
+    // Resolved ancestors guard captured history without becoming active conflicts again.
+    if (!conflict) continue;
     view.conflicts.delete(expected.conflictId);
     for (const alternative of conflict.alternatives) {
       if (captured.has(alternative.operationId)) continue;

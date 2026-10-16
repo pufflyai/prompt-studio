@@ -131,6 +131,12 @@ const projectOperation = async (view: Projection, state: GroupedState, entry: Jo
   const mutation = entry.mutation;
   if (view.completed.has(mutation.operationId)) return;
   const known = state.accepted?.receipts[mutation.operationId];
+  const retained =
+    known?.status === "conflict"
+      ? Object.values(state.accepted!.conflicts).find(
+          (conflict) => !conflict.resolvedBy && conflict.alternativeOperationIds.includes(mutation.operationId),
+        )
+      : undefined;
   if (mutation.environmentId !== environmentId && !entry.acceptance && known?.status !== "conflict") return;
   if (known?.status !== "conflict" && waitingForParent(view, mutation)) {
     view.outcomes.set(mutation.operationId, {
@@ -147,7 +153,7 @@ const projectOperation = async (view: Projection, state: GroupedState, entry: Jo
     addConflict(
       view,
       mutation,
-      known?.conflictId ??
+      retained?.conflictId ??
         (mutation.resolution && view.conflicts.has(mutation.resolution.conflictId)
           ? mutation.resolution.conflictId
           : undefined) ??

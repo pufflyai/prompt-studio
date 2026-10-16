@@ -6,6 +6,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "test": "bun test src",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check ."
   },
