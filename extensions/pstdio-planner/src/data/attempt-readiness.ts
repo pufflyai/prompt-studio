@@ -100,7 +100,7 @@ const selectDependencyAttempt = async (input: DependencyInput, dependency: Attem
   if (
     done &&
     delivery?.mergeSha &&
-    (!selectedHead || selectedHead === delivery.headSha) &&
+    (!selection || (selectedHead !== null && selectedHead === delivery.headSha)) &&
     (await input.isAncestor(delivery.mergeSha, input.mainHeadSha))
   )
     return null;

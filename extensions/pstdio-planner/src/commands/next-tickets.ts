@@ -7,6 +7,7 @@ import { usableAutoBuildIgnore } from "../data/auto-build-ignore";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
+import type { DependencyDeliveryReads } from "../data/dependency-deliveries";
 import { resolveImplementationBase } from "../data/implementation-targets";
 import { readTicketReviewRequests } from "../data/review-request-storage";
 import { readPlanCommand } from "../timeline/commands/read-plan";
@@ -29,16 +30,19 @@ async function appendStackRepair(
   next: NextTicket[],
   waiting: WaitingTicket[],
   mode: AutoBuildMode,
+  deliveryReads: DependencyDeliveryReads,
   base?: string,
 ) {
   const repair = await readSelectedStackRepair(ctx, summary.id, attempts, selections);
   if (!repair) return false;
   if ("unavailableWorkspaceId" in repair) {
     const recoveryBase = await readRecoveryBase(ctx, repair.attempt, base);
-    const { readiness } = await loadAttemptReadiness(ctx, summary.id, {
-      base: recoveryBase,
-      dependencyReview: mode.blockOnReview ? "approved" : "submitted",
-    });
+    const { readiness } = await loadAttemptReadiness(
+      ctx,
+      summary.id,
+      { base: recoveryBase, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
+      deliveryReads,
+    );
     if (readiness.decision === "wait")
       waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
     else
@@ -97,6 +101,8 @@ export async function readNextTickets(
   );
   const next: NextTicket[] = [];
   const waiting: WaitingTicket[] = [];
+  // Share GitHub reads within this query; dispatch rechecks create a fresh query.
+  const deliveryReads: DependencyDeliveryReads = new Map();
   let base = input.base;
   for (const row of selected) {
     const summary = { id: row.id, ticket: row.shorthand, title: row.title };
@@ -110,7 +116,7 @@ export async function readNextTickets(
     });
     if (
       canOfferStackRepair(wait?.reason, resumptions.has(row.id), capacity) &&
-      (await appendStackRepair(ctx, summary, attempts, selections, next, waiting, mode, input.base))
+      (await appendStackRepair(ctx, summary, attempts, selections, next, waiting, mode, deliveryReads, input.base))
     )
       continue;
     if (wait) {
@@ -121,10 +127,12 @@ export async function readNextTickets(
     const recordedBase =
       resumption && attempts.find(({ workspaceId }) => workspaceId === resumption.workspaceId)?.base.headSha;
     if (!recordedBase) base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
-    const { readiness } = await loadAttemptReadiness(ctx, row.id, {
-      base: recordedBase ?? base,
-      dependencyReview: mode.blockOnReview ? "approved" : "submitted",
-    });
+    const { readiness } = await loadAttemptReadiness(
+      ctx,
+      row.id,
+      { base: recordedBase ?? base, dependencyReview: mode.blockOnReview ? "approved" : "submitted" },
+      deliveryReads,
+    );
     if (readiness.decision === "wait") {
       waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
     } else if (resumptions.has(row.id)) {

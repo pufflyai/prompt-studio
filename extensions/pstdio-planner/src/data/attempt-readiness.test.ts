@@ -109,6 +109,27 @@ describe("attempt readiness", () => {
     ).toMatchObject({ decision: "ready", mode: "main", dependencyAttemptIds: [] });
   });
 
+  test("a selected attempt without revisions waits even when another variant was delivered", async () => {
+    const dependency = { ...ticket("PS-1"), statusId: "done" };
+    expect(
+      await resolve({
+        tickets: [dependency, ticket("PS-3", [dependency.id])],
+        attempts: [{ ...attempt("PS-1", "selected", "old"), state: "implementing", revisions: [] }],
+        selections: [
+          {
+            ticketId: dependency.id,
+            workspaceId: "selected",
+            selectedAt: "2026-10-15T00:00:00Z",
+            humanRequestId: null,
+            selectedBy: { type: "human", id: "user", displayName: "User" },
+          },
+        ],
+        dependencyDeliveries: new Map([[dependency.id, { headSha: "other-variant", mergeSha: "delivered" }]]),
+        ancestors: [["delivered", "main"]],
+      }),
+    ).toEqual({ decision: "wait", reason: "dependency-not-ready", dependencyIds: [dependency.id] });
+  });
+
   test("an older merged stack parent does not deliver a newer unmerged replacement PR", async () => {
     const dependency = { ...ticket("PS-1"), statusId: "done" };
     expect(

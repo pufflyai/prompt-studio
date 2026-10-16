@@ -6,7 +6,7 @@ import {
 } from "../data/attempt-readiness";
 import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import { statusesCollection, ticketsCollection } from "../data/collections";
-import { readDependencyDeliveries } from "../data/dependency-deliveries";
+import { type DependencyDeliveryReads, readDependencyDeliveries } from "../data/dependency-deliveries";
 import { findTicket } from "../data/resolve";
 import { readTicketReviewRequests } from "../data/review-request-storage";
 import { isLiveSession } from "./auto-build-sessions";
@@ -35,7 +35,12 @@ const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) =
   return result.stdout.trim();
 };
 
-const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, commandParams: ReadinessParams) => {
+const loadDependencyInput = async (
+  ctx: ReadinessContext,
+  ticketRef: string,
+  commandParams: ReadinessParams,
+  deliveryReads?: DependencyDeliveryReads,
+) => {
   const [storedTickets, attempts, selections, statuses, home, providers, requests, events] = await Promise.all([
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
@@ -86,7 +91,7 @@ const loadDependencyInput = async (ctx: ReadinessContext, ticketRef: string, com
   );
   const input = {
     dependencyDeliveries: storedTarget
-      ? await readDependencyDeliveries(ctx, storedTarget, storedTickets, doneStatusIds, rootPath)
+      ? await readDependencyDeliveries(ctx, storedTarget, storedTickets, doneStatusIds, rootPath, deliveryReads)
       : new Map(),
     mergedHeads: events.reduce((heads, event) => {
       const head = event.metadata.headSha;
@@ -125,9 +130,14 @@ export async function loadAttemptDependencies(ctx: ReadinessContext, ticketRef: 
   return { readiness: await resolveAttemptDependencies(input), workspace, target };
 }
 
-export async function loadAttemptReadiness(ctx: ReadinessContext, ticketRef: string, params: ReadinessParams) {
+export async function loadAttemptReadiness(
+  ctx: ReadinessContext,
+  ticketRef: string,
+  params: ReadinessParams,
+  deliveryReads?: DependencyDeliveryReads,
+) {
   const [{ input, workspace, target }, capacity] = await Promise.all([
-    loadDependencyInput(ctx, ticketRef, params),
+    loadDependencyInput(ctx, ticketRef, params, deliveryReads),
     readImplementationCapacity(ctx),
   ]);
   const readiness = await resolveAttemptReadiness({

@@ -8,12 +8,15 @@ export interface DependencyDelivery {
   mergeSha: string | null;
 }
 
+export type DependencyDeliveryReads = Map<string, Promise<DependencyDelivery | null>>;
+
 export async function readDependencyDeliveries(
   ctx: Pick<ExtensionContextBase, "process" | "logger">,
   target: StoredTicket,
   tickets: StoredTicket[],
   doneStatusIds: Set<string>,
   cwd: string,
+  reads: DependencyDeliveryReads = new Map(),
 ) {
   const byRef = new Map(
     tickets.flatMap((ticket) => [
@@ -44,19 +47,24 @@ export async function readDependencyDeliveries(
     Array.from({ length: Math.min(8, checks.length) }, async () => {
       while (next < checks.length) {
         const check = checks[next++]!;
-        const delivery = await readGithubMerge<DependencyDelivery>(
-          ctx,
-          ["gh", "pr", "view", check.url, "--json", "state,headRefOid,mergeCommit"],
-          cwd,
-          (output) => {
-            const value = JSON.parse(output);
-            return {
-              headSha: typeof value.headRefOid === "string" ? value.headRefOid : null,
-              mergeSha:
-                value.state === "MERGED" && typeof value.mergeCommit?.oid === "string" ? value.mergeCommit.oid : null,
-            };
-          },
-        );
+        let read = reads.get(check.url);
+        if (!read) {
+          read = readGithubMerge<DependencyDelivery>(
+            ctx,
+            ["gh", "pr", "view", check.url, "--json", "state,headRefOid,mergeCommit"],
+            cwd,
+            (output) => {
+              const value = JSON.parse(output);
+              return {
+                headSha: typeof value.headRefOid === "string" ? value.headRefOid : null,
+                mergeSha:
+                  value.state === "MERGED" && typeof value.mergeCommit?.oid === "string" ? value.mergeCommit.oid : null,
+              };
+            },
+          );
+          reads.set(check.url, read);
+        }
+        const delivery = await read;
         // An unavailable PR cannot provide delivery evidence; never fall back to an older PR.
         deliveries.set(check.ticketId, delivery ?? { headSha: null, mergeSha: null });
       }

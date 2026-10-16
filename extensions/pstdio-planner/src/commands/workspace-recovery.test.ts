@@ -96,9 +96,9 @@ test.each([
   expect(f.created[0]?.prompt).toContain("old-report");
   const expected = {
     branch: "branch-head",
-    restart: "available commit main-sha",
-    revision: "available commit submitted-head",
-    "missing owner": "available commit submitted-head",
+    restart: "main-sha",
+    revision: "submitted-head",
+    "missing owner": "submitted-head",
   }[source];
   expect(f.created[0]?.prompt).toContain(expected);
 });

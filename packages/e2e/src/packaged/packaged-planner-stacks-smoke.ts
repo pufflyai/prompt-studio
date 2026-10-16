@@ -176,6 +176,13 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
       expect((await execute("read-attempt-history", { workspaceId: started.workspace.id })).attempt.state).toBe(
         "abandoned",
       );
+      await execute("update-ticket", { id: child.id, status: "Done" });
+      const params = { content: "# Wait for the selected recovery revision", status: "Todo", dependsOn: [child.id] };
+      const dependent = await execute("create-ticket", params);
+      expect(await execute("attempt-readiness", { ticket: dependent.id, base: updated.headSha })).toMatchObject({
+        decision: "wait",
+        reason: "dependency-not-ready",
+      });
     } finally {
       await rename(`${path}.missing`, path);
       await execute("auto-build.configure", { enabled: false });
