@@ -13,7 +13,7 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
-// Shared Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+// Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";

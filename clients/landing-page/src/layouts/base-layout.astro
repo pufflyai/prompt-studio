@@ -57,12 +57,13 @@ const appleTouchIconUrl = new URL(siteMetadata.appleTouchIconPath, siteMetadata.
     <link rel="apple-touch-icon" href={appleTouchIconUrl} />
 
     {indexable && <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
-    <script>
+    <script is:inline>
       const stored = localStorage.getItem("theme-preference");
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       const dark = stored ? stored.includes("dark") : prefersDark;
       document.documentElement.classList.toggle("dark", dark);
       document.documentElement.classList.toggle("light", !dark);
+      document.documentElement.style.colorScheme = dark ? "dark" : "light";
     </script>
   </head>
   <body style="margin:0;overflow:auto;">
