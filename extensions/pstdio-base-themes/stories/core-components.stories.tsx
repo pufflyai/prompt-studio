@@ -24,7 +24,7 @@ function CoreComponents(props: { section: Section }) {
   const { section } = props;
   const visible = section === "all" ? Object.entries(sections) : ([[section, sections[section]]] as const);
   return (
-    <Stack gap="xl" p="md" bg="bg" color="fg" minH="100vh">
+    <Stack data-testid="theme-canvas" gap="xl" p="md" bg="bg" color="fg" minH="100vh">
       {visible.map(([id, Component]) => (
         <Component key={id} />
       ))}
@@ -80,6 +80,12 @@ export const InteractionChecks: Story = {
       await userEvent.click(checkbox);
     }
     if (args.section === "all" || args.section === "navigation") {
+      const panel = canvas.getByTestId("navigation-panel");
+      const hoveredRow = canvas.getByTestId("panel-hover-row");
+      const rowBackground = getComputedStyle(hoveredRow).backgroundColor;
+      await expect(rowBackground).not.toBe("rgba(0, 0, 0, 0)");
+      await expect(rowBackground).not.toBe(getComputedStyle(panel).backgroundColor);
+      await expect(rowBackground).not.toBe(getComputedStyle(canvas.getByTestId("theme-canvas")).backgroundColor);
       const advanced = canvas.getByRole("tab", { name: "Advanced" });
       await userEvent.click(advanced);
       await expect(advanced).toHaveAttribute("aria-selected", "true");

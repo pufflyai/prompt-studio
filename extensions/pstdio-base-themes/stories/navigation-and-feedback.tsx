@@ -65,7 +65,7 @@ export function Navigation() {
         onSelect={setTab}
         onClose={() => setTab(undefined)}
       />
-      <Box bg="bg.panel" p="sm" borderWidth="1px" borderColor="border.subtle">
+      <Box data-testid="navigation-panel" bg="bg.panel" p="sm" borderWidth="1px" borderColor="border.subtle">
         <Text color="fg.muted" textStyle="label/S/regular">
           Rows on a panel surface
         </Text>
@@ -82,6 +82,7 @@ export function Navigation() {
           isSelected={row === "selected"}
           onClick={() => setRow("selected")}
         />
+        <ListRow id="hovered" label="Hovered row" data-testid="panel-hover-row" data-hover="" />
         <ListRow id="disabled" label="Disabled row" disabled />
         <TreeList
           expandedSectionIds={["files"]}
