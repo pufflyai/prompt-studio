@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { WorkbenchLayout } from "../../core";
+import { batchWorkbenchChanges } from "../../core/shared/store/workbench-batch";
 import { createLocalStorageWorkbenchPersistence } from "../../storage/local-storage-persistence";
 import { opening, ref, setup } from "./related-resource-openings.fixture";
 
@@ -130,13 +131,15 @@ test.each([
           : { kind: "page", page: { kind: "page", id: "target", extensionId: "example" }, resource },
     }));
   await s.controller.open(s.source);
-  if (panel) {
-    panel.dispose();
-    registerPanel();
-  } else {
-    view.dispose();
-    registerView();
-  }
+  batchWorkbenchChanges(() => {
+    if (panel) {
+      panel.dispose();
+      registerPanel();
+    } else {
+      view.dispose();
+      registerView();
+    }
+  });
   await s.controller.open(s.source);
   expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("default");
   s.controller.dispose();
@@ -158,6 +161,32 @@ test("asynchronous preference storage keeps simultaneous Side and Bottom closure
   s.workbench.shell.setRegionOpen("side", false);
   s.workbench.shell.setRegionOpen("secondary", false);
   gate.resolve();
+  await Bun.sleep(0);
+  s.workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "home", extensionId: "example" } });
+  s.workbench.pageLocations.navigate(s.target(s.source));
+  await s.controller.open(s.source);
+  expect(s.workbench.shell.getRegionState("side").open).toBe(false);
+  expect(s.workbench.shell.getRegionState("secondary").open).toBe(false);
+  s.controller.dispose();
+});
+
+test("a failed preference save does not discard later user choices", async () => {
+  const values = new Map<string, import("../../core").PreferenceValue>();
+  const first = Promise.withResolvers<void>();
+  let attempts = 0;
+  const s = setup([opening("side"), opening("bottom", "secondary")], {
+    preferencePersistence: {
+      getValue: (name, scope) => values.get(JSON.stringify([name, scope])),
+      setValue: async (name, value, scope) => {
+        if (++attempts === 1) await first.promise;
+        values.set(JSON.stringify([name, scope]), value);
+      },
+    },
+  });
+  await s.controller.open(s.source);
+  s.workbench.shell.setRegionOpen("side", false);
+  s.workbench.shell.setRegionOpen("secondary", false);
+  first.reject(new Error("Storage write failed"));
   await Bun.sleep(0);
   s.workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "home", extensionId: "example" } });
   s.workbench.pageLocations.navigate(s.target(s.source));
