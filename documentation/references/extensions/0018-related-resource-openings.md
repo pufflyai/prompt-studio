@@ -66,7 +66,7 @@ An already open target keeps its tray and pin state. New previews replace the el
 
 Automatic openings keep the source route, global focus, and the selected tab in each populated tray. A new related tab opens in the background; if it replaces the selected preview, it takes that preview's place. They do not recursively open more resources.
 
-Leaving the source page closes an automatically opened preview when it is the only tab in its tray. Pinned tabs, manually opened tabs, and previews sharing a tray with other tabs stay open. Selecting a related tab or refreshing resource metadata does not leave the source page. Closing the last tab in Side or Bottom also closes that panel.
+Leaving the source page closes every unpinned tab newly opened automatically for that page, including tabs sharing a tray with pinned tabs. Tabs already open before entry stay open. Pinning a tab, manually reopening it, or replacing its resource releases it from page cleanup. Selecting a related tab or refreshing its metadata keeps its page lifetime. Closing the last tab in Side or Bottom also closes that panel.
 
 Source or project changes, disabling the existing Open related resources switch, and owner removal discard pending results. Restoring layout and refreshing resource metadata do not reopen closed related tabs.
 

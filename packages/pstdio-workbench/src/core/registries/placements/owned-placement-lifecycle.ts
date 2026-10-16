@@ -159,7 +159,9 @@ export const updateResourcePlacementInstance = (input: {
         ? {
             ...instance,
             ...(input.open ? { open: input.open } : {}),
-            ...(input.open ? { relatedSource: undefined } : {}),
+            ...(input.open || (input.resource && resourceKey(input.resource) !== resourceKey(instance.resource))
+              ? { relatedSource: undefined }
+              : {}),
             ...(input.resource ? { resource: input.resource } : {}),
             ...(input.title === undefined ? {} : { title: input.title }),
           }

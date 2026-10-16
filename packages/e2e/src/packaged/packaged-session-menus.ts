@@ -92,6 +92,9 @@ export const verifyPackagedSessionMenus = async (
   await expect(preview).toBeVisible();
   await expect(preview).toHaveAttribute("aria-selected", "false");
   await expect(createdTab).toHaveAttribute("aria-selected", "true");
+  await leaveWorkspace();
+  await expect(preview).toBeHidden();
+  await expect(createdTab).toBeVisible();
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",

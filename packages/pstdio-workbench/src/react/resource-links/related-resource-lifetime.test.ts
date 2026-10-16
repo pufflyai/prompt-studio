@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import type { WorkbenchLayout, WorkbenchModuleContext } from "../../core";
 import { opening, ref, setup } from "./related-resource-openings.fixture";
 import { registerRelatedResourcePreviews } from "./related-resource-previews";
@@ -76,13 +76,14 @@ test("selecting or hydrating a related preview does not leave the source page", 
   s.controller.dispose();
 });
 
-test("leaving the source page retains a related preview when another tab shares its panel", async () => {
+test("leaving the source page closes its automatic preview while keeping other tabs in the panel", async () => {
   const s = setup([opening("related")]);
   registerTray(s);
   s.workbench.shellPlacements.openPlacement({ placementId: "manual", resource: ref("document", "kept"), open: "pin" });
   await s.controller.open(s.source);
   leavePage(s);
-  expect(s.workbench.layout.listPanelInstances("side").map((p) => p.resource?.id)).toEqual(["related", "kept"]);
+  expect(s.workbench.layout.listPanelInstances("side").map((p) => p.resource?.id)).toEqual(["kept"]);
+  expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("kept");
   expect(s.workbench.layout.getLayout().regions.side.visible).toBe(true);
   s.controller.dispose();
 });
@@ -99,15 +100,76 @@ test("leaving the source page retains a related preview the user pinned", async 
 
 test("leaving the source page does not close a manually opened related preview", async () => {
   const s = setup([opening("related")]);
+  leavePage(s);
   registerTray(s);
   s.workbench.shellPlacements.openPlacement({
     placementId: "manual",
     resource: ref("document", "related"),
     open: "preview",
   });
+  s.workbench.pageLocations.navigate(s.target(s.source));
   await s.controller.open(s.source);
   leavePage(s);
   expect(s.workbench.layout.listPanelInstances("side")[0]?.resource?.id).toBe("related");
+  s.controller.dispose();
+});
+
+test.each([
+  "shell",
+  "mode",
+] as const)("replacing an automatic %s tab keeps its new resource on page leave", async (kind) => {
+  const s = setup([opening("related")]);
+  const binding = {
+    view: { kind: "view", id: "document" },
+    kinds: [{ kind: "resource-kind", id: "document" }],
+    cardinality: "many",
+  } as const;
+  const panel = { kind: "placement", extensionId: "example", id: "native" } as const;
+  if (kind === "shell") registerTray(s);
+  else
+    s.workbench.modePlacements.registerPlacement({
+      id: "native",
+      ref: panel,
+      modeId: "project",
+      region: "side",
+      item: { kind: "binding", binding },
+    });
+  s.service.resolve = async (resources) =>
+    resources.map((resource) => ({
+      resource,
+      target:
+        kind === "shell"
+          ? { kind: "panel", panel: { kind: "shell-placement", id: "manual" }, resource }
+          : { kind: "panel", panel, resource },
+    }));
+  await s.controller.open(s.source);
+  const before = s.workbench.layout.listPanelInstances("side")[0]!;
+  const identity = before.placementIdentity!;
+  const update = { resource: ref("document", "manual-replacement"), title: "Manual replacement" };
+  if (identity.kind === "shell") s.workbench.shellPlacements.updatePlacement(identity, update);
+  else s.workbench.modePlacements.updatePlacement(identity, update);
+  expect(s.workbench.layout.listPanelInstances("side")[0]?.instanceId).toBe(before.instanceId);
+  leavePage(s);
+  expect(s.workbench.layout.listPanelInstances("side")[0]?.resource?.id).toBe("manual-replacement");
+  s.controller.dispose();
+});
+
+test("refreshing an automatic target's metadata keeps its page lifetime", async () => {
+  const s = setup([opening("related")]);
+  registerTray(s);
+  s.service.resolve = async (resources) =>
+    resources.map((resource) => ({
+      resource,
+      target: { kind: "panel", panel: { kind: "shell-placement", id: "manual" }, resource },
+    }));
+  await s.controller.open(s.source);
+  const before = s.workbench.layout.listPanelInstances("side")[0]!;
+  s.workbench.shellPlacements.updatePlacement(before.placementIdentity!, {
+    resource: { ...before.resource!, label: "Refreshed label" },
+    title: "Refreshed title",
+  });
+  leavePage(s);
+  expect(s.workbench.layout.listPanelInstances("side")).toEqual([]);
   s.controller.dispose();
 });
 
@@ -128,9 +190,9 @@ test("a manually reopened tab no longer belongs to the automatic page lifetime",
   s.controller.dispose();
 });
 
-test("leaving a persisted resource page removes its sole automatic preview from that page's cache", async () => {
+test("leaving a persisted resource page removes every automatic preview from that page's cache", async () => {
   const layouts = new Map<string | undefined, WorkbenchLayout>();
-  const s = setup([opening("related")], {
+  const s = setup([opening("related"), opening("bottom", "secondary")], {
     layoutPersistence: {
       getLayout: (scope) => layouts.get(scope),
       setLayout: (layout, scope) => {
@@ -140,11 +202,18 @@ test("leaving a persisted resource page removes its sole automatic preview from 
     resolvePagePersistenceScope: ({ resource }) => ({ scope: resource?.id ?? "home" }),
   });
   await s.controller.open(s.source);
-  leavePage(s);
+  const errors = spyOn(console, "error");
+  try {
+    leavePage(s);
+    expect(errors).not.toHaveBeenCalled();
+  } finally {
+    errors.mockRestore();
+  }
   expect(s.workbench.pages.store.getState().activePageId).toBe("home");
   await s.workbench.preferences.setValue("workbench.openRelatedResources", false, { scope: "user" });
   s.workbench.pageLocations.navigate(s.target(s.source));
   expect(s.workbench.layout.listPanelInstances("side")).toEqual([]);
+  expect(s.workbench.layout.listPanelInstances("secondary")).toEqual([]);
   s.controller.dispose();
 });
 
