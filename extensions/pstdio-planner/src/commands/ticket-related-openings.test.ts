@@ -64,7 +64,10 @@ test("tickets without a linked session have no automatic opening", async () => {
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
-    overrides: { resource: { type: "ticket", id: "empty" } },
+    overrides: {
+      resource: { type: "ticket", id: "empty" },
+      sessions: { query: async () => ({ items: [], nextCursor: null }) },
+    },
   });
   expect(await ticketRelatedOpeningsCommand.run(ctx, {})).toEqual([]);
 });
