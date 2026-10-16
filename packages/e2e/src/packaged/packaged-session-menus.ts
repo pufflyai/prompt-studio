@@ -105,9 +105,11 @@ export const verifyPackagedSessionMenus = async (
   await bottomHeader.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
   const terminalSocket = await terminalConnection;
-  const terminalTabId = await bottomHeader.getByRole("tab", { selected: true }).getAttribute("id");
-  expect(terminalTabId).toBeTruthy();
-  const terminalTab = page.locator(`[id=${JSON.stringify(terminalTabId)}]`);
+  const terminalWidgetId = await bottomHeader
+    .locator('[data-workbench-tab]:has([role="tab"][aria-selected="true"])')
+    .getAttribute("data-workbench-tab");
+  expect(terminalWidgetId).toBeTruthy();
+  const terminalTab = page.locator(`[data-workbench-tab=${JSON.stringify(terminalWidgetId)}]`).getByRole("tab");
   const terminalInput = page.getByRole("textbox", { name: "Terminal input" }).filter({ visible: true });
   await terminalInput.pressSequentially("export PSTDIO_NAVIGATION_STATE=retained");
   await terminalInput.press("Enter");
