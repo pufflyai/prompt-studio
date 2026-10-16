@@ -54,7 +54,8 @@ test("draft discovery tolerates replacement after the final provider lookup", as
     });
     const body = await response.json();
     expect({ status: response.status, body }).toMatchObject({
-      status: 200, body: { commands: [{ name: "/current", description: "/current" }] },
+      status: 200,
+      body: { commands: [{ name: "/current", description: "/current" }] },
     });
   } finally {
     await app.close();
