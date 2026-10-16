@@ -1,21 +1,29 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { readPackageManifestMetadata } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
-import { sourceFor, toInstallInput, withResolvedDefaultEntries } from "./default-extension-entries";
+import {
+  sourceFor,
+  sourceModeDefaultEntry,
+  toInstallInput,
+  withResolvedDefaultEntries,
+} from "./default-extension-entries";
 import { enqueueDefaultExtensionInstall } from "./default-extension-install-queue";
 import {
   type DefaultExtensionEntry,
   type DefaultExtensionsConfig,
   resolveDefaultExtensionsConfig,
 } from "./default-extensions-config";
-import { type ExtensionCatalog, loadExtensionCatalog } from "./extension-catalog";
+import { loadExtensionCatalog } from "./extension-catalog";
+import { shouldInstallDependencies } from "./install-extension-dependencies";
 import {
   type createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
+  isLocalExtensionSource,
 } from "./install-extension-source";
 
 export {
@@ -40,10 +48,8 @@ type InstallDefaultExtensionsDeps = {
 const runDefaultExtensionInstall = async (
   deps: InstallDefaultExtensionsDeps,
   context: {
-    catalog?: ExtensionCatalog;
     config: DefaultExtensionsConfig;
     env: Record<string, string | undefined>;
-    sourceMode: boolean;
   },
 ) => {
   const install = deps.installExtensionSource ?? installExtensionSource;
@@ -71,8 +77,6 @@ const runDefaultExtensionInstall = async (
       forceSourceDefaults: deps.forceSourceDefaults,
       releaseRef: deps.releaseRef,
       signal: deps.signal,
-      sourceMode: context.sourceMode,
-      catalog: context.catalog,
     },
     async (entries, prepareNamedSource) => {
       for (const resolved of entries) {
@@ -108,13 +112,31 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
     enqueueDefaultExtensionInstall(async () => {
       return traceSetupPhase("default_extensions.active", {}, async () => {
         const catalog = deps.config ? undefined : await loadExtensionCatalog({ env });
+        const config =
+          deps.config ??
+          (deps.installNames ? { defaultExtensions: deps.installNames } : await resolveDefaultExtensionsConfig(env));
+        const entries = deps.config
+          ? config.defaultExtensions
+          : await Promise.all(
+              config.defaultExtensions.map((entry) =>
+                sourceModeDefaultEntry(entry, deps.forceSourceDefaults ?? true, catalog),
+              ),
+            );
+        const extensionsRoot = join(resolvePstdioHome({ env }), "extensions");
+        // Startup and first-project setup share this queue. Check after the previous install
+        // finishes so project creation does not fetch the same defaults again. Project sync
+        // discovers installed sources and keeps their recorded Git origin.
+        const defaultExtensions = entries.filter((entry) => {
+          if (isLocalExtensionSource(sourceFor(entry)) || (typeof entry !== "string" && entry.force)) return true;
+          if (!isInstalledUserExtension(entry, extensionsRoot)) return true;
+          const installName = typeof entry === "string" ? entry : (entry.installName ?? entry.source);
+          const targetPath = join(extensionsRoot, installName);
+          const { manifest } = readPackageManifestMetadata(targetPath);
+          return !manifest || manifest.pstdio?.scope === "repo" || shouldInstallDependencies(targetPath);
+        });
         const context = {
-          config:
-            deps.config ??
-            (deps.installNames ? { defaultExtensions: deps.installNames } : await resolveDefaultExtensionsConfig(env)),
+          config: { defaultExtensions },
           env,
-          sourceMode: !deps.config,
-          catalog,
         };
         return runDefaultExtensionInstall(deps, context);
       });
@@ -136,6 +158,7 @@ type InstallRepoDefaultExtensionsInput = {
 // not repo-scoped. Skipping it keeps project folders from fetching sources they never install.
 const isInstalledUserExtension = (entry: DefaultExtensionEntry, extensionsRoot: string) => {
   const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
+  if (!installName || installName === "." || installName === ".." || /[\\/:]/.test(installName)) return false;
   return existsSync(join(extensionsRoot, installName, "package.json"));
 };
 
