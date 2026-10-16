@@ -2,8 +2,15 @@ import { asc, eq, sql } from "drizzle-orm";
 import { canonicalJson, fingerprint, identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { grantSchema, ownerSchema } from "./contracts";
+import { session, verification } from "./auth-schema";
 import type { ManagerDatabase } from "./database";
-import { accounts, credentials, requests, restoreRequests, workbenches } from "./schema";
+import {
+  accounts,
+  credentials,
+  requests,
+  restoreRequests,
+  workbenches,
+} from "./schema";
 
 const snapshotSchema = z
   .strictObject({
@@ -86,6 +93,8 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
       if (known && (known.fingerprint !== row.fingerprint || canonicalJson(known.result) !== canonicalJson(row.result)))
         throw new Error("Manager snapshot conflicts with a known request outcome");
     }
+    await transaction.delete(verification);
+    await transaction.delete(session);
     await transaction.delete(credentials);
     await transaction.update(accounts).set({ state: "disabled" });
     if (snapshot.accounts.length)
