@@ -111,6 +111,37 @@ export const FileLinks: Story = {
   },
 };
 export const StreamingLinks: Story = { args: { streaming: true } };
+export const ResourceBubbles: Story = {
+  render: () => {
+    const [opened, setOpened] = useState<string>();
+    return (
+      <>
+        <RichMessage
+          defaultState="Review [ticket](tickets/T-1/ticket.md), `tickets/T-1/ticket.md`, and {{link('tickets/T-1/ticket.md')}}. [Website](https://example.com) stays a web link."
+          linkHandler={{
+            resolveHref: () => null,
+            resolveResource: async () => ({
+              label: "T-1 Fix resource links",
+              icon: "component",
+              href: "/projects/demo/ticket/T-1",
+            }),
+            open: (candidate) => setOpened(candidate.source),
+          }}
+        />
+        {opened ? <Text>{opened}</Text> : null}
+      </>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const links = await canvas.findAllByRole("link", { name: "T-1 Fix resource links" });
+    await expect(links).toHaveLength(3);
+    links[0]!.focus();
+    await userEvent.keyboard("{Enter}");
+    await expect(canvas.getByText("tickets/T-1/ticket.md")).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "Website" })).toHaveAttribute("href", "https://example.com");
+  },
+};
 export const StandaloneRichMessage: Story = {
   render: () => (
     <RichMessage

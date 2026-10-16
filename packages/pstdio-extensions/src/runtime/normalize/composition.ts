@@ -105,6 +105,17 @@ const validateResourceKindResolvers = (runtime: Accumulator) => {
   const commands = new Map(runtime.commands.map((command) => [command.id, command]));
   runtime.resourceKinds = runtime.resourceKinds.map((kind) => {
     const result = { ...kind };
+    result.paths = kind.paths?.filter((path) => {
+      if (commands.get(path.resolveCommand)?.extensionId === kind.extensionId) return true;
+      addDiagnostic(
+        runtime,
+        kind,
+        "extension_resource_kind_resolver_invalid",
+        path.resolveCommand,
+        `Resource kind "${kind.id}" must resolve paths with a command of its own extension`,
+      );
+      return false;
+    });
     for (const key of ["resolveCommandId", "resolveManyCommandId"] as const) {
       const commandId = kind[key];
       if (!commandId || commands.get(commandId)?.extensionId === kind.extensionId) continue;

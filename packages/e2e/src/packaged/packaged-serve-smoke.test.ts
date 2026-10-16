@@ -58,6 +58,7 @@ import { expectPackagedRefinement } from "./packaged-refinement-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
+// Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
