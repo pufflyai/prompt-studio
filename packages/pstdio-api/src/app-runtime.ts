@@ -6,6 +6,7 @@ import { createTerminalSupervisor } from "./features/extensions/extension-termin
 import type { RuntimeHost } from "./features/runtime/routes";
 import { createBrowserSessions } from "./features/runtime/runtime-auth";
 import { watchSessionQueueReadiness } from "./features/sessions/session-queue-readiness";
+import { prepareQueuedSessionRecovery } from "./features/sessions/session-queue-recovery";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { prepareOrphanedSessionRecovery } from "./features/sessions/startup";
 import { apiLogger } from "./lib/logger";
@@ -165,7 +166,10 @@ export const startAppLifecycle = async (input: {
   const startupAbort = new AbortController();
   // Only sessions present before admission belong to restart recovery. Harness
   // discovery and reattachment can finish later without claiming new requests.
-  const recoverOrphanedSessions = await prepareOrphanedSessionRecovery(input.deps);
+  const [recoverOrphanedSessions, recoverQueuedSessions] = await Promise.all([
+    prepareOrphanedSessionRecovery(input.deps),
+    prepareQueuedSessionRecovery(input.deps),
+  ]);
   const stopQueueReadiness = watchSessionQueueReadiness(input.deps, () =>
     createSessionScheduler(input.deps).drainQueue(),
   );
@@ -184,7 +188,7 @@ export const startAppLifecycle = async (input: {
     recoverQueuedAutomation: async () => {
       await input.automationService.recoverQueuedRuns();
     },
-    recoverQueuedSessions: () => createSessionScheduler(input.deps).recoverQueuedSessions(),
+    recoverQueuedSessions,
   }).catch((err) => {
     if (!startupAbort.signal.aborted) apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed");
   });

@@ -7,6 +7,8 @@ import { hasCreateCapacity, withSchedulingLock } from "./session-scheduler-inter
 const isTerminal = (status: string) =>
   status === "completed" || status === "failed" || status === "cancelled" || status === "disconnected";
 
+type QueueDrainInput = { releasedSessionId?: string; queuePositions?: ReadonlySet<number> };
+
 export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
   const maybeRequeueReleasedSession = async (sessionId: string) => {
     const session = await deps.sessionService.get(sessionId);
@@ -18,7 +20,7 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
     await deps.sessionService.requeueAfterTerminal(sessionId);
   };
 
-  const drain = async (input?: { releasedSessionId?: string }) => {
+  const drain = async (input?: QueueDrainInput) => {
     const dispatches: (Promise<unknown> | undefined)[] = [];
     const dispatchPending = async () => {
       const pending = await withSchedulingLock(async () => {
@@ -28,6 +30,7 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
         return deps.sessionQueueEntriesService.listPending();
       });
       for (const entry of pending) {
+        if (input?.queuePositions && !input.queuePositions.has(entry.queue_position)) continue;
         // Pending entries can coexist with non-queued sessions (multi-pending follow-ups).
         // Skip without side-effect; markDispatchStarted would permanently orphan the entry.
         const queued = await deps.sessionService.get(entry.session_id);
@@ -62,5 +65,5 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
     });
   };
 
-  return (input?: { releasedSessionId?: string }) => deps.sessionQueueLifecycle.run(() => drain(input));
+  return (input?: QueueDrainInput) => deps.sessionQueueLifecycle.run(() => drain(input));
 };

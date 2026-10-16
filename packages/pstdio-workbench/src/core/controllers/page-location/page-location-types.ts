@@ -70,8 +70,8 @@ export interface WorkbenchPageLocationController {
   clearProject(): void;
   isCurrentProjectUrl(projectId: string): boolean;
   hasCurrentPageUrl(projectId: string): boolean;
-  /** Whether the URL, saved location, or Start page can open with the registered pages. */
-  canBoot(projectId: string): boolean;
+  /** Resolves the URL, saved location, or Start page without changing navigation. */
+  getBootLocation(projectId: string): PageLocation | undefined;
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;

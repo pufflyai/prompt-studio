@@ -99,13 +99,13 @@ const createHarness = () => {
 describe("workbench core page navigation", () => {
   test("checks whether boot can restore a registered page without changing history or saved locations", () => {
     const harness = createHarness();
-    expect(harness.workbench.pageLocations.canBoot("p1")).toBe(true);
+    expect(harness.workbench.pageLocations.getBootLocation("p1")?.page).toEqual(startRef);
     harness.browser.browser.replace({ url: "/projects/p1/extensions/missing.extension/page" });
-    expect(harness.workbench.pageLocations.canBoot("p1")).toBe(false);
+    expect(harness.workbench.pageLocations.getBootLocation("p1")).toBeUndefined();
     harness.browser.browser.replace({ url: "/" });
     const saved = { location: { page: { extensionId: "missing.extension", kind: "page" as const, id: "page" } } };
     harness.persistence.values.set("p1", saved);
-    expect(harness.workbench.pageLocations.canBoot("p1")).toBe(false);
+    expect(harness.workbench.pageLocations.getBootLocation("p1")).toBeUndefined();
     expect(harness.persistence.values.get("p1")).toBe(saved);
     expect(harness.browser.browser.current().url).toBe("/");
     expect(harness.workbench.pages.store.getState().activePageId).toBeUndefined();

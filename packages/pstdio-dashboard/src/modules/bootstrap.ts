@@ -1,3 +1,4 @@
+import type { PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -18,6 +19,15 @@ interface CreateBootstrapModuleInput {
 }
 
 type BootstrapContext = Parameters<WorkbenchModuleContribution["activate"]>[0];
+
+const isCorePageLocation = (location: PageLocation | undefined) => {
+  if (!location) return false;
+  while (location) {
+    if (location.page.extensionId !== "pstdio") return false;
+    location = location.parent;
+  }
+  return true;
+};
 
 const selectedSession = (ctx: BootstrapContext, sessionId: string) =>
   createDashboardSessions(getDashboardSelectedProjectId(ctx)).find((session) => session.id === sessionId);
@@ -117,9 +127,13 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
             readyUnsubscribe = undefined;
             return true;
           }
-          // Core pages can open now. Keep an unresolved extension URL or saved
-          // location intact until its page registers, rather than replacing it with Start.
-          if (getDashboardExtensionsReadyProjectId(ctx) !== projectId && !ctx.pageLocations.canBoot(projectId)) {
+          // Registered extension pages may still belong to the previous project.
+          // Restore only core page paths before this project's metadata arrives,
+          // preserving extension URLs and saved parents until their pages register.
+          if (
+            getDashboardExtensionsReadyProjectId(ctx) !== projectId &&
+            !isCorePageLocation(ctx.pageLocations.getBootLocation(projectId))
+          ) {
             return false;
           }
           readyUnsubscribe?.();
