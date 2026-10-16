@@ -1,10 +1,10 @@
-import { spawn } from "node:child_process";
 import { connect } from "node:net";
-import { createInterface } from "node:readline";
 import type { HarnessStateApi } from "@pstdio/sdk/extensions";
 import { isConnectionError } from "./opencode-http";
+import type { OpencodeServer, OpencodeServerStarter } from "./opencode-server-process";
 
-export type OpencodeServerStarter = (options: { host: string; port: number }) => Promise<string>;
+export type { OpencodeServerStarter } from "./opencode-server-process";
+export { startOpencodeServer as defaultStartServer } from "./opencode-server-process";
 
 export type OpencodeServerStore = {
   read: () => Promise<string | null>;
@@ -69,210 +69,116 @@ export const defaultPingServer = async (url: string) => {
   }
 };
 
-const readServerUrl = (output: string) => {
-  const trimmed = output.trim();
-  if (!trimmed) return null;
+type Connection = { url: string; owned: OpencodeServer | null };
 
-  const prefix = "opencode server listening on ";
-  if (trimmed.startsWith(prefix)) {
-    return trimmed.slice(prefix.length).trim();
-  }
-
-  return null;
-};
-
-const waitForServerUrl = async (stdout: NodeJS.ReadableStream, stderr: NodeJS.ReadableStream) => {
-  const reader = createInterface({ input: stdout });
-  const errReader = createInterface({ input: stderr });
-  let stderrTail = "";
-
-  const collectError = (line: string) => {
-    stderrTail = `${stderrTail}\n${line}`.trim().slice(-8000);
-  };
-
-  errReader.on("line", collectError);
-
-  const url = await new Promise<string>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      const suffix = stderrTail ? `\n${stderrTail}` : "";
-      reject(new Error(`Timed out waiting for Opencode server URL.${suffix}`));
-    }, 120_000);
-
-    reader.on("line", (line) => {
-      const parsed = readServerUrl(line);
-      if (parsed) {
-        clearTimeout(timeout);
-        resolve(parsed);
-      }
-    });
-
-    reader.once("close", () => {
-      clearTimeout(timeout);
-      const suffix = stderrTail ? `\n${stderrTail}` : "";
-      reject(new Error(`Opencode server exited before publishing its URL.${suffix}`));
-    });
-  });
-
-  reader.close();
-  errReader.close();
-
-  return url;
-};
-
-export const defaultStartServer: OpencodeServerStarter = async ({ host, port }) => {
-  const child = spawn("opencode", ["serve", "--hostname", host, "--port", String(port)], {
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
-
-  try {
-    const url = await new Promise<string>((resolve, reject) => {
-      child.once("error", (error) => {
-        reject(new Error(`Failed to start Opencode server: ${error.message}`));
-      });
-
-      if (!child.stdout || !child.stderr) {
-        reject(new Error("Opencode server missing stdout/stderr streams."));
-        return;
-      }
-
-      waitForServerUrl(child.stdout, child.stderr).then(resolve).catch(reject);
-    });
-
-    return url;
-  } catch (error) {
-    child.kill();
-    throw error;
-  }
-};
-
-// Resolves (and remembers) a reachable opencode server URL, starting a shared
-// server when none is found, and retries actions once on connection errors.
+// The connection owns only the child it starts. A discovered server belongs to its caller.
 export const createServerConnection = (deps: OpencodeServerDeps) => {
-  let sharedServerPromise: Promise<string> | null = null;
-  let cachedServerUrl: string | null = null;
+  const lifetime = new AbortController();
+  let connection: Promise<Connection> | null = null;
+  let closing: Promise<void> | undefined;
+  let pendingStartup: AbortController | undefined;
 
-  const toStartServerError = (error: unknown) =>
-    error instanceof Error ? error : new Error("Failed to start Opencode server.");
+  const clearStoredUrl = async (url: string) => {
+    if ((await deps.serverStore.read()) === url) await deps.serverStore.clear();
+  };
 
-  const resolveServerOnPort = async (port: number) => {
-    const candidate = buildServerUrl(defaultServerHost, port);
-    const portOpen = await deps.isPortOpen({ host: defaultServerHost, port });
-
-    if (portOpen) {
-      const healthy = await deps.pingServer(candidate);
-      return healthy ? { url: candidate } : { url: null };
-    }
-
+  const startOwned = async (port: number, signal: AbortSignal) => {
+    const owned = await deps.startServer({ host: defaultServerHost, port, signal });
     try {
-      return { url: await deps.startServer({ host: defaultServerHost, port }) };
+      signal.throwIfAborted();
+      await deps.serverStore.write(owned.url);
+      signal.throwIfAborted();
+      return { url: owned.url, owned };
     } catch (error) {
-      return { url: null, error: toStartServerError(error) };
+      await owned.dispose();
+      await clearStoredUrl(owned.url);
+      throw error;
     }
   };
 
-  const findOrStartSharedServer = async () => {
-    let lastError: Error | null = null;
-
-    for (let offset = 0; offset < maxServerPortAttempts; offset += 1) {
-      const port = defaultServerPort + offset;
-      const result = await resolveServerOnPort(port);
-      if (result.url) return result.url;
-      if (result.error) lastError = result.error;
-    }
-
-    const maxPort = defaultServerPort + maxServerPortAttempts - 1;
-    const suffix = lastError ? ` ${lastError.message}` : "";
-    throw new Error(`Failed to start Opencode server on ports ${defaultServerPort}-${maxPort}.${suffix}`);
-  };
-
-  const ensureSharedServer = async () => {
-    if (!sharedServerPromise) {
-      sharedServerPromise = findOrStartSharedServer().catch((error) => {
-        sharedServerPromise = null;
-        throw error;
-      });
-    }
-
-    return sharedServerPromise;
-  };
-
-  const resolveExistingServerUrl = async () => {
-    if (cachedServerUrl) {
-      const reachable = await deps.pingServer(cachedServerUrl);
-      if (reachable) return cachedServerUrl;
-      cachedServerUrl = null;
-    }
-
+  const establish = async (signal: AbortSignal) => {
+    signal.throwIfAborted();
     const stored = await deps.serverStore.read();
-
-    if (!stored) {
-      const defaultUrl = buildServerUrl(defaultServerHost, defaultServerPort);
-      const reachable = await deps.pingServer(defaultUrl);
-
-      if (reachable) {
-        cachedServerUrl = defaultUrl;
-        return defaultUrl;
-      }
-
-      return null;
+    if (stored) {
+      if (await deps.pingServer(stored)) return { url: stored, owned: null };
+      await clearStoredUrl(stored);
     }
-
-    const reachable = await deps.pingServer(stored);
-
-    if (!reachable) {
-      await deps.serverStore.clear();
-      const defaultUrl = buildServerUrl(defaultServerHost, defaultServerPort);
-      const fallbackReachable = await deps.pingServer(defaultUrl);
-
-      if (fallbackReachable) {
-        cachedServerUrl = defaultUrl;
-        return defaultUrl;
+    let lastError: unknown;
+    for (let offset = 0; offset < maxServerPortAttempts; offset += 1) {
+      signal.throwIfAborted();
+      const port = defaultServerPort + offset;
+      const url = buildServerUrl(defaultServerHost, port);
+      if (await deps.isPortOpen({ host: defaultServerHost, port })) {
+        if (await deps.pingServer(url)) {
+          await deps.serverStore.write(url);
+          return { url, owned: null };
+        }
+        continue;
       }
-
-      return null;
+      try {
+        return await startOwned(port, signal);
+      } catch (error) {
+        signal.throwIfAborted();
+        lastError = error;
+      }
     }
-
-    cachedServerUrl = stored;
-    return stored;
+    const suffix = lastError instanceof Error ? lastError.message : "";
+    throw new Error(`Failed to start Opencode server on ports 4096-4115. ${suffix}`);
   };
 
-  const rememberServerUrl = async (url: string) => {
-    cachedServerUrl = url;
-    await deps.serverStore.write(url);
-    return url;
+  const connect = async (before?: () => Promise<void>) => {
+    const startup = new AbortController();
+    pendingStartup = startup;
+    try {
+      await before?.();
+      return await establish(AbortSignal.any([lifetime.signal, startup.signal]));
+    } finally {
+      if (pendingStartup === startup) pendingStartup = undefined;
+    }
   };
 
-  const ensureServerUrl = async () => {
-    const existing = await resolveExistingServerUrl();
-    if (existing) return { url: existing, started: false };
-
-    const started = await ensureSharedServer();
-    const url = await rememberServerUrl(started);
-    return { url, started: true };
-  };
-
-  const startFreshServer = async () => {
-    sharedServerPromise = null;
-    const url = await ensureSharedServer();
-    return rememberServerUrl(url);
+  const track = (pending: Promise<Connection>) => {
+    const tracked = pending.catch((error: unknown) => {
+      if (connection === tracked) connection = null;
+      throw error;
+    });
+    connection = tracked;
+    return tracked;
   };
 
   const withServerUrl: WithServerUrl = async (action) => {
-    const attachInfo = await ensureServerUrl();
-
+    lifetime.signal.throwIfAborted();
+    const pending = connection ?? track(connect());
+    const current = await pending;
+    lifetime.signal.throwIfAborted();
     try {
-      return await action(attachInfo.url);
+      return await action(current.url);
     } catch (error) {
-      if (attachInfo.started) throw error;
+      lifetime.signal.throwIfAborted();
       if (!isConnectionError(error)) throw error;
-
-      await deps.serverStore.clear();
-      cachedServerUrl = null;
-      const freshUrl = await startFreshServer();
-      return action(freshUrl);
+      if (connection === pending) {
+        track(
+          connect(async () => {
+            await current.owned?.dispose();
+            await clearStoredUrl(current.url);
+          }),
+        );
+      }
+      const replacement = await connection!;
+      lifetime.signal.throwIfAborted();
+      return action(replacement.url);
     }
   };
 
-  return { withServerUrl };
+  const dispose = () =>
+    (closing ??= (async () => {
+      lifetime.abort();
+      const current = await connection?.catch(() => null);
+      if (current?.owned) {
+        await current.owned.dispose();
+        await clearStoredUrl(current.url);
+      }
+    })());
+
+  return { withServerUrl, dispose, cancelPendingStartup: () => pendingStartup?.abort() };
 };

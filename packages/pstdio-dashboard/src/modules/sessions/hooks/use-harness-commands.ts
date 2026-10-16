@@ -15,7 +15,9 @@ export const useHarnessCommands = (
   const state = useQuery({
     queryKey,
     enabled: Boolean(harnessId && (sessionId || draft)),
-    refetchInterval: 2000,
+    // Draft definitions refresh with inputs, focus, and native actions. Existing
+    // conversations keep polling so modes created by the agent become visible.
+    refetchInterval: sessionId ? 2000 : false,
     queryFn: ({ signal }) =>
       apiRequest<HarnessCommandState & { harnessId: string }>(
         sessionId ? `/v1/sessions/${sessionId}/harness-commands` : "/v1/sessions/harness-command-state",

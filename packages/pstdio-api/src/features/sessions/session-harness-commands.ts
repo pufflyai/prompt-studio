@@ -6,6 +6,8 @@ import type {
   HarnessSession,
   PreparedHarnessOperation,
 } from "pstdio-api-contracts";
+import { HarnessDisposedError } from "pstdio-api-runtime-host";
+import { readCurrentHarness } from "../harnesses/read-current-harness";
 import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
@@ -31,12 +33,12 @@ export class HarnessOperationError extends Error {
 const resolve = async (deps: SessionsRouteDeps, id: string) => {
   const session = await deps.sessionService.get(id);
   if (!session) throw new HarnessOperationError("Session not found.", 404);
-  const harness = await getSessionHarness(deps.harnessRegistry, session);
-  if (!harness) throw new HarnessOperationError("The selected harness is not enabled for this project.", 400);
   const record = await waitForWorkspaceReady({ workspaceSessionService: deps.workspaceSessionService }, id);
   if (record?.initializing || record?.setup_error || (record?.provider_state && record.provider_state !== "ready"))
     throw new HarnessOperationError("The workspace is not ready.", 409);
   const workspace = toHarnessWorkspaceContext(record);
+  const harness = await getSessionHarness(deps.harnessRegistry, session);
+  if (!harness) throw new HarnessOperationError("The selected harness is not enabled for this project.", 400);
   if (workspace?.executionTarget.kind === "remote" && harness.cwdRequirement === "required")
     throw new HarnessOperationError("This harness requires a local workspace.", 400);
   const input: HarnessCommandContext = {
@@ -51,7 +53,19 @@ const resolve = async (deps: SessionsRouteDeps, id: string) => {
 };
 export const getSessionHarnessCommands = async (deps: SessionsRouteDeps, id: string) => {
   const { harness, input, options } = await resolve(deps, id);
-  return { ...(await harness.getCommandState(input, options)), harnessId: harness.id };
+  try {
+    const state = await readCurrentHarness(deps.harnessRegistry, harness.id, options, async (current) => {
+      if (input.workspace?.executionTarget.kind === "remote" && current.cwdRequirement === "required")
+        throw new HarnessOperationError("This harness requires a local workspace.", 400);
+      return { ...(await current.getCommandState(input, options)), harnessId: current.id };
+    });
+    if (!state) throw new HarnessOperationError("The selected harness is not enabled for this project.", 400);
+    return state;
+  } catch (error) {
+    if (error instanceof HarnessDisposedError)
+      throw new HarnessOperationError("The harness changed during discovery. Try again.", 409);
+    throw error;
+  }
 };
 const saveParams = (deps: SessionsRouteDeps, id: string, params: HarnessParams | undefined, harnessId: string) => {
   if (!params) return;

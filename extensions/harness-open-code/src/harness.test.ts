@@ -13,7 +13,7 @@ const harness = (opts: { available?: boolean; modelsOutput?: string } = {}) =>
       getModelsOutput: async () => opts.modelsOutput ?? "",
     },
     {
-      startServer: async () => "http://localhost:4096",
+      startServer: async () => ({ url: "http://localhost:4096", dispose: async () => {} }),
       serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
       pingServer: async () => false,
       isPortOpen: async () => false,

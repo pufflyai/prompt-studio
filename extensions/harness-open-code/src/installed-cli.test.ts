@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -32,6 +32,9 @@ const context = {
 
 describe.if(enabled)("installed OpenCode CLI", () => {
   const harness = createOpencodeHarness();
+  afterAll(async () => {
+    await harness.dispose!(context);
+  });
 
   test("is detected as supported", async () => {
     expect(await detectOpencode(context)).toMatchObject({ available: true });

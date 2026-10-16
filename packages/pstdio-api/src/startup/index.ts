@@ -120,10 +120,11 @@ export const repairLegacyTemplateOwners = async (
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
-  await repairLegacyTemplateOwners(deps, installDefaultExtensions, signal);
-  const defaultExtensionPreparation = options?.prepareDefaultExtensions
-    ? options.prepareDefaultExtensions(signal)
-    : ensureDefaultExtensionsInstalled(deps, signal);
+  const defaultExtensionPreparation = (async () => {
+    await repairLegacyTemplateOwners(deps, installDefaultExtensions, signal);
+    if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);
+    else await ensureDefaultExtensionsInstalled(deps, signal);
+  })();
   const projectIds = (await deps.projectService.list()).map((project) => project.id);
   await reconcileProjectWorkspaces(deps, projectIds, signal);
   await options?.recoverQueuedSessions?.();

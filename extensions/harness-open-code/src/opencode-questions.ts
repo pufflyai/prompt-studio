@@ -36,7 +36,7 @@ export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerU
     return withServerUrl(fetchQuestions);
   };
 
-  const replyQuestion = async (requestId: string, answers: string[][], cwd?: string) => {
+  const replyQuestion = async (requestId: string, answers: string[][], cwd?: string, signal?: AbortSignal) => {
     const directory = cwd?.trim() || process.cwd();
 
     const answerQuestion = async (baseUrl: string) => {
@@ -47,6 +47,7 @@ export const createQuestionApi = (input: { fetcher: OpencodeFetcher; withServerU
       const { response, text } = await requestJson<boolean>(fetcher, url, {
         method: "POST",
         headers,
+        signal,
         body: { answers },
       });
 

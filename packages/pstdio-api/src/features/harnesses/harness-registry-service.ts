@@ -13,6 +13,7 @@ import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
 import type { ProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import type { ProjectExtensionRuntimeSnapshot } from "../extensions/project-extension-runtime-snapshot";
+import { ExtensionRuntimeProjectMissingError } from "../extensions/project-extension-runtime-snapshot";
 import { createHarnessRegistryLifecycle } from "./harness-registry-lifecycle";
 import { createHarnessStateApi } from "./harness-state";
 
@@ -211,7 +212,13 @@ export const createHarnessRegistryService = (input: {
     for (;;) {
       ensureActive();
       const generation = resolutionGeneration;
-      const snapshot = await input.extensionRuntimeCatalog.get(projectId);
+      const snapshot = await input.extensionRuntimeCatalog.get(projectId).catch(async (error: unknown) => {
+        if (error instanceof ExtensionRuntimeProjectMissingError) {
+          projectRegistries.delete(projectId);
+          await lifecycle.remove(projectId);
+        }
+        throw error;
+      });
       const cached = projectRegistries.get(projectId);
       if (cached && cached.snapshot === snapshot) return cached.registry;
       const loaded = await lifecycle.get(snapshot.runtime.harnesses, projectId);
@@ -282,7 +289,7 @@ export const createHarnessRegistryService = (input: {
     // Disablement must release workers even if the user never sends another turn.
     for (const projectId of projects) {
       resolveProjectRegistry(projectId).catch((err) => {
-        if (!closed)
+        if (!closed && !(err instanceof ExtensionRuntimeProjectMissingError))
           apiLogger.error({ err, event: "harness.cleanup.error", project_id: projectId }, "Harness refresh failed");
       });
     }

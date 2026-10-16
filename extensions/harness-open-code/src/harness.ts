@@ -11,10 +11,10 @@ import { opencodeCommandState, prepareOpencodeOperation } from "./commands";
 import { detectOpencode } from "./detection";
 import { recoverOpencodeMessages } from "./history-reconciliation";
 import { parseOpencodeModels } from "./models";
+import { createOpencodeHarnessService } from "./opencode-harness-service";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
-import { createHarnessServerStore } from "./opencode-server";
-import { createOpencodeService } from "./opencode-service";
+import type { createOpencodeService } from "./opencode-service";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 
 // --- Detection ---
@@ -67,12 +67,12 @@ const toHarnessSession = (input: {
 }): HarnessSession => {
   const { agentSessionId, abortController, abortSession, done } = input;
   // Aborting the controller stops the poll loop; the server-side abort is best-effort.
-  const stop = () => {
+  const stop = async () => {
     if (abortController.signal.aborted) return;
-    void abortSession().catch((error) => {
+    abortController.abort();
+    await abortSession().catch((error) => {
       console.error(`[opencode] failed to abort session ${agentSessionId}`, error);
     });
-    abortController.abort();
   };
 
   return {
@@ -80,7 +80,7 @@ const toHarnessSession = (input: {
     // The host does not call stop when a turn ends, so a poll that gives up with an
     // error must stop OpenCode itself, or it keeps changing the worktree.
     done: done.catch((error: unknown) => {
-      stop();
+      void stop();
       throw error;
     }),
     stop,
@@ -107,9 +107,8 @@ export const createOpencodeHarness = (
   serviceOverrides: Parameters<typeof createOpencodeService>[0] = {},
 ): Omit<HarnessProvider, "ref"> => {
   const deps = { ...defaultDeps, ...overrides };
-  const fixedService = serviceOverrides.serverStore ? createOpencodeService(serviceOverrides) : null;
-  const serviceFor = (ctx: HarnessContext) =>
-    fixedService ?? createOpencodeService({ ...serviceOverrides, serverStore: createHarnessServerStore(ctx.state) });
+  const services = createOpencodeHarnessService(serviceOverrides);
+  const serviceFor = services.get;
   let modelCache: { expiresAt: number; value: Promise<ReturnType<typeof parseOpencodeModels>> } | undefined;
 
   const listModels = async (ctx: HarnessContext) => {
@@ -130,7 +129,7 @@ export const createOpencodeHarness = (
 
   const fetchBaselineCount = async (ctx: HarnessContext, sessionId: string, cwd: string | undefined) => {
     try {
-      const opencode = serviceFor(ctx);
+      const opencode = await serviceFor(ctx);
       const existing = await opencode.getSessionMessages(sessionId, cwd);
       return existing.length;
     } catch {
@@ -142,12 +141,13 @@ export const createOpencodeHarness = (
     ctx: HarnessContext,
     input: HarnessResumeInput,
     questionResponse: QuestionResponse,
+    signal: AbortSignal,
   ) => {
-    const opencode = serviceFor(ctx);
+    const opencode = await serviceFor(ctx);
     const pendingQuestions = await opencode.listPendingQuestions(input.cwd);
     const pendingQuestion = pendingQuestions.find((question) => question.sessionID === input.agentSessionId);
     const messageComplete = pendingQuestion
-      ? opencode.replyQuestion(pendingQuestion.id, questionResponse.answers, input.cwd)
+      ? opencode.replyQuestion(pendingQuestion.id, questionResponse.answers, input.cwd, signal)
       : Promise.reject(new Error("OpenCode pending question request not found."));
     const abortController = new AbortController();
     const done = pollOpencodeQuestionReply({
@@ -162,12 +162,15 @@ export const createOpencodeHarness = (
       abortSignal: abortController.signal,
     });
 
-    return toHarnessSession({
-      agentSessionId: input.agentSessionId,
-      abortController,
-      abortSession: () => opencode.abortSession(input.agentSessionId, input.cwd),
-      done,
-    });
+    return services.track(
+      ctx,
+      toHarnessSession({
+        agentSessionId: input.agentSessionId,
+        abortController,
+        abortSession: () => opencode.abortSession(input.agentSessionId, input.cwd),
+        done,
+      }),
+    );
   };
 
   return {
@@ -180,97 +183,126 @@ export const createOpencodeHarness = (
     detect: (ctx) => deps.detect(ctx),
 
     listModels,
-    getCommandState: (ctx, input) => opencodeCommandState(input, serviceFor(ctx)),
-    prepareOperation: (ctx, input, operation) => prepareOpencodeOperation(input, operation, serviceFor(ctx)),
-
-    start: async (ctx, input) => {
-      const opencode = serviceFor(ctx);
-      const { sessionId, messageComplete } = await opencode.startSession({
-        prompt: input.prompt,
-        attachments: input.attachments,
-        model: input.model,
-        params: input.params,
-        cwd: input.cwd,
-      });
-
-      const abortController = new AbortController();
-      const done = pollOpencodeMessages({
-        loadMessages: opencode.getSessionMessages,
-        sessionId,
-        cwd: input.cwd,
-        events: input.events,
-        onHistoryRecovery: historyRecoveryLogger(ctx, sessionId),
-        baselineCount: 0,
-        messageComplete,
-        abortSignal: abortController.signal,
-      });
-
-      return toHarnessSession({
-        agentSessionId: sessionId,
-        abortController,
-        abortSession: () => opencode.abortSession(sessionId, input.cwd),
-        done,
-      });
+    getCommandState: async (ctx, input) => opencodeCommandState(input, await serviceFor(ctx)),
+    prepareOperation: async (ctx, input, operation) => {
+      const prepared = prepareOpencodeOperation(input, operation, await serviceFor(ctx));
+      return {
+        ...prepared,
+        invoke: (invocation) =>
+          services.run(ctx, async (signal) => {
+            const result = await prepared.invoke({
+              ...invocation,
+              signal: invocation.signal ? AbortSignal.any([signal, invocation.signal]) : signal,
+            });
+            if (result.kind === "started") await services.track(ctx, result.session);
+            return result;
+          }),
+      };
     },
+    dispose: services.dispose,
 
-    resume: async (ctx, input) => {
-      const opencode = serviceFor(ctx);
-      if (input.questionResponse) {
-        return resumeQuestionReply(ctx, input, input.questionResponse);
-      }
+    start: (ctx, input) =>
+      services.run(ctx, async (signal) => {
+        const opencode = await serviceFor(ctx);
+        const { sessionId, messageComplete } = await opencode.startSession({
+          signal,
+          prompt: input.prompt,
+          attachments: input.attachments,
+          model: input.model,
+          params: input.params,
+          cwd: input.cwd,
+        });
 
-      const baselineCount = await fetchBaselineCount(ctx, input.agentSessionId, input.cwd);
+        const abortController = new AbortController();
+        const done = pollOpencodeMessages({
+          loadMessages: opencode.getSessionMessages,
+          sessionId,
+          cwd: input.cwd,
+          events: input.events,
+          onHistoryRecovery: historyRecoveryLogger(ctx, sessionId),
+          baselineCount: 0,
+          messageComplete,
+          abortSignal: abortController.signal,
+        });
 
-      const { messageComplete } = opencode.sendSessionMessage({
-        sessionId: input.agentSessionId,
-        prompt: input.prompt,
-        attachments: input.attachments,
-        model: input.model,
-        params: input.params,
-        cwd: input.cwd,
-      });
-      const abortController = new AbortController();
-      const done = pollOpencodeMessages({
-        loadMessages: opencode.getSessionMessages,
-        sessionId: input.agentSessionId,
-        cwd: input.cwd,
-        events: input.events,
-        onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
-        baselineCount,
-        messageComplete,
-        abortSignal: abortController.signal,
-      });
+        return services.track(
+          ctx,
+          toHarnessSession({
+            agentSessionId: sessionId,
+            abortController,
+            abortSession: () => opencode.abortSession(sessionId, input.cwd),
+            done,
+          }),
+        );
+      }),
 
-      return toHarnessSession({
-        agentSessionId: input.agentSessionId,
-        abortController,
-        abortSession: () => opencode.abortSession(input.agentSessionId, input.cwd),
-        done,
-      });
-    },
+    resume: (ctx, input) =>
+      services.run(ctx, async (signal) => {
+        const opencode = await serviceFor(ctx);
+        if (input.questionResponse) {
+          return resumeQuestionReply(ctx, input, input.questionResponse, signal);
+        }
 
-    reattach: (ctx, input) => {
-      const opencode = serviceFor(ctx);
-      const abortController = new AbortController();
-      const done = pollOpencodeUntilIdle({
-        loadMessages: opencode.getSessionMessages,
-        sessionId: input.agentSessionId,
-        cwd: input.cwd,
-        events: input.events,
-        onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
-        abortSignal: abortController.signal,
-      });
+        const baselineCount = await fetchBaselineCount(ctx, input.agentSessionId, input.cwd);
 
-      return toHarnessSession({
-        agentSessionId: input.agentSessionId,
-        abortController,
-        abortSession: () => opencode.abortSession(input.agentSessionId, input.cwd),
-        done,
-      });
-    },
+        const { messageComplete } = opencode.sendSessionMessage({
+          signal,
+          sessionId: input.agentSessionId,
+          prompt: input.prompt,
+          attachments: input.attachments,
+          model: input.model,
+          params: input.params,
+          cwd: input.cwd,
+        });
+        const abortController = new AbortController();
+        const done = pollOpencodeMessages({
+          loadMessages: opencode.getSessionMessages,
+          sessionId: input.agentSessionId,
+          cwd: input.cwd,
+          events: input.events,
+          onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
+          baselineCount,
+          messageComplete,
+          abortSignal: abortController.signal,
+        });
+
+        return services.track(
+          ctx,
+          toHarnessSession({
+            agentSessionId: input.agentSessionId,
+            abortController,
+            abortSession: () => opencode.abortSession(input.agentSessionId, input.cwd),
+            done,
+          }),
+        );
+      }),
+
+    reattach: (ctx, input) =>
+      services.run(ctx, async () => {
+        const opencode = await serviceFor(ctx);
+        const abortController = new AbortController();
+        const done = pollOpencodeUntilIdle({
+          loadMessages: opencode.getSessionMessages,
+          sessionId: input.agentSessionId,
+          cwd: input.cwd,
+          events: input.events,
+          onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
+          abortSignal: abortController.signal,
+        });
+
+        return services.track(
+          ctx,
+          toHarnessSession({
+            agentSessionId: input.agentSessionId,
+            abortController,
+            abortSession: () => opencode.abortSession(input.agentSessionId, input.cwd),
+            done,
+          }),
+        );
+      }),
 
     getMessages: async (ctx, input) => {
-      const opencode = serviceFor(ctx);
+      const opencode = await serviceFor(ctx);
       const messages = await opencode.getSessionMessages(input.agentSessionId, input.cwd);
       return messages.map(normalizeOpencodeMessage);
     },
