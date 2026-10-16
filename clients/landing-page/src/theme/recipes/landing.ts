@@ -167,7 +167,8 @@ export const landingSlotRecipe = defineSlotRecipe({
       mx: "auto",
       [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: {
         gridTemplateColumns: "30rem minmax(0, 1fr)",
-        pb: "4",
+        alignItems: "center",
+        pb: "0",
       },
     },
     cardSpace: {
@@ -183,7 +184,7 @@ export const landingSlotRecipe = defineSlotRecipe({
       [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: {
         "--assembly-min-height": "36rem",
         "--assembly-horizontal-space": "48px",
-        "--assembly-bottom-space": "16px",
+        "--assembly-bottom-space": "0px",
         "--assembly-board-scale": BOARD_SCALE.wide,
       },
     },
