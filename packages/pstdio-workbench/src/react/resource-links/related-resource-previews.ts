@@ -37,7 +37,7 @@ const openCandidates = (
     const kind = JSON.stringify([candidate.resource.extensionId, candidate.resource.type]);
     if (!candidate.target || selectedKinds.has(kind) || resourceKey(candidate.resource) === resourceKey(source))
       continue;
-    if (opener.open(candidate.target)) selectedKinds.add(kind);
+    if (opener.open(candidate.target, source)) selectedKinds.add(kind);
   }
   if (active && ctx.layout.listPanelInstances().some((panel) => panel.instanceId === active))
     ctx.layout.activatePanel(active);

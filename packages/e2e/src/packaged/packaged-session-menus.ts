@@ -56,6 +56,13 @@ export const verifyPackagedSessionMenus = async (
   expect((await created).status()).toBe(201);
   await expect(sideTabs.filter({ hasText: "Packaged created session" })).toHaveAttribute("aria-selected", "true");
   expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
+  await expect(sideTabs.first()).toContainText("Packaged created session");
+  await expect(sideTabs.filter({ hasText: "Packaged session actions" })).toHaveCount(0);
+  const createdTab = sideTabs.filter({ hasText: "Packaged created session" });
+  await createdTab.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",
@@ -68,10 +75,24 @@ export const verifyPackagedSessionMenus = async (
     await expect(page.getByRole("menuitem", { name, exact: true })).toBeVisible();
   }
   await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
   const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
     name: /Packaged session actions/,
   });
   await expect(tab).toBeVisible();
+  await expect(sideTabs.first()).toContainText("Packaged session actions");
+  await createdTab.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Unpin tab", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(tab).toHaveCount(0);
+  await expect(sideTabs.first()).toContainText("Packaged created session");
+  await row.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(tab).toBeVisible();
+  await expect(createdTab).toHaveCount(0);
   await tab.focus();
   await page.keyboard.press("Shift+F10");
   await expect(page.getByRole("menu", { name: "Packaged session actions context menu", exact: true })).toBeVisible();

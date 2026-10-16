@@ -7,6 +7,7 @@ import type {
   WorkbenchRegion,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
+import { planTrayTabs } from "./tray-tabs";
 
 export const createLayoutPlacementMethods = (input: {
   getLayout(): WorkbenchLayout;
@@ -26,9 +27,17 @@ export const createLayoutPlacementMethods = (input: {
       if (index < 0) continue;
       const widget = input.requireWidget(region.widgets[index].contributionId);
       const nextPlacement = buildUpdatedPlacement(region.widgets[index], widget, update);
-      const nextLayout = replaceRegionWidgets(layout, region.id, (widgets) =>
-        widgets.map((current, currentIndex) => (currentIndex === index ? nextPlacement : current)),
+      const plan = planTrayTabs(
+        region.widgets.map((current, currentIndex) => (currentIndex === index ? nextPlacement : current)),
+        nextPlacement.tabRetention === "preview" ? nextPlacement.widgetId : region.activeWidgetId,
       );
+      const nextLayout = replaceRegionWidgets(layout, region.id, () => plan.widgets);
+      if (
+        plan.replaced.some(
+          (widget) => widget.widgetId === layout.activeWidgetId || widget.widgetId === region.activeWidgetId,
+        )
+      )
+        return input.applyAndActivate(nextLayout, region.id, nextPlacement);
       input.setLayout(nextLayout);
       input.persistLayout();
       return nextPlacement;

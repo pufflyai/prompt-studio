@@ -10,19 +10,21 @@ test("mixed page and mode order survives navigation and a fresh workbench", asyn
   await w.navigation.openTarget(openFile("one"));
   w.pinPlacement(w.layout.getLayout().regions.main.widgets[0]!.placementIdentity!);
   await w.navigation.openTarget(openFile("two"));
-  w.pinPlacement(w.layout.getLayout().regions.main.widgets[1]!.placementIdentity!);
+  w.pinPlacement(
+    w.layout.getLayout().regions.main.widgets.find((tab) => tab.resource?.id === "two")!.placementIdentity!,
+  );
   await w.navigation.openTarget({ kind: "panel", panel, resource: resource("session"), open: "pin" });
   w.movePanel(w.layout.getLayout().regions.side.widgets[0]!.widgetId, "main", {
     beforeWidgetId: w.layout.getLayout().regions.main.widgets[1]!.widgetId,
   });
   const order = (core: typeof w) => core.layout.getLayout().regions.main.widgets.map((tab) => tab.resource?.id);
-  expect(order(w)).toEqual(["one", "session", "two"]);
+  expect(order(w)).toEqual(["two", "session", "one"]);
   await w.navigation.openTarget(navigate("beta"));
   await w.navigation.openTarget(navigate("alpha"));
-  expect(order(w)).toEqual(["one", "session", "two"]);
+  expect(order(w)).toEqual(["two", "session", "one"]);
   const restored = harness(saved);
   await restored.navigation.openTarget(navigate("alpha"));
-  expect(order(restored)).toEqual(["one", "session", "two"]);
+  expect(order(restored)).toEqual(["two", "session", "one"]);
 });
 
 test("opening an existing moved panel reveals its actual destination", async () => {
@@ -181,14 +183,14 @@ test("page and shared mode placements restore their chosen regions after navigat
   expect(restored.layout.getLayout().regions.main.widgets.some((t) => t.widgetId === modeTab.widgetId)).toBe(true);
 });
 
-test("preview and pinned tabs can be interleaved without pinning changing their order", async () => {
+test("unpinning keeps the preview before pinned tabs", async () => {
   const w = harness();
   await w.navigation.openTarget(navigate("alpha"));
   await w.navigation.openTarget(openFile("pinned"));
   const pinned = w.layout.getLayout().regions.main.widgets[0]!;
   w.pinPlacement(pinned.placementIdentity!);
   await w.navigation.openTarget(openFile("preview"));
-  const preview = w.layout.getLayout().regions.main.widgets[1]!;
+  const preview = w.layout.getLayout().regions.main.widgets.find((tab) => tab.resource?.id === "preview")!;
   w.layout.reorderPanel(preview.widgetId, { beforeWidgetId: pinned.widgetId });
   w.pinPlacement(preview.placementIdentity!);
   w.pinPlacement(preview.placementIdentity!, false);

@@ -1,4 +1,4 @@
-import type { PageLocation } from "@pstdio/sdk/extensions";
+import { defaultPageResourceCodec, type PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout } from "../../registries/layout/layout-types";
 import { pageSlots } from "../../registries/pages/page-main";
 import type {
@@ -9,6 +9,7 @@ import type {
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
+import { workbenchPageLocationsEqual } from "../page-location/page-location-normalization";
 
 // The layout already persists instance resources, retention, and selection. Rebuild
 // the page owner's state from that cache instead of storing a second copy.
@@ -73,13 +74,17 @@ export const createPageStateRestorer =
       projectId,
       resource: location.resource,
     });
+    const saved = input.pageLocationPersistence?.load(projectId)?.location;
+    const restoresSavedLocation = workbenchPageLocationsEqual(saved, location, defaultPageResourceCodec, [page]);
     if (
       !layout ||
-      !Object.values(layout.regions).some((region) =>
-        region.widgets.some(
-          (placement) => placement.placementIdentity?.kind === "page" && placement.placementIdentity.pageId === page.id,
-        ),
-      )
+      (!restoresSavedLocation &&
+        !Object.values(layout.regions).some((region) =>
+          region.widgets.some(
+            (placement) =>
+              placement.placementIdentity?.kind === "page" && placement.placementIdentity.pageId === page.id,
+          ),
+        ))
     )
       return undefined;
     return pageStateFromLayout(page, layout);

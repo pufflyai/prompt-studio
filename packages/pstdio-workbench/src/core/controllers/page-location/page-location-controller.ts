@@ -110,7 +110,7 @@ export const createWorkbenchPageLocationController = <Value>(
     resolved: ResolvedPageLocation,
     history: "push" | "replace" | "none",
     action: string,
-  ) => publish(projectId, prepareState(projectId, resolved, action), history, action);
+  ) => publish(projectId, prepareState.open(projectId, resolved, action), history, action);
 
   const normalizeStored = (location: PageLocation): ResolvedPageLocation =>
     normalizeWorkbenchPageLocation({ location, pages: pages(), resources: internals.resources });
@@ -165,7 +165,15 @@ export const createWorkbenchPageLocationController = <Value>(
       rootLevel.restore(persisted?.rootLevel);
       const saved = hasProjectUrl ? undefined : persisted?.location;
       const resolved = fromUrl ?? (saved ? normalizeStored(saved) : start());
-      return commit(projectId, resolved, "replace", source === "boot" ? "bootPageLocation" : "switchPageProject");
+      const action = source === "boot" ? "bootPageLocation" : "switchPageProject";
+      const matchesSavedLocation = workbenchPageLocationsEqual(
+        persisted?.location,
+        resolved.location,
+        internals.resources,
+        pages(),
+      );
+      const prepare = matchesSavedLocation ? prepareState.restore : prepareState.open;
+      return publish(projectId, prepare(projectId, resolved, action), "replace", action);
     } catch (error) {
       fail(source, error);
       try {
@@ -240,7 +248,7 @@ export const createWorkbenchPageLocationController = <Value>(
     normalizeStored,
     locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources, pages()),
     commit,
-    replay: createPageLocationReplayer({ registry: input.registry, prepare: prepareState, publish }),
+    replay: createPageLocationReplayer({ registry: input.registry, prepare: prepareState.open, publish }),
     fail,
     closePlacement: closeActivePlacement,
     removeResource: createPageResourceRemover({

@@ -85,6 +85,7 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
     drag,
     target,
     drop: context.drop?.widgetId === placement.widgetId ? context.drop : undefined,
+    replacementStyle: context.drop?.replacing?.widgetId === placement.widgetId ? "tabDropZone" : undefined,
     onContextMenu,
     onKeyDown,
     onPointerDown,

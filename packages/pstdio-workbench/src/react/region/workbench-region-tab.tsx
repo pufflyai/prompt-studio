@@ -59,6 +59,8 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             aria-haspopup="menu"
             aria-expanded={behavior.open}
             aria-keyshortcuts={sortable ? "Alt+ArrowLeft Alt+ArrowRight Shift+F10" : "Shift+F10"}
+            data-drop-replace={Boolean(behavior.replacementStyle) || undefined}
+            layerStyle={behavior.replacementStyle}
             fontStyle={placement.tabRetention === "preview" ? "italic" : undefined}
             opacity={drag.isDragging ? 0.5 : undefined}
             w="full"
@@ -107,13 +109,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             ) : null}
           </Tabs.Trigger>
         </Tooltip>
-        {drop ? (
-          <DropIndicator
-            orientation="vertical"
-            left={drop.edge === "before" ? "0" : undefined}
-            right={drop.edge === "after" ? "0" : undefined}
-          />
-        ) : null}
+        <TabDropIndicator drop={drop} />
       </Box>
       <RegionTabMenu
         anchor={behavior.anchor}
@@ -125,5 +121,17 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         workbench={workbench}
       />
     </>
+  );
+};
+
+const TabDropIndicator = (props: { drop: ReturnType<typeof useRegionTab>["drop"] }) => {
+  const { drop } = props;
+  if (!drop || drop.replacing) return null;
+  return (
+    <DropIndicator
+      orientation="vertical"
+      left={drop.edge === "before" ? "0" : undefined}
+      right={drop.edge === "after" ? "0" : undefined}
+    />
   );
 };

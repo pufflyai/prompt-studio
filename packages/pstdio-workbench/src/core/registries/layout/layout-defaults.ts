@@ -1,5 +1,6 @@
 import { type WorkbenchRegion, workbenchRegions } from "./layout-regions";
 import type { WorkbenchLayout, WorkbenchRegionState, WorkbenchWidgetPlacement } from "./layout-types";
+import { planTrayTabs } from "./tray-tabs";
 import { resolveUniqueWidgetId } from "./widget-id";
 
 const createRegionState = (id: WorkbenchRegion, visible: boolean): WorkbenchRegionState => ({
@@ -58,7 +59,13 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
       return widgetId === placement.widgetId ? placement : { ...placement, widgetId };
     });
     const normalizedActiveWidgetId = activeIndex >= 0 ? widgets[activeIndex]?.widgetId : originalActiveWidgetId;
-    regions[id] = { ...region, widgets, activeWidgetId: normalizedActiveWidgetId };
+    const retained = planTrayTabs(widgets, normalizedActiveWidgetId).widgets;
+    regions[id] = {
+      ...region,
+      widgets: retained,
+      activeWidgetId:
+        retained.find((widget) => widget.widgetId === normalizedActiveWidgetId)?.widgetId ?? retained[0]?.widgetId,
+    };
 
     if (originalActiveWidgetId && layout.activeWidgetId === originalActiveWidgetId && activeIndex >= 0) {
       activeWidgetId = normalizedActiveWidgetId;

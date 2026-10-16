@@ -8,6 +8,7 @@ import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createPageHistoryEntry } from "./page-location-history-entry";
 import { workbenchPageLocationsEqual } from "./page-location-normalization";
+import { refreshOpenPageInstances } from "./page-location-refresh";
 import type { CreateWorkbenchPageLocationControllerInput, ResolvedPageLocation } from "./page-location-types";
 
 export const createPageLocationPublisher = <Value>(
@@ -62,24 +63,34 @@ export const createPageLocationReplayer =
     const refresh =
       current.projectId === projectId &&
       workbenchPageLocationsEqual(current.location, resolved.location, resources, input.registry.listPages());
-    const next = refresh ? { ...state, reconciliation: { ...state.reconciliation, activate: [] } } : state;
+    const next = refresh
+      ? getWorkbenchPageRegistryInternals(input.registry).prepare.compose(current, {
+          ...current,
+          location: state.location,
+          pageStates: refreshOpenPageInstances(current.pageStates, state.pageStates),
+          activate: [],
+          action,
+        })
+      : state;
     return input.publish(projectId, next, "replace", action);
   };
 
 export const createPageLocationPreparer = <Value>(registry: WorkbenchPageRegistry<Value>) => {
   const internals = getWorkbenchPageRegistryInternals(registry);
-  return (projectId: string, resolved: ResolvedPageLocation, action: string) =>
-    internals.prepare.location(
-      {
-        pageId: resolved.pageId,
-        projectId,
-        location: resolved.location,
-        action,
-        open: resolved.open,
-        resource: resolved.location.resource,
-        section: resolved.location.section,
-        pageStates: resolved.pageStates,
-      },
-      registry.store.getState(),
-    );
+  const target = (projectId: string, resolved: ResolvedPageLocation, action: string) => ({
+    pageId: resolved.pageId,
+    projectId,
+    location: resolved.location,
+    action,
+    open: resolved.open,
+    resource: resolved.location.resource,
+    section: resolved.location.section,
+    pageStates: resolved.pageStates,
+  });
+  return {
+    open: (projectId: string, resolved: ResolvedPageLocation, action: string) =>
+      internals.prepare.location(target(projectId, resolved, action), registry.store.getState()),
+    restore: (projectId: string, resolved: ResolvedPageLocation, action: string) =>
+      internals.prepare.restore(target(projectId, resolved, action), registry.store.getState()),
+  };
 };

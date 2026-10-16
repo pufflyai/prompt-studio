@@ -16,7 +16,7 @@ test.each(["page", "mode"] as const)("Keep Open pins the %s owner before another
   expect(
     workbench.layout.getLayout().regions[region].widgets.map((item) => [item.resource?.id, item.tabRetention]),
   ).toEqual([
-    ["first", "persistent"],
     ["second", "preview"],
+    ["first", "persistent"],
   ]);
 });

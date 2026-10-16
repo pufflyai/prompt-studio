@@ -181,5 +181,20 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       owned,
     );
   };
-  return { compose, location, slot };
+  const restore = (target: WorkbenchPageLocationCommitInput, current: WorkbenchPageRegistryStoreState<Value>) => {
+    const page = requirePage(current, target.pageId);
+    const state = input.restorePageState?.(page, target.location, target.projectId);
+    if (!state) return location(target, current);
+    return compose(current, {
+      ...current,
+      pageStates: { ...current.pageStates, [pageStateKey(page, target.location, input.resources)]: state },
+      projectId: target.projectId,
+      location: target.location,
+      activePageId: page.id,
+      activeModeId: page.modeId,
+      activate: [],
+      action: target.action,
+    });
+  };
+  return { compose, location, restore, slot };
 };
