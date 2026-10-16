@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Add resource-owned related openings and clarify tab replacement feedback
+Add passive resource-owned related openings with page cleanup and clarify tab replacement feedback

@@ -228,6 +228,8 @@ const reconcileRegions = (
       ) ?? widgets[0]?.widgetId;
     const opensPreviouslyEmptyRegion =
       region.widgets.length === 0 && widgets.some((placement) => !placement.hiddenByDefault);
+    const closesEmptyPanel =
+      (regionId === "side" || regionId === "secondary") && region.widgets.length > 0 && widgets.length === 0;
     regions[regionId] = {
       ...region,
       widgets: planTrayTabs(
@@ -238,6 +240,7 @@ const reconcileRegions = (
       savedWidgetOrder: undefined,
       activeWidgetId,
       ...(docked.has(regionId) ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
+      ...(closesEmptyPanel ? { visible: false } : {}),
     };
   }
   return { ...layout, regions };

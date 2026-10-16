@@ -1,5 +1,6 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { NavigationTarget, RegisteredResourceKind, WorkbenchModuleContext } from "../../core";
+import { relatedResourcePageKey } from "./related-resource-page-key";
 import type { WorkbenchResourceLinksOptions } from "./resource-links-module";
 import { createResourcePreviewOpener } from "./resource-preview-opener";
 
@@ -45,7 +46,6 @@ export const registerRelatedResourcePreviews = (
       );
       if (!current()) return;
       const targets = new Map(resolved.map((entry) => [resourceKey(entry.resource), entry.target]));
-      const active = ctx.layout.getLayout().activeWidgetId;
       openingPreviews = true;
       try {
         for (const entry of openings) {
@@ -53,8 +53,6 @@ export const registerRelatedResourcePreviews = (
           if (target) opener.open(target, resource, entry);
         }
       } finally {
-        if (active && ctx.layout.listPanelInstances().some((panel) => panel.instanceId === active))
-          ctx.layout.activatePanel(active);
         openingPreviews = false;
       }
     } catch (error) {
@@ -84,9 +82,11 @@ export const registerRelatedResourcePreviews = (
     else pending?.controller.abort();
   });
   const primaryState = ctx.pages.store.subscribeSelector(
-    (state) => state.location?.resource && resourceKey(state.location.resource),
-    (key) => {
-      if (!openingPreviews && pending?.key !== key) pending?.controller.abort();
+    () => relatedResourcePageKey(ctx),
+    (_key, previousKey) => {
+      if (openingPreviews) return;
+      opener.closePagePreviews(previousKey);
+      if (pending?.key !== resourceKey(ctx.pages.store.getState().location?.resource)) pending?.controller.abort();
     },
   );
   const navigation = ctx.navigation.onDidOpenTarget((target) => {
@@ -121,6 +121,14 @@ export const registerRelatedResourcePreviews = (
     },
   );
   const restoration = ctx.layout.onWillRestoreLayout(() => pending?.controller.abort());
+  const scope = ctx.layout.onWillChangePersistenceScope(() => {
+    if (!openingPreviews) {
+      // The registry has prepared the incoming page; clear the outgoing rendered
+      // tabs too before the scope switch writes its saved layout.
+      for (const id of opener.closePagePreviews(relatedResourcePageKey(ctx))) ctx.layout.removeWidgetPlacement(id);
+    }
+    pending?.controller.abort();
+  });
   return {
     open,
     dispose() {
@@ -134,6 +142,7 @@ export const registerRelatedResourcePreviews = (
       selection.dispose();
       selectionState();
       restoration.dispose();
+      scope.dispose();
       opener.dispose();
       schema.dispose();
     },

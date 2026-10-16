@@ -167,7 +167,12 @@ export const closeWidgetInLayout = (layout: WorkbenchLayout, widgetId: string) =
     widgets[found.index] ??
     widgets[found.index - 1];
   const activeWidgetId = closingEffectiveActive ? nextActivePlacement?.widgetId : region.activeWidgetId;
-  const nextRegion = { ...region, widgets, activeWidgetId };
+  const nextRegion = {
+    ...region,
+    widgets,
+    activeWidgetId,
+    visible: widgets.length === 0 && (region.id === "side" || region.id === "secondary") ? false : region.visible,
+  };
   let activeLocationWidgetId = layout.activeLocationWidgetId;
   if (layout.activeWidgetId === widgetId && nextActivePlacement?.role === "location") {
     activeLocationWidgetId = nextActivePlacement.widgetId;

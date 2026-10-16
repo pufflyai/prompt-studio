@@ -1,10 +1,4 @@
-import {
-  contributionRefId,
-  type PageRef,
-  type PlacementIdentity,
-  type RelatedResourceOpening,
-  resourceKey,
-} from "@pstdio/sdk/extensions";
+import { contributionRefId, type PageRef, type RelatedResourceOpening, resourceKey } from "@pstdio/sdk/extensions";
 import type {
   NavigationTarget,
   NavigationTargetPanel,
@@ -12,8 +6,8 @@ import type {
   WorkbenchModuleContext,
   WorkbenchRegion,
 } from "../../core";
-import { placementIdentityKey } from "../../core/registries/layout/placement-reconciliation";
 import { resourceMatchesConstraint } from "../../core/shared/contributions/reference-id";
+import { relatedResourcePageKey } from "./related-resource-page-key";
 
 const findPage = (ctx: WorkbenchModuleContext, ref: PageRef) =>
   ctx.pages.listPages().find((page) => page.ref.id === ref.id && page.ref.extensionId === ref.extensionId);
@@ -61,18 +55,16 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
       });
       projections.set(id, { viewId, dispose: () => registration.dispose() });
     }
-    ctx.shellPlacements.openPlacement({ placementId: id, resource, title: resource.label, open });
+    ctx.shellPlacements.openPlacement({
+      placementId: id,
+      resource,
+      title: resource.label,
+      open,
+      activate: false,
+      relatedSource: relatedResourcePageKey(ctx),
+    });
     reveal(region);
     return true;
-  };
-  const activatePlacement = (identity: PlacementIdentity) => {
-    const instance = ctx.layout
-      .listPanelInstances()
-      .find(
-        (entry) =>
-          entry.placementIdentity && placementIdentityKey(entry.placementIdentity) === placementIdentityKey(identity),
-      );
-    if (instance) ctx.layout.activatePanel(instance.instanceId);
   };
   const openPanel = (
     target: NavigationTargetPanel,
@@ -100,8 +92,15 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
       return openView(viewId, resource, source, options);
     if (open === "preview" && replacesSource(region, source)) return false;
     if (panel.kind === "shell-placement")
-      ctx.shellPlacements.openPlacement({ placementId: panel.id, resource, open, title: resource.label });
-    else activatePlacement(ctx.modePlacements.openPlacement({ panel, resource, open }));
+      ctx.shellPlacements.openPlacement({
+        placementId: panel.id,
+        resource,
+        open,
+        title: resource.label,
+        activate: false,
+        relatedSource: relatedResourcePageKey(ctx),
+      });
+    else ctx.modePlacements.openPlacement({ panel, resource, open, relatedSource: relatedResourcePageKey(ctx) });
     reveal(region);
     return true;
   };
@@ -118,7 +117,6 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
       .flatMap((region) => region.widgets.map((panel) => ({ region: region.id, panel })))
       .find(({ panel }) => panel.resource && resourceKey(panel.resource) === resourceKey(resource));
     if (existing) {
-      ctx.layout.activatePanel(existing.panel.widgetId);
       reveal(existing.region);
       return true;
     }
@@ -135,6 +133,20 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
   });
   return {
     open,
+    closePagePreviews(sourceKey: string) {
+      // Only tabs this opener created belong to the page's temporary context.
+      // Pins and trays with other tabs have become part of the user's workspace.
+      const closed: string[] = [];
+      for (const region of Object.values(ctx.layout.getLayout().regions)) {
+        const panel = region.widgets[0];
+        if (region.widgets.length !== 1 || !panel || panel.relatedSource !== sourceKey) continue;
+        if (panel.tabRetention === "preview" && panel.placementIdentity) {
+          ctx.closePlacement(panel.placementIdentity);
+          closed.push(panel.widgetId);
+        }
+      }
+      return closed;
+    },
     dispose() {
       unsubscribe();
       for (const projection of projections.values()) projection.dispose();
