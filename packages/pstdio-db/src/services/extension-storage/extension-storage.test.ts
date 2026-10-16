@@ -98,6 +98,32 @@ test("existing KV rows move atomically into the owner journal without a second w
   expect(await db.select().from(extension_storage_journal)).toHaveLength(1);
 });
 
+test("legacy structured writes preserve JSON serialization of optional object and array values", async () => {
+  const input = {
+    project_id: projectAId,
+    extension_instance_id: instanceAId,
+    scope_type: "project",
+    scope_id: projectAId,
+    collection: "revisions",
+    item_id: "revision",
+  };
+  const value = { title: "Artifact", favicon: undefined, nested: { label: undefined }, values: ["first", undefined] };
+  expect(await svc.createCollectionItemIfAbsent({ ...input, value_json: value })).toBe(true);
+  expect((await svc.getCollectionItem(input, input.item_id))?.value_json).toEqual({
+    title: "Artifact",
+    nested: {},
+    values: ["first", null],
+  });
+  expect(await svc.updateCollectionItem({ ...input, value_json: { ...value, title: "Renamed" } })).toBe(true);
+  expect(await svc.deleteCollectionItemIfValue(input, input.item_id, { ...value, title: "Renamed" })).toBe(true);
+  await svc.setKv({ ...input, key: "optional", value_json: value });
+  expect((await svc.getKv(input, "optional"))?.value_json).toEqual({
+    title: "Artifact",
+    nested: {},
+    values: ["first", null],
+  });
+});
+
 describe("extensionStorageService", () => {
   test("project-owned KV is isolated by extension instance", async () => {
     await svc.setKv({

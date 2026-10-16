@@ -8,6 +8,9 @@ interface LegacyCollectionValue {
   sortOrder: number | null;
 }
 
+// Legacy SQL JSON writes omitted undefined object fields and used null for undefined array entries.
+const legacyJson = (value: Json) => JSON.parse(JSON.stringify(value)) as Json;
+
 /** Deprecated replacements deliberately observe the latest value inside the owner transaction. */
 export const createLegacyRecordStorage = (input: {
   store: GroupedStore;
@@ -42,7 +45,7 @@ export const createLegacyRecordStorage = (input: {
           {
             recordId: id,
             expectedRevision: current.revision,
-            replace: value,
+            replace: legacyJson(value),
             ...(current.deleted !== deleted && { deleted }),
           },
         ],
@@ -110,7 +113,7 @@ export const createLegacyRecordStorage = (input: {
                     {
                       recordId: id,
                       expectedRevision: current.revision,
-                      replace: valueFor(value, stored.sortOrder),
+                      replace: legacyJson(valueFor(value, stored.sortOrder)),
                     },
                   ],
                 });
@@ -125,7 +128,7 @@ export const createLegacyRecordStorage = (input: {
                 const current = await records.read(id);
                 if (!current.exists || current.deleted) return false;
                 const stored = current.value as unknown as LegacyCollectionValue;
-                if (canonicalJson(stored.value) !== canonicalJson(value)) return false;
+                if (canonicalJson(stored.value) !== canonicalJson(legacyJson(value))) return false;
                 await records.commit({
                   operationId: crypto.randomUUID(),
                   edits: [
