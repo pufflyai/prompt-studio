@@ -16,6 +16,7 @@ import { implementationTargetsCommand } from "./src/commands/implementation-targ
 import { newTicketCommand } from "./src/commands/new-ticket";
 import { openTicketsCommand } from "./src/commands/open-tickets";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
+import { resolveTicketPathCommand } from "./src/commands/resolve-ticket-path";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
@@ -127,7 +128,7 @@ export default defineExtension({
     "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
   },
 
-  commands: [...plannerCommands, ...Object.values(timelineCommands)],
+  commands: [...plannerCommands, resolveTicketPathCommand, ...Object.values(timelineCommands)],
   views: [...plannerUi.views, timelineView],
   pages: [...plannerUi.pages, timelinePage],
   viewMenus: plannerUi.viewMenus,
