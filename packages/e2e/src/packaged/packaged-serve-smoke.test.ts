@@ -90,6 +90,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // The paired session-menu browser check restores focus to its tab after Escape.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
 // Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
+// Manually opened Bottom panels and terminals stay visible across page navigation, retaining the terminal process.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";

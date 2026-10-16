@@ -68,6 +68,8 @@ Automatic openings keep the source route, global focus, and the selected tab in 
 
 Leaving the source page closes every unpinned tab newly opened automatically for that page, including tabs sharing a tray with pinned tabs. Tabs already open before entry stay open. Pinning a tab, manually reopening it, or replacing its resource releases it from page cleanup. Selecting a related tab or refreshing its metadata keeps its page lifetime. Closing the last tab in Side or Bottom also closes that panel.
 
+In the dashboard, manually opened Side and Bottom panels and their tabs follow the project across page and mode navigation. This includes terminals added through the panel menu. Each mode still controls which regions it supports. Page cleanup only removes automatic previews, and an empty panel opened manually stays open during navigation.
+
 Source or project changes, disabling the existing Open related resources switch, and owner removal discard pending results. Restoring layout and refreshing resource metadata do not reopen closed related tabs.
 
 Kinds without a command open nothing automatically. Existing manual links still work. Returning an entry does not store a relationship or add a manual action. There is no per-kind customization UI or new preference store.

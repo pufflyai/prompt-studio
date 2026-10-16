@@ -168,7 +168,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
           }).scope
       : undefined,
     loadLayout: (context) =>
-      loadWorkbenchLocationLayout(cachedInput, { ...context, resource: context.location?.resource }),
+      loadWorkbenchLocationLayout(cachedInput, { ...context, resource: context.location?.resource }, layout),
     enteredWithPersistedLayout: layout.enteredWithPersistedLayout,
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });

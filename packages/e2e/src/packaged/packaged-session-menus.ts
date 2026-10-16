@@ -95,6 +95,37 @@ export const verifyPackagedSessionMenus = async (
   await leaveWorkspace();
   await expect(preview).toBeHidden();
   await expect(createdTab).toBeVisible();
+  await reopenWorkspace();
+  const bottomHeader = page.locator('[data-workbench-panel-header="secondary"]');
+  await expect(page.locator(".xterm:visible .xterm-rows")).not.toBeEmpty();
+  const terminalConnection = page.waitForEvent(
+    "websocket",
+    (socket) => new URL(socket.url()).pathname === "/v1/terminal",
+  );
+  await bottomHeader.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
+  const terminalSocket = await terminalConnection;
+  const terminalTabId = await bottomHeader.getByRole("tab", { selected: true }).getAttribute("id");
+  expect(terminalTabId).toBeTruthy();
+  const terminalTab = page.locator(`[id=${JSON.stringify(terminalTabId)}]`);
+  const terminalInput = page.getByRole("textbox", { name: "Terminal input" }).filter({ visible: true });
+  await terminalInput.pressSequentially("export PSTDIO_NAVIGATION_STATE=retained");
+  await terminalInput.press("Enter");
+  await leaveWorkspace();
+  await expect(terminalTab).toBeVisible();
+  await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
+  await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
+  await terminalInput.press("Enter");
+  await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__navigation_retained__");
+  const terminalClosed = terminalSocket.waitForEvent("close");
+  await terminalTab.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+  await terminalClosed;
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await reopenWorkspace();
+  await expect(page.getByRole("button", { name: "Hide Secondary Panel", exact: true })).toBeVisible();
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",
