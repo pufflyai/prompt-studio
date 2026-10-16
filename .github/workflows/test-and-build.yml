@@ -163,6 +163,9 @@ jobs:
       - name: Test PostgreSQL publication and process recovery
         run: bun run --cwd infra/relay test:storage
 
+      - name: Test durable streaming assets and object storage contract
+        run: bun run --cwd infra/relay test:assets
+
       - name: Test production relay with real local stores
         env:
           SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
