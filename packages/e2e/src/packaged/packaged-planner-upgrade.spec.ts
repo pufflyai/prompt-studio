@@ -172,7 +172,9 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
     browser = await chromium.launch({ headless: true });
     const page = await (await browser.newContext()).newPage();
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.addInitScript(() => {
+      if (window.top === window) localStorage.setItem("onboarding-complete", "true");
+    });
     await signInBrowser(page, started.descriptor);
     let timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
