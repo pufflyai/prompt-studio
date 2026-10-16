@@ -92,7 +92,7 @@ describe("createInstalledExtensionRuntime", () => {
       resolveBackgroundBuild = resolve;
     });
 
-    const runtime = await createInstalledExtensionRuntime({
+    const runtime = createInstalledExtensionRuntime({
       ...noopRuntimeDeps,
       extensionService: {
         reportBuildFailure: async () => {},
@@ -110,6 +110,7 @@ describe("createInstalledExtensionRuntime", () => {
           await backgroundBuild;
         }),
     });
+    await runtime.ready;
 
     const refresh = runtime.refresh();
     await wait();
@@ -119,13 +120,13 @@ describe("createInstalledExtensionRuntime", () => {
 
     resolveBackgroundBuild?.();
     await wait();
-    runtime.dispose();
+    await runtime.dispose();
   });
 
   test("watches the user extension root and every project folder extension root", async () => {
     let listExtensionRoots: (() => Promise<Array<{ path: string }>>) | undefined;
 
-    const runtime = await createInstalledExtensionRuntime({
+    const runtime = createInstalledExtensionRuntime({
       ...noopRuntimeDeps,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
@@ -146,6 +147,7 @@ describe("createInstalledExtensionRuntime", () => {
         return createProcess();
       },
     });
+    await runtime.ready;
 
     const roots = (await listExtensionRoots?.()) ?? [];
 
@@ -154,7 +156,7 @@ describe("createInstalledExtensionRuntime", () => {
       join("/repos/alpha", ".pstdio", "extensions"),
     ]);
 
-    runtime.dispose();
+    await runtime.dispose();
   });
 
   test("starts watching a repo linked after startup even when it has no extensions", async () => {
@@ -164,7 +166,7 @@ describe("createInstalledExtensionRuntime", () => {
     let repos: Array<{ path: string }> = [];
     const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];
 
-    const runtime = await createInstalledExtensionRuntime({
+    const runtime = createInstalledExtensionRuntime({
       ...noopRuntimeDeps,
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
@@ -182,6 +184,7 @@ describe("createInstalledExtensionRuntime", () => {
           },
         }),
     });
+    await runtime.ready;
 
     try {
       expect(watchers.some((entry) => entry.path === repoRoot)).toBe(false);
@@ -191,7 +194,7 @@ describe("createInstalledExtensionRuntime", () => {
 
       expect(watchers.some((entry) => entry.path === repoRoot)).toBe(true);
     } finally {
-      runtime.dispose();
+      await runtime.dispose();
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
@@ -225,7 +228,7 @@ describe("createInstalledExtensionRuntime", () => {
       const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];
       let rootSyncComplete = Promise.withResolvers<void>();
 
-      const runtime = await createInstalledExtensionRuntime({
+      const runtime = createInstalledExtensionRuntime({
         ...noopRuntimeDeps,
         extensionService,
         installedExtensionSourcesService,
@@ -270,6 +273,7 @@ describe("createInstalledExtensionRuntime", () => {
             },
           }),
       });
+      await runtime.ready;
       refreshRuntime = runtime.refresh;
 
       try {
@@ -298,7 +302,7 @@ describe("createInstalledExtensionRuntime", () => {
         const [reconciled] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
         expect(reconciled?.enabled).toBe(false);
       } finally {
-        runtime.dispose();
+        await runtime.dispose();
       }
     } finally {
       await close();

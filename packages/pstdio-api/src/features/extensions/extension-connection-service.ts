@@ -159,14 +159,29 @@ const removeConnection = async (deps: ExtensionConnectionServiceDeps, input: Con
 
 export const createExtensionConnectionService = (deps: ExtensionConnectionServiceDeps) => {
   const requestService = createExtensionConnectionRequestService(deps);
-  const configure = (input: ConnectionKey & { baseUrl: string; secret?: string }) => configureConnection(deps, input);
+  // Cleanup compares database references with secret files. Keep that comparison
+  // ordered with credential writes now that startup cleanup runs beside requests.
+  let mutations = Promise.resolve();
+  const mutate = <T>(operation: () => Promise<T>) => {
+    const result = mutations.then(operation);
+    mutations = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
+  };
+  const configure = (input: ConnectionKey & { baseUrl: string; secret?: string }) =>
+    mutate(() => configureConnection(deps, input));
   const list = async (projectId: string) =>
     (await deps.connectionsDBService.listByProject(projectId)).map(toConnectionRecord);
-  const remove = (input: ConnectionKey) => removeConnection(deps, input);
-  const reconcile = () => reconcileConnections(deps);
-  const prepareProjectRemoval = (projectId: string) => prepareProjectConnectionRemoval(deps, projectId);
+  const remove = (input: ConnectionKey) => mutate(() => removeConnection(deps, input));
+  const reconcile = () => mutate(() => reconcileConnections(deps));
+  const prepareProjectRemoval = async (projectId: string) => {
+    const removeSecrets = await mutate(() => prepareProjectConnectionRemoval(deps, projectId));
+    return () => mutate(removeSecrets);
+  };
   const removeExtension = (projectId: string, extensionId: string) =>
-    removeExtensionConnections(deps, projectId, extensionId);
+    mutate(() => removeExtensionConnections(deps, projectId, extensionId));
 
   return { ...requestService, configure, list, prepareProjectRemoval, reconcile, remove, removeExtension };
 };

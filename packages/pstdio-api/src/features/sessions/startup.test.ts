@@ -567,7 +567,7 @@ describe("resolveOrphanedSessions hooks", () => {
     };
     const updateStatus = mock(async (id: string, status: string) => ({ ...staleSession, id, status }));
     const sessionsDb = {
-      get: mock(async () => null),
+      get: mock(async () => staleSession),
       list: mock(async () => []),
       listActive: mock(async () => [staleSession]),
       updateStatus,
@@ -598,6 +598,7 @@ describe("resolveOrphanedSessions hooks", () => {
 
     expect(updateStatus).toHaveBeenCalledWith("session-orphan-hook", "disconnected", {
       expectedLastRequestStarted: null,
+      expectedStatus: "in_progress",
     });
     expect(onSessionStatusChanged).toHaveBeenCalledWith({
       id: "session-orphan-hook",

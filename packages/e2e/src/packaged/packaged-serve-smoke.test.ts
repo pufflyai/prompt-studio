@@ -27,6 +27,7 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 // Includes legacy status provider loading and its migration warning.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
@@ -84,6 +85,7 @@ beforeAll(() => {
 registerSharedCodexSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
+registerExtensionStartupSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
 registerCollectionViewOrderSmokeTests();

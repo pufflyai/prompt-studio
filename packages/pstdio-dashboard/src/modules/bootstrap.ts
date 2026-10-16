@@ -107,23 +107,35 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         }
 
         ctx.pageLocations.setProject(projectId);
+        ctx.modes.setActiveMode("project");
         const boot = () => {
-          if (run !== generation || getDashboardSelectedProjectId(ctx) !== projectId) return;
-          if (getDashboardExtensionsReadyProjectId(ctx) !== projectId) return;
+          if (run !== generation || getDashboardSelectedProjectId(ctx) !== projectId) return false;
+          // A user can navigate through the core shell while an extension URL waits.
+          // That committed location takes precedence over the delayed restore.
+          if (ctx.pages.store.getState().location) {
+            readyUnsubscribe?.();
+            readyUnsubscribe = undefined;
+            return true;
+          }
+          // Core pages can open now. Keep an unresolved extension URL or saved
+          // location intact until its page registers, rather than replacing it with Start.
+          if (getDashboardExtensionsReadyProjectId(ctx) !== projectId && !ctx.pageLocations.canBoot(projectId)) {
+            return false;
+          }
           readyUnsubscribe?.();
           readyUnsubscribe = undefined;
           const result = ctx.pageLocations.boot(projectId);
-          if (!result.ok) return;
+          if (!result.ok) return true;
           sessionRestore = restoreSelectedSession(
             ctx,
             input.sessionSelectionPersistence?.getSelectedSessionId(),
             () => run === generation && getDashboardSelectedProjectId(ctx) === projectId,
             isInitialSyncComplete,
           );
+          return true;
         };
 
-        boot();
-        if (getDashboardExtensionsReadyProjectId(ctx) !== projectId) {
+        if (!boot()) {
           readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
         }
       };

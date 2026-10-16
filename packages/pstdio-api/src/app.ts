@@ -129,12 +129,13 @@ const buildApp = async (
   const {
     extensionConnectionService,
     extensionRuntime,
+    extensionStartup,
     extensionRuntimeCatalog,
     extensionService,
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents,
-  } = await wireAppExtensionServices({
+  } = wireAppExtensionServices({
     config: input.config.extensions,
     db,
     dependencies,
@@ -275,6 +276,7 @@ const buildApp = async (
     notificationWakeTimer,
     unsubscribeExtensionEvents,
     extensionRuntime,
+    extensionStartup,
     extensionScheduler,
     artifactMountWatch,
     automationService,
