@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { isNavigationTarget, type ResourceRef } from "@pstdio/sdk/extensions";
 import { resolveResourcePath } from "./resource-path-resolution";
 
 const extensionId = "acme.planner";
@@ -71,4 +72,119 @@ test("missing resources fall back while foreign identities are rejected", async 
       execute: async () => ({ ...resolution, resource: { ...resolution.resource, extensionId: "other" } }),
     }),
   ).rejects.toThrow("owner");
+});
+
+const pageTarget = (resource: ResourceRef) => ({ ...resolution.target, resource });
+const panelTarget = (resource: ResourceRef) => ({
+  kind: "panel",
+  panel: { kind: "placement", id: "details" },
+  resource,
+});
+const nestedTargets = [
+  ["page", pageTarget],
+  ["panel", panelTarget],
+  ["parent", (resource: ResourceRef) => ({ ...resolution.target, parent: pageTarget(resource) })],
+  [
+    "ancestor",
+    (resource: ResourceRef) => ({
+      ...resolution.target,
+      parent: { ...resolution.target, parent: pageTarget(resource) },
+    }),
+  ],
+  ["compound page", (resource: ResourceRef) => ({ kind: "compound", targets: [pageTarget(resource)] })],
+  [
+    "compound panel",
+    (resource: ResourceRef) => ({ kind: "compound", targets: [resolution.target, panelTarget(resource)] }),
+  ],
+  [
+    "compound parent",
+    (resource: ResourceRef) => ({
+      kind: "compound",
+      targets: [{ ...resolution.target, parent: pageTarget(resource) }],
+    }),
+  ],
+] as const;
+
+for (const [name, target] of nestedTargets) {
+  test.each(["extensionId", "projectId"])(`rejects a foreign %s in the ${name} destination`, async (field) => {
+    await expect(
+      resolveResourcePath({
+        projectId: "project",
+        workspaceId: "workspace",
+        path: "tickets/T-1/ticket.md",
+        kinds: [kind],
+        execute: async () => ({ ...resolution, target: target({ type: "document", id: "doc", [field]: "foreign" }) }),
+      }),
+    ).rejects.toThrow("owner or project");
+  });
+}
+
+test("qualifies local resources throughout a compound destination and its ancestors", async () => {
+  const result = await resolveResourcePath({
+    projectId: "project",
+    workspaceId: "workspace",
+    path: "tickets/T-1/ticket.md",
+    kinds: [kind],
+    execute: async () => ({
+      ...resolution,
+      target: {
+        kind: "compound",
+        targets: [{ ...resolution.target, parent: resolution.target }, panelTarget({ type: "document", id: "doc" })],
+      },
+    }),
+  });
+  expect(result?.target).toMatchObject({
+    targets: [
+      { resource: { extensionId, projectId: "project" }, parent: { resource: { extensionId, projectId: "project" } } },
+      { resource: { extensionId, projectId: "project" } },
+    ],
+  });
+});
+
+test("source positions replace a page section and preserve its parent destination", async () => {
+  const section = { anchors: ["details"] };
+  const result = await resolveResourcePath({
+    projectId: "project",
+    workspaceId: "workspace",
+    path: "tickets/T-1/ticket.md",
+    kinds: [kind],
+    position: { line: 12, column: 4 },
+    execute: async () => ({
+      ...resolution,
+      target: { ...resolution.target, section, parent: { ...resolution.target, section } },
+    }),
+  });
+  expect(result?.target).toMatchObject({ position: { line: 12, column: 4 }, parent: { section } });
+  if (result?.target.kind !== "page") throw new Error("Expected a page destination");
+  expect(result.target.section).toBeUndefined();
+  expect(result.target.parent?.position).toBeUndefined();
+  expect(isNavigationTarget(result.target)).toBe(true);
+});
+
+test("source positions reach every page in compound destinations while panels stay intact", async () => {
+  const panel = panelTarget({ type: "document", id: "doc" });
+  const result = await resolveResourcePath({
+    projectId: "project",
+    workspaceId: "workspace",
+    path: "tickets/T-1/ticket.md",
+    kinds: [kind],
+    position: { line: 12 },
+    execute: async () => ({
+      ...resolution,
+      target: {
+        kind: "compound",
+        targets: [
+          { ...resolution.target, section: { anchors: ["summary"] } },
+          { ...resolution.target, position: { line: 3 } },
+          panel,
+        ],
+      },
+    }),
+  });
+  if (result?.target.kind !== "compound") throw new Error("Expected a compound destination");
+  expect(result.target.targets).toMatchObject([{ position: { line: 12 } }, { position: { line: 12 } }, panel]);
+  expect(
+    result.target.targets.filter((target) => target.kind === "page").every((target) => target.section === undefined),
+  ).toBe(true);
+  expect(isNavigationTarget(result.target)).toBe(true);
 });

@@ -112,6 +112,23 @@ export const FileLinks: Story = {
   },
 };
 export const StreamingLinks: Story = { args: { streaming: true } };
+export const ExternalReferences: Story = {
+  render: () => (
+    <RichMessage
+      defaultState="Open {{link('https://example.com')}}."
+      linkHandler={{ resolveHref: () => null, resolveResource: async () => null, open: () => {} }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const reference = await within(canvasElement).findByRole("link", { name: "example.com" });
+    await expect(reference).toHaveAttribute("href", "https://example.com");
+    await expect(reference).toHaveAttribute("target", "_blank");
+    await expect(reference).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(reference.querySelector('[data-scope="tooltip"]')).toBeNull();
+    reference.focus();
+    await expect(reference).toHaveFocus();
+  },
+};
 export const ResourceBubbles: Story = {
   render: () => {
     const [opened, setOpened] = useState<string>();

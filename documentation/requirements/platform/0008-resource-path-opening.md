@@ -21,13 +21,17 @@ labels, icons, and destinations. The host must not contain ticket-specific routi
   preserving source positions and the existing workspace-boundary checks.
 - Pass the normalized path and conversation workspace ID to the owner command.
 - Accept a resource and page, panel, or compound destination. Qualify local references
-  with the owner and project, and reject resources belonging to another owner or project.
+  with the owner and project, and reject foreign resources throughout page, panel,
+  parent, and compound destinations.
 - Open unclaimed paths and missing resources through the existing workspace flow.
   Report resolver failures when the link is opened.
 - Render local links in read-only rich messages as resource bubbles. Resolve owner
   labels, icons, and page URLs without changing the stored message.
 - Use the shared resource icon registry, with the resource kind's icon as the default.
   Show the icon with the resolved label. Bubbles have no tooltip or underline, including on hover.
+- Keep explicit web references on the native web-opening path, with mouse and keyboard activation.
+- Apply source positions to page destinations and every page in compound destinations,
+  replacing any competing section while retaining parent navigation.
 - Support Markdown links, inline-code file references, and explicit reference links.
   Preserve keyboard activation, web links, source positions, and editable Markdown.
 - Keep completed bubbles stable while more text streams. Ignore late presentation

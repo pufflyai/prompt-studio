@@ -1,4 +1,5 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Link } from "@chakra-ui/react";
+import { parseChatLink } from "@/components/chat-ui/links/chat-link";
 import { ChatLinkAnchor } from "@/components/chat-ui/links/chat-link-anchor";
 import { useChatLinkHandler } from "@/components/chat-ui/links/chat-link-context";
 import { ChatResourceLink } from "@/components/chat-ui/links/chat-resource-link";
@@ -9,12 +10,25 @@ export const ReferenceLinkBadge = (props: { href: string }) => {
   const handler = useChatLinkHandler();
   const candidate = { source: href, origin: "reference" as const };
   const label = href.split("/").pop() || "unknown";
+  const parsed = parseChatLink(candidate, typeof window === "undefined" ? undefined : window.location.origin);
+  if (parsed?.kind === "external")
+    return (
+      <Link
+        href={parsed.href}
+        variant="resource"
+        target={/^https?:/i.test(parsed.href) ? "_blank" : undefined}
+        rel="noopener noreferrer"
+      >
+        <ResourceBadge fileName={label} size="sm" tooltip={false} cursor="pointer" />
+      </Link>
+    );
   if (handler) return <ChatResourceLink candidate={candidate} label={label} />;
   return (
     <Box width="fit-content" display="inline-block">
       <ChatLinkAnchor candidate={candidate}>
         <ResourceBadge
           fileName={label}
+          tooltip={false}
           onSelect={() => {
             if (/^https?:\/\//i.test(href)) {
               window.open(href, "_blank", "noopener,noreferrer");

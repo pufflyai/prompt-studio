@@ -63,10 +63,11 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
     if (parsed?.kind !== "file" || !input.projectId) return null;
     const workspace = sessionWorkspace(input);
     const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
-    const resolved = await resolveResourcePath({
+    return resolveResourcePath({
       projectId: input.projectId,
       workspaceId: workspace.id,
       path,
+      position: parsed.position,
       kinds: getCachedDashboardExtensionMetadata(input.projectId)?.resourceKinds ?? [],
       execute: async (command, params) => {
         const response = await executeExtensionCommand(input.projectId!, command, { params, source: "dashboard" });
@@ -74,9 +75,6 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         return response.outcome.value;
       },
     });
-    if (resolved?.target.kind === "page" && parsed.position)
-      return { ...resolved, target: { ...resolved.target, position: parsed.position } };
-    return resolved;
   };
   const resolve = (candidate: ChatLinkCandidate) => {
     const parsed = parseChatLink(candidate, input.origin);
