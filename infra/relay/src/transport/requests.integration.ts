@@ -15,7 +15,7 @@ afterAll(() => fixture.close());
 
 test("real HTTP groups retain duplicate receipts and contiguous replay", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const base = `/v1/workbenches/~${context.scope.workbenchId}/extensions/~notes/`;
   const request = (path: string, body?: unknown) =>
     fetch(new URL(base + path, server.url), {
@@ -50,7 +50,6 @@ test("real HTTP groups retain duplicate receipts and contiguous replay", async (
     if (replay.status !== "replay") throw new Error("Expected replay");
     expect(replay.batch.groups).toEqual([receipt]);
     expect(snapshotSchema.parse(await (await request("snapshot")).json()).records.note!.value).toBe("network saved");
-    expect(context.checks()).toBe(5);
   } finally {
     await server.stop(true);
     await context.close();
@@ -59,7 +58,7 @@ test("real HTTP groups retain duplicate receipts and contiguous replay", async (
 
 test("current authority rejects foreign mutation identities and never initializes an unknown scope", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const base = `/v1/workbenches/~${context.scope.workbenchId}/extensions/~notes/`;
   const call = (path: string, token: string | null, body?: unknown) =>
     fetch(new URL(path, server.url), {
@@ -97,7 +96,8 @@ test("current authority rejects foreign mutation identities and never initialize
       accountId: context.scope.accountId,
       environmentId: context.environmentId,
     });
-    expect((await call(`${base}snapshot`, `Bearer ${context.token}`)).status).toBe(401);
+    await expect(context.renew()).rejects.toThrow("Environment access unavailable");
+    expect((await call(`${base}snapshot`, `Bearer ${context.token}`)).status).toBe(200);
   } finally {
     await server.stop(true);
     await context.close();

@@ -12,12 +12,11 @@ const upgradeSubscription = async (
   owners: RelayOwners,
   request: Request,
   scope: Parameters<typeof createRelaySubscription>[1],
-  token: string,
-  environmentId: string,
+  expiresAt: string,
   upgrade: RelayUpgrade,
 ) => {
   try {
-    const subscription = await createRelaySubscription(owners, scope, token, environmentId, request.signal);
+    const subscription = await createRelaySubscription(owners, scope, expiresAt, request.signal);
     if (upgrade(request, subscription)) return;
     subscription.close();
     return relayResponse({ error: "WebSocket upgrade required" }, 426, { upgrade: "websocket" });
@@ -38,10 +37,9 @@ const handleRelayRequest = async (owners: RelayOwners, upgrade: RelayUpgrade, re
   if (request.method !== method) return relayResponse({ error: "Method not allowed" }, 405, { allow: method });
   const authorization = await authorizeRelayRequest(owners, request, workbenchId);
   if (authorization instanceof Response) return authorization;
-  const { identity, token } = authorization;
+  const { identity } = authorization;
   const scope = { accountId: identity.accountId, workbenchId, extensionId };
-  if (operation === "changes")
-    return upgradeSubscription(owners, request, scope, token, identity.environmentId, upgrade);
+  if (operation === "changes") return upgradeSubscription(owners, request, scope, identity.expiresAt, upgrade);
   let body: unknown;
   if (method === "POST") {
     try {

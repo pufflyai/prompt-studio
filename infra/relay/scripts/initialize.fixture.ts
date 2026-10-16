@@ -1,6 +1,7 @@
 import { Client } from "pg";
 import { createAccountManager, migrateAccountManager } from "pstdio-account-manager";
 import { createRelayAssets, createRelayStorage, migrateRelayStorage } from "../src/index";
+import { createFixtureAuthentication, fixtureManagerConfig } from "./manager.fixture";
 
 const admin = new Client({ connectionString: process.env.FIXTURE_ADMIN_URL! });
 await admin.connect();
@@ -19,6 +20,7 @@ const databaseUrl = process.env.DATABASE_URL!;
 await migrateAccountManager(managerUrl, "/app/manager-drizzle");
 await migrateRelayStorage(databaseUrl, "/app/drizzle");
 const manager = createAccountManager(managerUrl);
+const auth = createFixtureAuthentication();
 const assets = createRelayAssets({
   databaseUrl,
   bucket: process.env.S3_BUCKET!,
@@ -49,7 +51,12 @@ try {
     "/fixture/grant.json",
     JSON.stringify({ scope, token: grant.token, environmentId: grant.environmentId }),
   );
+  const config = fixtureManagerConfig(managerUrl);
+  await Bun.write(
+    "/access-trust/trust.json",
+    JSON.stringify({ issuer: config.origin, audience: config.audience, jwks: await auth.jwks() }),
+  );
   console.log("Built fixture initialized separate authority and relay roles");
 } finally {
-  await Promise.all([storage.close(), assets.close(), manager.close()]);
+  await Promise.all([storage.close(), assets.close(), manager.close(), auth.close()]);
 }

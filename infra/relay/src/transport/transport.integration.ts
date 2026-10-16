@@ -14,8 +14,7 @@ test("a current environment reads its initialized relay scope through real HTTP 
     {
       storage: context.storage,
       assets: context.assets,
-      authority: context.authority,
-      subscriptionCheckIntervalMs: 20,
+      verifyAccess: context.verifyAccess,
     },
   );
   try {
@@ -26,7 +25,6 @@ test("a current environment reads its initialized relay scope through real HTTP 
     const snapshot = snapshotSchema.parse(await response.json());
     expect(snapshot.scope).toEqual(context.scope);
     expect(snapshot.records).toEqual({});
-    expect(context.checks()).toBe(1);
     const health = await fetch(new URL("/health", server.url));
     expect(health.status).toBe(200);
     expect(await health.json()).toEqual({ status: "ok" });

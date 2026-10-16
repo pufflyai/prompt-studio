@@ -15,7 +15,7 @@ afterAll(() => fixture.close());
 
 test("HTTP multipart resume publishes only verified assets and streams immutable offsets", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const bytes = new Uint8Array(5 * 1024 * 1024 + 32).fill(7);
   const hash = (data: Uint8Array) => new Bun.CryptoHasher("sha256").update(data).digest("hex");
   const asset = { sha256: hash(bytes), byteLength: bytes.length, mediaType: "application/octet-stream" };

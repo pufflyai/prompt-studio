@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { Client } from "pg";
 import type { createAccountManager } from "pstdio-account-manager";
 import { relayPath, type Scope } from "pstdio-sync-contracts";
+import { renewFixtureAccess } from "./manager.fixture";
 
 export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccountManager>, scope: Scope) => {
   const grant = await manager.register({
@@ -11,19 +12,17 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
     environmentId: "built-shutdown-reader",
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
   });
+  const access = await renewFixtureAccess(grant.token!, scope.workbenchId);
   const keys = [
     "PATH",
+    "HOME",
+    "RELAY_ACCESS_TRUST_FILE",
     "DATABASE_URL",
     "S3_ENDPOINT",
     "S3_BUCKET",
     "S3_REGION",
     "S3_ACCESS_KEY_ID",
     "S3_SECRET_ACCESS_KEY",
-    "MANAGER_ORIGIN",
-    "MANAGER_SERVICE_SECRET",
-    "MANAGER_REQUEST_TIMEOUT_MS",
-    "RELAY_SUBSCRIPTION_CHECK_INTERVAL_MS",
-    "NODE_EXTRA_CA_CERTS",
   ];
   const child = Bun.spawn([process.execPath, "/app/server.js"], {
     env: {
@@ -53,7 +52,7 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
     reading = Promise.all(
       Array.from({ length: 12 }, () =>
         fetch(new URL(relayPath(scope, "snapshot"), origin), {
-          headers: { authorization: `Bearer ${grant.token}` },
+          headers: { authorization: `Bearer ${access.token}` },
           signal: controller.signal,
         }).catch((error: unknown) => error),
       ),

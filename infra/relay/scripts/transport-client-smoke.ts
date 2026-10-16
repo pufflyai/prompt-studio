@@ -104,7 +104,7 @@ try {
   console.log("READY_FOR_REVOCATION");
   assert.equal((await closed.promise).code, 1008);
   assert.equal((await call("snapshot")).status, 401);
-  console.log("Built credential-only HTTP, asset ranges, replay and revoked idle WebSocket passed");
+  console.log("Built credential-only HTTP, asset ranges, replay and expiring idle WebSocket passed");
 } finally {
   ws.close();
 }

@@ -11,7 +11,7 @@ afterAll(() => fixture.close());
 test("overlapping workbench, environment, record and upload IDs remain independent across accounts", async () => {
   const first = await fixture.context({ workbenchId: "same-workbench", environmentId: "same-environment" });
   const second = await fixture.context({ workbenchId: "same-workbench", environmentId: "same-environment" });
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...first, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, first);
   const call = (context: typeof first, operation: RelayOperation, body?: unknown) =>
     fetch(new URL(relayPath(context.scope, operation), server.url), {
       method: body === undefined ? "GET" : "POST",
@@ -57,7 +57,8 @@ test("overlapping workbench, environment, record and upload IDs remain independe
     expect(a.messages).toHaveLength(2);
     expect(b.messages).toHaveLength(2);
     await first.manager.disable({ requestId: "disable", accountId: first.scope.accountId });
-    expect((await a.closed).code).toBe(1008);
+    await expect(first.renew()).rejects.toThrow("Environment access unavailable");
+    expect(a.socket.readyState).toBe(WebSocket.OPEN);
     expect((await call(second, "snapshot")).status).toBe(200);
     expect(b.socket.readyState).toBe(WebSocket.OPEN);
   } finally {

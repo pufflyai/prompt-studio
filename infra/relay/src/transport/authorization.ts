@@ -3,13 +3,13 @@ import { relayResponse } from "./responses";
 
 export const authorizeRelayRequest = async (owners: RelayOwners, request: Request, workbenchId: string) => {
   const denied = () => relayResponse({ error: "Unauthorized" }, 401, { "www-authenticate": 'Bearer realm="relay"' });
-  const token = /^Bearer +(.+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
+  const token = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return denied();
   try {
-    const identity = await owners.authority.authorize(token, workbenchId);
-    if (!identity) return denied();
-    return { identity, token };
+    const identity = await owners.verifyAccess(token);
+    if (identity.workbenchId !== workbenchId) return denied();
+    return { identity };
   } catch {
-    return relayResponse({ error: "Authority unavailable" }, 503);
+    return denied();
   }
 };

@@ -1,8 +1,23 @@
 import { expect, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
   // Windows terminates child processes without delivering POSIX shutdown signals.
   test.skipIf(process.platform === "win32")(`${signal} closes the relay and exits successfully`, async () => {
+    const directory = await mkdtemp(join(tmpdir(), "relay-public-trust-"));
+    const key = (await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"])) as CryptoKeyPair;
+    const trustFile = join(directory, "trust.json");
+    const publicKey = await crypto.subtle.exportKey("jwk", key.publicKey);
+    await writeFile(
+      trustFile,
+      JSON.stringify({
+        issuer: "https://manager.fixture.test",
+        audience: "https://relay.fixture.test",
+        jwks: { keys: [{ kty: publicKey.kty, crv: publicKey.crv, x: publicKey.x, kid: "owned" }] },
+      }),
+    );
     const child = Bun.spawn([process.execPath, `${import.meta.dir}/server.ts`], {
       // These idle owners never open a connection; real data/authority paths run in Docker.
       env: {
@@ -15,10 +30,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
         S3_REGION: "us-east-1",
         S3_ACCESS_KEY_ID: "idle",
         S3_SECRET_ACCESS_KEY: "idle",
-        MANAGER_ORIGIN: "https://manager.example.test",
-        MANAGER_SERVICE_SECRET: "idle-service",
-        MANAGER_REQUEST_TIMEOUT_MS: "1000",
-        RELAY_SUBSCRIPTION_CHECK_INTERVAL_MS: "20",
+        RELAY_ACCESS_TRUST_FILE: trustFile,
       },
       stdout: "pipe",
       stderr: "pipe",
@@ -36,6 +48,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
       child.kill();
       await child.exited;
       output.releaseLock();
+      await rm(directory, { recursive: true, force: true });
     }
   });
 }

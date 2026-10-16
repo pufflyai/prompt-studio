@@ -16,8 +16,6 @@ export function readConfig(env: Record<string, string | undefined>) {
 }
 
 export function startRelay(config: RelayConfig, owners: RelayOwners) {
-  if (!Number.isSafeInteger(owners.subscriptionCheckIntervalMs) || owners.subscriptionCheckIntervalMs <= 0)
-    throw new Error("Relay subscription check interval must be a positive integer");
   const handler = createRelayHandler(owners, (request, data) => server.upgrade(request, { data }));
   const server = Bun.serve<RelaySubscription>({
     ...config,

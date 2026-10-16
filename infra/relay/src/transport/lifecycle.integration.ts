@@ -8,10 +8,10 @@ const fixture = createTransportFixture();
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 const serve = (context: Awaited<ReturnType<typeof fixture.context>>) =>
-  startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  startRelay({ hostname: "127.0.0.1", port: 0 }, context);
 
-test("idle authority checks close even while relay data is locked", async () => {
-  const context = await fixture.context();
+test("access expiry closes even while relay data is locked", async () => {
+  const context = await fixture.context({ accessLifetimeSeconds: 2 });
   const server = serve(context);
   const connection = connectSocket(server.url, context.scope, context.token);
   let release = async () => {};
@@ -61,19 +61,20 @@ test("listener loss closes sockets and requires a fresh listener owner", async (
   }
 });
 
-test("private authority outage fails current HTTP and idle socket permission", async () => {
+test("manager outage preserves unexpired HTTP access and socket notifications", async () => {
   const context = await fixture.context();
   const server = serve(context);
   const connection = connectSocket(server.url, context.scope, context.token);
   try {
     expect((await connection.next()).type).toBe("ready");
     await context.stopAuthority();
-    expect((await connection.closed).code).toBe(1011);
+    expect(connection.socket.readyState).toBe(WebSocket.OPEN);
+    await context.storage.owner(context.scope).publishRevision("published-notes", "offline-manager");
+    expect((await connection.next()).type).toBe("changed");
     const request = await fetch(new URL(relayPath(context.scope, "snapshot"), server.url), {
       headers: { authorization: `Bearer ${context.token}` },
     });
-    expect(request.status).toBe(503);
-    expect(await request.json()).toEqual({ error: "Authority unavailable" });
+    expect(request.status).toBe(200);
   } finally {
     connection.socket.close();
     await server.stop(true);
@@ -82,7 +83,7 @@ test("private authority outage fails current HTTP and idle socket permission", a
 });
 
 test("expiry ends an idle socket without a content notification", async () => {
-  const context = await fixture.context({ expiresAt: new Date(Date.now() + 1000).toISOString() });
+  const context = await fixture.context({ accessLifetimeSeconds: 2 });
   const server = serve(context);
   const connection = connectSocket(server.url, context.scope, context.token);
   try {
@@ -96,7 +97,7 @@ test("expiry ends an idle socket without a content notification", async () => {
   }
 });
 
-test("content restore and service restart cannot revive a revoked grant; stale manager restore denies every old grant", async () => {
+test("content restore and restart preserve finite access while stale manager restore denies renewal", async () => {
   const context = await fixture.context();
   let server = serve(context);
   try {
@@ -111,7 +112,8 @@ test("content restore and service restart cannot revive a revoked grant; stale m
       accountId: context.scope.accountId,
       environmentId: context.environmentId,
     });
-    expect((await connection.closed).code).toBe(1008);
+    await expect(context.renew()).rejects.toThrow("Environment access unavailable");
+    connection.socket.close();
     await context.storage.owner(context.scope).restore(saved);
     await server.stop(true);
     server = serve(context);
@@ -119,7 +121,7 @@ test("content restore and service restart cannot revive a revoked grant; stale m
       fetch(new URL(relayPath(context.scope, "snapshot"), server.url), {
         headers: { authorization: `Bearer ${context.token}` },
       });
-    expect((await snapshot()).status).toBe(401);
+    expect((await snapshot()).status).toBe(200);
     const fresh = await context.manager.register({
       requestId: "new",
       accountId: context.scope.accountId,
@@ -127,11 +129,14 @@ test("content restore and service restart cannot revive a revoked grant; stale m
       environmentId: context.environmentId,
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
     });
-    const current = connectSocket(server.url, context.scope, fresh.token!);
+    const access = await context.issue(fresh.token!);
+    const current = connectSocket(server.url, context.scope, access.token);
     expect((await current.next()).type).toBe("ready");
     await context.manager.restore("owned-stale-restore", authority);
-    expect((await current.closed).code).toBe(1008);
-    expect((await snapshot()).status).toBe(401);
+    await expect(context.issue(fresh.token!)).rejects.toThrow("Environment access unavailable");
+    expect(current.socket.readyState).toBe(WebSocket.OPEN);
+    current.socket.close();
+    expect((await snapshot()).status).toBe(200);
   } finally {
     await server.stop(true);
     await context.close();

@@ -10,7 +10,7 @@ afterAll(() => fixture.close());
 
 test("a disconnected HTTP reader cancels its owned backend and later requests still work", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const controller = new AbortController();
   let release = await fixture.blockRelayData();
   let guard: ReturnType<typeof setTimeout> | undefined;
@@ -54,7 +54,7 @@ test("a disconnected HTTP reader cancels its owned backend and later requests st
 });
 
 test("SIGTERM drains an HTTP query blocked by an external content lock before that lock is released", async () => {
-  const context = await fixture.context({ tls: true });
+  const context = await fixture.context();
   const child = Bun.spawn([process.execPath, new URL("../server.ts", import.meta.url).pathname], {
     env: { PATH: process.env.PATH!, ...context.serverEnv, RELAY_HOST: "127.0.0.1", RELAY_PORT: "0" },
     stdout: "pipe",
@@ -112,7 +112,7 @@ test("SIGTERM drains an HTTP query blocked by an external content lock before th
 
 test("HTTP cancellation drains a streamed upload while unrelated content reads are locked", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const bytes = new Uint8Array(2 * 1024 * 1024).fill(8);
   const asset = {
     sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),

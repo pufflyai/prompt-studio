@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { fingerprint, sealMutation } from "pstdio-sync-contracts";
 import { startRelay } from "../service";
-import { blockFixtureTable, waitForFixtureLock, withFixtureDatabase } from "./database.fixture";
+import { withFixtureDatabase } from "./database.fixture";
 import { createTransportFixture } from "./integration-fixture";
 import { connectSocket } from "./socket.fixture";
 
@@ -11,7 +11,7 @@ afterAll(() => fixture.close());
 
 test("LISTEN precedes readiness and a pre-upgrade notification is retained", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   let release = await fixture.blockRelayData();
   const connection = connectSocket(server.url, context.scope, context.token);
   try {
@@ -34,16 +34,13 @@ test("LISTEN precedes readiness and a pre-upgrade notification is retained", asy
   }
 });
 
-test("bursts coalesce while one socket authority check is blocked", async () => {
+test("one hundred revision commits remain readable without any manager permission calls", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const connection = connectSocket(server.url, context.scope, context.token);
-  let release = async () => {};
   try {
     expect((await connection.next()).type).toBe("ready");
-    const before = context.checks();
-    release = await blockFixtureTable(fixture.managerDatabaseUrl, "manager_accounts");
-    await waitForFixtureLock(fixture.managerDatabaseUrl);
+    await context.stopAuthority();
     const owner = context.storage.owner(context.scope);
     let revision = "published-notes";
     for (let index = 0; index < 100; index++) {
@@ -51,13 +48,9 @@ test("bursts coalesce while one socket authority check is blocked", async () => 
       await owner.publishRevision(revision, next);
       revision = next;
     }
-    expect(context.checks() - before).toBe(1);
-    expect(connection.messages).toHaveLength(1);
-    await release();
-    release = async () => {};
     expect((await connection.next()).type).toBe("changed");
+    expect((await owner.snapshot()).publishedRevision).toBe("burst-99");
   } finally {
-    await release();
     connection.socket.close();
     await server.stop(true);
     await context.close();
@@ -66,7 +59,7 @@ test("bursts coalesce while one socket authority check is blocked", async () => 
 
 test("pending and conflicting receipt commits both notify; duplicates keep their receipt", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const connection = connectSocket(server.url, context.scope, context.token);
   try {
     expect((await connection.next()).type).toBe("ready");

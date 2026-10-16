@@ -1,16 +1,17 @@
-import { strict as assert } from "node:assert";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { Client } from "pg";
 import {
   createAccountManager,
-  createEnvironmentAuthorityClient,
-  createEnvironmentAuthorityHandler,
+  createEnvironmentAccessVerifier,
+  createManagerAuthentication,
   migrateAccountManager,
 } from "pstdio-account-manager";
 import { createRelayAssets } from "../assets/assets";
 import { migrateRelayStorage } from "../storage/database";
 import { createRelayStorage } from "../storage/storage";
-import { createFixtureTls } from "./tls.fixture";
 
 export const createTransportFixture = () => {
   const input = process.env.SYNC_TEST_DATABASE_URL;
@@ -80,31 +81,29 @@ export const createTransportFixture = () => {
         await new Promise<void>((resolve) => setImmediate(resolve));
       }
     },
-    async context(options: { workbenchId?: string; environmentId?: string; expiresAt?: string; tls?: boolean } = {}) {
+    async context(
+      options: {
+        workbenchId?: string;
+        environmentId?: string;
+        expiresAt?: string;
+        accessLifetimeSeconds?: number;
+      } = {},
+    ) {
       const manager = createAccountManager(managerDatabase.url);
       const assets = createRelayAssets({ databaseUrl: relayDatabase.url, bucket, s3 });
       const storage = createRelayStorage(relayDatabase.url, assets);
-      const serviceSecret = `fixture-service-${crypto.randomUUID()}`;
-      const tls = options.tls ? await createFixtureTls() : undefined;
-      const privateServer = Bun.serve({
-        hostname: "127.0.0.1",
-        port: 0,
-        ...(tls ? { tls: tls.config } : {}),
-        fetch: createEnvironmentAuthorityHandler(manager, { serviceSecret }),
+      const auth = createManagerAuthentication({
+        databaseUrl: managerDatabase.url,
+        origin: "https://manager.fixture.test",
+        audience: "https://relay.fixture.test",
+        secret: "owned-transport-fixture-secret-0123456789",
+        googleClientId: "owned-fixture-client",
+        googleClientSecret: "owned-fixture-secret",
+        sessionLifetimeSeconds: 120,
+        sessionUpdateAgeSeconds: 60,
+        accessLifetimeSeconds: options.accessLifetimeSeconds ?? 30,
       });
-      let checks = 0;
-      const authority = createEnvironmentAuthorityClient(
-        {
-          origin: "https://manager.example.test",
-          serviceSecret,
-          requestTimeoutMs: 1000,
-        },
-        async (url, options) => {
-          assert.equal(url, "https://manager.example.test/internal/v1/environment-authority");
-          checks++;
-          return fetch(new URL(new URL(url).pathname, privateServer.url), options);
-        },
-      );
+      const directory = await mkdtemp(join(tmpdir(), "relay-access-trust-"));
       const scope = {
         accountId: crypto.randomUUID(),
         workbenchId: options.workbenchId ?? crypto.randomUUID(),
@@ -112,9 +111,8 @@ export const createTransportFixture = () => {
       };
       const environmentId = options.environmentId ?? crypto.randomUUID();
       const close = async () => {
-        await privateServer.stop(true);
-        await Promise.all([storage.close(), assets.close(), manager.close()]);
-        await tls?.close();
+        await Promise.all([storage.close(), assets.close(), manager.close(), auth.close()]);
+        await rm(directory, { recursive: true, force: true });
       };
       try {
         await manager.provision({
@@ -129,18 +127,28 @@ export const createTransportFixture = () => {
           environmentId,
           expiresAt: options.expiresAt ?? new Date(Date.now() + 60_000).toISOString(),
         });
+        const access = await auth.renew(grant.token!, scope.workbenchId);
+        const trust = {
+          issuer: "https://manager.fixture.test",
+          audience: "https://relay.fixture.test",
+          jwks: await auth.jwks(),
+        };
+        const trustFile = join(directory, "trust.json");
+        await writeFile(trustFile, JSON.stringify(trust));
         await storage.initialize(scope, "published-notes");
         return {
           scope,
           environmentId,
-          token: grant.token!,
+          token: access.token,
+          expiresAt: access.expiresAt,
           storage,
           assets,
-          authority,
+          verifyAccess: createEnvironmentAccessVerifier(trust),
+          renew: () => auth.renew(grant.token!, scope.workbenchId),
+          issue: (token: string) => auth.renew(token, scope.workbenchId),
           manager,
           grant,
-          checks: () => checks,
-          stopAuthority: () => privateServer.stop(true),
+          stopAuthority: () => auth.close(),
           serverEnv: {
             DATABASE_URL: relayDatabase.url,
             S3_ENDPOINT: endpoint,
@@ -148,11 +156,7 @@ export const createTransportFixture = () => {
             S3_REGION: s3.region,
             S3_ACCESS_KEY_ID: s3.credentials.accessKeyId,
             S3_SECRET_ACCESS_KEY: s3.credentials.secretAccessKey,
-            MANAGER_ORIGIN: privateServer.url.origin,
-            MANAGER_SERVICE_SECRET: serviceSecret,
-            MANAGER_REQUEST_TIMEOUT_MS: "1000",
-            RELAY_SUBSCRIPTION_CHECK_INTERVAL_MS: "20",
-            ...(tls ? { NODE_EXTRA_CA_CERTS: tls.cert } : {}),
+            RELAY_ACCESS_TRUST_FILE: trustFile,
           },
           close,
         };

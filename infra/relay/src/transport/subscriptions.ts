@@ -5,55 +5,49 @@ import type { RelayOwners } from "./owners";
 export const createRelaySubscription = async (
   owners: RelayOwners,
   scope: Scope,
-  token: string,
-  environmentId: string,
+  expiresAt: string,
   requestSignal?: AbortSignal,
 ) => {
+  const expiry = new Date(expiresAt).getTime();
   let socket: Pick<ServerWebSocket, "send" | "close"> | undefined;
-  let timer: ReturnType<typeof setInterval> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
-  let checking = false;
+  let scheduled = false;
   let dirty = false;
   let ready = false;
   let unsubscribe = () => {};
   const close = (code = 1000) => {
     if (stopped) return;
     stopped = true;
-    clearInterval(timer);
+    clearTimeout(timer);
     unsubscribe();
     socket?.close(code, code === 1008 ? "Authorization ended" : "Subscription ended");
   };
+  const expired = () => {
+    if (Date.now() < expiry) return false;
+    close(1008);
+    return true;
+  };
+  const scheduleExpiry = () => {
+    if (stopped || expired()) return;
+    // Node/Bun timers use a signed32-bit delay; longer access still follows its original expiry.
+    timer = setTimeout(scheduleExpiry, Math.min(expiry - Date.now(), 2_147_483_647));
+  };
   const send = (type: "ready" | "changed") => {
-    // Disconnect a slow consumer rather than accumulate a per-socket message queue.
+    // A hint has no payload queue. Disconnect a slow consumer when the socket cannot accept it.
     if (socket!.send(JSON.stringify({ protocolVersion: 1, type })) <= 0) close(1013);
   };
-  const check = async () => {
-    if (stopped || checking || !socket) return;
-    checking = true;
-    try {
-      do {
-        const changed = dirty;
-        dirty = false;
-        const identity = await owners.authority.authorize(token, scope.workbenchId);
-        if (stopped) return;
-        if (identity?.accountId !== scope.accountId || identity.environmentId !== environmentId) {
-          close(1008);
-          return;
-        }
-        deliver(changed);
-      } while (dirty && !stopped);
-    } catch {
-      close(1011);
-    } finally {
-      checking = false;
-    }
-  };
-  const deliver = (changed: boolean) => {
+  const deliver = () => {
+    scheduled = false;
+    if (stopped || !socket || expired()) return;
     if (!ready) {
       ready = true;
       send("ready");
     }
-    if (changed && !stopped) send("changed");
+    if (dirty && !stopped) {
+      dirty = false;
+      send("changed");
+    }
   };
   const owner = owners.storage.owner(scope);
   const interrupted = () => close();
@@ -63,7 +57,10 @@ export const createRelaySubscription = async (
     unsubscribe = await owner.watch(
       () => {
         dirty = true;
-        void check();
+        if (!scheduled && socket) {
+          scheduled = true;
+          queueMicrotask(deliver);
+        }
       },
       () => close(1011),
     );
@@ -72,7 +69,7 @@ export const createRelaySubscription = async (
       throw new Error("Subscription ended");
     }
     await owner.checkpoint(requestSignal);
-    if (stopped) throw new Error("Relay change listener unavailable");
+    if (stopped || expired()) throw new Error("Relay change listener unavailable");
   } catch (error) {
     close();
     throw error;
@@ -87,8 +84,8 @@ export const createRelaySubscription = async (
         connection.close(1011, "Subscription ended");
         return;
       }
-      timer = setInterval(() => void check(), owners.subscriptionCheckIntervalMs);
-      void check();
+      scheduleExpiry();
+      deliver();
     },
   };
 };

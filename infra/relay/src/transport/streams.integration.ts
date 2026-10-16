@@ -10,7 +10,7 @@ afterAll(() => fixture.close());
 
 test("HTTP disconnection resumes the same part; HTTP cancellation drains an active streamed writer", async () => {
   const context = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...context, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const bytes = new Uint8Array(2 * 1024 * 1024).fill(5);
   const asset = {
     sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),

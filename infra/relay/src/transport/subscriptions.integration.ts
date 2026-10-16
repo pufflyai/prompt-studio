@@ -8,10 +8,10 @@ const fixture = createTransportFixture();
 beforeAll(() => fixture.initialize());
 afterAll(() => fixture.close());
 
-test("ready sockets see only their committed scope and idle revocation closes them", async () => {
+test("ready sockets see only their committed scope while revoked renewal leaves issued access valid", async () => {
   const first = await fixture.context();
   const second = await fixture.context();
-  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, { ...first, subscriptionCheckIntervalMs: 20 });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, first);
   const a = connectSocket(server.url, first.scope, first.token);
   const b = connectSocket(server.url, second.scope, second.token);
   try {
@@ -49,12 +49,13 @@ test("ready sockets see only their committed scope and idle revocation closes th
       accountId: first.scope.accountId,
       environmentId: first.environmentId,
     });
-    expect((await a.closed).code).toBe(1008);
+    await expect(first.renew()).rejects.toThrow("Environment access unavailable");
+    expect(a.socket.readyState).toBe(WebSocket.OPEN);
     expect(b.socket.readyState).toBe(WebSocket.OPEN);
     const response = await fetch(new URL(relayPath(first.scope, "snapshot"), server.url), {
       headers: { authorization: `Bearer ${first.token}` },
     });
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
     await second.storage.owner(second.scope).publishRevision("published-notes", "published-next");
     expect((await b.next()).type).toBe("changed");
   } finally {
