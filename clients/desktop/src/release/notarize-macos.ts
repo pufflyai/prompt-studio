@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import { notarizationFailure, notaryCredentials, waitForNotarization } from "./notarization-status";
 import type { DesktopSigningConfig } from "./release-config";
 import { runMacCommand, runStapler } from "./stapler";
 
@@ -8,6 +9,9 @@ export const notarizeMacApp = async (
   appPath: string,
   credentials: NonNullable<DesktopSigningConfig["macosNotarization"]>,
   run = runMacCommand,
+  wait = async (milliseconds: number) => {
+    await new Promise((resolve) => setTimeout(resolve, milliseconds));
+  },
 ) => {
   const temporary = mkdtempSync(join(tmpdir(), "pstdio-notary-"));
   try {
@@ -19,13 +23,7 @@ export const notarizeMacApp = async (
       "notarytool",
       "submit",
       archive,
-      "--key",
-      credentials.appleApiKey,
-      "--key-id",
-      credentials.appleApiKeyId,
-      "--issuer",
-      credentials.appleApiIssuer,
-      "--wait",
+      ...notaryCredentials(credentials),
       "--output-format",
       "json",
     ]);
@@ -36,21 +34,11 @@ export const notarizeMacApp = async (
     } catch {
       throw new Error(submissionFailure);
     }
-    if (submitted.code !== 0 || result.status !== "Accepted") {
-      if (!result.id) throw new Error(submissionFailure);
-      const diagnostics = await run("xcrun", [
-        "notarytool",
-        "log",
-        result.id,
-        "--key",
-        credentials.appleApiKey,
-        "--key-id",
-        credentials.appleApiKeyId,
-        "--issuer",
-        credentials.appleApiIssuer,
-      ]).catch(() => ({ stdout: "", stderr: "" }));
-      throw new Error(`${submissionFailure}\n${diagnostics.stdout}${diagnostics.stderr}`);
-    }
+    if (submitted.code !== 0 || !result.id || result.status === "Invalid")
+      throw await notarizationFailure(result.id, submissionFailure, credentials, run);
+    // Upload and waiting are separate so a failed status request cannot lose the
+    // submission identity or cause the same signed app to be uploaded again.
+    await waitForNotarization(result.id, credentials, run, wait);
     console.log(`macOS notarization accepted: ${result.id}`);
     await runStapler("staple", appPath, run);
   } finally {
