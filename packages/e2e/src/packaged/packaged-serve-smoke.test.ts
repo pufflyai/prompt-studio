@@ -92,6 +92,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
 // Manually opened Bottom panels and terminals stay visible across page navigation, retaining the terminal process.
 // Related tabs select when revealing closed Side/Bottom panels; open panels keep their selection.
+// Resource pages remember manual selections and tab/panel closures across return visits and reloads.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";

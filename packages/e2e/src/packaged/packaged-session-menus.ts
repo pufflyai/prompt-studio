@@ -1,33 +1,6 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
-
-const verifyBottomSelectionOnReveal = async (
-  page: Page,
-  terminalTab: Locator,
-  reopenWorkspace: () => Promise<unknown>,
-  leaveWorkspace: () => Promise<unknown>,
-) => {
-  // Workspace reuses its last terminal. A session provides a different selected tab.
-  const sessionTab = page.getByRole("tab", { name: /Packaged created session/ });
-  const moveSession = async (destination: string) => {
-    await sessionTab.focus();
-    await page.keyboard.press("Shift+F10");
-    await page.getByRole("menuitem", { name: destination, exact: true }).click();
-  };
-  await moveSession("Move to Secondary");
-  await expect(sessionTab).toHaveAttribute("aria-selected", "true");
-  await page.getByRole("button", { name: "Hide Secondary Panel", exact: true }).click();
-  await reopenWorkspace();
-  await expect(terminalTab).toHaveAttribute("aria-selected", "true");
-  await expect(sessionTab).toHaveAttribute("aria-selected", "false");
-  await leaveWorkspace();
-  await sessionTab.click();
-  await reopenWorkspace();
-  await expect(sessionTab).toHaveAttribute("aria-selected", "true");
-  await expect(terminalTab).toHaveAttribute("aria-selected", "false");
-  await leaveWorkspace();
-  await moveSession("Move to Side");
-};
+import { verifyBottomPageChoices, verifyClosedSidePreference } from "./packaged-related-resource-preferences";
 
 export const verifyPackagedSessionMenus = async (
   page: Page,
@@ -88,7 +61,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
   await leaveWorkspace();
   await reopenWorkspace();
-  await expect(preview).toBeVisible();
+  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace);
   await preview.focus();
   await page.keyboard.press("ControlOrMeta+Alt+s");
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
@@ -118,12 +91,11 @@ export const verifyPackagedSessionMenus = async (
   await leaveWorkspace();
   await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
   await reopenWorkspace();
-  await expect(preview).toHaveAttribute("aria-selected", "true");
-  await expect(createdTab).toHaveAttribute("aria-selected", "false");
+  await expect(preview).toHaveCount(0);
+  await expect(createdTab).toHaveAttribute("aria-selected", "true");
   await leaveWorkspace();
   await reopenWorkspace();
-  await expect(preview).toBeVisible();
-  await expect(preview).toHaveAttribute("aria-selected", "false");
+  await expect(preview).toHaveCount(0);
   await expect(createdTab).toHaveAttribute("aria-selected", "true");
   await leaveWorkspace();
   await expect(preview).toBeHidden();
@@ -149,7 +121,7 @@ export const verifyPackagedSessionMenus = async (
   await leaveWorkspace();
   await expect(terminalTab).toBeVisible();
   await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
-  await verifyBottomSelectionOnReveal(page, terminalTab, reopenWorkspace, leaveWorkspace);
+  await verifyBottomPageChoices(page, terminalTab, reopenWorkspace, leaveWorkspace);
   await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
   await terminalInput.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__navigation_retained__");

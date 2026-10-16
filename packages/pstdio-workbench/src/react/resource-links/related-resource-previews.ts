@@ -1,6 +1,7 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { NavigationTarget, RegisteredResourceKind, WorkbenchModuleContext } from "../../core";
 import { relatedResourcePageKey } from "./related-resource-page-key";
+import { createRelatedResourcePreferences } from "./related-resource-preferences";
 import type { WorkbenchResourceLinksOptions } from "./resource-links-module";
 import { createResourcePreviewOpener } from "./resource-preview-opener";
 
@@ -27,18 +28,23 @@ export const registerRelatedResourcePreviews = (
       }
     | undefined;
   let openingPreviews = false;
+  const preferences = createRelatedResourcePreferences(ctx, () => pending?.controller.abort());
   const enabled = () => ctx.preferences.getValue(openRelatedResourcesPreference) !== false;
   const load = async (resource: ResourceRef, owner: RegisteredResourceKind, controller: AbortController) => {
     const current = () => !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type) === owner;
     try {
       const entries = await owner.relatedOpenings!(resource, controller.signal);
       if (!current()) return;
-      const openings = entries.filter(
-        (entry) =>
-          entry.autoOpen === true &&
-          entry.resource.projectId === resource.projectId &&
-          resourceKey(entry.resource) !== resourceKey(resource),
+      const openings = preferences.openings(
+        resource,
+        entries.filter(
+          (entry) =>
+            entry.autoOpen === true &&
+            entry.resource.projectId === resource.projectId &&
+            resourceKey(entry.resource) !== resourceKey(resource),
+        ),
       );
+      preferences.run(() => preferences.restoreVisibility(resource));
       if (!openings.length) return;
       const resolved = await options.createService(resource).resolve(
         openings.map((entry) => entry.resource),
@@ -48,10 +54,13 @@ export const registerRelatedResourcePreviews = (
       const targets = new Map(resolved.map((entry) => [resourceKey(entry.resource), entry.target]));
       openingPreviews = true;
       try {
-        for (const entry of openings) {
-          const target = targets.get(resourceKey(entry.resource));
-          if (target) opener.open(target, resource, entry);
-        }
+        preferences.run(() => {
+          for (const entry of openings) {
+            const target = targets.get(resourceKey(entry.resource));
+            if (target && preferences.allows(resource, entry)) opener.open(target, resource, entry);
+          }
+          preferences.select(resource);
+        });
       } finally {
         openingPreviews = false;
       }
@@ -69,6 +78,7 @@ export const registerRelatedResourcePreviews = (
     const key = resourceKey(resource);
     if (pending?.key === key && pending.owner === owner && !pending.controller.signal.aborted) return pending.promise;
     pending?.controller.abort();
+    preferences.enter(resource);
     const controller = new AbortController();
     const promise = load(resource, owner, controller).finally(() => {
       if (pending?.controller === controller) pending = undefined;
@@ -78,14 +88,16 @@ export const registerRelatedResourcePreviews = (
   };
   const primary = ctx.pageLocations.onDidNavigate((location) => {
     if (openingPreviews) return;
-    if (location.resource) void open(location.resource);
-    else pending?.controller.abort();
+    if (location.resource) {
+      preferences.enter(location.resource);
+      void open(location.resource);
+    } else pending?.controller.abort();
   });
   const primaryState = ctx.pages.store.subscribeSelector(
     () => relatedResourcePageKey(ctx),
     (_key, previousKey) => {
       if (openingPreviews) return;
-      opener.closePagePreviews(previousKey);
+      preferences.run(() => opener.closePagePreviews(previousKey));
       if (pending?.key !== resourceKey(ctx.pages.store.getState().location?.resource)) pending?.controller.abort();
     },
   );
@@ -125,7 +137,9 @@ export const registerRelatedResourcePreviews = (
     if (!openingPreviews) {
       // The registry has prepared the incoming page; clear the outgoing rendered
       // tabs too before the scope switch writes its saved layout.
-      for (const id of opener.closePagePreviews(relatedResourcePageKey(ctx))) ctx.layout.removeWidgetPlacement(id);
+      preferences.run(() => {
+        for (const id of opener.closePagePreviews(relatedResourcePageKey(ctx))) ctx.layout.removeWidgetPlacement(id);
+      });
     }
     pending?.controller.abort();
   });
@@ -143,6 +157,7 @@ export const registerRelatedResourcePreviews = (
       selectionState();
       restoration.dispose();
       scope.dispose();
+      preferences.dispose();
       opener.dispose();
       schema.dispose();
     },

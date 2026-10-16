@@ -64,9 +64,9 @@ Targets use their normal resource-owner resolver. A source does not need to know
 
 An explicit resource open or selection evaluates its owner's command once when **Open related resources** is enabled in Appearance settings. The setting is on by default. Automatic targets do not run their own related-opening commands, so openings do not recurse.
 
-Side and Bottom use the same selection rules. Automatic openings keep the source route. In an open populated panel they preserve its selected tab and keyboard focus. Revealing a closed or empty panel selects the related tab; its view may focus its input normally. Tab selection means the content shown in that panel.
+Side and Bottom use the same selection rules. Automatic openings keep the source route. Without a saved page choice, an open populated panel keeps its selected tab and keyboard focus. Revealing a closed or empty panel selects the related tab; its view may focus its input normally. Tab selection means the content shown in that panel.
 
-| Panel before the automatic opening | Result |
+| Panel before the automatic opening, with no saved page choice | Result |
 | --- | --- |
 | Closed, including a panel with saved tabs | Open the panel and select the related tab. Its previously selected tab stays open if the preview rules allow it. |
 | Open with a selected tab | Keep that selection and open the related tab in the background. If it replaces the selected preview, show the replacement in that preview's slot. |
@@ -76,13 +76,23 @@ An already open target keeps its actual tray and pin state, even when the owner 
 
 New previews replace the eligible preview in their requested tray and stay leftmost. Each tray has at most one unpinned tab. Pinned tabs stay open. The initiating source preview is protected. Results apply in order: once a closed panel has been revealed, later entries use its open-panel rule. Several new previews in one tray replace each other, leaving the last eligible preview. Owners can also request Main without navigating away from the source.
 
+## Remembered page choices
+
+Resource pages remember the user's Side and Bottom choices. Choosing another session or resource, selecting a different tab, pinning it, or manually opening, closing or hiding a panel updates that page's choice. Returning through navigation or browser history restores the chosen resource and selected tab instead of the owner's default. For example, choosing an older session on a ticket keeps that session selected when returning, even after another page shows a different session.
+
+Closing a tab records the remaining selection, or an empty closed panel when the last tab closes. Hiding the panel records it as closed. Returning to that resource page does not reopen a manually closed panel. Manually reopening it updates the choice again. An explicitly opened empty panel stays empty and open on return.
+
+Choices belong to the user and the qualified resource page, including its project and resource owner. Changing one resource's choices does not change another's. They use the existing workbench preference storage and survive reloads. There is no settings editor or extension API change. **Reset layout** clears the current page's remembered choices. Turning off **Open related resources** skips related openings without deleting the choices.
+
+Only user edits override the owner's defaults. Automatic preview cleanup, automatic panel reveal, and metadata refresh do not record a new choice. A page with no user changes can still open the owner's latest related resources on a later visit. Manual edits also cancel pending automatic openings so late results cannot undo a closure or selection.
+
 ## Navigation and cleanup
 
 Leaving the source page closes every unpinned tab newly opened automatically for that page, including tabs sharing a tray with pinned tabs. The following rules apply equally to Side and Bottom.
 
 | Tab or panel state | On source page leave |
 | --- | --- |
-| New automatic unpinned tab | Close it. Selecting it or refreshing its title or metadata does not change this lifetime. |
+| New automatic unpinned tab | Close it. Selecting it or refreshing its title or metadata does not change this lifetime. Remembered choices remain available for the next visit. |
 | Tab already present before entry | Keep it, including an existing unpinned target. |
 | Automatic tab the user pinned | Keep it. |
 | Tab manually opened or reopened, or whose resource the user replaced | Keep it. It no longer belongs to automatic page cleanup. |
