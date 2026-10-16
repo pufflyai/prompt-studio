@@ -19,7 +19,9 @@ export const session = pgTable(
     updatedAt: timestamp({ withTimezone: true }).notNull(),
     ipAddress: text(),
     userAgent: text(),
-    userId: text().notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
   },
   (table) => [index("auth_sessions_user").on(table.userId)],
 );
@@ -29,7 +31,9 @@ export const account = pgTable(
     id: text().primaryKey(),
     accountId: text().notNull(),
     providerId: text().notNull(),
-    userId: text().notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     accessToken: text(),
     refreshToken: text(),
     idToken: text(),

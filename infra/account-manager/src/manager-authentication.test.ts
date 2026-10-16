@@ -2,6 +2,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { createLocalJWKSet, jwtVerify } from "jose";
 import { createAuthorityFixture, provisionAccount, registration } from "./authority.fixture";
 import * as implementation from "./index";
+import { authenticationConfig } from "./manager-authentication.fixture";
 
 const fixture = createAuthorityFixture(implementation);
 beforeAll(() => fixture.initialize());
@@ -42,5 +43,36 @@ test("an environment renews scoped library-signed access that remains valid afte
     expect((await jwtVerify(access.token, keys, verification)).payload).toEqual(payload);
   } finally {
     await Promise.all([auth.close(), manager.close()]);
+  }
+});
+
+test("issuance caps access at grant expiry and expired access cannot authorize", async () => {
+  const manager = fixture.owner();
+  const auth = implementation.createManagerAuthentication({
+    ...authenticationConfig(fixture.databaseUrl),
+    accessLifetimeSeconds: 2,
+  });
+  const standardAuth = implementation.createManagerAuthentication(authenticationConfig(fixture.databaseUrl));
+  try {
+    const accountId = await provisionAccount(manager);
+    const grant = await manager.register(registration(accountId));
+    const issued = await auth.renew(grant.token!, grant.workbenchId);
+    const verify = implementation.createEnvironmentAccessVerifier({
+      issuer: "https://auth.fixture.test",
+      audience: "https://relay.fixture.test",
+      jwks: await auth.jwks(),
+    });
+    expect(Date.parse(issued.expiresAt)).toBeLessThanOrEqual(Date.parse(grant.expiresAt));
+    expect(await verify(issued.token)).toMatchObject({ accountId });
+    await Bun.sleep(2100);
+    await expect(verify(issued.token)).rejects.toThrow();
+    const short = await manager.register({
+      ...registration(accountId),
+      expiresAt: new Date((Math.floor(Date.now() / 1000) + 2) * 1000).toISOString(),
+    });
+    const capped = await standardAuth.renew(short.token!, short.workbenchId);
+    expect(capped.expiresAt).toBe(short.expiresAt);
+  } finally {
+    await Promise.all([auth.close(), standardAuth.close(), manager.close()]);
   }
 });
