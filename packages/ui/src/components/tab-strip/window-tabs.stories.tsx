@@ -60,7 +60,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const SeveralTabs: Story = { render: () => <Example /> };
+export const SeveralTabs: Story = {
+  render: () => <Example />,
+  play: async ({ canvasElement }) => {
+    const tabs = within(canvasElement).getAllByRole("tab");
+    for (const tab of tabs) await expect(tab.closest(".ps-window-tabs__tab")).toHaveStyle({ borderWidth: "0px" });
+    await userEvent.click(tabs[1]);
+    await expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+    for (const tab of tabs) await expect(tab.closest(".ps-window-tabs__tab")).toHaveStyle({ borderWidth: "0px" });
+  },
+};
 export const KeyboardReordering: Story = {
   render: () => <Example />,
   play: async ({ canvasElement }) => {
