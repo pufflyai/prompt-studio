@@ -40,7 +40,7 @@ export const registerSessionQuerySmokeTests = () => {
             resume() { throw new Error("Not used by this smoke test"); }
           }],
           commands: [{ id: "read", ref: { kind: "command", id: "read" }, title: "Read sessions",
-            run(ctx, params) { return ctx.sessions.query({ cursor: params?.cursor, agent: "test.session-query.harness.worker", status: ["completed"] }); }
+            run(ctx, params) { return ctx.sessions.query({ cursor: params?.cursor, orderBy: params?.orderBy, agent: "test.session-query.harness.worker", status: ["completed"] }); }
           }, {id:"inspect",ref:{kind:"command",id:"inspect"},title:"Inspect execution",run(ctx,params){return ctx.sessions.get(params.sessionId);}},
           {id:"workspace",ref:{kind:"command",id:"workspace"},title:"Read workspace",run(ctx){return ctx.workspaces.getDefault();}},
           {id:"continue",ref:{kind:"command",id:"continue"},title:"Guarded continuation",async run(ctx,params){try{await ctx.sessions.followup({sessionId:params.sessionId,prompt:"Automatic continuation",expectedRun:params.expectedRun});return {accepted:true};}catch(error){return {accepted:false,error:error.message};}}}]
@@ -108,6 +108,8 @@ export const registerSessionQuerySmokeTests = () => {
       );
       const restarted = await request(commandPath, { source: "api", params: { cursor } });
       expect(restarted.outcome.value).toEqual(page);
+      const active = await request(commandPath, { source: "api", params: { orderBy: "lastActivity" } });
+      expect(active.outcome.value).toEqual(page);
       const rows = await request(
         `/sessions?project_id=${project.id}&created_from=${encodeURIComponent(session.created_at)}`,
       );

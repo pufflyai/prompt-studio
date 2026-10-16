@@ -1,11 +1,24 @@
 import type { Page } from "../../pagination";
+import type { ExtensionPanelRegion } from "./composition";
 import type { JsonObject } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { PageOpenIntent } from "./pages";
 
 export interface ResourceResolution {
   resource: ResourceRef;
   target?: Extract<NavigationTarget, { kind: "page" | "panel" | "compound" }>;
 }
+
+export interface RelatedResourceOpening {
+  readonly resource: ResourceRef;
+  /** Only explicit true opens the target automatically. */
+  readonly autoOpen?: boolean;
+  readonly region: ExtensionPanelRegion;
+  /** Defaults to preview. */
+  readonly open?: PageOpenIntent;
+}
+
+export type RelatedResourceOpenings = readonly RelatedResourceOpening[];
 
 export type ResourceRole = "primary" | "context" | "source" | "result";
 

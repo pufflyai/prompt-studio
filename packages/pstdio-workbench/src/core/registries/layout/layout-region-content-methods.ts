@@ -1,3 +1,4 @@
+import { createWorkbenchEvent } from "../../shared/workbench-event";
 import type { LayoutModel } from "./layout-model-types";
 import {
   closeWidgetInLayout,
@@ -26,11 +27,19 @@ export const createLayoutRegionContentMethods = (
   input: CreateLayoutRegionContentMethodsInput,
 ): Pick<
   LayoutModel,
-  "setRegionActiveWidget" | "closeWidget" | "removeWidgetPlacement" | "clearRegion" | "resetRegions" | "restoreLayout"
+  | "setRegionActiveWidget"
+  | "closeWidget"
+  | "removeWidgetPlacement"
+  | "clearRegion"
+  | "resetRegions"
+  | "restoreLayout"
+  | "onWillRestoreLayout"
 > => {
   const { getLayout, setLayout, persistLayout } = input;
 
+  const restoring = createWorkbenchEvent<void>("layout restoration subscriber");
   return {
+    onWillRestoreLayout: restoring.subscribe,
     setRegionActiveWidget(regionId, widgetId) {
       const nextLayout = selectRegionActiveWidget(getLayout(), regionId, widgetId);
       if (!nextLayout) return;
@@ -100,6 +109,7 @@ export const createLayoutRegionContentMethods = (
     },
 
     restoreLayout(layout) {
+      restoring.notify();
       setLayout(mergeWithDefaultRegions(layout, input.defaultRegionVisibility));
       persistLayout();
     },

@@ -182,6 +182,7 @@ export const createWorkbenchExtensionMetadata = (
     icon: record.contribution.icon,
     resolveCommand: record.resolveCommandId,
     resolveManyCommand: record.resolveManyCommandId,
+    relatedOpeningsCommand: record.relatedOpeningsCommandId,
     paths: record.paths,
     menuSlots: Object.entries(record.contribution.menuSlots ?? {}).map(([id, slot]) => ({
       id,

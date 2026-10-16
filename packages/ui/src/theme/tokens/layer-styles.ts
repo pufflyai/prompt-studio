@@ -1,5 +1,10 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
+const replacementColors = {
+  bg: "bg.accent-primary.default/16",
+  borderColor: "bg.accent-primary.default",
+};
+
 export const layerStyles = defineLayerStyles({
   chatContent: {
     value: {
@@ -42,11 +47,23 @@ export const layerStyles = defineLayerStyles({
   },
   tabDropZone: {
     value: {
-      bg: "bg.accent-primary.default/4",
-      color: "fg.muted",
+      _after: {
+        content: '""',
+        position: "absolute",
+        inset: "3xs",
+        borderWidth: "1px",
+        borderColor: "bg.accent-primary.default",
+        borderRadius: "compact",
+        pointerEvents: "none",
+      },
+    },
+  },
+  tabDropReplacement: {
+    value: {
+      ...replacementColors,
       borderWidth: "1px",
-      borderColor: "bg.accent-primary.default",
-      borderRadius: "inherit",
+      _selected: replacementColors,
+      _hover: replacementColors,
     },
   },
   filterPicker: {

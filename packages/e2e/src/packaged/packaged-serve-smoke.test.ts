@@ -69,7 +69,7 @@ import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smok
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
-// Resource links include owner batch-resolution commands and their public workbench metadata.
+// Resource links include owner batch-resolution and related-opening commands with public workbench metadata.
 // Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { registerResourcePageSmokeTests } from "./packaged-resource-pages-smoke";

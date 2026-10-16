@@ -20,7 +20,7 @@ import { WorkspaceSummary } from "./components/workspace-summary";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { registerWorkspaceSidenavContributions } from "./workspace-navigation";
-import { relatedWorkspaceResources } from "./workspace-related-resources";
+import { workspaceRelatedOpenings } from "./workspace-related-openings";
 import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
 import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
 
@@ -212,6 +212,8 @@ export const createWorkspacesModule = () =>
     activate(ctx) {
       ctx.resources.registerKind({
         kind: "workspace",
+        extensionId: "pstdio",
+        relatedOpenings: (resource, signal) => workspaceRelatedOpenings(ctx, resource, signal),
         label: "Workspace",
         icon: dashboardViews.workspaces.icon,
         resolve: (resource) =>
@@ -226,7 +228,6 @@ export const createWorkspacesModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",
         kind: "workspace",
-        related: (resource) => relatedWorkspaceResources(ctx, resource),
         list: () =>
           createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map((workspace) => ({
             resource: workspace.resource,

@@ -124,3 +124,31 @@ test("malformed cursor fields restart from the first page", async () => {
   const cursor = Buffer.from(JSON.stringify({ projectId, createdAt: "", id: "" })).toString("base64url");
   expect((await service.query(projectId, { cursor })).rows.map((session) => session.id)).toEqual([row.id]);
 });
+
+test("pages by latest activity and scopes anchor identity to its owner", async () => {
+  const older = await create("active", "codex", "2026-10-01T00:00:00.000Z");
+  const newer = await create("new", "codex", "2026-10-02T00:00:00.000Z");
+  const foreign = await create("other owner", "codex", "2026-10-03T00:00:00.000Z");
+  const anchor = { type: "drawing", id: "same", extensionId: "example", projectId };
+  await service.addAnchors(older.id, [anchor]);
+  await service.addAnchors(newer.id, [anchor]);
+  await service.addAnchors(foreign.id, [{ ...anchor, extensionId: "other" }]);
+  await conn.db
+    .update(sessions)
+    .set({ updated_at: "2026-10-04T00:00:00.000Z", last_request_started: null, last_request_ended: null });
+  await conn.db
+    .update(sessions)
+    .set({ last_request_started: "2026-10-05T00:00:00.000Z" })
+    .where(eq(sessions.id, older.id));
+  const first = await service.query(projectId, { anchor, orderBy: "lastActivity", limit: 1 });
+  expect(first.rows.map((row) => row.id)).toEqual([older.id]);
+  const second = await service.query(projectId, {
+    anchor,
+    orderBy: "lastActivity",
+    limit: 1,
+    cursor: first.nextCursor!,
+  });
+  expect(second.rows.map((row) => row.id)).toEqual([newer.id]);
+  expect(second.nextCursor).toBeNull();
+  expect((await service.query(projectId, { anchor })).rows.map((row) => row.id)).toEqual([newer.id, older.id]);
+});

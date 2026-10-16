@@ -1,9 +1,13 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
 import { isWorkbenchProjectUrl, parseWorkbenchPageUrl } from "pstdio-api-contracts";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
-import { createWorkbenchStore } from "../../shared/store/workbench-store";
+import { createWorkbenchEvent } from "../../shared/workbench-event";
 import { createPageLocationControllerActions } from "./page-location-actions";
-import { createPageHistoryEntry, createPageLocationFailureHandler } from "./page-location-history-entry";
+import {
+  createPageHistoryEntry,
+  createPageLocationFailureHandler,
+  createPageLocationHistory,
+} from "./page-location-history-entry";
 import {
   normalizeDirectWorkbenchPageLocation,
   normalizeWorkbenchPageLocation,
@@ -24,7 +28,6 @@ import type {
   WorkbenchPageBrowserEntry,
   WorkbenchPageHistoryState,
   WorkbenchPageLocationController,
-  WorkbenchPageLocationHistoryState,
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
 import { connectPageOwnerRemoval } from "./page-owner-removal";
@@ -64,24 +67,10 @@ const locationWithUrlParams = (direct: PageLocation, contextual: PageLocation) =
 export const createWorkbenchPageLocationController = <Value>(
   input: CreateWorkbenchPageLocationControllerInput<Value>,
 ): WorkbenchPageLocationController => {
+  const navigation = createWorkbenchEvent<PageLocation>("page navigation subscriber");
   const internals = getWorkbenchPageRegistryInternals(input.registry);
   const pages = input.registry.listPages;
-  let historyIndex = 0;
-  let maxHistoryIndex = 0;
-  const historyStore = createWorkbenchStore<WorkbenchPageLocationHistoryState>({
-    name: "workbench.page-location-history",
-    initialState: { canGoBack: false, canGoForward: false },
-  });
-  const publishHistory = () =>
-    historyStore.setState(
-      { canGoBack: historyIndex > 0, canGoForward: historyIndex < maxHistoryIndex },
-      false,
-      "pageLocationHistory",
-    );
-  const resetHistory = () => {
-    [historyIndex, maxHistoryIndex] = [0, 0];
-    publishHistory();
-  };
+  const history = createPageLocationHistory();
 
   const fail = createPageLocationFailureHandler(input.reportDiagnostic);
   const historyEntry = createPageHistoryEntry({ pages, resources: internals.resources });
@@ -95,13 +84,10 @@ export const createWorkbenchPageLocationController = <Value>(
   });
 
   const publish = createPageLocationPublisher(input, internals, {
-    getIndex: () => historyIndex,
-    commitIndex: (index, push) => {
-      historyIndex = index;
-      if (push) maxHistoryIndex = index;
-    },
+    getIndex: history.getIndex,
+    commitIndex: history.commitIndex,
     entry: historyEntry,
-    publish: publishHistory,
+    publish: history.publish,
     rememberRootLevel: rootLevel.remember,
   });
   const prepareState = createPageLocationPreparer(input.registry);
@@ -151,11 +137,9 @@ export const createWorkbenchPageLocationController = <Value>(
     try {
       const browserEntry = input.browser.current();
       if (isHistoryState(browserEntry.state) && browserEntry.state.projectId === projectId) {
-        historyIndex = browserEntry.state.index;
-        maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
+        history.adopt(browserEntry.state.index);
       } else {
-        historyIndex = 0;
-        maxHistoryIndex = 0;
+        history.reset();
       }
       const hasProjectUrl = useCurrentUrl && isWorkbenchProjectUrl(browserEntry.url, projectId);
       const fromUrl = hasProjectUrl ? resolveUrl(projectId, browserEntry) : undefined;
@@ -173,7 +157,9 @@ export const createWorkbenchPageLocationController = <Value>(
         pages(),
       );
       const prepare = matchesSavedLocation ? prepareState.restore : prepareState.open;
-      return publish(projectId, prepare(projectId, resolved, action), "replace", action);
+      const result = publish(projectId, prepare(projectId, resolved, action), "replace", action);
+      if (result.ok && fromUrl && !matchesSavedLocation) navigation.notify(result.location);
+      return result;
     } catch (error) {
       fail(source, error);
       try {
@@ -189,13 +175,12 @@ export const createWorkbenchPageLocationController = <Value>(
     if (!projectId) return;
     try {
       if (isHistoryState(entry.state) && entry.state.projectId === projectId) {
-        historyIndex = entry.state.index;
-        maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
-        publishHistory();
+        history.adopt(entry.state.index);
       }
       const resolved = resolveUrl(projectId, entry);
       if (!resolved) throw new Error(`Cannot resolve page URL: ${entry.url}`);
-      commit(projectId, resolved, "none", "replayPageHistory");
+      const result = commit(projectId, resolved, "none", "replayPageHistory");
+      if (result.ok) navigation.notify(result.location);
     } catch (error) {
       fail("history", error);
     }
@@ -228,13 +213,14 @@ export const createWorkbenchPageLocationController = <Value>(
 
   const controller = createPageLocationControllerActions({
     input,
-    historyStore,
+    historyStore: history.store,
+    navigation,
     clearProject(projectId) {
       // The remembered root level belongs to the project the user is leaving.
       rootLevel.restore(undefined);
       internals.clearProject(projectId);
     },
-    resetHistory,
+    resetHistory: history.reset,
     rootLevelTarget: rootLevel.target,
     restore,
     resolveUrl,
@@ -257,8 +243,8 @@ export const createWorkbenchPageLocationController = <Value>(
       forgetRootLevel: rootLevel.forget,
       commit,
     }),
-    canGoBack: () => historyIndex > 0,
-    canGoForward: () => historyIndex < maxHistoryIndex,
+    canGoBack: history.canGoBack,
+    canGoForward: history.canGoForward,
     dispose() {
       popStateSubscription.dispose();
       pageRemovalSubscription();
