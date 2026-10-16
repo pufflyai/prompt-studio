@@ -44,13 +44,27 @@ const setup = () => {
   const createManager = () => {
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_path: sourcePath },
-        { id: "unused", install_name: "unused", source_path: unusedPath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_path: sourcePath,
+        },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "unused",
+          install_name: "unused",
+          source_path: unusedPath,
+        },
       ],
       reportBuildFailure: async (_name, _id, error) => {
         throw error;
       },
-      reportBuildSuccess: async () => {},
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async ({ outdir, entryPath }) => {
         builds.push(entryPath);
         mkdirSync(outdir, { recursive: true });

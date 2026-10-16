@@ -38,16 +38,26 @@ describe("createExtensionWebviewBuildManager source identity", () => {
     const rows = ["workspace-copy", "project-copy"].map((id) => {
       const sourcePath = join(root, id, "font-editor");
       writeExtension(sourcePath);
-      return { id, install_name: "font-editor", source_hash: "hash-1", source_path: sourcePath };
+      return {
+        updated_at: "2026-10-16T00:00:00.000Z",
+
+        id,
+        install_name: "font-editor",
+        source_hash: "hash-1",
+        source_path: sourcePath,
+      };
     });
     const builtEntries: string[] = [];
     const successes: string[] = [];
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => rows,
-      reportBuildFailure: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
       reportBuildSuccess: async (installedExtensionId) => {
         successes.push(installedExtensionId);
+        return "reported";
       },
       buildWebview: async (input) => {
         builtEntries.push(input.entryPath);
@@ -84,10 +94,21 @@ describe("createExtensionWebviewBuildManager source identity", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "project-copy", install_name: "font-editor", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "project-copy",
+          install_name: "font-editor",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         mkdirSync(input.outdir, { recursive: true });
         writeFileSync(join(input.outdir, "module.js"), "");

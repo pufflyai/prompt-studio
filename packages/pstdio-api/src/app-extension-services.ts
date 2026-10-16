@@ -13,7 +13,7 @@ import {
   createExtensionConnectionsApi,
 } from "./features/extensions/extension-connection-service";
 import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
-import type { LoadedExtension } from "./features/extensions/extension-runtime";
+import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
@@ -47,9 +47,11 @@ export const productionAppDependencies: AppDependencies = {
 };
 
 export const wireAppExtensionServices = async (input: WireExtensionServicesInput) => {
-  let refreshInstalledExtensionProcesses: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> =
-    async () => {};
-  const refreshInstalledSources = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+  let refreshInstalledExtensionProcesses: (
+    sourcePath?: string,
+    validatedSource?: LoadedExtensionSnapshot,
+  ) => Promise<void> = async () => {};
+  const refreshInstalledSources = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     harnessRegistry.invalidate();
     await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
   };

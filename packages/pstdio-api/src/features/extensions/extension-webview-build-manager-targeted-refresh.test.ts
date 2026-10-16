@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { extensionLoadKey } from "pstdio-extensions";
 import { loadExtensionSource } from "./extension-runtime";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 
@@ -64,15 +65,31 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
     const sourcePath = join(root, "extension");
     writeSingleWebviewExtension(sourcePath);
     const loaded = await loadExtensionSource(sourcePath);
-    rmSync(join(sourcePath, "extension.ts"));
+    const snapshot = { loaded, loadKey: extensionLoadKey(sourcePath) };
     let buildCount = 0;
+    let loadCount = 0;
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      loadSource: async (path) => {
+        loadCount++;
+        return loadExtensionSource(path);
+      },
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         buildCount++;
         mkdirSync(input.outdir, { recursive: true });
@@ -83,8 +100,9 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
     });
 
     try {
-      await manager.refresh(sourcePath, loaded);
+      await manager.adopt(sourcePath, snapshot);
       expect(buildCount).toBe(1);
+      expect(loadCount).toBe(0);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -116,11 +134,21 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
       reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         if (webviewId === "pstdio.lab.view.first") firstPublished.resolve();
+        return "reported";
       },
       buildWebview: async (input) => {
         if (input.entryPath.endsWith("first.tsx")) {
@@ -183,11 +211,21 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: sourceHash, source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: sourceHash,
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
       reportBuildSuccess: async (_installedExtensionId, _webviewId, expectedSource) => {
         successes.push(expectedSource);
+        return "reported";
       },
       buildWebview: async (input) => {
         runCount++;
@@ -204,15 +242,21 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
       const targetedRefresh = manager.ensure("installed-lab");
       await buildStarted.promise;
 
-      writeFileSync(join(sourcePath, "extension.ts"), "export default { views: ;");
+      const definitionPath = join(sourcePath, "extension.ts");
+      writeFileSync(
+        definitionPath,
+        readFileSync(definitionPath, "utf8").replace("export default {", 'export default { description: "updated",'),
+      );
       sourceHash = "hash-2";
       const registrationRefresh = manager.refresh();
       releaseBuild();
       await targetedRefresh;
 
-      expect(successes).toEqual([{ sourcePath }]);
-
       await registrationRefresh;
+      expect(successes.length).toBeGreaterThan(0);
+      expect(successes.every((source) => source.sourcePath === sourcePath && source.sourceHash === "hash-2")).toBe(
+        true,
+      );
       expect(runCount).toBe(1);
     } finally {
       manager.dispose();
