@@ -18,6 +18,23 @@ afterEach(async () => {
   await close?.();
 });
 
+test("conditionally records load state only while the source registration is unchanged", async () => {
+  const original = await svc.register({
+    install_name: "lab",
+    extension_id: "pstdio.lab",
+    display_name: "Lab",
+    source_kind: "local_path",
+    source_path: "/extensions/lab",
+    source_hash: "hash-1",
+  });
+  const current = await svc.updateRegistration(original.id, { source_hash: "hash-2", status: "loaded" });
+  const obsolete = await svc.updateLoadStateIfUnchanged(original.id, original.updated_at, { status: "error" });
+  expect(obsolete).toBeNull();
+  expect(await svc.get(original.id)).toMatchObject({ source_hash: "hash-2", status: "loaded" });
+  const recorded = await svc.updateLoadStateIfUnchanged(original.id, current!.updated_at, { status: "error" });
+  expect(recorded).toMatchObject({ source_hash: "hash-2", status: "error" });
+});
+
 describe("installedExtensionSourcesService", () => {
   test("registers and retrieves a source by install name", async () => {
     const registered = await svc.register({

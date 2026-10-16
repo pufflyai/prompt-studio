@@ -46,6 +46,11 @@ export type LoadedExtension = {
   diagnostics: RuntimeExtensionDiagnostic[];
 };
 
+export type LoadedExtensionSnapshot = {
+  loaded: LoadedExtension;
+  loadKey: string;
+};
+
 type CheckExtensionHostOptions = {
   hostCapabilities?: ExtensionHostCapabilities | null;
 };

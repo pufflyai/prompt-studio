@@ -99,6 +99,7 @@ const reloadPlanner = async (host: Host, projectId: string) => {
     method: "POST",
   });
   expect(response.status).toBe(200);
+  return response.json();
 };
 
 const plannerWebview = async (host: Host, projectId: string, localId: string) => {
@@ -274,7 +275,10 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
     const original = readFileSync(entry, "utf8");
     writeFileSync(entry, `${original}\nexport const broken = ;\n`);
-    await reloadPlanner(host, valid.id);
+    expect(await reloadPlanner(host, valid.id)).toMatchObject({
+      status: "error",
+      lastError: { code: "extension_webview_build_failed" },
+    });
     const webview = await plannerWebview(host, valid.id, "timeline");
     expect(await (await fetch(`${host.baseUrl}${webview!.moduleUrl}`)).text()).toContain(
       "Extension webview build failed",
@@ -282,7 +286,7 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     timeline = await openTimeline(page, host, valid.id);
     await expect(page.getByText(/Extension view failed to load/)).toBeVisible({ timeout: 30_000 });
     writeFileSync(entry, original);
-    await reloadPlanner(host, valid.id);
+    expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
   } finally {
     await browser?.close();

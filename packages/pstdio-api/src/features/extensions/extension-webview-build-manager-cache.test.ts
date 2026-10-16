@@ -69,10 +69,21 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         buildCount++;
         mkdirSync(input.outdir, { recursive: true });
@@ -106,13 +117,22 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async (_installedExtensionId, webviewId) => {
         failures.push(webviewId);
+        return "reported";
       },
       reportBuildSuccess: async (_installedExtensionId, webviewId) => {
         successes.push(webviewId);
+        return "reported";
       },
       buildWebview: async (input) => {
         if (input.entryPath.endsWith("faulty.tsx")) return { success: false, details: "build failed" };
@@ -156,10 +176,21 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
-      reportBuildFailure: async () => {},
-      reportBuildSuccess: async () => {},
+      reportBuildFailure: async () => {
+        return "reported";
+      },
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         buildCount++;
         if (!existsSync(join(sourcePath, "node_modules", "react"))) {
@@ -197,12 +228,22 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
     const manager = createExtensionWebviewBuildManager({
       listInstalledSources: async () => [
-        { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "hash-1",
+          source_path: sourcePath,
+        },
       ],
       reportBuildFailure: async (_installedExtensionId, webviewId) => {
         failures.push(webviewId);
+        return "reported";
       },
-      reportBuildSuccess: async () => {},
+      reportBuildSuccess: async () => {
+        return "reported";
+      },
       buildWebview: async (input) => {
         buildCount++;
         if (buildCount === 1) {
