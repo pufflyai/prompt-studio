@@ -55,6 +55,9 @@ export const InteractionChecks: Story = {
           await expect(contrastRatio(getComputedStyle(text).color, background)).toBeGreaterThanOrEqual(4.5);
         }
       }
+      const sample = canvasElement.querySelector<HTMLElement>("[data-theme-surface] p")!;
+      const selection = getComputedStyle(sample, "::selection");
+      await expect(contrastRatio(selection.color, selection.backgroundColor)).toBeGreaterThanOrEqual(4.5);
     }
     if (args.section === "all" || args.section === "buttons") {
       const resting = canvas.getAllByRole("button", { name: "Default" })[0];

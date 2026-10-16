@@ -33,6 +33,7 @@ Use the same roles in every extra theme:
 - Separate the canvas, panel, muted, hover, and selected surfaces. Hover must remain visible on both canvas and panel surfaces.
 - Give primary buttons distinct default, hover, and pressed colors. Keep normal text at least 4.5:1 against its background in each state.
 - Keep primary and secondary text at least 4.5:1 on the neutral surfaces. Disabled controls are exempt; placeholders still need readable contrast.
+- Keep selected text at least 4.5:1 against its highlight. Dark themes use an accent highlight with inverted text.
 - Keep control borders at least 3:1 against their resting surfaces. Use the theme's hue for subtle separators and accent borders.
 - Keep focus borders, inverted surfaces, and status surfaces inside the theme palette.
 
