@@ -53,6 +53,19 @@ test("a manually added terminal stays open across workspace, ticket and tickets 
   }
 });
 
+test("browser Back keeps a terminal added after entering the workspace", () => {
+  const { workbench, navigate } = setup();
+  workbench.registerModule(createWorkbenchTerminalModule());
+  navigate("ticket");
+  navigate("workspace");
+  const terminal = openWorkbenchTerminal(workbench);
+  workbench.pageLocations.goBack();
+  expect(workbench.pages.store.getState().activePageId).toBe("ticket");
+  expect(workbench.layout.getActivePanel("secondary")?.instanceId).toBe(terminal.instanceId);
+  navigate("tickets");
+  expect(workbench.layout.getActivePanel("secondary")?.instanceId).toBe(terminal.instanceId);
+});
+
 test.each([
   "side",
   "secondary",
