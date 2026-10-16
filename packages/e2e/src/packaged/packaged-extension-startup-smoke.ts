@@ -66,14 +66,14 @@ export const registerExtensionStartupSmokeTests = () => {
         expect((await fetch(runtime.baseUrl)).status).toBe(200);
 
         release.resolve();
-      let extensions: Array<{ installName: string }> = [];
+        let extensions: Array<{ installName: string }> = [];
         for (let attempt = 0; extensions.length === 0 && attempt < 100; attempt++) {
           const response = await fetch(`${runtime.baseUrl}/v1/projects/${project.id}/extensions`, { headers });
           expect(response.status).toBe(200);
           extensions = ((await response.json()) as { extensions: typeof extensions }).extensions;
           if (extensions.length === 0) await Bun.sleep(10);
         }
-      expect(extensions).toContainEqual(expect.objectContaining({ installName: "slow-extension" }));
+        expect(extensions).toContainEqual(expect.objectContaining({ installName: "slow-extension" }));
       } finally {
         release.resolve();
         if (child) await stopProcess(child);
