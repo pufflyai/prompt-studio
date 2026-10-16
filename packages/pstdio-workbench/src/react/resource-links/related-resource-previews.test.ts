@@ -64,7 +64,7 @@ test("opens direct linked resources of arbitrary kinds as previews without chang
   const location = workbench.pages.store.getState().location;
   const active = workbench.layout.getLayout().activeWidgetId;
   await controller.open(source);
-  expect(workbench.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toEqual(["first", "note"]);
+  expect(workbench.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toEqual(["note"]);
   expect(
     workbench.layout.listPanelInstances("side").every((panel) => panel.tabRetention === "preview" && !panel.pinned),
   ).toBe(true);
@@ -235,5 +235,91 @@ test("refreshing the routed resource does not replace an explicitly opened draft
   });
   await Promise.resolve();
   expect(reads).toBe(readsBeforeRefresh);
+  controller.dispose();
+});
+
+test("automatic related previews never replace their initiating preview in the same tray", async () => {
+  const { workbench, service, controller, target } = setup([]);
+  const initiating = ref("drawing", "initiating");
+  const related = ref("document", "related");
+  service.list = async () => ({ items: [{ source: initiating, target: related }] });
+  service.resolve = async () => [{ resource: related, target: target(related) }];
+  workbench.shellPlacements.registerPlacement({
+    id: "source-preview",
+    region: "side",
+    item: {
+      kind: "binding",
+      binding: {
+        view: { kind: "view", id: "document" },
+        kinds: [{ kind: "resource-kind", id: "drawing" }],
+        cardinality: "many",
+      },
+    },
+  });
+  workbench.shellPlacements.openPlacement({ placementId: "source-preview", resource: initiating, open: "preview" });
+  await controller.open(initiating);
+  expect(workbench.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toEqual(["initiating"]);
+  const source = workbench.layout.listPanelInstances("side")[0]!;
+  workbench.movePanel(source.instanceId, "secondary");
+  await controller.open(initiating);
+  expect(workbench.layout.listPanelInstances("secondary").map((panel) => panel.resource?.id)).toEqual(["initiating"]);
+  expect(workbench.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toEqual(["related"]);
+  controller.dispose();
+});
+
+test("related projections keep their destination tray when the same view already previews another resource", async () => {
+  const { workbench, source, service, controller } = setup([ref("document", "first")]);
+  await controller.open(source);
+  workbench.pinPlacement(workbench.layout.listPanelInstances("side")[0]!.placementIdentity!);
+  const page = { kind: "page", extensionId: "example", id: "secondary-documents" } as const;
+  workbench.pages.registerPage({
+    id: "secondary-documents",
+    ref: page,
+    path: "secondary-documents",
+    modeId: "project",
+    main: { kind: "view", view: { kind: "view", id: "document" }, cardinality: "one" },
+    slots: [
+      {
+        id: "documents",
+        region: "secondary",
+        item: {
+          kind: "binding",
+          binding: {
+            view: { kind: "view", id: "document" },
+            kinds: [{ kind: "resource-kind", id: "document" }],
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  });
+  const initiating = ref("drawing", "initiating");
+  const related = ref("document", "second");
+  service.list = async () => ({ items: [{ source: initiating, target: related }] });
+  service.resolve = async () => [
+    {
+      resource: related,
+      target: { kind: "panel", panel: { kind: "page-slot", page, id: "documents" }, resource: related },
+    },
+  ];
+  workbench.shellPlacements.registerPlacement({
+    id: "source-preview",
+    region: "side",
+    item: {
+      kind: "binding",
+      binding: {
+        view: { kind: "view", id: "document" },
+        kinds: [{ kind: "resource-kind", id: "drawing" }],
+        cardinality: "many",
+      },
+    },
+  });
+  workbench.shellPlacements.openPlacement({ placementId: "source-preview", resource: initiating, open: "preview" });
+  await controller.open(initiating);
+  expect(workbench.layout.listPanelInstances("side").map((panel) => panel.resource?.id)).toEqual([
+    "initiating",
+    "first",
+  ]);
+  expect(workbench.layout.listPanelInstances("secondary").map((panel) => panel.resource?.id)).toEqual(["second"]);
   controller.dispose();
 });

@@ -28,7 +28,10 @@ import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
+import { connectTrayPreviewRemoval } from "./tray-preview-removal";
+import { retainTrayPreviews } from "./tray-preview-retention";
 export interface ConnectWorkbenchPageRuntimeInput {
+  loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
@@ -107,20 +110,32 @@ const applyPageState = (
 };
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
   let applyingTransition = false;
-  const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime((state) => {
-    const storeBeforeTransition = input.registry.store.getState();
-    applyingTransition = true;
-    try {
-      applyPageState(input, state, "transition", storeBeforeTransition);
-    } finally {
-      applyingTransition = false;
-    }
-  });
+  const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime(
+    (state) => {
+      const storeBeforeTransition = input.registry.store.getState();
+      applyingTransition = true;
+      try {
+        applyPageState(input, state, "transition", storeBeforeTransition);
+      } finally {
+        applyingTransition = false;
+      }
+    },
+    (state) =>
+      retainTrayPreviews(
+        state,
+        input.registry.store.getState(),
+        input.loadPageLayout?.(state) ?? input.layout.getLayout(),
+        getWorkbenchPageRegistryInternals(input.registry).resources,
+        state.activeModeId ? input.loadModeLayout?.(state.projectId, state.activeModeId) : undefined,
+      ),
+  );
+  const removedPreviews = connectTrayPreviewRemoval(input, () => applyingTransition);
   const scope = input.layout.onDidChangePersistenceScope(() => {
     if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
   });
   return createDisposable(() => {
     scope.dispose();
+    removedPreviews();
     runtime.dispose();
   });
 };
@@ -153,6 +168,7 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   restorePageState?: CreateWorkbenchPageRegistryInput<WorkbenchWidgetPlacement>["restorePageState"];
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
@@ -203,6 +219,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    loadPageLayout: input.loadPageLayout,
     loadModeLayout: input.loadModeLayout,
     beforeApply: (state) => {
       input.beforeApply?.(state);

@@ -3,4 +3,4 @@
 "pstdio": minor
 ---
 
-Open recent related resources as unpinned previews with a default-on Appearance setting.
+Open related resources with a default-on Appearance setting, keep one leftmost preview per tray, and show preview replacement while dragging.

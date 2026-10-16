@@ -56,6 +56,13 @@ export const verifyPackagedSessionMenus = async (
   expect((await created).status()).toBe(201);
   await expect(sideTabs.filter({ hasText: "Packaged created session" })).toHaveAttribute("aria-selected", "true");
   expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
+  await expect(sideTabs.first()).toContainText("Packaged created session");
+  await expect(sideTabs.filter({ hasText: "Packaged session actions" })).toHaveCount(0);
+  const createdTab = sideTabs.filter({ hasText: "Packaged created session" });
+  await createdTab.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",
