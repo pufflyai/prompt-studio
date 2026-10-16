@@ -135,17 +135,19 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
     open,
     closePagePreviews(sourceKey: string) {
       // Only tabs this opener created belong to the page's temporary context.
-      // Pins and trays with other tabs have become part of the user's workspace.
-      const closed: string[] = [];
-      for (const region of Object.values(ctx.layout.getLayout().regions)) {
-        const panel = region.widgets[0];
-        if (region.widgets.length !== 1 || !panel || panel.relatedSource !== sourceKey) continue;
-        if (panel.tabRetention === "preview" && panel.placementIdentity) {
+      // Existing tabs and tabs the user repurposed do not belong to this page.
+      const previews = Object.values(ctx.layout.getLayout().regions)
+        .flatMap((region) => region.widgets)
+        .filter((panel) => panel.relatedSource === sourceKey && panel.tabRetention === "preview");
+      for (const preview of previews) {
+        // Closing one placement can reconcile the other outgoing tabs away.
+        const panel = Object.values(ctx.layout.getLayout().regions)
+          .flatMap((region) => region.widgets)
+          .find((panel) => panel.widgetId === preview.widgetId);
+        if (panel?.relatedSource === sourceKey && panel.tabRetention === "preview" && panel.placementIdentity)
           ctx.closePlacement(panel.placementIdentity);
-          closed.push(panel.widgetId);
-        }
       }
-      return closed;
+      return previews.map((panel) => panel.widgetId);
     },
     dispose() {
       unsubscribe();

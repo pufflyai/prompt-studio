@@ -89,7 +89,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 // The paired session-menu browser check restores focus to its tab after Escape.
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
-// Related openings preserve an existing selected tab; sole automatic previews close on page leave and empty panels collapse.
+// Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
