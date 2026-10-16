@@ -1,4 +1,4 @@
-import { exportJWK, type FetchImplementation, generateKeyPair, SignJWT } from "jose";
+import { exportJWK, generateKeyPair, SignJWT } from "jose";
 
 export const createGoogleFixture = async () => {
   const pairs = await Promise.all([generateKeyPair("RS256"), generateKeyPair("RS256")]);
@@ -15,7 +15,7 @@ export const createGoogleFixture = async () => {
       return Response.json({ keys }, { status });
     },
   });
-  const transport: FetchImplementation = (url, options) => {
+  const transport = (url: string, options: RequestInit) => {
     if (url !== "https://www.googleapis.com/oauth2/v3/certs") throw new Error("Untrusted key source");
     return fetch(server.url, options);
   };

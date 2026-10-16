@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { createAuthorityFixture, provisionAccount, registration } from "../src/authority.fixture";
+import { createGoogleCodeFixture } from "../src/google-code.fixture";
 import { createGoogleFixture } from "../src/google-identity.fixture";
 
 const implementation: typeof import("../src/index") = await import(new URL("./authority.js", import.meta.url).href);
@@ -126,7 +127,60 @@ try {
   } finally {
     await google.close();
   }
-  console.log("Built private manager authority, recovery, Google identity, owner login and environment access passed");
+  const codeProvider = await createGoogleCodeFixture();
+  try {
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const login = implementation.createGoogleLogin(reopened, codeProvider.config, codeProvider.transport);
+    const begun = await login.begin({ expiresAt });
+    const callback = await codeProvider.authorize(begun.authorizationUrl, accountId);
+    const complete = { ...callback, binding: begun.binding, accountId, expiresAt };
+    const session = await login.complete(complete);
+    assert.deepEqual(Object.keys(session).sort(), ["accountId", "expiresAt", "token"]);
+    await assert.rejects(login.complete(complete));
+    const access = reopened.forOwnerSession(session.token);
+    const grant = await access.register({
+      requestId: "code-flow-registration",
+      workbenchId: "code-workbench",
+      environmentId: "code-environment",
+      expiresAt,
+    });
+    assert.ok(grant.token);
+    assert.equal(grant.accountId, accountId);
+    assert.ok(await reopened.authorize(grant.token, grant.workbenchId));
+    const stored = JSON.stringify({ session, snapshot: await reopened.snapshot() });
+    for (const secret of [codeProvider.config.clientSecret, callback.code, begun.binding, ...codeProvider.issuedTokens])
+      assert.ok(!stored.includes(secret));
+    let configError: unknown;
+    try {
+      implementation.createGoogleLogin(reopened, {
+        ...codeProvider.config,
+        redirectUri: codeProvider.config.clientSecret,
+      });
+    } catch (error) {
+      configError = error;
+    }
+    assert.ok(configError instanceof Error);
+    assert.ok(!Bun.inspect(configError, { depth: Infinity }).includes(codeProvider.config.clientSecret));
+    const rejected = await login.begin({ expiresAt });
+    const rejectedCallback = await codeProvider.authorize(rejected.authorizationUrl, accountId);
+    const sensitive = [
+      rejected.binding,
+      rejectedCallback.code,
+      codeProvider.config.clientSecret,
+      ...codeProvider.issuedTokens,
+    ];
+    codeProvider.respondWith(Response.json({ id_token: sensitive.join(" ") }));
+    const error = await login
+      .complete({ ...rejectedCallback, binding: rejected.binding, accountId, expiresAt })
+      .catch((reason: unknown) => reason);
+    assert.ok(error instanceof Error);
+    for (const secret of sensitive) assert.ok(!Bun.inspect(error, { depth: Infinity }).includes(secret));
+    await reopened.logout(session.token);
+    await assert.rejects(access.environments());
+  } finally {
+    await codeProvider.close();
+  }
+  console.log("Built private manager authority, recovery, Google code login and environment access passed");
 } finally {
   await Promise.all(owners.map((owner) => owner.close()));
   await fixture.close();
