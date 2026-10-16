@@ -3,28 +3,31 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writeRuntimeDescriptor } from "pstdio/runtime";
-import { DESKTOP_RUNTIME_TIMEOUT_MS } from "./runtime-controller";
 import { DesktopRuntimeManager } from "./runtime-manager";
 
 for (const externalRuntime of [false, true]) {
-  test(`recovers from an unresponsive ${externalRuntime ? "external" : "local"} runtime within the startup budget`, async () => {
-    const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-timeout-"));
+  test(`cancels waiting for ${externalRuntime ? "an external" : "a local"} runtime on quit and preserves its owner`, async () => {
+    const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-startup-"));
+    const requested = Promise.withResolvers<void>();
     const server = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
       idleTimeout: 0,
-      fetch: () => new Promise<Response>(() => {}),
+      fetch: () => {
+        requested.resolve();
+        return new Promise<Response>(() => {});
+      },
     });
     const descriptorPath = join(home, "runtime.json");
     writeRuntimeDescriptor(descriptorPath, {
       schemaVersion: 1,
       protocolVersion: 1,
       pid: process.pid,
-      instanceId: "stalled-runtime",
+      instanceId: "starting-runtime",
       ownerType: "persistent",
       origin: `http://127.0.0.1:${server.port!}`,
       token: "isolated-test-token",
-      appVersion: "0.31.0",
+      appVersion: "0.43.1",
       startedAt: new Date().toISOString(),
     });
     const originalDescriptor = readFileSync(descriptorPath, "utf8");
@@ -40,18 +43,15 @@ for (const externalRuntime of [false, true]) {
     });
 
     try {
-      const result = await Promise.race([
-        manager.start().then(
-          () => "Unexpectedly ready",
-          (error) => error.message,
-        ),
-        Bun.sleep(DESKTOP_RUNTIME_TIMEOUT_MS + 1_000).then(() => "Still starting after the readiness budget"),
-      ]);
-      expect(result).toContain("runtime_timeout");
+      const startup = manager.start().catch((error) => error);
+      await requested.promise;
+      manager.detach();
+      expect(await startup).toBeInstanceOf(Error);
       expect(readFileSync(descriptorPath, "utf8")).toBe(originalDescriptor);
     } finally {
+      manager.detach();
       server.stop(true);
       rmSync(home, { recursive: true, force: true });
     }
-  }, 20_000);
+  });
 }

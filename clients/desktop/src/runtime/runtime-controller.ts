@@ -1,6 +1,5 @@
 import type { RuntimeDescriptor, RuntimeDiscovery } from "pstdio/runtime";
 
-export const DESKTOP_RUNTIME_TIMEOUT_MS = 15_000;
 const DISCOVERY_INTERVAL_MS = 50;
 
 export const createSidecarLaunchArguments = (instanceId: string) => [
@@ -18,7 +17,7 @@ export const createSidecarLaunchArguments = (instanceId: string) => [
 
 type RuntimeDiscoveryDeps = {
   discover: (path: string) => Promise<RuntimeDiscovery>;
-  now: () => number;
+  signal: AbortSignal;
   sleep: (milliseconds: number) => Promise<void>;
 };
 
@@ -50,9 +49,10 @@ export const waitForDesktopRuntime = async (
   expectedInstanceId: string | null,
   deps: RuntimeDiscoveryDeps,
 ) => {
-  const deadline = deps.now() + DESKTOP_RUNTIME_TIMEOUT_MS;
-  while (deps.now() <= deadline) {
+  while (true) {
+    deps.signal.throwIfAborted();
     const discovery = await deps.discover(descriptorPath);
+    deps.signal.throwIfAborted();
     if (discovery.state === "healthy") {
       if (!expectedInstanceId || discovery.descriptor.instanceId === expectedInstanceId) return discovery.descriptor;
       throw new Error("A replacement runtime appeared while desktop was starting");
@@ -60,7 +60,6 @@ export const waitForDesktopRuntime = async (
     if (discovery.state === "unsafe") throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
     await deps.sleep(DISCOVERY_INTERVAL_MS);
   }
-  throw new Error("Runtime readiness timed out");
 };
 
 export const reconcileRuntimeOwnership = (current: RuntimeDescriptor, discovery: RuntimeDiscovery) => {
