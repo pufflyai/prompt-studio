@@ -7,17 +7,26 @@ const verifyBottomSelectionOnReveal = async (
   reopenWorkspace: () => Promise<unknown>,
   leaveWorkspace: () => Promise<unknown>,
 ) => {
+  // Workspace reuses its last terminal. A session provides a different selected tab.
+  const sessionTab = page.getByRole("tab", { name: /Packaged created session/ });
+  const moveSession = async (destination: string) => {
+    await sessionTab.focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: destination, exact: true }).click();
+  };
+  await moveSession("Move to Secondary");
+  await expect(sessionTab).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "Hide Secondary Panel", exact: true }).click();
   await reopenWorkspace();
-  await expect(terminalTab).toHaveAttribute("aria-selected", "false");
-  await expect(
-    page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab", { selected: true }),
-  ).toHaveCount(1);
-  await leaveWorkspace();
   await expect(terminalTab).toHaveAttribute("aria-selected", "true");
+  await expect(sessionTab).toHaveAttribute("aria-selected", "false");
+  await leaveWorkspace();
+  await sessionTab.click();
   await reopenWorkspace();
-  await expect(terminalTab).toHaveAttribute("aria-selected", "true");
+  await expect(sessionTab).toHaveAttribute("aria-selected", "true");
+  await expect(terminalTab).toHaveAttribute("aria-selected", "false");
   await leaveWorkspace();
+  await moveSession("Move to Side");
 };
 
 export const verifyPackagedSessionMenus = async (
