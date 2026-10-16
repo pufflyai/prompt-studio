@@ -93,6 +93,7 @@ export const createCommandEnvironment = (
     const resolveProjectPath = (access: FileAccess) =>
       resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access);
     const storage = createStorageApi(deps, {
+      extensionId: input.extensionId,
       extensionInstanceId: enabledSource.instance.id,
       projectId: input.projectId,
       signal,
@@ -107,11 +108,15 @@ export const createCommandEnvironment = (
 
     return {
       storage,
-      artifacts: createArtifactsApi(resolveProjectPath, {
-        ...input,
-        onWrite: (path) => deps.artifactMountWrites.record(path),
-        signal,
-      }),
+      artifacts: createArtifactsApi(
+        resolveProjectPath,
+        {
+          ...input,
+          onWrite: (path) => deps.artifactMountWrites.record(path),
+          signal,
+        },
+        deps,
+      ),
       projectFiles: createProjectFilesApi(deps, input.projectId, provisioningWorkspaceId, signal),
       workspaceFiles:
         input.workspaceId && workingFiles

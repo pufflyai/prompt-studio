@@ -48,7 +48,7 @@ export const createExtensionFilesDBService = (db: DbClient) => {
     input: Pick<ExtensionFileScope, "project_id" | "extension_instance_id"> & { file_id: string },
   ) => {
     const rows = await db
-      .select({ file: files })
+      .select({ file: files, scope_type: extension_files.scope_type, scope_id: extension_files.scope_id })
       .from(extension_files)
       .innerJoin(files, eq(extension_files.file_id, files.id))
       .where(
@@ -59,7 +59,8 @@ export const createExtensionFilesDBService = (db: DbClient) => {
         ),
       );
 
-    return rows.at(0)?.file ?? null;
+    const row = rows.at(0);
+    return row ? { ...row.file, scope_type: row.scope_type, scope_id: row.scope_id } : null;
   };
 
   const detach = async (

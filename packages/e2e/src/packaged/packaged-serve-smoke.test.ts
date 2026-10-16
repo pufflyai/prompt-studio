@@ -45,6 +45,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Shared record contracts remain covered through the compiled host. The separate relay
 // image checks authenticated HTTP, immutable asset ranges and finite native sockets.
+// Native relay coverage also hydrates ordinary artifact mounts and canonical attachment URLs.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";

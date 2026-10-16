@@ -1,4 +1,6 @@
+import { encodeText } from "./encoding";
 import type { createRecordStorage } from "./storage";
+import type { StorageOwner } from "./types";
 
 export const storageRecordId = (namespace: string[], recordId: string) => JSON.stringify([...namespace, recordId]);
 
@@ -26,3 +28,6 @@ export const legacyNamespaceStorage = (
       }),
   };
 };
+
+export const initialRecordRevision = (owner: StorageOwner, recordId: string) =>
+  encodeText(JSON.stringify({ owner, recordId, operations: [] }));

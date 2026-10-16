@@ -5,6 +5,7 @@ import { createExtensionBlobsApi } from "./blobs";
 import { createExtensionRecordsApi } from "./records";
 
 type StorageApiInput = {
+  extensionId: string;
   extensionInstanceId: string;
   projectId: string;
   signal?: AbortSignal;
@@ -42,6 +43,7 @@ export const createStorageApi = (
     assets: createExtensionAssetsApi(deps, input),
     files: createExtensionBlobsApi(deps, {
       extensionInstanceId: input.extensionInstanceId,
+      extensionId: input.extensionId,
       signal: input.signal,
       projectId: input.projectId,
       scopeType: scope.scope_type,
@@ -113,6 +115,7 @@ export const createStorageApi = (
         attachments(itemId) {
           return createExtensionBlobsApi(deps, {
             extensionInstanceId: input.extensionInstanceId,
+            extensionId: input.extensionId,
             signal: input.signal,
             projectId: input.projectId,
             scopeType: `collection:${name}`,

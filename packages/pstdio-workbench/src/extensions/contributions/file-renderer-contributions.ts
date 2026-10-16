@@ -9,8 +9,10 @@ import type {
   ResourceRef,
   WorkbenchModuleContext,
 } from "../../core";
+import { unwrapCommandValue } from "../host/command-response";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
-import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
+import { executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
+import { attachFileStorageVersions, fileStorageVersions } from "./file-storage-versions";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
 export interface RegisterWorkbenchExtensionFileRenderersInput {
@@ -39,7 +41,7 @@ const executeFileCommand = async (
   pageParams?: import("@pstdio/sdk/extensions").PageParams,
 ) => {
   const ext = resource;
-  return executeWorkbenchExtensionCommand(input, commandId, {
+  return executeWorkbenchExtensionCommandResponse(input, commandId, {
     params: {
       renderer: {
         rendererId,
@@ -107,14 +109,14 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
           record.loadHandlerId,
           resource,
           {},
-          undefined,
+          { fileStorageVersions: {} },
           signal,
           pageParams,
         );
-        return (result ?? {}) as FileRendererContent;
+        return attachFileStorageVersions((unwrapCommandValue(result) ?? {}) as FileRendererContent, result);
       },
       save: record.saveHandlerId
-        ? async (resource, content, origin) => {
+        ? async (resource, content, origin, loaded) => {
             const result = await executeFileCommand(
               input,
               record.id,
@@ -122,12 +124,13 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
               resource,
               { content },
               {
+                fileStorageVersions: fileStorageVersions(loaded),
                 ...(origin ? { fileRendererOrigin: origin } : {}),
                 ...(resourceKey(resource) ? { fileRendererResourceKey: resourceKey(resource) } : {}),
               },
             );
-            const revision = revisionFromValue(result);
-            return revision ? { revision } : undefined;
+            const revision = revisionFromValue(unwrapCommandValue(result));
+            return attachFileStorageVersions(revision ? { revision } : {}, result);
           }
         : undefined,
     },

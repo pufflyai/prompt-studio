@@ -22,6 +22,7 @@ import {
   acceptFileRendererLoad,
   type LoadedFile,
   readCachedFileContent,
+  saveLoadedFile,
   storeCachedFileContent,
 } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
@@ -82,6 +83,12 @@ const FileRendererHeader = (props: { file: LoadedFile }) => {
     <FileRendererPathHeader fileName={file.fileName ?? file.filePath} filePath={file.filePath} />
   ) : null;
 };
+
+const fileRendererOwnerKey = (
+  placement: WorkbenchPanelInstance | undefined,
+  contributionId: string,
+  loadKey: string,
+) => (placement ? rendererReadKey(placement) : JSON.stringify(["file", contributionId, loadKey]));
 
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
@@ -146,9 +153,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   });
   const contributionId = contribution.id;
   const hasSave = Boolean(contribution.save);
-  const ownerKey = props.placement
-    ? rendererReadKey(props.placement)
-    : JSON.stringify(["file", contributionId, loadKey]);
+  const ownerKey = fileRendererOwnerKey(props.placement, contributionId, loadKey);
   const instanceId = props.placement?.instanceId ?? contributionId;
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useEffect(() => {
@@ -162,6 +167,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     // A recently viewed document mounts immediately from the cache; the load
     // below reconciles it (unchanged content keeps the editor mounted).
     const cached = readCachedFileContent(loadKey);
+    let baseline = cached;
     setLoaded(cached ? { ...cached, editorRevision: 1, loadKey } : null);
     const load = (reason: "refresh" | "retry" = "refresh") => {
       read.request(
@@ -172,6 +178,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
             if (cancelled || removed) return;
             const updateLoaded = acceptFileRendererLoad(next, loadKey, controller);
             if (!updateLoaded) return;
+            baseline = next;
             setError(null);
             setLoaded(updateLoaded);
           },
@@ -196,12 +203,12 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           onStateChange: (state) => {
             if (!cancelled) setEditState(state);
           },
-          save: (value, origin) =>
-            Promise.resolve(boundContribution.save?.(boundResource, value, origin)).then((result) => {
-              const current = readCachedFileContent(loadKey);
-              if (current && !removed) storeCachedFileContent(loadKey, { ...current, content: value });
-              return result ?? undefined;
-            }),
+          save: async (value, origin) => {
+            const saved = await saveLoadedFile(boundContribution, boundResource, value, origin, baseline);
+            baseline = saved.content;
+            if (baseline && !removed) storeCachedFileContent(loadKey, baseline);
+            return saved.result;
+          },
         })
       : null;
     controllerRef.current = controller;

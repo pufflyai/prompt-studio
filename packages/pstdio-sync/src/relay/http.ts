@@ -48,10 +48,15 @@ export const createRelayAdapter = (input: RelayHttpInput) => {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  return {
+  const adapter = {
     scope: input.scope,
     snapshot: async () => snapshotSchema.parse(await (await request("snapshot")).json()),
     submit: async (mutation) => receiptSchema.parse(await (await request("submit", json(mutation))).json()),
     assets: createRelayAssetAdapter(request, input.signal),
   } satisfies RelayAdapter;
+  return {
+    ...adapter,
+    initialize: async (publishedRevision: string) =>
+      snapshotSchema.parse(await (await request("initialize", json({ publishedRevision }))).json()),
+  };
 };

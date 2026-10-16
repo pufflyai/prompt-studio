@@ -1,5 +1,6 @@
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { readPackageManifestMetadata } from "pstdio-extensions";
 import { resolveIsolatedHome } from "./dev-isolated";
 
 const root = resolve(import.meta.dir, "../..");
@@ -24,6 +25,9 @@ const env = {
         force: true,
         skipInstall: true,
       },
+      ...["pstdio-notes", "pstdio-artifacts", "harness-codex", "harness-claude-code", "harness-open-code"].map(
+        (installName) => ({ source: join(root, "extensions", installName), installName, force: false }),
+      ),
       { source: join(root, "infra/local/extensions/relay-demo"), installName: "relay-demo", force: true },
     ],
   }),
@@ -127,7 +131,6 @@ if (process.argv.includes("--down")) {
     const scope = {
       accountId: "built-network-account",
       workbenchId: "built-network-workbench",
-      extensionId: "pstdio-tests.relay-demo",
     };
     await run(["docker", "exec", `${app}-prompt-studio-1`, "mkdir", "-p", "/workspace/project/shared"]);
     await api(`projects/${scope.workbenchId}/environment-binding`, "PUT", {
@@ -135,13 +138,41 @@ if (process.argv.includes("--down")) {
       name: "Shared relay",
       initial_workspace: { provider_id: "pstdio.root", params: { path: "/workspace/project/shared" } },
     });
-    const installed = (await api(`projects/${scope.workbenchId}/extensions`)) as {
-      extensions: { id: string; installName: string }[];
+    await api("agents/info");
+    for (const installName of [
+      "pstdio-base-themes",
+      "pstdio-notes",
+      "pstdio-artifacts",
+      "harness-codex",
+      "harness-claude-code",
+      "harness-open-code",
+      "relay-demo",
+    ]) {
+      const sourcePath = join(home, "extensions", installName);
+      const { manifest } = readPackageManifestMetadata(sourcePath);
+      if (!manifest) throw new Error(`Missing installed extension: ${installName}`);
+      await api(`projects/${scope.workbenchId}/extensions/installed/${installName}/enable`, "POST", {
+        displayName: manifest.displayName ?? manifest.name,
+        extensionId: manifest.id,
+        manifest,
+        name: manifest.name,
+        sourcePath,
+        sourceKind: "local_path",
+        version: manifest.version,
+      });
+    }
+    const existing = JSON.parse(await readFile(configPath, "utf8")) as {
+      connections: { accountId: string; workbenchId: string; environmentId: string; extensionId?: string }[];
     };
-    const demo = installed.extensions.find((extension) => extension.installName === "relay-demo")!;
-    await api(`projects/${scope.workbenchId}/extensions/${demo.id}`, "PATCH", { enabled: true });
-    const existing = JSON.parse(await readFile(configPath, "utf8")) as { connections: { environmentId: string }[] };
-    if (!existing.connections.some((item) => item.environmentId === identity.environmentId)) {
+    if (
+      !existing.connections.some(
+        (item) =>
+          item.environmentId === identity.environmentId &&
+          item.accountId === scope.accountId &&
+          item.workbenchId === scope.workbenchId &&
+          !item.extensionId,
+      )
+    ) {
       const enrolled = JSON.parse(
         await run([...compose, "exec", "-T", "authority", "bun", "/app/enroll-local.js"], {
           capture: true,
@@ -170,7 +201,7 @@ if (process.argv.includes("--down")) {
       await chmod(configPath, 0o600);
       await run(["docker", "restart", `${app}-prompt-studio-1`]);
     }
-    const url = `${connection.dashboardUrl}projects/${scope.workbenchId}/extensions/${scope.extensionId}/relay`;
+    const url = `${connection.dashboardUrl}projects/${scope.workbenchId}/extensions/pstdio.pstdio-notes/notes`;
     await writeFile(
       join(directory, `${app}.json`),
       JSON.stringify({ ...connection, environmentId: identity.environmentId, url }),

@@ -3,11 +3,13 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type WorkspaceCapabilities, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
-import { folderWorkspaceCapabilities } from "pstdio-db";
+import { createProjectsDBService, folderWorkspaceCapabilities } from "pstdio-db";
+import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createCommandEnvironment } from "./index";
 
 let root: string;
+let shared: Awaited<ReturnType<typeof artifactFilesFixture>>;
 let workspace: {
   id: string;
   project_id: string;
@@ -19,6 +21,8 @@ let workspace: {
   provider_capabilities_json: WorkspaceCapabilities;
 };
 beforeEach(async () => {
+  shared = await artifactFilesFixture();
+  await createProjectsDBService(shared.db).create({ id: "project-1", name: "Workspace files" });
   root = await mkdtemp(join(tmpdir(), "extension-workspace-files-"));
   workspace = {
     id: "workspace-1",
@@ -40,12 +44,14 @@ beforeEach(async () => {
   }
 });
 afterEach(async () => {
+  await shared.close();
   await rm(root, { recursive: true, force: true });
 });
 
 const environment = (eventId?: string, home = () => workspace) =>
   createCommandEnvironment(
     {
+      ...shared.deps,
       artifactMountWrites: createArtifactMountWriteLedger(),
       workspaceService: { get: async () => workspace, getDefault: async () => home() },
     } as never,
