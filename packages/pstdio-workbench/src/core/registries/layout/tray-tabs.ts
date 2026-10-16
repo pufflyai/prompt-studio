@@ -10,7 +10,7 @@ export const planTrayTabs = (widgets: readonly WorkbenchWidgetPlacement[], prefe
   };
 };
 
-export const planTrayDrop = (
+export const planTrayPlacement = (
   widgets: readonly WorkbenchWidgetPlacement[],
   placement: WorkbenchWidgetPlacement,
   position: WorkbenchTabPosition = "end",
@@ -26,3 +26,14 @@ export const planTrayDrop = (
   remaining.splice(index, 0, placement);
   return planTrayTabs(remaining, placement.tabRetention === "preview" ? placement.widgetId : undefined);
 };
+
+export const planTrayDrop = (
+  widgets: readonly WorkbenchWidgetPlacement[],
+  placement: WorkbenchWidgetPlacement,
+  position: WorkbenchTabPosition = "end",
+) =>
+  planTrayPlacement(
+    widgets,
+    placement.tabRetention === "preview" ? { ...placement, pinned: true, tabRetention: "persistent" } : placement,
+    position,
+  );

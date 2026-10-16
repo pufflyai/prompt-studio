@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Add resource-owned related openings that remember page choices and manual closures, preserve manual panels across navigation, and clarify tab replacement feedback
+Add resource-owned related openings that remember page choices and manual closures, preserve manual panels across navigation, and pin dragged tabs without replacing previews

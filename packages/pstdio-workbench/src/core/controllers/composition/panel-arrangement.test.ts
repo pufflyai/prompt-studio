@@ -68,7 +68,13 @@ test("moving a preview preserves ownership, content identity and the page route"
   const location = w.pages.store.getState().location;
   w.movePanel(original.widgetId, "main", "start");
   expect(w.layout.getLayout().regions.side.widgets).toEqual([]);
-  expect(w.layout.getLayout().regions.main.widgets[0]).toBe(original);
+  expect(w.layout.getLayout().regions.main.widgets[0]).toMatchObject({
+    widgetId: original.widgetId,
+    placementIdentity: original.placementIdentity,
+    resource: original.resource,
+    pinned: true,
+    tabRetention: "persistent",
+  });
   expect(w.layout.getLayout().regions.main.activeWidgetId).toBe(original.widgetId);
   expect(w.pages.store.getState().location).toEqual(location);
   w.pinPlacement(original.placementIdentity!);

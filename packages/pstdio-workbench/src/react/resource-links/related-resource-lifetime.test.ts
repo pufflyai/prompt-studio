@@ -20,6 +20,20 @@ const registerTray = (s: ReturnType<typeof setup>, region: "side" | "secondary" 
 const leavePage = (s: ReturnType<typeof setup>) =>
   s.workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "home", extensionId: "example" } });
 
+test.each([
+  "side",
+  "secondary",
+] as const)("dropping an automatic preview into %s pins it past source departure", async (region) => {
+  const s = setup([opening("related")]);
+  await s.controller.open(s.source);
+  const tab = s.workbench.layout.listPanelInstances("side")[0]!;
+  s.workbench.movePanel(tab.instanceId, region);
+  expect(s.workbench.layout.getActivePanel(region)?.tabRetention).toBe("persistent");
+  leavePage(s);
+  expect(s.workbench.layout.listPanelInstances(region).map((tab) => tab.resource?.id)).toContain("related");
+  s.controller.dispose();
+});
+
 test("new related tabs keep the selected shell tab and global focus", async () => {
   const s = setup([opening("related")]);
   registerTray(s);

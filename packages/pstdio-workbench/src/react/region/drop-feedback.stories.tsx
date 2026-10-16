@@ -66,9 +66,9 @@ const meta = {
 } satisfies Meta<typeof WorkbenchStory>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Replacement: Story = { args: { workbench: createDropFeedbackWorkbench() } };
-export const DarkReplacement: Story = {
+export const PreviewInsertion: Story = { args: { workbench: createDropFeedbackWorkbench() } };
+export const DarkPreviewInsertion: Story = {
   args: { workbench: createDropFeedbackWorkbench(), initialThemePreference: "pstdio-dark" },
 };
 export const PinnedInsertion: Story = { args: { workbench: createDropFeedbackWorkbench(true) } };
-export const FloatingReplacement: Story = { args: { workbench: createDropFeedbackWorkbench(false, true) } };
+export const FloatingInsertion: Story = { args: { workbench: createDropFeedbackWorkbench(false, true) } };
