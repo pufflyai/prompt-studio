@@ -1,6 +1,6 @@
 # Relay development
 
-The private `pstdio-relay` workspace under `infra/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. Public browser onboarding, the reusable local network adapter, live provider validation, and deployment remain separate work.
+The private `pstdio-relay` workspace under `infra/relay/` owns transactional PostgreSQL storage and verified S3 assets for shared extension groups. It serves authenticated HTTP and finite native WebSocket subscriptions. The native runtime adapter and two-dashboard launcher are described in [the local relay guide](0008-two-dashboard-relay.md). Public browser onboarding, live provider validation and deployment remain separate work.
 
 ## Build and check
 

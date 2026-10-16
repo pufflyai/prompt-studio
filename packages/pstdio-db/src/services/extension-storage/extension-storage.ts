@@ -36,6 +36,7 @@ export const createExtensionStorageDBService = (db: DbClient) => {
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
+    watch: grouped.watch,
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {
       const { environmentId } = await grouped.getEnvironment();

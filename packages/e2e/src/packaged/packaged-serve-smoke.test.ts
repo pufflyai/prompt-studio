@@ -27,8 +27,6 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
-// Shared record contracts remain covered through the compiled host. The separate relay
-// image checks authenticated HTTP, immutable asset ranges and revocable native sockets.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
@@ -45,6 +43,9 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Also checks native harness controls and their structured values in packaged command handlers.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
+// Shared record contracts remain covered through the compiled host. The separate relay
+// image checks authenticated HTTP, immutable asset ranges and finite native sockets.
+import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
@@ -82,6 +83,7 @@ registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
 registerAssetStorageSmokeTests();
 registerGroupedStorageSmokeTests();
+registerNativeRelaySmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
 

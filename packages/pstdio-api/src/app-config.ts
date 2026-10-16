@@ -6,6 +6,7 @@ const DEFAULT_AUTOMATION_RUNS_PER_MINUTE = 60;
 export type ExtensionRelease = { source: "git"; ref: string } | { source: "workspace"; ref: string; root: string };
 
 export interface AppConfig {
+  relay?: { connectionsFile: string };
   database: { path: string };
   storage: { root: string };
   sync: { eventBufferSize: number };
@@ -54,6 +55,7 @@ const resolveRelease = (input: ResolveAppConfigInput): ExtensionRelease | null =
 export const resolveAppConfig = (input: ResolveAppConfigInput): AppConfig => {
   const home = input.env.HOME?.trim() || undefined;
   return {
+    ...(input.env.PSTDIO_RELAY_CONFIG_FILE ? { relay: { connectionsFile: input.env.PSTDIO_RELAY_CONFIG_FILE } } : {}),
     database: {
       path: resolvePath(input.env.PSTDIO_DB_PATH, resolvePstdioDbPath({ env: input.env }), home),
     },

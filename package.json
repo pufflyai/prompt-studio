@@ -47,7 +47,8 @@
     "validate:changesets": "bun run --cwd scripts validate:changesets",
     "verify:translations": "bun run --cwd scripts verify:translations",
     "changeset": "changeset",
-    "release": "bun run build && changeset publish"
+    "release": "bun run build && changeset publish",
+    "dev:relay": "bun scripts/dev/relay-local.ts"
   },
   "engines": {
     "bun": ">=1.4.2"

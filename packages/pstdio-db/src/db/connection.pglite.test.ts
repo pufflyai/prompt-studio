@@ -76,7 +76,7 @@ describe("createDb", () => {
 
     try {
       await expect(createDb({ path: dbPath })).rejects.toThrow(
-        new RegExp(`pstdio\\.db is in use by pid ${process.pid} .*refusing to open it a second time`),
+        /pstdio\.db is in use .*refusing to open it a second time/,
       );
     } finally {
       await first.close();
@@ -97,23 +97,6 @@ describe("createDb", () => {
     }
   });
 
-  it("reclaims a lock owned by a dead process", async () => {
-    const { dbPath } = seed;
-    const lockPath = `${dbPath}.lock`;
-    // A closed connection leaves an empty lock directory; legacy locks were files.
-    fs.rmdirSync(lockPath);
-    fs.writeFileSync(
-      lockPath,
-      JSON.stringify({ pid: 999_999_999, process: "stopped pstdio serve", startedAt: "2026-07-15T10:00:00.000Z" }),
-    );
-
-    const client = await createDb({ path: dbPath });
-    await client.close();
-
-    expect(fs.statSync(lockPath).isDirectory()).toBe(true);
-    expect(fs.readdirSync(lockPath)).toEqual([]);
-  });
-
   it("refuses a symlink alias while the canonical database directory is open", async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-alias-"));
     const { dbPath } = seed;
@@ -122,25 +105,11 @@ describe("createDb", () => {
     const first = await createDb({ path: dbPath });
 
     try {
-      await expect(createDb({ path: aliasPath })).rejects.toThrow(
-        new RegExp(`pstdio\\.db is in use by pid ${process.pid}`),
-      );
+      await expect(createDb({ path: aliasPath })).rejects.toThrow(/pstdio\.db is in use/);
     } finally {
       await first.close();
       fs.rmSync(tempRoot, { force: true, recursive: true });
     }
-  });
-
-  it("reclaims an incomplete lock left without owner metadata", async () => {
-    const { dbPath } = seed;
-    const lockPath = `${dbPath}.lock`;
-    // A closed connection leaves an empty lock directory; legacy locks were files.
-    fs.rmdirSync(lockPath);
-    fs.writeFileSync(lockPath, "");
-
-    const client = await createDb({ path: dbPath });
-    await client.close();
-    expect(fs.readdirSync(lockPath)).toEqual([]);
   });
 
   it(

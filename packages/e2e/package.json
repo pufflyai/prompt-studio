@@ -37,6 +37,8 @@
     "pstdio-skills": "workspace:*",
     "pstdio-wt": "workspace:*",
     "remote-workspaces": "workspace:*",
-    "workbench-fixture": "workspace:*"
+    "workbench-fixture": "workspace:*",
+    "pstdio-sync": "workspace:*",
+    "pstdio-sync-contracts": "workspace:*"
   }
 }
