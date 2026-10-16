@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getWriter } from "@/lib/sync/collections";
 import { setupWorkspaceOpening as setup } from "./workspace-related-openings.fixture";
 
@@ -16,7 +17,7 @@ test("workspace opening waits for the initial session memberships before selecti
       "production",
       "--tsconfig-override",
       "tsconfig.app.json",
-      "src/modules/workspaces/workspace-opening-initial-sync.fixture.ts",
+      fileURLToPath(new URL("./workspace-opening-initial-sync.fixture.ts", import.meta.url)),
     ],
     {
       cwd: resolve(import.meta.dir, "../../.."),
