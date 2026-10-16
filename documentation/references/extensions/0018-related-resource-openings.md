@@ -58,19 +58,40 @@ export default defineExtension({ commands: [related], resourceKinds: [ticket] })
 
 One command can return several targets. Workspace's owner returns its terminal in Bottom and its latest session in Side. Owners select candidates using their domain data. Selection commands must not navigate or create sessions.
 
-## Presentation and retention
+## Opening and tab selection
 
 Targets use their normal resource-owner resolver. A source does not need to know the target extension's view implementation. Resource and command references without an extension ID use the defining owner; omitted project IDs use the current project.
 
-An already open target keeps its tray and pin state. New previews replace the eligible preview in their requested tray and stay leftmost. Each tray has at most one preview. Results apply in order, so the last eligible preview for a tray remains. The initiating source preview is protected.
+An explicit resource open or selection evaluates its owner's command once when **Open related resources** is enabled in Appearance settings. The setting is on by default. Automatic targets do not run their own related-opening commands, so openings do not recurse.
 
-Automatic openings keep the source route, global focus, and the selected tab in each populated tray. A new related tab opens in the background; if it replaces the selected preview, it takes that preview's place. They do not recursively open more resources.
+Side and Bottom use the same selection rules. Tab selection means the content shown in that panel; it does not move keyboard focus away from the source or change the source route.
 
-Leaving the source page closes every unpinned tab newly opened automatically for that page, including tabs sharing a tray with pinned tabs. Tabs already open before entry stay open. Pinning a tab, manually reopening it, or replacing its resource releases it from page cleanup. Selecting a related tab or refreshing its metadata keeps its page lifetime. Closing the last tab in Side or Bottom also closes that panel.
+| Panel before the automatic opening | Result |
+| --- | --- |
+| Closed, including a panel with saved tabs | Open the panel and select the related tab. Its previously selected tab stays open if the preview rules allow it. |
+| Open with a selected tab | Keep that selection and open the related tab in the background. If it replaces the selected preview, show the replacement in that preview's slot. |
+| Open and empty | Show the related tab as the panel's only selection. |
 
-In the dashboard, manually opened Side and Bottom panels and their tabs follow the project across page and mode navigation. This includes terminals added through the panel menu. Each mode still controls which regions it supports. Page cleanup only removes automatic previews, and an empty panel opened manually stays open during navigation.
+An already open target keeps its actual tray and pin state, even when the owner requests another tray. Reveal and select it if its actual Side or Bottom panel was closed; keep the current selection if that panel was already open. Do not create a duplicate tab or give that existing tab a new automatic lifetime.
 
-Source or project changes, disabling the existing Open related resources switch, and owner removal discard pending results. Restoring layout and refreshing resource metadata do not reopen closed related tabs.
+New previews replace the eligible preview in their requested tray and stay leftmost. Each tray has at most one unpinned tab. Pinned tabs stay open. The initiating source preview is protected. Results apply in order: once a closed panel has been revealed, later entries use its open-panel rule. Several new previews in one tray replace each other, leaving the last eligible preview. Owners can also request Main without navigating away from the source.
+
+## Navigation and cleanup
+
+Leaving the source page closes every unpinned tab newly opened automatically for that page, including tabs sharing a tray with pinned tabs. The following rules apply equally to Side and Bottom.
+
+| Tab or panel state | On source page leave |
+| --- | --- |
+| New automatic unpinned tab | Close it. Selecting it or refreshing its title or metadata does not change this lifetime. |
+| Tab already present before entry | Keep it, including an existing unpinned target. |
+| Automatic tab the user pinned | Keep it. |
+| Tab manually opened or reopened, or whose resource the user replaced | Keep it. It no longer belongs to automatic page cleanup. |
+| Manually opened empty panel | Keep it open. |
+| Last tab is closed, manually or by page cleanup | Close that Side or Bottom panel too. |
+
+In the dashboard, manual Side and Bottom panels and tabs follow the project across page and mode navigation and browser history. This includes terminals added through the panel menu: leaving Workspace for Ticket or Tickets keeps the tab and the same running terminal process. Closing the terminal tab ends that process. Each mode still controls which regions it supports. Panel state does not carry into another project.
+
+Automatic page ownership survives saved-layout restoration. Restoring layout and refreshing resource metadata do not run the owner's command again or reopen closed related tabs. Source or project changes, disabling **Open related resources**, and owner removal discard pending results.
 
 Kinds without a command open nothing automatically. Existing manual links still work. Returning an entry does not store a relationship or add a manual action. There is no per-kind customization UI or new preference store.
 

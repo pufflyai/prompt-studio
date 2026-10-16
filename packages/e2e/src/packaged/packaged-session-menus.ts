@@ -1,5 +1,24 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+
+const verifyBottomSelectionOnReveal = async (
+  page: Page,
+  terminalTab: Locator,
+  reopenWorkspace: () => Promise<unknown>,
+  leaveWorkspace: () => Promise<unknown>,
+) => {
+  await page.getByRole("button", { name: "Hide Secondary Panel", exact: true }).click();
+  await reopenWorkspace();
+  await expect(terminalTab).toHaveAttribute("aria-selected", "false");
+  await expect(
+    page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab", { selected: true }),
+  ).toHaveCount(1);
+  await leaveWorkspace();
+  await expect(terminalTab).toHaveAttribute("aria-selected", "true");
+  await reopenWorkspace();
+  await expect(terminalTab).toHaveAttribute("aria-selected", "true");
+  await leaveWorkspace();
+};
 
 export const verifyPackagedSessionMenus = async (
   page: Page,
@@ -88,6 +107,11 @@ export const verifyPackagedSessionMenus = async (
   });
   expect(refresh.ok).toBe(true);
   await leaveWorkspace();
+  await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+  await reopenWorkspace();
+  await expect(preview).toHaveAttribute("aria-selected", "true");
+  await expect(createdTab).toHaveAttribute("aria-selected", "false");
+  await leaveWorkspace();
   await reopenWorkspace();
   await expect(preview).toBeVisible();
   await expect(preview).toHaveAttribute("aria-selected", "false");
@@ -116,6 +140,7 @@ export const verifyPackagedSessionMenus = async (
   await leaveWorkspace();
   await expect(terminalTab).toBeVisible();
   await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
+  await verifyBottomSelectionOnReveal(page, terminalTab, reopenWorkspace, leaveWorkspace);
   await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
   await terminalInput.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__navigation_retained__");

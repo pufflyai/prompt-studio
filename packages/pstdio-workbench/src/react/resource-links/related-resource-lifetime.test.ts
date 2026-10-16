@@ -24,6 +24,7 @@ test("new related tabs keep the selected shell tab and global focus", async () =
   const s = setup([opening("related")]);
   registerTray(s);
   s.workbench.shellPlacements.openPlacement({ placementId: "manual", resource: ref("document", "kept"), open: "pin" });
+  s.workbench.shell.setRegionOpen("side", true);
   s.workbench.layout.activateWidget(s.workbench.layout.listPanelInstances("main")[0]!.instanceId);
   const active = s.workbench.layout.getLayout().activeWidgetId;
   await s.controller.open(s.source);
@@ -42,6 +43,7 @@ test("an already open related target keeps the selected tab in its actual tray",
     open: "pin",
   });
   s.workbench.shellPlacements.openPlacement({ placementId: "manual", resource: ref("document", "kept"), open: "pin" });
+  s.workbench.shell.setRegionOpen("secondary", true);
   s.workbench.layout.activateWidget(s.workbench.layout.listPanelInstances("main")[0]!.instanceId);
   await s.controller.open(s.source);
   expect(s.workbench.layout.getActivePanel("secondary")?.resource?.id).toBe("kept");
