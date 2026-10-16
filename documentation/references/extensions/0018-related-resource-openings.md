@@ -64,7 +64,7 @@ Targets use their normal resource-owner resolver. A source does not need to know
 
 An explicit resource open or selection evaluates its owner's command once when **Open related resources** is enabled in Appearance settings. The setting is on by default. Automatic targets do not run their own related-opening commands, so openings do not recurse.
 
-Side and Bottom use the same selection rules. Tab selection means the content shown in that panel; it does not move keyboard focus away from the source or change the source route.
+Side and Bottom use the same selection rules. Automatic openings keep the source route. In an open populated panel they preserve its selected tab and keyboard focus. Revealing a closed or empty panel selects the related tab; its view may focus its input normally. Tab selection means the content shown in that panel.
 
 | Panel before the automatic opening | Result |
 | --- | --- |
