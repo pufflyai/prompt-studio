@@ -12,6 +12,7 @@ database:
       - any-glob-to-any-file:
           - packages/pstdio-db/**
           - packages/pstdio-storage/**
+          - infra/account-manager/**
 extension-runtime:
   - changed-files:
       - any-glob-to-any-file:
@@ -21,6 +22,7 @@ extension-runtime:
 security:
   - changed-files:
       - any-glob-to-any-file:
+          - infra/account-manager/**
           - packages/pstdio-api/src/features/runtime/runtime-auth.ts
           - packages/pstdio-api/src/features/extensions/connection-secret-store.ts
           - packages/pstdio-api/src/features/extensions/extension-webview-access.ts
