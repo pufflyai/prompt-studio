@@ -14,6 +14,7 @@ export type WorkbenchStoragePersistenceKind =
   | "layout-scope-index"
   | "panel-menus"
   | "page-location"
+  | "preferences"
   | "status-bar"
   | "tree";
 

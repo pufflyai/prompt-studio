@@ -2,7 +2,7 @@
 
 Manage saved conversations from the session breadcrumb or its row in the Sessions or workspace navigation.
 
-Choosing **New session** opens its composer. Navigating to a ticket leaves your session panel unchanged; open a related session explicitly from the ticket's navigation. Opening a workspace still previews its latest linked session.
+Choosing **New session** opens its composer. Opening a ticket or workspace previews its latest related session as an unpinned tab. This follows the shared **Open related resources** setting in Appearance, which is on by default. Turn it off to open related sessions only when you choose them. Creating a session from the UI opens it in either setting.
 
 ## Open session actions
 

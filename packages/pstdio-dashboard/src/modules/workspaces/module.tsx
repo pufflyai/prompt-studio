@@ -20,7 +20,8 @@ import { WorkspaceSummary } from "./components/workspace-summary";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { registerWorkspaceSidenavContributions } from "./workspace-navigation";
-import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import { relatedWorkspaceResources } from "./workspace-related-resources";
+import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
 import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
 
 const WorkspaceDiffsPanel = lazy(() =>
@@ -196,7 +197,6 @@ const syncActiveWorkspacePage = (ctx: WorkbenchModuleContext) => {
   if (state.activePageId !== workbenchPages.workspace.id || state.location?.resource?.type !== "workspace") return;
   const resource = ctx.getPrimaryResource();
   if (!resource) return;
-  ensureWorkspaceTerminalResource(ctx, resource);
   updateDashboardSidenav(ctx, { selectedNode: null });
   if (resourceMetadataString(resource, "workspaceView") !== "files") return;
   const files = ctx.layout
@@ -226,9 +226,11 @@ export const createWorkspacesModule = () =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",
         kind: "workspace",
+        related: (resource) => relatedWorkspaceResources(ctx, resource),
         list: () =>
           createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).map((workspace) => ({
             resource: workspace.resource,
+            target: { kind: "page", page: workbenchPages.workspace, resource: workspace.resource },
             searchText: [workspace.title, workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
             group: "Workspaces",
             activate: () => openWorkspacesPage(ctx, workspace.resource),

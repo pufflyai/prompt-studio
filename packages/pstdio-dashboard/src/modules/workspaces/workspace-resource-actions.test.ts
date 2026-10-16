@@ -7,7 +7,7 @@ import {
 } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "../../shared/app/commands";
 import { createDashboardResource } from "../../shared/app/resources";
-import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
 const workspaceActionCommandIds = new Set<string>([
   dashboardCommandIds.openWorkspaceTerminal,
@@ -110,29 +110,6 @@ describe("registerWorkspaceResourceActions", () => {
     });
 
     expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([]);
-  });
-
-  test("restores an owned workspace terminal missing from the rendered layout", () => {
-    const workbench = createWorkbench();
-    const workspace = createDashboardResource("workspace", "workspace-1", "WS-1", "GitBranch", "project-1", {
-      workspaceId: "workspace-1",
-      workspaceExecutionKind: "local",
-      workspacePath: "/repo/.pstdio/workspaces/WS-1",
-      workspaceProviderState: "ready",
-    });
-    workbench.registerModule(createWorkbenchTerminalModule());
-    ensureWorkspaceTerminalResource(workbench, workspace);
-    const terminal = workbench.layout.listPanelInstances("secondary")[0];
-    workbench.layout.removeWidgetPlacement(terminal.instanceId);
-
-    ensureWorkspaceTerminalResource(workbench, workspace);
-
-    expect(workbench.layout.listPanelInstances("secondary")).toEqual([
-      expect.objectContaining({
-        viewId: WORKBENCH_TERMINAL_WIDGET_ID,
-        resource: expect.objectContaining({ metadata: expect.objectContaining({ workspaceId: "workspace-1" }) }),
-      }),
-    ]);
   });
 
   test("keeps terminal action visible for default and worktree workspace resources", () => {

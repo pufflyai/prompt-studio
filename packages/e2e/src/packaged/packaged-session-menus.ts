@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
 
 export const verifyPackagedSessionMenus = async (
   page: Page,
@@ -6,11 +7,19 @@ export const verifyPackagedSessionMenus = async (
   projectId: string,
   authorization: Record<string, string>,
 ) => {
+  const workspacesResponse = await fetch(`${baseUrl}/v1/workspaces?project_id=${projectId}`, {
+    headers: authorization,
+  });
+  expect(workspacesResponse.ok).toBe(true);
+  const workspaces = (await workspacesResponse.json()) as Array<{ id: string; is_default: boolean }>;
+  const workspace = workspaces.find((workspace) => workspace.is_default)!;
+  expect(workspace).toBeDefined();
   const response = await fetch(`${baseUrl}/v1/sessions`, {
     method: "POST",
     headers: { ...authorization, "content-type": "application/json" },
     body: JSON.stringify({
       project_id: projectId,
+      workspace_id: workspace.id,
       title: "Packaged session actions",
       prompt: "",
       agent: "pstdio.workbench-fixture.harness.fake",
@@ -18,6 +27,23 @@ export const verifyPackagedSessionMenus = async (
   });
   expect(response.status).toBe(201);
   const session = (await response.json()) as { id: string };
+  const workspaceUrl = serializePageUrl({
+    projectId,
+    page: { id: "workspace", ref: workbenchPages.workspace, path: "workspace" },
+    resource: { type: "workspace", id: workspace.id },
+  });
+  await page.goto(new URL(workspaceUrl, baseUrl).href);
+  const showSide = page.getByRole("button", { name: "Show Side Panel", exact: true });
+  if (await showSide.isVisible()) await showSide.click();
+  const preview = page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { name: /Packaged session actions/ });
+  await expect(preview).toBeVisible();
+  await preview.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
   await page.goto(`${baseUrl}/projects/${projectId}/sessions`);
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Packaged session actions",
