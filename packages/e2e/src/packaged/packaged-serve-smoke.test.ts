@@ -27,6 +27,8 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
+// Shared record contracts remain covered through the compiled host. The separate relay
+// image checks authenticated HTTP, immutable asset ranges and revocable native sockets.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
 // Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.

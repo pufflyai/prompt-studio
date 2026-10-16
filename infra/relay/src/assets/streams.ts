@@ -7,11 +7,11 @@ export interface PartInput {
 
 export async function* checkedBytes(
   body: ReadableStream<Uint8Array>,
-  expected: { sha256: string; byteLength: number },
+  expected: { sha256?: string; byteLength: number },
   signal?: AbortSignal,
 ) {
   const reader = body.getReader();
-  const hash = new Bun.CryptoHasher("sha256");
+  const hash = expected.sha256 ? new Bun.CryptoHasher("sha256") : undefined;
   let length = 0;
   const abort = () => void reader.cancel(signal?.reason).catch(() => {});
   signal?.addEventListener("abort", abort, { once: true });
@@ -23,10 +23,10 @@ export async function* checkedBytes(
       if (chunk.done) break;
       length += chunk.value.byteLength;
       if (length > expected.byteLength) throw new Error("Asset length mismatch");
-      hash.update(chunk.value);
+      hash?.update(chunk.value);
       yield chunk.value;
     }
-    if (length !== expected.byteLength || hash.digest("hex") !== expected.sha256)
+    if (length !== expected.byteLength || (hash && hash.digest("hex") !== expected.sha256))
       throw new Error("Asset digest or length mismatch");
   } finally {
     signal?.removeEventListener("abort", abort);
@@ -43,9 +43,13 @@ export const multipartSize = (byteLength: number) => {
   return size;
 };
 
-export const checkedStream = (body: ReadableStream<Uint8Array>, expected: { sha256: string; byteLength: number }) => {
+export const checkedStream = (
+  body: ReadableStream<Uint8Array>,
+  expected: { sha256?: string; byteLength: number },
+  signal?: AbortSignal,
+) => {
   const controller = new AbortController();
-  const bytes = checkedBytes(body, expected, controller.signal);
+  const bytes = checkedBytes(body, expected, signal ? AbortSignal.any([signal, controller.signal]) : controller.signal);
   return new ReadableStream<Uint8Array>(
     {
       async pull(controller) {

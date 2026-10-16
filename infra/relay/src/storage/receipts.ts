@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Mutation, Receipt } from "pstdio-sync-contracts";
+import { notifyScope } from "./changes";
 import { operationRow } from "./codec";
 import type { RelayTransaction } from "./database";
 import { relayOperations, relayScopes } from "./schema";
@@ -35,5 +36,6 @@ export const saveReceipt = async (
       acceptedSequence: receipt.checkpoint?.sequence ?? owner.acceptedSequence,
     })
     .where(eq(relayScopes.id, owner.id));
+  await notifyScope(transaction, owner.id);
   return receipt;
 };

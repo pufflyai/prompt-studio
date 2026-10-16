@@ -7,6 +7,19 @@ services:
     environment:
       RELAY_HOST: 0.0.0.0
       RELAY_PORT: "8080"
+      DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
+      S3_ENDPOINT: http://objects:9000
+      S3_BUCKET: relay-test
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: relay_test_access
+      S3_SECRET_ACCESS_KEY: relay_test_secret_key
+      MANAGER_ORIGIN: https://authority:8443
+      MANAGER_SERVICE_SECRET: separate-service-fixture-only
+      MANAGER_REQUEST_TIMEOUT_MS: "1000"
+      RELAY_SUBSCRIPTION_CHECK_INTERVAL_MS: "20"
+      NODE_EXTRA_CA_CERTS: /tls-public/authority-cert.pem
+    volumes:
+      - tls-public:/tls-public:ro
     healthcheck:
       test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:8080/health'); if (!r.ok) process.exit(1)"]
       interval: 1s
@@ -62,18 +75,80 @@ services:
     profiles: ["test"]
     environment:
       RELAY_URL: http://relay:8080
-      DATABASE_URL: postgres://relay_test:relay_test_password@postgres:5432/relay_test
+      DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
+      MANAGER_DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
+      MANAGER_ORIGIN: https://authority:8443
+      MANAGER_SERVICE_SECRET: separate-service-fixture-only
+      MANAGER_REQUEST_TIMEOUT_MS: "1000"
+      RELAY_SUBSCRIPTION_CHECK_INTERVAL_MS: "20"
+      NODE_EXTRA_CA_CERTS: /tls-public/authority-cert.pem
       S3_ENDPOINT: http://objects:9000
       S3_BUCKET: relay-test
       S3_REGION: us-east-1
       S3_ACCESS_KEY_ID: relay_test_access
       S3_SECRET_ACCESS_KEY: relay_test_secret_key
+    volumes:
+      - fixture-data:/fixture:ro
+      - tls-public:/tls-public:ro
+
+  tls:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: tls-fixture
+    profiles: ["test"]
+    volumes:
+      - tls-private:/tls-private
+      - tls-public:/tls-public
+
+  initialize:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: fixture
+    profiles: ["test"]
+    environment:
+      FIXTURE_ADMIN_URL: postgres://relay_test:relay_test_password@postgres:5432/relay_test
+      DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
+      MANAGER_DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
+      S3_ENDPOINT: http://objects:9000
+      S3_BUCKET: relay-test
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: relay_test_access
+      S3_SECRET_ACCESS_KEY: relay_test_secret_key
+    volumes:
+      - fixture-data:/fixture
+
+  authority:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: fixture
+    command: ["bun", "authority-service.js"]
+    environment:
+      MANAGER_DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
+      MANAGER_SERVICE_SECRET: separate-service-fixture-only
+      NODE_EXTRA_CA_CERTS: /tls-public/authority-cert.pem
+    volumes:
+      - tls-private:/tls-private:ro
+      - tls-public:/tls-public:ro
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('https://authority:8443/internal/v1/environment-authority', {method:'POST'}); if (r.status !== 401) process.exit(1)"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
 
 volumes:
   postgres-data:
   objects-data:
   objects-logs:
+  fixture-data:
+  tls-private:
+  tls-public:
 
 networks:
   default:
     internal: true
+    ipam:
+      config:
+        - subnet: ${RELAY_TEST_SUBNET:-10.254.237.0/24}
