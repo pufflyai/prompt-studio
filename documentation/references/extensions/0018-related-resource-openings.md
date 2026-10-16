@@ -80,11 +80,11 @@ New previews replace the eligible preview in their requested tray and stay leftm
 
 Resource pages remember the user's Side and Bottom choices. Choosing another session or resource, selecting a different tab, pinning it, or manually opening, closing or hiding a panel updates that page's choice. Returning through navigation or browser history restores the chosen resource and selected tab instead of the owner's default. For example, choosing an older session on a ticket keeps that session selected when returning, even after another page shows a different session.
 
-Closing a tab records the remaining selection, or an empty closed panel when the last tab closes. Hiding the panel records it as closed. Returning to that resource page does not reopen a manually closed panel. Manually reopening it updates the choice again. An explicitly opened empty panel stays empty and open on return.
+Closing a tab records the remaining selection, or an empty closed panel when the last tab closes. Hiding the panel records it as closed. Returning to that resource page does not reopen a manually closed panel. Manually reopening it updates the choice again. An explicitly opened empty panel stays open and suppresses that page's automatic default; manually kept project tabs can still carry into it.
 
 Choices belong to the user and the qualified resource page, including its project and resource owner. Changing one resource's choices does not change another's. They use the existing workbench preference storage and survive reloads. There is no settings editor or extension API change. **Reset layout** clears the current page's remembered choices. Turning off **Open related resources** skips related openings without deleting the choices.
 
-Only user edits override the owner's defaults. Automatic preview cleanup, automatic panel reveal, and metadata refresh do not record a new choice. A page with no user changes can still open the owner's latest related resources on a later visit. Manual edits also cancel pending automatic openings so late results cannot undo a closure or selection.
+Only user edits override the owner's defaults. Automatic preview cleanup, automatic panel reveal, metadata refresh, and extension teardown do not record a new choice. A page with no user changes can still open the owner's latest related resources on a later visit. Manual edits also cancel pending automatic openings so late results cannot undo a closure or selection.
 
 ## Navigation and cleanup
 

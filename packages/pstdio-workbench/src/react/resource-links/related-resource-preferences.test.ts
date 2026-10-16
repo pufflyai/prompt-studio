@@ -91,6 +91,82 @@ test("untouched defaults remain available after controller teardown and reload",
   second.controller.dispose();
 });
 
+test.each([
+  "projection",
+  "shell",
+] as const)("reloading a related %s owner does not remember its teardown as a closure", async (presentation) => {
+  const s = setup([opening("default")]);
+  const registerView = () =>
+    s.workbench.views.registerView({ id: "target", title: "Target", body: { kind: "react", render: () => null } });
+  const view = registerView();
+  const registerPanel = () =>
+    s.workbench.shellPlacements.registerPlacement({
+      id: "native",
+      region: "side",
+      item: {
+        kind: "binding",
+        binding: {
+          view: { kind: "view", id: "target" },
+          kinds: [{ kind: "resource-kind", id: "document" }],
+          cardinality: "many",
+        },
+      },
+    });
+  const panel = presentation === "shell" ? registerPanel() : undefined;
+  s.workbench.pages.registerPage({
+    id: "target",
+    ref: { kind: "page", id: "target", extensionId: "example" },
+    modeId: "project",
+    path: "target",
+    main: { kind: "view", view: { kind: "view", id: "target" }, cardinality: "one" },
+    slots: [],
+  });
+  s.service.resolve = async (resources) =>
+    resources.map((resource) => ({
+      resource,
+      target:
+        presentation === "shell"
+          ? { kind: "panel", panel: { kind: "shell-placement", id: "native" }, resource }
+          : { kind: "page", page: { kind: "page", id: "target", extensionId: "example" }, resource },
+    }));
+  await s.controller.open(s.source);
+  if (panel) {
+    panel.dispose();
+    registerPanel();
+  } else {
+    view.dispose();
+    registerView();
+  }
+  await s.controller.open(s.source);
+  expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("default");
+  s.controller.dispose();
+});
+
+test("asynchronous preference storage keeps simultaneous Side and Bottom closures", async () => {
+  const values = new Map<string, import("../../core").PreferenceValue>();
+  const gate = Promise.withResolvers<void>();
+  const s = setup([opening("side"), opening("bottom", "secondary")], {
+    preferencePersistence: {
+      getValue: (name, scope) => values.get(JSON.stringify([name, scope])),
+      setValue: async (name, value, scope) => {
+        await gate.promise;
+        values.set(JSON.stringify([name, scope]), value);
+      },
+    },
+  });
+  await s.controller.open(s.source);
+  s.workbench.shell.setRegionOpen("side", false);
+  s.workbench.shell.setRegionOpen("secondary", false);
+  gate.resolve();
+  await Bun.sleep(0);
+  s.workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "home", extensionId: "example" } });
+  s.workbench.pageLocations.navigate(s.target(s.source));
+  await s.controller.open(s.source);
+  expect(s.workbench.shell.getRegionState("side").open).toBe(false);
+  expect(s.workbench.shell.getRegionState("secondary").open).toBe(false);
+  s.controller.dispose();
+});
+
 test("closing a background automatic tab keeps the user's selected pin on return", async () => {
   const s = setupPage("side");
   await s.controller.open(s.source);

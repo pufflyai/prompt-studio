@@ -98,6 +98,8 @@ export const registerRelatedResourcePreviews = (
     (_key, previousKey) => {
       if (openingPreviews) return;
       preferences.run(() => opener.closePagePreviews(previousKey));
+      const resource = ctx.pages.store.getState().location?.resource;
+      if (resource) preferences.enter(resource);
       if (pending?.key !== resourceKey(ctx.pages.store.getState().location?.resource)) pending?.controller.abort();
     },
   );
