@@ -57,13 +57,13 @@ export async function checkPlannerStress(
     const session = await page.context().newCDPSession(page);
     await session.send("Performance.enable");
     await session.send("Network.enable");
+    let iframeStartedAt: number | undefined;
     const assets = new Map<string, { type: string; bytes: number }>();
     session.on("Network.requestWillBeSent", ({ requestId, request, type }) => {
-      if (
-        type &&
-        new URL(request.url).pathname.includes("/extensions/webviews/") &&
-        ["Script", "Stylesheet"].includes(type)
-      )
+      const path = new URL(request.url).pathname;
+      if (type === "Document" && path.endsWith("/pstdio.pstdio-planner.view.timeline/runtime"))
+        iframeStartedAt ??= performance.now();
+      if (type && path.includes("/extensions/webviews/") && ["Script", "Stylesheet"].includes(type))
         assets.set(requestId, { type, bytes: 0 });
     });
     session.on("Network.loadingFinished", ({ requestId, encodedDataLength }) => {
@@ -91,7 +91,9 @@ export async function checkPlannerStress(
     const cards = timeline.locator("[data-ticket]");
     await cards.first().waitFor();
     await expect(timeline.locator("[data-edge-layer] g")).toHaveCount(20);
-    const firstOpenMs = Math.round(performance.now() - started);
+    const renderedAt = performance.now();
+    const firstOpenMs = Math.round(renderedAt - started);
+    const iframeStartupMs = iframeStartedAt === undefined ? null : Math.round(renderedAt - iframeStartedAt);
     const startupAssets = [...assets.values()];
     const webviewStartupTransferBytes = {
       javascript: startupAssets.filter(({ type }) => type === "Script").reduce((sum, { bytes }) => sum + bytes, 0),
@@ -126,6 +128,7 @@ export async function checkPlannerStress(
       platform: `${process.platform}/${process.arch}`,
       chromium: browser.version(),
       firstOpenMs,
+      iframeStartupMs,
       planReadMs: Math.round(response.request().timing().responseEnd),
       planResponseBytes: body.byteLength,
       webviewStartupTransferBytes,

@@ -1,6 +1,6 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
 import { Box, Flex, Text } from "@chakra-ui/react";
-import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
+import type { GuestHost } from "@pstdio/sdk/extensions";
 import { type HostStorage, HostStorageProvider, installPrismGlobal } from "@pstdio/ui";
 import {
   type CollectionViewsSource,
@@ -11,7 +11,7 @@ import {
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { stepReview } from "../model/review";
-import { AutoBuildButton } from "./auto-build-button";
+import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
@@ -19,10 +19,9 @@ import { useViewSections } from "./plan-state";
 import { reportTimelineError } from "./timeline-notice";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
-import { useAutoBuild } from "./use-auto-build";
+import { timelineViewsSource } from "./timeline-views";
 import { type PlanClient, usePlan } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
-import { useTimelineViews } from "./use-timeline-views";
 import { visibleTracks } from "./visible-tracks";
 
 // Published UI panels can import editor code that requires Prism before module evaluation.
@@ -34,10 +33,6 @@ const PlanEditor = lazy(async () => {
   await installPrismGlobal();
   return import("./plan-editor").then((module) => ({ default: module.PlanEditor }));
 });
-const AutoBuildDialog = lazy(async () => {
-  await installPrismGlobal();
-  return import("./auto-build-dialog").then((module) => ({ default: module.AutoBuildDialog }));
-});
 
 interface PlanRootProps {
   host: GuestHost;
@@ -47,7 +42,6 @@ interface PlanRootProps {
 export function PlanRoot(props: PlanRootProps) {
   const { host, t } = props;
   const { client, plan } = usePlan(host);
-  const { source: viewsSource } = useTimelineViews(client);
   const [storage, setStorage] = useState<HostStorage>();
   useEffect(() => {
     let active = true;
@@ -63,7 +57,8 @@ export function PlanRoot(props: PlanRootProps) {
       active = false;
     };
   }, [host]);
-  if (!plan || !viewsSource || !storage) return <Text p="md">{t("timeline.loading", "Loading tickets…")}</Text>;
+  if (!plan || !storage) return <Text p="md">{t("timeline.loading", "Loading tickets…")}</Text>;
+  const viewsSource = timelineViewsSource(client, plan.savedViews);
   return (
     <HostStorageProvider storage={storage}>
       <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
@@ -80,8 +75,6 @@ interface PlanContentProps extends PlanRootProps {
 function PlanContent(props: PlanContentProps) {
   const { host, t, client, plan, viewsSource } = props;
   const [search, setSearch] = useState("");
-  const autoBuild = useAutoBuild(client);
-  const [autoBuildOpen, setAutoBuildOpen] = useState(false);
   const queryData = timelineQueryData(plan, t);
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const filtered = filterRowsByView(queryData.rows, filter, queryData.attributes);
@@ -98,35 +91,7 @@ function PlanContent(props: PlanContentProps) {
         search={search}
         onSearchChange={setSearch}
         resultLabel={`${sections.reduce((total, section) => total + section.rows.length, 0)} of ${filtered.length}`}
-        actions={
-          <AutoBuildButton
-            enabled={autoBuild.mode?.enabled ?? false}
-            supervisor={autoBuild.mode?.supervisor}
-            sessions={autoBuild.mode?.sessions ?? []}
-            running={autoBuild.mode?.capacity.running ?? 0}
-            capacity={autoBuild.mode?.capacity.limit ?? 0}
-            stuck={autoBuild.mode?.stuck}
-            error={autoBuild.mode?.error}
-            onOpenSession={(session) =>
-              void host.call("navigation.open", {
-                target: {
-                  kind: "panel",
-                  panel: workbenchPanels.projectSession,
-                  open: "preview",
-                  resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
-                },
-              })
-            }
-            disabled={!autoBuild.mode || autoBuild.saving}
-            onConfigure={() => {
-              void autoBuild.refresh().then((success) => {
-                if (success) setAutoBuildOpen(true);
-              });
-            }}
-            onTurnOff={() => autoBuild.configure(false)}
-            t={t}
-          />
-        }
+        actions={<AutoBuildControl host={host} client={client} t={t} data={queryData} />}
       />
       <Flex flex="1" minH="0" minW="0">
         <Box flex="1" minH="0" minW="0">
@@ -165,21 +130,6 @@ function PlanContent(props: PlanContentProps) {
             client={client}
             plan={plan}
             onDone={done}
-          />
-        </Suspense>
-      ) : null}
-      {autoBuildOpen ? (
-        <Suspense fallback={null}>
-          <AutoBuildDialog
-            prompt={autoBuild.mode!.prompt}
-            ignore={autoBuild.mode!.ignore}
-            blockOnReview={autoBuild.mode!.blockOnReview}
-            data={queryData}
-            saving={autoBuild.saving}
-            error={autoBuild.error}
-            onEnable={(prompt, ignore, blockOnReview) => autoBuild.configure(true, prompt, ignore, blockOnReview)}
-            onClose={() => setAutoBuildOpen(false)}
-            t={t}
           />
         </Suspense>
       ) : null}

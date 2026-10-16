@@ -10,6 +10,7 @@ import {
 } from "../../data/mappers";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
+import { timelineBoard } from "../../data/ticket-board";
 import { sortedBySortOrder } from "../../utils/sort";
 import { buildPlan } from "../model/build-plan";
 import { resolvePlan } from "../model/resolve-plan";
@@ -64,9 +65,10 @@ export const readPlanCommand = defineCommand({
         rows: section.rows.map((row) => (row.gate ? row : { ...row, instructions: "" })),
       })),
       projectId: ctx.projectId,
+      savedViews: await ctx.views.list(timelineBoard),
       ticketRows: active.map((ticket) => {
-        const row = toRow(ticket);
-        return { ...row, attributes: { ...row.attributes, ...properties.values.get(ticket.id) } };
+        const { id, title, attributes } = toRow(ticket);
+        return { id, title, attributes: { ...attributes, ...properties.values.get(ticket.id) } };
       }),
       ticketAttributes: [...buildTicketAttributes(statuses, tags), ...properties.attributes],
     };

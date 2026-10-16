@@ -45,6 +45,8 @@ Add an additive public timeline view contribution after the reusable renderer is
 
 The host renders the collection bar, graph, and error chrome in its own document. This lets Timeline use the same theme, fonts, filters, viewport sizing, connection indicator, and action reporting as Kanban and DataTable. Planner can continue opening its existing ticket pages and sessions through public navigation targets.
 
+Saved views must resolve collection fields without rerunning the row query. Replace the hidden Kanban schema adapter described in [ADR 0076](../../adrs/0076-temporary-timeline-saved-view-schema.md) with a public collection schema contract. Reading saved views must not load ticket rows, session histories, or another dependency plan.
+
 A component extraction consumed by the old iframe is an intermediate release. It is not evidence that runtime duplication or the iframe sizing difference has been removed.
 
 ## Interaction and performance requirements

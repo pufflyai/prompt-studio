@@ -18,6 +18,7 @@ const plan = {
   projectId: "timeline-error-story",
   ticketRows: [],
   ticketAttributes: [],
+  savedViews: { views: [], defaultViewId: null },
 };
 
 function TimelineStory(props: { failConfigure?: boolean }) {
@@ -30,9 +31,6 @@ function TimelineStory(props: { failConfigure?: boolean }) {
     switch (input?.commandId?.split(".command.")[1]) {
       case "timeline.plan.read":
         value = plan;
-        break;
-      case "timeline.views.read":
-        value = { views: [], defaultViewId: null };
         break;
       case "auto-build.read":
         value = {
