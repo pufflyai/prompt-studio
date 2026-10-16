@@ -1,10 +1,14 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
-import type { WorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import type { WorkbenchPageRegistry, WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
+import {
+  getWorkbenchPageRegistryInternals,
+  type WorkbenchPageRegistryInternals,
+} from "../../registries/pages/page-registry-internals";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createPageHistoryEntry } from "./page-location-history-entry";
-import type { CreateWorkbenchPageLocationControllerInput } from "./page-location-types";
+import { workbenchPageLocationsEqual } from "./page-location-normalization";
+import type { CreateWorkbenchPageLocationControllerInput, ResolvedPageLocation } from "./page-location-types";
 
 export const createPageLocationPublisher = <Value>(
   input: CreateWorkbenchPageLocationControllerInput<Value>,
@@ -41,4 +45,41 @@ export const createPageLocationPublisher = <Value>(
       if (history !== "none") hooks.publish();
       return { ok: true, location } as const;
     });
+};
+
+export const createPageLocationReplayer =
+  <Value>(input: {
+    registry: WorkbenchPageRegistry<Value>;
+    prepare(projectId: string, resolved: ResolvedPageLocation, action: string): WorkbenchPageRegistryStoreState<Value>;
+    publish: ReturnType<typeof createPageLocationPublisher<Value>>;
+  }) =>
+  (projectId: string, resolved: ResolvedPageLocation) => {
+    const action = "replayWorkbenchPageHistory";
+    const current = input.registry.store.getState();
+    const state = input.prepare(projectId, resolved, action);
+    const { resources } = getWorkbenchPageRegistryInternals(input.registry);
+    // Hydrating the current location updates its views without reselecting Main.
+    const refresh =
+      current.projectId === projectId &&
+      workbenchPageLocationsEqual(current.location, resolved.location, resources, input.registry.listPages());
+    const next = refresh ? { ...state, reconciliation: { ...state.reconciliation, activate: [] } } : state;
+    return input.publish(projectId, next, "replace", action);
+  };
+
+export const createPageLocationPreparer = <Value>(registry: WorkbenchPageRegistry<Value>) => {
+  const internals = getWorkbenchPageRegistryInternals(registry);
+  return (projectId: string, resolved: ResolvedPageLocation, action: string) =>
+    internals.prepare.location(
+      {
+        pageId: resolved.pageId,
+        projectId,
+        location: resolved.location,
+        action,
+        open: resolved.open,
+        resource: resolved.location.resource,
+        section: resolved.location.section,
+        pageStates: resolved.pageStates,
+      },
+      registry.store.getState(),
+    );
 };

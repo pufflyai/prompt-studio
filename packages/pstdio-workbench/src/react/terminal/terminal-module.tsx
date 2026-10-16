@@ -99,6 +99,8 @@ export const openWorkbenchTerminal = (
   const resource: ResourceRef = {
     type: "terminal",
     id,
+    extensionId: "pstdio",
+    projectId: workspace?.projectId ?? ctx.pages.store.getState().projectId,
     label: title,
     icon: "SquareTerminal",
     metadata: workspace?.metadata,

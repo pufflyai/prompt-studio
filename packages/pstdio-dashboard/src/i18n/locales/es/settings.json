@@ -87,7 +87,9 @@
     "title": "Apariencia",
     "description": "Elige cómo se ve Prompt Studio. También puedes cambiar el tema con Alt+Shift+T.",
     "theme": "Tema",
-    "themeHelper": "Se aplica a todos los proyectos."
+    "themeHelper": "Se aplica a todos los proyectos.",
+    "openRelatedResources": "Abrir recursos relacionados",
+    "openRelatedResourcesHelper": "Abrir automáticamente un recurso relacionado reciente de cada tipo como vista previa sin fijar."
   },
   "connectionStatus": {
     "description": "Mostrar el estado de conexión al servidor en la barra de estado.",

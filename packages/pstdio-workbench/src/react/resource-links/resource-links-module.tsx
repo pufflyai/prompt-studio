@@ -1,5 +1,6 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContribution } from "../../core";
+import { registerRelatedResourcePreviews } from "./related-resource-previews";
 import { RelatedResources } from "./related-resources";
 import { closeResourceLinksOnProjectChange } from "./resource-links-project-scope";
 import type { ResourceLinksService } from "./resource-links-types";
@@ -16,6 +17,7 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
   ({
     id: "workbench.resource-links",
     activate(ctx) {
+      const previews = registerRelatedResourcePreviews(ctx, options);
       const currentResource = () => {
         const resource = ctx.getActiveResource() ?? ctx.getPrimaryResource();
         return resource && options.canonicalize(resource);
@@ -55,6 +57,6 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
           },
         },
       );
-      return closeResourceLinksOnProjectChange(ctx, viewId);
+      return [previews, closeResourceLinksOnProjectChange(ctx, viewId)];
     },
   }) satisfies WorkbenchModuleContribution;

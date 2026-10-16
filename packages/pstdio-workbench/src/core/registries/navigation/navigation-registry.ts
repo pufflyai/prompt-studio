@@ -10,6 +10,7 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 
 /** Core-only panel ref for host-owned shell placements. Extensions cannot address them. */
 export interface ShellPlacementRef {
@@ -94,6 +95,7 @@ export interface NavigationRegistry {
   /** Opens or activates an owned panel through the shared executor. */
   openPanel(target: DistributiveOmit<NavigationTargetPanel, "kind">): Promise<readonly unknown[]>;
   navigate(location: string): Promise<readonly unknown[]>;
+  onDidOpenTarget(listener: (target: NavigationTarget) => void): Disposable;
 }
 
 export interface CreateNavigationRegistryInput {
@@ -140,6 +142,7 @@ const toItems = (target: NavigationTarget): readonly NavigationTargetItem[] =>
 
 export const createNavigationRegistry = (input: CreateNavigationRegistryInput = {}): NavigationRegistry => {
   const resolveDispatcher = input.resolveDispatcher ?? noDispatcher;
+  const listeners = new Set<(target: NavigationTarget) => void>();
 
   const store = createWorkbenchStore<NavigationRegistryStoreState>({
     name: "workbench.navigation",
@@ -196,9 +199,12 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
         if (!dispatcher.prepareNavigation)
           throw new Error("navigation.openTarget: navigation preparation is not configured");
         const prepared = dispatcher.prepareNavigation(target.targets);
-        return [prepared.commit()];
+        const result = [prepared.commit()];
+        for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target));
+        return result;
       }
       for (const item of items) results.push(await dispatchItem(item, dispatcher));
+      for (const listener of listeners) runWorkbenchEffect("navigation observer", () => listener(target));
       return results;
     },
 
@@ -212,6 +218,10 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
 
     async navigate(location) {
       return registry.openTarget(registry.resolveLocation(location));
+    },
+    onDidOpenTarget(listener) {
+      listeners.add(listener);
+      return createDisposable(() => listeners.delete(listener));
     },
   };
 

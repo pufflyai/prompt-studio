@@ -87,7 +87,9 @@
     "title": "外観",
     "description": "Prompt Studio の見た目を選びます。Alt+Shift+T でもテーマを変更できます。",
     "theme": "テーマ",
-    "themeHelper": "すべてのプロジェクトに適用されます。"
+    "themeHelper": "すべてのプロジェクトに適用されます。",
+    "openRelatedResources": "関連リソースを開く",
+    "openRelatedResourcesHelper": "各種類の最近の関連リソースを、ピン留めされていないプレビューで自動的に開きます。"
   },
   "connectionStatus": {
     "description": "ステータスバーにバックエンドの接続状態を表示します。",

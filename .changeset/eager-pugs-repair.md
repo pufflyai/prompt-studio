@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Keep page context stable, restore tab menu focus, and require explicit session opens from tickets.
+Keep page context stable and restore tab menu focus.

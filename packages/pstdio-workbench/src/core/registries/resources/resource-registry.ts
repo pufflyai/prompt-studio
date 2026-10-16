@@ -1,4 +1,5 @@
 import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import type { NavigationTarget } from "../navigation/navigation-registry";
 import { createResourcePreview } from "./resource-preview";
 
 export type { ResourceRef } from "@pstdio/sdk/extensions";
@@ -86,6 +87,7 @@ export interface ResourceKindContribution {
 export interface RegisteredResourceKind extends ResourceKindContribution, RegisteredContributionMetadata {}
 export interface ResourceBrowseEntry {
   resource: ResourceRef;
+  target?: NavigationTarget;
   searchText?: string;
   description?: string;
   group?: string;
@@ -101,6 +103,8 @@ export interface ResourceProvider {
   id: string;
   kind: string;
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
+  /** Direct relationships in the owner's recent-first order. */
+  related?(resource: ResourceRef): readonly ResourceBrowseEntry[];
 }
 export interface ResourceRegistryStoreState {
   kinds: Record<string, RegisteredResourceKind>;
@@ -118,6 +122,7 @@ export interface ResourceRegistry {
   registerProvider(provider: ResourceProvider): Disposable;
   listProviders(): ResourceProvider[];
   listResources(query: string): readonly ResourceBrowseEntry[];
+  listRelatedResources(resource: ResourceRef): readonly ResourceBrowseEntry[];
   registerHierarchyProvider(provider: ResourceHierarchyProvider): Disposable;
   listHierarchyProviders(): ResolvedResourceHierarchyProvider[];
   walkHierarchy(resource: ResourceRef | undefined): WorkbenchHierarchyNode[];
@@ -200,6 +205,9 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         entries.push(...provider.list(query, context));
       }
       return entries;
+    },
+    listRelatedResources(resource) {
+      return Object.values(store.getState().providers).flatMap((provider) => provider.related?.(resource) ?? []);
     },
     registerHierarchyProvider(provider) {
       const snapshot = store.getState();

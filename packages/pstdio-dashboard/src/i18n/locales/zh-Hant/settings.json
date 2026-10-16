@@ -87,7 +87,9 @@
     "title": "外觀",
     "description": "選擇 Prompt Studio 的外觀。也可以按 Alt+Shift+T 變更主題。",
     "theme": "主題",
-    "themeHelper": "套用至所有專案。"
+    "themeHelper": "套用至所有專案。",
+    "openRelatedResources": "開啟相關資源",
+    "openRelatedResourcesHelper": "自動以未釘選的預覽開啟每種類型的最近相關資源。"
   },
   "connectionStatus": {
     "description": "在狀態列中顯示後端連線狀態。",

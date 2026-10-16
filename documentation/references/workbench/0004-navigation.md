@@ -16,11 +16,19 @@ The workbench navigates only to explicit targets. This page lists the target kin
 
 A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
 
+## Related resources
+
+Appearance's **Open related resources** setting is on by default. Opening a resource or selecting its tab opens one recent related resource per owner and kind as an unpinned preview. This includes direct incoming and outgoing resource links and relationships supplied by resource providers. Previews do not recursively open their own links. Selecting a preview explicitly can open its related resources.
+
+Sessions relate to their anchors and workspace. Workspaces can open their latest session and terminal. A terminal can open its workspace. These relationships use the same workbench policy as extension resources; tickets have no special session-opening policy.
+
+Owners return recent-first `ResourceBrowseEntry` values through `ResourceProvider.related(resource)`. Each entry carries the owner's page or panel `target`. Linked extension resources use their resource kind's `resolveManyCommand` target. Unavailable owners are skipped. The workbench renders the owner view as a preview without changing the initiating page, browser history, or keyboard focus. Existing pinned resources stay pinned. Late results are discarded after another resource is selected, the project changes, or the setting is disabled. The setting persists across reloads.
+
 ## Validation and history
 
 Navigation validates the complete target before changing state. An unresolved page or inactive panel owner produces one error and leaves location, history, breadcrumbs, page instances, mode placements, selection, and visibility unchanged. Commands and external links remain standalone actions. It does not search by resource kind or fall back to `main`.
 
-Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry.
+Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry. Refreshing metadata for the same logical location preserves the selected panel; replaying a different document or location activates its destination.
 
 The routed page owns its breadcrumb and page actions. A collection page uses Main's selected document for its document context. Focusing Side or Secondary does not replace that context. A resource-bound page keeps its routed resource as the breadcrumb subject, even when Main renders another resource.
 
