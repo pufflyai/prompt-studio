@@ -1,8 +1,34 @@
 import { expect, test } from "bun:test";
-import type { WorkbenchLayout } from "../../core";
+import type { WorkbenchLayout, WorkbenchModuleContext } from "../../core";
 import { batchWorkbenchChanges } from "../../core/shared/store/workbench-batch";
 import { createLocalStorageWorkbenchPersistence } from "../../storage/local-storage-persistence";
 import { opening, ref, setup } from "./related-resource-openings.fixture";
+import { registerRelatedResourcePreviews } from "./related-resource-previews";
+
+test("direct and qualified resource entries share manual panel choices", async () => {
+  const s = setup([opening("default")]);
+  s.controller.dispose();
+  const controller = registerRelatedResourcePreviews(s.workbench as WorkbenchModuleContext, {
+    canonicalize: (resource) => ({
+      ...resource,
+      extensionId: resource.extensionId ?? "example",
+      projectId: resource.projectId ?? "project",
+    }),
+    createService: () => s.service,
+  });
+  const direct = { type: "document", id: "source" };
+  s.workbench.pageLocations.navigate(s.target(direct));
+  await controller.open(direct);
+  s.workbench.closePlacement(s.workbench.layout.getActivePanel("side")!.placementIdentity!);
+  s.workbench.pageLocations.navigate({ kind: "page", page: { kind: "page", id: "home", extensionId: "example" } });
+  s.workbench.pageLocations.navigate(s.target(s.source));
+  await controller.open(s.source);
+  expect(s.workbench.shell.getRegionState("side").open).toBe(false);
+  s.workbench.pageLocations.navigate(s.target(direct));
+  await controller.open(direct);
+  expect(s.workbench.shell.getRegionState("side").open).toBe(false);
+  controller.dispose();
+});
 
 const setupPage = (region: "side" | "secondary") => {
   const layouts = new Map<string | undefined, WorkbenchLayout>();

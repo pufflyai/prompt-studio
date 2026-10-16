@@ -19,6 +19,8 @@ export const registerRelatedResourcePreviews = (
     properties: { [openRelatedResourcesPreference]: { type: "boolean", scope: "user", default: true } },
   });
   const opener = createResourcePreviewOpener(ctx);
+  const canonicalize = (source: ResourceRef) =>
+    options.canonicalize(source) ?? (source.projectId && source.extensionId ? source : undefined);
   let pending:
     | {
         key: string;
@@ -28,7 +30,7 @@ export const registerRelatedResourcePreviews = (
       }
     | undefined;
   let openingPreviews = false;
-  const preferences = createRelatedResourcePreferences(ctx, () => pending?.controller.abort());
+  const preferences = createRelatedResourcePreferences(ctx, canonicalize, () => pending?.controller.abort());
   const enabled = () => ctx.preferences.getValue(openRelatedResourcesPreference) !== false;
   const load = async (resource: ResourceRef, owner: RegisteredResourceKind, controller: AbortController) => {
     const current = () => !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type) === owner;
@@ -69,7 +71,7 @@ export const registerRelatedResourcePreviews = (
     }
   };
   const open = (source: ResourceRef) => {
-    const resource = options.canonicalize(source) ?? (source.projectId && source.extensionId ? source : undefined);
+    const resource = canonicalize(source);
     const owner = resource && ctx.resources.getKind(resource.type);
     if (!enabled() || !resource || !owner?.relatedOpenings || owner.extensionId !== resource.extensionId) {
       pending?.controller.abort();
