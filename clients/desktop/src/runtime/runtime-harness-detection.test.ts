@@ -68,7 +68,7 @@ test.skipIf(process.platform === "win32")("detects shell-installed harnesses aft
     expect(probeOutput).toBe("harness-probe 1.0");
     expect(runtimeHome).toBe(join(home, "runtime"));
   } finally {
-    manager.detach();
+    await manager.detach();
     for (const name of ["HOME", "SHELL", "PATH", "PSTDIO_HOME"]) {
       if (originalEnv[name] === undefined) delete process.env[name];
       else process.env[name] = originalEnv[name];

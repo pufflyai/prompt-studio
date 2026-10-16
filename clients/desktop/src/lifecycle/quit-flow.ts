@@ -41,7 +41,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
   const stopRuntimeAndQuit = async () => {
     const runtime = await deps.runtimeManager.refreshRuntime();
     if (!runtime || runtime.external || runtime.descriptor.ownerType === "persistent") {
-      deps.runtimeManager.detach();
+      await deps.runtimeManager.detach();
       await finishQuit();
       return;
     }

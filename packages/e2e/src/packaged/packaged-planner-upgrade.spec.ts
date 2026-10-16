@@ -21,6 +21,7 @@ import {
   ACTIVE_CONFLICTS,
   ARCHIVED_CONFLICTS,
   type Execute,
+  moveLegacyPlannerDrafts,
   plannerCommands,
   seedTrackProject,
   timelinePlannerSource,
@@ -163,6 +164,8 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     expect(await plannerWebview(host, valid.id, "timeline")).toBeUndefined();
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
+    moveLegacyPlannerDrafts(conflicting.folder);
+    moveLegacyPlannerDrafts(valid.folder);
     installPlanner(host, conflicting.folder, timelinePlannerSource, true);
 
     // A valid Track cannot hide a missing module behind a schema error.

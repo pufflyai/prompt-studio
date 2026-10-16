@@ -111,7 +111,9 @@ test(
 
       await app.page.getByRole("button", { name: `Close ${first.name}`, exact: true }).click();
       await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
-      await expect(app.page.getByRole("dialog").getByPlaceholder("Search projects...")).toBeVisible();
+      await expect(
+        app.page.getByRole("dialog").getByRole("button", { name: "Create project", exact: true }),
+      ).toBeVisible();
       await expect(app.page.getByRole("dialog").getByText(first.name, { exact: true })).toBeVisible();
       await expect(app.page.getByRole("dialog").getByText(second.name, { exact: true })).toBeVisible();
       expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);

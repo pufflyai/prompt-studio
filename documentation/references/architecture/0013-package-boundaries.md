@@ -9,6 +9,14 @@ layer-map change.
 ## Layers
 
 1. **Contracts and utilities**
+   `pstdio-sync-contracts` defines private, versioned synchronization wire schemas,
+   fingerprint validation, compatibility checks, and proposed authoring inputs.
+   Its main export depends only on Zod and Web Crypto. Its separate `./conformance`
+   export is test-only and uses development dependencies for PGlite, PostgreSQL,
+   Yjs, and S3 test storage. It imports no host, SDK, UI, database implementation,
+   or provider code. Future runtime and relay consumers must declare their own
+   dependency and layer-map edge when they integrate it; none is added speculatively.
+
    `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
    `pstdio-storage` define stable contracts, file-type metadata, paths, logging,
@@ -85,6 +93,16 @@ layer-map change.
    from each entry's pinned Git origin and is not embedded in the host binary.
    Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.
+
+## Shared relay
+
+The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
+service, not part of the local API host or the CLI bundle. Its scaffold declares
+no workspace dependencies. It must not import the API host, UI, clients, or
+prototype implementation. The shared synchronization contract is owned separately
+by PS-744. Future Terraform configuration belongs under `infra/relay/terraform/`,
+separate from relay source. See the [relay development guide](../../guides/development/0006-relay.md)
+for isolated storage fixtures and container checks.
 
 ## Rules
 

@@ -81,8 +81,8 @@ export const Recovery: Story = {
     state: {
       kind: "recovery",
       error: {
-        code: "runtime_timeout",
-        message: "The Prompt Studio runtime did not become ready in time.",
+        code: "pglite_recovery_failure",
+        message: "Prompt Studio could not open its database safely.",
         actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
       },
     },

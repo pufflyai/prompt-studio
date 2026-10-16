@@ -1,0 +1,79 @@
+services:
+  relay:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: runtime
+    environment:
+      RELAY_HOST: 0.0.0.0
+      RELAY_PORT: "8080"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:8080/health'); if (!r.ok) process.exit(1)"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: relay_test
+      POSTGRES_PASSWORD: relay_test_password
+      POSTGRES_DB: relay_test
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U relay_test -d relay_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  objects:
+    image: rustfs/rustfs:1.0.1
+    environment:
+      RUSTFS_ACCESS_KEY: relay_test_access
+      RUSTFS_SECRET_KEY: relay_test_secret_key
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_OBS_LOG_DIRECTORY: /logs
+    command: ["/data"]
+    volumes:
+      - objects-data:/data
+      - objects-logs:/logs
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:9000/health"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  bucket:
+    image: amazon/aws-cli:2.37.13
+    profiles: ["test"]
+    environment:
+      AWS_ACCESS_KEY_ID: relay_test_access
+      AWS_SECRET_ACCESS_KEY: relay_test_secret_key
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_EC2_METADATA_DISABLED: "true"
+    command: ["--endpoint-url", "http://objects:9000", "s3api", "create-bucket", "--bucket", "relay-test"]
+
+  smoke:
+    build:
+      context: ../..
+      dockerfile: infra/relay/Dockerfile
+      target: smoke
+    profiles: ["test"]
+    environment:
+      RELAY_URL: http://relay:8080
+      DATABASE_URL: postgres://relay_test:relay_test_password@postgres:5432/relay_test
+      S3_ENDPOINT: http://objects:9000
+      S3_BUCKET: relay-test
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: relay_test_access
+      S3_SECRET_ACCESS_KEY: relay_test_secret_key
+
+volumes:
+  postgres-data:
+  objects-data:
+  objects-logs:
+
+networks:
+  default:
+    internal: true

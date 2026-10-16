@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -13,12 +13,13 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
 import { registerBoardViewsSmokeTests } from "./packaged-board-views-smoke";
-// Shared Kanban and data table tabs persist pointer/keyboard order and follow live sync.
+// Shared borderless Kanban and data table tabs persist pointer/keyboard order and follow live sync.
 import { registerCollectionViewOrderSmokeTests } from "./packaged-collection-view-order-smoke";
 import { registerCommandStreamSmokeTests } from "./packaged-command-stream-smoke";
 import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-extension-smoke";
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
+// Core extension checks cover extension-owned draft storage and allocated file roots.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -41,6 +42,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native harness controls and their structured values in packaged command handlers.
+// Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
@@ -80,6 +82,7 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 registerSharedCodexSmokeTests();
+// Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
@@ -118,12 +121,14 @@ test(
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
       const navigationProbe = writeNavigationExtension(tempRoot);
       const nativeActions = writeNativeActionsExtension(tempRoot);
+      const otherNativeActions = writeNativeActionsExtension(join(tempRoot, "other-source"), "other");
       const started = await startPackagedServe(tempRoot, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
           { source: navigationProbe, installName: "navigation-probe" },
           { source: nativeActions, installName: "native-actions" },
+          { source: otherNativeActions, installName: "other-native-actions" },
         ]),
         HTTPS_PROXY: "http://127.0.0.1:9",
         NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",
@@ -133,10 +138,12 @@ test(
       });
       child = started.child;
 
+      const projectFolder = join(tempRoot, "project");
+      mkdirSync(projectFolder, { recursive: true });
       const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" })),
+        body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" }, projectFolder)),
       });
       expect(createRes.status).toBe(201);
 
@@ -156,6 +163,7 @@ test(
         name: "dep-ext",
       });
       await expectPackagedNativeActions({
+        projectFolder,
         baseUrl: started.baseUrl,
         projectId: project.id,
         headers: runtimeAuthorization(started.descriptor),

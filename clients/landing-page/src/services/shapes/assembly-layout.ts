@@ -73,14 +73,16 @@ export const assemblyLayout = (
 ) => {
   const wide = size.width >= ASSEMBLY_WIDE_WIDTH * unitScale;
   const available = wide ? size.width - copy.width - 48 : size.width - 32;
-  const y = wide ? 24 : copy.height + 24;
+  const top = wide ? 24 : copy.height + 24;
   // Grow the whole editor with its container, leaving physical space for the slot tray and pile.
-  const previewHeight = Math.max(1, size.height - y - SLOT_TRAY_HEIGHT - PILE_CLEARANCE);
+  const previewHeight = Math.max(1, size.height - top - SLOT_TRAY_HEIGHT - PILE_CLEARANCE);
   const scale =
     (wide ? BOARD_SCALE.wide : BOARD_SCALE.narrow) *
     Math.min(available / (BOARD_WIDTH * unitScale), previewHeight / (BOARD_PREVIEW_HEIGHT * unitScale));
   const width = BOARD_WIDTH * unitScale * scale;
   const x = wide ? copy.width + 24 + (available - width) / 2 : (size.width - width) / 2;
+  const height = BOARD_PREVIEW_HEIGHT * unitScale * scale + SLOT_TRAY_HEIGHT;
+  const y = wide ? (size.height - height) / 2 : top;
   const board = { x, y, scale, unitScale };
   return { board, slots: boardSlots(board, example) };
 };

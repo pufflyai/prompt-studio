@@ -20,6 +20,11 @@
       // scripts/ci/install-native-dependencies.ts points npm_config_node_gyp at this package's binary.
       "ignoreDependencies": ["node-gyp"]
     },
+    "infra/relay": {
+      "entry": ["src/server.ts", "src/**/*.test.ts", "scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "ignore": ["dist/**"]
+    },
     "scripts": {
       "entry": ["**/*.ts"],
       "project": ["**/*.ts"]
@@ -33,6 +38,8 @@
         "src/extension-kernel/workbench-targets.ts",
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
+        // Isolated integration tests are launched by scripts with explicit paths.
+        "src/**/*.integration.ts",
         // Tests spawn fixtures by path, so nothing imports them.
         "src/**/*.fixture.ts",
         "src/**/*.typecheck.ts",

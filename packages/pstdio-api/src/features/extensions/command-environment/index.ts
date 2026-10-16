@@ -127,6 +127,7 @@ export const createCommandEnvironment = (
           : workingFiles,
       packageFiles: createExtensionPackageFilesApi(enabledSource.installedSource.source_path, signal),
       extensionFiles: createExtensionFilesApi({
+        name: input.name,
         extensionId: input.extensionId,
         signal,
         resolveRepoPath: resolveProjectPath,

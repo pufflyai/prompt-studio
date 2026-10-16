@@ -51,13 +51,21 @@ afterEach(() => {
 });
 
 describe("installExtensionSource replacement", () => {
-  test("does not let cleanup errors replace the install result", () => {
+  test("does not let cleanup errors replace the install result", async () => {
     const remove = mock(() => {
       throw new Error("cleanup failed");
     });
 
-    expect(() => removePathBestEffort("/locked/staging", remove)).not.toThrow();
+    await expect(removePathBestEffort("/locked/staging", remove)).resolves.toBeUndefined();
     expect(remove).toHaveBeenCalledWith("/locked/staging");
+  });
+
+  test("does not let asynchronous cleanup errors replace the install result", async () => {
+    await expect(
+      removePathBestEffort("/locked/staging", async () => {
+        throw new Error("cleanup failed");
+      }),
+    ).resolves.toBeUndefined();
   });
 
   test("force=true replaces an existing install", async () => {

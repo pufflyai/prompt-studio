@@ -7,6 +7,7 @@ import { parseCssGlyphNames } from "../font/font-document";
 import {
   buildRepositoryFont,
   inspectRepositoryFont,
+  readRepositoryConfig,
   renameRepositoryGlyph,
   updateRepositoryConfig,
   verifyRepositoryFont,
@@ -74,6 +75,16 @@ const createMount = async () => {
 };
 
 describe("font repository", () => {
+  test("reads and saves configuration in the extension storage directory", async () => {
+    const mount = await createMount();
+    const path = ".pstdio/extension-storage/font-editor/config.json";
+    await mount.writeText(path, JSON.stringify({ ...defaultFontEditorConfig, family: "custom-icons" }));
+
+    expect((await readRepositoryConfig(mount)).family).toBe("custom-icons");
+    await updateRepositoryConfig(mount, { family: "updated-icons" });
+    expect(JSON.parse(await mount.readText(path)).family).toBe("updated-icons");
+  });
+
   test("inspects all semantic glyph mappings from the current font and CSS", async () => {
     const mount = await createMount();
     const result = await inspectRepositoryFont(mount);

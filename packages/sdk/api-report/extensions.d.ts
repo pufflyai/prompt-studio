@@ -1170,6 +1170,8 @@ interface MenuContribution<TSlotContext extends Struct = Struct, TParams extends
   placement?: "first" | "default" | "last";
   icon?: string;
   when?: WhenExpression;
+  disabledWhen?: WhenExpression;
+  disabledReason?: Localizable<string>;
   params?: Partial<TParams>;
   presentation?: "menu-item" | "button" | "icon-button";
 }
@@ -1989,6 +1991,7 @@ interface PlacementTabMenuRow {
 }
 interface PlacementTabMenuGroup {
   readonly id: string;
+  readonly label?: Localizable<string>;
   readonly rows: readonly PlacementTabMenuRow[];
 }
 interface PlacementTabSnapshot extends Struct {
@@ -2767,7 +2770,7 @@ interface StatusBarItemContribution extends ContributionDefinition<"status-bar-i
   readonly order?: number;
   readonly when?: WhenExpression;
 }
-export declare const EXTENSION_API_VERSION = "0.1.7";
+export declare const EXTENSION_API_VERSION = "0.2.0";
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema ? ParamsOf<TSchema> : Record<string, never>;
 interface WorkspaceProviderRef {
   version: number;

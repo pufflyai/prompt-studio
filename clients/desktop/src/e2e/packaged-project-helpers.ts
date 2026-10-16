@@ -12,7 +12,9 @@ export const startKeyboardTabDrag = async (tab: Locator) => {
 
 export const openPackagedProject = async (page: Page, project: { id: string; name: string }) => {
   const { id, name } = project;
-  const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
+  const picker = page
+    .getByRole("dialog")
+    .filter({ has: page.getByRole("button", { name: "Create project", exact: true }) });
   if (!(await picker.isVisible()))
     await page.getByRole("button", { name: /^Open (?:project|\/ create project)$/ }).click();
   await picker.getByText(name, { exact: true }).click();

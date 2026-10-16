@@ -46,12 +46,14 @@
     "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",
+    "pstdio-sync-contracts",
     "pstdio-wt",
     "workbench-fixture",
     "motion-lab",
     "social-radar",
     "pstdio-shader-lab",
-    "shape-art"
+    "shape-art",
+    "pstdio-relay"
   ],
   "snapshot": {
     "useCalculatedVersion": true,
