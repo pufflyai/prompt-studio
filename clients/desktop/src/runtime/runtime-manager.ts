@@ -8,6 +8,7 @@ import {
   observeRuntimeShutdown,
   type RuntimeDescriptor,
   readRuntimeDescriptor,
+  readRuntimeShutdown,
   requestRuntimeShutdown,
   waitForRuntimeExit,
 } from "pstdio/runtime";
@@ -172,6 +173,7 @@ export class DesktopRuntimeManager {
       return this.#attach(descriptor, true);
     }
 
+    const initialShutdown = readRuntimeShutdown(this.#options.descriptorPath);
     const discover = async (path: string) => {
       signal.throwIfAborted();
       const discovery = await this.#deps.discoverRuntime(path, { signal });
@@ -179,7 +181,7 @@ export class DesktopRuntimeManager {
       return discovery;
     };
     const discovery = await discover(this.#options.descriptorPath);
-    if (discovery.state === "healthy") return this.#attach(discovery.descriptor, false);
+    if (discovery.state === "healthy") return this.#attach(discovery.descriptor, false, { initialShutdown });
     if (discovery.state === "unsafe") {
       throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
     }
@@ -203,7 +205,7 @@ export class DesktopRuntimeManager {
     });
     this.#readOutput = child.readOutput;
 
-    let ready = false;
+    let ready: RuntimeDescriptor | null = null;
     let markChildTerminated: () => void = () => {};
     const childTerminated = new Promise<void>((resolve) => {
       markChildTerminated = resolve;
@@ -215,7 +217,7 @@ export class DesktopRuntimeManager {
           child.readOutput() || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
         if (!ready) reject(new Error(detail));
         // A clean owned-process exit can arrive before its HTTP shutdown event.
-        else if (code === 0) this.#handleIntentionalShutdown();
+        else if (code === 0 || this.#wasShutdown(ready, initialShutdown)) this.#handleIntentionalShutdown();
         else if (!this.#intentional) {
           this.#forgetRuntime();
           this.#options.onUnexpectedExit(detail);
@@ -237,8 +239,8 @@ export class DesktopRuntimeManager {
         childExit,
       ]);
       signal.throwIfAborted();
-      ready = true;
-      return this.#attach(descriptor, false, false);
+      ready = descriptor;
+      return this.#attach(descriptor, false);
     } catch (error) {
       await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
       const detail = child.readOutput() || (error instanceof Error ? error.message : String(error));
@@ -279,10 +281,27 @@ export class DesktopRuntimeManager {
   #handleIntentionalShutdown() {
     if (this.#intentional) return;
     this.#intentional = true;
+    this.#eventAbort?.abort();
     this.#options.onIntentionalShutdown();
   }
 
-  #attach(descriptor: RuntimeDescriptor, external: boolean, observeProcessExit = true) {
+  #wasShutdown(descriptor: RuntimeDescriptor, initialShutdown: ReturnType<typeof readRuntimeShutdown>) {
+    const shutdown = readRuntimeShutdown(this.#options.descriptorPath);
+    // A later stop of this home also applies to an old disconnected desktop, even if
+    // a replacement backend has already overwritten the previous shutdown receipt.
+    return (
+      shutdown !== null &&
+      ((shutdown.pid === descriptor.pid && shutdown.instanceId === descriptor.instanceId) ||
+        shutdown.pid !== initialShutdown?.pid ||
+        shutdown.instanceId !== initialShutdown?.instanceId)
+    );
+  }
+
+  #attach(
+    descriptor: RuntimeDescriptor,
+    external: boolean,
+    attachment?: { initialShutdown: ReturnType<typeof readRuntimeShutdown> },
+  ) {
     this.#runtime = { descriptor, external };
     this.#lastDescriptor = descriptor;
     this.#eventAbort = new AbortController();
@@ -290,8 +309,14 @@ export class DesktopRuntimeManager {
     const disconnected = () => {
       // Spawned children have an exit event, including their clean-exit status. An attached
       // backend needs a PID check: a broken connection alone must never replace a live owner.
-      if (external || !observeProcessExit || signal.aborted || this.#intentional) return;
-      if (this.#deps.isRuntimePidAlive(descriptor.pid)) return;
+      if (external || !attachment || signal.aborted || this.#intentional) return;
+      // Read intent after checking the process: shutdown can be announced just before it exits.
+      const alive = this.#deps.isRuntimePidAlive(descriptor.pid);
+      if (this.#wasShutdown(descriptor, attachment.initialShutdown)) {
+        this.#handleIntentionalShutdown();
+        return;
+      }
+      if (alive) return;
       this.#forgetRuntime();
       this.#options.onUnexpectedExit("The attached backend process exited unexpectedly.");
     };
