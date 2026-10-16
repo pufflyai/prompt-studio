@@ -15,7 +15,7 @@ test("a Linux runtime does not inherit Electron resource descriptors", async () 
   const entry = join(root, "main.mjs");
   const build = spawnSync("bun", [
     "build",
-    join(import.meta.dirname, "runtime-descriptors.fixture.ts"),
+    join(import.meta.dirname, "runtime-descriptors-fixture.ts"),
     "--outfile",
     entry,
     "--target=node",
