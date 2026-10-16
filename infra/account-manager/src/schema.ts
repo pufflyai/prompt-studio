@@ -7,6 +7,19 @@ export const accounts = pgTable("manager_accounts", {
   ownerSubject: text().notNull(),
   state: text({ enum: ["active", "disabled"] }).notNull(),
 });
+export const loginChallenges = pgTable("manager_login_challenges", {
+  stateDigest: text().primaryKey(),
+  bindingDigest: text().notNull(),
+  nonce: text().notNull(),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+});
+export const ownerSessions = pgTable("manager_owner_sessions", {
+  digest: text().primaryKey(),
+  accountId: text()
+    .notNull()
+    .references(() => accounts.id),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+});
 export const restoreRequests = pgTable("manager_restore_requests", {
   id: text().primaryKey(),
   fingerprint: text().notNull(),

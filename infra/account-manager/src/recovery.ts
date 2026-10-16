@@ -3,7 +3,15 @@ import { canonicalJson, fingerprint, identitySchema } from "pstdio-sync-contract
 import { z } from "zod";
 import { grantSchema, ownerSchema } from "./contracts";
 import type { ManagerDatabase } from "./database";
-import { accounts, credentials, requests, restoreRequests, workbenches } from "./schema";
+import {
+  accounts,
+  credentials,
+  loginChallenges,
+  ownerSessions,
+  requests,
+  restoreRequests,
+  workbenches,
+} from "./schema";
 
 const snapshotSchema = z
   .strictObject({
@@ -86,6 +94,8 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
       if (known && (known.fingerprint !== row.fingerprint || canonicalJson(known.result) !== canonicalJson(row.result)))
         throw new Error("Manager snapshot conflicts with a known request outcome");
     }
+    await transaction.delete(loginChallenges);
+    await transaction.delete(ownerSessions);
     await transaction.delete(credentials);
     await transaction.update(accounts).set({ state: "disabled" });
     if (snapshot.accounts.length)

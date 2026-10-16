@@ -6,12 +6,10 @@ import {
   registrationSchema,
   replacementSchema,
 } from "./contracts";
+import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
 import { executeRequest } from "./requests";
 import { accounts, credentials, workbenches } from "./schema";
-
-export const digestCredential = (token: string) => new Bun.CryptoHasher("sha256").update(token).digest("hex");
-const mint = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
 
 const issue = async (transaction: ManagerTransaction, intent: RegistrationInput, token: string) => {
   const account = (await transaction.select().from(accounts).where(eq(accounts.id, intent.accountId)))[0];
@@ -35,7 +33,7 @@ const issue = async (transaction: ManagerTransaction, intent: RegistrationInput,
 
 export const registerCredential = async (db: ManagerDatabase, input: RegistrationInput) => {
   const intent = registrationSchema.parse(input);
-  const token = mint();
+  const token = createCredential();
   const saved = await executeRequest(db, intent, "register", intent, (transaction) =>
     issue(transaction, intent, token),
   );
@@ -44,7 +42,7 @@ export const registerCredential = async (db: ManagerDatabase, input: Registratio
 
 export const replaceCredential = async (db: ManagerDatabase, input: ReplacementInput) => {
   const intent = replacementSchema.parse(input);
-  const token = mint();
+  const token = createCredential();
   const saved = await executeRequest(db, intent, "replace", intent, async (transaction) => {
     const replaced = await transaction
       .update(credentials)

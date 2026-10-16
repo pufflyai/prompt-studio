@@ -16,7 +16,17 @@ Construct `createGoogleIdentityVerifier(clientId)` inside the trusted manager. C
 
 The optional second constructor argument is a trusted fetch transport for the fixed key request, such as a proxy. Token headers cannot select a key URL, transport or algorithm. JOSE owns the public key cache and refresh behavior; its defaults remain unchanged. A warm cache can verify already fetched overlapping signing keys without another request. Unknown keys and failed cold retrieval cannot authenticate. Verification failures return a generic error without the original error/cause, which can contain rejected claims. No token or profile is stored or logged.
 
-This verifier is stateless. The later login owner must generate and atomically consume a one-time state/nonce challenge, complete the code exchange, check current account ownership/lifecycle, and establish an application session. Never read the expected nonce from an untrusted callback body. Verification alone grants no account/environment permission and does not provision an account. Live OAuth client/secret/redirect setup remains required for browser sign-in.
+This verifier is stateless. The private login methods below own challenge/session persistence. The later browser handler must complete code exchange, verify identity against the stored nonce and compose the current account check. Never read the expected nonce from an untrusted callback body. Verification alone grants no account/environment permission and does not provision an account. Live OAuth client/secret/redirect setup remains required for browser sign-in.
+
+## One-time login and owner sessions
+
+The trusted manager begins login with an explicit finite challenge expiry. `beginLogin` returns a new state, nonce and browser-binding secret. Persist only state/binding digests and the nonce. The future browser handler must protect the binding secret in the initiating browser and send state/nonce through the Google flow. `loginChallenge(state, binding)` returns the stored nonce only while that challenge is pending and unexpired.
+
+After code exchange and Google verification against that nonce, call `completeLogin` with state/binding, the existing account, canonical verified owner and an explicit session expiry from trusted server policy. The private store rechecks current account ownership/lifecycle, consumes the pending challenge and creates a session in one transaction. Its account lock is shared with lifecycle mutations. Independent completions have one winner. A lost successful response requires a fresh login; replay cannot issue a second credential or recover plaintext.
+
+Only a session digest, account reference and expiry persist. `authorizeSession(token)` checks current active account state and database time, returning account identity or `null`. `logout(token)` removes that session idempotently. Disable and reconciliation remove that account's sessions; another account is unaffected. Beginning a new challenge removes expired challenges/sessions. No product lifetime default, quota, copied owner/active state or new scheduler is introduced.
+
+These are private data-owner methods. Never pass raw callback claims as the verified owner or take expiries from an untrusted body. The later HTTP handler owns secure cookies, CSRF transport, signup/account selection and public route permissions. Session persistence does not itself complete browser login.
 
 ## Internal operations
 
@@ -30,6 +40,11 @@ This verifier is stateless. The later login owner must generate and atomically c
 | `revoke(intent)` | Revoke that account/environment's grants across its workbenches. Another account with overlapping IDs is unaffected. |
 | `disable(intent)` | Disable account authorization and new issuance. Retried historical issuance returns metadata, not new authority. |
 | `reconcile(intent)` | Apply explicit current operator ownership/lifecycle and revoke all existing account grants. This is the private recovery boundary, not a user-facing ownership-transfer API. |
+| `beginLogin({ expiresAt })` | Generate a browser-bound pending login challenge with an explicit trusted expiry. |
+| `loginChallenge(state, binding)` | Read the expected nonce from a live matching pending challenge, or return `null`. |
+| `completeLogin(intent)` | Consume a challenge once and create a session for the current active matching account owner. The caller supplies verified identity and trusted expiry. |
+| `authorizeSession(token)` | Return current account identity for a live owner session, or `null`. |
+| `logout(token)` | Remove that owner session idempotently. |
 | `snapshot()` | Capture a consistent, versioned private manager snapshot. It excludes credential rows and digests. |
 | `restore(requestId, snapshot)` | Import missing history, preserve known identities and receipts, remove every credential and disable all accounts atomically. An exact completed retry preserves authority established afterward; changed input cannot reuse its ID. |
 | `close()` | Close this owner's PostgreSQL connections. |
@@ -46,11 +61,11 @@ Keep manager and content recovery separate. Restoring content must not call mana
 
 An owned manager restore uses a new immutable operator request ID. It first validates snapshot account/workbench relationships and receipt result ownership. It rejects a snapshot receipt whose fingerprint or result conflicts with a known request. Its transaction imports missing account/workbench identities and receipts, retains all known history and current owner metadata, removes every credential and disables every known or imported account. Historical identities are not permission. Even an account created after the snapshot stays disabled, and replaying its completed provision or registration cannot create new authority.
 
-The operator then establishes current ownership/lifecycle with a new reconciliation intent. The later authenticated service requires fresh Google sign-in and environment registration. Owned restore preserves known completion history; it does not recover unknown history absent from an external backup.
+Pending challenges and owner sessions are excluded from snapshots. Restore removes all of them in the same transaction as environment credentials. The operator then establishes current ownership/lifecycle with a new reconciliation intent. A fresh Google challenge/session and environment registration are required. Owned restore preserves known completion history; it does not recover unknown history absent from an external backup.
 
 Restore receipts live outside account snapshots. Existence records committed completion, so a retry after a lost response cannot disable fresh registrations. Another intentional restore needs another request ID. Shared/exclusive PostgreSQL transaction locks serialize restore and authority mutations; snapshot reads use repeatable-read isolation.
 
-This snapshot is private operator data. It contains account identities and request metadata even though it excludes credential material. It is not encrypted backup tooling or a public content export. Future manager session credentials must also participate in recovery invalidation.
+This snapshot is private operator data. It contains account identities and request metadata even though it excludes credential material. It is not encrypted backup tooling or a public content export. Any future credential types must also participate in recovery invalidation.
 
 ## Validate in Docker
 
@@ -63,7 +78,7 @@ bun run --cwd infra/account-manager lint
 bun run --cwd infra/account-manager build
 ```
 
-The isolated command starts its own PostgreSQL container, creates distinct manager and relay roles/databases, runs the real-store tests, then builds and runs `Dockerfile.smoke`. Google verification tests use real disposable RSA keys and an HTTP public-key fixture inside the test container. The smoke imports the actual bundled `authority.js` and uses copied generated migrations without a developer checkout or dependency install in its runtime image. It checks restart, duplicate issuance, revocation, restore invalidation/retry and Google signature/context verification through the same fixture transport. No live Google account or OAuth secret is used.
+The isolated command starts its own PostgreSQL container, creates distinct manager and relay roles/databases, runs the real-store tests, then builds and runs `Dockerfile.smoke`. Google verification tests use real disposable RSA keys and an HTTP public-key fixture inside the test container. The smoke imports the actual bundled `authority.js` and uses copied generated migrations without a developer checkout or dependency install in its runtime image. It checks restart, duplicate issuance, revocation, restore invalidation/retry, Google verification and browser-bound owner sessions. The source suite also proves migration upgrade preservation and controlled lifecycle races. No live Google account or OAuth secret is used.
 
 The Linux isolated infrastructure CI job runs the source suite and built image explicitly, alongside the relay checks. Manager changes select that job. Cross-platform package checks still build and lint this private owner; it has no ordinary `test` target that would launch Linux containers from Windows. Existing allowances and workloads remain unchanged. For a focused source file, append its path to `test:isolated`, such as `src/recovery.test.ts`; the built smoke still follows a passing source run.
 

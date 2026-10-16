@@ -59,10 +59,43 @@ try {
     assert.ok(error instanceof Error);
     assert.ok(!Bun.inspect(error, { depth: Infinity }).includes(privateProfile));
     assert.ok(!Bun.inspect(error, { depth: Infinity }).includes(rejected));
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const login = async () => {
+      const challenge = await reopened.beginLogin({ expiresAt });
+      const pending = await reopened.loginChallenge(challenge.state, challenge.binding);
+      assert.ok(pending);
+      const verified = await verify(await google.sign({ sub: accountId, nonce: pending.nonce }), pending.nonce);
+      return reopened.completeLogin({
+        state: challenge.state,
+        binding: challenge.binding,
+        accountId,
+        owner: verified,
+        expiresAt,
+      });
+    };
+    const session = await login();
+    assert.deepEqual(await reopened.authorizeSession(session.token), { accountId });
+    const pendingLogin = await reopened.beginLogin({ expiresAt });
+    const loginSnapshot = await reopened.snapshot();
+    assert.ok(!JSON.stringify(loginSnapshot).includes(session.token));
+    await reopened.restore("restore-owner-sessions", loginSnapshot);
+    assert.equal(await reopened.authorizeSession(session.token), null);
+    assert.equal(await reopened.loginChallenge(pendingLogin.state, pendingLogin.binding), null);
+    await reopened.reconcile({
+      requestId: "current-owner-for-login",
+      accountId,
+      owner: { issuer: "https://accounts.google.com", subject: accountId },
+      state: "active",
+    });
+    const currentSession = await login();
+    await reopened.restore("restore-owner-sessions", loginSnapshot);
+    assert.deepEqual(await reopened.authorizeSession(currentSession.token), { accountId });
+    await reopened.logout(currentSession.token);
+    assert.equal(await reopened.authorizeSession(currentSession.token), null);
   } finally {
-    google.close();
+    await google.close();
   }
-  console.log("Built private manager authority, recovery and Google identity verification passed");
+  console.log("Built private manager authority, recovery, Google identity and owner login passed");
 } finally {
   await Promise.all(owners.map((owner) => owner.close()));
   await fixture.close();

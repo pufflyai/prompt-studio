@@ -31,3 +31,14 @@ export type ReplacementInput = z.input<typeof replacementSchema>;
 export type AccountRequest = z.input<typeof accountRequestSchema>;
 export type RevokeInput = z.input<typeof revokeSchema>;
 export type ReconciliationInput = z.input<typeof reconciliationSchema>;
+
+export const beginLoginSchema = z.strictObject({ expiresAt: z.iso.datetime() });
+export const completeLoginSchema = z.strictObject({
+  state: identitySchema,
+  binding: identitySchema,
+  accountId: identitySchema,
+  owner: ownerSchema,
+  expiresAt: z.iso.datetime(),
+});
+export type BeginLoginInput = z.input<typeof beginLoginSchema>;
+export type CompleteLoginInput = z.input<typeof completeLoginSchema>;

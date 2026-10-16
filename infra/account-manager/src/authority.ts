@@ -3,6 +3,8 @@ import { canonicalJson, identitySchema } from "pstdio-sync-contracts";
 import {
   type AccountRequest,
   accountRequestSchema,
+  type BeginLoginInput,
+  type CompleteLoginInput,
   type ProvisionInput,
   provisionSchema,
   type ReconciliationInput,
@@ -12,15 +14,22 @@ import {
   reconciliationSchema,
   revokeSchema,
 } from "./contracts";
+import { digestCredential } from "./credential";
 import { connectManager } from "./database";
-import { digestCredential, registerCredential, replaceCredential } from "./grants";
+import { authorizeSession, beginLogin, completeLogin, loginChallenge, logout } from "./google-login";
+import { registerCredential, replaceCredential } from "./grants";
 import { captureManager, restoreManager } from "./recovery";
 import { executeRequest } from "./requests";
-import { accounts, credentials } from "./schema";
+import { accounts, credentials, ownerSessions } from "./schema";
 
 export const createAccountManager = (databaseUrl: string) => {
   const connection = connectManager(databaseUrl);
   return {
+    beginLogin: (input: BeginLoginInput) => beginLogin(connection.db, input),
+    loginChallenge: (state: string, binding: string) => loginChallenge(connection.db, state, binding),
+    completeLogin: (input: CompleteLoginInput) => completeLogin(connection.db, input),
+    authorizeSession: (token: string) => authorizeSession(connection.db, token),
+    logout: (token: string) => logout(connection.db, token),
     async provision(input: ProvisionInput) {
       const intent = provisionSchema.parse(input);
       const saved = await executeRequest(connection.db, intent, "provision", intent, async (transaction) => {
@@ -71,12 +80,14 @@ export const createAccountManager = (databaseUrl: string) => {
           .where(eq(accounts.id, intent.accountId))
           .returning({ id: accounts.id });
         if (!rows.length) throw new Error("Unknown account");
+        await transaction.delete(ownerSessions).where(eq(ownerSessions.accountId, intent.accountId));
         return { accountId: intent.accountId };
       });
     },
     async reconcile(input: ReconciliationInput) {
       const intent = reconciliationSchema.parse(input);
       await executeRequest(connection.db, intent, "reconcile", intent, async (transaction) => {
+        await transaction.delete(ownerSessions).where(eq(ownerSessions.accountId, intent.accountId));
         await transaction
           .update(credentials)
           .set({ revokedAt: sql`clock_timestamp()` })
