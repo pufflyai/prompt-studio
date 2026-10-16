@@ -1,45 +1,10 @@
-import { createMemoryResources } from "@pstdio/sdk/testing";
+import { createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
 import type { ExtensionRuntime } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
-export const makeStorage = () => {
-  const state = new Map<string, unknown>();
-  const api: CommandRunnerEnvironment["storage"] = {
-    assets: {
-      stage: async () => {
-        throw new Error("Asset staging requires the host runtime");
-      },
-      getTransfer: async () => undefined,
-      cancel: async () => undefined,
-      read: async () => {
-        throw new Error("Asset reads require the host runtime");
-      },
-      verifyComplete: async () => {},
-    },
-    scope: () => api,
-    files: {
-      put: async () => ({}) as never,
-      get: async () => undefined,
-      getBytes: async () => new Uint8Array(),
-      list: async () => [],
-      delete: async () => {},
-      urlFor: () => "",
-    },
-    get: async (key) => state.get(String(key)) as never,
-    set: async (key, value) => {
-      state.set(String(key), value);
-    },
-    delete: async (key) => {
-      state.delete(String(key));
-    },
-    collection: () => {
-      throw new Error("collection not implemented in test");
-    },
-  };
-  return { api, state };
-};
+export const makeStorage = () => ({ api: createMemoryStorage() });
 
 const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
 

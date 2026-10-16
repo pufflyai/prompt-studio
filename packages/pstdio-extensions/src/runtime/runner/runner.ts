@@ -58,7 +58,11 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
     execute: (input: CommandExecuteInput) => executeInternal({ ...input, depth: 0 }),
     executeHostCommand: (input) => executeHostCommand(state, input),
     dispatchEvent: (input: ExtensionEventDispatchInput): Promise<EventDeliveryResult> =>
-      dispatcher.dispatch(input.eventId, { ...(input.payload ?? {}), projectId: input.projectId } as Struct),
+      dispatcher.dispatch(input.eventId, { ...(input.payload ?? {}), projectId: input.projectId } as Struct, {
+        projectId: input.projectId,
+        workspaceDir: input.payload?.workspaceDir as string | undefined,
+        workspaceId: input.payload?.workspaceId as string | undefined,
+      }),
   };
 };
 

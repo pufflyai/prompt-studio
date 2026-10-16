@@ -68,7 +68,7 @@ const runHostCommand = async <TResult>(
     input.projectId,
     input.source,
   );
-  await state.dispatcher.dispatch(lifecycleEventId("requested", input.commandId), requestedPayload);
+  await state.dispatcher.dispatch(lifecycleEventId("requested", input.commandId), requestedPayload, input);
 
   const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
     state.factory.buildCommandContext(
@@ -97,7 +97,7 @@ const runHostCommand = async <TResult>(
 
   if (middlewareResult.status === "reject") {
     const rejectedPayload = { ...requestedPayload, ...middlewareResult.rejection };
-    await state.dispatcher.dispatch(lifecycleEventId("rejected", input.commandId), rejectedPayload);
+    await state.dispatcher.dispatch(lifecycleEventId("rejected", input.commandId), rejectedPayload, input);
     return withNotices(
       {
         ok: false,
@@ -117,28 +117,36 @@ const runHostCommand = async <TResult>(
     resource: finalInvocation.resource,
   };
 
-  await state.dispatcher.dispatch(lifecycleEventId("started", input.commandId), startedPayload);
+  await state.dispatcher.dispatch(lifecycleEventId("started", input.commandId), startedPayload, input);
 
   const start = Date.now();
   try {
     if (input.signal?.aborted) throw input.signal.reason;
     const value = await input.run(finalInvocation);
     const elapsedMs = Date.now() - start;
-    await state.dispatcher.dispatch(lifecycleEventId("completed", input.commandId), {
-      ...startedPayload,
-      result: value,
-      elapsedMs,
-    });
+    await state.dispatcher.dispatch(
+      lifecycleEventId("completed", input.commandId),
+      {
+        ...startedPayload,
+        result: value,
+        elapsedMs,
+      },
+      input,
+    );
     return withNotices({ ok: true, status: "success", value }, notices);
   } catch (err) {
     const elapsedMs = Date.now() - start;
     const message = err instanceof Error ? err.message : String(err);
-    await state.dispatcher.dispatch(lifecycleEventId("failed", input.commandId), {
-      ...startedPayload,
-      reason: message,
-      error: serializeError(err),
-      elapsedMs,
-    });
+    await state.dispatcher.dispatch(
+      lifecycleEventId("failed", input.commandId),
+      {
+        ...startedPayload,
+        reason: message,
+        error: serializeError(err),
+        elapsedMs,
+      },
+      input,
+    );
     return withNotices(
       { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
       notices,
