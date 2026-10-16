@@ -6,6 +6,35 @@ import { applyRecordChange } from "./records";
 import { inspectConflict, resolutionEntry } from "./resolution";
 import { conflictedState } from "./sync-state.fixture";
 
+test("a resolved local conflict cannot be chosen again with fresh record inputs", async () => {
+  const { state } = await conflictedState();
+  const inspection = await inspectConflict(state, "writer", "branch");
+  const proposal = {
+    conflictId: inspection.conflictId,
+    capturedOperationIds: inspection.capturedOperationIds,
+    expectedConflicts: inspection.expectedConflicts,
+    expectedInputs: inspection.expectedInputs,
+  };
+  state.journal.push(await resolutionEntry(state, { ...proposal, operationId: "first", choose: "local" }, "writer"));
+  const current = await projectGroups(state, "writer");
+  expect(current.conflicts).toEqual([]);
+  state.journal.push(
+    await resolutionEntry(
+      state,
+      {
+        ...proposal,
+        operationId: "stale-root",
+        choose: "remote",
+        expectedInputs: [{ recordId: "note", revision: current.read("note").revision }],
+      },
+      "writer",
+    ),
+  );
+  const after = await projectGroups(state, "writer");
+  expect(after.outcomes.get("stale-root")?.status).toBe("conflict");
+  expect(after.read("note").value).toBe(current.read("note").value);
+});
+
 test("a fresh relay conflict choice uses the current local records and conflict revisions", async () => {
   const { state } = await conflictedState();
   const current = (await projectGroups(state, "writer")).read("note");
