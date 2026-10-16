@@ -65,3 +65,36 @@ test("plain path bubbles complete across streamed chunks and retain their identi
   expect(links().map((node) => node.__candidate.source)).toEqual(["src/app.tsx", "README.md"]);
   expect(links()[0]?.getKey()).not.toBe(firstKey);
 });
+
+test.each([
+  ["src/app/(dashboard)/page.ts", "src/app/(dashboard)/page.ts"],
+  ["(src/app/(dashboard)/page.ts)", "src/app/(dashboard)/page.ts"],
+  ["src/app/(dash(board))/page.ts:12:4", "src/app/(dash(board))/page.ts:12:4"],
+  ["(dashboard)/page.ts", "(dashboard)/page.ts"],
+  ["src/app/(dashboard)/page.ts)", "src/app/(dashboard)/page.ts"],
+  ["src/app/[id]/page.ts", "src/app/[id]/page.ts"],
+])("preserves the complete plain path in %s", (text, path) => {
+  const { editor, links } = pathEditor();
+  const source = `Read ${text}. Then continue.`;
+  editor.update(() => importMarkdownToLexical(source), { discrete: true });
+  expect(links().map((node) => node.__candidate.source)).toEqual([path]);
+  editor.read(() => expect($getRoot().getTextContent()).toBe(source));
+});
+
+test("does not link fragments of paths with mismatched delimiters", () => {
+  const { editor, links } = pathEditor();
+  editor.update(() => importMarkdownToLexical("Read src/app/(dashboard]/page.ts."), { discrete: true });
+  expect(links()).toHaveLength(0);
+});
+
+test("route-group paths stream into a complete bubble without changing the target", () => {
+  const { editor, links } = pathEditor();
+  const update = (source: string) => editor.update(() => importStreamingMarkdownToLexical(source), { discrete: true });
+  update("Read src/app/(dashboard)/pa");
+  expect(links()).toHaveLength(0);
+  update("Read src/app/(dashboard)/page.ts");
+  expect(links().map((node) => node.__candidate.source)).toEqual(["src/app/(dashboard)/page.ts"]);
+  const key = links()[0]?.getKey();
+  update("Read src/app/(dashboard)/page.ts. Then continue.");
+  expect(links()[0]?.getKey()).toBe(key);
+});

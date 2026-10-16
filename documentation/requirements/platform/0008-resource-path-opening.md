@@ -34,6 +34,7 @@ labels, icons, and destinations. The host must not contain ticket-specific routi
   replacing any competing section while retaining parent navigation.
 - Detect ordinary file paths in prose without agent-specific link formatting.
   Support Markdown links, inline-code file references, and explicit reference links too.
+  Preserve route-group parentheses and dynamic path segments; never turn a path suffix into a different file link.
   Preserve keyboard activation, web links, source positions, and editable Markdown.
 - Keep completed bubbles stable while more text streams. Ignore late presentation
   results after a link changes or its view closes.

@@ -180,6 +180,33 @@ export const StandaloneRichMessage: Story = {
     />
   ),
 };
+export const ParenthesizedPaths: Story = {
+  render: () => {
+    const [opened, setOpened] = useState<string>();
+    return (
+      <>
+        <RichMessage
+          defaultState="Read src/app/(dashboard)/page.ts and (src/app/[id]/page.ts)."
+          linkHandler={{
+            resolveHref: (candidate) => `/projects/demo/workspace?document=${encodeURIComponent(candidate.source)}`,
+            open: (candidate) => setOpened(candidate.source),
+          }}
+        />
+        <Text data-testid="opened-path">{opened}</Text>
+      </>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const path = "src/app/(dashboard)/page.ts";
+    const link = await canvas.findByRole("link", { name: path, exact: true });
+    await expect(link).toHaveAttribute("href", `/projects/demo/workspace?document=${encodeURIComponent(path)}`);
+    await userEvent.click(link);
+    await expect(canvas.getByTestId("opened-path")).toHaveTextContent(path);
+    await expect(canvas.getByRole("link", { name: "src/app/[id]/page.ts", exact: true })).toBeVisible();
+    await expect(canvas.queryByRole("link", { name: "/page.ts", exact: true })).toBeNull();
+  },
+};
 export const EditableSource: Story = {
   render: () => <EditableLinkMessage />,
   play: async ({ canvasElement }) => {
