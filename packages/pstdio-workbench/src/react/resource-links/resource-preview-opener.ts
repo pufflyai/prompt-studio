@@ -11,6 +11,10 @@ import { relatedResourcePageKey } from "./related-resource-page-key";
 
 const findPage = (ctx: WorkbenchModuleContext, ref: PageRef) =>
   ctx.pages.listPages().find((page) => page.ref.id === ref.id && page.ref.extensionId === ref.extensionId);
+const findOpenResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) =>
+  Object.values(ctx.layout.getLayout().regions)
+    .flatMap((region) => region.widgets.map((panel) => ({ region: region.id, panel })))
+    .find(({ panel }) => panel.resource && resourceKey(panel.resource) === resourceKey(resource));
 const pagePreviewView = (ctx: WorkbenchModuleContext, pageRef: PageRef, resource: ResourceRef) => {
   const page = findPage(ctx, pageRef);
   if (!page) return;
@@ -63,7 +67,6 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
       activate: false,
       relatedSource: relatedResourcePageKey(ctx),
     });
-    reveal(region);
     return true;
   };
   const openPanel = (
@@ -101,6 +104,34 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
         relatedSource: relatedResourcePageKey(ctx),
       });
     else ctx.modePlacements.openPlacement({ panel, resource, open, relatedSource: relatedResourcePageKey(ctx) });
+    return true;
+  };
+  const present = (
+    target: Extract<NavigationTarget, { kind: "page" | "panel" }>,
+    resource: ResourceRef,
+    source: ResourceRef,
+    options: RelatedResourceOpening,
+  ) => {
+    if (target.kind === "panel") return Boolean(openPanel(target, resource, source, options));
+    const viewId = pagePreviewView(ctx, target.page, resource);
+    return viewId ? openView(viewId, resource, source, options) : false;
+  };
+  const openResource = (
+    target: Extract<NavigationTarget, { kind: "page" | "panel" }>,
+    source: ResourceRef,
+    options: RelatedResourceOpening,
+  ) => {
+    const resource = target.resource;
+    if (!resource) return false;
+    const existing = findOpenResource(ctx, resource);
+    const region = existing?.region ?? options.region;
+    // Capture visibility before placement reconciliation can reveal the panel.
+    const select = (region === "side" || region === "secondary") && !ctx.shell.getRegionState(region).open;
+    if (!existing && !present(target, resource, source, options)) return false;
+    if (select) {
+      const panel = findOpenResource(ctx, resource)?.panel;
+      if (panel) ctx.layout.setRegionActiveWidget(region, panel.widgetId);
+    }
     reveal(region);
     return true;
   };
@@ -111,18 +142,7 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
       return opened;
     }
     if (target.kind !== "panel" && target.kind !== "page") return false;
-    const resource = target.resource;
-    if (!resource) return false;
-    const existing = Object.values(ctx.layout.getLayout().regions)
-      .flatMap((region) => region.widgets.map((panel) => ({ region: region.id, panel })))
-      .find(({ panel }) => panel.resource && resourceKey(panel.resource) === resourceKey(resource));
-    if (existing) {
-      reveal(existing.region);
-      return true;
-    }
-    if (target.kind === "panel") return Boolean(openPanel(target, resource, source, options));
-    const viewId = pagePreviewView(ctx, target.page, resource);
-    return viewId ? openView(viewId, resource, source, options) : false;
+    return openResource(target, source, options);
   };
   const unsubscribe = ctx.views.store.subscribe(() => {
     for (const [id, projection] of projections) {

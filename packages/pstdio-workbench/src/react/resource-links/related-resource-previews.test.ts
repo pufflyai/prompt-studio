@@ -187,6 +187,7 @@ test("opens a related resource behind the selected mode tab while retaining sour
     },
   });
   s.workbench.modePlacements.openPlacement({ panel, resource: ref("document", "old"), open: "pin" });
+  s.workbench.shell.setRegionOpen("side", true);
   const active = s.workbench.layout.getLayout().activeWidgetId;
   s.service.resolve = async (resources) =>
     resources.map((resource) => ({

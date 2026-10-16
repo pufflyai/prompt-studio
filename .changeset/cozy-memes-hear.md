@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Add passive resource-owned related openings with page cleanup, preserve manually opened panels across navigation, and clarify tab replacement feedback
+Add resource-owned related openings with panel-aware tab selection and page cleanup, preserve manual panels across navigation, and clarify tab replacement feedback
