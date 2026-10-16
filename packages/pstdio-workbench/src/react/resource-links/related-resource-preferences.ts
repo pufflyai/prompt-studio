@@ -19,9 +19,18 @@ const choiceChanged = (before: WorkbenchRegionState, after: WorkbenchRegionState
 
 // Layout state follows the project. These are only the user's overrides of a
 // resource page's related-opening defaults, not another copy of its layout.
-export const createRelatedResourcePreferences = (ctx: WorkbenchModuleContext, changed: () => void) => {
+export const createRelatedResourcePreferences = (
+  ctx: WorkbenchModuleContext,
+  canonicalize: (source: ResourceRef) => ResourceRef | undefined,
+  changed: () => void,
+) => {
   const writes = new Map<string, { value: PageChoices; promise: Promise<void> }>();
-  const scope = () => ({ scope: "user" as const, scopeId: relatedResourcePageKey(ctx) });
+  const currentResource = () => {
+    const source = ctx.pages.store.getState().location?.resource;
+    return source && canonicalize(source);
+  };
+  const pageKey = () => relatedResourcePageKey(ctx, currentResource());
+  const scope = () => ({ scope: "user" as const, scopeId: pageKey() });
   const read = () =>
     writes.get(scope().scopeId)?.value ??
     (ctx.preferences.getOwnedValue("workbench.related-resources", "panels", scope()) as PageChoices | undefined) ??
@@ -53,14 +62,14 @@ export const createRelatedResourcePreferences = (ctx: WorkbenchModuleContext, ch
           (panel.viewId && !ctx.views.getView(panel.viewId))),
     );
   const forSource = (source: ResourceRef) =>
-    resourceKey(source) === resourceKey(ctx.pages.store.getState().location?.resource) ? read() : {};
+    resourceKey(canonicalize(source)) === resourceKey(currentResource()) ? read() : {};
   const isResourcePage = () => {
-    const source = ctx.pages.store.getState().location?.resource;
+    const source = currentResource();
     const owner = source && ctx.resources.getKind(source.type);
     return source && owner?.extensionId === source.extensionId && Boolean(owner?.relatedOpenings);
   };
   const snapshot = () => ({
-    key: relatedResourcePageKey(ctx),
+    key: pageKey(),
     scope: ctx.layout.getPersistenceScope(),
     layout: ctx.layout.getLayout(),
     widgets: ctx.layout.store.getState().widgets,
@@ -113,8 +122,8 @@ export const createRelatedResourcePreferences = (ctx: WorkbenchModuleContext, ch
   return {
     run,
     enter(source: ResourceRef) {
-      if (resourceKey(source) !== resourceKey(ctx.pages.store.getState().location?.resource)) return;
-      observing = relatedResourcePageKey(ctx);
+      if (resourceKey(canonicalize(source)) !== resourceKey(currentResource())) return;
+      observing = pageKey();
       previous = snapshot();
     },
     openings(source: ResourceRef, defaults: RelatedResourceOpening[]) {
