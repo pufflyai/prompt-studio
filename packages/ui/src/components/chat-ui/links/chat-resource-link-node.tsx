@@ -54,7 +54,11 @@ export class ChatResourceLinkNode extends DecoratorNode<ReactElement> {
         node.getSource() === this.__candidate.source &&
         node.getTextContent() === this.__label
       );
-    return $isTextNode(node) && node.hasFormat("code") && node.getTextContent() === this.__candidate.source;
+    return (
+      $isTextNode(node) &&
+      node.hasFormat("code") === (this.__candidate.origin === "inline-code") &&
+      node.getTextContent() === this.__candidate.source
+    );
   }
   decorate() {
     return <ChatResourceLink candidate={this.__candidate} label={this.__label} />;

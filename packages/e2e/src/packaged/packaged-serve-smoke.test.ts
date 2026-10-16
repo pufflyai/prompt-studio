@@ -51,7 +51,7 @@ import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke
 // Timeline coverage checks Auto Build scope, short wakes, managed status, and owner reconciliation of Done dependency branches, including Git conflicts.
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
-// Composer coverage keeps explicit web references intact and natively clickable in packaged messages.
+// Composer coverage detects plain file paths and keeps web references natively clickable in packaged messages.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.

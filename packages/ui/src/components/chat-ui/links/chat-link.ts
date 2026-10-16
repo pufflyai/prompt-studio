@@ -1,6 +1,6 @@
 export interface ChatLinkCandidate {
   source: string;
-  origin: "markdown" | "inline-code" | "reference" | "tool";
+  origin: "markdown" | "inline-code" | "reference" | "tool" | "text";
 }
 
 export interface ChatLinkHandler {

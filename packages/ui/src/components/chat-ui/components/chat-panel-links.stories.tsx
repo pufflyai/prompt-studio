@@ -66,7 +66,7 @@ const LinkConversation = (props: { streaming?: boolean }) => {
 };
 
 const EditableLinkMessage = () => {
-  const source = '[Source](src/app.ts "Original title") after.';
+  const source = '[Source](src/app.ts "Original title") after README.md.';
   const [markdown, setMarkdown] = useState(source);
   return (
     <>
@@ -135,7 +135,7 @@ export const ResourceBubbles: Story = {
     return (
       <>
         <RichMessage
-          defaultState="Review [ticket](tickets/T-1/ticket.md), `tickets/T-1/ticket.md`, and {{link('tickets/T-1/ticket.md')}}. Read [notes](tickets/T-1/files/notes.md). [Website](https://example.com) stays a web link."
+          defaultState="Review tickets/T-1/ticket.md, [ticket](tickets/T-1/ticket.md), `tickets/T-1/ticket.md`, and {{link('tickets/T-1/ticket.md')}}. Read tickets/T-1/files/notes.md. [Website](https://example.com) stays a web link."
           linkHandler={{
             resolveHref: () => null,
             resolveResource: async (candidate) => ({
@@ -153,7 +153,7 @@ export const ResourceBubbles: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const links = await canvas.findAllByRole("link", { name: "T-1 Fix resource links" });
-    await expect(links).toHaveLength(3);
+    await expect(links).toHaveLength(4);
     for (const link of links) {
       await expect(link.querySelector("svg.lucide-component")).not.toBeNull();
       await expect(link.querySelector('[data-scope="tooltip"]')).toBeNull();
@@ -189,6 +189,7 @@ export const EditableSource: Story = {
     await userEvent.type(editor, " updated", { skipClick: true });
     await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent('"Original title"');
     await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent("updated");
+    await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent("README.md");
     await expect(canvas.getByTestId("exported-markdown")).not.toHaveTextContent("Workspace demo");
   },
 };

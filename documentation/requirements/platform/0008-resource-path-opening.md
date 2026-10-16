@@ -32,7 +32,8 @@ labels, icons, and destinations. The host must not contain ticket-specific routi
 - Keep explicit web references on the native web-opening path, with mouse and keyboard activation.
 - Apply source positions to page destinations and every page in compound destinations,
   replacing any competing section while retaining parent navigation.
-- Support Markdown links, inline-code file references, and explicit reference links.
+- Detect ordinary file paths in prose without agent-specific link formatting.
+  Support Markdown links, inline-code file references, and explicit reference links too.
   Preserve keyboard activation, web links, source positions, and editable Markdown.
 - Keep completed bubbles stable while more text streams. Ignore late presentation
   results after a link changes or its view closes.
@@ -76,8 +77,9 @@ schema change, stored message rewrite, or migration.
 3. Prefer a more specific path claim and do not match a sibling directory with a similar name.
 4. Open an unclaimed file through the workspace browser. Reject an outside-workspace
    path and a resolver result from another resource owner or project.
-5. Show owner labels and icons for Markdown, inline-code, and explicit reference
-   bubbles. Activate them by keyboard and preserve ordinary web links.
+5. Share a plain ticket or saved-document path in prose and show its owner label and
+   icon without requiring any link syntax. Support Markdown, inline-code, and explicit
+   reference bubbles too. Activate them by keyboard and preserve ordinary web links.
 6. Stream more text without recreating earlier bubbles. Edit Markdown without
    replacing its source with resolved labels or URLs.
 7. Load an independent extension's declaration through the packaged host, expose

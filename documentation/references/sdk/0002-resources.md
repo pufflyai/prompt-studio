@@ -99,6 +99,7 @@ panel, or compound target to choose how the resource opens. Page targets retain
 source line and column positions. Unclaimed and missing paths open as workspace
 files. Resolution errors appear in the conversation when the link is opened.
 
-Read-only rich messages show file and resource links as resource bubbles. Owner
+Read-only rich messages detect ordinary file paths in prose and show them as resource
+bubbles. Agents can share paths without knowing any special link syntax. Owner
 resolution supplies the label, icon, and navigation URL. Ordinary web links keep
 their normal appearance. Editable messages retain their original Markdown source.
