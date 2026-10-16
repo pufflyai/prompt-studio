@@ -1,7 +1,7 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type GuestHost, workbenchPanels } from "@pstdio/sdk/extensions";
-import { type HostStorage, HostStorageProvider } from "@pstdio/ui";
+import { type HostStorage, HostStorageProvider, installPrismGlobal } from "@pstdio/ui";
 import {
   type CollectionViewsSource,
   filterRowsByView,
@@ -25,11 +25,19 @@ import { usePlanActions } from "./use-plan-actions";
 import { useTimelineViews } from "./use-timeline-views";
 import { visibleTracks } from "./visible-tracks";
 
-const Details = lazy(() => import("./details").then((module) => ({ default: module.Details })));
-const PlanEditor = lazy(() => import("./plan-editor").then((module) => ({ default: module.PlanEditor })));
-const AutoBuildDialog = lazy(() =>
-  import("./auto-build-dialog").then((module) => ({ default: module.AutoBuildDialog })),
-);
+// Published UI panels can import editor code that requires Prism before module evaluation.
+const Details = lazy(async () => {
+  await installPrismGlobal();
+  return import("./details").then((module) => ({ default: module.Details }));
+});
+const PlanEditor = lazy(async () => {
+  await installPrismGlobal();
+  return import("./plan-editor").then((module) => ({ default: module.PlanEditor }));
+});
+const AutoBuildDialog = lazy(async () => {
+  await installPrismGlobal();
+  return import("./auto-build-dialog").then((module) => ({ default: module.AutoBuildDialog }));
+});
 
 interface PlanRootProps {
   host: GuestHost;
