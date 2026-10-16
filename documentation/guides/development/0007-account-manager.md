@@ -6,9 +6,17 @@ The private account manager owns durable account and environment authority separ
 
 `infra/account-manager/` is a private Bun workspace. `createAccountManager(databaseUrl)` receives a separate manager PostgreSQL connection from the trusted manager process. Run `migrateAccountManager(databaseUrl, migrationsFolder)` with its generated migrations before opening authority operations. The manager and relay use separate databases and roles on the shared PostgreSQL server.
 
-This is an internal data owner. It starts no listener and does not verify Google ID tokens or authenticate public callers. The future Google/session service must verify sign-in and current ownership before invoking these methods. Never expose lifecycle or issuance methods directly to untrusted bodies, and never send the manager connection to extensions or local execution contexts. Supplying a Google subject or account ID is not proof of permission.
+The account authority factory starts no listener and does not authenticate public callers. The separate Google verifier below checks ID tokens; the future login/session service must also check current ownership before invoking authority methods. Never expose lifecycle or issuance methods directly to untrusted bodies, and never send the manager connection to extensions or local execution contexts. Supplying a Google subject or account ID is not proof of permission.
 
-The component implements part of PS-735. Google sign-in, public manager endpoints, relay transport, active subscription closure, deployed role configuration, backups and production recovery remain later work. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+The component implements part of PS-735. Browser sign-in, public manager endpoints, relay transport, active subscription closure, deployed role configuration, backups and production recovery remain later work. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+
+## Google identity verification
+
+Construct `createGoogleIdentityVerifier(clientId)` inside the trusted manager. Call its returned function with the Google ID token and the nonce stored for the pending login. It verifies an RS256 signature using Google's fixed public key endpoint, accepted Google issuer, configured audience, optional authorized presenter, required subject/time claims, expiry and nonce. Untrusted extra audiences fail. Successful verification returns only the canonical Google issuer and stable subject; email/profile fields do not define identity. See [Google's validation guide](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token) and [OpenID token validation](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation).
+
+The optional second constructor argument is a trusted fetch transport for the fixed key request, such as a proxy. Token headers cannot select a key URL, transport or algorithm. JOSE owns the public key cache and refresh behavior; its defaults remain unchanged. A warm cache can verify already fetched overlapping signing keys without another request. Unknown keys and failed cold retrieval cannot authenticate. Verification failures return a generic error without the original error/cause, which can contain rejected claims. No token or profile is stored or logged.
+
+This verifier is stateless. The later login owner must generate and atomically consume a one-time state/nonce challenge, complete the code exchange, check current account ownership/lifecycle, and establish an application session. Never read the expected nonce from an untrusted callback body. Verification alone grants no account/environment permission and does not provision an account. Live OAuth client/secret/redirect setup remains required for browser sign-in.
 
 ## Internal operations
 
@@ -55,7 +63,7 @@ bun run --cwd infra/account-manager lint
 bun run --cwd infra/account-manager build
 ```
 
-The isolated command starts its own PostgreSQL container, creates distinct manager and relay roles/databases, runs the real-store tests, then builds and runs `Dockerfile.smoke`. That smoke imports the actual bundled `authority.js` and uses the copied generated migrations without a developer checkout or dependency install in its runtime image. It checks restart, duplicate issuance, revocation, restore invalidation and restore retry.
+The isolated command starts its own PostgreSQL container, creates distinct manager and relay roles/databases, runs the real-store tests, then builds and runs `Dockerfile.smoke`. Google verification tests use real disposable RSA keys and an HTTP public-key fixture inside the test container. The smoke imports the actual bundled `authority.js` and uses copied generated migrations without a developer checkout or dependency install in its runtime image. It checks restart, duplicate issuance, revocation, restore invalidation/retry and Google signature/context verification through the same fixture transport. No live Google account or OAuth secret is used.
 
 The Linux isolated infrastructure CI job runs the source suite and built image explicitly, alongside the relay checks. Manager changes select that job. Cross-platform package checks still build and lint this private owner; it has no ordinary `test` target that would launch Linux containers from Windows. Existing allowances and workloads remain unchanged. For a focused source file, append its path to `test:isolated`, such as `src/recovery.test.ts`; the built smoke still follows a passing source run.
 

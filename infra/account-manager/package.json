@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.12",
     "pg": "^8.20.0",
     "pstdio-sync-contracts": "workspace:*",
     "zod": "^4.3.6"
