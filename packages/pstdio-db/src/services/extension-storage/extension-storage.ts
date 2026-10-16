@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
+import { readRetiredData } from "../../db/retired-data";
 import { extension_collection_items, extension_kv } from "../../db/schemas.pg";
+import { createStorageMigrations } from "./data-migrations";
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -231,6 +233,9 @@ export const createExtensionStorageDBService = (db: DbClient) => {
   };
 
   return {
+    migrate: createStorageMigrations(db),
+    readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
+      readRetiredData(db, source, scope),
     getKv,
     listKv,
     setKv,

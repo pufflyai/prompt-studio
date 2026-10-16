@@ -3044,6 +3044,11 @@ type StorageScope = {
   id: string;
 };
 interface ExtensionStorageApi {
+  migrate(version: number, run: (previousVersion: number) => Promise<void>): Promise<void>;
+  readLegacy(source: string): Promise<{
+    version: string;
+    records: JsonObject[];
+  } | undefined>;
   scope(scope: StorageScope): ExtensionStorageApi;
   files: ExtensionBlobsApi;
   get<T = unknown>(key: string): Promise<T | undefined>;

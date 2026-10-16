@@ -9,6 +9,7 @@ import {
   projects,
 } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
+import { createExtensionStorageDBService } from "../extension-storage/extension-storage";
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createExtensionUserDataDBService } from "./extension-user-data";
 
@@ -117,5 +118,18 @@ describe("extensionUserDataService", () => {
     await seedAllTables();
     await svc.deleteForInstance(instanceId);
     expect(await svc.hasUserData(instanceId)).toBe(false);
+  });
+});
+test("migration metadata follows retained data and resets on an explicit data purge", async () => {
+  const storage = createExtensionStorageDBService(db);
+  const scope = { extension_instance_id: instanceId, scope_type: "project", scope_id: projectId };
+  await storage.migrate(scope, 1, async () => {});
+  expect(await svc.hasUserData(instanceId)).toBe(false);
+  await storage.migrate(scope, 1, async () => {
+    throw new Error("Retained instance lost its checkpoint");
+  });
+  await svc.deleteForInstance(instanceId);
+  await storage.migrate(scope, 1, async (previous) => {
+    expect(previous).toBe(0);
   });
 });

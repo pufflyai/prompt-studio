@@ -1,27 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
-import { createMemoryResources } from "@pstdio/sdk/testing";
+import { createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 import { stubEnvironment } from "./test-helpers.test";
 
-const storage: CommandRunnerEnvironment["storage"] = {
-  scope: () => storage,
-  files: {
-    put: async () => ({}) as never,
-    get: async () => undefined,
-    getBytes: async () => new Uint8Array(),
-    list: async () => [],
-    delete: async () => {},
-    urlFor: () => "",
-  },
-  get: async () => undefined,
-  set: async () => {},
-  delete: async () => {},
-  collection: () => {
-    throw new Error("collection not implemented in test");
-  },
-};
+const storage = createMemoryStorage();
 
 const environment: CommandRunnerEnvironment = {
   project: { id: "project-1", name: "Project One", shorthand: "PO" },

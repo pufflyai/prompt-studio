@@ -63,6 +63,7 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
+import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration-smoke";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
@@ -359,6 +360,7 @@ registerResourceChoicesSmokeTests();
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+registerStorageMigrationSmokeTests();
 
 registerWorkspaceCapabilitiesSmokeTests();
 

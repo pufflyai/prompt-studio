@@ -4,6 +4,7 @@ import {
   board_default_views,
   board_views,
   extension_collection_items,
+  extension_data_versions,
   extension_files,
   extension_kv,
   extension_skill_preferences,
@@ -48,6 +49,9 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
         if (table === board_views || table === board_default_views) continue;
         await tx.delete(table).where(eq(table.extension_instance_id, extensionInstanceId));
       }
+      await tx
+        .delete(extension_data_versions)
+        .where(eq(extension_data_versions.extension_instance_id, extensionInstanceId));
       return { boardViews, boardDefaults };
     });
 

@@ -3,6 +3,7 @@ export * from "./schemas/automation";
 export * from "./schemas/board-views";
 export * from "./schemas/enums";
 export * from "./schemas/extension-connections";
+export * from "./schemas/extension-data-versions";
 export * from "./schemas/extension-resource-sequences";
 export * from "./schemas/extensions";
 export * from "./schemas/files";

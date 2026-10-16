@@ -13,7 +13,7 @@ type StorageApiInput = {
 type RuntimeStorageScope = Parameters<CommandRunnerEnvironment["storage"]["scope"]>[0];
 
 const resolveStorageScopeInput = (input: StorageApiInput, nextScope: RuntimeStorageScope) => {
-  if (nextScope.type === "project") return input;
+  if (nextScope.type === "project") return { ...input, scopeType: undefined, scopeId: undefined };
   if (nextScope.type === "resource") {
     const resource = "resource" in nextScope ? nextScope.resource : undefined;
     if (!resource?.id) throw new Error("resource storage scope requires resource.id");
@@ -36,6 +36,19 @@ export const createStorageApi = (
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
+    migrate: (version, run) =>
+      deps.extensionStorageService.migrate(scope, version, async (previous) => {
+        input.signal?.throwIfAborted();
+        await run(previous);
+        input.signal?.throwIfAborted();
+      }),
+    readLegacy: (source) =>
+      read(() =>
+        deps.extensionStorageService.readLegacy(source, {
+          projectId: input.projectId,
+          extensionInstanceId: input.extensionInstanceId,
+        }),
+      ),
     files: createExtensionBlobsApi(deps, {
       extensionInstanceId: input.extensionInstanceId,
       signal: input.signal,

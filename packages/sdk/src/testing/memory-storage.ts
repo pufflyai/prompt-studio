@@ -1,15 +1,35 @@
+import { createDataMigrationRunner } from "pstdio-api-contracts";
 import type {
   ExtensionBlobRef,
   ExtensionBlobsApi,
   ExtensionStorageApi,
   ExtensionStorageCollectionApi,
+  JsonObject,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
 
-export const createMemoryStorage = (): ExtensionStorageApi => {
+interface MemoryStorageOptions {
+  legacyData?: Record<string, { version: string; records: JsonObject[] }>;
+}
+
+export const createMemoryStorage = (options: MemoryStorageOptions = {}): ExtensionStorageApi => {
   const kv = new Map<string, unknown>();
   const collections = new Map<string, Map<string, unknown>>();
   const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
+  const migrations = new Map<string, ReturnType<typeof createDataMigrationRunner>>();
+  const migrateFor = (scope: string) => {
+    const existing = migrations.get(scope);
+    if (existing) return existing;
+    let version = 0;
+    const migrate = createDataMigrationRunner({
+      readVersion: async () => version,
+      writeVersion: async (next) => {
+        version = next;
+      },
+    });
+    migrations.set(scope, migrate);
+    return migrate;
+  };
 
   const collectionStore = (name: string) => {
     const existing = collections.get(name);
@@ -69,22 +89,29 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
     };
   };
 
-  const api: ExtensionStorageApi = {
-    files: blobsApi("project"),
-    scope(_scope: StorageScope) {
-      return api;
+  const createScopedApi = (prefix: string): ExtensionStorageApi => ({
+    migrate: migrateFor(prefix),
+    readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
+    files: blobsApi(prefix),
+    scope(scope: StorageScope) {
+      if (scope.type === "project") return createScopedApi("project");
+      let id: string | undefined;
+      if ("resource" in scope) id = scope.resource.id;
+      else if ("id" in scope) id = scope.id;
+      if (!id) throw new Error("Storage scope requires an id.");
+      return createScopedApi(JSON.stringify([scope.type, id]));
     },
     async get(key) {
-      return kv.get(key) as never;
+      return kv.get(JSON.stringify([prefix, key])) as never;
     },
     async set(key, value) {
-      kv.set(key, value);
+      kv.set(JSON.stringify([prefix, key]), value);
     },
     async delete(key) {
-      kv.delete(key);
+      kv.delete(JSON.stringify([prefix, key]));
     },
     collection<TItem>(name: string): ExtensionStorageCollectionApi<TItem> {
-      const store = collectionStore(name);
+      const store = collectionStore(JSON.stringify([prefix, name]));
       return {
         async get(id) {
           return store.get(id) as TItem | undefined;
@@ -117,11 +144,11 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
           store.delete(id);
         },
         attachments(itemId) {
-          return blobsApi(`${name}:${itemId}`);
+          return blobsApi(JSON.stringify([prefix, name, itemId]));
         },
       };
     },
-  };
+  });
 
-  return api;
+  return createScopedApi("project");
 };
