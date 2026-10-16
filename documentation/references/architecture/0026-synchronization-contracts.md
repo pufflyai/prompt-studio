@@ -26,6 +26,25 @@ The [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-ke
 now adds `storage.assets` through the public SDK and host adapter. Existing blob and collection methods remain supported.
 The grouped-storage child must follow [API versioning](../extensions/0014-api-versioning.md) when adding replacements.
 
+PS-758 implements the internal PostgreSQL persistence owner in `infra/relay/src/storage/`.
+It reuses the production record evaluator and pure resolution validator from `pstdio-sync`.
+Account/workbench/extension scope rows serialize independent writers. Current records,
+conflict metadata, one canonical operation body, its outcome, and the accepted replay
+sequence commit together. Supersession is derived from accepted resolution captures;
+it is not another stored status. Test-only references remain independent from this owner.
+
+The owner provides repeatable-read snapshots and contiguous accepted replay. Restore
+validates receipt fingerprints and the immutable bytes required by retained history,
+replaces scoped content in one transaction, and creates a new epoch. Old receipts keep
+their saved acknowledgments. Replay after restore begins at the restored sequence in
+the new epoch. It does not erase receipt ancestry or use a TTL to discard offline work.
+
+This internal scope is not authorization. The listener still exposes only liveness.
+Authenticated transport must derive current grants and published revisions, and the
+production object adapter must keep verified bytes available during publication and
+retention. See the [relay guide](../../guides/development/0006-relay.md) for migrations,
+isolated PostgreSQL/process-kill checks, and the built persistence smoke.
+
 ## Local staged assets
 
 The local runtime implements immutable `{sha256, byteLength, mediaType}` references through

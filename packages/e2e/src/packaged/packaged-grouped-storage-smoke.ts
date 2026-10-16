@@ -15,7 +15,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 export const registerGroupedStorageSmokeTests = () => {
   test(
-    "packaged public storage retains grouped caller work and resolves it after restart",
+    "packaged public storage preserves grouped conflicts and resolved branches across restarts",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "packaged-grouped-storage-"));
       const source = join(root, "source");
@@ -133,6 +133,23 @@ export const registerGroupedStorageSmokeTests = () => {
         expect(final.caption.value).toBe("Second caption");
         expect(final.note.asset).toEqual(replacement);
         expect(final.note.shared?.kind).toBe("text");
+        await stopProcess(host.child);
+        host = await startPackagedServe(root, env);
+        expect(await read(project.id)).toEqual(final);
+        const later = await command<StorageSaveOutcome>(project.id, "commit", {
+          group: {
+            operationId: "after-resolution",
+            edits: [
+              {
+                recordId: final.caption.recordId,
+                expectedRevision: final.caption.revision,
+                replace: "Caption after resolution",
+              },
+            ],
+          },
+        });
+        expect(later.status).toBe("saved-locally");
+        expect((await read(project.id)).caption.value).toBe("Caption after resolution");
       } finally {
         await stopProcess(host.child);
         rmSync(root, { recursive: true, force: true });
