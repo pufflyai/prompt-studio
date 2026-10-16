@@ -8,6 +8,7 @@ export * from "./schemas/extension-connections";
 export * from "./schemas/extension-resource-sequences";
 export * from "./schemas/extensions";
 export * from "./schemas/files";
+export * from "./schemas/grouped-storage";
 export * from "./schemas/notifications";
 export * from "./schemas/projects";
 export * from "./schemas/resource-anchors";

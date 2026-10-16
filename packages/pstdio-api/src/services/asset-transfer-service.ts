@@ -4,6 +4,7 @@ import type { createAssetTransfersDBService } from "pstdio-db";
 import { AssetIntegrityError, type createAssetBytesStorage } from "pstdio-storage";
 import { AssetTransferError } from "./asset-transfer-errors";
 import { createAssetTransferOperations } from "./asset-transfer-operations";
+import { openAssetTransferSource } from "./asset-transfer-source";
 
 export { AssetTransferError } from "./asset-transfer-errors";
 
@@ -119,6 +120,28 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
     assetOwnerSchema.parse(owner);
     for (const asset of assets) await deps.bytes.verify(owner, assetReferenceSchema.parse(asset), signal);
   };
+  const receive = (
+    owner: AssetOwner,
+    operationId: string,
+    expected: AssetReference,
+    source: (offset: number, signal: AbortSignal) => Promise<ReadableStream<Uint8Array>>,
+    requestSignal?: AbortSignal,
+  ) =>
+    operations.run(
+      owner,
+      operationId,
+      async (signal) => {
+        const transfer = await begin(owner, operationId, expected, signal);
+        if (transfer.status === "cancelled") throw new AssetTransferError("ASSET_TRANSFER_CANCELLED");
+        if (transfer.status === "staging") {
+          const offset = transfer.uploadedByteLength;
+          const stream = await openAssetTransferSource(source, offset, signal);
+          await appendBytes(owner, operationId, offset, stream, signal);
+        }
+        return (await completeBytes(owner, operationId, signal)).asset;
+      },
+      requestSignal,
+    );
   const stage = async (owner: AssetOwner, operationId: string, source: Blob, signal?: AbortSignal) => {
     const hash = createHash("sha256");
     const reader = source.stream().getReader();
@@ -143,25 +166,7 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
       byteLength: source.size,
       mediaType: source.type || "application/octet-stream",
     };
-    return operations.run(
-      owner,
-      operationId,
-      async (stageSignal) => {
-        const transfer = await begin(owner, operationId, expected, stageSignal);
-        if (transfer.status === "cancelled") throw new AssetTransferError("ASSET_TRANSFER_CANCELLED");
-        if (transfer.status === "staging")
-          await appendBytes(
-            owner,
-            operationId,
-            transfer.uploadedByteLength,
-            source.slice(transfer.uploadedByteLength).stream(),
-            stageSignal,
-          );
-        const completed = await completeBytes(owner, operationId, stageSignal);
-        return completed.asset;
-      },
-      signal,
-    );
+    return receive(owner, operationId, expected, async (offset) => source.slice(offset).stream(), signal);
   };
-  return { begin, get, append, complete, cancel, read, verifyComplete, stage };
+  return { begin, get, append, complete, cancel, read, verifyComplete, receive, stage };
 };

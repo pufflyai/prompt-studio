@@ -1,6 +1,26 @@
 import { expect, test } from "bun:test";
 import { createBenchEnvironment } from "./testbench-environment";
 
+test("testbench storage shares seeded and guarded records with deprecated storage calls", async () => {
+  const { storage } = createBenchEnvironment({
+    kv: { note: "seed" },
+    collections: { notes: { a: { title: "Seeded" } } },
+  });
+  const observed = await storage.records.read(storage.records.id("note"));
+  expect(observed.value).toBe("seed");
+  await storage.set("note", "newer");
+  expect(
+    (
+      await storage.records.commit({
+        operationId: "open",
+        edits: [{ recordId: observed.recordId, expectedRevision: observed.revision, replace: "retained" }],
+      })
+    ).status,
+  ).toBe("conflict");
+  expect(await storage.get<string>("note")).toBe("newer");
+  expect(await storage.collection("notes").get("a")).toEqual({ title: "Seeded" });
+});
+
 test("testbench commands stage and read isolated immutable assets", async () => {
   const { storage } = createBenchEnvironment();
   const asset = await storage.assets.stage({ operationId: "preview", source: new Blob(["bench asset"]) });

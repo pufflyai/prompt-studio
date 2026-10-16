@@ -1,6 +1,11 @@
-import { type ExtensionContextBase, eventRef, type ViewFilterGroup } from "@pstdio/sdk/extensions";
+import {
+  type ExtensionContextBase,
+  eventRef,
+  type StorageGroup,
+  type StorageRecord,
+  type ViewFilterGroup,
+} from "@pstdio/sdk/extensions";
 import { seedDefaultStatuses } from "./seed";
-import { withWriteGuard } from "./write-guard";
 
 export interface AutoBuildMode {
   revision: string;
@@ -25,31 +30,43 @@ export const defaultAutoBuildIgnore = async (ctx: Pick<ExtensionContextBase, "st
   ],
 });
 
-export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage">) => {
-  const mode = await ctx.storage.get<AutoBuildMode>("auto-build");
+export const readAutoBuildModeSnapshot = async (ctx: Pick<ExtensionContextBase, "storage">) => {
+  const record = await ctx.storage.records.read(ctx.storage.records.id("auto-build"));
+  const mode = record.deleted ? null : (record.value as AutoBuildMode | null);
   return {
-    revision: mode?.revision ?? "",
-    enabled: Boolean(mode?.enabled && mode.prompt),
-    prompt: mode?.prompt ?? "",
-    ignore: mode?.ignore ?? (await defaultAutoBuildIgnore(ctx)),
-    blockOnReview: mode?.blockOnReview ?? true,
+    record,
+    mode: {
+      revision: mode?.revision ?? "",
+      enabled: Boolean(mode?.enabled && mode.prompt),
+      prompt: mode?.prompt ?? "",
+      ignore: mode?.ignore ?? (await defaultAutoBuildIgnore(ctx)),
+      blockOnReview: mode?.blockOnReview ?? true,
+    },
   };
 };
 
+export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage">) =>
+  (await readAutoBuildModeSnapshot(ctx)).mode;
+
 export const pauseAutoBuildMode = async (ctx: ExtensionContextBase, mode: AutoBuildMode) => {
-  await withWriteGuard(
-    ctx,
-    "auto-build-mode",
-    async () => {
-      const current = await readAutoBuildMode(ctx);
-      if (current.revision === mode.revision) await saveAutoBuildMode(ctx, { ...current, enabled: false });
-    },
-    () => undefined,
-  );
+  const current = await readAutoBuildModeSnapshot(ctx);
+  if (current.mode.revision === mode.revision)
+    return saveAutoBuildMode(ctx, { ...current.mode, enabled: false }, current.record);
 };
 
-export const saveAutoBuildMode = async (ctx: ExtensionContextBase, mode: AutoBuildMode) => {
-  await ctx.storage.set("auto-build", mode);
-  await ctx.events.emit(autoBuildChanged, {});
-  return mode;
+export const saveAutoBuildMode = async (
+  ctx: ExtensionContextBase,
+  mode: AutoBuildMode,
+  observed: StorageRecord,
+  relatedEdits: StorageGroup["edits"] = [],
+) => {
+  const storageOutcome = await ctx.storage.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [
+      { recordId: observed.recordId, expectedRevision: observed.revision, replace: { ...mode } },
+      ...relatedEdits,
+    ],
+  });
+  if (storageOutcome.status !== "conflict") await ctx.events.emit(autoBuildChanged, {});
+  return { ...mode, storageOutcome };
 };

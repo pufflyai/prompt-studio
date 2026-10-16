@@ -533,12 +533,15 @@
         "pg": "^8.20.0",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-paths": "workspace:*",
+        "pstdio-sync": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
         "@types/pg": "^8.18.0",
         "drizzle-kit": "^0.31.9",
+        "pstdio-storage": "workspace:*",
         "typescript": "6.0.2",
       },
     },
@@ -635,6 +638,17 @@
         "typescript": "6.0.2",
       },
     },
+    "packages/pstdio-sync": {
+      "name": "pstdio-sync",
+      "dependencies": {
+        "pstdio-sync-contracts": "workspace:*",
+        "yjs": "^13.6.29",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "typescript": "6.0.2",
+      },
+    },
     "packages/pstdio-sync-contracts": {
       "name": "pstdio-sync-contracts",
       "dependencies": {
@@ -719,6 +733,7 @@
         "@types/mustache": "^4.2.6",
         "@types/react": "^19.2.0",
         "pstdio-api-contracts": "workspace:*",
+        "pstdio-sync": "workspace:*",
         "pstdio-sync-contracts": "workspace:*",
         "react": "^19.0.0",
         "rolldown": "^1.2.11",
@@ -4187,6 +4202,8 @@
     "pstdio-skills": ["pstdio-skills@workspace:extensions/pstdio-skills"],
 
     "pstdio-storage": ["pstdio-storage@workspace:packages/pstdio-storage"],
+
+    "pstdio-sync": ["pstdio-sync@workspace:packages/pstdio-sync"],
 
     "pstdio-sync-contracts": ["pstdio-sync-contracts@workspace:packages/pstdio-sync-contracts"],
 

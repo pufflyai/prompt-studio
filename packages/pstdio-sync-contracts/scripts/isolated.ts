@@ -35,8 +35,9 @@ const config = {
       environment: {
         SYNC_TEST_DATABASE_URL: "postgres://test:isolated-test-only@database:5432/conformance",
         SYNC_TEST_OBJECT_ENDPOINT: "http://objects:9000",
+        SYNC_TEST_ENTRY: process.env.SYNC_TEST_ENTRY,
       },
-      command: ["bun", "scripts/run-conformance.ts"],
+      command: ["bun", "scripts/run-conformance.ts", ...process.argv.slice(2)],
       depends_on: { database: { condition: "service_healthy" }, objects: { condition: "service_started" } },
     },
   },
