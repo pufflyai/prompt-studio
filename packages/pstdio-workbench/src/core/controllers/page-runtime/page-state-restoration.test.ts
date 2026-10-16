@@ -132,6 +132,10 @@ test("restoring a saved route preserves the replacement after its last primary p
     open: "preview",
   });
   w.movePanel(w.layout.listPanelInstances("side")[0]!.instanceId, "main");
+  w.pinPlacement(
+    w.layout.listPanelInstances("main").find((panel) => panel.resource?.id === "incoming")!.placementIdentity!,
+    false,
+  );
   const restored = setup();
   expect(restored.pageLocations.boot("project").ok).toBe(true);
   expect(restored.layout.listPanelInstances("main").map((panel) => panel.resource?.id)).toEqual(["incoming"]);

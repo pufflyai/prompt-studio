@@ -93,6 +93,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Manually opened Bottom panels and terminals stay visible across page navigation, retaining the terminal process.
 // Related tabs select when revealing closed Side/Bottom panels; open panels keep their selection.
 // Resource pages remember manual selections and tab/panel closures across return visits and reloads.
+// Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
 
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";

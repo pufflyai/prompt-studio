@@ -76,6 +76,8 @@ An already open target keeps its actual tray and pin state, even when the owner 
 
 New previews replace the eligible preview in their requested tray and stay leftmost. Each tray has at most one unpinned tab. Pinned tabs stay open. The initiating source preview is protected. Results apply in order: once a closed panel has been revealed, later entries use its open-panel rule. Several new previews in one tray replace each other, leaving the last eligible preview. Owners can also request Main without navigating away from the source.
 
+Dragging and dropping an unpinned tab pins it, including a reorder within the same tray or a drop into an empty tray. The destination's existing preview stays open and leftmost. The moved tab uses the requested insertion position among pinned tabs. Moving through a tab's menu follows the same rule. Feedback shows the insertion marker and rounded tray outline. Cancelling a drag leaves the tab unpinned. A moved automatic preview is now a kept pinned tab, so source-page cleanup does not close it.
+
 ## Remembered page choices
 
 Resource pages remember the user's Side and Bottom choices. Choosing another session or resource, selecting a different tab, pinning it, or manually opening, closing or hiding a panel updates that page's choice. Returning through navigation or browser history restores the chosen resource and selected tab instead of the owner's default. For example, choosing an older session on a ticket keeps that session selected when returning, even after another page shows a different session.

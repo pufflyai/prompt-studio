@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { verifyTabDropPinning } from "./packaged-tab-drop-pinning";
 
 type Navigate = () => Promise<unknown>;
 const tabAction = async (page: Page, tab: Locator, name: string) => {
@@ -25,6 +26,7 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
   await reopen();
   await expect(side).toHaveCount(0);
   await reset();
+  await verifyTabDropPinning(page, preview);
 };
 
 export const verifyBottomPageChoices = async (page: Page, terminalTab: Locator, reopen: Navigate, leave: Navigate) => {

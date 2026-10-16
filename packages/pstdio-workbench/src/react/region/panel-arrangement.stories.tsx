@@ -179,15 +179,15 @@ terminalWorkbench.shellPlacements.openPlacement({
 terminalWorkbench.shell.setRegionOpen("secondary", true);
 export const TerminalIcons: Story = { args: { workbench: terminalWorkbench } };
 
-const previewReplacementWorkbench = createArrangementWorkbench();
-const draggedPreview = previewReplacementWorkbench.layout
+const previewInsertionWorkbench = createArrangementWorkbench();
+const draggedPreview = previewInsertionWorkbench.layout
   .getLayout()
   .regions.side.widgets.find((widget) => widget.tabRetention === "preview")!;
-previewReplacementWorkbench.movePanel(draggedPreview.widgetId, "secondary");
-void previewReplacementWorkbench.navigation.openTarget({
+previewInsertionWorkbench.movePanel(draggedPreview.widgetId, "secondary");
+void previewInsertionWorkbench.navigation.openTarget({
   kind: "panel",
   panel: { kind: "placement", extensionId: "storybook", id: "sessions" },
-  resource: { type: "session", id: "replace-me", label: "Unpinned session to replace" },
+  resource: { type: "session", id: "kept-preview", label: "Unpinned session to keep" },
   open: "preview",
 });
-export const PreviewReplacement: Story = { args: { workbench: previewReplacementWorkbench } };
+export const PreviewInsertion: Story = { args: { workbench: previewInsertionWorkbench } };

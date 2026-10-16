@@ -1,13 +1,13 @@
 import { getActivePlacement, removeLocationSubPanelSelection, replaceRegionWidgets } from "./layout-operations";
 import type { WorkbenchLayout, WorkbenchTabPosition, WorkbenchWidgetPlacement } from "./layout-types";
-import { planTrayDrop } from "./tray-tabs";
+import { planTrayPlacement } from "./tray-tabs";
 
 export const placeWidget = (
   widgets: WorkbenchWidgetPlacement[],
   placement: WorkbenchWidgetPlacement,
   position?: WorkbenchTabPosition,
 ) => {
-  return planTrayDrop(widgets, placement, position).widgets;
+  return planTrayPlacement(widgets, placement, position).widgets;
 };
 
 export const reorderWidgetPlacement = (
@@ -18,7 +18,7 @@ export const reorderWidgetPlacement = (
   const placement = widgets.find((candidate) => candidate.widgetId === widgetId);
   if (!placement) return widgets;
   const remaining = widgets.filter((candidate) => candidate.widgetId !== widgetId);
-  return planTrayDrop(remaining, placement, position).widgets;
+  return planTrayPlacement(remaining, placement, position).widgets;
 };
 
 const removePlacements = (layout: WorkbenchLayout, shouldRemove: (placement: WorkbenchWidgetPlacement) => boolean) => {

@@ -21,7 +21,6 @@ interface TabDrop {
   position: WorkbenchTabPosition;
   widgetId?: string;
   edge?: "before" | "after";
-  replacing?: { widgetId: string };
 }
 const TabDragContext = createContext<{ activeId?: string; drop?: TabDrop; destinations?: WorkbenchPanelRegion[] }>({});
 export const useTabDrag = () => useContext(TabDragContext);
@@ -57,16 +56,6 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     let position: WorkbenchTabPosition = "end";
     if (widgetId) position = before ? { beforeWidgetId: widgetId } : { afterWidgetId: widgetId };
     const plan = planTrayDrop(widgets, placement, position);
-    const replaced = plan.replaced[0];
-    if (replaced)
-      return {
-        region,
-        position,
-        widgetId: replaced.widgetId,
-        replacing: {
-          widgetId: replaced.widgetId,
-        },
-      } satisfies TabDrop;
     const index = plan.widgets.findIndex((widget) => widget.widgetId === placement.widgetId);
     const next = plan.widgets[index + 1];
     const previous = plan.widgets[index - 1];
