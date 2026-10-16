@@ -120,6 +120,15 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const updateLoadStateIfUnchanged = async (id: string, updatedAt: string, input: UpdateLoadStateInput) => {
+    const [updated] = await db
+      .update(installed_extension_sources)
+      .set({ ...input, updated_at: nowTimestamp() })
+      .where(and(eq(installed_extension_sources.id, id), eq(installed_extension_sources.updated_at, updatedAt)))
+      .returning();
+    return updated ?? null;
+  };
+
   const markStatus = async (
     id: string,
     status: InstalledSourceRow["status"],
@@ -183,6 +192,7 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     listBySourcePathPrefix,
     register,
     updateLoadState,
+    updateLoadStateIfUnchanged,
     updateRegistration,
     markStatus,
     remove,

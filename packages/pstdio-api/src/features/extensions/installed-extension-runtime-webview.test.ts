@@ -4,6 +4,7 @@ import { createInstalledExtensionRuntime } from "./installed-extension-runtime";
 const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
+  adopt: onRefresh ?? (async () => {}),
   ensure: async () => {},
   dispose: () => {},
   refresh: onRefresh ?? (async () => {}),
