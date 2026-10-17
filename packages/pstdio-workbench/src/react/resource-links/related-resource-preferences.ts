@@ -72,7 +72,7 @@ export const createRelatedResourcePreferences = (
   };
   const isResourcePage = () => {
     const source = currentResource();
-    const owner = source && ctx.resources.getKind(source.type);
+    const owner = source && ctx.resources.getKind(source.type, source.extensionId);
     return source && owner?.extensionId === source.extensionId && Boolean(owner?.relatedOpenings);
   };
   const snapshot = () => ({

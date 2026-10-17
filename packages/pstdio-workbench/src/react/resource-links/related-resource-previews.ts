@@ -47,7 +47,8 @@ export const registerRelatedResourcePreviews = (
   const preferences = createRelatedResourcePreferences(ctx, canonicalize);
   const enabled = () => ctx.preferences.getValue(openRelatedResourcesPreference) !== false;
   const load = async (resource: ResourceRef, owner: RegisteredResourceKind, controller: AbortController) => {
-    const current = () => !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type) === owner;
+    const current = () =>
+      !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type, resource.extensionId) === owner;
     try {
       const entries = await owner.relatedOpenings!(resource, controller.signal);
       if (!current()) return;
@@ -84,7 +85,7 @@ export const registerRelatedResourcePreviews = (
   };
   const open = (source: ResourceRef) => {
     const resource = canonicalize(source);
-    const owner = resource && ctx.resources.getKind(resource.type);
+    const owner = resource && ctx.resources.getKind(resource.type, resource.extensionId);
     cancelOtherSelections(resourceKey(resource));
     if (!enabled() || !resource || !owner?.relatedOpenings || owner.extensionId !== resource.extensionId) {
       if (!enabled()) abortAll();
@@ -136,7 +137,7 @@ export const registerRelatedResourcePreviews = (
   const project = ctx.pages.store.subscribeSelector((state) => state.projectId, abortAll);
   const owners = ctx.resources.store.subscribe(() => {
     for (const { owner, controller } of pending.values()) {
-      if (ctx.resources.getKind(owner.kind) !== owner) controller.abort();
+      if (ctx.resources.getKind(owner.kind, owner.extensionId) !== owner) controller.abort();
     }
   });
   const preference = ctx.preferences.onDidChangeValue((name) => {
