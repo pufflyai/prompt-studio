@@ -1,5 +1,6 @@
 export { createApprovalService } from "./approval-service";
 export { createEventStore } from "./event-store";
+export { HarnessDisposedError } from "./harness-disposed-error";
 export { resolveHarnessExit } from "./harness-lifecycle";
 export {
   createHarnessRegistry,

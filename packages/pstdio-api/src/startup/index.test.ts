@@ -138,7 +138,7 @@ describe("startup default extensions", () => {
     process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
     const preparation = Promise.withResolvers<void>();
     let prepareCalled = false;
-    let backgroundTask: Promise<void> | undefined;
+    const backgroundTasks: Promise<void>[] = [];
     const deps = {
       projectService: { list: async () => [] },
       sessionService: { listActive: async () => [] },
@@ -147,7 +147,7 @@ describe("startup default extensions", () => {
     try {
       await runStartupTasks(deps, undefined, {
         onBackgroundTask: (task) => {
-          backgroundTask = task;
+          backgroundTasks.push(task);
         },
         prepareDefaultExtensions: async () => {
           prepareCalled = true;
@@ -156,8 +156,8 @@ describe("startup default extensions", () => {
       });
 
       expect(prepareCalled).toBe(true);
-      expect(backgroundTask).toBeDefined();
-      if (!backgroundTask) throw new Error("Startup did not register its background work");
+      expect(backgroundTasks.length).toBeGreaterThan(0);
+      const backgroundTask = Promise.all(backgroundTasks);
 
       let backgroundSettled = false;
       void backgroundTask.then(() => {
@@ -180,7 +180,7 @@ describe("startup default extensions", () => {
     const controller = new AbortController();
     const fallback = Promise.withResolvers<void>();
     let preparationSignal: AbortSignal | undefined;
-    let backgroundTask: Promise<void> | undefined;
+    const backgroundTasks: Promise<void>[] = [];
     const deps = {
       projectService: { list: async () => [] },
       sessionService: { listActive: async () => [] },
@@ -189,7 +189,7 @@ describe("startup default extensions", () => {
     try {
       await runStartupTasks(deps, controller.signal, {
         onBackgroundTask: (task) => {
-          backgroundTask = task;
+          backgroundTasks.push(task);
         },
         prepareDefaultExtensions: (signal) => {
           preparationSignal = signal;
@@ -199,8 +199,8 @@ describe("startup default extensions", () => {
       });
 
       expect(preparationSignal).toBe(controller.signal);
-      expect(backgroundTask).toBeDefined();
-      if (!backgroundTask) throw new Error("Startup did not register its background work");
+      expect(backgroundTasks.length).toBeGreaterThan(0);
+      const backgroundTask = Promise.all(backgroundTasks);
 
       controller.abort();
       const closed = await Promise.race([backgroundTask.then(() => true), Bun.sleep(100).then(() => false)]);

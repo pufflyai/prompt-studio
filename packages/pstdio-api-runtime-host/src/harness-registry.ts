@@ -28,6 +28,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { detectHarness } from "./harness-detection";
+import { HarnessDisposedError } from "./harness-disposed-error";
 
 export type HarnessCallOptions = {
   /** Project the call runs on behalf of, when there is one (session dispatch). */
@@ -160,7 +161,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
   let closing: Promise<void> | undefined;
   let disposed = false;
   const ensureActive = () => {
-    if (disposed) throw new Error(`Harness has been disposed: ${record.id}`);
+    if (disposed) throw new HarnessDisposedError(`Harness has been disposed: ${record.id}`);
   };
   const ctx = async (options?: HarnessCallOptions) => {
     ensureActive();
@@ -246,7 +247,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
           if (result.kind === "started") {
             if (disposed) {
               await result.session.stop();
-              throw new Error(`Harness has been disposed: ${record.id}`);
+              throw new HarnessDisposedError(`Harness has been disposed: ${record.id}`);
             }
             return { ...result, session: adaptSession(result.session) };
           }

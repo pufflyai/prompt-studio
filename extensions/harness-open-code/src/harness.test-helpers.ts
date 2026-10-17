@@ -22,7 +22,7 @@ export const ctx: HarnessContext = {
 };
 
 export const serviceOverrides = () => ({
-  startServer: async () => "http://localhost:4096",
+  startServer: async () => ({ url: "http://localhost:4096", dispose: async () => {} }),
   serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
   pingServer: async () => true,
   isPortOpen: async () => true,

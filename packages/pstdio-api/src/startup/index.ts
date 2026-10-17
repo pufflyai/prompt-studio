@@ -17,6 +17,7 @@ interface StartupTaskOptions {
   prepareDefaultExtensions?: (signal?: AbortSignal) => Promise<void>;
   recoverQueuedAutomation?: () => Promise<void>;
   recoverQueuedSessions?: () => Promise<void>;
+  recoverOrphanedSessions?: (signal?: AbortSignal) => Promise<void>;
 }
 
 const registerBackgroundTask = (task: Promise<void>, options?: StartupTaskOptions) => {
@@ -120,15 +121,22 @@ export const repairLegacyTemplateOwners = async (
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
-  await repairLegacyTemplateOwners(deps, installDefaultExtensions, signal);
-  const defaultExtensionPreparation = options?.prepareDefaultExtensions
-    ? options.prepareDefaultExtensions(signal)
-    : ensureDefaultExtensionsInstalled(deps, signal);
+  const defaultExtensionPreparation = (async () => {
+    await repairLegacyTemplateOwners(deps, installDefaultExtensions, signal);
+    signal?.throwIfAborted();
+    if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);
+    else await ensureDefaultExtensionsInstalled(deps, signal);
+  })();
+  registerBackgroundTask(defaultExtensionPreparation, options);
   const projectIds = (await deps.projectService.list()).map((project) => project.id);
+  signal?.throwIfAborted();
   await reconcileProjectWorkspaces(deps, projectIds, signal);
+  signal?.throwIfAborted();
   await options?.recoverQueuedSessions?.();
-  registerBackgroundTask(resolveOrphanedSessions(deps, signal), options);
+  const recoverOrphaned = options?.recoverOrphanedSessions ?? ((signal) => resolveOrphanedSessions(deps, signal));
+  registerBackgroundTask(recoverOrphaned(signal), options);
   await options?.recoverQueuedAutomation?.();
+  signal?.throwIfAborted();
   await syncInstalledExtensionsForProjects({
     extensionService: deps.extensionService,
     onProjectExtensionInstancesPruned: async ({ projectId }) => {
@@ -137,6 +145,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
     projectService: deps.projectService,
   });
   for (const project of await deps.projectService.list()) {
+    signal?.throwIfAborted();
     await syncRepoExtensionsForProjectFolder({
       extensionService: deps.extensionService,
       installedExtensionSourcesService: deps.installedExtensionSourcesService,
@@ -144,9 +153,5 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       workspaceService: deps.workspaceService,
     });
   }
-  const backgroundTasks = Promise.all([
-    defaultExtensionPreparation,
-    provisionRecoveredWorkspaces(deps, projectIds, signal),
-  ]).then(() => undefined);
-  registerBackgroundTask(backgroundTasks, options);
+  registerBackgroundTask(provisionRecoveredWorkspaces(deps, projectIds, signal), options);
 };

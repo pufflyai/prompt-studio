@@ -39,13 +39,9 @@ export const isConnectionError = (error: unknown) => {
   if (message.includes("econnrefused")) return true;
   if (message.includes("econnreset")) return true;
 
-  const cause = (error as { cause?: unknown }).cause;
-  if (cause && typeof cause === "object") {
-    const code = (cause as { code?: unknown }).code;
-    if (code === "ECONNREFUSED" || code === "ECONNRESET" || code === "ENOTFOUND") return true;
-  }
-
-  return false;
+  const cause = (error as { cause?: { code?: unknown } }).cause;
+  const code = (error as { code?: unknown }).code ?? cause?.code;
+  return code === "ECONNREFUSED" || code === "ECONNRESET" || code === "ENOTFOUND" || code === "ConnectionRefused";
 };
 
 export const requestJson = async <T>(
@@ -53,6 +49,7 @@ export const requestJson = async <T>(
   url: string,
   options: { method: string; headers: Record<string, string>; body?: unknown; signal?: AbortSignal },
 ) => {
+  options.signal?.throwIfAborted();
   const timeoutMs = options.method === "GET" ? GET_TIMEOUT_MS : POST_TIMEOUT_MS;
 
   const response = await fetcher(url, {

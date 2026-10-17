@@ -9,9 +9,15 @@ import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
+import { createSettingsService } from "./services/settings-service";
 import { createSyncService } from "./services/sync-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
+
+export const createAppSettingsService = async (input: Parameters<typeof createSettingsService>[0]) => {
+  await input.settingsDb.get();
+  return createSettingsService(input);
+};
 
 export const createCoreDomainServices = (input: {
   getCommandDeps: () => RouteDeps;

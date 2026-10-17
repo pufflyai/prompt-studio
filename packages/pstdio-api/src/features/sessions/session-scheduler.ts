@@ -9,6 +9,7 @@ import {
 } from "./live-question-reply";
 import { prepareHostQuestionDelivery } from "./session-question-delivery";
 import { createSessionQueueDrain } from "./session-queue-drain";
+import { prepareQueuedSessionRecovery } from "./session-queue-recovery";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
   createSubmittedDispatchEntry,
@@ -309,19 +310,8 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   };
 
   const recoverQueuedSessions = async () => {
-    const claimedEntries = await deps.sessionQueueEntriesService.listDispatchStarted();
-    for (const entry of claimedEntries) {
-      const session = await deps.sessionService.get(entry.session_id);
-      if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
-        await deps.sessionService.recoverQueuedDispatchClaim(
-          session.id,
-          entry.queue_position,
-          session.last_request_started,
-        );
-      }
-    }
-
-    await drainQueue();
+    const recover = await prepareQueuedSessionRecovery(deps);
+    await recover();
   };
 
   return {
