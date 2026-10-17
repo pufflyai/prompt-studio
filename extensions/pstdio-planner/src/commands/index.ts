@@ -79,6 +79,7 @@ import {
 import { linkTicketCommand, unlinkTicketCommand } from "./ticket-links";
 import { ticketPropertiesQueryCommand } from "./ticket-properties/query";
 import { ticketPropertiesUpdateCommand } from "./ticket-properties/update";
+import { ticketRelatedOpeningsCommand } from "./ticket-related-openings";
 import {
   createTicketStatusCommand,
   deleteTicketStatusCommand,
@@ -110,6 +111,7 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  ticketRelatedOpeningsCommand,
   autoBuildCommand,
   autoBuildCandidatesCommand,
   autoBuildDispatchCommand,
