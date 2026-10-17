@@ -34,6 +34,9 @@ layer-map change.
    adapter. `pstdio-db` supplies its durable local adapter.
    Its real-file integration tests declare `pstdio-storage` as a development
    dependency to verify immutable asset gates; database runtime code does not import it.
+   Its production-relay conformance tests also declare `pstdio-relay` as a development
+   dependency. That edge is confined to test fixtures; local database runtime code
+   does not open PostgreSQL relay storage.
 
 2. **Public authoring SDK**
    `@pstdio/sdk` exposes extension and client authoring APIs. Runtime or host
@@ -111,10 +114,12 @@ layer-map change.
 ## Shared relay
 
 The private `pstdio-relay` workspace lives under `infra/relay/`. It is a separate
-service, not part of the local API host or the CLI bundle. Its scaffold declares
-no workspace dependencies. It must not import the API host, UI, clients, or
-prototype implementation. The shared synchronization contract is owned separately
-by PS-744. Future Terraform configuration belongs under `infra/relay/terraform/`,
+service, not part of the local API host or the CLI bundle. It consumes the private
+`pstdio-sync` record/branch rules and `pstdio-sync-contracts` wire schemas. Its production
+modules never import the test-only conformance export. It must not import the API
+host, UI, clients, database implementation, or prototype. PostgreSQL persistence
+belongs to the relay; the real local adapter belongs to `pstdio-db`.
+Future Terraform configuration belongs under `infra/relay/terraform/`,
 separate from relay source. See the [relay development guide](../../guides/development/0006-relay.md)
 for isolated storage fixtures and container checks.
 

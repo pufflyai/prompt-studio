@@ -21,8 +21,17 @@
       "ignoreDependencies": ["node-gyp"]
     },
     "infra/relay": {
-      "entry": ["src/server.ts", "src/**/*.test.ts", "scripts/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "entry": [
+        "package.json",
+        "drizzle.config.ts",
+        "src/index.ts",
+        "src/server.ts",
+        "src/**/*.test.ts",
+        "src/**/*.integration.ts",
+        "src/**/*.fixture.ts",
+        "scripts/*.ts"
+      ],
+      "project": ["*.ts", "src/**/*.ts", "scripts/**/*.ts"],
       "ignore": ["dist/**"]
     },
     "scripts": {

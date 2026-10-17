@@ -174,3 +174,9 @@ test("relay changes select the isolated container check", () => {
   expect(pullRequest(["packages/ui/src/index.ts"])).toHaveProperty("relaySmoke", false);
   expect(pullRequest(["bun.lock"])).toHaveProperty("relaySmoke", true);
 });
+
+test("local storage changes select production relay conformance", () => {
+  expect(
+    pullRequest(["packages/pstdio-db/src/services/extension-storage/grouped-storage.ts"], [], ["pstdio-db"]),
+  ).toHaveProperty("relaySmoke", true);
+});
