@@ -218,6 +218,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0002 — Resource types](../references/sdk/0002-resources.md)
 - [0003 — Method reference](../references/sdk/0003-api.md)
 - [0004 — Grouped storage](../references/sdk/0004-storage.md)
+- [0005 — API clarity prototype](../references/sdk/0005-api-clarity-prototype.md)
 
 ### Workbench
 

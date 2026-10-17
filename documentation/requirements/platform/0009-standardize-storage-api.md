@@ -13,35 +13,36 @@ migrate callers to records and assets, then remove the replaced APIs in a coordi
 
 ## Benefits and trade-offs
 
-### How much the API shrinks
+### What shrinks, and what does not
 
-After removal in 0.46, **11 grouped entry points become 3 recommended entry points**:
-8 fewer, or about **73%**. The migration table below defines the groups.
+The [runnable comparison](../../references/sdk/0005-api-clarity-prototype.md) tests 15 author tasks.
+The earlier 73% headline counted grouped names. It did not measure methods or author effort and is withdrawn.
 
-| Purpose | Current API families | Proposed API | Count |
-| --- | --- | --- | --- |
-| Structured data | KV `get/set/delete`, `collection`, `records` | `storage.records` | 3 → 1 |
-| Uploaded bytes and files addressed by ID | `storage.files` including collection attachments, direct `ctx.files` methods, `storage.assets` | `storage.assets`, with metadata in records | 3 → 1 |
-| Files addressed by path | `artifacts.mount`, `extensionFiles`, `workspaceFiles`, `projectFiles`, `packageFiles` | `files.open` | 5 → 1 |
+| Purpose | Current families | Revised design |
+| --- | --- | --- |
+| Structured data | KV, collections, records | Records; `save` wraps a revision-guarded commit for one record. |
+| Uploaded bytes | Mutable file IDs, collection attachments, assets | Assets plus an attachment composition helper over records/assets. |
+| Paths | Five root accessors in several namespaces | Five named root accessors under `files`; the five root meanings remain. |
 
-The count groups related calls; it does not count individual methods or underlying stores.
-`storage.scope`, `migrate`, `readLegacy`, sessions, settings and saved views remain outside this comparison.
-The five entry points for file paths shrink by **80%**. Shared files, local files, the current
-workspace, the default workspace and package files remain explicit choices.
+No whole-API reduction percentage is established. Inventory individual exports and removals before
+publishing one. `scope`, migrations, sessions, settings and saved views remain separate contracts.
+A convenience helper adds a public method without adding a storage owner. That trade is acceptable
+when it removes repeated correctness code. Namespace count is not the acceptance target.
 
-In **0.44**, the three entry points become available and the old calls remain deprecated.
-In **0.45**, all maintained extensions adopt the replacements. **0.46** removes the old calls.
-Most file operations already share types. Compare author code for ticket saves, uploads and template
-reads before claiming fewer methods, adapters or lines of extension code.
+For the fixed examples, a guarded save falls from 54 to 32 function-body tokens. A package read
+rises from 12 to 14; the discarded `files.open` design required 27. The attachment helper requires
+39 tokens versus 142 for the manual recipe, which also fails an identical retry after rereading.
+The old attachment call needs 60 tokens but lacks that stable retry contract. These are syntax
+measurements, not measured comprehension, performance or equivalent durability for the old upload.
 
 ### What becomes easier
 
 - A ticket editor and a report editor keep the revision they read and save related records together.
   They can report a stale save without implementing separate overwrite rules for KV and collections.
 - A file helper can read a packaged template, write an extension draft or edit workspace source
-  through the same relative-path methods. The caller selects the root when opening the handle.
+  through the same relative-path methods. Named accessors state the root at the call site.
 - An attachment and a published HTML revision use the same upload, resume and verified-read API.
-  Their names, parent records and display order live in metadata records.
+  A shared helper writes names and parent associations to metadata records; extensions own display order.
 - Publishing an Artifacts revision no longer requires a separate materialized HTML file for every
   historical revision. The revision record identifies the retained bytes; an editable draft keeps its file.
 - Host adapters, SDK test helpers and authoring examples support fewer public interfaces.
@@ -50,18 +51,19 @@ reads before claiming fewer methods, adapters or lines of extension code.
 ### Custom use cases we drop or move
 
 Ticket boards, reports, notes, attachments, templates and workspace provisioning remain supported.
-The following convenience APIs and file assumptions go away after migration:
+The following authoring paths change after migration:
 
 | Existing use | Required change |
 | --- | --- |
 | Save a key with `set(key, value)` without keeping the revision from the editor's read. | Keep the read revision, commit against it and handle a conflict. Blind replacement is removed from the authoring API. |
-| Create a named collection and let its API generate IDs, preserve ordering and attach files to items. | The extension defines stable record IDs, stores ordering and parent associations, and uses records and assets. |
+| Create a named collection and let its API generate IDs, preserve ordering and attach files to items. | The extension defines stable domain IDs and ordering. The attachment helper handles metadata and retry identity over records/assets. |
 | Create and edit documents by file ID through `storage.files` or `ctx.files.createText`. | Store document metadata and an asset reference in an owned record, or edit a file through an explicit root. Replacing asset bytes creates a new immutable version. Existing promised URLs still resolve. |
 | Open every published Artifacts revision as a permanent local HTML file. | Read its asset or explicitly export a file. Editing a draft and publishing it creates a new revision. Migrate direct-file consumers before removing redundant files. |
 
 Small extensions will write more code than a bare `get/set` pair requires. They must keep revisions
-and handle save outcomes. Extensions that used collection conveniences must own their data schema
-and attachment metadata. The shared API continues to provide persistence, transfer and conflict handling.
+and handle save outcomes. Extensions that used collection conveniences must own their domain schema
+and ordering. They do not have to rebuild upload metadata and retries. The shared API provides
+persistence, transfer and conflict handling.
 
 ## Storage design issues that must be fixed
 
@@ -84,7 +86,7 @@ The [0.44 version PR](https://github.com/pufflyai/prompt-studio/pull/1078) is op
 | Change | Release |
 | --- | --- |
 | Bound client storage, reclaim safe temporary/orphan data and isolate missing-asset failures. | 0.44.0; prerequisite for the storage rollout. |
-| Add `ctx.files.open` with host, SDK, browser and testing support. | 0.44.0 |
+| Add named `ctx.files` handles and record/attachment helpers with host, SDK, browser and testing support. | 0.44.0 |
 | Migrate all maintained extensions and authoring examples to records, assets and explicit file roots. | 0.45.0, before API removal. |
 | Store Artifacts' published revision contents through immutable asset references and migrate existing revisions. | 0.45.0, before API removal. |
 | Deprecate replaced APIs and publish the upgrade guide. | 0.44.0 |
@@ -113,47 +115,39 @@ Existing local data still needs a verified, resumable conversion. Planner's
 ## Proposed API
 
 Keep `ctx.storage.records` for structured data and `ctx.storage.assets` for immutable bytes.
-Put path-based file access behind `ctx.files.open(...)`.
+Expose named path handles under `ctx.files`. Keep `records.commit` for atomic multi-record edits.
 
 ```ts
-// Save task data with the revision the editor read.
 const records = ctx.storage.records;
 const task = await records.read(records.id("task-1"));
-await records.commit({
-  operationId: crypto.randomUUID(),
-  edits: [{
-    recordId: task.recordId,
-    expectedRevision: task.revision,
-    replace: { title: "Launch Friday" },
-  }],
-});
+// Keep this ID with the draft. Retry the same captured task and value with it.
+const operationId = crypto.randomUUID();
+const outcome = await records.save(task, { title: "Launch Friday" }, { operationId });
+if (outcome.status === "conflict") showConflict(outcome);
 
-// Write an output that other environments receive.
-const outputs = await ctx.files.open({ root: "shared", mount: "outputs" });
-await outputs.writeText("launch.html", html);
+await ctx.files.shared("outputs").writeText("launch.html", html);
+await ctx.files.local.writeText("draft.md", markdown);
+await ctx.files.currentWorkspace.writeText("README.md", readme);
+const template = await ctx.files.package.readText("templates/report.md");
 
-// Write an extension file that stays in this environment.
-const local = await ctx.files.open({ root: "local" });
-await local.writeText("draft.md", markdown);
-
-// Edit files in the workspace targeted by this command.
-const workspace = await ctx.files.open({ root: "workspace", target: "current" });
-await workspace.writeText("README.md", readme);
-
-// Read a file shipped with the installed extension.
-const packaged = await ctx.files.open({ root: "package" });
-const template = await packaged.readText("templates/report.md");
+await ctx.storage.attachments.add(task.recordId, file, { operationId: uploadId });
 ```
 
-These names and signatures are proposed. The contract PR must resolve their types before adoption.
+These are proposed contracts, implemented only in the isolated prototype. `save` must forward the
+captured revision; it must not fetch a newer base. Persist operation identity with durable drafts
+when retry must survive restart. Its result retains the full grouped commit outcome.
+`attachments.add` composes existing records and assets, without another table, byte store or queue.
+Specify listing, deletion, authorized display/download and optional ordering before production adoption.
+Stable retries compare the original payload and retained outcome; they do not rebuild against a newer
+revision. The prototype validates completed in-memory retries, not interrupted disk transfers or GC.
 
-| Root | Resolves to | Behavior |
+| Accessor | Resolves to | Behavior |
 | --- | --- | --- |
-| `shared`, with a declared mount ID | The current extension's artifact mount | The host journals changes, transfers verified bytes, captures direct edits and refreshes views. |
-| `local` | The extension's allocated directory | Files remain with the environment. Preserve publisher isolation and existing ignore rules. |
-| `workspace`, with `target: "current"` | The command's target workspace | Read and write project source through that workspace's provider. |
-| `workspace`, with `target: "default"` | The project's default workspace | Preserve callers that deliberately edit the default workspace. |
-| `package` | The installed extension package | Read-only access. |
+| `files.shared(mountId)` | The extension's declared artifact mount | Journal changes, transfer verified bytes, capture direct edits and refresh views. |
+| `files.local` | The extension's allocated directory | Environment-local files; preserve publisher isolation and ignore rules. |
+| `files.currentWorkspace` | The command's target workspace | Source edits through that workspace's provider. |
+| `files.defaultWorkspace` | The project's default workspace | Deliberate default-workspace source edits. |
+| `files.package` | The installed extension package | Read-only access. |
 
 All file handles use relative paths. Readable handles expose `exists`, `readText`, `readBytes`,
 `list` and `listDirs`. Writable handles also expose `writeText`, `updateText`, `writeBytes`
@@ -162,7 +156,9 @@ Preserve the existing path-method return values and the rule that `updateText` f
 Large transfers continue through the streaming asset API.
 
 The package handle must reject writes through both public types and runtime checks.
-Opening a root must resolve its current owner, workspace readiness and provider permissions.
+Named handles capture the invocation identity. Each asynchronous operation resolves readiness and
+provider permissions for that bound target; accessors do not perform unawaited I/O. Missing-root errors
+move to the operation rather than disappear. Do not retarget a handle after a connection switch.
 A missing current workspace must not redirect a write to the default workspace.
 Do not accept arbitrary absolute roots or caller-supplied ownership claims.
 
@@ -174,17 +170,17 @@ distributed transactions or make external filesystem writers obey revision guard
 
 | Existing API | Replacement |
 | --- | --- |
-| `storage.get/set/delete` | `storage.records.read/commit` with the caller's observed revision. |
+| `storage.get/set/delete` | `storage.records.read/save` or grouped `commit`, with the caller's observed revision. |
 | `storage.collection(...)` | Domain records migrated by the owning extension. Preserve IDs, order and conditional operations. |
 | `storage.records` | Keep. |
 | `storage.assets` | Keep. |
-| `storage.files` and collection attachments | A metadata record with an asset reference and its parent association. |
+| `storage.files` and collection attachments | `storage.attachments` over metadata records/assets; preserve parent associations and links. |
 | Direct `ctx.files` methods taking file IDs | Records and assets after resolving the existing file's owner and references. |
-| `ctx.artifacts.mount(id)` | `ctx.files.open({ root: "shared", mount: id })`. |
-| `ctx.extensionFiles` | `ctx.files.open({ root: "local" })`. |
-| `ctx.workspaceFiles` | `ctx.files.open({ root: "workspace", target: "current" })`. |
-| `ctx.projectFiles` | `ctx.files.open({ root: "workspace", target: "default" })`. |
-| `ctx.packageFiles` | `ctx.files.open({ root: "package" })`. |
+| `ctx.artifacts.mount(id)` | `ctx.files.shared(id)`. |
+| `ctx.extensionFiles` | `ctx.files.local`. |
+| `ctx.workspaceFiles` | `ctx.files.currentWorkspace`. |
+| `ctx.projectFiles` | `ctx.files.defaultWorkspace`. |
+| `ctx.packageFiles` | `ctx.files.package`. |
 
 Keep `storage.scope`, `migrate` and `readLegacy` for addressing and migration.
 Keep domain APIs such as sessions, settings and saved views with their existing owners.
@@ -239,7 +235,8 @@ contract. Do not claim stronger guarantees for direct external filesystem edits.
 
 ### 2. Add host and SDK support
 
-Add `open` to the existing `ctx.files` object without changing its old file-ID methods.
+Add named handles to the existing `ctx.files` object without changing its old file-ID methods.
+Add `records.save` and attachment composition helpers over the existing primitives.
 Return handles backed by the existing host adapters. Add SDK testing support and align the command,
 browser and external client contracts. Reuse the existing file events and transport owners.
 
@@ -315,7 +312,8 @@ retention must prove returning-client and restore recovery before deleting retai
 - Before 0.46, extensions pass cleaned-contract checks and their API ranges accept the breaking API.
   Old APIs and deprecated public paths are gone. Required data and URL readers remain private.
 
-For this planning change, validate documentation links, numbering and formatting only.
+The isolated prototype verifies authoring examples and in-memory saves. Production adapters, capacity,
+relay, conversion, restart recovery and packaged behavior still require the checks above.
 
 ## Source references
 

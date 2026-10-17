@@ -29,9 +29,12 @@ data, interrupted conversions, active drafts and promised links through the supp
 - A board and a table use the same saved filter and sort definitions. Extensions return their own options.
 - Settings, terminal access and navigation get consistent adapters without losing their owner or permission rules.
 
-Measure author code for these tasks before and after adoption. Count exported methods, accepted
-manifest fields, bridge operations and retired adapters separately. A namespace rename does not
-demonstrate less implementation work. The storage entry-point percentage is not a whole-SDK reduction.
+The [runnable prototype and measurements](../../references/sdk/0005-api-clarity-prototype.md) compare
+15 tasks. `setStatus` removes selector fields and array extraction; session iteration removes the
+caller-owned cursor loop. Generic resource links still require more owner fields than the old wrapper.
+Saved views and workspace deletion already have clear canonical calls; keep them. Counts of syntax
+are evidence about those examples, not comprehension scores or a whole-SDK reduction percentage.
+Inventory exports, manifest fields, bridge operations and retired adapters separately.
 
 ## Inventory and decisions
 
@@ -43,11 +46,11 @@ the additional public surfaces appear below. Share operation contracts where the
 | --- | --- |
 | `storage`, `artifacts`, `files`, `projectFiles`, `workspaceFiles`, `packageFiles`, `extensionFiles` | Apply the storage PRD. Keep root selection, read-only types, mount grants and provider checks. |
 | `commands` | Share validated outcomes, typed errors and high-level stream handling across clients. Keep middleware decisions distinct from command execution. |
-| `sessions` | Use `query` for collection reads and `get` for an exact ID. Keep agent runs and queued input as session operations. |
+| `sessions` | Use paged `query`, an SDK iterator, and `get` for an exact ID. Keep agent runs and queued input as session operations. |
 | `workspaces` | Use `delete` for deletion; remove archive aliases. Keep provider selection, readiness, resolution, cancellation and repository removal distinct. |
 | `resources` | Own link additions, removals and queries. Preserve domain validation, changed-edge events and source lifecycle rules. |
 | `views` | Keep the saved-view owner. Share filter/sort definitions across renderer, HTTP, CLI and UI adapters. |
-| `notify` | Use an explicit transition selector and uniform result. Keep transient notices separate from persistent actions. |
+| `notify` | Use `setStatus(id, status)` and `setStatusByKey(key, status)` with explicit result cardinality. Keep transient notices separate from persistent actions. |
 | `settings` | Match typed command and webview methods, including deletion. Preserve installed-extension and project-instance owners. |
 | `navigation` | Share typed navigation targets and owner-aware file links across callers. Preserve headless behavior and page/placement ownership. |
 | `events` | Keep typed domain event delivery and diagnostics. Do not treat it as a durable command queue or storage receipt. |
@@ -68,7 +71,7 @@ The [HTTP SDK root](../../../packages/sdk/src/client/client.ts) also needs expli
 | SDK client | Shared contract or boundary |
 | --- | --- |
 | `assets` | Storage PRD; retain explicit owner and streaming guarantees. |
-| `filesystem` | Privileged runtime directory browsing/creation for setup. Keep machine-path authority out of `ctx.files.open`. |
+| `filesystem` | Privileged runtime directory browsing/creation for setup. Keep machine-path authority out of extension file handles. |
 | `resources`, `views` | Resource links and saved views below; preserve HTTP authorization. |
 | `sessions`, `workspaces`, `notifications` | Align shared operations below; keep runtime administration out of extension contexts. |
 | `extensions` | Align command execution/streaming; installation, upgrades and connection configuration remain privileged administration. |
@@ -77,32 +80,32 @@ The [HTTP SDK root](../../../packages/sdk/src/client/client.ts) also needs expli
 | `projects`, `agents`, `runtime` | Keep project administration, agent configuration, environment targeting and browser-login operations with explicit runtime authority. |
 | `skills`, `sync` | Keep resolved catalog and UI synchronization transports. Their output is not a durable relay-acceptance receipt. |
 
-## Notification transitions
+## Notification status
 
 Current context calls prioritize `id`; the browser prioritizes `dedupeKey` when both are supplied.
 The context returns `Notification[]`, while the bridge returns a notification or a batch wrapper.
 The bridge type also permits expiry by ID, which its browser implementation rejects.
 
-Add this contract in 0.44, with a new bridge capability for the new operation:
+Use these contracts in 0.44, with matching command, typed webview and HTTP adapters:
 
 ```ts
-await ctx.notify.transition({
-  selector: { by: "id", id: "review-123" },
-  status: "done",
-});
-// { notifications: Notification[] }
+const notification = await ctx.notify.setStatus("review-123", "done"); // Notification | null
+const notifications = await ctx.notify.setStatusByKey("review-group", "dismissed"); // Notification[]
 ```
 
-The other selector is `{ by: "dedupeKey", dedupeKey: "review-123" }`. Require exactly one selector.
-Use the same schema and result for command, typed webview and HTTP adapters. Define empty matches,
-idempotent terminal transitions and stale/not-found outcomes. Preserve project boundaries, source
-attribution and capability checks. A selector must not grant access to a different project.
+The prototype's single-ID call needs 16 body tokens; the discarded nested `transition` call needs 43.
+A single result no longer needs array extraction. Two method names express single-ID and group selection.
+A caller with a dynamic selector must branch; that case remains unmeasured. Do not add a third public
+selector method unless an actual maintained workflow needs it.
 
-Decide whether `expired` is a system-owned transition or an author operation before publishing the
-contract. Encode that decision in all schemas and implementations. Do not advertise unsupported combinations.
-Deprecate the ambiguous `resolve`/`dismiss` inputs in 0.44, migrate callers in 0.45 and remove their
-old methods and bridge paths in 0.46. Keep action creation and transient notices with distinct results.
+Author statuses are `done` and `dismissed`; automatic expiry belongs to the host. Document the removal
+of author-triggered expiry in 0.46. Missing IDs return `null`; empty groups return `[]`; repeating the
+same terminal status is idempotent. Specify transitions between terminal statuses before publishing.
+Preserve project boundaries, source attribution and capability checks; IDs do not grant cross-project access.
+New adapters must return the same cardinality and retain raw transport metadata outside the result.
 
+Deprecate `resolve`/`dismiss` and their old bridge inputs in 0.44, migrate in 0.45 and remove in 0.46.
+Keep action creation and transient notices separate. No production adapter is implemented in this PR.
 Evidence: [context adapter](../../../packages/pstdio-api/src/features/extensions/command-environment/notifications.ts),
 [browser adapter](../../../packages/pstdio-dashboard/src/shared/extensions/components/extension-webview-frame.tsx),
 [bridge contracts](../../../packages/pstdio-api-contracts/src/extension-kernel/types/webview-capabilities.ts).
@@ -122,7 +125,12 @@ In 0.45 migrate activity displays and automation safety checks. Planner's
 [stack update](../../../extensions/pstdio-planner/src/commands/update-stack.ts) rejects work when
 another live session uses its workspace. Reading only the first page could miss that session.
 Filter for live statuses and follow every relevant page; check the owning session separately by ID.
-Preserve intentional ordering and archived behavior. Remove old collection-read paths in 0.46.
+Preserve intentional ordering and archived behavior. Add an SDK `sessions.iterate(filter)` over
+`query` so callers can consume complete results without writing cursor loops. The prototype reads
+63 sessions in two pages and supports live-status filtering and early stop. Its caller uses 45 tokens
+versus 84 for manual paging and 28 for the old unbounded array. Paging improves bounds, not brevity
+against that old array. The production iterator must retain all query filters and cancellation;
+the prototype implements only workspace/status filters. Remove old collection-read paths in 0.46.
 
 Apply the same page result and cancellation conventions to other potentially large histories, such
 as automation runs, after checking their ordering and completeness requirements. Small provider and
@@ -143,8 +151,9 @@ await ctx.resources.addAnchors(
 );
 ```
 
-Before deprecating session/workspace wrappers, define common source-existence, owner, project,
-transaction and timestamp rules. Legacy additions lock the source row and update its timestamp;
+The explicit generic example needs 45 tokens versus 32 for the domain wrapper. Accept that owner
+cost for a common link contract; do not claim a shorter call. Before deprecating wrappers, define
+common source-existence, owner, project, transaction and timestamp rules. Legacy additions lock the source row and update its timestamp;
 generic additions currently write edges without that source update. Generic canonicalization also
 does not reject an absent host resource. Specify and verify the intended behavior in 0.44.
 
@@ -165,7 +174,9 @@ independently, including contradictory combinations. The typed webview unwraps f
 
 In 0.44 add a shared validated outcome contract and adapters. Preserve success values, rejection
 codes/data, serialized causes, diagnostics and notices. A throwing helper must expose a typed error
-containing the complete outcome. Callers must be able to choose explicit outcomes or throwing helpers.
+containing the complete outcome. Recommend explicit outcomes for recoverable rejections. Keep an optional
+typed throwing helper;
+the draft already allowed both and the experiment does not justify forcing exception handling.
 Keep transport metadata outside the domain outcome; retain raw transport access where it is useful.
 
 Provide a high-level command stream with iterable chunks, a final outcome promise and cancellation.
@@ -269,7 +280,7 @@ normal SDK client in 0.45, and remove the old export path in 0.46. Keep their di
 where typed host slots still need them; removing an obsolete facade must not remove supported events.
 
 Retire [requireRepoFiles](../../../packages/sdk/src/data/draft-layout.ts) with old file acquisition.
-Planner and Reports pass `ctx.projectFiles` into it today. They must open the intended root in 0.45;
+Planner and Reports pass `ctx.projectFiles` into it today. They must use the intended named file handle in 0.45;
 deprecate the helper in 0.44 and remove it in 0.46. Keep pure frontmatter, draft-layout, name-resolution
 and prompt-rendering helpers. They do not create another storage owner or command execution model.
 
@@ -287,8 +298,8 @@ Use export graphs plus actual HTTP/CLI/bridge registrations for the rest of the 
 | Removal family | Replacement or required action |
 | --- | --- |
 | Deprecated storage KV/collections, mutable file-ID APIs and old file-root properties | Storage PRD; records/assets/explicit file handles. |
-| Ambiguous notification resolve/dismiss operations | Shared explicit transition contract. |
-| Session list/listByWorkspace and unpaged compatibility routes | Paged query; migrate completeness-sensitive callers explicitly. |
+| Ambiguous notification resolve/dismiss operations | `setStatus` and `setStatusByKey`, with matched adapter results. |
+| Session list/listByWorkspace and unpaged compatibility routes | Paged query plus SDK iterator; preserve completeness-sensitive checks. |
 | Session/workspace link wrappers | `resources` with agreed source validation and events. |
 | Old command outcome schemas, lossy unwrap and stream adapters | Shared outcome plus typed adapters; preserve raw transport metadata when needed. |
 | Workspace archive API, provider hook/capability and event aliases | Delete contract, with persisted-state audit. |
@@ -331,5 +342,6 @@ extensions and examples must use supported paths. Audit exports, manifests, brid
 HTTP registrations against the completed removal inventory. Required private data readers have explicit owners.
 Delete tests for removed compatibility paths; preserve checks of supported behavior and required data upgrades.
 
-For this documentation-only PR, validate source claims, links, numbering and formatting. Runtime changes,
-published SDKs, data conversions and release acceptance remain implementation work.
+The prototype runs selected task checks and real in-memory storage conflicts/retries. Production
+host/browser/HTTP adapters, published SDKs, conversions and release acceptance remain implementation work.
+Repeat these tasks against real adapters before adoption; keep security, restart and failure tests.

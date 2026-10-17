@@ -151,6 +151,16 @@ results. When a save cannot proceed, explain whether space, bytes, permission, p
 a conflict is blocking it. Preserve the draft and provide an action that can resolve the condition.
 Keep these outcomes available through public APIs for both UI and agent callers.
 
+## Limits of the authoring prototype
+
+The [API experiment](../../references/sdk/0005-api-clarity-prototype.md) exercises guarded saves and
+completed attachment retries against the real in-memory record engine. It proves neither bounded
+storage nor recovery after compaction, asset eviction, restart or relay failure. Its attachment retry
+still hashes the supplied file and reads retained metadata even when it avoids staging again.
+Production helpers must use the same capacity, availability and durability outcomes as raw primitives.
+They must not conceal pending replication, unavailable bytes or protected data exceeding a budget.
+The acceptance evidence below remains required for 0.44; smaller callers do not satisfy it.
+
 ## Acceptance evidence for 0.44 platform features and 0.45 adoption
 
 - Publish exact limits, retention rules, protected-data rules and the offline-ready definition.
@@ -182,8 +192,8 @@ Keep these outcomes available through public APIs for both UI and agent callers.
 - Record capacity and reconnect results for the unchanged 10,000-record/5 GiB workload. Do not
   change existing performance budgets, reduce the workload or skip a platform to pass a check.
 
-For this documentation-only change, verify source claims, local links, numbering and formatting.
-Runtime implementation and the acceptance evidence above remain outstanding.
+The isolated authoring experiment does not implement this PRD. Runtime implementation and the
+capacity/recovery acceptance evidence above remain outstanding.
 
 ## Evidence and related contracts
 
