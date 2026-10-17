@@ -469,6 +469,7 @@
     "packages/pstdio-api-contracts": {
       "name": "pstdio-api-contracts",
       "dependencies": {
+        "pstdio-sync-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
       "devDependencies": {
@@ -676,6 +677,7 @@
         "cross-env": "10.1.0",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-extensions": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "rolldown": "^1.2.11",
@@ -715,6 +717,7 @@
         "@types/mustache": "^4.2.6",
         "@types/react": "^19.2.0",
         "pstdio-api-contracts": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "react": "^19.0.0",
         "rolldown": "^1.2.11",
         "rolldown-plugin-dts": "^0.28.6",

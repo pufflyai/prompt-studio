@@ -259,6 +259,7 @@ const buildApp = async (
   const terminalSupervisor = createAppTerminalSupervisor();
 
   deps = {
+    environmentService: dbs.environmentDBService,
     artifactMountWrites,
     resourceLinksService: dbs.resourceLinksDBService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,

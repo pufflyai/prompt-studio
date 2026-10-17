@@ -10,35 +10,10 @@ type ApiRequestOptions = {
   allowNotFound?: boolean;
 };
 
-export type PstdioConfig = {
-  apiBaseUrl?: string;
-  terminalWebSocketUrl?: string;
-  version?: string;
-};
+import { resolveApiBaseUrl } from "./runtime-config";
 
-export const readRuntimeConfig = (): PstdioConfig | null => {
-  const w = globalThis as unknown as { __PSTDIO_CONFIG__?: PstdioConfig };
-  if (w.__PSTDIO_CONFIG__) return w.__PSTDIO_CONFIG__;
-
-  const encodedConfig = globalThis.document?.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
-  if (!encodedConfig) return null;
-  try {
-    return JSON.parse(decodeURIComponent(encodedConfig)) as PstdioConfig;
-  } catch {
-    return null;
-  }
-};
-
-const resolveApiBaseUrl = () => {
-  const runtimeConfig = readRuntimeConfig();
-
-  if (runtimeConfig) {
-    return runtimeConfig.apiBaseUrl?.replace(/\/$/, "") ?? "";
-  }
-
-  // Packaged dashboards share an origin with the API. Vite development uses its proxy.
-  return "";
-};
+export type { PstdioConfig } from "./runtime-config";
+export { readRuntimeConfig } from "./runtime-config";
 
 export const buildApiUrl = (path: string) => {
   if (path.startsWith("http://") || path.startsWith("https://")) {
@@ -81,13 +56,12 @@ export const buildAbsoluteApiUrl = (path: string, baseHref = globalThis.location
 };
 
 // The browser session secret is a bearer credential. A server without auth ignores it.
-export const apiClientOptions = () => ({ baseUrl: resolveApiBaseUrl(), token: readBrowserSession() });
+export const apiClientOptions = () => ({ baseUrl: resolveApiBaseUrl(), token: readBrowserSession() ?? "" });
 
 let apiClientInstance: PstdioClient | null = null;
 let apiClientKey: string | null = null;
 
-export const getApiClient = () => {
-  const options = apiClientOptions();
+export const getApiClient = (options = apiClientOptions()) => {
   const key = JSON.stringify(options);
   if (!apiClientInstance || apiClientKey !== key) {
     apiClientInstance = createClient(options);
@@ -97,17 +71,20 @@ export const getApiClient = () => {
   return apiClientInstance;
 };
 
-export const apiRequest = async <T>(path: string, options: ApiRequestOptions = {}) => {
-  const { allowNotFound, ...requestOptions } = options;
-  const request = createRequest(apiClientOptions());
+export const createApiRequest =
+  (connection = apiClientOptions()) =>
+  async <T>(path: string, options: ApiRequestOptions = {}) => {
+    const { allowNotFound, ...requestOptions } = options;
+    const request = createRequest(connection);
 
-  try {
-    return await request<T>(path, requestOptions);
-  } catch (error) {
-    if (allowNotFound && error instanceof PstdioApiError && error.status === 404) {
-      return null as T;
+    try {
+      return await request<T>(path, requestOptions);
+    } catch (error) {
+      if (allowNotFound && error instanceof PstdioApiError && error.status === 404) {
+        return null as T;
+      }
+
+      throw error;
     }
-
-    throw error;
-  }
-};
+  };
+export const apiRequest = <T>(path: string, options: ApiRequestOptions = {}) => createApiRequest()<T>(path, options);

@@ -1,6 +1,8 @@
 import type { ListExtensionAppearanceResponse, LocalizableString, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { JsonValue } from "@pstdio/sdk/extensions";
 import i18n from "@/i18n";
+import { getRuntimeCollections } from "@/lib/sync/collections";
+import { createRuntimeState } from "@/lib/sync/runtime-state";
 
 type LocalizedStringToken = Extract<LocalizableString, { $l10n: string }>;
 
@@ -18,7 +20,11 @@ export type ResolvedWorkbenchExtensionMetadata = ResolvedLocalizable<WorkbenchEx
 export type ResolvedWorkbenchExtensionAppearance = ResolvedLocalizable<ListExtensionAppearanceResponse>;
 
 type TranslationRecord = ListExtensionAppearanceResponse["translations"][number];
-const translationRecords = new Map<string, TranslationRecord>();
+const translations = createRuntimeState(
+  () => new Map<string, TranslationRecord>(),
+  (records) => records.clear(),
+);
+const namespaceFor = (extensionId: string, owner = getRuntimeCollections()) => `ext:${owner.id}:${extensionId}`;
 
 const isLocalizedString = (value: unknown): value is Extract<LocalizableString, { $l10n: string }> =>
   typeof value === "object" &&
@@ -36,6 +42,7 @@ export const resolveLocalizableString = (
   value: LocalizableString | undefined,
   extensionId?: string,
   args?: Record<string, unknown>,
+  owner = getRuntimeCollections(),
 ) => {
   if (value === undefined) return "";
   if (!isLocalizedString(value)) return value;
@@ -45,14 +52,14 @@ export const resolveLocalizableString = (
 
   return i18n.t(value.$l10n, {
     defaultValue,
-    ns: `ext:${extensionId}`,
+    ns: namespaceFor(extensionId, owner),
     replace: args,
   });
 };
 
-const resolveValue = (value: unknown, extensionId?: string): unknown => {
-  if (isLocalizedString(value)) return resolveLocalizableString(value, extensionId);
-  if (Array.isArray(value)) return value.map((item) => resolveValue(item, extensionId));
+const resolveValue = (value: unknown, extensionId: string | undefined, owner = getRuntimeCollections()): unknown => {
+  if (isLocalizedString(value)) return resolveLocalizableString(value, extensionId, undefined, owner);
+  if (Array.isArray(value)) return value.map((item) => resolveValue(item, extensionId, owner));
   if (typeof value !== "object" || value === null) return value;
 
   const nextExtensionId =
@@ -60,26 +67,33 @@ const resolveValue = (value: unknown, extensionId?: string): unknown => {
       ? (value as { extensionId: string }).extensionId
       : extensionId;
   const next: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) next[key] = resolveValue(item, nextExtensionId);
+  for (const [key, item] of Object.entries(value)) next[key] = resolveValue(item, nextExtensionId, owner);
   return next;
 };
 
-export const localizeExtensionMetadata = (metadata: WorkbenchExtensionMetadata) =>
-  resolveValue(metadata) as ResolvedWorkbenchExtensionMetadata;
+export const localizeExtensionMetadata = (metadata: WorkbenchExtensionMetadata, owner = getRuntimeCollections()) =>
+  resolveValue(metadata, undefined, owner) as ResolvedWorkbenchExtensionMetadata;
 
 // Deep-resolves any `l10n()` tokens in an arbitrary value (e.g. a command result whose
 // labels the extension localized) against the extension's translation bundle.
-export const localizeExtensionValue = (value: unknown, extensionId?: string) => resolveValue(value, extensionId);
+export const localizeExtensionValue = (value: unknown, extensionId?: string, owner = getRuntimeCollections()) =>
+  resolveValue(value, extensionId, owner);
 
-export const localizeExtensionAppearance = (appearance: ListExtensionAppearanceResponse) =>
-  resolveValue(appearance) as ResolvedWorkbenchExtensionAppearance;
+export const localizeExtensionAppearance = (
+  appearance: ListExtensionAppearanceResponse,
+  owner = getRuntimeCollections(),
+) => resolveValue(appearance, undefined, owner) as ResolvedWorkbenchExtensionAppearance;
 
-export const registerExtensionTranslationBundles = (appearance: ListExtensionAppearanceResponse) => {
+export const registerExtensionTranslationBundles = (
+  appearance: ListExtensionAppearanceResponse,
+  owner = getRuntimeCollections(),
+) => {
+  const translationRecords = translations(owner);
   const registered: Array<{ locale: string; namespace: string }> = [];
   const extensionIds = new Set<string>();
 
   for (const record of appearance.translations ?? []) {
-    const namespace = `ext:${record.extensionId}`;
+    const namespace = namespaceFor(record.extensionId, owner);
     translationRecords.set(record.extensionId, record);
     extensionIds.add(record.extensionId);
     for (const [locale, bundle] of Object.entries(record.bundles)) {
@@ -88,18 +102,27 @@ export const registerExtensionTranslationBundles = (appearance: ListExtensionApp
     }
   }
 
+  const dispose = () => {
+    for (const { locale, namespace } of registered) {
+      if (i18n.hasResourceBundle(locale, namespace)) i18n.removeResourceBundle(locale, namespace);
+    }
+    for (const extensionId of extensionIds) translationRecords.delete(extensionId);
+  };
+  const unsubscribe = owner.onDispose(dispose);
   return {
-    dispose() {
-      for (const { locale, namespace } of registered) {
-        if (i18n.hasResourceBundle(locale, namespace)) i18n.removeResourceBundle(locale, namespace);
-      }
-      for (const extensionId of extensionIds) translationRecords.delete(extensionId);
+    dispose: () => {
+      unsubscribe();
+      dispose();
     },
   };
 };
 
-export const getExtensionTranslationContext = (extensionId: string, locale: string) => {
-  const record = translationRecords.get(extensionId);
+export const getExtensionTranslationContext = (
+  extensionId: string,
+  locale: string,
+  owner = getRuntimeCollections(),
+) => {
+  const record = translations(owner).get(extensionId);
   if (!record) return { locale, defaultLocale: locale, bundle: {}, defaultBundle: {} };
 
   return {

@@ -1,7 +1,7 @@
 import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
+import { type CollectionChange, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import {
   addLocalExtensionFolder,
   type DroppedExtensionFolder,
@@ -204,13 +204,14 @@ export const useUninstallProjectExtension = (projectId: string | undefined) => {
 };
 
 export const useExecuteExtensionCommand = (projectId: string | undefined) => {
+  const owner = getRuntimeCollections();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ commandId, body, signal }: { commandId: string; body: unknown; signal?: AbortSignal }) => {
       if (!projectId) throw new Error("Project id is required to execute extension commands.");
       const response = await executeExtensionCommand(projectId, commandId, body, signal);
-      publishExtensionCommandEvent(response, { projectId });
+      publishExtensionCommandEvent(response, { projectId }, owner);
       return response;
     },
     onSuccess: async (response) => {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
@@ -31,11 +31,11 @@ const workspace: ResourceRef = {
   },
 };
 beforeEach(() => {
-  dashboardQueryClient.clear();
+  getDashboardQueryClient().clear();
   runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: "http://workspace-finder.test" };
 });
 afterEach(() => {
-  dashboardQueryClient.clear();
+  getDashboardQueryClient().clear();
   globalThis.fetch = originalFetch;
   delete runtime.__PSTDIO_CONFIG__;
   delete runtime.promptStudioDesktop;

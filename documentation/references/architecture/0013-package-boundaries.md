@@ -15,7 +15,9 @@ layer-map change.
    export is test-only and uses development dependencies for PGlite, PostgreSQL,
    Yjs, and S3 test storage. It imports no host, SDK, UI, database implementation,
    or provider code. Future runtime and relay consumers must declare their own
-   dependency and layer-map edge when they integrate it; none is added speculatively.
+   dependency and layer-map edge when they integrate it. `pstdio-api-contracts`
+   consumes its identity and exact-target schemas for local environment bindings;
+   it adds no host or provider dependency to the synchronization package.
 
    `pstdio-api-contracts`, `pstdio-file-types`, `pstdio-paths`,
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
@@ -27,7 +29,8 @@ layer-map change.
 2. **Public authoring SDK**
    `@pstdio/sdk` exposes extension and client authoring APIs. Runtime or host
    contracts shared with the API live below it in `pstdio-api-contracts`, not in
-   API packages.
+   API packages. The SDK and workbench declare `pstdio-sync-contracts` as a build
+   dependency and inline its types and schemas into their public packages.
 
 3. **Extension runtime**
    `pstdio-extensions` owns extension discovery, metadata normalization, bridge
@@ -63,7 +66,7 @@ layer-map change.
    `@pstdio/workbench` owns workbench core contracts, layout, renderers, storage
    integration, and adapters from extension metadata into workbench modules. It is
    published to npm as a self-contained bundle (its private workspace deps,
-   `pstdio-extensions` and `pstdio-api-contracts`, are inlined at build time). Its
+   `pstdio-extensions`, `pstdio-api-contracts`, and `pstdio-sync-contracts`, are inlined at build time). Its
    core API must not import `@pstdio/ui`, including type-only imports.
 
 7. **Product apps and tests**
