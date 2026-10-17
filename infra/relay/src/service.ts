@@ -1,4 +1,8 @@
-interface RelayConfig {
+import { createRelayHandler } from "./transport/http";
+import type { RelayOwners } from "./transport/owners";
+import type { RelaySubscription } from "./transport/subscriptions";
+
+export interface RelayConfig {
   hostname: string;
   port: number;
 }
@@ -11,14 +15,24 @@ export function readConfig(env: Record<string, string | undefined>) {
   return { hostname: env.RELAY_HOST ?? "127.0.0.1", port };
 }
 
-export function startRelay(config: RelayConfig) {
-  return Bun.serve({
+export function startRelay(config: RelayConfig, owners: RelayOwners) {
+  const handler = createRelayHandler(owners, (request, data) => server.upgrade(request, { data }));
+  const server = Bun.serve<RelaySubscription>({
     ...config,
-    fetch(request) {
-      if (request.method === "GET" && new URL(request.url).pathname === "/health") {
-        return Response.json({ status: "ok" });
-      }
-      return new Response("Not found", { status: 404 });
+    // Match the existing S3 maximum part size while forwarding the body as a bounded stream.
+    maxRequestBodySize: 5 * 1024 ** 3,
+    fetch: handler,
+    websocket: {
+      open(socket) {
+        socket.data.open(socket);
+      },
+      message(socket) {
+        socket.data.close(1008);
+      },
+      close(socket) {
+        socket.data.close();
+      },
     },
   });
+  return server;
 }

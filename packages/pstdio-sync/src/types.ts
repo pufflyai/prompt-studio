@@ -51,6 +51,7 @@ export interface JournalEntry {
   inputFingerprint: string;
   mutation: LocalOperation;
   acceptance?: Acceptance | null;
+  recoveryProof?: string;
 }
 
 export interface GroupedState {
@@ -69,4 +70,5 @@ export interface RelayAdapter {
   assets?: RelayAssets;
   snapshot(): Promise<Snapshot>;
   submit(mutation: Mutation): Promise<Receipt>;
+  recover?(mutation: Mutation, proof: string): Promise<Receipt>;
 }

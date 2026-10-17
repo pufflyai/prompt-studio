@@ -32,10 +32,12 @@ async function step(args: string[]) {
 }
 
 try {
-  await step(["build", "relay", "smoke"]);
+  await step(["build", "relay", "smoke", "initialize", "authority", "tls"]);
+  await step(["run", "--rm", "--no-deps", "tls"]);
   await step(["up", "--wait", "postgres", "objects"]);
   await step(["run", "--rm", "--no-deps", "bucket"]);
-  await step(["up", "--wait", "relay"]);
+  await step(["run", "--rm", "--no-deps", "initialize"]);
+  await step(["up", "--wait", "authority", "relay"]);
   await step(["run", "--rm", "--no-deps", "smoke"]);
   await step(["stop", "relay"]);
   const relayId = await run([...compose, "ps", "--all", "--quiet", "relay"], true);

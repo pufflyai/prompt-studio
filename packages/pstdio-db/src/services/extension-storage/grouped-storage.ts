@@ -40,6 +40,7 @@ export const createGroupedStorageDBService = (db: DbClient) => {
         inputFingerprint: entry.input_fingerprint,
         mutation: entry.mutation_json,
         acceptance: entry.acceptance_json,
+        recoveryProof: entry.recovery_proof ?? undefined,
       }));
       const accepted = decodeAcceptedState(row.accepted_json, journal);
       const state: GroupedState = {
@@ -59,15 +60,19 @@ export const createGroupedStorageDBService = (db: DbClient) => {
           input_fingerprint: entry.inputFingerprint,
           mutation_json: entry.mutation,
           acceptance_json: entry.acceptance,
+          recovery_proof: entry.recoveryProof,
         });
       }
       const originals = new Map(stored.map((row) => [row.operation_id, row]));
       for (const entry of state.journal.slice(0, stored.length)) {
         const original = originals.get(entry.mutation.operationId)!;
-        if (entry.acceptance !== original.acceptance_json)
+        if (
+          entry.acceptance !== original.acceptance_json ||
+          entry.recoveryProof !== (original.recovery_proof ?? undefined)
+        )
           await tx
             .update(extension_storage_journal)
-            .set({ acceptance_json: entry.acceptance })
+            .set({ acceptance_json: entry.acceptance, recovery_proof: entry.recoveryProof })
             .where(
               and(
                 eq(extension_storage_journal.workbench_id, owner.workbenchId),

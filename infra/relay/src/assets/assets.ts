@@ -71,7 +71,7 @@ export const createRelayAssets = (config: AssetConfig) => {
       }
     });
   };
-  const verified = async (scope: Scope, asset: Asset, db: NodePgDatabase = database.db, signal?: AbortSignal) => {
+  const verified = async (scope: Scope, asset: Asset, db: NodePgDatabase, signal: AbortSignal) => {
     const ownerId = await fingerprint(scopeSchema.parse(scope));
     const reference = await fingerprint(assetSchema.parse(asset));
     const row = (
@@ -89,16 +89,20 @@ export const createRelayAssets = (config: AssetConfig) => {
       return operations.run(async (controller) => {
         const asset = assetSchema.parse(input);
         const key = await identity(scope, id);
-        await database.db
-          .insert(assetUploads)
-          .values({
-            ...key,
-            asset,
-            objectKey: `assets/${key.ownerId}/${await fingerprint(key.id)}`,
-            partSize: multipartSize(asset.byteLength),
-            status: "open",
-          })
-          .onConflictDoNothing();
+        await database.run(
+          async (db) =>
+            db
+              .insert(assetUploads)
+              .values({
+                ...key,
+                asset,
+                objectKey: `assets/${key.ownerId}/${await fingerprint(key.id)}`,
+                partSize: multipartSize(asset.byteLength),
+                status: "open",
+              })
+              .onConflictDoNothing(),
+          controller.signal,
+        );
         return withUpload(scope, id, controller, async ({ db, row, signal }) => {
           if (canonicalJson(row.asset) !== canonicalJson(asset))
             throw new Error("Upload identity reused with changed asset");
@@ -133,30 +137,58 @@ export const createRelayAssets = (config: AssetConfig) => {
         }),
       );
     },
-    async complete(scope: Scope, asset: Asset) {
-      return operations.run(async ({ signal }) => (await verified(scope, asset, database.db, signal)) !== null);
+    async complete(scope: Scope, asset: Asset, requestSignal?: AbortSignal) {
+      return operations.run(
+        ({ signal }) => database.run(async (db) => (await verified(scope, asset, db, signal)) !== null, signal),
+        requestSignal,
+      );
     },
-    async read(scope: Scope, asset: Asset) {
+    async read(scope: Scope, asset: Asset, offset = 0, requestSignal?: AbortSignal) {
+      if (!Number.isSafeInteger(offset) || offset < 0 || offset > asset.byteLength)
+        throw new Error("Invalid asset offset");
       return operations.run(async ({ signal }) => {
-        const row = await verified(scope, asset, database.db, signal);
+        const combined = requestSignal ? AbortSignal.any([signal, requestSignal]) : signal;
+        const row = await database.run((db) => verified(scope, asset, db, combined), combined);
         if (!row) return null;
-        const body = checkedStream(await objects.get(row.objectKey, row.etag, signal), row.asset);
+        if (offset === asset.byteLength && offset > 0)
+          return {
+            asset: row.asset,
+            body: new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.close();
+              },
+            }),
+          };
+        const source =
+          offset === 0
+            ? await objects.get(row.objectKey, row.etag, combined)
+            : await objects.range(row.objectKey, row.etag, row.asset, offset, combined);
+        // A suffix cannot prove the full digest. The receiver verifies its complete assembled file.
+        const body = checkedStream(
+          source,
+          offset === 0 ? row.asset : { byteLength: row.asset.byteLength - offset },
+          requestSignal,
+        );
         return { asset: row.asset, body };
-      });
+      }, requestSignal);
     },
     async cancel(scope: Scope, id: string) {
       return operations.run(async ({ signal }) => {
         const key = await identity(scope, id);
-        const cancelled = await database.db.transaction(async (db) => {
-          const rows = await db
-            .update(assetUploads)
-            .set({ status: "cancelled" })
-            .where(and(uploadWhere(key), inArray(assetUploads.status, ["open", "cancelled"])))
-            .returning({ id: assetUploads.id });
-          if (!rows.length) return false;
-          await db.execute(sql`SELECT pg_notify('relay_asset_cancel', ${lockKey(key)})`);
-          return true;
-        });
+        const cancelled = await database.run(
+          (db) =>
+            db.transaction(async (db) => {
+              const rows = await db
+                .update(assetUploads)
+                .set({ status: "cancelled" })
+                .where(and(uploadWhere(key), inArray(assetUploads.status, ["open", "cancelled"])))
+                .returning({ id: assetUploads.id });
+              if (!rows.length) return false;
+              await db.execute(sql`SELECT pg_notify('relay_asset_cancel', ${lockKey(key)})`);
+              return true;
+            }),
+          signal,
+        );
         if (!cancelled) return;
         active.get(lockKey(key))?.abort(new Error("Asset upload was cancelled"));
         await database.lock(lockKey(key), signal, async (db) => {

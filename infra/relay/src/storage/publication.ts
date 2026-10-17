@@ -8,7 +8,7 @@ import { saveReceipt } from "./receipts";
 import { relayOperations, relayRecords, type relayScopes } from "./schema";
 
 export interface RelayAssets {
-  complete(scope: Scope, asset: Asset): Promise<boolean>;
+  complete(scope: Scope, asset: Asset, signal?: AbortSignal): Promise<boolean>;
 }
 
 const dependencyProblem = async (
@@ -16,6 +16,7 @@ const dependencyProblem = async (
   ownerId: string,
   mutation: Mutation,
   assets: RelayAssets,
+  signal?: AbortSignal,
 ) => {
   const parents = mutation.parents.length
     ? await transaction
@@ -27,7 +28,8 @@ const dependencyProblem = async (
   const captured = new Set(mutation.resolution?.capturedOperationIds ?? []);
   if (mutation.parents.some((id) => !captured.has(id) && !ready.has(id))) return "unaccepted dependency";
   for (const change of mutation.changes)
-    if (change.asset?.next && !(await assets.complete(mutation.scope, change.asset.next))) return "incomplete assets";
+    if (change.asset?.next && !(await assets.complete(mutation.scope, change.asset.next, signal)))
+      return "incomplete assets";
 };
 
 export const publishGroup = async (
@@ -35,6 +37,7 @@ export const publishGroup = async (
   owner: typeof relayScopes.$inferSelect,
   mutation: Mutation,
   assets: RelayAssets,
+  signal?: AbortSignal,
 ) => {
   const previous = (
     await transaction
@@ -45,7 +48,7 @@ export const publishGroup = async (
   if (previous && previous.mutation.fingerprint !== mutation.fingerprint)
     throw new Error("Operation identity reused with changed content");
   if (previous && previous.status !== "pending") return receiptFromRow(previous);
-  const waiting = await dependencyProblem(transaction, owner.id, mutation, assets);
+  const waiting = await dependencyProblem(transaction, owner.id, mutation, assets, signal);
   if (waiting) return saveReceipt(transaction, owner, mutation, previous, { status: "pending", reason: waiting });
 
   const state = await loadCandidate(transaction, owner, mutation);

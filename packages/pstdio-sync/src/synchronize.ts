@@ -34,12 +34,21 @@ export const synchronize = async (
   };
   await receive();
   const pending = await input.store.transaction(input.owner, async (state) =>
-    Promise.all(pendingOperations(state, input.environmentId).map((operation) => sealOperation(state, operation))),
+    Promise.all(
+      pendingOperations(state, input.environmentId).map(async (operation) => ({
+        mutation: await sealOperation(state, operation),
+        proof: state.journal.find((entry) => entry.mutation.operationId === operation.operationId)?.recoveryProof,
+      })),
+    ),
   );
   const outcomes: Receipt[] = [];
-  for (const mutation of pending) {
+  for (const { mutation, proof } of pending) {
     await uploadMutationAssets(input.assets, adapter, mutation);
-    const receipt = receiptSchema.parse(await adapter.submit(mutation));
+    const foreignRecovery = mutation.environmentId !== input.environmentId && adapter.recover;
+    if (foreignRecovery && !proof) throw new Error("Relay recovery proof is unavailable for a retained operation");
+    const receipt = receiptSchema.parse(
+      foreignRecovery ? await foreignRecovery(mutation, proof!) : await adapter.submit(mutation),
+    );
     await validateMutation(receipt.mutation);
     if (receipt.operationId !== mutation.operationId || receipt.fingerprint !== mutation.fingerprint)
       throw new Error("Relay receipt differs from the submitted operation");

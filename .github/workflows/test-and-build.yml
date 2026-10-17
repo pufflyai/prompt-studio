@@ -167,6 +167,9 @@ jobs:
       - name: Test durable streaming assets and object storage contract
         run: bun run --cwd infra/relay test:assets
 
+      - name: Test authenticated relay HTTP and finite WebSocket subscriptions
+        run: bun run --cwd infra/relay test:transport
+
       - name: Test production relay with real local stores
         env:
           SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts

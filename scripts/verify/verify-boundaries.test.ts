@@ -178,7 +178,11 @@ describe("verifyBoundaries", () => {
 });
 
 test("a relay outside packages is discovered and obeys package boundaries", () => {
-  const dependencies = { "pstdio-sync": "workspace:*", "pstdio-sync-contracts": "workspace:*" };
+  const dependencies = {
+    "pstdio-account-manager": "workspace:*",
+    "pstdio-sync": "workspace:*",
+    "pstdio-sync-contracts": "workspace:*",
+  };
   const root = createWorkspace({
     "package.json": { private: true, workspaces: ["packages/*", "clients/*", "infra/relay"] },
     "infra/relay/package.json": { name: "pstdio-relay", private: true, dependencies },

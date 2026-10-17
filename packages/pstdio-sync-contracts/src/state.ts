@@ -38,6 +38,7 @@ export const receiptSchema = z
     reason: z.string().optional(),
     checkpoint: checkpointSchema.nullable(),
     conflictId: identitySchema.optional(),
+    recoveryProof: fingerprintSchema.optional(),
   })
   .superRefine((receipt, ctx) => {
     const identityMatches =

@@ -25,6 +25,7 @@ export const extension_storage_journal = pgTable(
     input_fingerprint: text("input_fingerprint").notNull(),
     mutation_json: jsonb("mutation_json").$type<LocalOperation>().notNull(),
     acceptance_json: jsonb("acceptance_json").$type<Acceptance>(),
+    recovery_proof: text("recovery_proof"),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.extension_id, table.operation_id] }),

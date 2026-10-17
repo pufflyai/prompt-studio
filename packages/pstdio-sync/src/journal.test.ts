@@ -3,6 +3,23 @@ import { receiveSnapshot } from "./journal";
 import { projectGroups } from "./projection";
 import { conflictedState } from "./sync-state.fixture";
 
+test("accepted and conflicting operation recovery evidence remains after an epoch rollback", async () => {
+  const { state, before, latest } = await conflictedState();
+  latest.receipts.winner.recoveryProof = "a".repeat(64);
+  latest.receipts.branch.recoveryProof = "b".repeat(64);
+  await receiveSnapshot(state, latest, state.accepted);
+  const restored = {
+    ...before,
+    checkpoint: { epoch: "rollback", sequence: 0 },
+    journalSequence: 0,
+    records: {},
+    receipts: {},
+    conflicts: {},
+  };
+  await receiveSnapshot(state, restored, latest);
+  expect(state.journal.map((entry) => entry.recoveryProof)).toEqual(["a".repeat(64), "b".repeat(64)]);
+});
+
 test("an older snapshot cannot hide a newer foreign conflict at the same accepted checkpoint", async () => {
   const { state, before, latest } = await conflictedState();
   await receiveSnapshot(state, before, latest);

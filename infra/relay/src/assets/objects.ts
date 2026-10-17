@@ -69,6 +69,25 @@ export const createAssetObjects = (config: ObjectConfig) => {
   return {
     head,
     get,
+    async range(key: string, etag: string, asset: Asset, offset: number, signal?: AbortSignal) {
+      const result = await client.send(
+        new GetObjectCommand({ ...target(key), IfMatch: etag, Range: `bytes=${offset}-` }),
+        { abortSignal: signal },
+      );
+      if (!result.Body) throw new Error("Object storage returned no range body");
+      const body = result.Body.transformToWebStream();
+      if (
+        result.$metadata.httpStatusCode !== 206 ||
+        result.ETag !== etag ||
+        result.ContentRange !== `bytes ${offset}-${asset.byteLength - 1}/${asset.byteLength}` ||
+        result.ContentLength !== asset.byteLength - offset ||
+        result.ContentType !== asset.mediaType
+      ) {
+        await body.cancel();
+        throw new Error("Object storage returned an invalid immutable range");
+      }
+      return body;
+    },
     async begin(key: string, asset: Asset, signal?: AbortSignal) {
       // A lost Create response can leave an empty multipart upload before its ID is saved.
       const [recovered, ...duplicates] = await uploads(key, signal);
