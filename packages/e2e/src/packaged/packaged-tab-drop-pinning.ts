@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
-const dragTab = async (page: Page, tab: Locator, target: Locator, region: "side" | "secondary") => {
+const dragTab = async (page: Page, tab: Locator, target: Locator, region: "main" | "side" | "secondary") => {
   const start = (await tab.boundingBox())!;
   const end = (await target.boundingBox())!;
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
@@ -9,6 +9,21 @@ const dragTab = async (page: Page, tab: Locator, target: Locator, region: "side"
   await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2, { steps: 10 });
   await expect(page.locator(`[data-workbench-tab-drop="${region}"][data-drop-active]:visible`).first()).toBeVisible();
   await page.mouse.up();
+};
+
+export const verifyRetainedTerminalDrop = async (page: Page, terminal: Locator) => {
+  await dragTab(page, terminal, page.locator('[data-workbench-panel="main"]'), "main");
+  await expect(
+    page.locator('[data-workbench-panel="main"]').getByRole("textbox", { name: "Terminal input" }),
+  ).toBeVisible();
+  await expect(terminal).toHaveAttribute("aria-selected", "true");
+  const input = page.getByRole("textbox", { name: "Terminal input" }).filter({ visible: true });
+  await input.pressSequentially('printf "__main_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
+  await input.press("Enter");
+  await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__main_retained__");
+  const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
+  if (await showBottom.isVisible()) await showBottom.click();
+  await dragTab(page, terminal, page.locator('[data-workbench-panel="secondary"]:visible'), "secondary");
 };
 
 export const verifyTabDropPinning = async (page: Page, preview: Locator) => {

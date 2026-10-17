@@ -35,7 +35,7 @@ interface RenderedOwnedPlacement {
 }
 
 const bindsToLocation = (placement: WorkbenchOwnedWidgetPlacement) =>
-  placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey));
+  placement.value.role === "sub-panel" && placement.identity.kind === "page";
 
 const resolveOwnerResourceKey = (
   desired: WorkbenchOwnedWidgetPlacement,
@@ -298,7 +298,8 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
           if (placement.role !== "sub-panel" || !placement.placementIdentity) return placement;
           const desiredPlacement = desiredByKey.get(placementIdentityKey(placement.placementIdentity));
           if (!desiredPlacement) return placement;
-          if (desiredPlacement.identity.kind !== "page" && !desiredPlacement.placement.resourceKey) return placement;
+          // Shared resources own their content; visiting a page does not make it their owner.
+          if (desiredPlacement.identity.kind !== "page") return placement;
           return { ...placement, ownerResourceKey };
         }),
       },

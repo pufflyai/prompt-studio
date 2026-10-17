@@ -31,17 +31,27 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
     await isolated.goto(`${descriptor.origin}/projects/${projectId}/sessions`);
     const header = isolated.locator('[data-workbench-panel-header="side"]');
     const open = async (title: string) => {
-      await isolated.getByRole("option", { name: title, exact: true }).focus();
-      await isolated.keyboard.press("Shift+F10");
-      await isolated.getByRole("menuitem", { name: "Open session panel", exact: true }).click();
+      const showSide = isolated.getByRole("button", { name: "Show Side Panel", exact: true });
+      if (await showSide.isVisible()) await showSide.click();
+      await header.getByRole("button", { name: "Add panel", exact: true }).click();
+      await isolated.getByRole("menuitem", { name: "Session", exact: true }).click();
+      await header.getByRole("tab", { selected: true }).click({ button: "right" });
+      await isolated.getByRole("menuitem", { name: "Switch session", exact: true }).click();
+      const picker = isolated.getByRole("dialog", { name: "Switch session", exact: true });
+      await picker.getByRole("textbox").fill(title);
+      await picker.getByRole("textbox").press("Enter");
       const tab = header.getByRole("tab", { name: new RegExp(title) });
       await expect(tab).toHaveAttribute("aria-selected", "true");
+      await tab.click({ button: "right" });
+      await isolated.getByRole("menuitem", { name: "Unpin tab", exact: true }).click();
+      await expect(tab).toHaveCSS("font-style", "italic");
       return tab;
     };
     const kept = await open("Selection kept");
     await kept.focus();
     await isolated.keyboard.press("Shift+F10");
     await isolated.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    await expect(kept).toHaveCSS("font-style", "normal");
     const old = await open("Selection old");
     await isolated
       .getByRole("region", { name: "Side Panel", exact: true })

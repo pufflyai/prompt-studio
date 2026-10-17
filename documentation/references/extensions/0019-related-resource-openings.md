@@ -80,6 +80,8 @@ New previews replace the eligible preview in their requested tray and stay leftm
 
 Dragging and dropping an unpinned tab pins it, including a reorder within the same tray or a drop into an empty tray. The destination's existing preview stays open and leftmost. The moved tab uses the requested insertion position among pinned tabs. Moving through a tab's menu follows the same rule. Feedback shows the insertion marker and rounded tray outline. Cancelling a drag leaves the tab unpinned. A moved automatic preview is now a kept pinned tab, so source-page cleanup does not close it.
 
+Only page-owned slots bind to the current resource page. Shell and mode placements own their resource content independently. Opening a shared tab while viewing a resource does not make that page its owner. The tab stays visible when moved into Main on Start or another supported page.
+
 ## Panel policy and remembered choices
 
 Tab placement, tab selection and panel visibility are separate. These rules apply to every resource owner and related resource, equally in Side and Bottom. They do not depend on Ticket, Session or Workspace types.

@@ -1,13 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
+import { verifyRetainedTerminalDrop } from "./packaged-tab-drop-pinning";
 
-export const verifyPackagedSessionMenus = async (
-  page: Page,
-  baseUrl: string,
-  projectId: string,
-  authorization: Record<string, string>,
-) => {
+const createSessionFixture = async (baseUrl: string, projectId: string, authorization: Record<string, string>) => {
   const workspacesResponse = await fetch(`${baseUrl}/v1/workspaces?project_id=${projectId}`, {
     headers: authorization,
   });
@@ -28,6 +24,16 @@ export const verifyPackagedSessionMenus = async (
   });
   expect(response.status).toBe(201);
   const session = (await response.json()) as { id: string };
+  return { workspace, session };
+};
+
+export const verifyPackagedSessionMenus = async (
+  page: Page,
+  baseUrl: string,
+  projectId: string,
+  authorization: Record<string, string>,
+) => {
+  const { workspace, session } = await createSessionFixture(baseUrl, projectId, authorization);
   const workspaceUrl = serializePageUrl({
     projectId,
     page: { id: "workspace", ref: workbenchPages.workspace, path: "workspace" },
@@ -125,6 +131,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(terminalTab).toBeVisible();
   await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
   await verifyGlobalBottomState(page, terminalTab, reopenWorkspace, leaveWorkspace);
+  await verifyRetainedTerminalDrop(page, terminalTab);
   await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
   await terminalInput.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__navigation_retained__");

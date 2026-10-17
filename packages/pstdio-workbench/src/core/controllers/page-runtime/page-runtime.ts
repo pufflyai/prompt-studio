@@ -63,7 +63,7 @@ const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreSta
   const ownerResourceKey = resourceKey(state.location?.resource);
   if (!ownerResourceKey) return state.placements;
   return state.placements.map((placement) =>
-    placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey))
+    placement.value.role === "sub-panel" && placement.identity.kind === "page"
       ? { ...placement, value: { ...placement.value, ownerResourceKey } }
       : placement,
   );

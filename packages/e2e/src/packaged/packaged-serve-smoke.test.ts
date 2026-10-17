@@ -91,6 +91,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // It also opens a workspace's related session through the default-on preview policy and checks that it is unpinned.
 // Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
 // Manually opened Bottom panels and terminals stay visible across page navigation, retaining the terminal process.
+// A terminal opened on a resource page can move into Main on its listing without losing visibility or shell state.
 // Related tabs select when revealing closed Side/Bottom panels; open panels keep their selection.
 // Related tabs are placed even when a remembered closure hides their panel; global tab selection remains stable.
 // Only automatically revealed panels close on leave; pinning or adding a manual tab keeps the panel open.

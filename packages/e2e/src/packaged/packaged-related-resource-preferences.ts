@@ -22,6 +22,7 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
     await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
     const bottomTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab").first();
     await tabAction(page, bottomTab, "Reset layout");
+    await expect(bottomTab).toHaveCount(0);
     await leave();
     await reopen();
     await expect(preview).toBeVisible();

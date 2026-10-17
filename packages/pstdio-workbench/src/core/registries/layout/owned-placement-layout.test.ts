@@ -93,7 +93,7 @@ describe("owned placement layout reconciliation", () => {
     expect(next.regions.side.activeWidgetId).toBe("project-sessions");
     expect(next.activeWidgetId).toBe("project-sessions");
   });
-  test("binds declarative Sub Panels to the active Location", () => {
+  test("binds page Sub Panels while shared resource panels remain independent", () => {
     const board = owned(pageIdentity("workspaces", "content"), "main", 0, "board", "workspace-view");
     const initial = reconcileOwnedWidgetLayout({
       layout: createDefaultWorkbenchLayout(),
@@ -118,18 +118,21 @@ describe("owned placement layout reconciliation", () => {
       id: "terminal:one",
     };
     terminal.value.resourceKey = "terminal:one";
+    const tools = owned(pageIdentity("workspaces", "tools"), "side", 0, "tools", "tools-view");
     const workspaceLayout = reconcileOwnedWidgetLayout({
       layout: initial,
-      placements: [board, workspace, terminal],
+      placements: [board, workspace, terminal, tools],
       activate: [workspace.identity, terminal.identity],
     });
     const next = reconcileOwnedWidgetLayout({
       layout: workspaceLayout,
-      placements: [board, workspace, terminal],
+      placements: [board, workspace, terminal, tools],
       activate: [board.identity],
     });
-    expect(next.regions.secondary.widgets[0]).toMatchObject({
-      widgetId: "terminal",
+    expect(next.regions.secondary.widgets[0]?.resource).toEqual(terminal.value.resource);
+    expect(next.regions.secondary.widgets[0]).not.toHaveProperty("ownerResourceKey");
+    expect(next.regions.side.widgets[0]).toMatchObject({
+      widgetId: "tools",
       ownerResourceKey: "workspace:one",
     });
   });
