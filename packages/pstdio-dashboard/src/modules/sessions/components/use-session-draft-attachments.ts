@@ -1,12 +1,12 @@
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { useRef, useSyncExternalStore } from "react";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, createApiRequest } from "@/lib/api";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { uploadDraftAttachmentFiles } from "./session-draft-attachment-upload";
 import { createClipboardAttachmentFile } from "./session-draft-clipboard-attachment";
 
 const uploadSessionAttachment = async (projectId: string, file: File) =>
-  apiRequest<SessionAttachment>(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments`, {
+  createApiRequest()<SessionAttachment>(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments`, {
     method: "POST",
     body: await file.arrayBuffer(),
     headers: {

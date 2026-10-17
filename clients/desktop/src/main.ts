@@ -14,6 +14,7 @@ import {
 } from "./lifecycle/lifecycle-machine";
 import { createQuitFlow } from "./lifecycle/quit-flow";
 import { recoveryError } from "./lifecycle/recovery-error";
+import { createRuntimeRecovery } from "./lifecycle/runtime-recovery";
 import { startWorkbench } from "./lifecycle/start-workbench";
 import { createDesktopPerformanceMonitor } from "./performance/create-desktop-performance-monitor";
 import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
@@ -112,8 +113,8 @@ const runtimeManager = new DesktopRuntimeManager({
     void runtimeManager.waitForExit().then(() => quitFlow.finishQuit());
   },
   onUnexpectedExit: (detail) => {
-    setState({ kind: "recovery", error: recoveryError(new Error(detail)) });
-    void windowController?.showLifecycle();
+    if (quitFlow.isQuitting() || state.kind === "closing" || state.kind === "detached") return;
+    void runtimeRecovery.recover(new Error(detail));
   },
 });
 
@@ -155,9 +156,10 @@ const quitFlow = createQuitFlow({
   },
 });
 
-const startRuntime = async () => {
-  setState(initialDesktopState);
-  try {
+const runtimeRecovery = createRuntimeRecovery({
+  canRestart: () => !externalRuntime && !quitFlow.isQuitting() && state.kind === "workbench",
+  start: async () => {
+    setState(initialDesktopState);
     const runtime = await startWorkbench(windowController!, runtimeManager);
     setState(
       transitionDesktopState(state, {
@@ -170,15 +172,17 @@ const startRuntime = async () => {
       }),
     );
     if (app.isPackaged) updateNotifications.installed();
-  } catch (error) {
+  },
+  showFailure: async (error) => {
+    if (quitFlow.isQuitting() || state.kind === "closing" || state.kind === "detached") return;
     logger.error(
       { event: "desktop.runtime.start.failed", message: recoveryError(error).message },
       "Runtime start failed",
     );
     setState({ kind: "recovery", error: recoveryError(error) });
     await windowController?.showLifecycle();
-  }
-};
+  },
+});
 
 const bootstrap = async () => {
   const cliSetup = createMacOSCliSetup((error) => {
@@ -224,7 +228,7 @@ const bootstrap = async () => {
     getState: () => state,
     getStartupAppearance: () => workbenchState.getStartupAppearance(),
     setStartupAppearance: (value) => windowController?.setStartupAppearance(workbenchState.setStartupAppearance(value)),
-    retryRuntime: startRuntime,
+    retryRuntime: () => (quitFlow.isQuitting() ? Promise.resolve() : runtimeRecovery.start()),
     openLogs: () => shell.showItemInFolder(resolveDefaultLogPath()),
     revealInFinder: (path) => {
       if (process.platform !== "darwin") throw new Error("Reveal in Finder is only available on macOS.");
@@ -270,7 +274,7 @@ const bootstrap = async () => {
     performance: performanceMonitor,
   });
   void performanceMonitor.start();
-  await startRuntime();
+  await runtimeRecovery.start();
   // Squirrel.Windows still holds its update lock on first run, so wait for the interval.
   if (!process.argv.includes("--squirrel-firstrun")) void updateManager.checkInBackground();
   setInterval(() => void updateManager.checkInBackground(), UPDATE_CHECK_INTERVAL_MS);

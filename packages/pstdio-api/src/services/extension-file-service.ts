@@ -26,7 +26,14 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
     return instance !== null && instance.scope_type === "project" && instance.scope_id === input.project_id;
   };
 
-  const upload = async (input: ExtensionFileScope & { file_name: string; data: Buffer; mime_type?: string | null }) => {
+  const upload = async (
+    input: ExtensionFileScope & {
+      file_name: string;
+      data: Buffer | ReadableStream<Uint8Array>;
+      mime_type?: string | null;
+      signal?: AbortSignal;
+    },
+  ) => {
     if (!(await ownsProjectInstance(input))) return null;
 
     const file = await deps.fileService.upload(
@@ -36,6 +43,7 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
         file_kind: "extension",
         data: input.data,
         mime_type: input.mime_type ?? null,
+        signal: input.signal,
       },
       async (file) => {
         await deps.extensionFilesDBService.attach({

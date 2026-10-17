@@ -1,6 +1,60 @@
 import { expect, test } from "bun:test";
 import { createBenchEnvironment } from "./testbench-environment";
 
+test("bench commands migrate once per storage scope and retry failed imports", async () => {
+  const { storage } = createBenchEnvironment({ kv: { title: "Seed" } });
+  await expect(
+    storage.migrate(1, async () => {
+      throw new Error("Retry");
+    }),
+  ).rejects.toThrow("Retry");
+  const versions: number[] = [];
+  await storage.migrate(1, async (previous) => {
+    versions.push(previous);
+  });
+  await storage.migrate(1, async () => {
+    throw new Error("Already imported");
+  });
+  const scoped = storage.scope({ type: "custom", id: "other" });
+  await scoped.migrate(1, async (previous) => {
+    versions.push(previous);
+  });
+  await scoped.set("title", "Other");
+  expect(versions).toEqual([0, 0]);
+  expect(await scoped.scope({ type: "project" }).get<string>("title")).toBe("Seed");
+  expect(await scoped.get<string>("title")).toBe("Other");
+  expect(await scoped.readLegacy("missing")).toBeUndefined();
+});
+
+test("testbench storage shares seeded and guarded records with deprecated storage calls", async () => {
+  const { storage } = createBenchEnvironment({
+    kv: { note: "seed" },
+    collections: { notes: { a: { title: "Seeded" } } },
+  });
+  const observed = await storage.records.read(storage.records.id("note"));
+  expect(observed.value).toBe("seed");
+  await storage.set("note", "newer");
+  expect(
+    (
+      await storage.records.commit({
+        operationId: "open",
+        edits: [{ recordId: observed.recordId, expectedRevision: observed.revision, replace: "retained" }],
+      })
+    ).status,
+  ).toBe("conflict");
+  expect(await storage.get<string>("note")).toBe("newer");
+  expect(await storage.collection("notes").get("a")).toEqual({ title: "Seeded" });
+});
+
+test("testbench commands stage and read isolated immutable assets", async () => {
+  const { storage } = createBenchEnvironment();
+  const asset = await storage.assets.stage({ operationId: "preview", source: new Blob(["bench asset"]) });
+  await storage.assets.verifyComplete([asset]);
+  expect(await new Response(await storage.assets.read(asset)).text()).toBe("bench asset");
+  expect(await storage.assets.getTransfer("preview")).toMatchObject({ status: "complete", asset });
+  expect(await createBenchEnvironment().storage.assets.getTransfer("preview")).toBeUndefined();
+});
+
 test("queued requests explain their host runtime requirement in the testbench", async () => {
   const { sessions } = createBenchEnvironment();
   await expect(sessions.getQueuedFollowUps("session")).rejects.toThrow("host runtime");

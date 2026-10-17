@@ -1,7 +1,7 @@
+import type { SyncOutcome } from "./state";
 import type { Asset, Json } from "./wire";
 
-// Design inputs for the SDK child, deliberately separate from wire envelopes.
-// These are not added to @pstdio/sdk until the storage implementation owns them.
+// Author inputs stay separate from wire envelopes and internal shared-document bytes.
 export type SharedEdit =
   | { kind: "text.insert"; index: number; text: string }
   | { kind: "text.delete"; index: number; count: number }
@@ -23,3 +23,54 @@ export interface ResolutionInput {
   expectedInputs: { recordId: string; revision: number }[];
   handler?: { publishedRevision: string; handlerId: string };
 }
+
+export interface StorageRecord {
+  recordId: string;
+  /** True after the first saved change, including a retained tombstone. */
+  exists: boolean;
+  /** Opaque caller-observed revision. Pass it back unchanged when saving. */
+  revision: string;
+  value: Json;
+  asset: Asset | null;
+  deleted: boolean;
+  shared:
+    | { kind: "text"; value: string }
+    | { kind: "list"; value: Json[] }
+    | { kind: "map"; value: Record<string, Json> }
+    | null;
+}
+
+export interface StorageGroup {
+  operationId: string;
+  edits: (RecordEdit & { expectedRevision: string })[];
+}
+
+export interface StorageResolution {
+  operationId: string;
+  conflictId: string;
+  expectedConflicts: { conflictId: string; revision: number }[];
+  capturedOperationIds: string[];
+  expectedInputs: { recordId: string; revision: string }[];
+  choose: "local" | "remote";
+  handler?: { publishedRevision: string; handlerId: string };
+}
+
+export interface StorageConflict {
+  conflictId: string;
+  revision: number;
+  reason: string;
+  recordIds: string[];
+  alternativeOperationIds: string[];
+}
+
+export interface StorageConflictInspection {
+  conflictId: string;
+  revision: number;
+  expectedConflicts: { conflictId: string; revision: number }[];
+  capturedOperationIds: string[];
+  expectedInputs: { recordId: string; revision: string }[];
+  accepted: StorageRecord[];
+  alternatives: { operationId: string; parents: string[]; records: StorageRecord[] }[];
+}
+
+export type StorageSaveOutcome = SyncOutcome;

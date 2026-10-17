@@ -121,6 +121,7 @@ export { getFileTypeIcon } from "@/utils/get-file-type-icon";
 export { type HostStorage, HostStorageProvider } from "@/utils/host-storage";
 export { installPrismGlobal } from "@/utils/prism";
 export { resolveFileIconElement } from "@/utils/resolve-file-icon-element";
+export { resolveIconComponent } from "@/utils/resolve-icon-component";
 export {
   getInitialThemePreference,
   ThemePreferenceProvider,

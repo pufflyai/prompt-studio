@@ -13,6 +13,7 @@ import type { Definition, ImageReference, LinkReference, PhrasingContent, RootCo
 import { $createReferenceLinkNode } from "../markdown-editor/plugins/ReferenceLinkPlugin/ReferenceLinkNode";
 import { $createCodeNode } from "./lexical-code";
 import { parseMarkdown, serializeMarkdownBlock, serializeMarkdownInline } from "./markdown-ast";
+import { REFERENCE_TOKEN, readReferenceText } from "./markdown-reference-tokens";
 import type { MarkdownTableAlignment, MarkdownTableValue } from "./markdown-table";
 import type { MarkdownUrlResolver } from "./markdown-url";
 import { $createDataTableNode } from "./nodes/DataTableNode";
@@ -28,8 +29,6 @@ interface ImportContext {
   resolver?: MarkdownUrlResolver;
   tableIndex: number;
 }
-
-const REFERENCE_TOKEN = /\{\{\s*link\((['"])([^'"\s]+)\1\)\s*\}\}/g;
 
 const formattedText = (value: string, formats: Set<TextFormatType>) => {
   const node = $createTextNode(value);
@@ -107,7 +106,8 @@ function importInlineChildren(
   const nodes: LexicalNode[] = [];
   let underlineDepth = 0;
 
-  for (const node of children) {
+  for (let index = 0; index < children.length; index++) {
+    const node = children[index]!;
     if (node.type === "html" && /^<(?:ins|u)>$/i.test(node.value.trim())) {
       underlineDepth += 1;
       continue;
@@ -119,6 +119,12 @@ function importInlineChildren(
 
     const activeFormats = new Set(formats);
     if (underlineDepth > 0) activeFormats.add("underline");
+    const reference = readReferenceText(children, index);
+    if (reference) {
+      nodes.push(...textWithReferences(reference.value, activeFormats));
+      index = reference.end;
+      continue;
+    }
     nodes.push(...importInlineNode(node, context, activeFormats));
   }
 

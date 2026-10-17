@@ -69,6 +69,14 @@ const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, sig
       const dispatchEntry = await getDispatchStartedEntryForSession(deps, session.id).catch((error) => {
         throw new RetryableSessionReattachError(error);
       });
+      const current = await deps.sessionService.get(session.id);
+      if (
+        !current ||
+        current.status !== session.status ||
+        current.last_request_started !== session.last_request_started ||
+        deps.sessionService.store.get(session.id)
+      )
+        return;
       const starting = reattachAgentSession(
         {
           sessionId: session.id,
@@ -113,6 +121,7 @@ const resolveOrphanedSession = async (deps: Deps, session: OrphanedSession, sign
     await deps.sessionService.transitionStatus(session.id, "disconnected", {
       expectedOwner: null,
       expectedLastRequestStarted: session.last_request_started,
+      ...(session.status ? { expectedStatus: session.status } : {}),
     });
     return;
   }
@@ -125,16 +134,30 @@ const resolveOrphanedSession = async (deps: Deps, session: OrphanedSession, sign
       "Failed to reattach orphaned session permanently; marking it disconnected",
     );
     const owner = deps.sessionService.store.get(session.id);
-    if (!owner) await removeDispatchStartedEntriesForSession(deps, session.id);
-    await deps.sessionService.transitionStatus(session.id, "disconnected", {
+    const settled = await deps.sessionService.transitionStatus(session.id, "disconnected", {
+      expectedOwner: null,
       expectedLastRequestStarted: session.last_request_started,
+      ...(session.status ? { expectedStatus: session.status } : {}),
     });
+    if (settled && !owner) await removeDispatchStartedEntriesForSession(deps, session.id);
   }
 };
 
 // Every active session had a live process before the restart, including one that was waiting
 // on a question, so the sweep covers both.
+export const prepareOrphanedSessionRecovery = async (deps: Deps) => {
+  const staleSessions = new Map(
+    (await deps.sessionService.listActive()).map((session) => [session.id, session.last_request_started]),
+  );
+  return async (signal?: AbortSignal) => {
+    const active = (await deps.sessionService.listActive()).filter(
+      (session) => staleSessions.has(session.id) && staleSessions.get(session.id) === session.last_request_started,
+    );
+    await Promise.all(active.map((session) => resolveOrphanedSession(deps, session, signal)));
+  };
+};
+
 export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
-  const staleSessions = await deps.sessionService.listActive();
-  await Promise.all(staleSessions.map((session) => resolveOrphanedSession(deps, session, signal)));
+  const recover = await prepareOrphanedSessionRecovery(deps);
+  await recover(signal);
 };

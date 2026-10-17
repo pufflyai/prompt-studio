@@ -8,7 +8,7 @@ import type { createWorkspaceService } from "../../services/workspace-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
-import { hashExtensionSource, type LoadedExtension } from "./extension-runtime";
+import { hashExtensionSource, type LoadedExtensionSnapshot } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
@@ -18,7 +18,7 @@ import { syncRepoExtensionsForProject } from "./repo-extensions";
 
 type RuntimeProcess = {
   dispose: () => void;
-  refresh: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void>;
+  refresh: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
 };
 
 // An installed source whose directory has been removed (project deleted/moved, extension
@@ -29,7 +29,7 @@ export const selectExistingSources = <T extends { source_path: string }>(
   exists: (path: string) => boolean = existsSync,
 ) => rows.filter((row) => exists(row.source_path) && !exists(join(row.source_path, EXTENSION_INSTALLING_MARKER)));
 
-export const createInstalledExtensionRuntime = async (input: {
+export const createInstalledExtensionRuntime = (input: {
   createRootWatcher?: typeof createExtensionRootWatcher;
   createSourceWatcher?: typeof createExtensionSourceWatcher;
   createWebviewBuildManager?: typeof createExtensionWebviewBuildManager;
@@ -87,35 +87,42 @@ export const createInstalledExtensionRuntime = async (input: {
     }));
   };
 
-  const rootWatcher = await createRootWatcher({
+  const rootWatcher = createRootWatcher({
     listExtensionRoots: async () => [userExtensionRootRegistration, ...(await listRepoExtensionRootRegistrations())],
     onError: (err) => apiLogger.error({ err, event: "extensions.root_watcher.error" }, "Extension root watcher failed"),
   });
   const listExistingInstalledSources = async () =>
     selectExistingSources(await input.installedExtensionSourcesService.list());
   const webviewBuildManager: RuntimeProcess & {
+    adopt: (sourcePath: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
     ensure: (installedExtensionId: string, webviewId?: string) => Promise<void>;
   } = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
-        reportBuildFailure: (installedExtensionId, webviewId, error, expectedSource) => {
+        reportBuildFailure: async (installedExtensionId, webviewId, error, expectedSource) => {
           // A snapshot serves each webview's built module URL, so a finished build — for
           // better or worse — changes what the snapshot must say.
           input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildFailure(
+          const result = await input.extensionService.reportWebviewBuildFailure(
             installedExtensionId,
             webviewId,
             error,
             expectedSource,
           );
+          return result.status;
         },
-        reportBuildSuccess: (installedExtensionId, webviewId, expectedSource) => {
+        reportBuildSuccess: async (installedExtensionId, webviewId, expectedSource) => {
           input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildSuccess(installedExtensionId, webviewId, expectedSource);
+          const result = await input.extensionService.reportWebviewBuildSuccess(
+            installedExtensionId,
+            webviewId,
+            expectedSource,
+          );
+          return result.status;
         },
         onError: reportError,
       })
-    : { dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
+    : { adopt: async () => {}, dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
   const refreshWebviewsInBackground = (sourcePath?: string) => {
     webviewBuildManager
       .refresh(sourcePath)
@@ -136,7 +143,7 @@ export const createInstalledExtensionRuntime = async (input: {
   // Editing a watched folder rebuilds the assets of the extension the project already adopted. It
   // never re-reads contributions from disk: adopting new source is an explicit act. Skill files
   // are read from disk, so the edit also re-provisions workspaces to keep harness copies current.
-  const sourceWatcher = await createSourceWatcher({
+  const sourceWatcher = createSourceWatcher({
     listInstalledSources: listExistingInstalledSources,
     onSourceChanged: async (sourcePath) => {
       await webviewBuildManager.refresh(sourcePath);
@@ -146,16 +153,16 @@ export const createInstalledExtensionRuntime = async (input: {
   });
 
   const refreshWatchers = async () => {
-    await rootWatcher.refresh();
-    await sourceWatcher.refresh();
+    await (await rootWatcher).refresh();
+    await (await sourceWatcher).refresh();
   };
 
-  const refresh = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+  const refresh = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     if (sourcePath) {
       // A single changed source invalidates only the projects that use it.
       input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "source_changed" });
-      await sourceWatcher.refresh(sourcePath);
-      await webviewBuildManager.refresh(sourcePath, validatedSource);
+      await (await sourceWatcher).refresh(sourcePath);
+      await webviewBuildManager.adopt(sourcePath, validatedSource);
       // A snapshot serves the module URL of each built webview bundle, so a snapshot
       // read between the source change and the finished build would cache the previous
       // bundle. The build is part of what the snapshot describes: invalidate again.
@@ -168,15 +175,20 @@ export const createInstalledExtensionRuntime = async (input: {
   };
   triggerRuntimeRefresh = refresh;
 
-  await refreshWatchers();
-  // Readiness does not wait: unchanged bundles are reused, and requests wait for pending checks.
-  refreshWebviewsInBackground();
+  // Watchers scan extension folders at startup. The app owns this work, but readiness
+  // must not depend on how many extensions are installed or how long their checks take.
+  const ready = Promise.all([rootWatcher, sourceWatcher])
+    .then(refreshWatchers)
+    .then(() => refreshWebviewsInBackground());
 
   return {
-    dispose: () => {
-      rootWatcher.dispose();
-      sourceWatcher.dispose();
+    ready,
+    dispose: async () => {
       webviewBuildManager.dispose();
+      await ready.catch(() => {});
+      for (const result of await Promise.allSettled([rootWatcher, sourceWatcher])) {
+        if (result.status === "fulfilled") result.value.dispose();
+      }
     },
     ensureWebviews: webviewBuildManager.ensure,
     refresh,

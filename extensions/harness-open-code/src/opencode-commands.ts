@@ -2,10 +2,11 @@ import { buildHeaders, buildRequestUrl, type OpencodeFetcher, requestJson, requi
 export const createCommandApi = (deps: {
   fetcher: OpencodeFetcher;
   withServerUrl: <T>(fn: (url: string) => Promise<T>) => Promise<T>;
-}) => ({
-  getCommands: (cwd?: string) =>
+  now?: () => number;
+}) => {
+  const now = deps.now ?? Date.now;
+  const loadCommands = (directory: string) =>
     deps.withServerUrl(async (baseUrl) => {
-      const directory = cwd ?? process.cwd();
       const { response, text, parsed } = await requestJson<Array<{ name: string; description?: string }>>(
         deps.fetcher,
         buildRequestUrl(baseUrl, "/command", directory),
@@ -16,23 +17,38 @@ export const createCommandApi = (deps: {
         name: `/${command.name}`,
         description: command.description ?? "Native OpenCode command",
       }));
-    }),
-  runCommand: (input: CommandInput) =>
-    deps.withServerUrl(async (baseUrl) => {
-      const body = commandRequest(input);
-      const compact = "auto" in body;
-      const directory = input.cwd ?? process.cwd();
-      const path = `/session/${input.sessionId}/${compact ? "summarize" : "command"}`;
-      const { response, text } = await requestJson(deps.fetcher, buildRequestUrl(baseUrl, path, directory), {
-        method: "POST",
-        headers: buildHeaders(directory),
-        body,
-        signal: input.signal,
+    });
+  const commands = new Map<string, { expiresAt: number; value: ReturnType<typeof loadCommands> }>();
+  return {
+    getCommands: (cwd?: string) => {
+      const directory = cwd ?? process.cwd();
+      const cached = commands.get(directory);
+      if (cached && cached.expiresAt > now()) return cached.value;
+      const value = loadCommands(directory).catch((error: unknown) => {
+        if (commands.get(directory)?.value === value) commands.delete(directory);
+        throw error;
       });
-      requireResponseOk(response, text, "OpenCode native command failed");
-      if (compact && JSON.parse(text) !== true) throw new Error("OpenCode did not complete compaction.");
-    }),
-});
+      commands.set(directory, { expiresAt: now() + 30_000, value });
+      return value;
+    },
+    runCommand: (input: CommandInput) =>
+      deps.withServerUrl(async (baseUrl) => {
+        const body = commandRequest(input);
+        const compact = "auto" in body;
+        const directory = input.cwd ?? process.cwd();
+        const path = `/session/${input.sessionId}/${compact ? "summarize" : "command"}`;
+        const { response, text } = await requestJson(deps.fetcher, buildRequestUrl(baseUrl, path, directory), {
+          method: "POST",
+          headers: buildHeaders(directory),
+          body,
+          signal: input.signal,
+        });
+        requireResponseOk(response, text, "OpenCode native command failed");
+        if (compact && JSON.parse(text) !== true) throw new Error("OpenCode did not complete compaction.");
+        commands.delete(directory);
+      }),
+  };
+};
 
 interface CommandInput {
   signal?: AbortSignal;

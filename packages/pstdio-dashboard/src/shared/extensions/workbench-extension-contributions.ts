@@ -15,6 +15,8 @@ import {
   emptyWorkbenchExtensionMetadata,
   type WorkbenchExtensionMenuSlotConfig,
 } from "@pstdio/workbench/extensions";
+import { getRuntimeCollections } from "@/lib/sync/collections";
+import { createRuntimeState } from "@/lib/sync/runtime-state";
 import type { ResolvedWorkbenchExtensionMetadata } from "./extension-localization";
 import { resolveLocalizableString } from "./extension-localization";
 
@@ -39,29 +41,48 @@ type DashboardExtensionMenuRegistration = Omit<BaseDashboardExtensionMenuRegistr
 
 export const emptyDashboardExtensionMetadata = emptyWorkbenchExtensionMetadata as DashboardExtensionMetadata;
 
-const metadataListeners = new Set<() => void>();
-export const subscribeDashboardExtensionMetadata = (listener: () => void) => {
+const runtimeMetadata = createRuntimeState(
+  () => ({
+    listeners: new Set<() => void>(),
+    projects: new Map<string, DashboardExtensionMetadata>(),
+  }),
+  (state) => {
+    state.listeners.clear();
+    state.projects.clear();
+  },
+);
+
+export const subscribeDashboardExtensionMetadata = (listener: () => void, owner = getRuntimeCollections()) => {
+  const metadataListeners = runtimeMetadata(owner).listeners;
   metadataListeners.add(listener);
   return () => {
     metadataListeners.delete(listener);
   };
 };
 
-const metadataByProjectId = new Map<string, DashboardExtensionMetadata>();
-
-export const setCachedDashboardExtensionMetadata = (projectId: string, metadata: DashboardExtensionMetadata) => {
-  metadataByProjectId.set(projectId, metadata);
-  for (const listener of metadataListeners) listener();
+export const setCachedDashboardExtensionMetadata = (
+  projectId: string,
+  metadata: DashboardExtensionMetadata,
+  owner = getRuntimeCollections(),
+) => {
+  if (owner.isDisposed()) return;
+  const state = runtimeMetadata(owner);
+  state.projects.set(projectId, metadata);
+  for (const listener of state.listeners) listener();
 };
 
-export const clearCachedDashboardExtensionMetadata = (projectId: string | undefined) => {
-  if (!projectId) return;
-  metadataByProjectId.delete(projectId);
-  for (const listener of metadataListeners) listener();
+export const clearCachedDashboardExtensionMetadata = (
+  projectId: string | undefined,
+  owner = getRuntimeCollections(),
+) => {
+  if (!projectId || owner.isDisposed()) return;
+  const state = runtimeMetadata(owner);
+  state.projects.delete(projectId);
+  for (const listener of state.listeners) listener();
 };
 
-export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>
-  projectId ? metadataByProjectId.get(projectId) : undefined;
+export const getCachedDashboardExtensionMetadata = (projectId: string | undefined, owner = getRuntimeCollections()) =>
+  projectId ? runtimeMetadata(owner).projects.get(projectId) : undefined;
 
 type ResourceKindMenuMetadata = Pick<
   DashboardExtensionMetadata["resourceKinds"][number],

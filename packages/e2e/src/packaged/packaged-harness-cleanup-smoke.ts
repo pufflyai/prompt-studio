@@ -3,6 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expect as expectEventually } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { registerHarnessDetectionSmokeTests } from "./packaged-harness-detection-smoke";
@@ -10,7 +11,7 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 
 export const registerHarnessCleanupSmokeTests = () => {
   registerHarnessDetectionSmokeTests();
-  test("packaged host releases project harness resources on disablement and shutdown", async () => {
+  test("packaged host releases project harness resources on disablement, deletion, and shutdown", async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-harness-cleanup-"));
     const evidence = join(root, "released.jsonl");
     let child: ChildProcess | undefined;
@@ -60,7 +61,7 @@ export const registerHarnessCleanupSmokeTests = () => {
         return JSON.parse(text);
       };
       const projects: Array<{ id: string; instanceId: string }> = [];
-      for (const name of ["first", "second"]) {
+      for (const name of ["first", "second", "third"]) {
         const folder = join(root, name);
         mkdirSync(folder);
         const project = await request("/projects", "POST", folderProjectInput({ name }, folder));
@@ -108,6 +109,7 @@ export const registerHarnessCleanupSmokeTests = () => {
           prompt: "Hello",
           agent: "test.cleanup-smoke.harness.worker",
         });
+        await expectEventually.poll(async () => (await request(`/sessions/${session.id}`)).status).toBe("completed");
         const state = await request(`/sessions/${session.id}/harness-commands`);
         expect(state.commands[0].name).toBe("/goal");
         expect(state.modes[0]).toMatchObject({ tagText: "paused: Native objective", closeActionId: "clear" });
@@ -140,6 +142,14 @@ export const registerHarnessCleanupSmokeTests = () => {
       await request(`/projects/${first.id}/extensions/${first.instanceId}`, "PATCH", { enabled: false });
       for (let attempt = 0; attempt < 50 && !releases().includes(first.id); attempt++) await Bun.sleep(20);
       expect(releases()).toEqual([first.id]);
+      const second = projects[1];
+      const deleted = await fetch(`${started.baseUrl}/v1/projects/${second.id}`, {
+        method: "DELETE",
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(deleted.status).toBe(204);
+      for (let attempt = 0; attempt < 50 && !releases().includes(second.id); attempt++) await Bun.sleep(20);
+      expect(releases()).toEqual([first.id, second.id]);
       await stopProcess(child);
       child = undefined;
       expect(releases().sort()).toEqual(projects.map((project) => project.id).sort());

@@ -4,13 +4,10 @@
 !.pstdio/
 .pstdio/*
 !.pstdio/extensions/
-.pstdio/extensions/*
-!.pstdio/extensions/font-editor/
-.pstdio/extensions/font-editor/*
-!.pstdio/extensions/font-editor/package.json
-!.pstdio/extensions/pstdio-dev/
-.pstdio/extensions/pstdio-dev/*
-!.pstdio/extensions/pstdio-dev/package.json
+# Bun needs every workspace manifest, including local extensions, to validate bun.lock.
+!.pstdio/extensions/*/
+.pstdio/extensions/*/**
+!.pstdio/extensions/*/package.json
 .nx
 .vscode
 .idea

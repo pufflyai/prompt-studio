@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       stage: ${{ steps.scope.outputs.stage }}
+      docker_build: ${{ steps.scope.outputs.dockerBuild }}
       lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
       database_tests: ${{ steps.scope.outputs.databaseTests }}
       license: ${{ steps.scope.outputs.license }}
@@ -156,6 +157,20 @@ jobs:
 
       - name: Test built relay with disposable PostgreSQL and object storage
         run: bun run --cwd infra/relay test:isolated
+
+      - name: Install dependencies for storage conformance
+        run: bun install --frozen-lockfile
+
+      - name: Test PostgreSQL publication and process recovery
+        run: bun run --cwd infra/relay test:storage
+
+      - name: Test durable streaming assets and object storage contract
+        run: bun run --cwd infra/relay test:assets
+
+      - name: Test production relay with real local stores
+        env:
+          SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
+        run: bun run --cwd packages/pstdio-sync-contracts test:conformance
 
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
@@ -641,7 +656,7 @@ jobs:
 
   build_docker:
     needs: scope
-    if: needs.scope.outputs.stage != 'pull_request'
+    if: needs.scope.outputs.docker_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:

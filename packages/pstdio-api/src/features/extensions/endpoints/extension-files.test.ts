@@ -10,6 +10,7 @@ import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 
 let app: OpenAPIHono<AppBindings>;
+let files: Awaited<ReturnType<typeof createTestApp>>["deps"]["fileService"];
 let closeApp: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
@@ -114,6 +115,7 @@ beforeEach(async () => {
     storageRoot: join(tempRoot, "storage"),
   });
   app = created.app;
+  files = created.deps.fileService;
   closeApp = created.close;
 
   const project = await createJson(
@@ -201,14 +203,15 @@ describe("extension file endpoints", () => {
     expect(response.status).toBe(404);
   });
 
-  test("applies the extension file size limit to command uploads", async () => {
+  test("uploads a large command attachment with the existing blob API", async () => {
     const response = await uploadCommandFile(
       projectId,
       "pstdio.lab.command.read-upload",
-      Buffer.alloc(25 * 1024 * 1024 + 1),
+      new Blob([new Uint8Array(26 * 1024 * 1024)]).stream(),
     );
 
-    expect(response.status).toBe(413);
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ size: 26 * 1024 * 1024 });
   });
 
   test("uploads, lists, and downloads files owned by an extension scope", async () => {
@@ -303,7 +306,7 @@ describe("extension file endpoints", () => {
   test("returns 404 when file bytes are missing from storage", async () => {
     const uploadResponse = await uploadFile(labInstanceId);
     const uploaded = (await uploadResponse.json()) as { id: string; url: string };
-    rmSync(join(tempRoot, "storage", projectId, uploaded.id), { force: true });
+    rmSync((await files.get(uploaded.id))!.storage_path);
 
     const contentResponse = await app.request(uploaded.url);
 

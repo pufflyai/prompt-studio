@@ -79,7 +79,12 @@ export type Checkpoint = z.infer<typeof checkpointSchema>;
 export type SyncOutcome = z.infer<typeof syncOutcomeSchema>;
 
 export function replayBoundary(after: Checkpoint, current: Checkpoint, retainedFrom: number) {
-  if (after.epoch !== current.epoch || after.sequence < retainedFrom || after.sequence > current.sequence) {
+  if (
+    !checkpointSchema.safeParse(after).success ||
+    after.epoch !== current.epoch ||
+    after.sequence < retainedFrom ||
+    after.sequence > current.sequence
+  ) {
     return { status: "snapshot-required" as const, checkpoint: current };
   }
   return { status: "replay" as const, after, through: current };

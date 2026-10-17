@@ -1,28 +1,7 @@
 import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
-import { expectPackagedDependencyBlockers } from "./packaged-planner-blockers-smoke";
-import { expectPackagedDependencyStacks } from "./packaged-planner-stacks-smoke";
+import { commandRunner } from "./packaged-planner-helpers";
 import { expectIndependentPlannerViews } from "./packaged-planner-views-smoke";
-import { expectBriefSupervisorWakes } from "./packaged-planner-wakes-smoke";
-
-// Run a Planner command through the packaged HTTP API and return its value.
-const commandRunner =
-  (input: { baseUrl: string; projectId: string; headers: Record<string, string> }) =>
-  async (command: string, params: unknown) => {
-    const { baseUrl, projectId, headers } = input;
-    const response = await fetch(
-      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
-      {
-        method: "POST",
-        headers: { ...headers, "content-type": "application/json" },
-        body: JSON.stringify({ params }),
-      },
-    );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.outcome.status, JSON.stringify(body)).toBe("success");
-    return body.outcome.value;
-  };
 
 export async function expectPackagedPlannerTimeline(input: {
   baseUrl: string;
@@ -59,34 +38,6 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
   await expectIndependentPlannerViews({ ...input, execute });
-  // Empty ready work exercises the shipped action without starting real agents.
-  expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  expect(await execute("auto-build.read", {})).toMatchObject({ enabled: false, blockOnReview: true });
-  expect(
-    await execute("auto-build.configure", { enabled: true, prompt: "Choose valid tasks.", blockOnReview: false }),
-  ).toMatchObject({
-    enabled: true,
-    blockOnReview: false,
-  });
-  expect(await execute("auto-build.candidates", {})).toMatchObject({ enabled: true, candidates: [] });
-  expect(await execute("next-tickets", {})).toMatchObject({ enabled: true, tickets: [], waiting: [] });
-  // An idle project without actionable work must not start a supervisor on repeated background checks.
-  for (let check = 0; check < 3; check++) expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  expect(await execute("auto-build.read", {})).toMatchObject({
-    enabled: true,
-    prompt: "Choose valid tasks.",
-    blockOnReview: false,
-    stuck: false,
-    supervisor: null,
-  });
-  await expectScopedAutoBuild(execute);
-  expect(await execute("auto-build.configure", { enabled: false })).toMatchObject({
-    enabled: false,
-  });
-  expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  await expectPackagedDependencyBlockers({ ...input, execute });
-  await expectBriefSupervisorWakes(input);
-  await expectPackagedDependencyStacks(input);
   await expectImplementationStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
   const result = await execute("timeline.ticket.create", {
@@ -158,25 +109,6 @@ async function expectSharedMilestoneProperties(execute: Execute, ticketId: strin
 
 type Execute = ReturnType<typeof commandRunner>;
 const reviewNeeded = "default-human-requested-true";
-
-async function expectScopedAutoBuild(execute: Execute) {
-  const { revision } = await execute("auto-build.read", {});
-  expect(await execute("auto-build.scope", { revision, queries: [{ status: "Blocked" }] })).toMatchObject({
-    tickets: [],
-  });
-  const outside = await execute("create-ticket", {
-    content: "# Ready work outside the supervisor scope",
-    status: "Todo",
-  });
-  expect(await execute("next-tickets", {})).toMatchObject({ tickets: [], waiting: [] });
-  for (let check = 0; check < 3; check++) expect(await execute("auto-build", {})).toEqual({ prompted: false });
-  expect(await execute("auto-build.dispatch", { revision, ticket: outside.id })).toMatchObject({
-    decision: "wait",
-    reason: "ticket-not-ready",
-  });
-  expect(await execute("auto-build.read", {})).toMatchObject({ supervisor: null });
-  await execute("delete-ticket", { id: outside.id });
-}
 
 async function expectImplementationStatus(execute: Execute) {
   const ticket = await execute("create-ticket", { content: "# Live implementation status", status: "Todo" });

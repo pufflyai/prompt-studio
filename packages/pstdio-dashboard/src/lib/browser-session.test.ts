@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { browserSessionWebSocketProtocols, takeBrowserLoginCode } from "./browser-session";
+import { browserSessionStorageKey, browserSessionWebSocketProtocols, takeBrowserLoginCode } from "./browser-session";
+
+it("scopes credentials to the selected API runtime, including its port", () => {
+  const page = "http://localhost:19840/projects";
+  expect(browserSessionStorageKey("/", page)).toBe(browserSessionStorageKey("http://localhost:19840", page));
+  expect(browserSessionStorageKey("http://localhost:19841", page)).not.toBe(browserSessionStorageKey("/", page));
+  expect(browserSessionStorageKey("ws://localhost:19840/v1/terminals", page)).toBe(browserSessionStorageKey("/", page));
+});
 
 describe("browser login links", () => {
   it("takes the single-use code out of the URL fragment", () => {

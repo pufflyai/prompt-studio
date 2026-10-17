@@ -6,7 +6,9 @@ import { createTerminalSupervisor } from "./features/extensions/extension-termin
 import type { RuntimeHost } from "./features/runtime/routes";
 import { createBrowserSessions } from "./features/runtime/runtime-auth";
 import { watchSessionQueueReadiness } from "./features/sessions/session-queue-readiness";
+import { prepareQueuedSessionRecovery } from "./features/sessions/session-queue-recovery";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
+import { prepareOrphanedSessionRecovery } from "./features/sessions/startup";
 import { apiLogger } from "./lib/logger";
 import type { createNotificationService } from "./services/notification-service";
 import type { createProjectService } from "./services/project-service";
@@ -108,7 +110,7 @@ const createAppCloser = (input: {
   getStartupBackgroundDone: () => Promise<void>;
   notificationWakeTimer: ReturnType<typeof setInterval>;
   unsubscribeExtensionEvents: () => void;
-  extensionRuntime: { dispose(): void };
+  extensionRuntime: { dispose(): Promise<void> };
   extensionScheduler: { dispose(): Promise<void> };
   artifactMountWatch: { dispose(): Promise<void> };
   automationService: { close(): Promise<void> };
@@ -134,7 +136,7 @@ const createAppCloser = (input: {
         await input.getStartupBackgroundDone();
         clearInterval(input.notificationWakeTimer);
         input.unsubscribeExtensionEvents();
-        input.extensionRuntime.dispose();
+        await input.extensionRuntime.dispose();
         await input.artifactMountWatch.dispose();
         await input.extensionScheduler.dispose();
         await input.automationService.close();
@@ -153,7 +155,8 @@ export const startAppLifecycle = async (input: {
   deps: RouteDeps;
   notificationWakeTimer: ReturnType<typeof setInterval>;
   unsubscribeExtensionEvents: () => void;
-  extensionRuntime: { dispose(): void };
+  extensionRuntime: { dispose(): Promise<void> };
+  extensionStartup: Promise<void>;
   extensionScheduler: { dispose(): Promise<void> };
   artifactMountWatch: { dispose(): Promise<void> };
   automationService: Pick<RouteDeps["automationService"], "close" | "recoverQueuedRuns">;
@@ -161,22 +164,34 @@ export const startAppLifecycle = async (input: {
   closeDb: () => Promise<void>;
 }) => {
   const startupAbort = new AbortController();
+  // Only sessions present before admission belong to restart recovery. Harness
+  // discovery and reattachment can finish later without claiming new requests.
+  const [recoverOrphanedSessions, recoverQueuedSessions] = await Promise.all([
+    prepareOrphanedSessionRecovery(input.deps),
+    prepareQueuedSessionRecovery(input.deps),
+  ]);
   const stopQueueReadiness = watchSessionQueueReadiness(input.deps, () =>
     createSessionScheduler(input.deps).drainQueue(),
   );
-  const startupBackgroundTasks: Promise<void>[] = [];
+  const startupBackgroundTasks: Promise<void>[] = [input.extensionStartup];
   const startupDone = runStartupTasks(input.deps, startupAbort.signal, {
+    recoverOrphanedSessions,
     onBackgroundTask: (task) => {
       startupBackgroundTasks.push(
-        task.catch((err) => apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed")),
+        task.catch((err) => {
+          if (!startupAbort.signal.aborted) {
+            apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed");
+          }
+        }),
       );
     },
     recoverQueuedAutomation: async () => {
       await input.automationService.recoverQueuedRuns();
     },
-    recoverQueuedSessions: () => createSessionScheduler(input.deps).recoverQueuedSessions(),
-  }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
-  await startupDone;
+    recoverQueuedSessions,
+  }).catch((err) => {
+    if (!startupAbort.signal.aborted) apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed");
+  });
 
   return createAppCloser({
     ...input,

@@ -1,19 +1,10 @@
-import {
-  createClient,
-  parseSyncDeleteEvent as parseSdkSyncDeleteEvent,
-  type SyncConnection,
-  type SyncRow,
-  type SyncWriter,
-  type SyncWriterProvider,
-} from "@pstdio/sdk/client";
+import { createClient, parseSyncDeleteEvent as parseSdkSyncDeleteEvent, type SyncWriter } from "@pstdio/sdk/client";
 import type { ResourceAnchorChangeEvent, ResourceRemovedEvent } from "@pstdio/sdk/extensions";
-import { readBrowserSession } from "@/lib/browser-session";
+import { apiClientOptions } from "@/lib/api";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { publishResourceAnchorChange } from "@/shared/extensions/resource-anchor-feed";
 import { publishResourceRemoval } from "@/shared/extensions/resource-removal-feed";
-import { getWriter, type SyncedTable } from "./collections";
-
-export type SyncClient = SyncConnection;
+import { getRuntimeCollections } from "./collections";
 
 interface SyncCallbacks {
   onConnected?: () => void;
@@ -26,45 +17,42 @@ const HEARTBEAT_THRESHOLD = 3;
 
 export const parseSyncDeleteEvent = parseSdkSyncDeleteEvent;
 
-const extensionEventWriter: SyncWriter = {
-  truncateAndWrite: () => undefined,
-  upsert: (row: SyncRow) => {
-    const eventId = typeof row.eventId === "string" ? row.eventId : undefined;
-    const projectId = typeof row.projectId === "string" ? row.projectId : undefined;
-    if (eventId) publishExtensionEvent({ id: eventId, projectId });
-  },
-  remove: () => undefined,
+export const createDashboardSyncWriterProvider = (collections = getRuntimeCollections()) => {
+  const events: Record<string, SyncWriter> = {
+    extension_events: {
+      truncateAndWrite: () => undefined,
+      upsert: (row) => {
+        const eventId = typeof row.eventId === "string" ? row.eventId : undefined;
+        const projectId = typeof row.projectId === "string" ? row.projectId : undefined;
+        if (eventId) publishExtensionEvent({ id: eventId, projectId }, collections);
+      },
+      remove: () => undefined,
+    },
+    resource_anchor_events: {
+      truncateAndWrite: () => undefined,
+      upsert: (row) => publishResourceAnchorChange(row as unknown as ResourceAnchorChangeEvent, collections),
+      remove: () => undefined,
+    },
+    resource_events: {
+      truncateAndWrite: () => undefined,
+      upsert: (row) => publishResourceRemoval((row as unknown as ResourceRemovedEvent).resource, collections),
+      remove: () => undefined,
+    },
+  };
+  return { getWriter: (table: string) => events[table] ?? collections.getWriter(table) };
 };
 
-export const createDashboardSyncWriterProvider = (): SyncWriterProvider => ({
-  getWriter: (table) => {
-    if (table === "extension_events") return extensionEventWriter;
-    if (table === "resource_anchor_events") return resourceAnchorEventWriter;
-    if (table === "resource_events") return resourceEventWriter;
-    return getWriter(table as SyncedTable);
-  },
-});
-
-const resourceAnchorEventWriter: SyncWriter = {
-  truncateAndWrite: () => undefined,
-  upsert: (row) => publishResourceAnchorChange(row as unknown as ResourceAnchorChangeEvent),
-  remove: () => undefined,
-};
-
-const resourceEventWriter: SyncWriter = {
-  truncateAndWrite: () => undefined,
-  upsert: (row) => publishResourceRemoval((row as unknown as ResourceRemovedEvent).resource),
-  remove: () => undefined,
-};
-
-export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncClient =>
-  createClient({ baseUrl: apiUrl, token: readBrowserSession() }).sync.start({
-    ...createDashboardSyncWriterProvider(),
+export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}, options = apiClientOptions()) => {
+  const connection = { ...options, baseUrl: apiUrl };
+  const collections = getRuntimeCollections(connection);
+  return createClient(connection).sync.start({
+    ...createDashboardSyncWriterProvider(collections),
     heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS,
     heartbeatThreshold: HEARTBEAT_THRESHOLD,
     ...callbacks,
     onConnected: () => {
-      publishExtensionEventReset();
+      publishExtensionEventReset(collections);
       callbacks.onConnected?.();
     },
   });
+};

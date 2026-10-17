@@ -21,8 +21,17 @@
       "ignoreDependencies": ["node-gyp"]
     },
     "infra/relay": {
-      "entry": ["src/server.ts", "src/**/*.test.ts", "scripts/*.ts"],
-      "project": ["src/**/*.ts", "scripts/**/*.ts"],
+      "entry": [
+        "package.json",
+        "drizzle.config.ts",
+        "src/index.ts",
+        "src/server.ts",
+        "src/**/*.test.ts",
+        "src/**/*.integration.ts",
+        "src/**/*.fixture.ts",
+        "scripts/*.ts"
+      ],
+      "project": ["*.ts", "src/**/*.ts", "scripts/**/*.ts"],
       "ignore": ["dist/**"]
     },
     "scripts": {
@@ -58,6 +67,8 @@
         "src/**/*.perf.ts",
         "src/**/*.test.ts",
         "src/**/*.fixture.ts",
+        // Packaged smoke tests bundle these extension entries by path.
+        "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts"
       ],
@@ -96,7 +107,15 @@
       ]
     },
     "packages/pstdio-db": {
-      "entry": ["drizzle.config.ts", "scripts/**/*.ts", "src/index.ts", "src/**/*.test.ts"],
+      "entry": [
+        "drizzle.config.ts",
+        "scripts/**/*.ts",
+        "src/index.ts",
+        "src/**/*.test.ts",
+        // The isolated conformance runner and durability tests launch these by path.
+        "src/**/*.integration.ts",
+        "src/**/*.fixture.ts"
+      ],
       "project": ["drizzle.config.ts", "scripts/**/*.ts", "src/**/*.ts"],
       "ignore": ["dist/**", "vendor/**"]
     },
@@ -148,7 +167,9 @@
         "src/**/*.typecheck.ts"
       ],
       "project": ["src/**/*.ts"],
-      "ignore": ["dist/**"]
+      "ignore": ["dist/**"],
+      // tsconfig.build.json includes this transitive contract source in the declaration bundle.
+      "ignoreDependencies": ["pstdio-sync-contracts"]
     },
     "packages/pstdio-workbench": {
       "entry": [
@@ -164,8 +185,8 @@
       ],
       "project": [".storybook/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**", "storybook-static/**"],
-      // The build inlines pstdio-extensions and pstdio-api-contracts (build-entries.ts), so dist imports their dependencies.
-      "ignoreDependencies": ["rimless", "zod"]
+      // The build inlines private contracts and extensions (build-entries.ts); sync types also enter via tsconfig.build.json.
+      "ignoreDependencies": ["pstdio-sync-contracts", "rimless", "zod"]
     },
     "packages/ui": {
       "entry": [

@@ -1,8 +1,13 @@
 import { expect } from "bun:test";
-import { execFileSync } from "node:child_process";
 import { rename } from "node:fs/promises";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { runTestCommand } from "../scripts/run-test-command";
+
+const git = async (path: string, ...args: string[]) => {
+  const { stdout } = await runTestCommand("git", ["-C", path, ...args], {});
+  return stdout.trim();
+};
 
 export async function expectPackagedDependencyStacks(input: { baseUrl: string; headers: Record<string, string> }) {
   await expectDependencyStack(input, false);
@@ -25,15 +30,13 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     agents: ["pstdio.workbench-fixture.harness.fake"],
   });
   const folder = projectInput.initial_workspace.params.path;
-  const git = (path: string, ...args: string[]) =>
-    execFileSync("git", ["-C", path, ...args], { encoding: "utf8" }).trim();
-  execFileSync("git", ["init", "-b", "main", folder]);
-  git(folder, "config", "user.name", "Stack smoke");
-  git(folder, "config", "user.email", "smoke@example.invalid");
+  await runTestCommand("git", ["init", "-b", "main", folder], {});
+  await git(folder, "config", "user.name", "Stack smoke");
+  await git(folder, "config", "user.email", "smoke@example.invalid");
   await Bun.write(join(folder, ".gitignore"), ".pstdio/\n.codex/\n.claude/\n.agents/\nnode_modules/\n");
-  git(folder, "add", ".gitignore");
-  git(folder, "commit", "-m", "Initialize stack smoke");
-  const original = git(folder, "rev-parse", "HEAD");
+  await git(folder, "add", ".gitignore");
+  await git(folder, "commit", "-m", "Initialize stack smoke");
+  const original = await git(folder, "rev-parse", "HEAD");
   const project = await request("/projects", "POST", projectInput);
   const execute = async (name: string, params: unknown = {}, provider = "pstdio-planner") => {
     const response = await request(
@@ -53,8 +56,8 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
   };
   const commit = async (path: string, file: string, content: string) => {
     await Bun.write(join(path, file), content);
-    git(path, "add", ".gitignore", file);
-    git(path, "commit", "-m", file);
+    await git(path, "add", ".gitignore", file);
+    await git(path, "commit", "-m", file);
     return git(path, "rev-parse", "HEAD");
   };
   const dependencies: { ticketId: string; headSha: string }[] = [];
@@ -131,7 +134,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
       },
     );
     expect(response.outcome.ok).toBe(false);
-    expect(git(started.workspace.root_path, "diff", "--name-only", "--diff-filter=U")).toBe("words.ts");
+    expect(await git(started.workspace.root_path, "diff", "--name-only", "--diff-filter=U")).toBe("words.ts");
     head = await commit(
       started.workspace.root_path,
       "words.ts",
@@ -140,11 +143,13 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
   }
   const updated = await update();
   for (const dependency of dependencies)
-    git(folder, "merge-base", "--is-ancestor", dependency.headSha, updated.headSha);
-  expect(git(started.workspace.root_path, "show", conflict ? "HEAD:words.ts" : "HEAD:left.ts")).toContain("left");
-  expect(git(started.workspace.root_path, "show", conflict ? "HEAD:words.ts" : "HEAD:right.ts")).toContain("right");
-  expect(git(started.workspace.root_path, "show", "HEAD:child.ts")).toContain("true");
-  expect(git(folder, "rev-parse", "main")).toBe(original);
+    await git(folder, "merge-base", "--is-ancestor", dependency.headSha, updated.headSha);
+  expect(await git(started.workspace.root_path, "show", conflict ? "HEAD:words.ts" : "HEAD:left.ts")).toContain("left");
+  expect(await git(started.workspace.root_path, "show", conflict ? "HEAD:words.ts" : "HEAD:right.ts")).toContain(
+    "right",
+  );
+  expect(await git(started.workspace.root_path, "show", "HEAD:child.ts")).toContain("true");
+  expect(await git(folder, "rev-parse", "main")).toBe(original);
   expect(
     (await execute("list-attempts")).filter((attempt: { ticketId: string }) => attempt.ticketId === child.id),
   ).toHaveLength(1);
@@ -172,7 +177,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
         (workspace: { id: string }) => workspace.id === recovery.workspaceId,
       );
       expect(recoveredWorkspace).toBeDefined();
-      expect(git(recoveredWorkspace.root_path, "show", "HEAD:child.ts")).toContain("true");
+      expect(await git(recoveredWorkspace.root_path, "show", "HEAD:child.ts")).toContain("true");
       expect((await execute("read-attempt-history", { workspaceId: started.workspace.id })).attempt.state).toBe(
         "abandoned",
       );
@@ -187,7 +192,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
       await rename(`${path}.missing`, path);
       await execute("auto-build.configure", { enabled: false });
     }
-    git(folder, "branch", "feature/acceptance", updated.headSha);
+    await git(folder, "branch", "feature/acceptance", updated.headSha);
     const draftTicket = await execute("create-ticket", { content: "# Continue a feature draft", status: "Todo" });
     const draft = await execute("create-workspace", {
       ticket: draftTicket.id,
@@ -195,10 +200,10 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
       params: { base: original },
     });
     const draftPath = draft.workspace.root_path;
-    const draftHead = git(draftPath, "rev-parse", "HEAD");
+    const draftHead = await git(draftPath, "rev-parse", "HEAD");
     await Bun.write(join(draftPath, "draft.ts"), "export const preserved = true;\n");
-    git(draftPath, "add", "draft.ts");
-    const status = git(draftPath, "status", "--porcelain");
+    await git(draftPath, "add", "draft.ts");
+    const status = await git(draftPath, "status", "--porcelain");
     const mode = await execute("auto-build.configure", { enabled: true, prompt: "Continue the feature draft." });
     try {
       const feature = await execute("next-tickets", { base: "feature/acceptance" });
@@ -213,8 +218,8 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
       });
       expect(adopted).toMatchObject({ decision: "started", workspaceId: draft.workspace.id });
       await stop(adopted.sessionId);
-      expect(git(draftPath, "rev-parse", "HEAD")).toBe(draftHead);
-      expect(git(draftPath, "status", "--porcelain")).toBe(status);
+      expect(await git(draftPath, "rev-parse", "HEAD")).toBe(draftHead);
+      expect(await git(draftPath, "status", "--porcelain")).toBe(status);
     } finally {
       await execute("auto-build.configure", { enabled: false });
     }

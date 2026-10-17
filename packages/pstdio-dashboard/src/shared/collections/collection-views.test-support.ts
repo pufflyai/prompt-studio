@@ -1,7 +1,7 @@
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { createSharedCollectionViews } from "./collection-views";
 
-export const writer = getWriter("board_views")!;
+export let writer: NonNullable<ReturnType<typeof getWriter>>;
 export const row = (id: string, sortOrder: number) => ({
   id,
   project_id: "project",
@@ -22,7 +22,7 @@ const servers: ReturnType<typeof Bun.serve>[] = [];
 export const cleanup = () => {
   for (const server of servers) server.stop(true);
   servers.length = 0;
-  writer.truncateAndWrite([]);
+  writer?.truncateAndWrite([]);
   if (config) Object.defineProperty(globalThis, "__PSTDIO_CONFIG__", config);
   else Reflect.deleteProperty(globalThis, "__PSTDIO_CONFIG__");
 };
@@ -44,6 +44,7 @@ export const setup = (
     configurable: true,
     value: { apiBaseUrl: server.url.origin },
   });
+  writer = getWriter("board_views")!;
   writer.truncateAndWrite([row("a", 0), row("b", 1), row("c", 2)]);
   markInitialCollectionsSyncComplete();
   return createSharedCollectionViews({
