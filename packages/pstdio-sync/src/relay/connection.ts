@@ -7,7 +7,7 @@ export const createRelayConnection = (input: {
   origin: string;
   scope: Scope;
   access: () => Promise<{ token: string; expiresAt: string }>;
-  synchronize: () => Promise<unknown>;
+  synchronize: (signal: AbortSignal) => Promise<unknown>;
   signal: AbortSignal;
   onError?: () => void;
 }) => {
@@ -19,14 +19,16 @@ export const createRelayConnection = (input: {
   let expiry: ReturnType<typeof setTimeout> | undefined;
   let retryDone: (() => void) | undefined;
   let connected = false;
+  let attempt: AbortController | undefined;
   const drain = async () => {
+    const signal = AbortSignal.any([input.signal, attempt!.signal]);
     try {
-      while (dirty && connected && !input.signal.aborted) {
+      while (dirty && connected && !signal.aborted) {
         dirty = false;
-        await input.synchronize();
+        await input.synchronize(signal);
       }
     } catch {
-      input.onError?.();
+      if (!signal.aborted) input.onError?.();
       socket?.close();
     } finally {
       running = undefined;
@@ -41,11 +43,13 @@ export const createRelayConnection = (input: {
     clearTimeout(expiry);
     retryDone?.();
     socket?.close();
+    attempt?.abort();
   };
   input.signal.addEventListener("abort", abort, { once: true });
   const done = (async () => {
     let failures = 0;
     while (!input.signal.aborted) {
+      attempt = new AbortController();
       try {
         const access = await input.access();
         if (input.signal.aborted) break;
@@ -59,6 +63,7 @@ export const createRelayConnection = (input: {
         const endAccess = () => {
           const remaining = Date.parse(access.expiresAt) - Date.now();
           if (remaining <= 0) {
+            attempt?.abort();
             connection.close();
             return;
           }
@@ -95,6 +100,7 @@ export const createRelayConnection = (input: {
       }
       clearTimeout(expiry);
       connected = false;
+      attempt.abort();
       await running;
       if (input.signal.aborted) break;
       await new Promise<void>((resolve) => {

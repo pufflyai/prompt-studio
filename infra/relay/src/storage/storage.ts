@@ -64,7 +64,7 @@ export const createRelayStorage = (databaseUrl: string, assets: RelayAssets) => 
         const mutation = await validateMutation(input);
         if (canonicalJson(mutation.scope) !== canonicalJson(scope))
           throw new Error("Mutation belongs to another relay scope");
-        return write((transaction, row) => publishGroup(transaction, row, mutation, assets), signal);
+        return write((transaction, row) => publishGroup(transaction, row, mutation, assets, signal), signal);
       },
       async snapshot(signal?: AbortSignal) {
         return connection.run(

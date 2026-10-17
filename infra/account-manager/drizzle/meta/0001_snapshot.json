@@ -1,6 +1,6 @@
 {
-  "id": "c82e3456-7005-40c2-a126-2d74bda221db",
-  "prevId": "0427b368-2149-4743-a22c-44c246f49174",
+  "id": "e80714d4-b113-4fcc-9972-c362c37a36df",
+  "prevId": "4a4aff85-cd34-4d03-83c0-a181d94f9940",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -100,6 +100,27 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "manager_credentials_account_environment": {
+          "name": "manager_credentials_account_environment",
+          "columns": [
+            {
+              "expression": "accountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "environmentId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}

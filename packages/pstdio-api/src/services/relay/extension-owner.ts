@@ -30,12 +30,14 @@ export const startRelayExtension = async (input: {
     assets: createRecordAssets(deps.assetTransferService, owner, signal),
   });
   const access = () => createReadBoundary(signal)(input.access);
-  const adapter = createRelayAdapter({
-    origin: config.relayOrigin,
-    scope: { ...owner, accountId: config.accountId },
-    token: async () => (await access()).token,
-    signal,
-  });
+  const adapterFor = (signal: AbortSignal) =>
+    createRelayAdapter({
+      origin: config.relayOrigin,
+      scope: { ...owner, accountId: config.accountId },
+      token: async () => (await access()).token,
+      signal,
+    });
+  const adapter = adapterFor(signal);
   const revision =
     input.source.installedSource.loaded_revision ??
     input.source.installedSource.source_hash ??
@@ -93,10 +95,10 @@ export const startRelayExtension = async (input: {
         await adapter.initialize(revision);
         return issued;
       },
-      synchronize: async () => {
+      synchronize: async (attemptSignal) => {
         await refreshFiles();
         const before = await local.readState();
-        await local.synchronize(adapter);
+        await local.synchronize(adapterFor(attemptSignal));
         await refreshFiles();
         if (canonicalJson(before.accepted) !== canonicalJson((await local.readState()).accepted)) input.notify();
       },

@@ -6,7 +6,7 @@ const environmentId = identitySchema.parse(input.environmentId);
 const workbenchId = identitySchema.parse(input.workbenchId);
 const manager = createAccountManager(process.env.DATABASE_URL!);
 try {
-  await manager.revoke({ requestId: crypto.randomUUID(), accountId: "built-network-account", environmentId });
+  // The launcher enrolls missing or denied grants; other workbenches share this environment.
   const grant = await manager.register({
     requestId: crypto.randomUUID(),
     accountId: "built-network-account",

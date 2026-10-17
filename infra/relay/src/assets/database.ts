@@ -1,5 +1,6 @@
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
+import { createDatabaseLeases } from "../database-leases";
 
 export const createAssetDatabase = (
   databaseUrl: string,
@@ -10,6 +11,7 @@ export const createAssetDatabase = (
   // Cancellation must not queue behind connections held by streaming uploads.
   const control = new Pool({ connectionString: databaseUrl, max: 1 });
   const writers = new Pool({ connectionString: databaseUrl });
+  const leases = createDatabaseLeases(databaseUrl, [control, writers]);
   const listener = new Client({ connectionString: databaseUrl });
   let listening: Promise<void> | undefined;
   let failure: Error | undefined;
@@ -27,7 +29,8 @@ export const createAssetDatabase = (
     if (message.channel === "relay_asset_cancel" && message.payload) cancelled(message.payload);
   });
   return {
-    db: drizzle(control),
+    run: <T>(action: (db: NodePgDatabase) => Promise<T>, signal: AbortSignal) =>
+      leases.run(control, (client) => action(drizzle(client)), signal),
     async ready() {
       if (failure) throw failure;
       listening ??= listener.connect().then(async () => {
@@ -37,38 +40,23 @@ export const createAssetDatabase = (
       if (failure) throw failure;
     },
     async lock<T>(key: string, signal: AbortSignal, action: (database: NodePgDatabase) => Promise<T>) {
-      signal.throwIfAborted();
-      const client = await writers.connect();
-      let released = false;
-      let locked = false;
-      const interrupt = () => {
-        released = true;
-        client.release(true);
-      };
-      try {
-        signal.throwIfAborted();
-        signal.addEventListener("abort", interrupt, { once: true });
-        await client.query("SELECT pg_advisory_lock(hashtextextended($1, 0))", [key]);
-        locked = true;
-        signal.removeEventListener("abort", interrupt);
-        signal.throwIfAborted();
-        return await action(drizzle(client));
-      } finally {
-        signal.removeEventListener("abort", interrupt);
-        if (!released) {
-          const destroy =
-            locked &&
-            (await client.query("SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key]).then(
-              () => false,
-              () => true,
-            ));
-          client.release(destroy);
-        }
-      }
+      return leases.run(
+        writers,
+        async (client) => {
+          await client.query("SELECT pg_advisory_lock(hashtextextended($1, 0))", [key]);
+          try {
+            signal.throwIfAborted();
+            return await action(drizzle(client));
+          } finally {
+            if (!signal.aborted) await client.query("SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key]);
+          }
+        },
+        signal,
+      );
     },
     async close() {
       closing = true;
-      const results = await Promise.allSettled([control.end(), writers.end(), listener.end()]);
+      const results = await Promise.allSettled([leases.close(), listener.end()]);
       const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
       if (errors.length) throw new AggregateError(errors, "Asset database shutdown failed");
     },

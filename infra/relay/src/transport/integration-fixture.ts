@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,6 +12,7 @@ import {
   migrateAccountManager,
 } from "pstdio-account-manager";
 import { createRelayAssets } from "../assets/assets";
+import { createRecoveryProofs } from "../recovery-proofs";
 import { migrateRelayStorage } from "../storage/database";
 import { createRelayStorage } from "../storage/storage";
 
@@ -31,6 +33,7 @@ export const createTransportFixture = () => {
   const managerDatabase = database("manager");
   const relayDatabase = database("relay");
   const bucket = `relay-transport-${crypto.randomUUID()}`;
+  const recoveryKey = randomBytes(32);
   const s3 = {
     endpoint,
     region: "us-east-1",
@@ -136,6 +139,8 @@ export const createTransportFixture = () => {
         };
         const trustFile = join(directory, "trust.json");
         await writeFile(trustFile, JSON.stringify(trust));
+        const recoveryFile = join(directory, "recovery-key");
+        await writeFile(recoveryFile, recoveryKey, { mode: 0o600 });
         await storage.initialize(scope, "published-notes");
         return {
           scope,
@@ -146,6 +151,7 @@ export const createTransportFixture = () => {
           assets,
           verifyAccess: createEnvironmentAccessVerifier(trust),
           managerHandler: createManagerHandler(auth, "https://manager.fixture.test"),
+          recovery: createRecoveryProofs(recoveryKey),
           renew: () => auth.renew(grant.token!, scope.workbenchId),
           issue: (token: string) => auth.renew(token, scope.workbenchId),
           manager,
@@ -159,6 +165,7 @@ export const createTransportFixture = () => {
             S3_ACCESS_KEY_ID: s3.credentials.accessKeyId,
             S3_SECRET_ACCESS_KEY: s3.credentials.secretAccessKey,
             RELAY_ACCESS_TRUST_FILE: trustFile,
+            RELAY_RECOVERY_KEY_FILE: recoveryFile,
           },
           close,
         };

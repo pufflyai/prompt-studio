@@ -2,6 +2,12 @@ import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
 import { resolveIsolatedHome } from "./dev-isolated";
+import {
+  type LocalRelayConnection,
+  localGrantNeedsEnrollment,
+  sameRelayOwner,
+  upsertLocalRelayConnection,
+} from "./relay-local-config";
 
 const root = resolve(import.meta.dir, "../..");
 const name = process.argv.find((value) => value.startsWith("--name="))?.slice(7) ?? "relay-local";
@@ -72,7 +78,16 @@ if (process.argv.includes("--down")) {
 } else {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await docker("build", "relay", "authority", "initialize", "tls");
-  if (!(await Bun.file(certificate).exists())) {
+  const previousTrust = await Bun.file(certificate)
+    .text()
+    .catch(() => null);
+  const refreshTls = await run([...compose, "run", "--rm", "--no-deps", "tls", "bun", "tls.fixture.ts", "--check"], {
+    capture: true,
+  }).then(
+    () => false,
+    () => true,
+  );
+  if (refreshTls) {
     await docker("run", "--rm", "--no-deps", "tls");
   }
   await docker("up", "--wait", "postgres", "objects");
@@ -100,8 +115,10 @@ if (process.argv.includes("--down")) {
     "-e",
     "if (!await Bun.file('/fixture/grant.json').exists()) await import('/app/initialize.js')",
   );
-  await docker("up", "--wait", "authority", "relay");
+  await docker("run", "--rm", "--no-deps", "initialize", "bun", "/app/recovery-key.js");
+  await docker("up", "--wait", ...(refreshTls ? ["--force-recreate"] : []), "authority", "relay");
   await docker("cp", "authority:/tls-public/trust.pem", certificate);
+  const trustChanged = previousTrust !== (await Bun.file(certificate).text());
   for (const suffix of ["app-deps"])
     await run(["docker", "volume", "create", "--label", `pstdio.local-relay=${name}`, `${project}-${suffix}`], {
       capture: true,
@@ -161,18 +178,29 @@ if (process.argv.includes("--down")) {
         version: manifest.version,
       });
     }
-    const existing = JSON.parse(await readFile(configPath, "utf8")) as {
-      connections: { accountId: string; workbenchId: string; environmentId: string; extensionId?: string }[];
-    };
-    if (
-      !existing.connections.some(
-        (item) =>
-          item.environmentId === identity.environmentId &&
-          item.accountId === scope.accountId &&
-          item.workbenchId === scope.workbenchId &&
-          !item.extensionId,
-      )
-    ) {
+    const existing = JSON.parse(await readFile(configPath, "utf8")) as { connections: LocalRelayConnection[] };
+    const saved = existing.connections.find((item) =>
+      sameRelayOwner(item, { ...scope, environmentId: identity.environmentId }),
+    );
+    let enroll = !saved;
+    if (saved) {
+      const probe = JSON.parse(
+        await run(
+          [
+            ...compose,
+            "exec",
+            "-T",
+            "authority",
+            "bun",
+            "-e",
+            "const input=await Bun.stdin.json(); const response=await fetch('https://authority:8443/v1/environment-access',{method:'POST',tls:{ca:await Bun.file('/tls-public/trust.pem').text()},headers:{authorization:'Bearer '+input.grant,'content-type':'application/json'},body:JSON.stringify({workbenchId:input.workbenchId})}); await response.body?.cancel(); console.log(JSON.stringify({status:response.status}));",
+          ],
+          { capture: true, input: JSON.stringify({ grant: saved.renewalGrant, workbenchId: saved.workbenchId }) },
+        ),
+      ) as { status: number };
+      enroll = localGrantNeedsEnrollment(probe.status);
+    }
+    if (enroll) {
       const enrolled = JSON.parse(
         await run([...compose, "exec", "-T", "authority", "bun", "/app/enroll-local.js"], {
           capture: true,
@@ -183,15 +211,13 @@ if (process.argv.includes("--down")) {
         configPath,
         JSON.stringify(
           {
-            connections: [
-              {
-                ...scope,
-                environmentId: identity.environmentId,
-                managerOrigin: "https://authority:8443",
-                relayOrigin: "https://relay:8080",
-                renewalGrant: enrolled.token,
-              },
-            ],
+            connections: upsertLocalRelayConnection(existing.connections, {
+              ...scope,
+              environmentId: identity.environmentId,
+              managerOrigin: "https://authority:8443",
+              relayOrigin: "https://relay:8080",
+              renewalGrant: enrolled.token,
+            }),
           },
           null,
           2,
@@ -199,8 +225,8 @@ if (process.argv.includes("--down")) {
         { mode: 0o600 },
       );
       await chmod(configPath, 0o600);
-      await run(["docker", "restart", `${app}-prompt-studio-1`]);
     }
+    if (enroll || trustChanged) await run(["docker", "restart", `${app}-prompt-studio-1`]);
     const url = `${connection.dashboardUrl}projects/${scope.workbenchId}/extensions/pstdio.pstdio-notes/notes`;
     await writeFile(
       join(directory, `${app}.json`),

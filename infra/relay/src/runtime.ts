@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createEnvironmentAccessVerifier } from "pstdio-account-manager/access";
 import { createRelayAssets } from "./assets/assets";
+import { createRecoveryProofs } from "./recovery-proofs";
 import { createRelayStorage } from "./storage/storage";
 
 export const createRelayRuntime = (env: Record<string, string | undefined>) => {
@@ -21,10 +22,12 @@ export const createRelayRuntime = (env: Record<string, string | undefined>) => {
     const verifyAccess = createEnvironmentAccessVerifier(
       JSON.parse(readFileSync(required("RELAY_ACCESS_TRUST_FILE"), "utf8")),
     );
+    const recovery = createRecoveryProofs(readFileSync(required("RELAY_RECOVERY_KEY_FILE")));
     const assets = createRelayAssets({ databaseUrl, bucket, s3 });
     const storage = createRelayStorage(databaseUrl, assets);
     return {
       verifyAccess,
+      recovery,
       assets,
       storage,
       async close() {
