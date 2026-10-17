@@ -42,6 +42,8 @@ The operator then establishes current ownership/lifecycle with a new reconciliat
 
 Restore receipts live outside account snapshots. Existence records committed completion, so a retry after a lost response cannot disable fresh registrations. Another intentional restore needs another request ID. Shared/exclusive PostgreSQL transaction locks serialize restore and authority mutations; snapshot reads use repeatable-read isolation.
 
+Restore inserts account, workbench and receipt history in bounded SQL batches inside that same transaction. Snapshot size does not change the atomic recovery boundary. Credential lookups and updates use the account/environment index rather than scanning every account's grants.
+
 This snapshot is private operator data. It contains account identities and request metadata even though it excludes credential material. It is not encrypted backup tooling or a public content export. Future manager session credentials must also participate in recovery invalidation.
 
 ## Validate in Docker
