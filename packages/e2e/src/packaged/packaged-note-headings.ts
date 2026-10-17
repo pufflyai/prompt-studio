@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 
 export const verifyPackagedNoteHeadings = async (
   page: Page,
@@ -31,6 +32,7 @@ export const verifyPackagedNoteHeadings = async (
   const paragraphs = ["First paragraph.", "Second paragraph.", "Third paragraph."];
   await execute(view.body.saveHandlerId!, { renderer, content: paragraphs.join("\n\n\n\n") });
   await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.pstdio-notes/notes`);
+  await (await showSidenavEntry(page, "Notes")).click();
   await page.locator('[data-workbench-region="sidenav"]').getByText("Heading formatting", { exact: true }).click();
   const editor = page.locator('[contenteditable="true"]:visible');
   await expect(editor).toContainText("Third paragraph.");
