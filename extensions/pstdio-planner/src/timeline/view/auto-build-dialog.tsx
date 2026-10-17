@@ -1,12 +1,12 @@
 import { Button, CloseButton, Dialog, Icon, Link, Portal, Stack, Text, useRecipe } from "@chakra-ui/react";
 import type { ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { Checkbox } from "@pstdio/ui";
+import { CollectionFilter } from "@pstdio/ui/collection-view";
 import { buildFilterCategories } from "@pstdio/ui/kanban-renderer";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { psTheme } from "@pstdio/ui/theme";
 import { ArrowUpRight } from "lucide-react";
 import { useState } from "react";
-import { CollectionFilter } from "../../../vendor/collection-filter.js";
 import type { timelineQueryData } from "./timeline-query";
 
 interface AutoBuildDialogProps {

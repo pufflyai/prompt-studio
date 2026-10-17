@@ -11,27 +11,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bun ../../scripts/build/build-planner-filter-control.ts",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "typecheck": "tsc --noEmit"
-  },
-  "nx": {
-    "implicitDependencies": [
-      "@pstdio/ui"
-    ],
-    "targets": {
-      "build": {
-        "inputs": [
-          "default",
-          "^default",
-          "{workspaceRoot}/scripts/build/build-planner-filter-control.ts"
-        ],
-        "outputs": [
-          "{projectRoot}/vendor"
-        ]
-      }
-    }
   },
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
@@ -42,8 +24,7 @@
     "lucide-react": "^0.557.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-markdown": "10.1.0",
-    "zustand": "^5.0.8"
+    "react-markdown": "10.1.0"
   },
   "devDependencies": {
     "@storybook/react": "^10.6.0",

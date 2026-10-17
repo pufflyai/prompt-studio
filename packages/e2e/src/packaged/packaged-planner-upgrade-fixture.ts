@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
 
-// The current Planner adds the timeline, which imports @pstdio/ui/collection-view (@pstdio/ui 0.42).
+// The current Planner imports the timeline and standalone filter from published @pstdio/ui 0.43.1.
 export const timelinePlannerSource = join(repoRoot, "extensions", "pstdio-planner");
 
 // The last release before the timeline. Its Planner uses @pstdio/ui 0.41, which has no
