@@ -129,7 +129,7 @@ describe("runtime control routes", () => {
     const client = createClient({
       baseUrl: "http://127.0.0.1:43123",
       token: "runtime-secret",
-      fetch: Object.assign((url: unknown, init?: RequestInit) => app.request(String(url), init), {
+      fetch: Object.assign(async (url: unknown, init?: RequestInit) => app.request(String(url), init), {
         preconnect: fetch.preconnect,
       }),
     });

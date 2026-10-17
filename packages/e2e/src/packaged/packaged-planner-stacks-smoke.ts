@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
 
 export async function expectPackagedDependencyStacks(input: { baseUrl: string; headers: Record<string, string> }) {
@@ -9,13 +10,20 @@ export async function expectPackagedDependencyStacks(input: { baseUrl: string; h
 }
 
 async function expectDependencyStack(input: { baseUrl: string; headers: Record<string, string> }, conflict: boolean) {
+  const scenario = conflict ? "conflict" : "normal";
+  const startedAt = Date.now();
+  logTestPhase(`Planner stack ${scenario}: start`);
   const request = async (path: string, method = "GET", body?: unknown) => {
+    const requestStarted = Date.now();
     const response = await fetch(`${input.baseUrl}/v1${path}`, {
       method,
       headers: { ...input.headers, "content-type": "application/json" },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     const bodyText = await response.text();
+    logTestPhase(
+      `Planner stack ${scenario}: ${method} ${path.split("/").at(-2)} (${Date.now() - requestStarted}ms; total ${Date.now() - startedAt}ms)`,
+    );
     expect(response.ok, `${method} ${path}: ${response.status} ${bodyText}`).toBe(true);
     return JSON.parse(bodyText);
   };
@@ -25,7 +33,9 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
   });
   const folder = projectInput.initial_workspace.params.path;
   const git = async (path: string, ...args: string[]) => {
+    const operationStarted = Date.now();
     const { stdout } = await runTestCommand("git", ["-C", path, ...args], {});
+    logTestPhase(`Planner stack ${scenario}: git ${args[0]} (${Date.now() - operationStarted}ms)`);
     return stdout.trim();
   };
   await runTestCommand("git", ["init", "-b", "main", folder], {});
@@ -140,6 +150,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     );
   }
   const updated = await update();
+  logTestPhase(`Planner stack ${scenario}: integration finished (${Date.now() - startedAt}ms)`);
   for (const dependency of dependencies)
     await git(folder, "merge-base", "--is-ancestor", dependency.headSha, updated.headSha);
   expect(await git(started.workspace.root_path, "show", conflict ? "HEAD:words.ts" : "HEAD:left.ts")).toContain("left");
