@@ -119,8 +119,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     const newTabPromise = page.context().waitForEvent("page");
     await first.click({ modifiers: ["ControlOrMeta"] });
     const newTab = await newTabPromise;
-    await newTab.waitForLoadState();
-    expect(newTab.url()).toContain("document=src%2Fapp.ts");
+    await expect(newTab).toHaveURL(/document=src%2Fapp\.ts/);
     expect(page.url()).not.toContain("document=");
     await newTab.close();
     await side.getByRole("link", { name: "Second", exact: true }).last().click();
@@ -158,7 +157,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     await expect(page.getByText(/not found/i).first()).toBeVisible();
     await expect(floating.getByRole("link", { name: "First", exact: true }).last()).toBeVisible();
     const beforeInvalidPage = page.url();
-    await floating.getByRole("link", { name: "Invalid page", exact: true }).last().click();
+    await floating.getByRole("button", { name: "Invalid page", exact: true }).last().click();
     await expect(page.getByText(/unavailable in the conversation project/)).toBeVisible();
     expect(page.url()).toBe(beforeInvalidPage);
     await floating.getByRole("button", { name: "Invalid table", exact: true }).last().click();
