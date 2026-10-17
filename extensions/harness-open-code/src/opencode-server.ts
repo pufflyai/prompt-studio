@@ -69,7 +69,7 @@ export const defaultPingServer = async (url: string) => {
   }
 };
 
-type Connection = { url: string; owned: OpencodeServer | null };
+type Connection = { url: string; owned: OpencodeServer | null; replacement?: Promise<Connection> };
 
 // The connection owns only the child it starts. A discovered server belongs to its caller.
 export const createServerConnection = (deps: OpencodeServerDeps) => {
@@ -156,15 +156,13 @@ export const createServerConnection = (deps: OpencodeServerDeps) => {
     } catch (error) {
       lifetime.signal.throwIfAborted();
       if (!isConnectionError(error)) throw error;
-      if (connection === pending) {
-        track(
-          connect(async () => {
-            await current.owned?.dispose();
-            await clearStoredUrl(current.url);
-          }),
-        );
-      }
-      const replacement = await connection!;
+      current.replacement ??= track(
+        connect(async () => {
+          await current.owned?.dispose();
+          await clearStoredUrl(current.url);
+        }),
+      );
+      const replacement = await current.replacement;
       lifetime.signal.throwIfAborted();
       return action(replacement.url);
     }

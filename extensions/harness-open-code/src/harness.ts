@@ -67,22 +67,29 @@ const toHarnessSession = (input: {
 }): HarnessSession => {
   const { agentSessionId, abortController, abortSession, done } = input;
   // Aborting the controller stops the poll loop; the server-side abort is best-effort.
-  const stop = async () => {
-    if (abortController.signal.aborted) return;
-    abortController.abort();
-    await abortSession().catch((error) => {
-      console.error(`[opencode] failed to abort session ${agentSessionId}`, error);
-    });
-  };
+  let stopping: Promise<void> | undefined;
+  const stop = () =>
+    (stopping ??= (async () => {
+      abortController.abort();
+      await abortSession().catch((error) => {
+        console.error(`[opencode] failed to abort session ${agentSessionId}`, error);
+      });
+    })());
 
   return {
     agentSessionId,
     // The host does not call stop when a turn ends, so a poll that gives up with an
     // error must stop OpenCode itself, or it keeps changing the worktree.
-    done: done.catch((error: unknown) => {
-      void stop();
-      throw error;
-    }),
+    done: done.then(
+      async (exit) => {
+        await stopping;
+        return exit;
+      },
+      async (error: unknown) => {
+        await stop();
+        throw error;
+      },
+    ),
     stop,
     timeoutStrategy: "provider",
   };

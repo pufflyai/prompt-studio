@@ -3,6 +3,78 @@ import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { ctx } from "./harness.test-helpers";
 
+test("project disposal waits for a native abort already started by cancellation", async () => {
+  const abortEntered = Promise.withResolvers<void>();
+  const releaseAbort = Promise.withResolvers<void>();
+  const releasePrompt = Promise.withResolvers<void>();
+  const cancelled = Promise.withResolvers<void>();
+  let aborts = 0;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (path === "/session") return Response.json({ id: "native" });
+      if (path === "/session/native/abort") {
+        aborts++;
+        abortEntered.resolve();
+        await releaseAbort.promise;
+        return Response.json(true);
+      }
+      if (request.method === "POST") {
+        await releasePrompt.promise;
+        return Response.json({ info: {}, parts: [] });
+      }
+      return Response.json([]);
+    },
+  });
+  const harness = createOpencodeHarness(
+    {},
+    {
+      serverStore: { read: async () => server.url.origin, write: async () => {}, clear: async () => {} },
+      pingServer: async () => true,
+    },
+  );
+  let stopping: Promise<void> | undefined;
+  let cleanup: Promise<void> | undefined;
+  try {
+    const session = await harness.start(ctx, {
+      sessionId: "host",
+      prompt: "Do work",
+      cwd: "/tmp",
+      events: {
+        getMessages: () => [],
+        push(event) {
+          if (event.path === "/status" && event.value === "cancelled") cancelled.resolve();
+        },
+      },
+    });
+    stopping = Promise.resolve(session.stop());
+    await Promise.all([abortEntered.promise, cancelled.promise]);
+    await Bun.sleep(0);
+    let stoppedAgain = false;
+    const stopAgain = Promise.resolve(session.stop()).then(() => {
+      stoppedAgain = true;
+    });
+    let disposed = false;
+    cleanup = Promise.resolve(harness.dispose!(ctx)).then(() => {
+      disposed = true;
+    });
+    await Bun.sleep(0);
+    expect({ stoppedAgain, disposed }).toEqual({ stoppedAgain: false, disposed: false });
+    releaseAbort.resolve();
+    await Promise.all([stopping, stopAgain, cleanup, session.done]);
+    expect(aborts).toBe(1);
+  } finally {
+    releaseAbort.resolve();
+    releasePrompt.resolve();
+    await stopping;
+    await cleanup;
+    await harness.dispose!(ctx);
+    server.stop(true);
+  }
+});
+
 test("concurrent discovery shares startup across project contexts", async () => {
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();

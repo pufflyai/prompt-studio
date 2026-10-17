@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DraftHarnessCommandInput, HarnessCommandState, HarnessOperation } from "pstdio-api-contracts";
 import { apiRequest } from "@/lib/api";
 import { assertCurrentNativeAction } from "../chat/native-action-state";
+
 export const useHarnessCommands = (
   sessionId: string | null,
   harnessId: string,
@@ -15,9 +16,10 @@ export const useHarnessCommands = (
   const state = useQuery({
     queryKey,
     enabled: Boolean(harnessId && (sessionId || draft)),
-    // Draft definitions refresh with inputs, focus, and native actions. Existing
-    // conversations keep polling so modes created by the agent become visible.
-    refetchInterval: sessionId ? 2000 : false,
+    // Failed draft discovery recovers when its workspace becomes ready. Healthy
+    // drafts refresh with inputs, focus, and native actions; conversations keep
+    // polling so modes created by the agent become visible.
+    refetchInterval: (query) => (sessionId || query.state.status === "error" ? 2000 : false),
     queryFn: ({ signal }) =>
       apiRequest<HarnessCommandState & { harnessId: string }>(
         sessionId ? `/v1/sessions/${sessionId}/harness-commands` : "/v1/sessions/harness-command-state",
