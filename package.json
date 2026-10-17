@@ -58,6 +58,7 @@
     "extensions/*",
     "infra/local/extensions/*",
     "infra/relay",
+    "infra/account-manager",
     ".pstdio/extensions/font-editor",
     ".pstdio/extensions/pstdio-dev",
     "scripts",

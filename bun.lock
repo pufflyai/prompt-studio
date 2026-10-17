@@ -371,6 +371,21 @@
         "typescript": "6.0.2",
       },
     },
+    "infra/account-manager": {
+      "name": "pstdio-account-manager",
+      "dependencies": {
+        "drizzle-orm": "^0.45.2",
+        "pg": "^8.20.0",
+        "pstdio-sync-contracts": "workspace:*",
+        "zod": "^4.3.6",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "@types/pg": "^8.18.0",
+        "drizzle-kit": "^0.31.9",
+        "typescript": "6.0.2",
+      },
+    },
     "infra/local/extensions/local-example": {
       "name": "local-example",
       "version": "0.1.2",
@@ -4180,6 +4195,8 @@
     "proxy-memoize": ["proxy-memoize@3.0.1", "", { "dependencies": { "proxy-compare": "^3.0.0" } }, "sha512-VDdG/VYtOgdGkWJx7y0o7p+zArSf2383Isci8C+BP3YXgMYDoPd3cCBjw0JdWb6YBb9sFiOPbAADDVTPJnh+9g=="],
 
     "pstdio": ["pstdio@workspace:packages/pstdio"],
+
+    "pstdio-account-manager": ["pstdio-account-manager@workspace:infra/account-manager"],
 
     "pstdio-api": ["pstdio-api@workspace:packages/pstdio-api"],
 
