@@ -19,6 +19,18 @@ const sourceRoundTrip = (markdown: string, edit: () => void) => {
 };
 
 describe("Markdown source document edge cases", () => {
+  test("retains interleaved reference definitions when moving an earlier paragraph", () => {
+    const markdown = "First.\n\n[ref]: /Second\n\n\n\n[Second][ref].\n\nThird.";
+    const result = sourceRoundTrip(markdown, () => {
+      const root = $getRoot();
+      root.append(root.getFirstChildOrThrow());
+    });
+
+    expect(result).toContain("[ref]: /Second");
+    expect(result).toContain("[Second][ref].");
+    expect(result.endsWith("First.")).toBe(true);
+  });
+
   test("edits a reference-link label without normalizing its source", () => {
     const markdown = [
       "Use [the reference link][studio] without changing its definition.",
