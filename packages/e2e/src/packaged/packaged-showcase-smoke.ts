@@ -65,7 +65,6 @@ export function registerPackagedShowcaseSmokeTests() {
           headers: runtimeAuthorization(started.descriptor),
           metadata,
         });
-        expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "vendor", "collection-filter.js"))).toBe(true);
         expect(
           existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "commands", "auto-build-resume.ts")),
         ).toBe(true);

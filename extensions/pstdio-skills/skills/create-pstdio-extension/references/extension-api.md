@@ -114,7 +114,6 @@ rejected by `pst extensions check`.
 | `resourceKinds`                                   | Domain resource identity, labels, icons, and menus.                               |
 | `modes`                                           | Typed Workbench modes referenced by placements.                                   |
 | `statusBarItems`                                  | View references rendered outside docked layout.                                   |
-| `statuses`                                        | Workflow status providers shared by boards and settings.                          |
 | `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                  |
 | `settingsPanels`                                  | References from host settings slots to views.                                     |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
@@ -150,7 +149,6 @@ Current dashboard capability names:
 | `navigation-item.v1` | Fixed host navigation items. |
 | `navigation-tree.v1` | Page- or mode-owned tree sections. |
 | `status-bar-item.v1` | Views placed in the status bar. |
-| `status.v1` | Workflow status providers. |
 | `settings.section.v1` | Settings navigation sections. |
 | `settings.panel.v1` | Settings placements that reference views. |
 | `settings.definition.v1` | Extension setting definitions. |
@@ -225,7 +223,7 @@ Use kernel event refs from `@pstdio/sdk/extensions` when possible:
 
 - `projectEvents.opened`
 - `sessionEvents.started`, `resumed`, `awaitingInput`, `succeeded`, `failed`, `completed`
-- `workspaceEvents.created`, `provision` (awaited), `ready`, `deleted`; `archived` is deprecated (use `deleted`)
+- `workspaceEvents.created`, `provision` (awaited), `ready`, `deleted`
 - `worktreeEvents.removed`
 - `gitEvents.committed`, `rebased`, `merged`, `conflicted`
 
@@ -488,22 +486,18 @@ Declare the starting view with `defaultFilter`, `defaultSorts`, and
 `rowNumbers`, `wrapRows`, `showStats`, `hiddenColumns`, and `columnOrder`. The
 query receives `filter`, `sorts`, and `settings`; use them only to narrow what
 you load, because the renderer applies the full view to the rows you return.
-`defaultFilters`, `settings.ordering`, and `filters` in `defaultViews` are
-deprecated; the host converts them, and the new field wins when both are set.
+Use `defaultFilter`, `defaultSorts`, and saved-view `filter` and `sorts` fields.
 
 ### Shared views
 
 The host owns saved views per project, extension instance, and local view ID,
 for kanban and data table views alike. Do not persist user-created views in
 extension storage. Keep view and field IDs stable across releases. Return
-complete attributes or columns from queries; the host uses them and status
-providers to validate saved settings, rules, and sorts. A successful query can
+complete attributes or columns from queries; the host uses their enum options
+to validate saved settings, rules, and sorts. A successful query can
 remove rules for deleted fields and options. A failed query preserves them.
 
 `defaultViews` declares read-only built-ins. Use `defaultActiveViewId` for the
-extension fallback. The deprecated `isDefault` flag is a fallback when that ID is
-absent; use `defaultActiveViewId` in new extensions. The project default takes
-precedence over both. People
-and agents can choose any saved or built-in view as the shared project default.
+extension fallback. The shared project default takes precedence. People and agents can choose any saved or built-in view as the shared project default.
 Disabled boards retain saved data; removing a board leaves orphaned views that
 agents can inspect with `pst views list --orphaned`.

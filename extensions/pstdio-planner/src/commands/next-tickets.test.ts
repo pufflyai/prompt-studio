@@ -7,6 +7,7 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
 import { nextTicketsCommand } from "./next-tickets";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionQuery } from "./session-query.fixture";
 
 async function trackFixture() {
   const result = await fixture(6);
@@ -155,14 +156,14 @@ test("next tickets respects saved ignore rules, draft state and live assignments
   const draft = await ticket("Draft");
   await putTicket(storage, { ...draft, draft: true });
   const assigned = await ticket("Working");
-  ctx.sessions.list = async () => [
+  ctx.sessions.query = sessionQuery(async () => [
     {
       id: "manual",
       title: "Manual",
       status: "in_progress",
       anchors_json: [{ type: "ticket", id: assigned.id }],
     },
-  ];
+  ]);
   const ready = await ticket("Available");
   const next = await nextTicketsCommand.run(ctx, { track: "Workbench" });
   expect(next.tickets.map(({ id }) => id)).toEqual([ready.id]);

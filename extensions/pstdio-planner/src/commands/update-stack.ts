@@ -3,6 +3,7 @@ import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensio
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, attemptEventsCollection, putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
+import { readSessionHistory } from "../data/session-history";
 import { withWriteGuard } from "../data/write-guard";
 import { loadAttemptDependencies } from "./attempt-readiness";
 import { isLiveSession } from "./auto-build-sessions";
@@ -14,7 +15,10 @@ export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecor
   const latest = attempt.revisions.at(-1);
   const session = await ctx.sessions.get(attempt.implementationSessionId);
   if (!session || isLiveSession(session)) return null;
-  if (!(await ctx.sessions.listByWorkspace(attempt.workspaceId)).some(({ id }) => id === session.id)) return null;
+  if (
+    !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(({ id }) => id === session.id)
+  )
+    return null;
   const eventId = `stack-repair-resumed:${session.id}:${session.updated_at ?? attempt.updatedAt}`;
   if (await attemptEventsCollection(ctx.storage).get(eventId)) return null;
   const workspace = await ctx.workspaces.get(attempt.workspaceId);
@@ -55,7 +59,7 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
   if (!attempt || attempt.implementationSessionId !== input.implementationSessionId)
     throw new Error("The implementation session does not own this workspace.");
   const owner = await ctx.sessions.get(input.implementationSessionId);
-  const sessions = await ctx.sessions.listByWorkspace(attempt.workspaceId);
+  const sessions = await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId });
   if (!owner || !sessions.some(({ id }) => id === owner.id))
     throw new Error("The implementation session is not linked to this workspace.");
   if (sessions.some((session) => session.id !== owner.id && isLiveSession(session)))

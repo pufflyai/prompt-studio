@@ -1,4 +1,15 @@
-import { defineStatuses, type WorkflowStatus } from "@pstdio/sdk/extensions";
+import { defineCommand, params } from "@pstdio/sdk/extensions";
+
+export interface TicketStatusDraft {
+  id: string;
+  label: string;
+  color: string;
+  icon?: string | null;
+  sortOrder: number;
+  isDefault?: boolean;
+  actions?: string[];
+}
+
 import { cleanupLegacyTicketFields } from "./data/cleanup-legacy-ticket-fields";
 import { cleanupLegacyWorkspaceStatus } from "./data/cleanup-legacy-workspace-status";
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
@@ -16,7 +27,7 @@ const toCommands = (status: Pick<StoredStatus, "canCreate" | "columnActions">) =
   ...status.columnActions,
 ];
 
-const toWorkflowStatus = (status: StoredStatus): WorkflowStatus => ({
+const toTicketStatusDraft = (status: StoredStatus): TicketStatusDraft => ({
   id: status.id,
   label: status.name,
   color: status.color,
@@ -26,7 +37,7 @@ const toWorkflowStatus = (status: StoredStatus): WorkflowStatus => ({
   actions: toCommands(status),
 });
 
-const toStoredStatus = (status: WorkflowStatus, stored: StoredStatus | undefined): StoredStatus => {
+const toStoredStatus = (status: TicketStatusDraft, stored: StoredStatus | undefined): StoredStatus => {
   const commands =
     status.actions ?? toCommands({ canCreate: stored?.canCreate ?? false, columnActions: stored?.columnActions ?? [] });
 
@@ -45,19 +56,23 @@ const toStoredStatus = (status: WorkflowStatus, stored: StoredStatus | undefined
   };
 };
 
-export const ticketStatuses = defineStatuses({
-  id: "ticket-statuses",
+export const readStatusSettings = defineCommand({
+  id: "ticket-status.read-settings",
   title: "Ticket status",
-  actions: [
-    { id: CREATE_COMMAND, label: "Create", icon: "plus" },
-    { id: "archive_all", label: "Archive all", icon: "archive" },
-  ],
-  async query(ctx) {
+  async run(ctx) {
     await cleanupLegacyWorkspaceStatus(ctx.storage);
     await cleanupLegacyTicketFields(ctx.storage);
-    return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toWorkflowStatus) };
+    return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toTicketStatusDraft) };
   },
-  async save(ctx, input) {
+});
+
+export const saveStatusSettings = defineCommand({
+  id: "ticket-status.save-settings",
+  title: "Save ticket status settings",
+  mutating: true,
+  params: { statuses: { ...params.json<TicketStatusDraft[]>(), required: true } },
+  async run(ctx, input) {
+    if (!input.statuses) throw new Error("Statuses are required");
     const stored = await statusesCollection(ctx.storage).list();
     const storedById = new Map(stored.map((status) => [status.id, status]));
     const next = input.statuses.map((status) => toStoredStatus(status, storedById.get(status.id)));
@@ -76,6 +91,6 @@ export const ticketStatuses = defineStatuses({
     ]);
     await ctx.events.emit(plannerTicketsChanged, {});
 
-    return { statuses: sortedBySortOrder(next).map(toWorkflowStatus) };
+    return { statuses: sortedBySortOrder(next).map(toTicketStatusDraft) };
   },
 });

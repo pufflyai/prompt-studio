@@ -45,7 +45,7 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
 });
 
 describe("runTicketsQuery", () => {
-  test("returns visible ticket rows and a typed status reference", async () => {
+  test("returns ticket rows with status enum options", async () => {
     const storage = createMemoryStorage();
     const statuses = await seedDefaultStatuses(storage);
     const todo = statuses.find((status) => status.isDefault)!;
@@ -57,9 +57,9 @@ describe("runTicketsQuery", () => {
 
     expect(result.rows.map((row) => row.title)).toEqual(["First", "Second"]);
     expect(result.attributes?.some((attribute) => attribute.id === "status")).toBe(true);
-    expect(result.attributes?.find((attribute) => attribute.id === "status")?.type).toEqual({
-      kind: "status",
-      statuses: { kind: "status", id: "ticket-statuses" },
+    expect(result.attributes?.find((attribute) => attribute.id === "status")?.type).toMatchObject({
+      kind: "enum",
+      options: expect.arrayContaining([expect.objectContaining({ value: "backlog" })]),
     });
     expect(result.boardColumnConfigs?.[todo.id]).toMatchObject({
       color: todo.color,
@@ -69,16 +69,16 @@ describe("runTicketsQuery", () => {
     });
   });
 
-  test("leaves status ownership with the provider when storage is empty", async () => {
+  test("seeds status enum options when storage is empty", async () => {
     const storage = createMemoryStorage();
     // No explicit seed — the board must still get status columns.
     await putTicket(storage, makeTicket({ shorthand: "T-1" }));
 
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
 
-    expect(result.attributes?.find((attribute) => attribute.id === "status")?.type).toEqual({
-      kind: "status",
-      statuses: { kind: "status", id: "ticket-statuses" },
+    expect(result.attributes?.find((attribute) => attribute.id === "status")?.type).toMatchObject({
+      kind: "enum",
+      options: expect.arrayContaining([expect.objectContaining({ value: "backlog" })]),
     });
     expect(result.boardColumnConfigs?.backlog?.canCreate).toBe(true);
   });
