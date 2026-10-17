@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       stage: ${{ steps.scope.outputs.stage }}
+      docker_build: ${{ steps.scope.outputs.dockerBuild }}
       lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
       database_tests: ${{ steps.scope.outputs.databaseTests }}
       license: ${{ steps.scope.outputs.license }}
@@ -641,7 +642,7 @@ jobs:
 
   build_docker:
     needs: scope
-    if: needs.scope.outputs.stage != 'pull_request'
+    if: needs.scope.outputs.docker_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
