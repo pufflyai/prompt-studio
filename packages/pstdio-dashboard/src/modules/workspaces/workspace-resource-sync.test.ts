@@ -16,7 +16,7 @@ test("workspace links resolve current capabilities and retain their navigation m
     provider_state: "ready",
     execution_kind: "local",
     is_default: false,
-    provider_capabilities_json: { archive: true, delete: true, files: "write", diff: true },
+    provider_capabilities_json: { delete: true, files: "write", diff: true },
   };
   getWriter("workspaces")!.upsert(row);
   const workbench = createWorkbench();
@@ -36,7 +36,7 @@ test("workspace links resolve current capabilities and retain their navigation m
   expect(createWorkbenchResourceActions(workbench, resource).map((action) => action.label)).toContain(
     "Delete workspace",
   );
-  getWriter("workspaces")!.upsert({ ...row, provider_capabilities_json: { archive: false, delete: false } });
+  getWriter("workspaces")!.upsert({ ...row, provider_capabilities_json: { delete: false } });
   expect(workbench.getPrimaryResource()?.metadata).toMatchObject({
     workspaceSupportsDelete: false,
   });

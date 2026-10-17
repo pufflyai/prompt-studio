@@ -67,7 +67,6 @@ export const createWorkspaceContextFixture = async () => {
       diff: false,
       merge: false,
       rebase: false,
-      archive: false,
       delete: false,
     },
   });

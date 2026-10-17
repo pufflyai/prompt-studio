@@ -624,7 +624,6 @@ describe("createCommandEnvironment workspaces", () => {
               diff: false,
               merge: false,
               rebase: false,
-              archive: false,
               delete: false,
             },
             provider_error_json: null,
