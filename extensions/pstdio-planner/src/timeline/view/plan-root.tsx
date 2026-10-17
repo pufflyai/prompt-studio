@@ -1,5 +1,5 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import type { GuestHost } from "@pstdio/sdk/extensions";
 import { type HostStorage, HostStorageProvider, installPrismGlobal } from "@pstdio/ui";
 import {
@@ -15,6 +15,7 @@ import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
+import { PlanLoading } from "./plan-loading";
 import { useViewSections } from "./plan-state";
 import { reportTimelineError } from "./timeline-notice";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
@@ -57,7 +58,7 @@ export function PlanRoot(props: PlanRootProps) {
       active = false;
     };
   }, [host]);
-  if (!plan || !storage) return <Text p="md">{t("timeline.loading", "Loading tickets…")}</Text>;
+  if (!plan || !storage) return <PlanLoading t={t} />;
   const viewsSource = timelineViewsSource(client, plan.savedViews);
   return (
     <HostStorageProvider storage={storage}>

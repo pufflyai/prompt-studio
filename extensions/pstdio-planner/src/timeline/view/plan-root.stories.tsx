@@ -21,15 +21,17 @@ const plan = {
   savedViews: { views: [], defaultViewId: null },
 };
 
-function TimelineStory(props: { failConfigure?: boolean }) {
-  const { failConfigure } = props;
+function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "preferences" }) {
+  const { failConfigure, loading } = props;
   const respond = async (method: string, input?: { commandId?: string }) => {
+    if (method === "preferences.get" && loading === "preferences") return new Promise(() => {});
     if (method === "preferences.get") return undefined;
     if (method === "preferences.set") return;
     if (method !== "commands.execute") throw new Error(`Unexpected capability: ${method}`);
     let value: unknown;
     switch (input?.commandId?.split(".command.")[1]) {
       case "timeline.plan.read":
+        if (loading === "tickets") return new Promise(() => {});
         value = plan;
         break;
       case "auto-build.read":
@@ -65,11 +67,23 @@ function TimelineStory(props: { failConfigure?: boolean }) {
 }
 
 const meta: Meta<typeof TimelineStory> = {
-  title: "Extensions/Planner/Timeline errors",
+  title: "Extensions/Planner/Timeline",
   component: TimelineStory,
 };
 export default meta;
 type Story = StoryObj<typeof TimelineStory>;
+
+export const LoadingTickets: Story = {
+  args: { loading: "tickets" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    expect(await canvas.findByRole("button", { name: "Filter" })).toBeDisabled();
+    expect(canvas.getByRole("button", { name: "Auto Build" })).toBeDisabled();
+    expect(canvas.getByRole("region", { name: "Loading timeline" })).toHaveAttribute("aria-busy", "true");
+  },
+};
+
+export const LoadingPreferences: Story = { ...LoadingTickets, args: { loading: "preferences" } };
 
 export const SavedAutoBuildFailure: Story = {
   play: async ({ canvasElement }) => {

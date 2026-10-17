@@ -9,7 +9,7 @@ import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 
 interface PlanHeaderProps {
   data: ReturnType<typeof timelineQueryData>;
-  viewsSource: CollectionViewsSource<KanbanRendererSettings>;
+  viewsSource?: CollectionViewsSource<KanbanRendererSettings>;
   search: string;
   onSearchChange: (value: string) => void;
   resultLabel: string;
