@@ -8,7 +8,7 @@ import type { createWorkspaceService } from "../../services/workspace-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
-import { hashExtensionSource, type LoadedExtension } from "./extension-runtime";
+import { hashExtensionSource, type LoadedExtensionSnapshot } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
@@ -18,7 +18,7 @@ import { syncRepoExtensionsForProject } from "./repo-extensions";
 
 type RuntimeProcess = {
   dispose: () => void;
-  refresh: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void>;
+  refresh: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
 };
 
 // An installed source whose directory has been removed (project deleted/moved, extension
@@ -94,28 +94,35 @@ export const createInstalledExtensionRuntime = async (input: {
   const listExistingInstalledSources = async () =>
     selectExistingSources(await input.installedExtensionSourcesService.list());
   const webviewBuildManager: RuntimeProcess & {
+    adopt: (sourcePath: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
     ensure: (installedExtensionId: string, webviewId?: string) => Promise<void>;
   } = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
-        reportBuildFailure: (installedExtensionId, webviewId, error, expectedSource) => {
+        reportBuildFailure: async (installedExtensionId, webviewId, error, expectedSource) => {
           // A snapshot serves each webview's built module URL, so a finished build — for
           // better or worse — changes what the snapshot must say.
           input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildFailure(
+          const result = await input.extensionService.reportWebviewBuildFailure(
             installedExtensionId,
             webviewId,
             error,
             expectedSource,
           );
+          return result.status;
         },
-        reportBuildSuccess: (installedExtensionId, webviewId, expectedSource) => {
+        reportBuildSuccess: async (installedExtensionId, webviewId, expectedSource) => {
           input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
-          return input.extensionService.reportWebviewBuildSuccess(installedExtensionId, webviewId, expectedSource);
+          const result = await input.extensionService.reportWebviewBuildSuccess(
+            installedExtensionId,
+            webviewId,
+            expectedSource,
+          );
+          return result.status;
         },
         onError: reportError,
       })
-    : { dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
+    : { adopt: async () => {}, dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
   const refreshWebviewsInBackground = (sourcePath?: string) => {
     webviewBuildManager
       .refresh(sourcePath)
@@ -150,12 +157,12 @@ export const createInstalledExtensionRuntime = async (input: {
     await sourceWatcher.refresh();
   };
 
-  const refresh = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+  const refresh = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     if (sourcePath) {
       // A single changed source invalidates only the projects that use it.
       input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "source_changed" });
       await sourceWatcher.refresh(sourcePath);
-      await webviewBuildManager.refresh(sourcePath, validatedSource);
+      await webviewBuildManager.adopt(sourcePath, validatedSource);
       // A snapshot serves the module URL of each built webview bundle, so a snapshot
       // read between the source change and the finished build would cache the previous
       // bundle. The build is part of what the snapshot describes: invalidate again.
