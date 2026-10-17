@@ -21,7 +21,7 @@
       "ignoreDependencies": ["node-gyp"]
     },
     "infra/account-manager": {
-      "entry": ["src/index.ts", "src/**/*.test.ts", "scripts/*.ts", "drizzle.config.ts"],
+      "entry": ["src/index.ts", "src/server.ts", "src/**/*.test.ts", "scripts/*.ts", "drizzle.config.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "drizzle.config.ts"],
       "ignore": ["dist/**"]
     },

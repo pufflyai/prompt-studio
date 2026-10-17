@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { createAuthorityFixture, provisionAccount, registration } from "../src/authority.fixture";
+import { smokeAuthentication } from "./smoke-authentication";
 
 const implementation: typeof import("../src/index") = await import(new URL("./authority.js", import.meta.url).href);
 const fixture = createAuthorityFixture(implementation);
@@ -41,6 +42,7 @@ try {
   await assert.rejects(reopened.register({ ...laterIntent, environmentId: "changed" }));
   await reopened.restore("restore", snapshot);
   assert.ok(await reopened.authorize(fresh.token, fresh.workbenchId));
+  await smokeAuthentication(fixture.databaseUrl, reopened, accountId);
   console.log("Built private manager authority, migrations, restart, revocation and restore passed");
 } finally {
   await Promise.all(owners.map((owner) => owner.close()));

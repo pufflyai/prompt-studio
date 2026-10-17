@@ -3,15 +3,16 @@ import {
   grantSchema,
   type RegistrationInput,
   type ReplacementInput,
+  type RevokeInput,
   registrationSchema,
   replacementSchema,
+  revokeSchema,
 } from "./contracts";
+import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
-import { executeRequest } from "./requests";
+import { recordRequest } from "./requests";
 import { accounts, credentials, workbenches } from "./schema";
-
-export const digestCredential = (token: string) => new Bun.CryptoHasher("sha256").update(token).digest("hex");
-const mint = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+import { withAccountTransaction } from "./transactions";
 
 const issue = async (transaction: ManagerTransaction, intent: RegistrationInput, token: string) => {
   const account = (await transaction.select().from(accounts).where(eq(accounts.id, intent.accountId)))[0];
@@ -33,19 +34,24 @@ const issue = async (transaction: ManagerTransaction, intent: RegistrationInput,
   return grant;
 };
 
-export const registerCredential = async (db: ManagerDatabase, input: RegistrationInput) => {
-  const intent = registrationSchema.parse(input);
-  const token = mint();
-  const saved = await executeRequest(db, intent, "register", intent, (transaction) =>
-    issue(transaction, intent, token),
+export const registerCredentialInTransaction = async (transaction: ManagerTransaction, intent: RegistrationInput) => {
+  const token = createCredential();
+  const saved = await recordRequest(transaction, intent, "register", intent, (current) =>
+    issue(current, intent, token),
   );
   return { ...grantSchema.parse(saved.result), token: saved.created ? token : null };
 };
 
-export const replaceCredential = async (db: ManagerDatabase, input: ReplacementInput) => {
-  const intent = replacementSchema.parse(input);
-  const token = mint();
-  const saved = await executeRequest(db, intent, "replace", intent, async (transaction) => {
+export const registerCredential = (db: ManagerDatabase, input: RegistrationInput) => {
+  const intent = registrationSchema.parse(input);
+  return withAccountTransaction(db, intent.accountId, (transaction) =>
+    registerCredentialInTransaction(transaction, intent),
+  );
+};
+
+export const replaceCredentialInTransaction = async (transaction: ManagerTransaction, intent: ReplacementInput) => {
+  const token = createCredential();
+  const saved = await recordRequest(transaction, intent, "replace", intent, async (transaction) => {
     const replaced = await transaction
       .update(credentials)
       .set({ revokedAt: sql`clock_timestamp()` })
@@ -63,4 +69,34 @@ export const replaceCredential = async (db: ManagerDatabase, input: ReplacementI
     return issue(transaction, intent, token);
   });
   return { ...grantSchema.parse(saved.result), token: saved.created ? token : null };
+};
+
+export const replaceCredential = (db: ManagerDatabase, input: ReplacementInput) => {
+  const intent = replacementSchema.parse(input);
+  return withAccountTransaction(db, intent.accountId, (transaction) =>
+    replaceCredentialInTransaction(transaction, intent),
+  );
+};
+
+export const revokeCredentialsInTransaction = async (transaction: ManagerTransaction, intent: RevokeInput) => {
+  await recordRequest(transaction, intent, "revoke", intent, async (current) => {
+    await current
+      .update(credentials)
+      .set({ revokedAt: sql`clock_timestamp()` })
+      .where(
+        and(
+          eq(credentials.accountId, intent.accountId),
+          eq(credentials.environmentId, intent.environmentId),
+          isNull(credentials.revokedAt),
+        ),
+      );
+    return {};
+  });
+};
+
+export const revokeCredentials = (db: ManagerDatabase, input: RevokeInput) => {
+  const intent = revokeSchema.parse(input);
+  return withAccountTransaction(db, intent.accountId, (transaction) =>
+    revokeCredentialsInTransaction(transaction, intent),
+  );
 };
