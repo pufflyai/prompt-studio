@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { createDb } from "../../db/connection.pglite";
-import { projects } from "../../db/schemas.pg";
+import { scopeRecordStorage } from "pstdio-sync";
+import { createDb, type DbClient } from "../../db/connection.pglite";
+import { extension_kv, extension_storage_journal, projects } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createExtensionStorageDBService } from "./extension-storage";
 
 let close: (() => Promise<void>) | undefined;
+let db: DbClient;
 let svc: ReturnType<typeof createExtensionStorageDBService>;
 let projectAId: string;
 let projectBId: string;
@@ -16,6 +18,7 @@ const nowTimestamp = () => new Date().toISOString();
 
 beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
+  db = result.db;
   close = result.close;
   svc = createExtensionStorageDBService(result.db);
   const sources = createInstalledExtensionSourcesDBService(result.db);
@@ -53,6 +56,72 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await close?.();
+});
+
+test("legacy writes and guarded records use one journal and retain the caller's original revision", async () => {
+  const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
+  await svc.setKv({ ...scope, key: "setting", value_json: "legacy", project_id: projectAId });
+  const storage = await svc.open({ owner: { workbenchId: projectAId, extensionId: "ext.example" } });
+  const records = scopeRecordStorage(storage.records, ["project", projectAId, "kv"]);
+  const observed = await records.read(records.id("setting"));
+  expect(observed.value).toBe("legacy");
+  await svc.setKv({ ...scope, key: "setting", value_json: "newer", project_id: projectAId });
+  expect(
+    (
+      await records.commit({
+        operationId: "stale",
+        edits: [{ recordId: observed.recordId, expectedRevision: observed.revision, replace: "open caller" }],
+      })
+    ).status,
+  ).toBe("conflict");
+  expect((await svc.getKv(scope, "setting"))?.value_json).toBe("newer");
+  expect(await db.select().from(extension_storage_journal)).toHaveLength(3);
+  expect(await db.select().from(extension_kv)).toHaveLength(0);
+});
+
+test("existing KV rows move atomically into the owner journal without a second writable copy", async () => {
+  const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
+  const timestamp = nowTimestamp();
+  await db.insert(extension_kv).values({
+    ...scope,
+    key: "existing",
+    value_json: { saved: true },
+    project_id: projectAId,
+    created_at: timestamp,
+    updated_at: timestamp,
+  });
+  const storage = await svc.open({ owner: { workbenchId: projectAId, extensionId: "ext.example" } });
+  const records = scopeRecordStorage(storage.records, ["project", projectAId, "kv"]);
+  expect((await records.read(records.id("existing"))).value).toEqual({ saved: true });
+  expect((await svc.getKv(scope, "existing"))?.value_json).toEqual({ saved: true });
+  expect(await db.select().from(extension_kv)).toHaveLength(0);
+  expect(await db.select().from(extension_storage_journal)).toHaveLength(1);
+});
+
+test("legacy structured writes preserve JSON serialization of optional object and array values", async () => {
+  const input = {
+    project_id: projectAId,
+    extension_instance_id: instanceAId,
+    scope_type: "project",
+    scope_id: projectAId,
+    collection: "revisions",
+    item_id: "revision",
+  };
+  const value = { title: "Artifact", favicon: undefined, nested: { label: undefined }, values: ["first", undefined] };
+  expect(await svc.createCollectionItemIfAbsent({ ...input, value_json: value })).toBe(true);
+  expect((await svc.getCollectionItem(input, input.item_id))?.value_json).toEqual({
+    title: "Artifact",
+    nested: {},
+    values: ["first", null],
+  });
+  expect(await svc.updateCollectionItem({ ...input, value_json: { ...value, title: "Renamed" } })).toBe(true);
+  expect(await svc.deleteCollectionItemIfValue(input, input.item_id, { ...value, title: "Renamed" })).toBe(true);
+  await svc.setKv({ ...input, key: "optional", value_json: value });
+  expect((await svc.getKv(input, "optional"))?.value_json).toEqual({
+    title: "Artifact",
+    nested: {},
+    values: ["first", null],
+  });
 });
 
 describe("extensionStorageService", () => {

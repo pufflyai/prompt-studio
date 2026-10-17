@@ -265,6 +265,13 @@ mounts source/dependencies read-only, and removes its containers/network/volume 
 unused subnet for concurrent stacks. It never opens the application's database.
 Its test tables and fault controls are not production migrations or service APIs.
 
+Snapshot requests capture the current accepted state before network work. Install
+a response only if that observed state still matches, including receipts and
+conflicts. Receipt outcomes can change without advancing checkpoint counters.
+Within one epoch, older journal or accepted positions cannot replace current
+state. A fresh restore can start a new epoch at a lower position. Local pending
+edits remain in the journal during this check.
+
 The source cases were inspected at WS-272 commit `565ceab57` in
 `infra/relay/prototype/src/{protocol,staging,client-model,recovery}.ts` and adjacent
 tests. That branch's `0026-cloud-sync-prototype.md` is evidence, not a merged

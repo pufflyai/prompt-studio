@@ -5,24 +5,7 @@ import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 import { makeStorage, stubEnvironment } from "./test-helpers.test";
 
-const storage: CommandRunnerEnvironment["storage"] = {
-  assets: makeStorage().api.assets,
-  scope: () => storage,
-  files: {
-    put: async () => ({}) as never,
-    get: async () => undefined,
-    getBytes: async () => new Uint8Array(),
-    list: async () => [],
-    delete: async () => {},
-    urlFor: () => "",
-  },
-  get: async () => undefined,
-  set: async () => {},
-  delete: async () => {},
-  collection: () => {
-    throw new Error("collection not implemented in test");
-  },
-};
+const storage = makeStorage().api;
 
 const environment: CommandRunnerEnvironment = {
   project: { id: "project-1", name: "Project One", shorthand: "PO" },

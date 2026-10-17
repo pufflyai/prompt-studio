@@ -26,12 +26,22 @@ layer-map change.
    `pstdio-storage` reuses asset reference types from `pstdio-sync-contracts`
    and does not depend on `pstdio-db`. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
+   `pstdio-db` also consumes synchronization contracts for the durable extension
+   journal and accepted state. It does not import the test-only conformance entry.
+   The private `pstdio-sync` package owns the production, runtime-neutral record
+   model and authoring operations. It depends on synchronization contracts and
+   Yjs, hides sequence documents behind record operations, and accepts a storage
+   adapter. `pstdio-db` supplies its durable local adapter.
+   Its real-file integration tests declare `pstdio-storage` as a development
+   dependency to verify immutable asset gates; database runtime code does not import it.
 
 2. **Public authoring SDK**
    `@pstdio/sdk` exposes extension and client authoring APIs. Runtime or host
    contracts shared with the API live below it in `pstdio-api-contracts`, not in
    API packages. The SDK and workbench declare `pstdio-sync-contracts` as a build
    dependency and inline its types and schemas into their public packages.
+   The SDK's in-memory test storage also bundles `pstdio-sync`, so extension tests
+   use the same grouped-write and conflict rules as the durable host.
 
 3. **Extension runtime**
    `pstdio-extensions` owns extension discovery, metadata normalization, bridge

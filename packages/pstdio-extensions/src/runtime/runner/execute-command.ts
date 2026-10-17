@@ -133,7 +133,7 @@ const runExtensionCommand = async (
     );
 
   const requestedPayload = buildRequestPayload(record, initialInvocation, invocationId, input.projectId, input.source);
-  await state.dispatcher.dispatch(lifecycleEventId("requested", record.id), requestedPayload);
+  await state.dispatcher.dispatch(lifecycleEventId("requested", record.id), requestedPayload, input);
 
   let middlewareResult: MiddlewareChainResult;
   try {
@@ -148,7 +148,7 @@ const runExtensionCommand = async (
 
   if (middlewareResult.status === "reject") {
     const rejectedPayload = { ...requestedPayload, ...middlewareResult.rejection };
-    await state.dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload);
+    await state.dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload, input);
     return withNotices(
       {
         ok: false,
@@ -171,7 +171,7 @@ const runExtensionCommand = async (
       code: "invalid_params",
       reason: validation.reason,
     };
-    await state.dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload);
+    await state.dispatcher.dispatch(lifecycleEventId("rejected", record.id), rejectedPayload, input);
     return withNotices({ ok: false, status: "rejected", code: "invalid_params", reason: validation.reason }, notices);
   }
 
@@ -181,7 +181,7 @@ const runExtensionCommand = async (
     resource: finalInvocation.resource,
   };
 
-  await state.dispatcher.dispatch(lifecycleEventId("started", record.id), startedPayload);
+  await state.dispatcher.dispatch(lifecycleEventId("started", record.id), startedPayload, input);
 
   const start = Date.now();
   try {
@@ -189,21 +189,29 @@ const runExtensionCommand = async (
     const value = await record.run({ ...buildCommandCtx(finalInvocation), stream: writer }, finalInvocation.params);
     if (streamCancelled(input, scope)) throw scope.signal.reason;
     const elapsedMs = Date.now() - start;
-    await state.dispatcher.dispatch(lifecycleEventId("completed", record.id), {
-      ...startedPayload,
-      result: value,
-      elapsedMs,
-    });
+    await state.dispatcher.dispatch(
+      lifecycleEventId("completed", record.id),
+      {
+        ...startedPayload,
+        result: value,
+        elapsedMs,
+      },
+      input,
+    );
     return withNotices({ ok: true, status: "success", value }, notices);
   } catch (err) {
     const elapsedMs = Date.now() - start;
     const message = err instanceof Error ? err.message : String(err);
-    await state.dispatcher.dispatch(lifecycleEventId("failed", record.id), {
-      ...startedPayload,
-      reason: message,
-      error: serializeError(err),
-      elapsedMs,
-    });
+    await state.dispatcher.dispatch(
+      lifecycleEventId("failed", record.id),
+      {
+        ...startedPayload,
+        reason: message,
+        error: serializeError(err),
+        elapsedMs,
+      },
+      input,
+    );
     return withNotices(
       {
         ok: false,
@@ -247,8 +255,8 @@ const executePrivateHandler = async (
     projectId: input.projectId,
   };
 
-  await state.dispatcher.dispatch(lifecycleEventId("requested", handler.id), requestPayload);
-  await state.dispatcher.dispatch(lifecycleEventId("started", handler.id), requestPayload);
+  await state.dispatcher.dispatch(lifecycleEventId("requested", handler.id), requestPayload, input);
+  await state.dispatcher.dispatch(lifecycleEventId("started", handler.id), requestPayload, input);
 
   const start = Date.now();
   try {
@@ -267,21 +275,29 @@ const executePrivateHandler = async (
     );
     const value = await handler.handler(ctx, params);
     const elapsedMs = Date.now() - start;
-    await state.dispatcher.dispatch(lifecycleEventId("completed", handler.id), {
-      ...requestPayload,
-      result: value,
-      elapsedMs,
-    });
+    await state.dispatcher.dispatch(
+      lifecycleEventId("completed", handler.id),
+      {
+        ...requestPayload,
+        result: value,
+        elapsedMs,
+      },
+      input,
+    );
     return withNotices({ ok: true, status: "success", value }, notices);
   } catch (err) {
     const elapsedMs = Date.now() - start;
     const message = err instanceof Error ? err.message : String(err);
-    await state.dispatcher.dispatch(lifecycleEventId("failed", handler.id), {
-      ...requestPayload,
-      reason: message,
-      error: serializeError(err),
-      elapsedMs,
-    });
+    await state.dispatcher.dispatch(
+      lifecycleEventId("failed", handler.id),
+      {
+        ...requestPayload,
+        reason: message,
+        error: serializeError(err),
+        elapsedMs,
+      },
+      input,
+    );
     return withNotices(
       { ok: false, status: "error", code: "handler_threw", reason: message, error: serializeError(err) },
       notices,

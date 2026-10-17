@@ -251,6 +251,30 @@ test("zero byte assets complete without a content request and remain readable", 
   }
 });
 
+test("cancellation interrupts opening a receive source before any byte stream exists", async () => {
+  const { owner, service, close } = await fixture();
+  const opening = Promise.withResolvers<AbortSignal>();
+  const release = Promise.withResolvers<ReadableStream<Uint8Array>>();
+  const lateCancelled = Promise.withResolvers<void>();
+  const download = service
+    .receive(owner, "opening", asset("waiting"), async (_offset, signal) => {
+      opening.resolve(signal);
+      return release.promise;
+    })
+    .catch((error: unknown) => error);
+  try {
+    expect(await opening.promise).toBeInstanceOf(AbortSignal);
+    expect(await service.cancel(owner, "opening")).toMatchObject({ status: "cancelled" });
+    expect(await download).toMatchObject({ code: "ASSET_TRANSFER_CANCELLED" });
+    release.resolve(new ReadableStream({ cancel: () => lateCancelled.resolve() }));
+    await lateCancelled.promise;
+  } finally {
+    release.resolve(bytes("waiting"));
+    await download;
+    await close();
+  }
+});
+
 test("explicit cancellation interrupts an active stream before cleaning its partial bytes", async () => {
   const { owner, storage, service, close } = await fixture();
   const waiting = Promise.withResolvers<void>();

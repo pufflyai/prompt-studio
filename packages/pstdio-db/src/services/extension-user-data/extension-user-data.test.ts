@@ -9,6 +9,7 @@ import {
   projects,
 } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
+import { createExtensionStorageDBService } from "../extension-storage/extension-storage";
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createExtensionUserDataDBService } from "./extension-user-data";
 
@@ -104,6 +105,40 @@ afterEach(async () => {
 });
 
 describe("extensionUserDataService", () => {
+  test("removing one provider preserves the stable owner while another disabled provider references it", async () => {
+    const source = await createInstalledExtensionSourcesDBService(db).register({
+      install_name: "other",
+      extension_id: "ext.example",
+      display_name: "Other",
+      source_kind: "local_path",
+      source_path: "/builtin/other",
+    });
+    const other = await createExtensionInstancesDBService(db).create({
+      installed_extension_id: source.id,
+      scope_type: "project",
+      scope_id: projectId,
+      enabled: false,
+    });
+    const storage = createExtensionStorageDBService(db);
+    const scope = { extension_instance_id: other.id, scope_type: "project", scope_id: projectId };
+    await storage.setKv({ ...scope, key: "retained-by-second", value_json: "keep" });
+    await svc.deleteForInstance(instanceId);
+    expect((await storage.getKv(scope, "retained-by-second"))?.value_json).toBe("keep");
+    expect(await svc.hasUserData(other.id)).toBe(true);
+  });
+  test("journaled storage keeps the uninstall data guard and supports explicit data removal", async () => {
+    const storage = createExtensionStorageDBService(db);
+    await storage.setKv({
+      extension_instance_id: instanceId,
+      scope_type: "project",
+      scope_id: projectId,
+      key: "saved",
+      value_json: "keep",
+    });
+    expect(await svc.hasUserData(instanceId)).toBe(true);
+    await svc.deleteForInstance(instanceId);
+    expect(await svc.hasUserData(instanceId)).toBe(false);
+  });
   test("hasUserData is false when the instance owns nothing", async () => {
     expect(await svc.hasUserData(instanceId)).toBe(false);
   });
