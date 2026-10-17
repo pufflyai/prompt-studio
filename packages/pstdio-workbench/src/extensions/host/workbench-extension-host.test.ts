@@ -306,7 +306,7 @@ describe("registerWorkbenchExtensionContributions", () => {
   });
 });
 describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
-  test("registers alpha.4 views, placements, status chrome, and workflow statuses", async () => {
+  test("registers extension views, placements, status chrome, and settings", async () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     workbench.views.registerView({ id: "start", title: "Start", body: { kind: "react", render: () => null } });
