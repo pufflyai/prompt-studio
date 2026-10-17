@@ -3,7 +3,6 @@ import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { getIndexedRows } from "@/lib/sync/collections";
 import { waitForInitialCollectionsSync } from "@/lib/sync/initial-collections-sync";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { workspaceTerminalResources } from "@/shared/terminal/workspace-terminal-resources";
 
 export const workspaceRelatedOpenings = async (
   ctx: WorkbenchModuleContext,
@@ -26,12 +25,7 @@ export const workspaceRelatedOpenings = async (
         entry.resource.projectId === projectId &&
         sessions.has(entry.resource.id),
     );
-  const openings: RelatedResourceOpenings[number][] = workspaceTerminalResources(ctx, source).map(({ resource }) => ({
-    resource,
-    autoOpen: true,
-    region: "secondary",
-    open: "preview",
-  }));
-  if (latest) openings.push({ resource: latest.resource, autoOpen: true, region: "side", open: "preview" });
-  return openings;
+  return (
+    latest ? [{ resource: latest.resource, autoOpen: true, region: "side", open: "preview" }] : []
+  ) satisfies RelatedResourceOpenings;
 };
