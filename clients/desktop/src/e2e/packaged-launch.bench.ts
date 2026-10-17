@@ -13,6 +13,7 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
+import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 import { waitForVisibleElement } from "./visible-element-timing";
 
 // Hosted Intel Mac runners start the packaged app two to three times slower than Apple Silicon,
@@ -124,6 +125,14 @@ test("sidecar crash shows recovery within budget", async () => {
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home);
+    const firstCrashAt = Date.now();
+    crashPackagedRuntime(app.runtime.pid);
+    const restartingAt = await waitForVisibleElement(
+      app.lifecyclePage,
+      '[role="status"] :is(h1, h2, h3)',
+      "Opening Prompt Studio",
+    );
+    await waitForAutomaticRecovery(app);
     const crashedAt = Date.now();
     process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
     const visibleAt = await waitForVisibleElement(
@@ -133,12 +142,15 @@ test("sidecar crash shows recovery within budget", async () => {
     );
     await recordBenchmark({
       name: "sidecar-crash-recovery",
-      scenario: "Runtime process killed while the workbench is open",
+      scenario: "Replacement runtime killed while the workbench is open after one automatic recovery",
       workload: "No projects",
       measuredProcess: "Desktop main process and lifecycle renderer",
       start: "Runtime process kill signal",
       end: "Visible recovery heading in the lifecycle window",
-      metrics: [{ name: "recovery-ui", unit: "ms", value: visibleAt - crashedAt, budget: recoveryBudgetMs }],
+      metrics: [
+        { name: "automatic-recovery-ui", unit: "ms", value: restartingAt - firstCrashAt, budget: recoveryBudgetMs },
+        { name: "recovery-ui", unit: "ms", value: visibleAt - crashedAt, budget: recoveryBudgetMs },
+      ],
     });
   } finally {
     await disposePackagedApp(app);

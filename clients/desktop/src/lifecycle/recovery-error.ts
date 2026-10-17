@@ -5,7 +5,6 @@ const recoveryCode = (detail: string): DesktopRecoveryError["code"] => {
   if (detail.startsWith("port_bind_failure:")) return "port_bind_failure";
   if (detail.startsWith("pglite_ownership_conflict:")) return "pglite_ownership_conflict";
   if (detail.startsWith("pglite_recovery_failure:")) return "pglite_recovery_failure";
-  if (detail.includes("timed out")) return "runtime_timeout";
   return "unexpected_exit";
 };
 

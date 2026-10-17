@@ -79,11 +79,7 @@ const seedProject = async (request: APIRequestContext, name: string, slug: strin
   return { id: project.id, name, repoRoot } satisfies ProjectFixture;
 };
 
-const projectPicker = (page: Page) =>
-  page
-    .getByRole("dialog")
-    .filter({ has: page.getByPlaceholder("Search projects...") })
-    .last();
+const projectPicker = (page: Page) => page.getByRole("dialog", { name: "Projects", exact: true }).last();
 
 const prepareSwitch = (page: Page, targetProjectName: string) =>
   page.evaluate((targetName) => {
