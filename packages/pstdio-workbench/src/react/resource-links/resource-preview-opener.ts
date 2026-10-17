@@ -7,6 +7,7 @@ import type {
   WorkbenchRegion,
 } from "../../core";
 import { resourceMatchesConstraint } from "../../core/shared/contributions/reference-id";
+import { createRelatedPanelLifetime } from "./related-panel-lifetime";
 import { relatedResourcePageKey } from "./related-resource-page-key";
 
 const findPage = (ctx: WorkbenchModuleContext, ref: PageRef) =>
@@ -28,6 +29,7 @@ const pagePreviewView = (ctx: WorkbenchModuleContext, pageRef: PageRef, resource
 
 // Owner views render related resources without changing the routed parent page.
 export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
+  const panels = createRelatedPanelLifetime(ctx);
   const reveal = (region: WorkbenchRegion) => {
     if (region === "side" || region === "secondary") ctx.shell.setRegionOpen(region, true);
     else ctx.layout.setRegionVisible(region, true);
@@ -116,33 +118,42 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
     const viewId = pagePreviewView(ctx, target.page, resource);
     return viewId ? openView(viewId, resource, source, options) : false;
   };
+  const updateVisibility = (region: WorkbenchRegion, show: boolean, closed: boolean, resource: ResourceRef) => {
+    if (!show) {
+      if (region === "side" || region === "secondary") ctx.shell.setRegionOpen(region, false);
+      return;
+    }
+    if (closed) {
+      const panel = findOpenResource(ctx, resource)?.panel;
+      if (panel) ctx.layout.setRegionActiveWidget(region, panel.widgetId);
+      panels.claim(region, relatedResourcePageKey(ctx));
+    }
+    reveal(region);
+  };
   const openResource = (
     target: Extract<NavigationTarget, { kind: "page" | "panel" }>,
     source: ResourceRef,
     options: RelatedResourceOpening,
+    show: boolean,
   ) => {
     const resource = target.resource;
     if (!resource) return false;
     const existing = findOpenResource(ctx, resource);
     const region = existing?.region ?? options.region;
     // Capture visibility before placement reconciliation can reveal the panel.
-    const select = (region === "side" || region === "secondary") && !ctx.shell.getRegionState(region).open;
+    const closed = (region === "side" || region === "secondary") && !ctx.shell.getRegionState(region).open;
     if (!existing && !present(target, resource, source, options)) return false;
-    if (select) {
-      const panel = findOpenResource(ctx, resource)?.panel;
-      if (panel) ctx.layout.setRegionActiveWidget(region, panel.widgetId);
-    }
-    reveal(region);
+    updateVisibility(region, show, closed, resource);
     return true;
   };
-  const open = (target: NavigationTarget, source: ResourceRef, options: RelatedResourceOpening) => {
+  const open = (target: NavigationTarget, source: ResourceRef, options: RelatedResourceOpening, show = true) => {
     if (target.kind === "compound") {
       let opened = false;
-      for (const item of target.targets) if (open(item, source, options)) opened = true;
+      for (const item of target.targets) if (open(item, source, options, show)) opened = true;
       return opened;
     }
     if (target.kind !== "panel" && target.kind !== "page") return false;
-    return openResource(target, source, options);
+    return panels.run(() => openResource(target, source, options, show));
   };
   const unsubscribe = ctx.views.store.subscribe(() => {
     for (const [id, projection] of projections) {
@@ -154,22 +165,26 @@ export const createResourcePreviewOpener = (ctx: WorkbenchModuleContext) => {
   return {
     open,
     closePagePreviews(sourceKey: string) {
-      // Only tabs this opener created belong to the page's temporary context.
-      // Existing tabs and tabs the user repurposed do not belong to this page.
-      const previews = Object.values(ctx.layout.getLayout().regions)
-        .flatMap((region) => region.widgets)
-        .filter((panel) => panel.relatedSource === sourceKey && panel.tabRetention === "preview");
-      for (const preview of previews) {
-        // Closing one placement can reconcile the other outgoing tabs away.
-        const panel = Object.values(ctx.layout.getLayout().regions)
+      return panels.run(() => {
+        // Only tabs this opener created belong to the page's temporary context.
+        // Existing tabs and tabs the user repurposed do not belong to this page.
+        const previews = Object.values(ctx.layout.getLayout().regions)
           .flatMap((region) => region.widgets)
-          .find((panel) => panel.widgetId === preview.widgetId);
-        if (panel?.relatedSource === sourceKey && panel.tabRetention === "preview" && panel.placementIdentity)
-          ctx.closePlacement(panel.placementIdentity);
-      }
-      return previews.map((panel) => panel.widgetId);
+          .filter((panel) => panel.relatedSource === sourceKey && panel.tabRetention === "preview");
+        for (const preview of previews) {
+          // Closing one placement can reconcile the other outgoing tabs away.
+          const panel = Object.values(ctx.layout.getLayout().regions)
+            .flatMap((region) => region.widgets)
+            .find((panel) => panel.widgetId === preview.widgetId);
+          if (panel?.relatedSource === sourceKey && panel.tabRetention === "preview" && panel.placementIdentity)
+            ctx.closePlacement(panel.placementIdentity);
+        }
+        panels.leave(sourceKey);
+        return previews.map((panel) => panel.widgetId);
+      });
     },
     dispose() {
+      panels.dispose();
       unsubscribe();
       for (const projection of projections.values()) projection.dispose();
     },

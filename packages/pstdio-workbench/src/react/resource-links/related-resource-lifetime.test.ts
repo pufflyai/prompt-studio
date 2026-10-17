@@ -92,10 +92,11 @@ test("selecting or hydrating a related preview does not leave the source page", 
   s.controller.dispose();
 });
 
-test("leaving the source page closes its automatic preview while keeping other tabs in the panel", async () => {
+test("leaving the source page keeps an already open panel and its manual tabs", async () => {
   const s = setup([opening("related")]);
   registerTray(s);
   s.workbench.shellPlacements.openPlacement({ placementId: "manual", resource: ref("document", "kept"), open: "pin" });
+  s.workbench.shell.setRegionOpen("side", true);
   await s.controller.open(s.source);
   leavePage(s);
   expect(s.workbench.layout.listPanelInstances("side").map((p) => p.resource?.id)).toEqual(["kept"]);

@@ -92,7 +92,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Related openings preserve selected tabs; all new automatic previews close on page leave and empty panels collapse.
 // Manually opened Bottom panels and terminals stay visible across page navigation, retaining the terminal process.
 // Related tabs select when revealing closed Side/Bottom panels; open panels keep their selection.
-// Resource-owned related destinations remember choices and closures; other Side/Bottom visibility stays global.
+// Related tabs are placed even when a remembered closure hides their panel; global tab selection remains stable.
+// Only automatically revealed panels close on leave; pinning or adding a manual tab keeps the panel open.
 // Closing manual Bottom elsewhere stays closed on Workspace return, without creating a terminal automatically.
 // Dropping a session preview pins it and keeps the destination terminal preview open and leftmost.
 // Unpinning a created session replaces the tray preview and keeps it leftmost.
