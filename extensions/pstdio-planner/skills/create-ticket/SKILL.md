@@ -2,16 +2,29 @@
 name: create-ticket
 description: "Create a planner ticket. Use when asked to make changes unrelated to an existing ticket or when asked to create a new ticket."
 metadata:
-  version: 0.0.4
+  version: 0.0.5
 ---
 
 Manage Planner tickets with the `pst tickets` commands.
+
+## Titles
+
+Name what gets better for the person, not the code change. Someone should understand the title without reading the ticket.
+
+- Use plain words. Put code, component names, and steps in the body. Keep a technical name only when people choose it, such as Docker.
+- For a bug, name what works again.
+- Keep a title the user gave you.
+
+| Instead of | Write |
+| --- | --- |
+| Add retry to upload client | Finish uploads when the connection drops briefly |
+| Add revocable consumer grants to browser previews | Choose who can see previews |
 
 ## Workflow
 
 1. List the available statuses, tags, and ticket templates with `pst statuses list`, `pst tags list`, and `pst tickets templates`. Do not assume their names. Use `pst tickets list` to check for related work.
 2. Choose how to create the ticket.
-   - For a detailed body, run `pst tickets write --title "<verb-led title>" [--status <status>] [--tags <tag>]`. Apply a template with `pst tickets apply-template --id <shorthand> --template <template>`, edit the returned absolute `path` in the default project folder, then save it with `pst tickets save --id <shorthand>`.
+   - For a detailed body, run `pst tickets write --title "<title>" [--status <status>] [--tags <tag>]`. Apply a template with `pst tickets apply-template --id <shorthand> --template <template>`, edit the returned absolute `path` in the default project folder, then save it with `pst tickets save --id <shorthand>`.
    - If the complete body already exists, run `pst tickets create --content "<markdown>" [--status <status>] [--tags <tag>]`. The first heading becomes the title.
 3. Read the relevant code and documentation before writing the body. Mark unanswered questions with `[MISSING INFORMATION]`.
 4. Complete every applicable template section. A free-form ticket must still include:
@@ -22,12 +35,13 @@ Manage Planner tickets with the `pst tickets` commands.
    - `depends_on` in the frontmatter. List the tickets that supply required code or other prerequisites. Planner checks their current attempts and Git integration before starting dependent work.
 5. Put priority and type in tags from `pst tags list`. Repeat `--tags` when needed.
 6. Check unfinished tickets with `pst tickets list`. If another ticket must finish first, add it to `depends_on`. Keep dependency waiting in those links; do not copy it into `blocked_reason` or change the ticket to Blocked for that reason alone. Planner derives readiness from the current prerequisites. Use `--blocked-reason "<why>"` only for an independent blocker, such as missing credentials. Clear that text with `pst tickets update --id <shorthand> --blocked-reason ''` when the independent blocker is resolved; keep the dependency links.
-7. Stop after saving the ticket unless the user also asked for implementation. In that case, follow the `implement-ticket` skill.
+7. Before saving, read the title alone. If it does not say what gets better, rewrite it.
+8. Stop after saving the ticket unless the user also asked for implementation. In that case, follow the `implement-ticket` skill.
 
 ## Example
 
 ```bash
-pst tickets write --title "Add retry to upload client"
+pst tickets write --title "Finish uploads when the connection drops briefly"
 # Apply a template if needed, then edit its returned absolute path.
 pst tickets save --id PS-42
 ```

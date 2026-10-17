@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.17
+  version: 0.0.18
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
@@ -71,7 +71,7 @@ Use an independent reviewer when available. Fix the findings before handoff.
 
 Read `pst pstdio-planner implementation-policy` again before handoff so changes to the settings take effect.
 
-- When `openPr` is enabled and validation has passed, push the implementation branch and open a draft PR against `defaultTargetBranch` from the policy, or the repository's default branch when unset. A value such as `origin/main` selects `main` on `origin`. Reuse an existing PR for that branch. Follow the repository's PR title rules. Write the description with the sections of the repository's PR template, such as `.github/pull_request_template.md`, in the same order, and include the ticket shorthand. Without a template, include the ticket shorthand, a summary, and validation results. With GitHub CLI, use `gh pr create --draft --base <target-branch> --title <title> --body-file <path>`. The body file replaces the template, so copy its headings into the file.
+- When `openPr` is enabled and validation has passed, push the implementation branch and open a draft PR against `defaultTargetBranch` from the policy, or the repository's default branch when unset. A value such as `origin/main` selects `main` on `origin`. Reuse an existing PR for that branch. Follow the repository's PR title rules. Like a ticket title, the PR title names what gets better for the person, not the code change. Write the description with the sections of the repository's PR template, such as `.github/pull_request_template.md`, in the same order, and include the ticket shorthand. Without a template, include the ticket shorthand, a summary, and validation results. With GitHub CLI, use `gh pr create --draft --base <target-branch> --title <title> --body-file <path>`. The body file replaces the template, so copy its headings into the file.
   - Inspect the diff against that target. A stacked branch can include prerequisite changes that have not reached the target yet. Name those dependencies and their PRs in the description. Do not claim they are merged or change a configured PR target to hide them.
 - Read the ticket's `reviewLinks` with `pst tickets panel --id <shorthand>`. If the PR URL is not already linked, run `pst tickets link-review --id <shorthand> --url <pr-url>`. Include the PR URL in the handoff. If pushing, creating, or linking the PR fails, report the blocker without claiming that step succeeded.
 - When `openPr` is disabled, skip PR creation and linking unless the user requested them.
