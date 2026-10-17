@@ -4,6 +4,7 @@ import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-web
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { toDashboardExtensionResource } from "./extension-kanban-adapter";
+import { resolutionFromResult, resourceResolutionRequest } from "./extension-resource-resolution";
 
 interface PlacementResourceSyncInput {
   projectId: string;
@@ -14,19 +15,40 @@ interface PlacementResourceSyncInput {
 export const isResourceRefreshEvent = (id: string, extensionId: string) =>
   id.startsWith(`${extensionId}.`) || id === viewDataEvents.workspacesChanged.id;
 
+const resolvedPlacementResource = (value: unknown, resource: ResourceRef, batch: boolean) =>
+  resolutionFromResult(value, {
+    batch,
+    open: resource,
+    identityOf: (candidate) =>
+      candidate
+        ? resourceKey({
+            ...candidate,
+            extensionId: candidate.extensionId ?? resource.extensionId,
+            projectId: candidate.projectId ?? resource.projectId,
+          })
+        : undefined,
+  })?.resource;
+
 export const refreshWorkbenchResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  const referenceKey = ctx.pages.resourceReferenceKey;
   const placements = Object.values(ctx.layout.getLayout().regions)
     .flatMap((region) => region.widgets)
-    .filter((placement) => placement.resource && resourceKey(placement.resource) === resourceKey(resource));
+    .filter((placement) => placement.resource && referenceKey(placement.resource) === referenceKey(resource));
   ctx.pages.refreshResource(resource);
   for (const placement of placements) {
     const identity = placement.placementIdentity;
-    if (identity?.kind === "mode") ctx.modePlacements.updatePlacement(identity, { resource });
-    if (identity?.kind === "shell") ctx.shellPlacements.updatePlacement(identity, { resource });
+    const updated = {
+      ...placement.resource,
+      ...resource,
+      metadata: { ...placement.resource?.metadata, ...resource.metadata },
+    };
+    if (identity?.kind === "mode") ctx.modePlacements.updatePlacement(identity, { resource: updated });
+    if (identity?.kind === "shell") ctx.shellPlacements.updatePlacement(identity, { resource: updated });
   }
 };
 
 export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, input: PlacementResourceSyncInput) => {
+  const referenceKey = ctx.pages.resourceReferenceKey;
   const pending = new Map<string, AbortController>();
   let identities = new Set<string>();
   const resources = () => {
@@ -38,7 +60,10 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       if (location.resource) result.push(location.resource);
       location = location.parent;
     }
-    return result;
+    // The primary watcher owns refreshes as soon as a placement becomes the page resource.
+    const primary = ctx.getPrimaryResource();
+    const primaryKey = primary ? referenceKey(primary) : undefined;
+    return result.filter((resource) => referenceKey(resource) !== primaryKey);
   };
   const applyResource = (resource: ResourceRef, result: unknown) => {
     const value = toDashboardExtensionResource(result, input.projectId, input.metadata.resourceKinds);
@@ -50,30 +75,32 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       projectId: value.projectId ?? resource.projectId,
       metadata: { ...resource.metadata, ...value.metadata },
     };
-    const key = resourceKey(resource);
-    if (resourceKey(updated) !== key) return;
+    const key = referenceKey(resource);
+    if (referenceKey(updated) !== key) return;
     refreshWorkbenchResource(ctx, updated);
   };
   const resolve = async (resource: ResourceRef) => {
     const kind = input.metadata.resourceKinds.find(
       (kind) => kind.id === resource.type && kind.extensionId === resource.extensionId,
     );
-    if (!kind?.resolveCommand) return;
-    const key = resourceKey(resource);
+    if (!kind) return;
+    const command = kind.resolveCommand ?? kind.resolveManyCommand;
+    if (!command) return;
+    const key = referenceKey(resource);
     pending.get(key)?.abort();
     const request = new AbortController();
     pending.set(key, request);
     try {
       const response = await input.executeCommand(
         input.projectId,
-        kind.resolveCommand,
-        { projectId: input.projectId, source: "dashboard", resource },
+        command,
+        resourceResolutionRequest(input.projectId, resource, !kind.resolveCommand),
         request.signal,
       );
-      if (request.signal.aborted || !resources().some((candidate) => resourceKey(candidate) === key)) return;
+      if (request.signal.aborted || !resources().some((candidate) => referenceKey(candidate) === key)) return;
       if (response.outcome.status !== "success")
         throw new Error(response.outcome.reason ?? "Resource resolver failed.");
-      applyResource(resource, response.outcome.value);
+      applyResource(resource, resolvedPlacementResource(response.outcome.value, resource, !kind.resolveCommand));
     } catch (error) {
       if (!request.signal.aborted) console.warn(`Could not refresh resource ${key}`, error);
     } finally {
@@ -81,7 +108,7 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
     }
   };
   const sync = () => {
-    const current = new Map(resources().map((resource) => [resourceKey(resource), resource]));
+    const current = new Map(resources().map((resource) => [referenceKey(resource), resource]));
     for (const [key, request] of pending)
       if (!current.has(key)) {
         request.abort();
@@ -89,28 +116,23 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       }
     const added = [...current].filter(([key]) => !identities.has(key));
     identities = new Set(current.keys());
-    const primary = ctx.getPrimaryResource();
-    for (const [key, resource] of added) if (!primary || resourceKey(primary) !== key) void resolve(resource);
+    for (const [, resource] of added) void resolve(resource);
   };
   sync();
   const unsubscribeLayout = ctx.layout.store.subscribe(sync);
   const unsubscribePages = ctx.pages.store.subscribe(sync);
+  const primarySubscription = ctx.onDidChangePrimaryResource(sync);
   const unsubscribeEvents = subscribeToExtensionEventFeed((event) => {
     if (event.projectId !== input.projectId) return;
-    const primary = ctx.getPrimaryResource();
-    for (const resource of new Map(resources().map((resource) => [resourceKey(resource), resource])).values()) {
-      if (
-        resource.extensionId &&
-        isResourceRefreshEvent(event.id, resource.extensionId) &&
-        (!primary || resourceKey(primary) !== resourceKey(resource))
-      )
-        void resolve(resource);
+    for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values()) {
+      if (resource.extensionId && isResourceRefreshEvent(event.id, resource.extensionId)) void resolve(resource);
     }
   });
   return {
     dispose() {
       unsubscribeLayout();
       unsubscribePages();
+      primarySubscription.dispose();
       unsubscribeEvents();
       for (const request of pending.values()) request.abort();
     },
