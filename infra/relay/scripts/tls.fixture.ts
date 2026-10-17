@@ -1,6 +1,24 @@
 import { strict as assert } from "node:assert";
 import { X509Certificate } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { chmod } from "node:fs/promises";
+import { validFixtureTls } from "./tls-validity";
+
+if (process.argv.includes("--check")) {
+  try {
+    const pairs = [
+      { host: "authority", certificate: "/tls-public/authority-cert.pem", key: "/tls-private/authority-key.pem" },
+      { host: "relay", certificate: "/tls-public/relay-cert.pem", key: "/relay-tls-private/relay-key.pem" },
+    ].map(({ host, certificate, key }) => ({
+      host,
+      certificate: readFileSync(certificate, "utf8"),
+      key: readFileSync(key, "utf8"),
+    }));
+    process.exit(validFixtureTls(pairs) ? 0 : 1);
+  } catch {
+    process.exit(1);
+  }
+}
 
 const cert = "/tls-public/authority-cert.pem";
 const child = Bun.spawn(

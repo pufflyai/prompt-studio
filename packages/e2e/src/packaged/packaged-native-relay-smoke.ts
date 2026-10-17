@@ -12,7 +12,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 export const registerNativeRelaySmokeTests = () => {
   test(
-    "compiled native connection applies a wire snapshot through public storage and retains it after restart",
+    "compiled native connection restores foreign journal work through public storage after restart",
     async () => {
       const root = mkdtempSync(join(tmpdir(), "packaged-native-relay-"));
       const source = join(root, "source");
@@ -95,12 +95,16 @@ export const registerNativeRelaySmokeTests = () => {
               mutation,
               status: "accepted",
               checkpoint,
+              recoveryProof: "a".repeat(64),
             },
           },
           conflicts: {},
         };
         // This owned protocol peer checks bundle wiring. Real manager/PostgreSQL/S3 behavior is tested separately.
-        peer = createNativeRelayPeer(snapshot);
+        let recovered = false;
+        peer = createNativeRelayPeer(snapshot, (operationId) => {
+          recovered = operationId === "remote-save";
+        });
         const configPath = join(root, "relay.json");
         writeFileSync(
           configPath,
@@ -120,6 +124,17 @@ export const registerNativeRelaySmokeTests = () => {
         await stopProcess(host.child);
         host = await startPackagedServe(root, { ...env, PSTDIO_RELAY_CONFIG_FILE: configPath });
         while ((await read(project.id)).value !== "From the native connection") await Bun.sleep(20);
+        expect((await read(project.id)).value).toBe("From the native connection");
+        await stopProcess(host.child);
+        Object.assign(snapshot, {
+          checkpoint: { epoch: "restored-peer", sequence: 0 },
+          journalSequence: 0,
+          records: {},
+          receipts: {},
+          conflicts: {},
+        });
+        host = await startPackagedServe(root, { ...env, PSTDIO_RELAY_CONFIG_FILE: configPath });
+        while (!recovered) await Bun.sleep(20);
         expect((await read(project.id)).value).toBe("From the native connection");
         await stopProcess(host.child);
         await peer.stop(true);

@@ -74,6 +74,10 @@ export const createRelayAssetAdapter = (request: Request, signal: AbortSignal) =
     async get(asset, offset, signal?: AbortSignal) {
       signal?.throwIfAborted();
       const response = await request("assets/read", { ...json({ asset, offset }), signal });
+      if (response.status === 404) {
+        await response.body?.cancel();
+        return null;
+      }
       if (
         !response.body ||
         response.headers.get("x-pstdio-offset") !== String(offset) ||

@@ -37,7 +37,7 @@ export const createRelayAdapter = (input: RelayHttpInput) => {
       headers,
       signal: init.signal ? AbortSignal.any([input.signal, init.signal]) : input.signal,
     });
-    if (!response.ok) {
+    if (!response.ok && !(operation === "assets/read" && response.status === 404)) {
       await response.body?.cancel();
       throw new Error(`Relay request failed (${response.status})`);
     }
@@ -52,6 +52,8 @@ export const createRelayAdapter = (input: RelayHttpInput) => {
     scope: input.scope,
     snapshot: async () => snapshotSchema.parse(await (await request("snapshot")).json()),
     submit: async (mutation) => receiptSchema.parse(await (await request("submit", json(mutation))).json()),
+    recover: async (mutation, proof) =>
+      receiptSchema.parse(await (await request("recover", json({ mutation, proof }))).json()),
     assets: createRelayAssetAdapter(request, input.signal),
   } satisfies RelayAdapter;
 };

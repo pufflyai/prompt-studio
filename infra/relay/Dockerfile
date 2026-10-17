@@ -18,6 +18,8 @@ RUN bun build infra/account-manager/src/server.ts --target bun --outfile dist/ma
 FROM oven/bun:1.4.2 AS tls-fixture
 WORKDIR /app
 COPY --chown=bun:bun infra/relay/scripts/tls.fixture.ts ./tls.fixture.ts
+COPY --chown=bun:bun infra/relay/scripts/tls-validity.ts ./tls-validity.ts
+COPY --chown=bun:bun infra/relay/scripts/tls-validity.test.ts ./tls-validity.test.ts
 RUN mkdir /tls-private /tls-public /relay-tls-private && chown bun:bun /tls-private /tls-public /relay-tls-private
 USER bun
 CMD ["bun", "tls.fixture.ts"]

@@ -53,18 +53,19 @@ export const startRelayRuntime = async (input: {
         workbenchId: owner.workbenchId,
         signal,
       });
-      const adapter = createRelayAdapter({
-        origin: config.relayOrigin,
-        scope: { ...owner, accountId: config.accountId },
-        token: async () => (await access()).token,
-        signal,
-      });
+      const scope = { ...owner, accountId: config.accountId };
       const connection = createRelayConnection({
         origin: config.relayOrigin,
-        scope: adapter.scope,
+        scope,
         access,
         signal,
-        synchronize: async () => {
+        synchronize: async (signal) => {
+          const adapter = createRelayAdapter({
+            origin: config.relayOrigin,
+            scope,
+            token: async () => (await access()).token,
+            signal,
+          });
           const before = await local.readState();
           await local.synchronize(adapter);
           const after = await local.readState();
