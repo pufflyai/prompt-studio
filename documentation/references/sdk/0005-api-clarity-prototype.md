@@ -21,7 +21,8 @@ Each task gets a fresh fixture. There are three versions:
 
 - [Current](../../../packages/sdk/prototypes/api-clarity/current.tasks.ts): existing public operations.
   The save already uses a captured revision and guarded commit. File availability stays optional.
-  Workspace deletion and saved views already use their modern APIs.
+  Workspace deletion and saved views already use their modern APIs. It uses only APIs that stay
+  supported in 0.44, so session listing pages through `query` instead of the removed `listByWorkspace`.
 - [Draft](../../../packages/sdk/prototypes/api-clarity/proposal.tasks.ts): the PRDs before this experiment.
   Nested notification selectors, `files.open`, manual attachment metadata and manual session paging.
   Explicit command outcomes were already allowed; this comparison uses them.
@@ -30,7 +31,8 @@ Each task gets a fresh fixture. There are three versions:
 
 The [contracts](../../../packages/sdk/prototypes/api-clarity/contracts.ts) are typed projections of
 the surfaces needed by these examples. They are not a complete post-cleanup SDK declaration.
-The fixture shares backing objects across projections; it does not implement API removal.
+The fixture shares backing objects across projections. The current and revised projections leave out
+APIs removed in 0.44; the revised projection does not yet leave out APIs deprecated in 0.44.
 
 ## Measurements
 
@@ -55,8 +57,8 @@ discoverability, network requests, latency, disk use or the size of the public A
 | Edit current workspace source | 28 | 33 | 16 |
 | Save a captured ticket | 54 | 54 | 32 |
 | Attach a file | 60 | 142 | 39 |
-| Read all 63 workspace sessions | 28 | 84 | 45 |
-| Link a session to a ticket | 32 | 45 | 45 |
+| Read all 63 workspace sessions | 84 | 84 | 45 |
+| Link a session to a ticket | 32 | 45 | 36 |
 | Read rejection code and data | 46 | 44 | 44 |
 | Consume chunks and final outcome | 73 | 54 | 54 |
 | Delete a settings override | 18 | 14 | 14 |
@@ -72,8 +74,8 @@ successful commit because it rereads a newer base. Fixing that recipe requires a
 | Single-notification object fields | 2 | 4 | 0 |
 | Single-save object fields | 6 | 6 | 2 |
 | Attachment object fields | 3 | 10 | 1 |
-| Session-list object fields | 0 | 3 | 1 |
-| Resource-link object fields | 3 | 6 | 6 |
+| Session-list object fields | 3 | 3 | 1 |
+| Resource-link object fields | 3 | 6 | 4 |
 | Stream control-flow sites | 2 | 1 | 1 |
 
 ## Decisions from the examples
@@ -120,7 +122,7 @@ The old memory attachment adapter has a different internal implementation, so op
 diagnostics, not comparable storage-I/O totals.
 
 Add `sessions.iterate(filter)` over paged `query`. It removes cursor bookkeeping from callers while
-preserving bounded pages. It remains longer than the old unbounded-array example. The fixture reads
+preserving bounded pages. The fixture reads
 63 sessions through two queries, including a live session beyond the first 50 entries. An early break
 avoids another query. The prototype supports workspace/status filters; production must support the
 full query filter contract, stable cursors and cancellation.
@@ -131,8 +133,9 @@ helper remains optional and must carry the complete outcome. Shared stream handl
 transport-event branch from this caller; lifecycle handling moves into the adapter.
 
 Keep the existing generic resource-link API, canonical saved-view fields and `workspaces.delete`.
-Generic links require more owner fields than the session wrapper. That is an explicit ownership
-cost, not a shorter-call benefit. Saved-view and delete examples have no token improvement because
+The revised link example leaves owners to the host, which infers them unless they are ambiguous.
+It is still longer than the session wrapper because it names both resource types. Saved-view and
+delete examples have no token improvement because
 their modern forms already exist. The typed browser settings wrapper saves spelling a capability
 string; it adds no new settings owner.
 
@@ -167,6 +170,8 @@ The capacity PRD's release requirements remain in force.
 The examples open each root for one task. Reusing one acquired handle across many reads may change
 the comparison. Dynamic root and notification-selector helpers may need extra branching with named
 methods. Those cases, real extension migrations and author comprehension remain unmeasured.
-Before freezing 0.44 contracts, exercise those maintained callers and the actual adapters. Before
-0.45 adoption, repeat the workflow and safety checks using published dependencies. The breaking
-removal release remains 0.46. Do not use these syntax counts as release acceptance evidence.
+Before freezing 0.44 contracts, exercise those maintained callers and the actual adapters. 0.44
+adds the new APIs and deprecates the old ones. 0.45 moves extensions to the new APIs on the
+published 0.44 SDK and removes everything deprecated in 0.44. Before that adoption, repeat the
+workflow and safety checks using published dependencies. Do not use these syntax counts as release
+acceptance evidence.

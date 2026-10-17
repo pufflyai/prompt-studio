@@ -24,7 +24,9 @@ test("save retries the same captured edit and rejects changed payload under its 
   const { apis, inputs } = await createFixture();
   const first = await revised.saveTicket(apis.revised, inputs);
   expect(await revised.saveTicket(apis.revised, inputs)).toEqual(first);
-  await expect(revised.saveTicket(apis.revised, { ...inputs, title: "Changed retry" })).rejects.toThrow();
+  await expect(revised.saveTicket(apis.revised, { ...inputs, title: "Changed retry" })).rejects.toThrow(
+    "Operation identity reused with changed payload",
+  );
 });
 
 test("attachment helper stores portable metadata and retries without staging bytes again", async () => {
@@ -45,5 +47,7 @@ test("attachment helper stores portable metadata and retries without staging byt
 test("manual attachment recipe cannot retry after rereading the new revision", async () => {
   const { apis, inputs } = await createFixture();
   await proposal.attachFile(apis.proposal, inputs);
-  await expect(proposal.attachFile(apis.proposal, inputs)).rejects.toThrow();
+  await expect(proposal.attachFile(apis.proposal, inputs)).rejects.toThrow(
+    "Operation identity reused with changed payload",
+  );
 });

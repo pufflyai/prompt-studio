@@ -1,4 +1,4 @@
-import type { ExtensionSessionQuery, ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionSessionQuery } from "pstdio-api-contracts/extension-kernel";
 import { unwrapCommandOutcome } from "../../src/extensions/command-outcome";
 import { createMemoryStorage } from "../../src/testing/memory-storage";
 import type { CurrentApi, FileRoot, Inputs, ProposalApi, RevisedApi } from "./contracts";
@@ -35,10 +35,15 @@ export const createFixture = async () => {
   const links: unknown[] = [];
   const settings = new Map<string, unknown>([["editor.compact", true]]);
   const deletedWorkspaces = new Set<string>();
+  // Mirrors the host's canonicalResource: host kinds belong to pstdio, the ticket kind has one declared owner.
+  const owned = <T extends { type: string; extensionId?: string }>(ref: T) => ({
+    ...ref,
+    extensionId: ref.extensionId ?? (ref.type === "session" ? "pstdio" : "planner"),
+  });
   const resources: CurrentApi["resources"] = {
     addAnchors: async (source, targets) => {
       record("resources.addAnchors");
-      links.push({ source, targets });
+      links.push({ source: owned(source), targets: targets.map(owned) });
     },
   };
   const deleteSetting = async (key: string) => {
@@ -58,21 +63,11 @@ export const createFixture = async () => {
     storage,
     sessions: {
       query,
-      listByWorkspace: async (id) => {
-        record("sessions.listByWorkspace");
-        return support.sessions.filter((session) => session.workspace_id === id);
-      },
       addAnchors: async (id, targets) => resources.addAnchors({ type: "session", id, extensionId: "pstdio" }, targets),
     },
     resources,
     settings: { delete: deleteSetting },
-    workspaces: {
-      delete: deleteWorkspace,
-      archive: async (id) => {
-        await deleteWorkspace(id);
-        return { id } satisfies ExtensionWorkspace;
-      },
-    },
+    workspaces: { delete: deleteWorkspace },
     views: {
       update: async (_board, id, input) => {
         record("views.update");
@@ -157,7 +152,7 @@ export const createFixture = async () => {
       },
       attachments: { add: (parent, file, options) => attachFile(storage, parent, file, options) },
     },
-    sessions: { ...current.sessions, iterate: (filter) => iterateSessions(query, filter) },
+    sessions: { query, iterate: (filter) => iterateSessions(query, filter) },
     browser: { ...proposal.browser, execute: async () => rejection },
   };
   const inputs: Inputs = {

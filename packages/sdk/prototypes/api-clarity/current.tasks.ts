@@ -49,7 +49,14 @@ export async function attachFile(ctx: CurrentApi, input: Inputs) {
 }
 
 export async function listWorkspaceSessions(ctx: CurrentApi, input: Inputs) {
-  return (await ctx.sessions.listByWorkspace(input.workspaceId)).map((session) => session.id);
+  const ids: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await ctx.sessions.query({ workspaceId: input.workspaceId, cursor, limit: 50 });
+    ids.push(...page.items.map((session) => session.id));
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
+  return ids;
 }
 
 export async function linkSession(ctx: CurrentApi, input: Inputs) {

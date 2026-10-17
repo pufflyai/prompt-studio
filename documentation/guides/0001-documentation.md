@@ -260,6 +260,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0009 — PRD: Standardize extension storage](../requirements/platform/0009-standardize-storage-api.md)
 - [0010 — PRD: Bound client storage and isolate sync failures](../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md)
 - [0011 — PRD: Simplify extension APIs](../requirements/platform/0011-simplify-extension-apis.md)
+- [0012 — PRD: Align extension API shapes](../requirements/platform/0012-align-extension-api-shapes.md)
 
 ## ADRs
 

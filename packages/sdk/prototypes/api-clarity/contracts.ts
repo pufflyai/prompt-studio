@@ -28,7 +28,7 @@ export type FileRoot =
   | { root: "workspace"; target: "current" | "default" };
 export type Records = ExtensionRecordsApi;
 export type SaveOptions = { operationId: string };
-export type Session = Awaited<ReturnType<ExtensionSessionsApi["listByWorkspace"]>>[number];
+export type Session = Awaited<ReturnType<ExtensionSessionsApi["query"]>>["items"][number];
 export type SessionFilter = Pick<ExtensionSessionQuery, "workspaceId" | "status">;
 export type CommandStream = AsyncIterable<string> & {
   outcome: Promise<CommandOutcome<string>>;
@@ -49,11 +49,11 @@ export type CurrentApi = {
   workspaceFiles?: ArtifactMount;
   artifacts: { mount(id: string): ArtifactMount };
   storage: ExtensionStorageApi;
-  sessions: Pick<ExtensionSessionsApi, "query" | "listByWorkspace" | "addAnchors">;
+  sessions: Pick<ExtensionSessionsApi, "query" | "addAnchors">;
   resources: Pick<ExtensionResourcesApi, "addAnchors">;
   settings: Pick<ExtensionSettingsApi, "delete">;
   views: Pick<ExtensionViewsApi, "update">;
-  workspaces: Pick<ExtensionWorkspacesApi, "archive" | "delete">;
+  workspaces: Pick<ExtensionWorkspacesApi, "delete">;
   browser: {
     execute(): Promise<{ outcome: CommandOutcome }>;
     saveTicket(): Promise<unknown>;
@@ -102,7 +102,7 @@ export type RevisedApi = Omit<ProposalApi, "notify" | "files" | "storage" | "ses
       add(parentRecordId: string, file: File, options: SaveOptions): Promise<{ recordId: string }>;
     };
   };
-  sessions: ProposalApi["sessions"] & { iterate(filter: SessionFilter): AsyncIterable<Session> };
+  sessions: Pick<ExtensionSessionsApi, "query"> & { iterate(filter: SessionFilter): AsyncIterable<Session> };
   browser: ProposalApi["browser"] & { execute(): Promise<CommandOutcome> };
 };
 

@@ -42,9 +42,7 @@ export async function listWorkspaceSessions(ctx: RevisedApi, input: Inputs) {
 }
 
 export async function linkSession(ctx: RevisedApi, input: Inputs) {
-  await ctx.resources.addAnchors({ type: "session", id: input.sessionId, extensionId: "pstdio" }, [
-    { type: "ticket", id: input.ticketId, extensionId: "planner" },
-  ]);
+  await ctx.resources.addAnchors({ type: "session", id: input.sessionId }, [{ type: "ticket", id: input.ticketId }]);
 }
 
 export async function readRejection(ctx: RevisedApi) {
