@@ -62,7 +62,6 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   activityItems: [],
   settingsSections: [],
   settingsPanels: [],

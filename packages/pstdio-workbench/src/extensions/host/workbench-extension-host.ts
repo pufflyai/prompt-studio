@@ -30,12 +30,7 @@ export type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-e
 
 import { toInternalWorkbenchExtensionMetadata } from "./workbench-extension-metadata-adapter";
 import { registerWorkbenchExtensionRendererRefreshEvents } from "./workbench-extension-refresh";
-import {
-  registerSettings,
-  registerStatuses,
-  registerViewMenus,
-  registerWebviewPanels,
-} from "./workbench-extension-surfaces";
+import { registerSettings, registerViewMenus, registerWebviewPanels } from "./workbench-extension-surfaces";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
 const disposeAll = (disposables: Disposable[]) => {
@@ -226,7 +221,6 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerSettings(input));
     // Status-backed renderers query their provider while they register. Providers
     // must exist first so the renderer's live option source can load immediately.
-    disposables.push(...registerStatuses(input, context));
     disposables.push(
       registerWorkbenchExtensionKanbanRenderers(context, input.metadata.kanbanRenderers ?? [], input.kanbanAdapter),
     );

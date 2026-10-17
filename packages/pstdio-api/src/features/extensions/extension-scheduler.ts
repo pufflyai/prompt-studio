@@ -11,6 +11,7 @@ import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
 import { instanceIdsByExtensionId, isAutomationEnabled, loadAutomationPreferences } from "./extension-automations";
+import { createExtensionLogger } from "./extension-logger";
 import type { ProjectExtensionRuntimeSnapshot } from "./project-extension-runtime-snapshot";
 
 const EXTENSION_SCHEDULE_TIMEOUT_MS = 15_000;
@@ -30,18 +31,6 @@ type ScheduleJobMeta = {
   commandId: string;
   extensionId: string;
   extensionName: string;
-};
-
-const extensionLogger: ExtensionLoggerApi = {
-  info(message, metadata) {
-    apiLogger.info({ event: "extension.log", metadata: metadata ?? {} }, message);
-  },
-  warn(message, metadata) {
-    apiLogger.warn({ event: "extension.log", metadata: metadata ?? {} }, message);
-  },
-  error(message, metadata) {
-    apiLogger.error({ event: "extension.log", metadata: metadata ?? {} }, message);
-  },
 };
 
 const isExtensionChangeEvent = (event: { table: string }) =>
@@ -125,7 +114,8 @@ export const createExtensionScheduler = (input: Input) => {
       if (!isAutomationEnabled(schedule, instanceId, preferences)) return;
 
       const runner = createCommandRunner(snapshot.runtime, {
-        logger: input.extensionLogger ?? extensionLogger,
+        logger: input.extensionLogger,
+        createLogger: input.extensionLogger ? () => input.extensionLogger! : createExtensionLogger,
         buildEnvironment: (ids) =>
           createCommandEnvironment(input.deps, snapshot.enabledSources, {
             artifactMounts: snapshot.runtime.artifactMounts,

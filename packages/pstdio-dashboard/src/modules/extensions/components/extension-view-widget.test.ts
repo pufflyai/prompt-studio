@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
+import { createDashboardExtensionWebviewCapabilities } from "@/shared/extensions/extension-webview-capabilities";
 import {
   clearCachedDashboardExtensionMetadata,
   type DashboardExtensionMetadata,
@@ -87,4 +88,42 @@ describe("resolveExtensionView", () => {
       installName: "extension-lab",
     });
   });
+});
+
+test("settings placements retain their settings slot context", () => {
+  const workbench = createWorkbench();
+  const view = metadata.views[0]!;
+  workbench.context.set(dashboardSelectedProjectIdContextKey, projectId);
+  const settingsId = "lab.settings.ticket-status";
+  setCachedDashboardExtensionMetadata(projectId, {
+    ...metadata,
+    extensions: metadata.extensions.map((extension) => ({
+      ...extension,
+      extensionInstanceId: "planner-instance",
+      installName: "pstdio-planner",
+    })),
+    settingsPanels: [
+      {
+        id: settingsId,
+        extensionId: view.extensionId,
+        slot: { id: "project.settings" },
+        view: { extensionId: view.extensionId, kind: "view", id: view.localId },
+      },
+    ],
+  });
+  const resolved = resolveExtensionView({
+    workbench,
+    panel: { id: settingsId, title: "Status", region: "main", rendererId: view.id },
+    instance: { instanceId: settingsId, panelId: settingsId, viewId: view.id, closable: false },
+  });
+  expect(resolved).toMatchObject({ projectId, slotKind: "settings", view: { id: view.id } });
+  const capabilities = createDashboardExtensionWebviewCapabilities({
+    ...resolved!,
+    base: {},
+    extensionId: view.extensionId,
+    webviewId: view.id,
+  });
+  expect(capabilities["files.upload"]).toBeFunction();
+  expect(capabilities["files.list"]).toBeFunction();
+  expect(capabilities["files.delete"]).toBeFunction();
 });

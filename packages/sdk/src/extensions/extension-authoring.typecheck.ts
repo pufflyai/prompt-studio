@@ -175,12 +175,10 @@ const kanbanQueryParams: KanbanRendererQueryParams = {
     viewMode: "board",
     columnGrouping: "status",
     rowGrouping: "none",
-    ordering: { attributeId: "status", direction: "asc" },
     displayProperties: [],
   },
   filter: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-none-of", value: ["done"] }] },
   sorts: [{ attributeId: "status", direction: "asc" }],
-  filters: {},
 };
 const treeQueryParams: TreeRendererQueryParams = { renderer: dataTableQueryParams.renderer };
 const fileLoadParams: FileRendererLoadParams = { renderer: dataTableQueryParams.renderer };

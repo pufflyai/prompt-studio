@@ -338,7 +338,8 @@ describe("extension event scope and diagnostics", () => {
       expect(result.diagnostics?.[0]?.code).toBe("hook_failed");
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(warnSpy.mock.calls[0]?.[0]).toMatchObject({
-        event: "extension.event.log",
+        event: "extension.log",
+        extensionId: "pstdio.extension-lab",
         metadata: { eventId: "workspace.provision" },
       });
       expect(warnSpy.mock.calls[0]?.[1]).toContain('Hook "pstdio.extension-lab.hook.exploding-hook" failed: boom');

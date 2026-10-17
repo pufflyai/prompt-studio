@@ -31,9 +31,7 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     fields: await resolveBoardFields(deps, board),
   });
   const listResolved = async (board: ResolvedBoard) => {
-    const declaredDefault =
-      board.body.defaultActiveViewId ??
-      (board.kind === "kanban" ? board.body.defaultViews?.find((view) => view.isDefault)?.id : undefined);
+    const declaredDefault = board.body.defaultActiveViewId;
     const defaultIndex = Math.max(
       0,
       board.startingViews.findIndex((view) => view.id === declaredDefault),

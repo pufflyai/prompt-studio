@@ -122,7 +122,8 @@ export const createProviderBackedWorkspace = async (
     updated.root_path &&
     projectPath
   ) {
-    return requireSuccessfulSetup(await input.provision(updated, projectPath));
+    const provisioned = requireSuccessfulSetup(await input.provision(updated, projectPath));
+    return provisioned;
   }
   return updated;
 };

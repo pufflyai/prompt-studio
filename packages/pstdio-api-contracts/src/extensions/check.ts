@@ -32,7 +32,6 @@ const checkWorkbenchMetadataSchema = workbenchExtensionMetadataSchema.pick({
   navigationItems: true,
   navigationTrees: true,
   statusBarItems: true,
-  statuses: true,
   activityItems: true,
   settingsSections: true,
   settingsPanels: true,

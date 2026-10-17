@@ -25,7 +25,6 @@ export const makeWorkspace = (overrides: Partial<Workspace> = {}): Workspace => 
       diff: true,
       merge: true,
       rebase: true,
-      archive: true,
       delete: true,
     },
     display_path: null,

@@ -80,7 +80,6 @@ export const normalizeViewBody = (input: {
         value: body.onAttributeChange,
       }),
       moveHandlerId: handler({ ...input, kind: "kanban", operation: "onMove", value: body.onMove }),
-      reorderHandlerId: handler({ ...input, kind: "kanban", operation: "onReorder", value: body.onReorder }),
       columnActionHandlerId: handler({
         ...input,
         kind: "kanban",

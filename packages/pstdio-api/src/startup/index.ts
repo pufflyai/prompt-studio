@@ -153,5 +153,14 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       workspaceService: deps.workspaceService,
     });
   }
-  registerBackgroundTask(provisionRecoveredWorkspaces(deps, projectIds, signal), options);
+  registerBackgroundTask(
+    defaultExtensionPreparation.then(async () => {
+      await provisionRecoveredWorkspaces(deps, projectIds, signal);
+      for (const projectId of projectIds) {
+        signal?.throwIfAborted();
+        await deps.extensionRuntimeCatalog.activate(projectId);
+      }
+    }),
+    options,
+  );
 };

@@ -43,3 +43,25 @@ test("resource link memory pagination visits mixed-case identities once", async 
   expect(new Set(ids)).toEqual(new Set(["a", "B", "A", "b"]));
   expect(ids).toHaveLength(4);
 });
+
+test("namespace overrides preserve the remaining host methods and settings", async () => {
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: { sessions: { get: async () => null } },
+  });
+  expect(await ctx.sessions.query()).toEqual({ items: [], nextCursor: null });
+  await ctx.settings.set("mode", "review");
+  expect(await ctx.settings.get("mode")).toBe("review");
+  expect(() => ctx.logger.warn("A warning")).not.toThrow();
+});
+
+test("workspace and session anchor writes use the shared resource links", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  const ticket = { type: "ticket", id: "ticket-1" };
+  await ctx.workspaces.addAnchors("workspace-1", [ticket]);
+  await ctx.sessions.addAnchors("session-1", [ticket]);
+  const links = await ctx.resources.listAnchors({ resource: ticket, direction: "incoming" });
+  expect(links.items.map(({ source }) => source.id).sort()).toEqual(["session-1", "workspace-1"]);
+});

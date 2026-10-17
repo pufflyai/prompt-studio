@@ -104,8 +104,6 @@ export const createBenchEnvironment = (
       addAnchors: async () => {},
       removeAnchors: async () => {},
       get: async () => null,
-      list: async () => [],
-      listByWorkspace: async () => [],
       create: async (input) => ({
         type: "session",
         id: crypto.randomUUID(),
@@ -124,7 +122,6 @@ export const createBenchEnvironment = (
       listProviders: async () => [],
       getDefault: async () => seed?.workspaces?.find((workspace) => workspace.is_default) ?? null,
       list: async () => seed?.workspaces ?? [],
-      archive: async (id) => ({ id }),
       cancel: async (id) => ({ id }),
       create: async () => ({ id: crypto.randomUUID() }),
       delete: async () => {},

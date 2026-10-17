@@ -1,7 +1,9 @@
+import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { createAssetBytesStorage, createFilesStorageService } from "pstdio-storage";
 import type { createAppDatabaseServices } from "./app-database";
 import type { RouteDeps } from "./features/deps";
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
+import { fireExtensionEventAsync } from "./features/extensions/extension-event-runtime";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import type { EventBus } from "./features/sync/event-bus";
 import { createAssetTransferService } from "./services/asset-transfer-service";
@@ -61,6 +63,22 @@ export const createCoreDomainServices = (input: {
       workspacesDb: dbs.workspacesDBService,
       sessionsDb: dbs.sessionsDBService,
       eventBus,
+      onCreated: (workspace) =>
+        fireExtensionEventAsync(
+          input.getCommandDeps(),
+          workspace.project_id,
+          workspaceEvents.created,
+          { workspace },
+          workspace,
+        ),
+      onDeleted: (workspace) =>
+        fireExtensionEventAsync(
+          input.getCommandDeps(),
+          workspace.project_id,
+          workspaceEvents.deleted,
+          { workspace },
+          workspace,
+        ),
       validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(input.getCommandDeps(), source, anchors),
     }),
   };

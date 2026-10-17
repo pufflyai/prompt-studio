@@ -31,7 +31,6 @@ import type {
   RuntimeSettingsSectionRecord,
   RuntimeSkillRecord,
   RuntimeStatusBarItemRecord,
-  RuntimeStatusRecord,
   RuntimeTemplateRecord,
   RuntimeTemplateTypeRecord,
   RuntimeThemeRecord,
@@ -224,7 +223,6 @@ export interface ExtensionRuntime {
   navigationTrees: RuntimeNavigationTreeRecord[];
   pages: RuntimePageRecord[];
   statusBarItems: RuntimeStatusBarItemRecord[];
-  statuses: RuntimeStatusRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
   activityItems: RuntimeActivityItemRecord[];

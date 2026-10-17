@@ -8,7 +8,6 @@ import {
 } from "../commands/glass-lab-artifacts-command";
 import { queryLabWorkflowArtifacts, updateLabWorkflowArtifact } from "../data/lab-workflow-artifacts";
 import { labArtifactsChanged } from "../events";
-import { labWorkflowStatuses } from "./lab-workflow-statuses";
 
 const labModeArtifactPanel = {
   kind: "page-slot" as const,
@@ -175,12 +174,19 @@ export const createLabViews = (baseUrl: string) => {
         {
           id: "status",
           label: "Status",
-          type: { kind: "status", statuses: labWorkflowStatuses.ref },
+          type: {
+            kind: "enum",
+            options: [
+              { value: "idea", label: "Idea", color: "gray" },
+              { value: "testing", label: "Testing", color: "blue" },
+            ],
+          },
           groupable: true,
           displayable: true,
         },
       ],
       query: queryLabWorkflowArtifacts,
+      defaultSorts: [{ attributeId: "status", direction: "asc" }],
       refreshEvents: [labArtifactsChanged],
       onAttributeChange: updateLabWorkflowArtifact,
       onRowActivate: (ctx, { row }) => {
@@ -190,7 +196,6 @@ export const createLabViews = (baseUrl: string) => {
         viewMode: "board",
         columnGrouping: "status",
         rowGrouping: "none",
-        ordering: { attributeId: "status", direction: "asc" },
         displayProperties: [],
       },
     },

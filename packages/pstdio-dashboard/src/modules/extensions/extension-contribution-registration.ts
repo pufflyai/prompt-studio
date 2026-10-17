@@ -19,7 +19,6 @@ import {
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
-import { createDashboardSettingsWebviewFileCapabilities } from "@/shared/extensions/extension-webview-capabilities";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
 import {
   buildDashboardExtensionMenuRegistrations,
@@ -111,12 +110,6 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
         createNavigationWhenExpression: (when) =>
           buildDashboardWorkbenchWhenExpression(toWorkbenchWhenExpression(when)),
-        createWebviewHostCapabilityOverrides: ({ webviewId }) =>
-          createDashboardSettingsWebviewFileCapabilities({
-            metadata: input.metadata,
-            projectId: input.projectId,
-            webviewId,
-          }),
         executeCommand: async (commandId, body, signal) => {
           const rawResponse = await input.executeCommand(input.projectId, commandId, body, signal);
           signal?.throwIfAborted();

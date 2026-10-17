@@ -100,3 +100,16 @@ test("webview command calls apply navigation once and preserve the response enve
   expect(await capabilities["commands.execute"]?.({ commandId: "notes.create" })).toEqual(response);
   expect(opened).toBe(1);
 });
+
+test("webviews receive structured command rejections", async () => {
+  const response = {
+    outcome: { ok: false, status: "rejected", code: "needs_review", reason: "Review first", data: { revision: 2 } },
+  };
+  const capabilities = createExtensionWebviewHostCapabilities({
+    executeCommand: () => response,
+    extensionIdForWebview: () => "notes",
+    projectId: "project",
+    slotKind: "panel",
+  })({ placement: {}, webviewId: "notes", workbench: createWorkbench() } as never);
+  expect(await capabilities["commands.execute"]?.({ commandId: "notes.command.save" })).toEqual(response);
+});

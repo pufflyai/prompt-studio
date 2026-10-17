@@ -349,7 +349,7 @@ describe("createCommandEnvironment session scopes", () => {
     );
 
     await expect(sessions.get("session-foreign")).resolves.toBeNull();
-    await expect(sessions.listByWorkspace("workspace-foreign")).rejects.toThrow(
+    await expect(sessions.query({ workspaceId: "workspace-foreign" })).rejects.toThrow(
       "Workspace not found: workspace-foreign",
     );
     await expect(sessions.create({ title: "Forged", prompt: "x", workspaceId: "workspace-foreign" })).rejects.toThrow(

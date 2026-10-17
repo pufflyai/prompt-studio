@@ -47,6 +47,7 @@ export {
   toWorkbenchNavigationTarget,
 } from "./host/extension-navigation-target";
 export {
+  createExtensionSlot,
   executeWorkbenchExtensionCommandResponse,
   type WorkbenchExtensionCommandContext,
 } from "./host/workbench-extension-command";
