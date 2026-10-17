@@ -1,0 +1,19 @@
+services:
+  relay:
+    environment:
+      RELAY_TLS_CERT: /tls-public/relay-cert.pem
+      RELAY_TLS_KEY: /relay-tls-private/relay-key.pem
+    volumes:
+      - tls-public:/tls-public:ro
+      - relay-tls-private:/relay-tls-private:ro
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r = await fetch('https://relay:8080/health', {tls:{ca:await Bun.file('/tls-public/relay-cert.pem').text()}}); if (!r.ok) process.exit(1)"]
+  initialize:
+    environment:
+      RELAY_FIXTURE_EXTENSION_ID: pstdio-tests.relay-demo
+networks:
+  default:
+    internal: false
+    ipam:
+      config:
+        - subnet: ${RELAY_TEST_SUBNET:-10.254.239.0/24}

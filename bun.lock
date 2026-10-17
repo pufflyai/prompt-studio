@@ -395,6 +395,13 @@
         "@pstdio/sdk": "^0.25.0",
       },
     },
+    "infra/local/extensions/relay-demo": {
+      "name": "relay-demo",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.43.1",
+      },
+    },
     "infra/relay": {
       "name": "pstdio-relay",
       "dependencies": {
@@ -434,6 +441,8 @@
         "pstdio-planner": "workspace:*",
         "pstdio-reports": "workspace:*",
         "pstdio-skills": "workspace:*",
+        "pstdio-sync": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "pstdio-wt": "workspace:*",
         "remote-workspaces": "workspace:*",
         "workbench-fixture": "workspace:*",
@@ -489,7 +498,10 @@
         "pstdio-paths": "workspace:*",
         "pstdio-scheduler": "workspace:*",
         "pstdio-storage": "workspace:*",
+        "pstdio-sync": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "pstdio-wt": "workspace:*",
+        "zod": "^4.3.6",
       },
       "devDependencies": {
         "@electric-sql/pglite": "^0.3.15",
@@ -1824,6 +1836,18 @@
     "@posthog/types": ["@posthog/types@1.411.1", "", {}, "sha512-Gd7tnSYctcSXup3naVlAgavvenByRao6rsSYdMgWgP35KE9jFn+rMHNRJeI5LNjJuLzMXHEVcgzAN7xcATefdw=="],
 
     "@preact/signals-core": ["@preact/signals-core@1.14.0", "", {}, "sha512-AowtCcCU/33lFlh1zRFf/u+12rfrhtNakj7UpaGEsmMwUKpKWMVvcktOGcwBBNiB4lWrZWc01LhiyyzVklJyaQ=="],
+
+    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.43.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-DESrVlWyTDi6LKmN074al6n7nL/phtkobmAZVY+e+0YSOt8CWUtY2w6BqznX4TDz3ki6IWARle3DY2Pd+I7cDQ=="],
+
+    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.43.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-q77q+hPWGEQowxuETGvM6tiYbRhWVr7UtddbS/cJnZVtb8GL0tZPaXu+EW8Hr8mJW8WbY8EmeygNL6MbNE4IZQ=="],
+
+    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.43.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-RwTmIFbyaEgm7Kx373mJEQaLcjmOBpDdBNW6AApEecWS/TQlzxAfjXuRkLvkWFwotoYwhXNP0C4Ku4y8FoOvjw=="],
+
+    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.43.1", "", { "os": "linux", "cpu": "x64" }, "sha512-PaKbjn5fMmPg1EvaoH4eQJcT6VlldNy2bdGjI5L4Su56F5HWNOh5E4dFu/KPLIf+MsO2vA8VLWBpcNgZGaNjkw=="],
+
+    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.43.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-gjmygysiKdZpP7tR7mFM1/WgUUnE7zRe/mKj1gUOBBmc4H/ow5NjV7u7Dlcogz1A38g8e/Kq+5i9xLVBh9cAmw=="],
+
+    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.43.1", "", { "os": "win32", "cpu": "x64" }, "sha512-Jac/3S30O1gaFrhAaAN4iKKo4oRfrCvMAimK09q8imkZ6JP2NwWyhv1VXu41x5E7PtZpGDyluYNY9dHmo9aZBw=="],
 
     "@pstdio/desktop": ["@pstdio/desktop@workspace:clients/desktop"],
 
@@ -4361,6 +4385,8 @@
 
     "regex-utilities": ["regex-utilities@2.3.0", "", {}, "sha512-8VhliFJAWRaUiVvREIiW2NXXTmHs4vMNnSzuJVhscgmGav3g9VDxLrQndI3dZZVVdp0ZO/5v0xmX516/7M9cng=="],
 
+    "relay-demo": ["relay-demo@workspace:infra/local/extensions/relay-demo"],
+
     "release-zalgo": ["release-zalgo@1.0.0", "", { "dependencies": { "es6-error": "^4.0.1" } }, "sha512-gUAyHVHPPC5wdqX/LG4LWtRYtgjxyX78oanFNTMMyFEfOqdC54s3eE82imuWKbOeqYht2CrNf64Qb8vgmmtZGA=="],
 
     "remark-parse": ["remark-parse@11.0.0", "", { "dependencies": { "@types/mdast": "^4.0.0", "mdast-util-from-markdown": "^2.0.0", "micromark-util-types": "^2.0.0", "unified": "^11.0.0" } }, "sha512-FCxlKLNGknS5ba/1lmpYijMUzX2esxW5xQqjWxw2eHFfS2MSdaHVINFmhjo+qN1WhZhNimq0dZATN9pH0IDrpA=="],
@@ -5784,6 +5810,8 @@
     "read-yaml-file/strip-bom": ["strip-bom@3.0.0", "", {}, "sha512-vavAMRXOgBVNF6nyEEmL3DBK19iRpDcoIwW+swQ+CbGiu7lju6t+JklA1MHweoWtadgt4ISVUsXLyDq34ddcwA=="],
 
     "redent/strip-indent": ["strip-indent@3.0.0", "", { "dependencies": { "min-indent": "^1.0.0" } }, "sha512-laJTa3Jb+VQpaC6DseHhF7dXVqHTfJPCRDaEbid/drOhgitgYku/letMUqOXFoWV0zIIUbjpdH2t+tYj4bQMRQ=="],
+
+    "relay-demo/@pstdio/sdk": ["@pstdio/sdk@0.43.1", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-4ois6kvGhcnaT/W6pM1i565rXl/UhjyvA7HnZb5ZKG+tdPfio3uKmemzYzJuWaU9v7mcVZu5f2TVSkJCd9n7HQ=="],
 
     "remote-workspaces/@pstdio/sdk": ["@pstdio/sdk@0.35.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-txkUZ6NloEJwRfJF3kovdXO5yqz6LmbzXw2Jlfb/15GFKqRB0gblDDDlBwWc/VB0ju6u02rd/QhgR3kjPEzegg=="],
 

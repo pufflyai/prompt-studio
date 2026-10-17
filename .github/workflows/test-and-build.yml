@@ -155,6 +155,9 @@ jobs:
         with:
           bun-version-file: package.json
 
+      - name: Test database ownership across container restarts
+        run: bun packages/pstdio-db/src/db/pglite-container-lock.integration.ts
+
       - name: Test built relay with disposable PostgreSQL and object storage
         run: bun run --cwd infra/relay test:isolated
 

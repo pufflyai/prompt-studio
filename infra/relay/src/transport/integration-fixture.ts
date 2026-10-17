@@ -8,6 +8,7 @@ import {
   createAccountManager,
   createEnvironmentAccessVerifier,
   createManagerAuthentication,
+  createManagerHandler,
   migrateAccountManager,
 } from "pstdio-account-manager";
 import { createRelayAssets } from "../assets/assets";
@@ -149,6 +150,7 @@ export const createTransportFixture = () => {
           storage,
           assets,
           verifyAccess: createEnvironmentAccessVerifier(trust),
+          managerHandler: createManagerHandler(auth, "https://manager.fixture.test"),
           recovery: createRecoveryProofs(recoveryKey),
           renew: () => auth.renew(grant.token!, scope.workbenchId),
           issue: (token: string) => auth.renew(token, scope.workbenchId),

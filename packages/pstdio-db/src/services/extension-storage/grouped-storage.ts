@@ -7,11 +7,13 @@ import { decodeAcceptedState, encodeAcceptedState } from "./grouped-storage-code
 import { importLegacyStorage } from "./legacy-import";
 
 export const createGroupedStorageDBService = (db: DbClient) => {
+  const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
   const transaction = async <T>(owner: StorageOwner, action: (state: GroupedState) => Promise<T>) => {
     const { environmentId } = await getEnvironment();
-    return db.transaction(async (tx) => {
+    let changed = false;
+    const result = await db.transaction(async (tx) => {
       await tx
         .insert(extension_storage_owners)
         .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId })
@@ -91,11 +93,20 @@ export const createGroupedStorageDBService = (db: DbClient) => {
               eq(extension_storage_owners.extension_id, owner.extensionId),
             ),
           );
+      changed = state.journal.length > stored.length;
       return result;
     });
+    if (changed) for (const listener of listeners) listener(owner);
+    return result;
   };
   return {
     transaction,
+    watch(listener: (owner: StorageOwner) => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
     getEnvironment,
     open(input: { owner: StorageOwner; environmentId: string; assets?: AssetStore }) {
       return createRecordStorage({ ...input, store: { transaction } });

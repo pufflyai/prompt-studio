@@ -27,6 +27,7 @@ import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
+import { connectAppRelay } from "./services/relay/runtime";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
@@ -281,7 +282,7 @@ const buildApp = async (
     terminalSupervisor,
     closeDb,
   });
-  return { app, close, deps, eventBus };
+  return connectAppRelay({ app, close, deps, eventBus }, input.config.relay?.connectionsFile);
 };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {

@@ -36,7 +36,11 @@ const assets = createRelayAssets({
 });
 const storage = createRelayStorage(databaseUrl, assets);
 try {
-  const scope = { accountId: "built-network-account", workbenchId: "built-network-workbench", extensionId: "notes" };
+  const scope = {
+    accountId: "built-network-account",
+    workbenchId: "built-network-workbench",
+    extensionId: process.env.RELAY_FIXTURE_EXTENSION_ID ?? "notes",
+  };
   await manager.provision({
     requestId: "provision",
     accountId: scope.accountId,

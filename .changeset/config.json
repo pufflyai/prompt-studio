@@ -55,7 +55,8 @@
     "pstdio-shader-lab",
     "shape-art",
     "pstdio-relay",
-    "pstdio-account-manager"
+    "pstdio-account-manager",
+    "relay-demo"
   ],
   "snapshot": {
     "useCalculatedVersion": true,

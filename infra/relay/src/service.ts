@@ -5,6 +5,7 @@ import type { RelaySubscription } from "./transport/subscriptions";
 export interface RelayConfig {
   hostname: string;
   port: number;
+  tls?: { cert: Bun.BunFile; key: Bun.BunFile };
 }
 
 export function readConfig(env: Record<string, string | undefined>) {
@@ -12,7 +13,14 @@ export function readConfig(env: Record<string, string | undefined>) {
   if (env.RELAY_PORT === "" || !Number.isInteger(port) || port < 0 || port > 65535) {
     throw new Error("RELAY_PORT must be an integer between 0 and 65535");
   }
-  return { hostname: env.RELAY_HOST ?? "127.0.0.1", port };
+  const certificate = env.RELAY_TLS_CERT;
+  const key = env.RELAY_TLS_KEY;
+  if (Boolean(certificate) !== Boolean(key)) throw new Error("Relay TLS requires a certificate and key");
+  return {
+    hostname: env.RELAY_HOST ?? "127.0.0.1",
+    port,
+    ...(certificate && key ? { tls: { cert: Bun.file(certificate), key: Bun.file(key) } } : {}),
+  };
 }
 
 export function startRelay(config: RelayConfig, owners: RelayOwners) {

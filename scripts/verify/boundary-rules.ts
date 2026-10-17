@@ -29,6 +29,8 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
   "pstdio-api": [
+    "pstdio-sync",
+    "pstdio-sync-contracts",
     "pstdio-api-contracts",
     "pstdio-api-runtime-host",
     "pstdio-db",
@@ -68,6 +70,8 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.
   e2e: [
+    "pstdio-sync",
+    "pstdio-sync-contracts",
     "@pstdio/sdk",
     "pstdio",
     "pstdio-api-contracts",

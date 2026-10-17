@@ -38,6 +38,7 @@ export const createExtensionStorageDBService = (db: DbClient) => {
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
+    watch: grouped.watch,
     migrate: createStorageMigrations(db),
     readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
       readRetiredData(db, source, scope),
