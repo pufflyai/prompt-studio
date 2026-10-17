@@ -4,7 +4,7 @@ Extension UI is built from views, pages, and modes. This page explains what each
 
 ## Views, pages, and modes
 
-A view supplies content. A page owns its route, routed resource, Main presentation, and extra panels. A mode owns shared panels, chrome, and region policy. A resource identifies data. Its owner resolves its normal presentation and can select [related resources to open](0018-related-resource-openings.md).
+A view supplies content. A page owns its route, routed resource, Main presentation, and extra panels. A mode owns shared panels, chrome, and region policy. A resource identifies data. Its owner resolves its normal presentation and can select [related resources to open](0019-related-resource-openings.md).
 
 Define each view body once with `defineView`. Native tree, file, controls, table, and Kanban views follow the same placement rules as webviews.
 
