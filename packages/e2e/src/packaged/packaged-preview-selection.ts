@@ -1,5 +1,4 @@
 import { expect, type Page } from "@playwright/test";
-import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
 import { type RuntimeDescriptor, runtimeAuthorization, signInBrowser } from "./packaged-serve-helpers";
 
 export const verifyPackagedPreviewSelection = async (page: Page, projectId: string, descriptor: RuntimeDescriptor) => {
@@ -44,12 +43,10 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
     await isolated.keyboard.press("Shift+F10");
     await isolated.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
     const old = await open("Selection old");
-    const url = serializePageUrl({
-      projectId,
-      page: { id: "workspace", ref: workbenchPages.workspace, path: "workspace" },
-      resource: { type: "workspace", id: workspace.id },
-    });
-    await isolated.goto(new URL(url, descriptor.origin).href);
+    await isolated
+      .getByRole("region", { name: "Side Panel", exact: true })
+      .getByRole("button", { name: "Open workspace", exact: true })
+      .click();
     await expect(header.getByRole("tab", { name: /Selection replacement/ })).toHaveAttribute("aria-selected", "true");
     await expect(kept).toHaveAttribute("aria-selected", "false");
     await expect(old).toHaveCount(0);
