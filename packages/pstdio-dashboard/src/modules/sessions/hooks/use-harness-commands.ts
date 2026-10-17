@@ -13,7 +13,7 @@ export const useHarnessCommands = (
 ) => {
   const client = useQueryClient();
   const queryKey = ["harness-commands", sessionId, harnessId, sessionId ? undefined : draft];
-  const state = useQuery({
+  const state = useQuery<HarnessCommandState & { harnessId: string }>({
     queryKey,
     enabled: Boolean(harnessId && (sessionId || draft)),
     // Failed draft discovery recovers when its workspace becomes ready. Healthy
