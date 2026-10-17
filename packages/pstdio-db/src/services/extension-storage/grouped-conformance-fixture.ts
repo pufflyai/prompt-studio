@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createAssetBytesStorage } from "pstdio-storage";
 import type { RelayAdapter } from "pstdio-sync";
 import type { Asset, Peer, RecordEdit, Scope } from "pstdio-sync-contracts";
-import { createConformanceServices, readConformanceRecord } from "pstdio-sync-contracts/conformance";
+import { type createConformanceServices, readConformanceRecord } from "pstdio-sync-contracts/conformance";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
 import { createGroupedStorageDBService } from "./grouped-storage";
@@ -15,8 +15,9 @@ interface SyncOptions {
   upload?: boolean;
 }
 
-export const createGroupedConformanceFixture = async (databaseUrl: string, objectEndpoint: string) => {
-  const services = await createConformanceServices(databaseUrl, objectEndpoint);
+export const createGroupedConformanceFixture = async (
+  services: Awaited<ReturnType<typeof createConformanceServices>>,
+) => {
   const root = await mkdtemp(join(tmpdir(), "grouped-conformance-"));
   const stores = await Promise.all(
     ["a", "b", "c"].map(async (environmentId) => ({

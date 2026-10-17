@@ -158,6 +158,17 @@ jobs:
       - name: Test built relay with disposable PostgreSQL and object storage
         run: bun run --cwd infra/relay test:isolated
 
+      - name: Install dependencies for storage conformance
+        run: bun install --frozen-lockfile
+
+      - name: Test PostgreSQL publication and process recovery
+        run: bun run --cwd infra/relay test:storage
+
+      - name: Test production relay with real local stores
+        env:
+          SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
+        run: bun run --cwd packages/pstdio-sync-contracts test:conformance
+
   # Together these suites took 6 to 8 minutes in one job, where they also slowed each other down.
   # Shards keep each job near the PR stage's 5-minute target.
   database_tests:

@@ -1,0 +1,341 @@
+{
+  "id": "7576b28c-9226-43b3-821b-cc9c51190162",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.relay_conflicts": {
+      "name": "relay_conflicts",
+      "schema": "",
+      "columns": {
+        "ownerId": {
+          "name": "ownerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recordIds": {
+          "name": "recordIds",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alternativeOperationIds": {
+          "name": "alternativeOperationIds",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolvedBy": {
+          "name": "resolvedBy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "relay_conflicts_records": {
+          "name": "relay_conflicts_records",
+          "columns": [
+            {
+              "expression": "recordIds",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "relay_conflicts_ownerId_relay_scopes_id_fk": {
+          "name": "relay_conflicts_ownerId_relay_scopes_id_fk",
+          "tableFrom": "relay_conflicts",
+          "tableTo": "relay_scopes",
+          "columnsFrom": ["ownerId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "relay_conflicts_ownerId_id_pk": {
+          "name": "relay_conflicts_ownerId_id_pk",
+          "columns": ["ownerId", "id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_operations": {
+      "name": "relay_operations",
+      "schema": "",
+      "columns": {
+        "ownerId": {
+          "name": "ownerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mutation": {
+          "name": "mutation",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "checkpointEpoch": {
+          "name": "checkpointEpoch",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acceptedSequence": {
+          "name": "acceptedSequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "conflictId": {
+          "name": "conflictId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "relay_operations_order": {
+          "name": "relay_operations_order",
+          "columns": [
+            {
+              "expression": "ownerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_operations_accepted_sequence": {
+          "name": "relay_operations_accepted_sequence",
+          "columns": [
+            {
+              "expression": "ownerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "acceptedSequence",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relay_operations_captures": {
+          "name": "relay_operations_captures",
+          "columns": [
+            {
+              "expression": "(\"mutation\"->'resolution'->'capturedOperationIds')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"relay_operations\".\"status\" = 'accepted'",
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "relay_operations_ownerId_relay_scopes_id_fk": {
+          "name": "relay_operations_ownerId_relay_scopes_id_fk",
+          "tableFrom": "relay_operations",
+          "tableTo": "relay_scopes",
+          "columnsFrom": ["ownerId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "relay_operations_ownerId_id_pk": {
+          "name": "relay_operations_ownerId_id_pk",
+          "columns": ["ownerId", "id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_records": {
+      "name": "relay_records",
+      "schema": "",
+      "columns": {
+        "ownerId": {
+          "name": "ownerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record": {
+          "name": "record",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "relay_records_ownerId_relay_scopes_id_fk": {
+          "name": "relay_records_ownerId_relay_scopes_id_fk",
+          "tableFrom": "relay_records",
+          "tableTo": "relay_scopes",
+          "columnsFrom": ["ownerId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "relay_records_ownerId_id_pk": {
+          "name": "relay_records_ownerId_id_pk",
+          "columns": ["ownerId", "id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relay_scopes": {
+      "name": "relay_scopes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "epoch": {
+          "name": "epoch",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acceptedSequence": {
+          "name": "acceptedSequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "journalSequence": {
+          "name": "journalSequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "replayFrom": {
+          "name": "replayFrom",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "publishedRevision": {
+          "name": "publishedRevision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
