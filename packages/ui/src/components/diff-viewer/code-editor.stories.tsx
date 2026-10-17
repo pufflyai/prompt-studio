@@ -1,7 +1,8 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Stack } from "@chakra-ui/react";
 import { loader } from "@monaco-editor/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, waitFor } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { ThemePreferenceProvider, useThemePreference } from "../../utils/theme-preference";
 import { CodeDiffEditor, CodeEditor, preloadCodeEditor } from "./code-editor";
 
 const meta = {
@@ -119,4 +120,62 @@ export const Diff: Story = {
       showLineNumbers
     />
   ),
+};
+
+const ThemeSwitchingEditors = () => {
+  const { toggleThemePreference } = useThemePreference();
+
+  return (
+    <Stack height="full">
+      <Button alignSelf="start" onClick={toggleThemePreference}>
+        Toggle theme
+      </Button>
+      <Box flex="1" minHeight="0">
+        <CodeEditor language="typescript" defaultCode="const greeting = 'Hello';" isEditable />
+      </Box>
+      <Box flex="1" minHeight="0">
+        <CodeDiffEditor
+          language="typescript"
+          original="const greeting = 'Hello';"
+          modified="const greeting = 'Welcome';"
+        />
+      </Box>
+    </Stack>
+  );
+};
+
+export const ThemeSwitching: Story = {
+  tags: ["!manifest"],
+  render: () => (
+    <ThemePreferenceProvider initialPreference="pstdio-light">
+      <ThemeSwitchingEditors />
+    </ThemePreferenceProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const document = canvasElement.ownerDocument;
+    const assertEditorMode = async (mode: "light" | "dark") => {
+      await waitFor(
+        () => {
+          const editors = canvasElement.querySelectorAll<HTMLElement>(".monaco-editor:not(.gutter)");
+          expect(editors).toHaveLength(3);
+          for (const editor of editors) {
+            const background = document.defaultView!.getComputedStyle(editor).backgroundColor;
+            const channels = background.match(/\d+/g)!.map(Number);
+            expect(channels.slice(0, 3).every((channel) => (mode === "light" ? channel > 200 : channel < 60))).toBe(
+              true,
+            );
+            expect(editor).toHaveClass(mode === "light" ? "vs" : "vs-dark");
+          }
+        },
+        { timeout: 5_000 },
+      );
+    };
+
+    await assertEditorMode("light");
+    await userEvent.click(canvas.getByRole("button", { name: "Toggle theme" }));
+    await assertEditorMode("dark");
+    await userEvent.click(canvas.getByRole("button", { name: "Toggle theme" }));
+    await assertEditorMode("light");
+  },
 };
