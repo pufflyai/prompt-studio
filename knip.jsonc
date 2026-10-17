@@ -164,9 +164,11 @@
         "rolldown.*.config.ts",
         "src/{api,client,extensions,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
         "src/**/*.test.ts",
-        "src/**/*.typecheck.ts"
+        "src/**/*.typecheck.ts",
+        "prototypes/**/*.test.ts",
+        "prototypes/**/*.typecheck.ts"
       ],
-      "project": ["src/**/*.ts"],
+      "project": ["src/**/*.ts", "prototypes/**/*.ts"],
       "ignore": ["dist/**"],
       // tsconfig.build.json includes this transitive contract source in the declaration bundle.
       "ignoreDependencies": ["pstdio-sync-contracts"]

@@ -218,6 +218,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0002 — Resource types](../references/sdk/0002-resources.md)
 - [0003 — Method reference](../references/sdk/0003-api.md)
 - [0004 — Grouped storage](../references/sdk/0004-storage.md)
+- [0005 — API clarity prototype](../references/sdk/0005-api-clarity-prototype.md)
 
 ### Workbench
 
@@ -256,6 +257,10 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0004 — PRD: Templates and skills](../requirements/platform/0004-templates-and-skills.md)
 - [0005 — PRD: Versioning and releases](../requirements/platform/0005-versioning-and-releases.md)
 - [0007 — PRD: Synchronization contracts v0.1](../requirements/platform/0007-synchronization-contracts.md)
+- [0009 — PRD: Standardize extension storage](../requirements/platform/0009-standardize-storage-api.md)
+- [0010 — PRD: Bound client storage and isolate sync failures](../requirements/platform/0010-bound-client-storage-and-isolate-sync-failures.md)
+- [0011 — PRD: Simplify extension APIs](../requirements/platform/0011-simplify-extension-apis.md)
+- [0012 — PRD: Align extension API shapes](../requirements/platform/0012-align-extension-api-shapes.md)
 
 ## ADRs
 
