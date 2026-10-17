@@ -83,12 +83,15 @@ export interface WebviewNotificationShowParams {
   message?: string;
 }
 
+/** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
 export type WebviewNotificationActionParams = Omit<CreateNotificationInput, "projectId">;
+/** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
 export interface WebviewNotificationResolveParams {
   id?: string;
   dedupeKey?: string;
   status?: Extract<NotificationStatus, "done" | "dismissed" | "expired">;
 }
+/** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
 export type WebviewNotificationDismissParams = Pick<WebviewNotificationResolveParams, "id" | "dedupeKey">;
 
 export interface WebviewPreferencesGetParams {
@@ -164,8 +167,11 @@ export interface WebviewHostCapabilityParams {
   "navigation.open": WebviewNavigationOpenParams;
   "placement.close": Record<string, never>;
   "notification.show": WebviewNotificationShowParams;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.action": WebviewNotificationActionParams;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.resolve": WebviewNotificationResolveParams;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.dismiss": WebviewNotificationDismissParams;
   "preferences.get": WebviewPreferencesGetParams;
   "preferences.set": WebviewPreferencesSetParams;
@@ -188,8 +194,11 @@ export interface WebviewHostCapabilityResults {
   "navigation.open": void;
   "placement.close": void;
   "notification.show": void;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.action": Notification;
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.resolve": Notification | { resolved: number; notifications: Notification[] };
+  /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.dismiss": Notification | { resolved: number; notifications: Notification[] };
   "preferences.get": WebviewPreferencesSetParams["value"] | undefined;
   "preferences.set": { name: string; value: WebviewPreferencesSetParams["value"] };

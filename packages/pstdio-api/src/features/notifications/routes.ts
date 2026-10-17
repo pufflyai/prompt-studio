@@ -10,6 +10,12 @@ import {
   listNotificationsRoute,
 } from "./endpoints/list-notifications";
 import {
+  setNotificationStatusByKeyHandler,
+  setNotificationStatusByKeyRoute,
+  setNotificationStatusHandler,
+  setNotificationStatusRoute,
+} from "./endpoints/set-notification-status";
+import {
   dismissNotificationHandler,
   dismissNotificationRoute,
   markNotificationDoneHandler,
@@ -30,6 +36,8 @@ export const createNotificationsRoutes = (deps: NotificationsRouteDeps) => {
   routes.openapi(countNotificationsRoute, countNotificationsHandler(deps));
   routes.openapi(createNotificationRoute, createNotificationHandler(deps));
   routes.openapi(resolveNotificationByDedupeKeyRoute, resolveNotificationByDedupeKeyHandler(deps));
+  routes.openapi(setNotificationStatusByKeyRoute, setNotificationStatusByKeyHandler(deps));
+  routes.openapi(setNotificationStatusRoute, setNotificationStatusHandler(deps));
   routes.openapi(getNotificationRoute, getNotificationHandler(deps));
   routes.openapi(updateNotificationRoute, updateNotificationHandler(deps));
   routes.openapi(markNotificationReadRoute, markNotificationReadHandler(deps));

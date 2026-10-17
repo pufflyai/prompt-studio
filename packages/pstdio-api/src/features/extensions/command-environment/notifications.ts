@@ -1,11 +1,10 @@
 import type { NotificationStatus } from "pstdio-api-contracts";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
-import type { EnabledSource } from "./types";
 
 export const createNotifyApi = (
-  deps: ExtensionsRouteDeps,
-  input: { projectId: string; enabledSource: EnabledSource },
+  deps: Pick<ExtensionsRouteDeps, "notificationService">,
+  input: { projectId: string; enabledSource: { installedSource: { id: string } } },
 ): CommandRunnerEnvironment["notify"] => {
   const sourceContext = {
     source: "api" as const,
@@ -21,6 +20,14 @@ export const createNotifyApi = (
 
   return {
     toast: async () => {},
+    setStatus: async (id, status) => {
+      if (status !== "done" && status !== "dismissed") throw new Error("Authors may set done or dismissed only.");
+      return deps.notificationService.setStatus(input.projectId, id, { status });
+    },
+    setStatusByKey: async (key, status) => {
+      if (status !== "done" && status !== "dismissed") throw new Error("Authors may set done or dismissed only.");
+      return deps.notificationService.setStatusByKey(input.projectId, key, { status });
+    },
     action: async (notification) =>
       deps.notificationService.create({
         projectId: input.projectId,
@@ -30,7 +37,7 @@ export const createNotifyApi = (
     resolve: async (notification) => {
       const status = notification.status ?? "done";
       if (notification.id) return resolveById(notification.id, status);
-      if (notification.dedupeKey) {
+      if (notification.dedupeKey !== undefined) {
         const result = await deps.notificationService.resolveByDedupeKey(
           input.projectId,
           notification.dedupeKey,
@@ -42,7 +49,7 @@ export const createNotifyApi = (
     },
     dismiss: async (notification) => {
       if (notification.id) return resolveById(notification.id, "dismissed");
-      if (notification.dedupeKey) {
+      if (notification.dedupeKey !== undefined) {
         const result = await deps.notificationService.resolveByDedupeKey(
           input.projectId,
           notification.dedupeKey,

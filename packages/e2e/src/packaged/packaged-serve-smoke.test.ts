@@ -50,6 +50,7 @@ import { expectPackagedNativeActions, writeNativeActionsExtension } from "./pack
 // Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
+import { registerNotificationStatusSmokeTests } from "./packaged-notification-status-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 // Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
@@ -99,6 +100,7 @@ registerConnectionStatusSmokeTests();
 registerAssetStorageSmokeTests();
 registerGroupedStorageSmokeTests();
 registerNativeRelaySmokeTests();
+registerNotificationStatusSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
 

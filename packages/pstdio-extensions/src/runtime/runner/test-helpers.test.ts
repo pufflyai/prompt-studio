@@ -61,6 +61,8 @@ export const stubEnvironment = (
     },
     activity: { record: async () => ({ id: "" }) },
     notify: {
+      setStatus: async () => null,
+      setStatusByKey: async () => [],
       toast: async () => {},
       action: async () => ({}) as never,
       resolve: async () => [],

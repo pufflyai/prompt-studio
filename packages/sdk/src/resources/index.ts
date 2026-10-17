@@ -7,10 +7,12 @@ export type {
   Notification,
   NotificationAction,
   NotificationActorType,
+  NotificationFinalStatus,
   NotificationKind,
   NotificationOrigin,
   NotificationPriority,
   NotificationStatus,
+  SetNotificationStatusInput,
   UpdateNotificationInput,
 } from "pstdio-api-contracts";
 export type { AgentAvailabilityType, AgentInfo, AgentModel, AgentSkillsLayout } from "./agent";

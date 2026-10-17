@@ -132,6 +132,8 @@ export const createBenchEnvironment = (
     },
     activity: { record: async () => ({ id: crypto.randomUUID() }) },
     notify: {
+      setStatus: async () => null,
+      setStatusByKey: async () => [],
       action: async () => ({}) as never,
       dismiss: async () => [],
       resolve: async () => [],
