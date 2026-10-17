@@ -24,3 +24,30 @@ test("missing relay assets return null while authentication and service failures
     await server.stop(true);
   }
 });
+
+test("cancelling a request releases its wait for a shared token without waiting for renewal", async () => {
+  const token = Promise.withResolvers<string>();
+  const requested = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  const adapter = createRelayAdapter({
+    origin: "http://127.0.0.1:1",
+    scope: { accountId: "account", workbenchId: "workbench", extensionId: "notes" },
+    token: () => {
+      requested.resolve();
+      return token.promise;
+    },
+    signal: controller.signal,
+  });
+  const result = adapter.snapshot().then(
+    () => "unexpected success",
+    () => "cancelled",
+  );
+  try {
+    await requested.promise;
+    controller.abort();
+    expect(await Promise.race([result, Bun.sleep(100).then(() => "still waiting")])).toBe("cancelled");
+  } finally {
+    token.resolve("late-shared-token");
+    await result;
+  }
+});
