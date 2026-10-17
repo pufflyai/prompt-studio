@@ -1,16 +1,15 @@
-import { type BoardView, viewDataEvents } from "@pstdio/sdk/extensions";
+import type { BoardView } from "@pstdio/sdk/extensions";
 import type { CollectionViewsSource } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
-import { useLiveValue } from "./use-live-value";
 import type { PlanClient } from "./use-plan";
 
-const readViews = (client: PlanClient) => client.commands["timeline.views.read"]();
-const viewEvents = [viewDataEvents.boardViewsChanged];
 const ticketView = (view: BoardView) => ({ ...view, settings: view.settings as KanbanRendererSettings });
 
-export function useTimelineViews(client: PlanClient) {
-  const { value, error } = useLiveValue(client, readViews, viewEvents);
-  const source: CollectionViewsSource<KanbanRendererSettings> | undefined = value && {
+export function timelineViewsSource(
+  client: PlanClient,
+  value: Awaited<ReturnType<PlanClient["commands"]["timeline.plan.read"]>>["savedViews"],
+) {
+  const source: CollectionViewsSource<KanbanRendererSettings> = {
     views: value.views.map(ticketView),
     defaultViewId: value.defaultViewId,
     onCreateView: async (input) => ticketView(await client.commands["timeline.views.create"]({ value: input })),
@@ -24,5 +23,5 @@ export function useTimelineViews(client: PlanClient) {
       await client.commands["timeline.views.default"]({ id: id ?? undefined });
     },
   };
-  return { source, error };
+  return source;
 }

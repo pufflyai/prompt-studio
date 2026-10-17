@@ -28,7 +28,12 @@ export async function fixture(limit = 2) {
         },
       },
       workspaces: {
-        get: async () => null,
+        get: async (id: string) => ({
+          id,
+          root_path: `/repo/${id}`,
+          execution_kind: "local",
+          provider_capabilities_json: { diff: true },
+        }),
         list: async () => [],
         create: async () => {
           sequence += 1;

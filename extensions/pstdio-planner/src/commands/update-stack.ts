@@ -6,20 +6,22 @@ import type { AttemptRecord } from "../data/attempt-types";
 import { withWriteGuard } from "../data/write-guard";
 import { loadAttemptDependencies } from "./attempt-readiness";
 import { isLiveSession } from "./auto-build-sessions";
-import { workspaceGitPath, workspaceHead } from "./change-requests";
+import { WorkspaceUnavailableError, workspaceGitPath, workspaceHead } from "./change-requests";
 import { containsDependencyHeads, dependencyHeads } from "./dependency-base";
 import { containsCommit, prepareRequiredStackBase, readRequiredStackDependencies } from "./stack-validation";
 
 export async function readStackRepair(ctx: CommandContext, attempt: AttemptRecord) {
   const latest = attempt.revisions.at(-1);
   const session = await ctx.sessions.get(attempt.implementationSessionId);
-  if (!session || isLiveSession(session)) return null;
+  if (isLiveSession(session)) return null;
+  const workspace = await ctx.workspaces.get(attempt.workspaceId);
+  if (!workspace?.root_path || workspace.id !== attempt.workspaceId)
+    throw new WorkspaceUnavailableError(`Workspace ${attempt.workspaceShorthand} is no longer available.`);
+  const head = await workspaceHead(ctx, attempt.workspaceId);
+  if (!session) return null;
   if (!(await ctx.sessions.listByWorkspace(attempt.workspaceId)).some(({ id }) => id === session.id)) return null;
   const eventId = `stack-repair-resumed:${session.id}:${session.updated_at ?? attempt.updatedAt}`;
   if (await attemptEventsCollection(ctx.storage).get(eventId)) return null;
-  const workspace = await ctx.workspaces.get(attempt.workspaceId);
-  if (!workspace?.root_path || workspace.id !== attempt.workspaceId) return null;
-  const head = await workspaceHead(ctx, attempt.workspaceId);
   const { readiness } = await loadAttemptDependencies(ctx, attempt.ticketId, {
     base: attempt.base.headSha,
     dependencyReview: "submitted",

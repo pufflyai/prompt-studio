@@ -31,6 +31,7 @@ import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
 import { ticketStatuses } from "./ticket-status-provider";
+import { timelineViewSchema } from "./timeline/commands/view-schema";
 import { planChanged } from "./timeline/contracts";
 
 export { ticketResourceKind } from "./resource-kinds";
@@ -157,7 +158,7 @@ export const createPlannerUi = (baseUrl: string) => {
     id: timelineBoard.id,
     title: l10n("timeline.page.title", "Project Timeline"),
     icon: "chart-no-axes-gantt",
-    body: tickets.body,
+    body: { ...tickets.body, query: timelineViewSchema },
   });
   const editor = defineView({
     id: "ticket-editor",

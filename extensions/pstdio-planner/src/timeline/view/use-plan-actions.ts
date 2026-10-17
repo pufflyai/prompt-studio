@@ -25,8 +25,7 @@ export function usePlanActions({
   const [selectedId, setSelectedId] = useState<string>();
   const [editor, setEditor] = useState<Editor>();
   const [context, setContext] = useState<BackgroundContext>();
-  const [actionError, setActionError] = useState<string>();
-  const dnd = useDragAndDrop(client, setActionError);
+  const dnd = useDragAndDrop(client);
   const selected = plan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
   const relations = relationsFor(selected, plan);
   const open = (target: NavigationTarget) => void host.call("navigation.open", { target });
@@ -34,12 +33,6 @@ export function usePlanActions({
   const review = reviewDeadline
     ? reviewQueue(plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === reviewDeadline.id)?.rows ?? [])
     : undefined;
-  // Inline edits revert when a save fails; the error stays visible above the graph.
-  const run = (promise: Promise<unknown>) =>
-    promise.catch((reason) => {
-      setActionError(String(reason));
-      throw reason;
-    });
   const viewProps: Omit<PlanViewProps, "today"> = {
     sections,
     tracks,
@@ -53,9 +46,9 @@ export function usePlanActions({
     onDrop: () => void dnd.drop(),
     onToggle: toggle,
     onRenameDeadline: (deadline, name) =>
-      run(client.commands["timeline.deadline.update"]({ deadline, name: name || "none" })),
-    onRedate: (deadline, date) => run(client.commands["timeline.deadline.update"]({ deadline, date })),
-    onRenameTrack: (track, name) => run(client.commands["timeline.track.rename"]({ track, name })),
+      client.commands["timeline.deadline.update"]({ deadline, name: name || "none" }),
+    onRedate: (deadline, date) => client.commands["timeline.deadline.update"]({ deadline, date }),
+    onRenameTrack: (track, name) => client.commands["timeline.track.rename"]({ track, name }),
     onReview: (deadlineId) => {
       const rows = plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === deadlineId)?.rows ?? [];
       const queue = reviewQueue(rows);
@@ -63,7 +56,8 @@ export function usePlanActions({
       setSelectedId(queue[0]);
     },
     onDelete: (deadline) => {
-      void client.commands["timeline.deadline.delete"]({ deadline }).catch((reason) => setActionError(String(reason)));
+      // Command failures are already reported by host chrome.
+      void client.commands["timeline.deadline.delete"]({ deadline }).catch(() => {});
     },
     onContext: setContext,
     onNewTrack: () => setEditor({ kind: "track" }),
@@ -82,7 +76,6 @@ export function usePlanActions({
     review,
     editor,
     context,
-    actionError,
     setSelectedId,
     setContext,
     setEditor,

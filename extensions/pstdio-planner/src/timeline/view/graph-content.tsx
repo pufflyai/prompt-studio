@@ -1,5 +1,6 @@
 // Compose milestone drop targets, ticket cards, and dependency edges inside the pannable graph.
 import { Box } from "@chakra-ui/react";
+import type { RefObject } from "react";
 import type { PlanRow } from "../contracts";
 import { type DropTarget, sameTarget } from "./drag";
 import { DropHighlight } from "./drop-highlight";
@@ -7,10 +8,12 @@ import type { dropRegion } from "./drop-region";
 import { Band } from "./graph-band";
 import { GraphCard } from "./graph-card";
 import { GraphEdges } from "./graph-edges";
-import { type geometry, gutterWidth } from "./graph-geometry";
+import { type geometry, gutterWidth, visibleContentLeft } from "./graph-geometry";
 import { GraphTimeline } from "./graph-timeline";
 import { CollapsedColumns, TrackLines } from "./graph-tracks";
+import { graphWindow, visibleGraphRows } from "./graph-window";
 import type { PlanViewProps } from "./plan-view";
+import { useCanvasWindow } from "./use-canvas-window";
 
 interface GraphData {
   box: ReturnType<typeof geometry>;
@@ -21,6 +24,7 @@ interface GraphData {
 interface Props {
   props: PlanViewProps;
   graph: GraphData;
+  visibleRows?: PlanRow[];
 }
 
 function overTarget(props: PlanViewProps, target: DropTarget) {
@@ -64,7 +68,7 @@ function GraphMilestones(input: Pick<Props, "props" | "graph"> & { width: number
 }
 
 function GraphTickets(input: Props) {
-  const { props, graph } = input;
+  const { props, graph, visibleRows = graph.rows } = input;
   const { relations, selectedId, dropTarget, ...actions } = props;
   const { box, rows } = graph;
   const over = (target: DropTarget) => overTarget(props, target);
@@ -78,7 +82,7 @@ function GraphTickets(input: Props) {
         selectedId={selectedId}
         relatedIds={new Set(relations.keys())}
       />
-      {rows.map((row) => {
+      {visibleRows.map((row) => {
         const position = box.positions.get(row.id);
         const target = { deadlineId: row.deadlineId, beforeId: row.id, trackId: row.trackId };
         return position ? (
@@ -104,13 +108,29 @@ export function GraphContent(
   input: Props & {
     collapsed: ReadonlySet<string>;
     region: ReturnType<typeof dropRegion>;
-    viewport: { width: number; canvasWidth: number; canvasHeight: number; zoom: number; headerLeft: number };
+    viewport: {
+      ref: RefObject<HTMLDivElement | null>;
+      width: number;
+      height: number;
+      canvasWidth: number;
+      canvasHeight: number;
+      zoom: number;
+    };
   },
 ) {
   const { props, graph, collapsed, region, viewport } = input;
   const { sections, tracks, today, dropTarget, ...actions } = props;
   const { box, trackAt } = graph;
-  const { width, canvasWidth, canvasHeight, zoom, headerLeft } = viewport;
+  const { width, height, canvasWidth, canvasHeight, zoom } = viewport;
+  const window = useCanvasWindow(viewport.ref);
+  const headerLeft = visibleContentLeft(box.contentLeft, window.left, zoom);
+  const bounds = graphWindow({ ...window, width: width * zoom, height: height * zoom, zoom });
+  const visibleRows = visibleGraphRows(
+    graph.rows,
+    box.positions,
+    bounds,
+    new Set([props.selectedId, props.dragId, window.focusedId]),
+  );
   return (
     <Box
       position="relative"
@@ -159,7 +179,7 @@ export function GraphContent(
       <TrackLines boxes={box.tracks} height={canvasHeight} contentLeft={box.contentLeft} />
       <DropHighlight region={region} width={canvasWidth} height={canvasHeight} />
       <GraphMilestones props={props} graph={graph} width={width} zoom={zoom} headerLeft={headerLeft} />
-      <GraphTickets props={props} graph={graph} />
+      <GraphTickets props={props} graph={graph} visibleRows={visibleRows} />
     </Box>
   );
 }
