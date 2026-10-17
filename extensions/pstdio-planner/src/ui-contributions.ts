@@ -16,8 +16,8 @@ import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
 import { getTicketContent } from "./commands/get-ticket-content";
+import { moveTicket } from "./commands/move-ticket";
 import { queryTickets } from "./commands/query-tickets";
-import { reorderTicket } from "./commands/reorder-ticket";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
 import { listTicketFilesTree } from "./commands/ticket-files";
@@ -30,7 +30,6 @@ import { ticketDocumentPage, ticketPageTarget } from "./data/ticket-page-target"
 import { plannerTicketsChanged } from "./events";
 import { ticketResourceKind } from "./resource-kinds";
 import { ticketCreateForm } from "./ticket-create-form";
-import { ticketStatuses } from "./ticket-status-provider";
 import { planChanged } from "./timeline/contracts";
 
 export { ticketResourceKind } from "./resource-kinds";
@@ -82,6 +81,15 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
+  const statusSettings = defineView({
+    id: "ticket-status-settings",
+    title: "Ticket status",
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/status-settings-panel.tsx", baseUrl),
+      capabilities: ["commands.execute"],
+    },
+  });
   const requests = defineView({
     id: "ticket-requests",
     title: l10n("requests.view.title", "Review requests"),
@@ -107,7 +115,7 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "square-kanban",
     body: {
       kind: "kanban",
-      attributes: buildTicketAttributes(ticketStatuses.ref),
+      attributes: buildTicketAttributes([]),
       query: queryTickets,
       refreshEvents: [
         plannerTicketsChanged,
@@ -125,9 +133,19 @@ export const createPlannerUi = (baseUrl: string) => {
         );
       },
       onAttributeChange: setTicketAttribute,
-      onReorder: reorderTicket,
+      onMove: moveTicket,
       onColumnAction: archiveTicketColumnAction,
-      defaultFilters: { [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: [TICKET_ARCHIVE_STATE_ACTIVE] },
+      defaultFilter: {
+        conjunction: "and",
+        rules: [
+          {
+            attributeId: TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
+            condition: "is-any-of",
+            value: [TICKET_ARCHIVE_STATE_ACTIVE],
+          },
+        ],
+      },
+      defaultSorts: [{ attributeId: "created", direction: "desc" }],
       createRow: {
         command: createTicketCommand.ref,
         columnParam: "statusId",
@@ -143,7 +161,6 @@ export const createPlannerUi = (baseUrl: string) => {
         viewMode: "board",
         columnGrouping: "status",
         rowGrouping: "none",
-        ordering: { attributeId: "created", direction: "desc" },
         displayProperties: ["id", "workspace", "type", "priority"],
       },
       emptyTitle: l10n("kanbanRenderers.tickets.emptyTitle", "No tickets yet"),
@@ -193,7 +210,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
-    views: [tickets, timelineTickets, editor, files, properties, tagSettings, requests],
+    views: [statusSettings, tickets, timelineTickets, editor, files, properties, tagSettings, requests],
     pages: [ticketsPage, ticketDetailPage, requestsPage],
     viewMenus: [
       defineViewMenu({
@@ -222,8 +239,8 @@ export const createPlannerUi = (baseUrl: string) => {
         view: files.ref,
       }),
     ],
-    // No section: the host lists Ticket tags in its Project group, next to Statuses.
     settingsPanels: [
+      defineSettingsPanel({ id: "ticket-status", view: statusSettings.ref, slot: workbenchSlots.projectSettings }),
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,

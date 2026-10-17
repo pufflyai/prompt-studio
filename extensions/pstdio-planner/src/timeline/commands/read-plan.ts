@@ -21,7 +21,9 @@ export const readPlanCommand = defineCommand({
     const [loaded, { tags }, { rows: ticketRows, attributes }] = await Promise.all([
       loadPlan(ctx),
       readTicketTags(ctx.storage),
-      queryTickets(ctx, { filters: { archived: ["active"] } }),
+      queryTickets(ctx, {
+        filter: { conjunction: "and", rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }] },
+      }),
     ]);
     const [requests, gates, track, attempts] = await Promise.all([
       readTicketReviewRequests(ctx.storage),

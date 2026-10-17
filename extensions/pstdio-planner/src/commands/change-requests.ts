@@ -5,6 +5,7 @@ import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendRevision } from "../data/attempt-state";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
+import { readSessionHistory } from "../data/session-history";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
 import { withWriteGuard } from "../data/write-guard";
 import { validateSubmittedStack } from "./stack-validation";
@@ -99,7 +100,11 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
   if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
     throw new Error("The implementation session does not own this attempt.");
   }
-  if (!(await ctx.sessions.listByWorkspace(attempt.workspaceId)).some(({ id }) => id === implementationSessionId))
+  if (
+    !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
+      ({ id }) => id === implementationSessionId,
+    )
+  )
     throw new Error("The implementation session is not linked to this workspace.");
   const currentHead = await workspaceHead(ctx, attempt.workspaceId);
   if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");

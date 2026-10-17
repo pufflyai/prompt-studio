@@ -1,9 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
+import { sessionQuery } from "./session-query.fixture";
 import { workspaceActivityCommand } from "./workspace-activity";
 
-const session = (id: string, status: string, overrides: Record<string, unknown> = {}) => ({
+const session = (
+  id: string,
+  status: import("@pstdio/sdk/extensions").ExtensionSessionSummary["status"],
+  overrides: Record<string, unknown> = {},
+) => ({
   id,
   title: `Session ${id}`,
   status,
@@ -12,13 +17,16 @@ const session = (id: string, status: string, overrides: Record<string, unknown> 
   ...overrides,
 });
 
-const activityContext = (sessions: unknown[]) =>
+const activityContext = (sessions: Array<ReturnType<typeof session>>) =>
   makeCommandArgs({
     storage: createMemoryStorage(),
     params: { workspaceId: "w1" },
     overrides: {
       sessions: {
-        listByWorkspace: async (workspaceId: string) => sessions.map((s) => ({ ...(s as object), workspaceId })),
+        query: sessionQuery(
+          async () => [],
+          async (workspaceId: string) => sessions.map((s) => ({ ...s, workspaceId })),
+        ),
       },
     } as never,
   });
@@ -26,7 +34,7 @@ const activityContext = (sessions: unknown[]) =>
 describe("workspaceActivityCommand", () => {
   test.each(["queued", "in_progress", "awaiting_input"])("reports active while a session is %s", async (status) => {
     const result = await workspaceActivityCommand.run(
-      ...activityContext([session("s1", "completed"), session("s2", status)]),
+      ...activityContext([session("s1", "completed"), session("s2", status as ReturnType<typeof session>["status"])]),
     );
 
     expect(result.active).toBe(true);
@@ -38,7 +46,9 @@ describe("workspaceActivityCommand", () => {
     "cancelled",
     "disconnected",
   ])("reports inactive when every session is terminal (%s)", async (status) => {
-    const result = await workspaceActivityCommand.run(...activityContext([session("s1", status)]));
+    const result = await workspaceActivityCommand.run(
+      ...activityContext([session("s1", status as ReturnType<typeof session>["status"])]),
+    );
 
     expect(result.active).toBe(false);
     expect(result.sessions.map((entry) => entry.status)).toEqual([status]);
