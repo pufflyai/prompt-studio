@@ -3,14 +3,19 @@ import { opening, ref, setup } from "./related-resource-openings.fixture";
 
 const cases = (["side", "secondary"] as const).flatMap((region) =>
   (["page", "shell", "mode"] as const).flatMap((presentation) =>
-    [false, true].map((open) => ({ region, presentation, open })),
+    [false, true].flatMap((open) =>
+      (["pin", "preview"] as const).map((selected) => ({ region, presentation, open, selected })),
+    ),
   ),
 );
 
-test.each(cases)("a $region panel with open=$open handles related $presentation selection", async ({
+test.each(
+  cases,
+)("a $region panel with open=$open and selected=$selected handles related $presentation selection", async ({
   region,
   presentation,
   open,
+  selected,
 }) => {
   const s = setup([opening("related", region)]);
   const binding = {
@@ -20,6 +25,12 @@ test.each(cases)("a $region panel with open=$open handles related $presentation 
   } as const;
   s.workbench.shellPlacements.registerPlacement({ id: "kept", region, item: { kind: "binding", binding } });
   s.workbench.shellPlacements.openPlacement({ placementId: "kept", resource: ref("document", "kept"), open: "pin" });
+  if (selected === "preview")
+    s.workbench.shellPlacements.openPlacement({
+      placementId: "kept",
+      resource: ref("document", "old"),
+      open: "preview",
+    });
   const panel = { kind: "placement", id: "native", extensionId: "example" } as const;
   if (presentation === "shell")
     s.workbench.shellPlacements.registerPlacement({ id: "native", region, item: { kind: "binding", binding } });
@@ -45,7 +56,8 @@ test.each(cases)("a $region panel with open=$open handles related $presentation 
   s.workbench.shell.setRegionOpen(region, open);
   await s.controller.open(s.source);
   expect(s.workbench.shell.getRegionState(region).open).toBe(true);
-  expect(s.workbench.layout.getActivePanel(region)?.resource?.id).toBe(open ? "kept" : "related");
+  expect(s.workbench.layout.getActivePanel(region)?.resource?.id).toBe(open && selected === "pin" ? "kept" : "related");
+  expect(s.workbench.layout.listPanelInstances(region).map((panel) => panel.resource?.id)).toEqual(["related", "kept"]);
   expect(s.workbench.layout.getLayout().activeWidgetId).toBe(active);
   expect(s.workbench.pages.store.getState().location?.resource?.id).toBe(s.source.id);
   s.controller.dispose();

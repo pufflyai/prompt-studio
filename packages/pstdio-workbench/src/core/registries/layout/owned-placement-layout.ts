@@ -221,22 +221,29 @@ const reconcileRegions = (
       const key = placementIdentityKey(entry.identity);
       if (entry.region === regionId && !placedKeys.has(key)) widgets.push(entry.placement);
     }
-    // Page caches omit mode tabs. Recover their shared selection from the mode's cache.
+    const tray = planTrayTabs(
+      widgets,
+      desired.find((entry) => entry.region === regionId && entry.placement.tabRetention === "preview")?.placement
+        .widgetId ?? region.activeWidgetId,
+    );
+    const selected = region.widgets.find((widget) => widget.widgetId === region.activeWidgetId);
+    // A selected preview keeps its slot when replaced; other selections stay put.
+    // Page caches omit mode tabs, so recover their shared selection from the mode's cache.
     const activeWidgetId =
-      [region.activeWidgetId, modeLayout?.regions[regionId].activeWidgetId].find((id) =>
-        widgets.some((placement) => placement.widgetId === id),
-      ) ?? widgets[0]?.widgetId;
+      [
+        region.activeWidgetId,
+        selected?.tabRetention === "preview"
+          ? tray.widgets.find((widget) => widget.tabRetention === "preview")?.widgetId
+          : undefined,
+        modeLayout?.regions[regionId].activeWidgetId,
+      ].find((id) => tray.widgets.some((placement) => placement.widgetId === id)) ?? tray.widgets[0]?.widgetId;
     const opensPreviouslyEmptyRegion =
       region.widgets.length === 0 && widgets.some((placement) => !placement.hiddenByDefault);
     const closesEmptyPanel =
       (regionId === "side" || regionId === "secondary") && region.widgets.length > 0 && widgets.length === 0;
     regions[regionId] = {
       ...region,
-      widgets: planTrayTabs(
-        widgets,
-        desired.find((entry) => entry.region === regionId && entry.placement.tabRetention === "preview")?.placement
-          .widgetId ?? activeWidgetId,
-      ).widgets,
+      widgets: tray.widgets,
       savedWidgetOrder: undefined,
       activeWidgetId,
       ...(docked.has(regionId) ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),

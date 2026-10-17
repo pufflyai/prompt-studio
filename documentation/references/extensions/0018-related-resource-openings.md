@@ -74,6 +74,8 @@ Side and Bottom use the same selection rules. Automatic openings keep the source
 
 An already open target keeps its actual tray and pin state, even when the owner requests another tray. Reveal and select it if its actual Side or Bottom panel was closed; keep the current selection if that panel was already open. Do not create a duplicate tab or give that existing tab a new automatic lifetime.
 
+For example, with preview A selected beside pinned tab B, automatically opening preview C replaces A and keeps C selected. If B was selected instead, B stays selected and C opens behind it. Both cases preserve the initiating page and keyboard focus.
+
 New previews replace the eligible preview in their requested tray and stay leftmost. Each tray has at most one unpinned tab. Pinned tabs stay open. The initiating source preview is protected. Results apply in order: once a closed panel has been revealed, later entries use its open-panel rule. Several new previews in one tray replace each other, leaving the last eligible preview. Owners can also request Main without navigating away from the source.
 
 Dragging and dropping an unpinned tab pins it, including a reorder within the same tray or a drop into an empty tray. The destination's existing preview stays open and leftmost. The moved tab uses the requested insertion position among pinned tabs. Moving through a tab's menu follows the same rule. Feedback shows the insertion marker and rounded tray outline. Cancelling a drag leaves the tab unpinned. A moved automatic preview is now a kept pinned tab, so source-page cleanup does not close it.
