@@ -3,15 +3,25 @@ import {
   RUNTIME_WEBSOCKET_PROTOCOL,
   WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX,
 } from "pstdio-api-contracts";
+import { resolveApiBaseUrl } from "./runtime-config";
 
 const STORAGE_KEY = "pstdio.browserSession";
 
 // The browser scopes localStorage to the exact origin, port included, and never sends it on its
 // own. So other local servers never see the secret, and two runtimes keep separate sessions
 // (ADR 0057).
-export const readBrowserSession = () => globalThis.localStorage?.getItem(STORAGE_KEY) ?? undefined;
+export const browserSessionStorageKey = (apiUrl: string, pageUrl = globalThis.location?.href) => {
+  const base = pageUrl ?? "http://localhost/";
+  const origin = new URL(apiUrl || "/", base).origin.replace(/^ws/, "http");
+  if (origin === new URL(base).origin) return STORAGE_KEY;
+  return `${STORAGE_KEY}:${origin}`;
+};
 
-export const storeBrowserSession = (secret: string) => globalThis.localStorage.setItem(STORAGE_KEY, secret);
+export const readBrowserSession = (apiUrl = resolveApiBaseUrl()) =>
+  globalThis.localStorage?.getItem(browserSessionStorageKey(apiUrl)) ?? undefined;
+
+export const storeBrowserSession = (secret: string) =>
+  globalThis.localStorage.setItem(browserSessionStorageKey(resolveApiBaseUrl()), secret);
 
 export const takeBrowserLoginCode = (hash: string) => {
   const params = new URLSearchParams(hash.replace(/^#/, ""));

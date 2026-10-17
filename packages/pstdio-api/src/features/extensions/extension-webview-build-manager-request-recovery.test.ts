@@ -45,12 +45,22 @@ const setup = (build: (entryPath: string) => ExtensionWebviewBuildResult | Promi
   const failures: string[] = [];
   const manager = createExtensionWebviewBuildManager({
     listInstalledSources: async () => [
-      { id: "installed-lab", install_name: "extension-lab", source_hash: "hash-1", source_path: sourcePath },
+      {
+        updated_at: "2026-10-16T00:00:00.000Z",
+
+        id: "installed-lab",
+        install_name: "extension-lab",
+        source_hash: "hash-1",
+        source_path: sourcePath,
+      },
     ],
     reportBuildFailure: async (_installedExtensionId, webviewId) => {
       failures.push(webviewId);
+      return "reported";
     },
-    reportBuildSuccess: async () => {},
+    reportBuildSuccess: async () => {
+      return "reported";
+    },
     buildWebview: async (input) => {
       builds.push(input.entryPath);
       const result = await build(input.entryPath);

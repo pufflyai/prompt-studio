@@ -3,7 +3,7 @@ import path from "node:path";
 // Inline only the private workspace packages that cannot be published; everything
 // else (react, @pstdio/sdk, @pstdio/ui, chakra, zustand, …) stays external so the
 // consumer provides a single copy.
-const INLINE_PACKAGES = new Set(["pstdio-extensions", "pstdio-api-contracts"]);
+const INLINE_PACKAGES = new Set(["pstdio-extensions", "pstdio-api-contracts", "pstdio-sync-contracts"]);
 
 const packageNameOf = (id: string) => (id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0]);
 

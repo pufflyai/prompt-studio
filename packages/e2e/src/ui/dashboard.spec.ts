@@ -222,7 +222,7 @@ test("project picker stays open when the background is clicked", async ({ page, 
   await page.goto("/");
   await navSwitchProjectButton(page).click();
 
-  const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
+  const picker = page.getByRole("dialog", { name: "Projects", exact: true });
   await expect(picker).toBeVisible();
   await page.mouse.click(100, 100);
 
@@ -241,7 +241,7 @@ test("switching projects never reopens the picker while restoring the landing vi
   await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
   await navSwitchProjectButton(page).click();
 
-  const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
+  const picker = page.getByRole("dialog", { name: "Projects", exact: true });
   await expect(picker).toBeVisible();
   await page.evaluate(() => {
     const dashboardWindow = window as unknown as {
@@ -291,15 +291,11 @@ test("dashboard opens the start page for a selected project without a saved loca
     dashboardWindow.__projectPickerAppearedDuringStartup = false;
     const observeProjectPicker = () => {
       const observer = new MutationObserver((records) => {
-        for (const record of records) {
-          for (const node of record.addedNodes) {
-            if (
-              node instanceof Element &&
-              (node.matches('input[placeholder="Search projects..."]') ||
-                node.querySelector('input[placeholder="Search projects..."]'))
-            ) {
-              dashboardWindow.__projectPickerAppearedDuringStartup = true;
-            }
+        for (const node of records.flatMap((record) => Array.from(record.addedNodes))) {
+          if (!(node instanceof Element)) continue;
+          const dialog = node.closest('[role="dialog"]') ?? node.querySelector('[role="dialog"]');
+          if (dialog?.querySelector('[data-part="title"]')?.textContent === "Projects") {
+            dashboardWindow.__projectPickerAppearedDuringStartup = true;
           }
         }
       });

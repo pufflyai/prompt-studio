@@ -204,13 +204,14 @@ export const createSessionService = (deps: SessionServiceDeps) => {
     id: string,
     queuePosition: number,
     expectedLastRequestStarted: string | null,
+    options: Pick<TransitionStatusOptions, "drainCapacity"> = {},
   ) => {
     const updated = await raw.recoverQueuedDispatchClaim(id, queuePosition, expectedLastRequestStarted);
     if (!updated) return null;
 
     deps.eventBus.emit("sessions", "set", updated);
     emitStatusChanged(updated);
-    await deps.onCapacityAvailable?.({});
+    if (options.drainCapacity !== false) await deps.onCapacityAvailable?.({});
     return updated;
   };
 

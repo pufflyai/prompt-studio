@@ -6,7 +6,7 @@ import type {
 import type {
   checkExtensionSource,
   hashExtensionSource,
-  LoadedExtension,
+  LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
 import {
@@ -77,7 +77,7 @@ type ExtensionServiceDeps = {
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;
   eventBus?: EventBus;
   hashExtension?: typeof hashExtensionSource;
-  onInstalledSourcesChanged?: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> | void;
+  onInstalledSourcesChanged?: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void> | void;
   checkExtension?: typeof checkExtensionSource;
   projectService: ReturnType<typeof createProjectService>;
   validateResourcePrefixes?: (
@@ -113,7 +113,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     deps.eventBus?.emit("extension_instances", "set", instance);
   };
 
-  const notifyInstalledSourcesChanged = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+  const notifyInstalledSourcesChanged = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     await deps.onInstalledSourcesChanged?.(sourcePath, validatedSource);
   };
 

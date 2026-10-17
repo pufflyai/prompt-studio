@@ -2,16 +2,33 @@
   "name": "pstdio-relay",
   "private": true,
   "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "build": "bun build src/server.ts --target bun --outdir dist",
+    "build": "bun build src/server.ts src/index.ts --target bun --outdir dist",
     "start": "bun ./dist/server.js",
+    "db:generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "test": "bun test src",
+    "test:storage": "SYNC_TEST_ENTRY=../../infra/relay/src/storage/storage.integration.ts bun ../../packages/pstdio-sync-contracts/scripts/isolated.ts ../../infra/relay/src/storage/crash.integration.ts ../../infra/relay/src/storage/resolution.integration.ts",
+    "test:assets": "SYNC_TEST_ENTRY=../../infra/relay/src/assets/assets.integration.ts bun ../../packages/pstdio-sync-contracts/scripts/isolated.ts ../../infra/relay/src/assets/integrity.integration.ts ../../infra/relay/src/assets/recovery.integration.ts ../../infra/relay/src/assets/transfers.integration.ts ../../infra/relay/src/assets/lifecycle.integration.ts ../../infra/relay/src/assets/objects.contract.integration.ts ../../infra/relay/src/assets/probe-cleanup.integration.ts ../../infra/relay/src/assets/streams.test.ts",
+    "test:objects": "bun test src/assets/objects.contract.integration.ts",
     "test:isolated": "bun scripts/test-isolated.ts"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",
+    "@types/pg": "^8.18.0",
+    "drizzle-kit": "^0.31.9",
     "typescript": "6.0.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1152.0",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.20.0",
+    "pstdio-sync": "workspace:*",
+    "pstdio-sync-contracts": "workspace:*"
   }
 }

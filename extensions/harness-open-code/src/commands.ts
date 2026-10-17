@@ -32,12 +32,16 @@ export const prepareOpencodeOperation = (
     execution: "exclusive",
     invoke: async ({ events, signal }) => {
       signal?.throwIfAborted();
-      const stopNative = () => void service.abortSession(id, input.cwd).catch(() => {});
+      let aborting: Promise<void> | undefined;
+      const stopNative = () => {
+        aborting ??= service.abortSession(id, input.cwd).catch(() => {});
+      };
       signal?.addEventListener("abort", stopNative, { once: true });
       try {
         await service.runCommand({ sessionId: id, text: operation.text, model: input.model, cwd: input.cwd, signal });
       } finally {
         signal?.removeEventListener("abort", stopNative);
+        await aborting;
       }
       const abort = new AbortController();
       return {

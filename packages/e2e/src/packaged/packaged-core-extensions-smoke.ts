@@ -14,6 +14,7 @@ import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
 import { preparePlannerSource } from "./packaged-planner-source";
 import { expectPlannerWorkflow } from "./packaged-planner-workflow-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { expectPackagedThemeColors } from "./packaged-theme-colors-smoke";
 import { expectTicketWorkspaceCleanup } from "./packaged-ticket-workspace-cleanup-smoke";
 import { expectPackagedWorkspaceSelection } from "./packaged-workspace-selection-smoke";
 
@@ -193,6 +194,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
           );
 
           await expectCoreSkills(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
+          await expectPackagedThemeColors(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
 
           const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
             headers: runtimeAuthorization(started.descriptor),

@@ -61,6 +61,9 @@ export const mutationBodySchema = z.strictObject({
   changes: z.array(changeSchema).min(1),
   resolution: resolutionSchema.optional(),
 });
+export const localOperationSchema = mutationBodySchema
+  .omit({ protocolVersion: true, scope: true })
+  .superRefine(checkGroup);
 export const mutationSchema = mutationBodySchema.extend({ fingerprint: fingerprintSchema }).superRefine(checkGroup);
 export type Scope = z.infer<typeof scopeSchema>;
 export type Asset = z.infer<typeof assetSchema>;
@@ -68,7 +71,10 @@ export type Change = z.infer<typeof changeSchema>;
 export type MutationBody = z.infer<typeof mutationBodySchema>;
 export type Mutation = z.infer<typeof mutationSchema>;
 
-function checkGroup(value: MutationBody, ctx: z.RefinementCtx) {
+function checkGroup(
+  value: Pick<MutationBody, "operationId" | "parents" | "changes" | "resolution">,
+  ctx: z.RefinementCtx,
+) {
   const unique = (values: string[]) => new Set(values).size === values.length;
   const records = value.changes.map((change) => change.recordId);
   if (!unique(records) || !unique(value.parents) || value.parents.includes(value.operationId)) {

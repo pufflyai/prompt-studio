@@ -2,12 +2,7 @@ import { Box, Button, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/r
 import { AlertMessage, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
-
-const phaseCopy = {
-  discovery: "Looking for your local Prompt Studio runtime…",
-  spawning: "Starting the Prompt Studio runtime…",
-  readiness: "Waiting for the workbench to become ready…",
-} as const;
+import { DesktopStartingState } from "./desktop-starting-state";
 
 interface DesktopLifecycleActions {
   copyDiagnostics: () => Promise<void>;
@@ -45,21 +40,6 @@ const useDesktopState = (initialState: DesktopState) => {
     };
   }, []);
   return state;
-};
-
-const StartingState = (props: { phase: keyof typeof phaseCopy }) => {
-  const { phase } = props;
-  return (
-    <Stack align="center" gap="lg" role="status" aria-live="polite">
-      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
-      <Stack align="center" gap="xs" textAlign="center">
-        <Heading textStyle="heading/M">Opening Prompt Studio</Heading>
-        <Text color="fg.muted" textStyle="paragraph/M/regular">
-          {phaseCopy[phase]}
-        </Text>
-      </Stack>
-    </Stack>
-  );
 };
 
 const RecoveryState = (props: {
@@ -128,7 +108,7 @@ export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
       <WindowTitleBar platform={platform} />
       <Box flex="1" display="grid" placeItems="center" padding="xl">
         <Box width="full" maxWidth="2xl">
-          {state.kind === "starting" && <StartingState phase={state.phase} />}
+          {state.kind === "starting" && <DesktopStartingState phase={state.phase} />}
           {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
           {state.kind === "closing" && <ClosingState />}
         </Box>

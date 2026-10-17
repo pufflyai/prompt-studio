@@ -4,13 +4,13 @@ WORKDIR /app
 
 # Copy the full workspace so every package.json declared in bun.lock is present.
 # Bun follows each target's workspace dependencies from the lockfile.
-COPY package.json bun.lock tsconfig.base.json ./
+COPY package.json bun.lock bunfig.toml .npmrc tsconfig.base.json ./
 COPY packages packages
 COPY clients clients
 COPY extensions extensions
 COPY infra/local/extensions infra/local/extensions
-COPY .pstdio/extensions/font-editor/package.json .pstdio/extensions/font-editor/package.json
-COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/package.json
+COPY infra/relay/package.json infra/relay/package.json
+COPY .pstdio/extensions .pstdio/extensions
 COPY scripts scripts
 
 FROM source AS sdk

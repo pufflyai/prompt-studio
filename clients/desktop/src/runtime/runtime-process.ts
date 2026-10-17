@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { closeSync, fstatSync, mkdirSync, openSync, readSync } from "node:fs";
 import { dirname } from "node:path";
+import { runtimeExec } from "./runtime-exec";
 
 const OUTPUT_LIMIT = 64 * 1024;
 
@@ -26,9 +27,10 @@ export const spawnRuntimeProcess = (
   // A new runtime replaces the previous launch log; diagnostics read only its bounded tail.
   const fd = openSync(options.outputPath, "w", 0o600);
   try {
-    const child = spawn(path, args, {
+    const launch = runtimeExec(args, options.env);
+    const child = spawn(path, launch.args, {
       detached: process.platform === "win32",
-      env: options.env,
+      env: launch.env,
       stdio: ["ignore", fd, fd],
       windowsHide: true,
     });

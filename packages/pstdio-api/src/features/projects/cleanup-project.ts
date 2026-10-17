@@ -8,7 +8,7 @@ export const cleanupProjectArtifacts = async (
   projectId: string,
   options: {
     deleteProviderWorkspace?: typeof cleanupProviderBackedWorkspace;
-    removeProjectStorage: (projectId: string) => void;
+    removeProjectStorage: (projectId: string) => void | Promise<void>;
   },
 ) => {
   const projectWorkspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
@@ -23,7 +23,7 @@ export const cleanupProjectArtifacts = async (
     await deps.workspaceService.softDelete(ws.id);
   }
 
-  options.removeProjectStorage(projectId);
+  await options.removeProjectStorage(projectId);
   const home = projectWorkspaces.find((workspace) => workspace.is_default);
   if (home?.root_path) await removeWorkspaceConfig(home.root_path, projectId, home.id);
 };

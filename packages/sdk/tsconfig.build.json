@@ -11,9 +11,15 @@
     "paths": {
       "@/*": ["./src/*"],
       "pstdio-api-contracts": ["../pstdio-api-contracts/src/index.ts"],
-      "pstdio-api-contracts/*": ["../pstdio-api-contracts/src/*"]
+      "pstdio-api-contracts/*": ["../pstdio-api-contracts/src/*"],
+      "pstdio-sync-contracts": ["../pstdio-sync-contracts/src/index.ts"]
     }
   },
-  "include": ["src", "../pstdio-api-contracts/src"],
-  "exclude": ["**/*.test.ts", "**/*.typecheck.ts", "../pstdio-api-contracts/src/**/*.test.ts"]
+  "include": ["src", "../pstdio-api-contracts/src", "../pstdio-sync-contracts/src/*.ts"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.typecheck.ts",
+    "../pstdio-api-contracts/src/**/*.test.ts",
+    "../pstdio-sync-contracts/src/**/*.test.ts"
+  ]
 }

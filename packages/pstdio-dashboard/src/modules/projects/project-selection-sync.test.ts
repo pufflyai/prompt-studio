@@ -10,7 +10,10 @@ import { createStartModule } from "../start/module";
 import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { createProjectsModule } from "./module";
 
-test("project tabs preserve each extension page when switching, closing, and reopening projects", async () => {
+test.each([
+  false,
+  true,
+])("project tabs preserve extension page context across switches (core child: %s)", async (coreChild) => {
   const workbench = createWorkbench();
   const tabs = new DesktopProjectTabsController([], async () => {});
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -38,7 +41,14 @@ test("project tabs preserve each extension page when switching, closing, and reo
   const secondPage = { extensionId: "acme.issue-tracker", kind: "page", id: "issue" } as const;
   try {
     await select("first");
-    expect(workbench.pageLocations.navigate({ kind: "page", page: firstPage }).ok).toBe(true);
+    const firstTarget = coreChild
+      ? {
+          kind: "page" as const,
+          page: { extensionId: "pstdio", kind: "page" as const, id: "sessions" },
+          parent: { kind: "page" as const, page: firstPage },
+        }
+      : { kind: "page" as const, page: firstPage };
+    expect(workbench.pageLocations.navigate(firstTarget).ok).toBe(true);
     const firstLocation = workbench.pages.store.getState().location;
     await select("second");
     expect(

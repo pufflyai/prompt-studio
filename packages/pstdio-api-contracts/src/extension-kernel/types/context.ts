@@ -17,60 +17,17 @@ import type { ExtensionResourcesApi, RendererContext, ResourceRef } from "./reso
 import type { ExtensionViewsApi } from "./saved-views";
 import type { ExtensionSessionsApi } from "./sessions";
 import type { SlotInvocationContext } from "./slots";
+import type { ExtensionStorageApi } from "./storage";
 import type { ExtensionWorkspacesApi } from "./workspaces";
 
-export interface ExtensionStorageCollectionApi<TItem = unknown> {
-  get(id: string): Promise<TItem | undefined>;
-  list(): Promise<TItem[]>;
-  put(id: string, value: TItem): Promise<void>;
-  /** Replace an existing item atomically. Throws if the item was deleted. */
-  update(id: string, value: TItem): Promise<void>;
-  createIfAbsent(id: string, value: TItem): Promise<boolean>;
-  deleteIfValue(id: string, value: TItem): Promise<boolean>;
-  create(value: TItem): Promise<TItem & { id: string }>;
-  delete(id: string): Promise<void>;
-  attachments(itemId: string): ExtensionBlobsApi;
-}
-
-export type StorageScope =
-  | { type: "project" }
-  | { type: "resource"; resource: ResourceRef }
-  | { type: string; id: string };
-
-export interface ExtensionStorageApi {
-  scope(scope: StorageScope): ExtensionStorageApi;
-  files: ExtensionBlobsApi;
-  get<T = unknown>(key: string): Promise<T | undefined>;
-  set<T = unknown>(key: string, value: T): Promise<void>;
-  delete(key: string): Promise<void>;
-  collection<TItem = unknown>(name: string): ExtensionStorageCollectionApi<TItem>;
-}
-
-export interface ExtensionBlobRef {
-  id: string;
-  name: string;
-  mimeType: string | null;
-  size: number;
-  hash: string | null;
-  url: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ExtensionBlobInput {
-  name: string;
-  data: Uint8Array | ArrayBuffer;
-  mimeType?: string | null;
-}
-
-export interface ExtensionBlobsApi {
-  put(input: ExtensionBlobInput): Promise<ExtensionBlobRef>;
-  get(id: string): Promise<ExtensionBlobRef | undefined>;
-  getBytes(id: string): Promise<Uint8Array>;
-  list(): Promise<ExtensionBlobRef[]>;
-  delete(id: string): Promise<void>;
-  urlFor(id: string): string;
-}
+export type {
+  ExtensionBlobInput,
+  ExtensionBlobRef,
+  ExtensionBlobsApi,
+  ExtensionStorageApi,
+  ExtensionStorageCollectionApi,
+  StorageScope,
+} from "./storage";
 
 export interface ArtifactFile {
   path: string;

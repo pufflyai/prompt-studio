@@ -43,11 +43,25 @@ describe("desktop runtime controller", () => {
 
     const result = await waitForDesktopRuntime("/tmp/runtime.json", "runtime-one", {
       discover: async () => discoveries.shift()!,
-      now: () => 1,
+      signal: new AbortController().signal,
       sleep: async () => {},
     });
 
     expect(result).toEqual(descriptor);
+  });
+
+  test("keeps waiting for a healthy runtime during a slow first start", async () => {
+    let elapsed = 0;
+    const result = await waitForDesktopRuntime("/tmp/runtime.json", "runtime-one", {
+      discover: async () => (elapsed >= 25_000 ? { state: "healthy", descriptor } : { state: "missing" }),
+      signal: new AbortController().signal,
+      sleep: async () => {
+        elapsed += 5_000;
+      },
+    });
+
+    expect(result).toEqual(descriptor);
+    expect(elapsed).toBe(25_000);
   });
 
   test("verifies an external runtime without inspecting its host PID", async () => {

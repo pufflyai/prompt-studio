@@ -8,6 +8,7 @@ import {
   type RuntimeDescriptor,
   writeRuntimeDescriptor,
 } from "@/features/runtime/runtime-descriptor";
+import { writeRuntimeShutdown } from "@/features/runtime/runtime-shutdown";
 
 export type ServeRuntimeOptions = {
   ownerType?: RuntimeOwnerType;
@@ -41,6 +42,7 @@ export const createServeRuntime = (options: ServeRuntimeOptions, shutdown: () =>
       ownerType = "persistent";
     },
     announceShutdown: () => {
+      writeRuntimeShutdown(descriptorPath, { pid: process.pid, instanceId });
       const event = { type: "intentional_shutdown" as const, instanceId };
       for (const listener of listeners) listener(event);
     },

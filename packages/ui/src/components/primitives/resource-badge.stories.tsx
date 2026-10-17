@@ -24,3 +24,7 @@ export const Default: Story = {
 export const Missing: Story = {
   render: () => <MissingResourceBadge referenceId="missing/resource.md" />,
 };
+
+export const WithoutTooltip: Story = {
+  args: { ...Default.args, tooltip: false },
+};

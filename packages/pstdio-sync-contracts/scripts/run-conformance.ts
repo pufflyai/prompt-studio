@@ -9,10 +9,18 @@ for (let attempt = 0; attempt < 60; attempt++) {
   await Bun.sleep(500);
 }
 if (!ready) throw new Error("Test object storage did not become ready");
-const child = Bun.spawn(["bun", "test", "./src/conformance/reference.integration.ts"], {
-  stdout: "inherit",
-  stderr: "inherit",
-});
+const child = Bun.spawn(
+  [
+    "bun",
+    "test",
+    process.env.SYNC_TEST_ENTRY ?? "./src/conformance/reference.integration.ts",
+    ...process.argv.slice(2),
+  ],
+  {
+    stdout: "inherit",
+    stderr: "inherit",
+  },
+);
 process.exitCode = await child.exited;
 
 export {};

@@ -116,13 +116,12 @@ test("retains Side chat and the editor draft during repeated file-position navig
     const composerNode = await composer.elementHandle();
     const first = side.getByRole("link", { name: "First", exact: true }).last();
     await expect(first).toHaveAttribute("href", /document=src%2Fapp.ts/);
-    const popupPromise = page.waitForEvent("popup");
+    const newTabPromise = page.context().waitForEvent("page");
     await first.click({ modifiers: ["ControlOrMeta"] });
-    const popup = await popupPromise;
-    await popup.waitForLoadState();
-    expect(popup.url()).toContain("document=src%2Fapp.ts");
+    const newTab = await newTabPromise;
+    await expect(newTab).toHaveURL(/document=src%2Fapp\.ts/);
     expect(page.url()).not.toContain("document=");
-    await popup.close();
+    await newTab.close();
     await side.getByRole("link", { name: "Second", exact: true }).last().click();
     const editor = page.locator(".monaco-editor:visible");
     await expect(editor).toContainText("secondLine");
@@ -158,7 +157,7 @@ test("retains Side chat and the editor draft during repeated file-position navig
     await expect(page.getByText(/not found/i).first()).toBeVisible();
     await expect(floating.getByRole("link", { name: "First", exact: true }).last()).toBeVisible();
     const beforeInvalidPage = page.url();
-    await floating.getByRole("link", { name: "Invalid page", exact: true }).last().click();
+    await floating.getByRole("button", { name: "Invalid page", exact: true }).last().click();
     await expect(page.getByText(/unavailable in the conversation project/)).toBeVisible();
     expect(page.url()).toBe(beforeInvalidPage);
     await floating.getByRole("button", { name: "Invalid table", exact: true }).last().click();

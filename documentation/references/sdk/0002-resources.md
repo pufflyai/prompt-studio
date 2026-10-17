@@ -77,3 +77,29 @@ Native owner views that show linked resources should include
 `viewDataEvents.resourceAnchorsChanged` in `refreshEvents`. The host delivers this
 project-scoped dependency after committed link changes, including changes made by
 another client or through the CLI.
+
+## Resource file paths
+
+Declare `paths` on a resource kind to open its files in the owner's UI. Each entry
+contains a workspace-relative `prefix` and a `resolve` command reference. Matching
+uses path segments, and the longest matching prefix wins. Paths are normalized
+against the conversation workspace before matching, including absolute file links.
+
+```ts
+const ticket = defineResourceKind({
+  id: "ticket",
+  paths: [{ prefix: ".pstdio/extension-storage/my-planner/tickets/", resolve: resolveTicketPath.ref }],
+});
+```
+
+The command receives `{ path, workspaceId }` as its second argument and returns
+`{ resource, target }` using `ResourceResolution`, or `null` for a missing resource.
+Only the resource kind's own extension may provide this command. Return a page,
+panel, or compound target to choose how the resource opens. Page targets retain
+source line and column positions. Unclaimed and missing paths open as workspace
+files. Resolution errors appear in the conversation when the link is opened.
+
+Read-only rich messages detect ordinary file paths in prose and show them as resource
+bubbles. Agents can share paths without knowing any special link syntax. Owner
+resolution supplies the label, icon, and navigation URL. Ordinary web links keep
+their normal appearance. Editable messages retain their original Markdown source.

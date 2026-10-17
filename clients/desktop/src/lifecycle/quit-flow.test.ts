@@ -31,12 +31,13 @@ const createHarness = (input: {
   const calls: string[] = [];
   const flow = createQuitFlow({
     runtimeManager: {
+      cancelStart: async () => {},
       refreshRuntime: input.refreshRuntime,
       requestShutdown: input.requestShutdown ?? (async () => ({ state: "accepted" })),
       waitForExit: async () => {
         calls.push("waitForExit");
       },
-      detach: () => {
+      detach: async () => {
         calls.push("detach");
       },
     },
