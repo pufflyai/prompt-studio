@@ -40,9 +40,17 @@ their saved acknowledgments. Replay after restore begins at the restored sequenc
 the new epoch. It does not erase receipt ancestry or use a TTL to discard offline work.
 
 This internal scope is not authorization. The listener still exposes only liveness.
-Authenticated transport must derive current grants and published revisions, and the
-production object adapter must keep verified bytes available during publication and
-retention. See the [relay guide](../../guides/development/0006-relay.md) for migrations,
+Authenticated transport must derive current grants and published revisions. PS-760's
+production S3 owner keeps scoped upload intent and acknowledged multipart parts in
+PostgreSQL. Each upload has its own object key. Completion streams the durable object
+through full SHA-256 and length verification before publishing the verified mapping
+and upload receipt in one transaction. Lost completion responses and process restarts
+recover that intent without accepting unchecked bytes. Conditional ETag reads detect
+changed objects. Cancellation commits its durable row and PostgreSQL notification together,
+interrupts writers across owners, and drains the writer before removing only its temporary bytes;
+completed objects stay available through publication and retained history without a TTL.
+The listener still has no authenticated asset transport. RustFS evidence does not
+establish live Spaces compatibility. See the [relay guide](../../guides/development/0006-relay.md) for migrations,
 isolated PostgreSQL/process-kill checks, and the built persistence smoke.
 
 ## Local staged assets
