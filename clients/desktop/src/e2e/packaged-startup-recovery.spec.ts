@@ -16,9 +16,10 @@ import {
   waitForDescriptor,
   waitForExit,
 } from "./packaged-app-helpers";
+import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
 import { waitForVisibleElement } from "./visible-element-timing";
 
-test("recovers from a stalled runtime and retries without replacing its owner", async ({
+test("keeps waiting for a slow runtime and opens automatically without replacing its owner", async ({
   browserName: _browserName,
 }, testInfo) => {
   const home = createPackagedHome();
@@ -34,34 +35,30 @@ test("recovers from a stalled runtime and retries without replacing its owner", 
 
     app = await launchPackagedWindow(home);
     await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
-    const recoveryAt = await waitForVisibleElement(
-      app.lifecyclePage,
-      '[role="alert"] :is(h1, h2, h3)',
-      "Prompt Studio needs attention",
-    );
-    testInfo.annotations.push({ type: "stalled-runtime-recovery-ms", description: String(recoveryAt - app.startedAt) });
+    // Advance the renderer's notice timer without delaying process startup or changing the test allowance.
+    const now = Date.now();
+    await app.lifecyclePage.clock.install({ time: now });
+    await app.lifecyclePage.clock.pauseAt(now + 100);
+    await app.lifecyclePage.reload();
+    await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
+    await app.lifecyclePage.clock.runFor(19_000);
+    await expect(app.lifecyclePage.getByText(/This is taking longer than usual/)).not.toBeVisible();
+    await app.lifecyclePage.clock.runFor(2_000);
+    await expect(app.lifecyclePage.getByText(/This is taking longer than usual/)).toBeVisible();
     expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
-      kind: "recovery",
-      error: { code: "runtime_timeout" },
+      kind: "starting",
     });
     expect(readFileSync(descriptorPath, "utf8")).toBe(originalDescriptor);
     expect(app.browser.contexts()[0]?.pages()).toHaveLength(1);
     expect(await app.lifecyclePage.content()).not.toContain(runtime.token);
-    await testInfo.attach("desktop-startup-timeout", {
+    await testInfo.attach("desktop-slow-startup", {
       body: await app.lifecyclePage.screenshot(),
       contentType: "image/png",
     });
 
-    const previousRecovery = await app.lifecyclePage
-      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
-      .elementHandle();
     resumeProcess(runtime.pid);
     suspendedPid = null;
-    await app.lifecyclePage.keyboard.press("Tab");
-    const retry = app.lifecyclePage.getByRole("button", { name: "Retry", exact: true });
-    await expect(retry).toBeFocused();
-    await app.lifecyclePage.keyboard.press("Enter");
-    await previousRecovery!.waitForElementState("hidden");
+    await app.lifecyclePage.clock.resume();
     const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
     await expect(workbench.locator("#root")).not.toBeEmpty();
     expect(readDescriptor(home)).toEqual(runtime);
@@ -131,6 +128,8 @@ test("quits from recovery after the runtime crashes", async () => {
   try {
     const launched = await launchPackagedApp(home);
     app = launched;
+    crashPackagedRuntime(launched.runtime.pid);
+    await waitForAutomaticRecovery(launched);
     process.kill(launched.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
     await waitForVisibleElement(app.lifecyclePage, '[role="alert"] :is(h1, h2, h3)', "Prompt Studio needs attention");
 

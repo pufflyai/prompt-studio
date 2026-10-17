@@ -3,7 +3,7 @@ import { websocket } from "hono/bun";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase } from "./app-database";
-import { createCoreDomainServices } from "./app-domain-services";
+import { createAppSettingsService, createCoreDomainServices } from "./app-domain-services";
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
 import {
@@ -30,7 +30,6 @@ import { createExtensionAutomationPreferencesService } from "./services/extensio
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
-import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
 import type { AppBindings } from "./types";
 
@@ -129,12 +128,13 @@ const buildApp = async (
   const {
     extensionConnectionService,
     extensionRuntime,
+    extensionStartup,
     extensionRuntimeCatalog,
     extensionService,
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents,
-  } = await wireAppExtensionServices({
+  } = wireAppExtensionServices({
     config: input.config.extensions,
     db,
     dependencies,
@@ -201,8 +201,7 @@ const buildApp = async (
     ...createSessionLifecycleCallbacks(sessionHookDeps),
     onCapacityAvailable: (input) => drainSessionQueue(input),
   });
-  await settingsDBService.get();
-  const settingsService = createSettingsService({
+  const settingsService = await createAppSettingsService({
     eventBus,
     settingsDb: settingsDBService,
     onCapacityAvailable: () => drainSessionQueue(),
@@ -275,6 +274,7 @@ const buildApp = async (
     notificationWakeTimer,
     unsubscribeExtensionEvents,
     extensionRuntime,
+    extensionStartup,
     extensionScheduler,
     artifactMountWatch,
     automationService,

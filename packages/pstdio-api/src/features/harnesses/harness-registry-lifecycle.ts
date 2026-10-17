@@ -48,6 +48,13 @@ export const createHarnessRegistryLifecycle = (build: (records: RuntimeHarnessRe
   };
 
   return {
+    remove: async (projectId: string) => {
+      const scope = scopes.get(projectId);
+      if (!scope) return;
+      retire(scope, [...scope.entries.values()]);
+      await scope.cleanup;
+      scopes.delete(projectId);
+    },
     get: async (records: RuntimeHarnessRecord[], projectId?: string) => {
       ensureActive();
       const scope = scopeFor(projectId);

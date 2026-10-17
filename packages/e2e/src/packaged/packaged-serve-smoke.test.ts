@@ -19,6 +19,7 @@ import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-ext
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
 // Core extension checks cover extension-owned draft storage and allocated file roots.
+// Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -26,11 +27,10 @@ import { registerExtensionAutomationSmokeTests } from "./packaged-extension-auto
 // Includes legacy status provider loading and its migration warning.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
+import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";
 import { registerExtensionViewsSmokeTests } from "./packaged-extension-views-smoke";
-// Shared record contracts remain covered through the compiled host. The separate relay
-// image checks authenticated HTTP, immutable asset ranges and revocable native sockets.
 import { registerGroupedStorageSmokeTests } from "./packaged-grouped-storage-smoke";
-// Also checks draft and saved native command discovery, first-action dispatch, and cleanup.
+// Also checks draft and saved native command discovery, first-action dispatch, and cleanup after project deletion.
 // Includes command presentation, native plan confirmations and command-owned parameter schemas through the packaged host.
 import { registerHarnessCleanupSmokeTests } from "./packaged-harness-cleanup-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -50,19 +50,28 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
+// Composer coverage preserves route-group file paths and keeps web references natively clickable in packaged messages.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
+// Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { registerPackagedShowcaseSmokeTests } from "./packaged-showcase-smoke";
+import { registerStorageMigrationSmokeTests } from "./packaged-storage-migration-smoke";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+// Includes the declared clipboard permission on the packaged webview fixture.
+// The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
+// The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
+// packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
+// It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
+
 import { registerWorkspaceCapabilitiesSmokeTests } from "./packaged-workspace-capabilities-smoke";
 
 const BUILD_TIMEOUT = 180_000;
@@ -76,6 +85,7 @@ beforeAll(() => {
 registerSharedCodexSmokeTests();
 // Replaces an extension with old dependencies and verifies completed staging cleanup.
 registerExtensionInstallSmokeTests();
+registerExtensionStartupSmokeTests();
 registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
 registerCollectionViewOrderSmokeTests();
@@ -224,6 +234,7 @@ registerResourceChoicesSmokeTests();
 registerQueuedRequestSmokeTests();
 
 registerSessionQuerySmokeTests();
+registerStorageMigrationSmokeTests();
 
 registerWorkspaceCapabilitiesSmokeTests();
 

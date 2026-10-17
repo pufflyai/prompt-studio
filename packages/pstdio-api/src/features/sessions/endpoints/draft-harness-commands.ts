@@ -1,6 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { Workspace } from "pstdio-api-contracts";
 import { draftHarnessCommandInputSchema, harnessCommandStateSchema } from "pstdio-api-contracts";
+import { HarnessDisposedError } from "pstdio-api-runtime-host";
 import type { AppRouteHandler } from "../../../types";
+import { readCurrentHarness } from "../../harnesses/read-current-harness";
 import type { SessionsRouteDeps } from "../deps";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { toHarnessWorkspaceContext } from "../session-workspace-context";
@@ -27,23 +30,25 @@ export const draftHarnessCommandsRoute = createRoute({
     409: errorResponse,
   },
 });
+
+const workspaceReady = (workspace: Workspace) =>
+  !workspace.initializing && !workspace.setup_error && workspace.provider_state === "ready";
+
 export const draftHarnessCommandsHandler =
   (deps: SessionsRouteDeps): AppRouteHandler<typeof draftHarnessCommandsRoute> =>
   async (c) => {
     const input = c.req.valid("json");
-    if (!(await deps.projectService.get(input.project_id))) return c.json({ error: "Project not found." }, 404);
-    const harness = await deps.harnessRegistry.get(input.agent, { projectId: input.project_id });
-    if (!harness) return c.json({ error: "The selected harness is not enabled for this project." }, 404);
+    const project = await deps.projectService.get(input.project_id);
+    if (!project) return c.json({ error: "Project not found." }, 404);
+    if (!(await deps.harnessRegistry.get(input.agent, { projectId: input.project_id })))
+      return c.json({ error: "The selected harness is not enabled for this project." }, 404);
     const resolved = await resolveCreateWorkspace(deps, input.project_id, input.workspace_id);
     if (resolved.error) return c.json({ error: resolved.error }, resolved.status);
     const record = resolved.workspace!;
-    if (record.initializing || record.setup_error || record.provider_state !== "ready")
-      return c.json({ error: "The workspace is not ready." }, 409);
-    const workspace = toHarnessWorkspaceContext(record);
-    if (workspace?.executionTarget.kind === "remote" && harness.cwdRequirement === "required")
-      return c.json({ error: "This harness requires a local workspace." }, 400);
+    if (!workspaceReady(record)) return c.json({ error: "The workspace is not ready." }, 409);
+    const workspace = toHarnessWorkspaceContext(record)!;
+    const cwd = workspace.executionTarget.kind === "local" ? workspace.executionTarget.rootPath : undefined;
     try {
-      const project = (await deps.projectService.get(input.project_id))!;
       const model = await resolveCreateSessionModel(input.model, project, input.agent, deps.harnessRegistry, {
         requestAgentWasOmitted: false,
       });
@@ -53,17 +58,25 @@ export const draftHarnessCommandsHandler =
         model,
         overrides: input.params,
       });
-      const state = await harness.getCommandState(
-        {
-          workspace,
-          cwd: workspace?.executionTarget.kind === "local" ? workspace.executionTarget.rootPath : undefined,
-          model,
-          params,
-        },
+      // Model discovery may finish after an extension refresh retires its provider.
+      const response = await readCurrentHarness(
+        deps.harnessRegistry,
+        input.agent,
         { projectId: input.project_id },
+        async (harness) => {
+          if (workspace.executionTarget.kind === "remote" && harness.cwdRequirement === "required")
+            return c.json({ error: "This harness requires a local workspace." }, 400);
+          const state = await harness.getCommandState(
+            { workspace, cwd, model, params },
+            { projectId: input.project_id },
+          );
+          return c.json({ ...state, harnessId: harness.id }, 200);
+        },
       );
-      return c.json({ ...state, harnessId: harness.id }, 200);
+      return response ?? c.json({ error: "The selected harness is not enabled for this project." }, 404);
     } catch (error) {
+      if (error instanceof HarnessDisposedError)
+        return c.json({ error: "The harness changed during discovery. Try again." }, 409);
       if (error instanceof HarnessParamError) return c.json({ error: error.message }, 400);
       throw error;
     }

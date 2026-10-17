@@ -46,6 +46,10 @@ gets its own entry: `./rich-text`, `./param-editor`, `./kanban-renderer`,
 from the root entry may import one of those, or every consumer's bundler emits the
 heavy chunks even when the consumer never renders the feature.
 
+Code and diff editors follow the active theme preference, including live theme previews.
+Themes can supply a `monacoTheme` palette. Otherwise, the editors use the built-in
+light or dark palette for the preference's color mode.
+
 ## Chat Layout
 
 `ChatPanel` fills its parent pane. The transcript and composer share a centered

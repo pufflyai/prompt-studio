@@ -316,6 +316,13 @@
       "when": 1792109664474,
       "tag": "0044_deep_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792223833171,
+      "tag": "0045_curved_thor_girl",
+      "breakpoints": true
     }
   ]
 }

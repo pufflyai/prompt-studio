@@ -2,6 +2,7 @@ import type { RuntimeMonacoTheme, RuntimeThemePreference } from "../../types/run
 
 export type VsCodeColorTheme = {
   colors?: Record<string, string>;
+  pstdio?: { colors?: Record<string, string> };
   tokenColors?: { scope?: string | string[]; settings?: { foreground?: string; fontStyle?: string } }[];
 };
 
@@ -64,6 +65,11 @@ export const createThemePreference = (
     const value = colors[vsCodeToken];
     if (!value) continue;
     for (const tokenPath of tokenPaths) tokens[tokenPath] = value;
+  }
+
+  // App roles such as pressed buttons and subtle borders have no VS Code equivalent.
+  for (const [role, value] of Object.entries(theme.pstdio?.colors ?? {})) {
+    tokens[`colors.${role}`] = value;
   }
 
   return { id, mode, tokens };

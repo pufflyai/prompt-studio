@@ -21,6 +21,33 @@ const source = (name: string, definition: LoadedExtensionSource["definition"]): 
 
 const resolveNote = defineCommand({ id: "resolve-note", title: "Resolve note", async run() {} });
 
+test("resource path handlers keep their prefixes and use owner commands", () => {
+  const note = defineResourceKind({
+    id: "note",
+    paths: [{ prefix: "notes/", resolve: resolveNote.ref }],
+  });
+  const runtime = normalizeExtensionSources([
+    source("notes", defineExtension({ commands: [resolveNote], resourceKinds: [note] })),
+  ]);
+  expect(runtime.resourceKinds[0]?.paths).toEqual([
+    { prefix: "notes/", resolveCommand: "pstdio.notes.command.resolve-note" },
+  ]);
+  expect(runtime.diagnostics).toEqual([]);
+});
+
+test("resource paths cannot run another extension's command", () => {
+  const note = defineResourceKind({
+    id: "note",
+    paths: [{ prefix: "notes/", resolve: commandRef({ extensionId: "pstdio.other", id: "resolve-note" }) }],
+  });
+  const runtime = normalizeExtensionSources([
+    source("notes", defineExtension({ resourceKinds: [note] })),
+    source("other", defineExtension({ commands: [resolveNote] })),
+  ]);
+  expect(runtime.resourceKinds[0]?.paths).toEqual([]);
+  expect(runtime.diagnostics).toHaveLength(1);
+});
+
 describe("resource kind resolver", () => {
   test("names the owner's resolver command by its qualified id", () => {
     const note = defineResourceKind({ id: "note", resolve: resolveNote.ref });

@@ -209,6 +209,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0011 — Notifications](../references/extensions/0011-notifications.md)
 - [0012 — Renderer edit and refresh](../references/extensions/0012-renderer-edit-refresh-lifecycle.md)
 - [0014 — API versioning](../references/extensions/0014-api-versioning.md)
+- [0018 — Data migrations](../references/extensions/0018-data-migrations.md)
 - [0015 — Harness commands and chat modes](../references/extensions/0015-harness-commands.md)
 - [0016 — Workflow status migration](../references/extensions/0016-workflow-status-migration.md)
 

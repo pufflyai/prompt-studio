@@ -5,6 +5,34 @@ import { join } from "node:path";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { buildExtensionWebview } from "./extension-webview-builder";
 import { writeExtension } from "./test-utils/webview-build-fixture";
+import { setup } from "./test-utils/webview-failure-fixture";
+
+test("retries a repaired cache's unwritten result without rebuilding", async () => {
+  const fixture = await setup();
+  try {
+    await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page");
+    const revision = (await fixture.sources.get(fixture.id))?.loaded_revision;
+    rmSync(join(fixture.sourcePath, "..", "cache", fixture.id, "pstdio.lab.view.page", "dist"), {
+      recursive: true,
+      force: true,
+    });
+    fixture.setReportingUnavailable(true);
+
+    await expect(fixture.manager.ensure(fixture.id, "pstdio.lab.view.page")).rejects.toThrow(
+      "Could not record webview build result",
+    );
+    expect(fixture.state.builds).toBe(2);
+    expect((await fixture.sources.get(fixture.id))?.loaded_revision).toBe(revision);
+
+    fixture.setReportingUnavailable(false);
+    await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page");
+
+    expect((await fixture.sources.get(fixture.id))?.loaded_revision).not.toBe(revision);
+    expect(fixture.state.builds).toBe(2);
+  } finally {
+    await fixture.dispose();
+  }
+});
 
 test("keeps requests waiting for a sibling build after failure reporting fails", async () => {
   const root = mkdtempSync(join(tmpdir(), "webview-persistence-siblings-"));

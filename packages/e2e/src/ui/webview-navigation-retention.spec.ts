@@ -84,7 +84,7 @@ test("switching projects releases the previous project's retained webviews", asy
     await page.goBack();
     expect(frames.every((frame) => !frame.isDetached())).toBe(true);
     await page.getByRole("button", { name: "Switch project", exact: true }).click();
-    const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
+    const picker = page.getByRole("dialog", { name: "Projects", exact: true });
     await picker.getByText(projects[1].name, { exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/projects/${projects[1].id}`));
     await expect.poll(() => frames.every((frame) => frame.isDetached())).toBe(true);

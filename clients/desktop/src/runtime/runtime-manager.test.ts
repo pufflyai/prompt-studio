@@ -51,7 +51,7 @@ describe("DesktopRuntimeManager", () => {
     );
 
     await expect(manager.start()).resolves.toEqual({ descriptor, external: false });
-    manager.detach();
+    await manager.detach();
   });
 
   test("refuses a different runtime that publishes the descriptor while the sidecar starts", async () => {

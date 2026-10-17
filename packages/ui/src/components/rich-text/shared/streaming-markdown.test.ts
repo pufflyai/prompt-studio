@@ -1,9 +1,31 @@
 import { expect, test } from "bun:test";
 import { $getRoot, $isElementNode, $isTextNode, createEditor } from "lexical";
 import { ChatCodeLinkNode } from "../../chat-ui/links/chat-code-link-node";
+import { ChatResourceLinkNode } from "../../chat-ui/links/chat-resource-link-node";
 import { editorNodes } from "./editor-config";
+import { MarkdownLinkNode } from "./nodes/MarkdownLinkNode";
 import { importStreamingMarkdownToLexical } from "./streaming-markdown";
 import { createHeadlessEditor } from "./transformers/markdown-transformers-test-utils";
+
+test("completed resource bubbles keep their identity while more text streams", () => {
+  const editor = createEditor({ nodes: [...editorNodes, ChatResourceLinkNode] });
+  editor.registerNodeTransform(MarkdownLinkNode, (node) => {
+    node.replace(new ChatResourceLinkNode({ source: node.getSource(), origin: "markdown" }, node.getTextContent()));
+  });
+  const update = (text: string) => editor.update(() => importStreamingMarkdownToLexical(text), { discrete: true });
+  const firstLink = () =>
+    editor.read(() => {
+      const paragraph = $getRoot().getFirstChild();
+      return $isElementNode(paragraph) ? paragraph.getFirstChild() : null;
+    });
+  update("[Ticket](tickets/T-1.md)");
+  const key = firstLink()?.getKey();
+  update("[Ticket](tickets/T-1.md) and more text");
+  expect(firstLink()?.getKey()).toBe(key);
+  update("[Other](tickets/T-2.md) and more text");
+  expect(firstLink()).toBeInstanceOf(ChatResourceLinkNode);
+  expect(firstLink()?.getKey()).not.toBe(key);
+});
 
 test("streamed chunks retain earlier text nodes and completed blocks", () => {
   const editor = createHeadlessEditor();

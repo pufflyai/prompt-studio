@@ -62,6 +62,18 @@ export const createPageLocationControllerActions = <Value>(
     },
     isCurrentProjectUrl: (projectId) => isWorkbenchProjectUrl(input.browser.current().url, projectId),
     hasCurrentPageUrl: (projectId) => hasResolvableCurrentPageUrl(actions, projectId),
+    getBootLocation(projectId) {
+      try {
+        if (isWorkbenchProjectUrl(input.browser.current().url, projectId)) {
+          return actions.resolveUrl(projectId, input.browser.current())?.location;
+        }
+        const saved = input.persistence.load(projectId);
+        if (saved) return actions.normalizeStored(saved.location).location;
+        return actions.normalizeTarget({ kind: "page", page: input.startPage }).location;
+      } catch {
+        return undefined;
+      }
+    },
     boot: (projectId) => actions.restore(projectId, "boot", true),
     switchProject(projectId) {
       actions.clearProject(projectId);

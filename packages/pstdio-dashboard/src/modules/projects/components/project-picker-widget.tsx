@@ -82,7 +82,10 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
   );
 
   const selectedProjectId = typeof selectedProjectIdValue === "string" ? selectedProjectIdValue : undefined;
-  const projects = filterProjects(createDashboardProjects(), searchTerm, dashboardDataVersion);
+  const allProjects = createDashboardProjects();
+  const showSearch = allProjects.length >= 8;
+  const activeSearchTerm = showSearch ? searchTerm : "";
+  const projects = filterProjects(allProjects, activeSearchTerm, dashboardDataVersion);
 
   const handleSelectProject = (project: DashboardProject) => {
     void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
@@ -96,6 +99,8 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
 
   return (
     <SearchModalContent
+      title={t("title")}
+      showSearch={showSearch}
       searchValue={searchTerm}
       searchPlaceholder={t("list.searchPlaceholder")}
       searchIcon={<Search size={14} />}
@@ -112,7 +117,7 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
       <ProjectPickerRows
         projects={projects}
         selectedProjectId={selectedProjectId}
-        searchTerm={searchTerm}
+        searchTerm={activeSearchTerm}
         onSelectProject={handleSelectProject}
       />
     </SearchModalContent>
