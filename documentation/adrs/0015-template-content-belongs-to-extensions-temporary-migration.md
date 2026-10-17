@@ -4,7 +4,7 @@ Proposed: 2026-08-28
 
 ## Status
 
-Accepted.
+Superseded by [ADR 0077: Extension-owned data migrations](0077-extension-owned-data-migrations.md). The template storage decision remains. The temporary core migration and installation repair are removed; the sections below record the original workaround.
 
 ## Context
 
@@ -32,7 +32,7 @@ For a database older than extension storage, startup first runs the generated mi
 
 ## Removal
 
-This workaround is isolated to the legacy template migration, its startup repair, and source adoption. Remove all three after every supported database version has passed the schema migration that drops the old tables. The supported versions are the releases published in the last 90 days ([Database upgrades](../references/architecture/0025-database-upgrades.md)). The table-drop migration first shipped in `pstdio@0.30.0` on 2026-08-28, so the workaround may be removed in the first breaking release after 2026-11-26. A future migration system should allow extensions to run owned data migrations before core schema removal.
+The core migration and startup repair are removed with ADR 0077. Core retains opaque table snapshots before removal, so supported upgrades no longer need domain rules in core. Planner and Reports import those snapshots through the same public helpers as other extensions. The original source records and extension import code remain subject to the 90-day [database upgrade window](../references/architecture/0025-database-upgrades.md); the table-drop migration first shipped on 2026-08-28.
 
 ## Consequences
 

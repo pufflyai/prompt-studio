@@ -1,6 +1,7 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { renderPrompt } from "@pstdio/sdk/prompts";
 import { plannerTemplateAssets } from "../../extension-assets";
+import { migratePlannerTemplates } from "./migrate-templates";
 
 export interface StoredTemplate {
   name: string;
@@ -26,6 +27,7 @@ const normalizedName = (id: string) => id.replaceAll("_", "-");
 const assetByName = (name: string) => plannerTemplateAssets.find((asset) => normalizedName(asset.id) === name);
 
 export const listOwnedTemplates = async (ctx: CommandContext, type?: string) => {
+  await migratePlannerTemplates(ctx);
   const [storedTemplates, defaultNames] = await Promise.all([
     templates(ctx).list(),
     ctx.storage.get<Record<string, string>>("template-defaults"),
@@ -56,6 +58,7 @@ export const listOwnedTemplates = async (ctx: CommandContext, type?: string) => 
 };
 
 export const readOwnedTemplate = async (ctx: CommandContext, name: string): Promise<ResolvedTemplate | null> => {
+  await migratePlannerTemplates(ctx);
   const [stored, preference] = await Promise.all([templates(ctx).get(name), preferences(ctx).get(name)]);
   if (preference?.enabled === false) return null;
   if (stored?.deleted) return null;
@@ -77,6 +80,7 @@ export const saveOwnedTemplate = async (
   ctx: CommandContext,
   input: { name: string; title?: string; type: string; content: string },
 ) => {
+  await migratePlannerTemplates(ctx);
   const current = await templates(ctx).get(input.name);
   const attachments = templates(ctx).attachments(input.name);
   const blob = await attachments.put({
@@ -103,6 +107,7 @@ export const saveOwnedTemplate = async (
 };
 
 export const deleteOwnedTemplate = async (ctx: CommandContext, name: string) => {
+  await migratePlannerTemplates(ctx);
   const current = await templates(ctx).get(name);
   const asset = assetByName(name);
   if (asset) {

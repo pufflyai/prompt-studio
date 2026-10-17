@@ -5,10 +5,9 @@ import { join, resolve } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { legacyTemplateOwnerSourcePath } from "pstdio-db";
 import { createTestApp } from "../test-utils/create-test-app";
 import { runBunScenario } from "../test-utils/run-bun-scenario";
-import { repairLegacyTemplateOwners, runStartupTasks } from ".";
+import { runStartupTasks } from ".";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 const MIGRATIONS_ROOT = join(REPO_ROOT, "packages/pstdio-db/drizzle");
@@ -210,7 +209,7 @@ describe("startup default extensions", () => {
     }
   });
 
-  test("repairs a pre-extension template owner and keeps its content editable through extension commands", async () => {
+  test("an extension imports old template data after the core app starts", async () => {
     const root = join(tempRoot, "legacy-template-upgrade");
     const pstdioHome = join(root, "home");
     const storageRoot = join(root, "storage");
@@ -220,9 +219,24 @@ describe("startup default extensions", () => {
     const databasePath = await createPreExtensionTemplateDatabase(root, legacyFile);
     process.env.PSTDIO_HOME = pstdioHome;
     process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
 
     const handle = await createTestApp({ databasePath, storageRoot });
     try {
+      expect((await handle.app.request("/v1/projects")).status).toBe(200);
+      expect(await handle.deps.extensionService.listProjectExtensionInstances("project-1")).toEqual([]);
+      const sourcePath = resolve(REPO_ROOT, "extensions/pstdio-planner");
+      const manifest = JSON.parse(readFileSync(join(sourcePath, "package.json"), "utf8"));
+      await handle.deps.extensionService.enableInstalledSourceForProject({
+        projectId: "project-1",
+        sourcePath,
+        installName: "pstdio-planner",
+        name: "pstdio-planner",
+        extensionId: "pstdio.pstdio-planner",
+        displayName: "Planner",
+        manifest,
+        version: manifest.version,
+      });
       let read: Response | undefined;
       for (let attempt = 0; attempt < 80; attempt += 1) {
         read = await invokePlannerTemplate(handle.app, "read", { name: "implement-ticket" });
@@ -258,37 +272,4 @@ describe("startup default extensions", () => {
       await handle.close();
     }
   }, 40_000);
-
-  test("keeps a legacy template owner available for retry when its extension install fails", async () => {
-    const sourcePath = legacyTemplateOwnerSourcePath("pstdio.pstdio-planner");
-    let registered = false;
-
-    await expect(
-      repairLegacyTemplateOwners(
-        {
-          installedExtensionSourcesService: {
-            list: async () => [
-              {
-                extension_id: "pstdio.pstdio-planner",
-                install_name: "pstdio-planner",
-                source_path: sourcePath,
-              },
-            ],
-          },
-          extensionService: {
-            registerInstalledSource: async () => {
-              registered = true;
-            },
-          },
-          extensionUpgradeService: { releaseRef: undefined },
-        } as never,
-        async () => {
-          throw new Error("catalog unavailable");
-        },
-      ),
-    ).resolves.toBeUndefined();
-
-    expect(registered).toBe(false);
-    expect(sourcePath).toBe(legacyTemplateOwnerSourcePath("pstdio.pstdio-planner"));
-  });
 });

@@ -1,7 +1,6 @@
 export { and, eq, sql } from "drizzle-orm";
 export type { DbClient, DbOpenPhase } from "./db/connection.pglite";
 export { createDb } from "./db/connection.pglite";
-export { legacyTemplateOwnerSourcePath } from "./db/legacy-template-migration";
 export { resolveDbPath } from "./db/paths";
 export * from "./db/schemas.pg";
 export * from "./db/schemas.zod";
