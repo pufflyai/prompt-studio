@@ -14,8 +14,10 @@ services:
       S3_ACCESS_KEY_ID: relay_test_access
       S3_SECRET_ACCESS_KEY: relay_test_secret_key
       RELAY_ACCESS_TRUST_FILE: /access-trust/trust.json
+      RELAY_RECOVERY_KEY_FILE: /recovery/key
     volumes:
       - access-trust:/access-trust:ro
+      - recovery-key:/recovery:ro
     healthcheck:
       test: ["CMD", "bun", "-e", "const r = await fetch('http://127.0.0.1:8080/health'); if (!r.ok) process.exit(1)"]
       interval: 1s
@@ -76,6 +78,7 @@ services:
       MANAGER_ORIGIN: https://authority:8443
       NODE_EXTRA_CA_CERTS: /tls-public/authority-cert.pem
       RELAY_ACCESS_TRUST_FILE: /access-trust/trust.json
+      RELAY_RECOVERY_KEY_FILE: /recovery/key
       S3_ENDPOINT: http://objects:9000
       S3_BUCKET: relay-test
       S3_REGION: us-east-1
@@ -85,6 +88,7 @@ services:
       - fixture-data:/fixture:ro
       - access-trust:/access-trust:ro
       - tls-public:/tls-public:ro
+      - recovery-key:/recovery:ro
 
   tls:
     build:
@@ -115,6 +119,7 @@ services:
     volumes:
       - fixture-data:/fixture
       - access-trust:/access-trust
+      - recovery-key:/recovery
 
   authority:
     build:
@@ -155,6 +160,7 @@ volumes:
   relay-tls-private:
   tls-private:
   tls-public:
+  recovery-key:
 
 networks:
   default:

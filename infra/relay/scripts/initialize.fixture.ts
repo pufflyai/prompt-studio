@@ -1,7 +1,10 @@
 import { Client } from "pg";
 import { createAccountManager, migrateAccountManager } from "pstdio-account-manager";
 import { createRelayAssets, createRelayStorage, migrateRelayStorage } from "../src/index";
+import { initializeRecoveryKey } from "../src/recovery-key";
 import { createFixtureAuthentication, fixtureManagerConfig } from "./manager.fixture";
+
+await initializeRecoveryKey("/recovery/key");
 
 const admin = new Client({ connectionString: process.env.FIXTURE_ADMIN_URL! });
 await admin.connect();

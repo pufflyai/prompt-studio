@@ -13,6 +13,7 @@ export const completedOperations = (snapshot: Snapshot | null) => {
 };
 
 export const retainAcceptance = (entry: JournalEntry, receipt: Receipt) => {
+  if (receipt.recoveryProof) entry.recoveryProof = receipt.recoveryProof;
   if (receipt.status !== "accepted" || !receipt.checkpoint) return;
   const next = { fingerprint: receipt.fingerprint, order: receipt.order, checkpoint: receipt.checkpoint };
   const previous = entry.acceptance;

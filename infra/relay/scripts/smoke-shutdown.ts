@@ -17,6 +17,7 @@ export const checkBuiltShutdown = async (manager: ReturnType<typeof createAccoun
     "PATH",
     "HOME",
     "RELAY_ACCESS_TRUST_FILE",
+    "RELAY_RECOVERY_KEY_FILE",
     "DATABASE_URL",
     "S3_ENDPOINT",
     "S3_BUCKET",

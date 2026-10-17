@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { replaySchema } from "./replay";
 import { checkpointSchema } from "./state";
-import { assetSchema, fingerprintSchema, identitySchema } from "./wire";
+import { assetSchema, fingerprintSchema, identitySchema, mutationSchema } from "./wire";
 
 export const relayOperationSchema = z.enum([
   "snapshot",
   "replay",
   "submit",
+  "recover",
   "changes",
   "assets/begin",
   "assets/part",
@@ -14,6 +15,7 @@ export const relayOperationSchema = z.enum([
   "assets/cancel",
   "assets/read",
 ]);
+export const relayRecoverySchema = z.strictObject({ mutation: mutationSchema, proof: fingerprintSchema });
 const targetSchema = z.strictObject({ workbenchId: identitySchema, extensionId: identitySchema });
 export type RelayTarget = z.infer<typeof targetSchema>;
 export type RelayOperation = z.infer<typeof relayOperationSchema>;

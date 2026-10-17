@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Mutation, Receipt } from "pstdio-sync-contracts";
 import { notifyScope } from "./changes";
-import { operationRow } from "./codec";
+import { operationRow, receiptFromRow } from "./codec";
 import type { RelayTransaction } from "./database";
 import { relayOperations, relayScopes } from "./schema";
 
@@ -12,6 +12,14 @@ export const saveReceipt = async (
   previous: typeof relayOperations.$inferSelect | undefined,
   result: Pick<Receipt, "status" | "reason" | "conflictId">,
 ) => {
+  if (
+    previous &&
+    previous.status === result.status &&
+    previous.reason === (result.reason ?? null) &&
+    previous.conflictId === (result.conflictId ?? null)
+  ) {
+    return receiptFromRow(previous);
+  }
   const receipt: Receipt = {
     order: previous?.order ?? owner.journalSequence + 1,
     operationId: mutation.operationId,
