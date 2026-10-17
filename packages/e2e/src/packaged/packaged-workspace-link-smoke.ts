@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { parsePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { parsePageUrl } from "pstdio-api-contracts";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 export const expectPackagedWorkspaceFileLink = async (input: {

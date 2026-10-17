@@ -5,7 +5,6 @@ import { createTerminalSessionCapability } from "./terminal-session-capability";
 import { createWebviewPreferencesCapabilities, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
-  dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;
   workbench: WorkbenchCore;
   placement?: WorkbenchPanelInstance;
   extensionId?: string;
@@ -14,12 +13,6 @@ interface CreateWorkbenchWebviewHostCapabilitiesInput {
   /** Event channel into the guest; terminal.session is only offered when present. */
   hostEvents?: HostEventPublisher;
 }
-
-const dispatchDocumentKeyboardEvent = (params: KeyboardEventInit) => {
-  if (typeof document === "undefined") return;
-  const event = new KeyboardEvent("keydown", { ...params, bubbles: true, cancelable: true });
-  document.dispatchEvent(event);
-};
 
 export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostCapabilitiesInput) =>
   ({
@@ -62,8 +55,6 @@ export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWeb
       });
     },
     ...createWebviewPreferencesCapabilities(input),
-    "host.dispatchKeyboardEvent": (params: unknown) =>
-      (input.dispatchKeyboardEvent ?? dispatchDocumentKeyboardEvent)(params as KeyboardEventInit),
     ...(input.hostEvents
       ? {
           "terminal.session": createTerminalSessionCapability({

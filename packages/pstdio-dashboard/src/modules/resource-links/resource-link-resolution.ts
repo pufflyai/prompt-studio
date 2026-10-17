@@ -1,14 +1,8 @@
-import {
-  isNavigationTarget,
-  qualifyNavigationTarget,
-  type ResourceRef,
-  type ResourceResolution,
-  resourceKey,
-} from "@pstdio/sdk/extensions";
+import { isNavigationTarget, type ResourceRef, type ResourceResolution, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { ResourceLinkCandidate } from "@pstdio/workbench/react";
-import { extensionResourceRefSchema } from "pstdio-api-contracts";
+import { extensionResourceRefSchema, qualifyNavigationTarget } from "pstdio-api-contracts";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";

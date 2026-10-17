@@ -1,6 +1,6 @@
-import type { BoardView, BoardViews } from "@pstdio/sdk/api";
+import type { BoardView } from "@pstdio/sdk/api";
 import type { CollectionViewsProvider, CollectionViewsSource } from "@pstdio/workbench";
-import { createApiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { type CollectionChange, getRuntimeCollections } from "@/lib/sync/collections";
 import {
   subscribeToExtensionEventFeed,
@@ -19,15 +19,14 @@ interface CollectionViewsInput {
 }
 
 /** Native and extension collections share storage, sync, defaults, and mutation actions. */
-export const createSharedCollectionViews = <TSettings>(
+export const createSharedCollectionViews = <
+  TSettings extends NonNullable<import("@pstdio/sdk/api").BoardView["settings"]>,
+>(
   input: CollectionViewsInput,
 ): CollectionViewsProvider<TSettings> => {
   const { projectId, extensionInstanceId: instanceId, localId, record } = input;
   const owner = getRuntimeCollections();
-  const apiRequest = createApiRequest(owner.connection);
-  const path = `/v1/projects/${encodeURIComponent(projectId)}/boards/${encodeURIComponent(record.id)}/views`;
-  const viewPath = (id: string) =>
-    `/v1/projects/${encodeURIComponent(projectId)}/board-views/${encodeURIComponent(id)}`;
+  const views = getApiClient(owner.connection).views;
   let cached: CollectionViewsSource<TSettings> | undefined;
   let version = -1;
   let pendingOrder: { ids: string[]; saved: boolean; snapshotDuringSave: boolean } | undefined;
@@ -65,22 +64,22 @@ export const createSharedCollectionViews = <TSettings>(
   const actions: Omit<CollectionViewsSource<TSettings>, "views" | "defaultViewId"> = {
     // The views API returns the settings of the board or table it was asked about.
     onCreateView: async (body) =>
-      (await apiRequest<BoardView>(path, { method: "POST", body })) as BoardView & { settings: TSettings },
+      (await views.create(projectId, record.id, body)) as BoardView & { settings: TSettings },
     onUpdateView: async (id, body) => {
-      await apiRequest(viewPath(id), { method: "PATCH", body });
+      await views.update(projectId, id, body);
     },
     onDeleteView: async (id) => {
-      await apiRequest(viewPath(id), { method: "DELETE" });
+      await views.delete(projectId, id);
     },
     onSetDefaultView: async (viewId) => {
-      await apiRequest(`${path}/default`, { method: "PUT", body: { viewId } });
+      await views.setDefault(projectId, record.id, viewId);
     },
     onReorderViews: async (viewIds) => {
       const order = { ids: [...viewIds], saved: false, snapshotDuringSave: false };
       pendingOrder = order;
       notify();
       try {
-        await apiRequest(`${path}/order`, { method: "PUT", body: { viewIds } });
+        await views.reorder(projectId, record.id, viewIds);
       } catch (error) {
         if (pendingOrder === order) {
           pendingOrder = undefined;
@@ -92,7 +91,7 @@ export const createSharedCollectionViews = <TSettings>(
       if (order.snapshotDuringSave && pendingOrder === order) {
         // A snapshot may follow the server commit but precede its HTTP response.
         // Read after acknowledgement instead of guessing which order is newer.
-        const current = await apiRequest<BoardViews>(path).catch(() => undefined);
+        const current = await views.list(projectId, record.id).catch(() => undefined);
         if (current && pendingOrder === order) {
           order.ids = current.views.map((view) => view.id);
           notify();
@@ -148,7 +147,7 @@ export const createSharedCollectionViews = <TSettings>(
       const controller = new AbortController();
       // Reads also clean deleted field options; the normal sync stream publishes any cleanup.
       const refresh = () => {
-        void apiRequest<BoardViews>(path, { signal: controller.signal }).catch(() => undefined);
+        void views.list(projectId, record.id, { signal: controller.signal }).catch(() => undefined);
       };
       const stopEvents = subscribeToExtensionEventFeed((event) => {
         if (

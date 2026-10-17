@@ -1,5 +1,5 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import { isWorkbenchProjectUrl, parseWorkbenchPageUrl } from "@pstdio/sdk/extensions";
+import { isWorkbenchProjectUrl, parseWorkbenchPageUrl } from "pstdio-api-contracts";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { createPageLocationControllerActions } from "./page-location-actions";

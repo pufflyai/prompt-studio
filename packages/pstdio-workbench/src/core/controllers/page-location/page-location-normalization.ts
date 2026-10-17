@@ -7,7 +7,8 @@ import type {
   PageRef,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
-import { isFileSourcePosition, normalizePageParams } from "@pstdio/sdk/extensions";
+import { isFileSourcePosition } from "@pstdio/sdk/extensions";
+import { normalizePageParams } from "pstdio-api-contracts";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 
 export const workbenchPageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;

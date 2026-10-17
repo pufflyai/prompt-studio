@@ -51,6 +51,7 @@ export type HostApi = {
 };
 
 export type GuestApi = {
+  dispatchKeyboardEvent: (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => Promise<void>;
   ready: (payload: ReadyPayload) => void;
   runtimeError: (payload: RuntimeErrorPayload) => void;
   call: (request: HostCapabilityRequest) => Promise<unknown>;

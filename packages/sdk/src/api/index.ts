@@ -11,7 +11,6 @@ export type {
   BoardViews,
   BoardViewUpdate,
   CreateAutomationRunInput,
-  CreateNotificationInput,
   ExtensionDiagnosticsResponse,
   InstallExtensionRequest,
   InstallExtensionResponse,
@@ -20,17 +19,7 @@ export type {
   IssueAutomationTokenResponse,
   ListAutomationRunEventsResponse,
   ListAutomationTokensResponse,
-  ListNotificationsQuery,
-  ListNotificationsResponse,
-  Notification,
-  NotificationAction,
-  NotificationActorType,
-  NotificationKind,
-  NotificationOrigin,
-  NotificationPriority,
-  NotificationStatus,
   ResourceRef,
-  UpdateNotificationInput,
   WorkspaceProviderDescriptor,
 } from "pstdio-api-contracts";
 // Lets clients check a view filter the way the views API does before they send it.
@@ -70,6 +59,19 @@ export type {
   WorkbenchExtensionViewRecord,
 } from "./extensions";
 export type { CreateProjectInput, UpdateProjectInput } from "./projects";
+export type {
+  CreateNotificationInput,
+  ListNotificationsQuery,
+  ListNotificationsResponse,
+  Notification,
+  NotificationAction,
+  NotificationActorType,
+  NotificationKind,
+  NotificationOrigin,
+  NotificationPriority,
+  NotificationStatus,
+  UpdateNotificationInput,
+} from "./resource-compat";
 export type {
   ApprovalInput,
   CombineQueuedFollowUpsInput,

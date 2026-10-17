@@ -12,7 +12,7 @@ import type {
   JsonObject,
   Struct,
 } from "@pstdio/sdk/extensions";
-import { qualifyNavigationTarget } from "@pstdio/sdk/extensions";
+import { qualifyNavigationTarget } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";

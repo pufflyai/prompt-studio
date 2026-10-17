@@ -1,4 +1,5 @@
-import { defaultPageResourceCodec, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import { registerArrangementCommands } from "./controllers/composition/arrangement-commands";

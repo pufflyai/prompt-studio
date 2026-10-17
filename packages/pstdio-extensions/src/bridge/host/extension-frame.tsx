@@ -2,6 +2,7 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { host } from "rimless";
 import type {
   ExtensionViewDescriptor,
+  GuestApi,
   HostCapabilityRegistry,
   HostCapabilityRequest,
   HostEventMessage,
@@ -19,6 +20,8 @@ export interface ExtensionFrameProps {
   props: unknown;
   theme: ThemePreference;
   capabilities?: HostCapabilityRegistry;
+  /** Private guest shortcut forwarding, outside extension capability grants. */
+  onKeyboardEvent?: (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => void;
   /** Publisher whose emitted events are forwarded into the guest once connected. */
   hostEvents?: HostEventPublisher;
   onReady?: () => void;
@@ -67,6 +70,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     props: extensionProps,
     theme,
     capabilities,
+    onKeyboardEvent,
     hostEvents,
     onReady,
     onError,
@@ -82,6 +86,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const propsRef = useRef(extensionProps);
   const themeRef = useRef(theme);
   const capabilitiesRef = useRef(capabilities);
+  const onKeyboardEventRef = useRef(onKeyboardEvent);
   const hostEventsRef = useRef(hostEvents);
   const declaredCapabilitiesRef = useRef(view.webview.capabilities);
   const onReadyRef = useRef(onReady);
@@ -95,6 +100,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   propsRef.current = extensionProps;
   themeRef.current = theme;
   capabilitiesRef.current = capabilities;
+  onKeyboardEventRef.current = onKeyboardEvent;
   hostEventsRef.current = hostEvents;
   declaredCapabilitiesRef.current = view.webview.capabilities;
   onReadyRef.current = onReady;
@@ -143,6 +149,10 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     reportDiagnostics(createCapabilityGate().diagnostics);
 
     const hostApi = {
+      dispatchKeyboardEvent: async (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => {
+        if (onKeyboardEventRef.current) return onKeyboardEventRef.current(event);
+        document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
+      },
       ready: () => {
         // no-op; init fires from host.connect().then() below.
       },
@@ -152,7 +162,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       call: async (request: HostCapabilityRequest) => {
         return await createCapabilityGate().call(request);
       },
-    };
+    } satisfies GuestApi;
 
     const connect = () => {
       initializedRef.current = false;

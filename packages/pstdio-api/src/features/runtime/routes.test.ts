@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { createClient } from "@pstdio/sdk/client";
 import type { AppBindings } from "../../types";
 import { createTerminalSupervisor } from "../extensions/extension-terminal-runtime";
 import {
@@ -124,7 +125,16 @@ describe("runtime control routes", () => {
   });
 
   test("returns authenticated runtime identity and readiness", async () => {
-    const { request } = createHarness();
+    const { app, request } = createHarness();
+    const client = createClient({
+      baseUrl: "http://127.0.0.1:43123",
+      token: "runtime-secret",
+      fetch: Object.assign((url: unknown, init?: RequestInit) => app.request(String(url), init), {
+        preconnect: fetch.preconnect,
+      }),
+    });
+    const identity: import("pstdio-api-contracts").RuntimeReadyResponse = await client.runtime.ready();
+    expect(identity).toEqual({ instanceId: "runtime-one", ok: true, ownerType: "desktop", protocolVersion: 1 });
     const response = await request("/runtime/ready");
 
     expect(response.status).toBe(200);

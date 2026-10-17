@@ -1,15 +1,8 @@
-import type {
-  IssueAutomationTokenInput,
-  IssueAutomationTokenResponse,
-  ListAutomationTokensResponse,
-} from "@pstdio/sdk/api";
-import { apiRequest } from "@/lib/api";
+import type { IssueAutomationTokenInput } from "@pstdio/sdk/api";
+import { getApiClient } from "@/lib/api";
 
-export const listAutomationTokens = (projectId: string) =>
-  apiRequest<ListAutomationTokensResponse>(`/v1/auth/tokens?projectId=${encodeURIComponent(projectId)}`);
+export const listAutomationTokens = (projectId: string) => getApiClient().automation.listTokens(projectId);
 
-export const issueAutomationToken = (input: IssueAutomationTokenInput) =>
-  apiRequest<IssueAutomationTokenResponse>("/v1/auth/tokens", { method: "POST", body: input });
+export const issueAutomationToken = (input: IssueAutomationTokenInput) => getApiClient().automation.issueToken(input);
 
-export const revokeAutomationToken = (tokenId: string) =>
-  apiRequest<void>(`/v1/auth/tokens/${encodeURIComponent(tokenId)}`, { method: "DELETE" });
+export const revokeAutomationToken = (tokenId: string) => getApiClient().automation.revokeToken(tokenId);

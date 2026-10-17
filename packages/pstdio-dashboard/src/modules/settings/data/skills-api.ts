@@ -1,34 +1,6 @@
-import { apiRequest } from "@/lib/api";
-
-export type ProjectSkill = {
-  id: string;
-  project_id: string;
-  name: string;
-  title: string;
-  description: string;
-  source_kind: "project" | "extension";
-  files: { path: string; content: string; encoding: "utf8" }[];
-  editable: boolean;
-  extension_instance_id?: string;
-  extension_id?: string;
-  installed_extension_id?: string;
-  install_name?: string;
-  key?: string;
-  enabled?: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-export type ProjectSkillDetails = ProjectSkill & {
-  installed_agents: string[];
-  agent_installations: {
-    agent_id: string;
-    agent_name: string;
-    installed_version: string | null;
-  }[];
-};
-
-export const getProjectSkills = (projectId: string) => apiRequest<ProjectSkill[]>(`/v1/projects/${projectId}/skills`);
-
-export const getProjectSkill = (projectId: string, name: string) =>
-  apiRequest<ProjectSkillDetails>(`/v1/projects/${projectId}/skills/${encodeURIComponent(name)}`);
+import type { Skill, SkillWithContent } from "@pstdio/sdk/resources";
+import { getApiClient } from "@/lib/api";
+export type ProjectSkill = Skill;
+export type ProjectSkillDetails = SkillWithContent;
+export const getProjectSkills = (projectId: string) => getApiClient().skills.list(projectId);
+export const getProjectSkill = (projectId: string, name: string) => getApiClient().skills.get(projectId, name);

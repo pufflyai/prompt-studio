@@ -12,7 +12,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 export type ExecuteDashboardExtensionCommand = (
   projectId: string,
   commandId: string,
-  body: unknown,
+  body: Omit<import("@pstdio/sdk/api").CommandExecuteRequest, "projectId">,
   signal?: AbortSignal,
 ) => Promise<CommandExecuteResponse>;
 

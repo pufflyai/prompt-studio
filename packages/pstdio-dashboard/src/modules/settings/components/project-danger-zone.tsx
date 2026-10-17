@@ -3,7 +3,7 @@ import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 
 interface ProjectDangerZoneProps {
   projectId?: string;
@@ -15,7 +15,7 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
   const { projectId, projectName, onDeleted } = props;
   const deleteProject = useMutation({
     mutationFn: async (input: { projectId: string }) => {
-      await apiRequest(`/v1/projects/${input.projectId}`, { method: "DELETE" });
+      await getApiClient().projects.delete(input.projectId);
     },
   });
   const [isDeleteOpen, setDeleteOpen] = useState(false);
