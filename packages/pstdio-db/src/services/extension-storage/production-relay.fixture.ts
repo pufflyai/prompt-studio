@@ -1,18 +1,59 @@
 import { resolve } from "node:path";
+import { CreateBucketCommand, DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { SQL } from "bun";
-import { createRelayStorage, migrateRelayStorage } from "pstdio-relay";
-import type { Asset, Mutation, Scope, Snapshot } from "pstdio-sync-contracts";
-import { createConformanceObjects } from "pstdio-sync-contracts/conformance";
+import { createRelayAssets, createRelayStorage, migrateRelayStorage } from "pstdio-relay";
+import { type Asset, fingerprint, type Mutation, type Scope, type Snapshot } from "pstdio-sync-contracts";
 
 export const createProductionRelayServices = async (databaseUrl: string, objectEndpoint: string) => {
   if (!databaseUrl || !objectEndpoint) throw new Error("Production conformance requires isolated service endpoints");
-  const objects = createConformanceObjects(objectEndpoint);
+  const bucket = `relay-conformance-${crypto.randomUUID()}`;
+  const config = {
+    endpoint: objectEndpoint,
+    region: "us-east-1",
+    forcePathStyle: true,
+    credentials: { accessKeyId: "conformance-access", secretAccessKey: "conformance-secret-only" },
+  };
+  const admin = new S3Client({ ...config, maxAttempts: 1 });
+  const assets = createRelayAssets({ databaseUrl, bucket, s3: config });
+  const faults = new SQL(databaseUrl);
+  const objects = {
+    async initialize() {
+      await admin.send(new CreateBucketCommand({ Bucket: bucket }));
+    },
+    async put(scope: Scope, asset: Asset, bytes: Uint8Array) {
+      const started = performance.now();
+      if (await assets.complete(scope, asset)) {
+        console.log(`Relay fixture reused verified asset: ${(performance.now() - started).toFixed(2)}ms`);
+        return;
+      }
+      const id = crypto.randomUUID();
+      const upload = await assets.begin(scope, id, asset);
+      for (let offset = 0; offset < bytes.byteLength; offset += upload.partSize) {
+        const part = bytes.slice(offset, offset + upload.partSize);
+        await assets.writePart(scope, id, offset / upload.partSize + 1, {
+          byteLength: part.byteLength,
+          sha256: new Bun.CryptoHasher("sha256").update(part).digest("hex"),
+          body: new Blob([part]).stream(),
+        });
+      }
+      await assets.finish(scope, id);
+      console.log(`Relay fixture streamed and verified asset: ${(performance.now() - started).toFixed(2)}ms`);
+    },
+    async get(scope: Scope, asset: Asset) {
+      const stored = await assets.read(scope, asset);
+      // The shared scenario API buffers only small fixture values; completion uses the production owner.
+      return stored ? new Uint8Array(await new Response(stored.body).arrayBuffer()) : null;
+    },
+    async remove(scope: Scope, asset: Asset) {
+      const rows = await faults`SELECT "objectKey" FROM relay_verified_assets
+        WHERE "ownerId" = ${await fingerprint(scope)} AND reference = ${await fingerprint(asset)}`;
+      for (const row of rows) await admin.send(new DeleteObjectCommand({ Bucket: bucket, Key: row.objectKey }));
+    },
+    close: () => admin.destroy(),
+  };
   await objects.initialize();
   await migrateRelayStorage(databaseUrl, resolve(import.meta.dir, "../../../../../infra/relay/drizzle"));
-  const storage = createRelayStorage(databaseUrl, {
-    complete: async (scope: Scope, asset: Asset) => (await objects.get(scope, asset)) !== null,
-  });
-  const faults = new SQL(databaseUrl);
+  const storage = createRelayStorage(databaseUrl, assets);
   await faults`CREATE TABLE relay_test_commit_failures (operation_id text PRIMARY KEY)`;
   await faults`CREATE FUNCTION relay_test_fail_commit() RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN
@@ -59,6 +100,7 @@ export const createProductionRelayServices = async (databaseUrl: string, objectE
     async close() {
       await faults.close();
       await relay.close();
+      await assets.close();
       objects.close();
     },
   };

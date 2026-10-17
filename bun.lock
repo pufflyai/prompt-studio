@@ -381,6 +381,7 @@
     "infra/relay": {
       "name": "pstdio-relay",
       "dependencies": {
+        "@aws-sdk/client-s3": "3.1152.0",
         "drizzle-orm": "^0.45.2",
         "pg": "^8.20.0",
         "pstdio-sync": "workspace:*",
@@ -557,6 +558,7 @@
         "zod": "^4.3.6",
       },
       "devDependencies": {
+        "@aws-sdk/client-s3": "3.1152.0",
         "@types/bun": "1.4.2",
         "@types/pg": "^8.18.0",
         "drizzle-kit": "^0.31.9",

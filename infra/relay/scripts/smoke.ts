@@ -1,32 +1,13 @@
 import { strict as assert } from "node:assert";
-import { S3Client } from "bun";
-import { canonicalJson, fingerprint, sealMutation } from "pstdio-sync-contracts";
-import { createRelayStorage, migrateRelayStorage } from "../src/index";
+import { fingerprint, sealMutation } from "pstdio-sync-contracts";
+import { createRelayAssets, createRelayStorage, migrateRelayStorage } from "../src/index";
 
 const response = await fetch(`${process.env.RELAY_URL}/health`);
 assert.equal(response.status, 200);
 assert.deepEqual(await response.json(), { status: "ok" });
 console.log("Built relay liveness passed");
 
-const s3 = new S3Client({
-  endpoint: process.env.S3_ENDPOINT,
-  bucket: process.env.S3_BUCKET,
-  region: process.env.S3_REGION,
-  accessKeyId: process.env.S3_ACCESS_KEY_ID,
-  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-  virtualHostedStyle: false,
-});
-const key = `smoke/${crypto.randomUUID()}`;
 const bytes = crypto.getRandomValues(new Uint8Array(1024));
-try {
-  await s3.write(key, bytes);
-  assert.equal(await s3.exists(key), true);
-  assert.deepEqual(new Uint8Array(await s3.file(key).arrayBuffer()), bytes);
-} finally {
-  await s3.delete(key);
-}
-assert.equal(await s3.exists(key), false);
-console.log("Disposable S3 byte round trip and deletion passed");
 
 const scope = { accountId: "smoke-owner", workbenchId: crypto.randomUUID(), extensionId: "notes" };
 const asset = {
@@ -34,20 +15,19 @@ const asset = {
   byteLength: bytes.length,
   mediaType: "image/png",
 };
-const assetKey = `smoke/${scope.workbenchId}/${asset.sha256}`;
 const databaseUrl = process.env.DATABASE_URL!;
 await migrateRelayStorage(databaseUrl, "/app/drizzle");
-const assets = {
-  async complete(input: typeof scope, reference: typeof asset) {
-    assert.equal(canonicalJson(input), canonicalJson(scope));
-    const stored = new Uint8Array(await s3.file(assetKey).arrayBuffer());
-    return (
-      stored.length === reference.byteLength &&
-      new Bun.CryptoHasher("sha256").update(stored).digest("hex") === reference.sha256
-    );
+const config = {
+  databaseUrl,
+  bucket: process.env.S3_BUCKET!,
+  s3: {
+    endpoint: process.env.S3_ENDPOINT,
+    region: process.env.S3_REGION,
+    forcePathStyle: true,
+    credentials: { accessKeyId: process.env.S3_ACCESS_KEY_ID!, secretAccessKey: process.env.S3_SECRET_ACCESS_KEY! },
   },
 };
-await s3.write(assetKey, bytes);
+let assets = createRelayAssets(config);
 let storage = createRelayStorage(databaseUrl, assets);
 try {
   const owner = await storage.initialize(scope, "published-smoke-1");
@@ -67,9 +47,17 @@ try {
       { recordId: "image", expectedRevision: 0, baseDeleted: false, asset: { base: null, next: asset } },
     ],
   });
+  assert.equal((await owner.submit(mutation)).status, "pending");
+  assert.deepEqual((await owner.snapshot()).records, {});
+  await assets.begin(scope, "built-smoke", asset);
+  await assets.writePart(scope, "built-smoke", 1, { ...asset, body: new Blob([bytes]).stream() });
+  assert.equal(await assets.complete(scope, asset), false);
+  await assets.finish(scope, "built-smoke");
   const receipt = await owner.submit(mutation);
   assert.equal(receipt.status, "accepted");
   await storage.close();
+  await assets.close();
+  assets = createRelayAssets(config);
   storage = createRelayStorage(databaseUrl, assets);
   const reopened = storage.owner(scope);
   assert.deepEqual(await reopened.submit(mutation), receipt);
@@ -79,8 +67,20 @@ try {
   const replay = await reopened.replay({ epoch: snapshot.checkpoint.epoch, sequence: 0 });
   assert.equal(replay.status, "replay");
   if (replay.status === "replay") assert.deepEqual(replay.batch.groups, [receipt]);
-  console.log("Built production PostgreSQL publication, restart receipt, snapshot and replay passed");
+  const stored = await assets.read(scope, asset);
+  assert.deepEqual(stored?.asset, asset);
+  const hash = new Bun.CryptoHasher("sha256");
+  let length = 0;
+  for await (const chunk of stored!.body) {
+    hash.update(chunk);
+    length += chunk.byteLength;
+  }
+  assert.equal(hash.digest("hex"), asset.sha256);
+  assert.equal(length, asset.byteLength);
+  await assets.cancel(scope, "built-smoke");
+  assert.equal(await assets.complete(scope, asset), true);
+  console.log("Built production PostgreSQL and S3 streaming publication, restart receipt, snapshot and replay passed");
 } finally {
   await storage.close();
-  await s3.delete(assetKey);
+  await assets.close();
 }
