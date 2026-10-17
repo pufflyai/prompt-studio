@@ -91,14 +91,27 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
     await transaction.delete(session);
     await transaction.delete(credentials);
     await transaction.update(accounts).set({ state: "disabled" });
-    if (snapshot.accounts.length)
+    // Bound each SQL statement while keeping the full restore in this transaction.
+    const batchSize = 1_000;
+    for (let offset = 0; offset < snapshot.accounts.length; offset += batchSize)
       await transaction
         .insert(accounts)
-        .values(snapshot.accounts.map((account) => ({ ...account, state: "disabled" as const })))
+        .values(
+          snapshot.accounts
+            .slice(offset, offset + batchSize)
+            .map((account) => ({ ...account, state: "disabled" as const })),
+        )
         .onConflictDoNothing();
-    if (snapshot.workbenches.length)
-      await transaction.insert(workbenches).values(snapshot.workbenches).onConflictDoNothing();
-    if (snapshot.requests.length) await transaction.insert(requests).values(snapshot.requests).onConflictDoNothing();
+    for (let offset = 0; offset < snapshot.workbenches.length; offset += batchSize)
+      await transaction
+        .insert(workbenches)
+        .values(snapshot.workbenches.slice(offset, offset + batchSize))
+        .onConflictDoNothing();
+    for (let offset = 0; offset < snapshot.requests.length; offset += batchSize)
+      await transaction
+        .insert(requests)
+        .values(snapshot.requests.slice(offset, offset + batchSize))
+        .onConflictDoNothing();
     await transaction.insert(restoreRequests).values({ id, fingerprint: digest });
   });
 };

@@ -37,4 +37,5 @@ CREATE TABLE "manager_workbenches" (
 ALTER TABLE "manager_credentials" ADD CONSTRAINT "manager_credentials_accountId_workbenchId_manager_workbenches_accountId_id_fk" FOREIGN KEY ("accountId","workbenchId") REFERENCES "public"."manager_workbenches"("accountId","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "manager_requests" ADD CONSTRAINT "manager_requests_accountId_manager_accounts_id_fk" FOREIGN KEY ("accountId") REFERENCES "public"."manager_accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "manager_workbenches" ADD CONSTRAINT "manager_workbenches_accountId_manager_accounts_id_fk" FOREIGN KEY ("accountId") REFERENCES "public"."manager_accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "manager_credentials_digest" ON "manager_credentials" USING btree ("digest");
+CREATE UNIQUE INDEX "manager_credentials_digest" ON "manager_credentials" USING btree ("digest");--> statement-breakpoint
+CREATE INDEX "manager_credentials_account_environment" ON "manager_credentials" USING btree ("accountId","environmentId");
