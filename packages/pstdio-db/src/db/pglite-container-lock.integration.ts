@@ -11,6 +11,8 @@ const args = [
   "docker",
   "run",
   "--rm",
+  "--user",
+  `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`,
   "-v",
   `${repo}:/work`,
   "-v",

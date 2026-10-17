@@ -26,16 +26,30 @@ export const relayOrigin = (input: string) => {
   return url.origin;
 };
 
+const waitForToken = async (token: () => Promise<string>, signal: AbortSignal) => {
+  signal.throwIfAborted();
+  const cancelled = Promise.withResolvers<never>();
+  const abort = () => cancelled.reject(signal.reason);
+  signal.addEventListener("abort", abort, { once: true });
+  try {
+    // Renewal may be shared by other owners; release only this request's wait.
+    return await Promise.race([token(), cancelled.promise]);
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
+};
+
 export const createRelayAdapter = (input: RelayHttpInput) => {
   const origin = relayOrigin(input.origin);
   const request = async (operation: RelayOperation, init: RequestInit = {}) => {
-    input.signal.throwIfAborted();
+    const signal = init.signal ? AbortSignal.any([input.signal, init.signal]) : input.signal;
+    signal.throwIfAborted();
     const headers = new Headers(init.headers);
-    headers.set("authorization", `Bearer ${await input.token()}`);
+    headers.set("authorization", `Bearer ${await waitForToken(input.token, signal)}`);
     const response = await fetch(new URL(relayPath(input.scope, operation), origin), {
       ...init,
       headers,
-      signal: init.signal ? AbortSignal.any([input.signal, init.signal]) : input.signal,
+      signal,
     });
     if (!response.ok && !(operation === "assets/read" && response.status === 404)) {
       await response.body?.cancel();
