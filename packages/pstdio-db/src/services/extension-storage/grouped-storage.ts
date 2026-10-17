@@ -1,12 +1,18 @@
 import { and, eq } from "drizzle-orm";
-import { type AssetStore, createRecordStorage, type GroupedState, type StorageOwner } from "pstdio-sync";
+import {
+  type AssetStore,
+  createRecordStorage,
+  type GroupedState,
+  type StorageObserver,
+  type StorageOwner,
+} from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_storage_journal, extension_storage_owners } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { decodeAcceptedState, encodeAcceptedState } from "./grouped-storage-codec";
 import { importLegacyStorage } from "./legacy-import";
 
-export const createGroupedStorageDBService = (db: DbClient) => {
+export const createGroupedStorageDBService = (db: DbClient, observer?: StorageObserver) => {
   const listeners = new Set<(owner: StorageOwner) => void>();
   let environment: ReturnType<ReturnType<typeof createEnvironmentDBService>["get"]> | undefined;
   const getEnvironment = () => (environment ??= createEnvironmentDBService(db).get());
@@ -101,6 +107,7 @@ export const createGroupedStorageDBService = (db: DbClient) => {
   };
   return {
     transaction,
+    observer,
     watch(listener: (owner: StorageOwner) => void) {
       listeners.add(listener);
       return () => {
@@ -109,7 +116,7 @@ export const createGroupedStorageDBService = (db: DbClient) => {
     },
     getEnvironment,
     open(input: { owner: StorageOwner; environmentId: string; assets?: AssetStore }) {
-      return createRecordStorage({ ...input, store: { transaction } });
+      return createRecordStorage({ ...input, store: { transaction, observer } });
     },
   };
 };

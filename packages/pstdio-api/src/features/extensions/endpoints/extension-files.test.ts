@@ -10,7 +10,6 @@ import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 
 let app: OpenAPIHono<AppBindings>;
-let files: Awaited<ReturnType<typeof createTestApp>>["deps"]["fileService"];
 let closeApp: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
@@ -115,7 +114,6 @@ beforeEach(async () => {
     storageRoot: join(tempRoot, "storage"),
   });
   app = created.app;
-  files = created.deps.fileService;
   closeApp = created.close;
 
   const project = await createJson(
@@ -159,7 +157,7 @@ describe("extension file endpoints", () => {
       name: "data.csv",
       size: Buffer.byteLength("hello command upload"),
     });
-    expect(uploaded.url).toContain(`/extensions/${labInstanceId}/files/${uploaded.id}/content`);
+    expect(uploaded.url).toContain(`/extensions/pstdio.lab/files/${uploaded.id}/content`);
 
     const executed = (await createJson(
       `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.read-upload/execute`,
@@ -223,9 +221,7 @@ describe("extension file endpoints", () => {
       name: "notes.txt",
       size: Buffer.byteLength("hello attachment"),
     });
-    expect(uploaded.url).toContain(
-      `/v1/projects/${projectId}/extensions/${labInstanceId}/files/${uploaded.id}/content`,
-    );
+    expect(uploaded.url).toContain(`/v1/projects/${projectId}/extensions/pstdio.lab/files/${uploaded.id}/content`);
 
     const listResponse = await app.request(
       `/v1/projects/${projectId}/extensions/${labInstanceId}/files?scope_type=resource&scope_id=ticket-1`,
@@ -306,7 +302,7 @@ describe("extension file endpoints", () => {
   test("returns 404 when file bytes are missing from storage", async () => {
     const uploadResponse = await uploadFile(labInstanceId);
     const uploaded = (await uploadResponse.json()) as { id: string; url: string };
-    rmSync((await files.get(uploaded.id))!.storage_path);
+    rmSync(join(tempRoot, "storage", "asset-bytes"), { recursive: true, force: true });
 
     const contentResponse = await app.request(uploaded.url);
 

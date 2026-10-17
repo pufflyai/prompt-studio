@@ -60,7 +60,14 @@ export interface GroupedState {
   journal: JournalEntry[];
 }
 
+export interface StorageObserver {
+  read(owner: StorageOwner, record: { recordId: string; revision: string }): void;
+  group(owner: StorageOwner, group: StorageGroup): StorageGroup;
+  committed(owner: StorageOwner, records: { recordId: string; revision: string }[], outcome: { status: string }): void;
+}
+
 export interface GroupedStore {
+  observer?: StorageObserver;
   transaction<T>(owner: StorageOwner, action: (state: GroupedState) => Promise<T>): Promise<T>;
 }
 

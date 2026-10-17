@@ -13,13 +13,13 @@ export const resolveExtensionFileScope = (projectId: string, query: { scope_type
 const fileUrl = (projectId: string, extensionInstanceId: string, fileId: string) =>
   `/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionInstanceId)}/files/${encodeURIComponent(fileId)}/content`;
 
-export const toExtensionBlobRef = (projectId: string, extensionInstanceId: string, file: FileRow) => ({
+export const toExtensionBlobRef = (projectId: string, _extensionInstanceId: string, file: FileRow) => ({
   id: file.id,
   name: file.file_name,
   mimeType: file.mime_type,
   size: file.size_bytes,
   hash: file.hash,
-  url: fileUrl(projectId, extensionInstanceId, file.id),
+  url: fileUrl(projectId, file.extension_id, file.id),
   createdAt: file.created_at,
   updatedAt: file.updated_at,
 });

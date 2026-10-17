@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createProjectsDBService } from "pstdio-db";
 import { createInvocationScope } from "pstdio-extensions";
+import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createCommandEnvironment } from "./index";
@@ -11,10 +13,13 @@ import { createWorkspacesApi } from "./workspaces";
 
 test("cancelling scoped reads leaves artifact, project and extension saves independent", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-scoped-save-"));
+  const shared = await artifactFilesFixture();
+  await createProjectsDBService(shared.db).create({ id: "p", name: "Scoped saves" });
   const controller = new AbortController();
   const workspace = Promise.withResolvers<Record<string, unknown>>();
   const environment = createCommandEnvironment(
     {
+      ...shared.deps,
       artifactMountWrites: createArtifactMountWriteLedger(),
       workspaceService: { getDefault: () => workspace.promise },
     } as never,
@@ -64,6 +69,7 @@ test("cancelling scoped reads leaves artifact, project and extension saves indep
     }
     for (const mount of mounts) await expect(mount.readText("draft.md")).rejects.toThrow();
   } finally {
+    await shared.close();
     await rm(root, { recursive: true, force: true });
   }
 });

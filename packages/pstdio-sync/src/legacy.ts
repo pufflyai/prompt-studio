@@ -23,7 +23,7 @@ export const createLegacyRecordStorage = (input: {
         legacyNamespaceStorage(
           createRecordStorage({
             ...input,
-            store: { transaction: async (_owner, run) => run(state) },
+            store: { transaction: async (_owner, run) => run(state), observer: input.store.observer },
           }).records,
           namespace,
         ),

@@ -21,6 +21,7 @@ import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
 import { buildBinary } from "./packaged-helpers";
+import { verifyPackagedNoteHeadings } from "./packaged-note-headings";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
@@ -61,7 +62,7 @@ test.describe("packaged extension webviews", () => {
     const browserAvailable = existsSync(browserCase.type.executablePath());
     const defaultExtensions = e2eExtensions(
       "workbench-fixture",
-      ...(browserCase.name === "Chromium" ? ["pstdio-artifacts"] : []),
+      ...(browserCase.name === "Chromium" ? ["pstdio-artifacts", "pstdio-notes"] : []),
     );
     const browserTest = browserAvailable || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;
 
@@ -191,6 +192,12 @@ test.describe("packaged extension webviews", () => {
           await expect(frame.getByText("8", { exact: true })).toBeVisible();
 
           if (browserCase.name === "Chromium") {
+            await verifyPackagedNoteHeadings(
+              page,
+              started.baseUrl,
+              project.id,
+              runtimeAuthorization(started.descriptor),
+            );
             await verifyPackagedTerminal(page, started.baseUrl, project.id, started.descriptor.token);
             await verifyPackagedSessionMenus(
               page,

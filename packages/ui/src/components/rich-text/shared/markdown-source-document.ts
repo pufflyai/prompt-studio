@@ -5,7 +5,7 @@ import { parseMarkdownSource } from "./markdown-ast";
 import { exportLexicalToMarkdown } from "./markdown-export";
 import { importMarkdownToLexical } from "./markdown-import";
 import { collectMarkdownLinkChanges } from "./markdown-source-links";
-import { buildSourceMap, mappedEnd, mappedStart, type SourceMap } from "./markdown-source-map";
+import { buildSourceMap, mappedEnd, mappedInsertion, mappedStart, type SourceMap } from "./markdown-source-map";
 import type { MarkdownUrlResolver } from "./markdown-url";
 
 interface TextEdit {
@@ -209,11 +209,15 @@ const applyChanges = (source: string, sourceMap: SourceMap, baseline: string, cu
   // Lexical reports semantic Markdown but normalizes its spelling. Map those
   // semantic edits back onto the loaded source so unrelated syntax never moves.
   const edits = collectEdits(baseline, tableChanges.normalizedCurrent)
-    .map((edit) => ({
-      start: edit.start === edit.end ? mappedEnd(sourceMap, edit.start) : mappedStart(sourceMap, edit.start),
-      end: mappedEnd(sourceMap, edit.end),
-      replacement: withSourceLineEndings(edit.replacement, source),
-    }))
+    .map((edit) => {
+      const start =
+        edit.start === edit.end ? mappedInsertion(sourceMap, edit.start) : mappedStart(sourceMap, edit.start);
+      return {
+        start,
+        end: edit.start === edit.end ? start : mappedEnd(sourceMap, edit.end),
+        replacement: withSourceLineEndings(edit.replacement, source),
+      };
+    })
     .concat(
       linkChanges.edits.map((edit) => ({
         ...edit,

@@ -318,3 +318,29 @@ describe("extension command execution routes", () => {
     expect(JSON.stringify(await response.json())).toContain("nested_depth_exceeded");
   });
 });
+
+test("native renderer metadata preserves a loaded storage baseline and returns updated versions after saving", async () => {
+  const read = () =>
+    createJson(`/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.read/execute`, {
+      metadata: { fileStorageVersions: {} },
+    });
+  const save = (versions: Record<string, string>) =>
+    createJson(`/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.bump/execute`, {
+      params: { amount: 1 },
+      metadata: { fileStorageVersions: versions },
+    });
+  const loaded = (await read()) as { outcome: { data: { fileStorageVersions: Record<string, string> } } };
+  const versions = loaded.outcome.data.fileStorageVersions;
+  expect(Object.keys(versions)).toHaveLength(1);
+  const first = (await save(versions)) as {
+    outcome: { ok: boolean; data: { fileStorageVersions: Record<string, string> } };
+  };
+  expect(first.outcome.ok).toBe(true);
+  const second = (await save(first.outcome.data.fileStorageVersions)) as { outcome: { ok: boolean } };
+  expect(second.outcome.ok).toBe(true);
+  const stale = (await save(versions)) as { outcome: { ok: boolean; reason: string } };
+  expect(stale.outcome.ok).toBe(false);
+  expect(stale.outcome.reason).toContain("draft is kept");
+  const current = (await read()) as { outcome: { value: { counter: number } } };
+  expect(current.outcome.value.counter).toBe(2);
+});

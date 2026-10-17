@@ -1,148 +1,107 @@
-import { describe, expect, test } from "bun:test";
-import { createExtensionFileService, type ExtensionFileServiceDeps } from "./extension-file-service";
+import { expect, test } from "bun:test";
+import { createExtensionFileService } from "./extension-file-service";
+import { blobFilesFixture } from "./shared-files/blob-files.fixture";
 
-const projectInstance = {
-  id: "instance-1",
-  installed_extension_id: "installed-1",
-  scope_type: "project",
-  scope_id: "project-1",
-  display_name_override: null,
-  enabled: true,
-  config_json: {},
-  diagnostics_json: null,
-  created_at: "2026-01-01T00:00:00.000Z",
-  updated_at: "2026-01-01T00:00:00.000Z",
-};
-
-const fileRow = (id: string) => ({
-  id,
-  project_id: "project-1",
-  file_name: "notes.txt",
-  file_kind: "extension",
-  storage_path: `/tmp/project-1/${id}`,
-  mime_type: "text/plain" as string | null,
-  size_bytes: 5,
-  hash: "hash",
-  created_at: "2026-01-01T00:00:00.000Z",
-  updated_at: "2026-01-01T00:00:00.000Z",
+test("file ownership uses the workbench and canonical extension identity", async () => {
+  const f = await blobFilesFixture();
+  try {
+    const file = (await f.service.upload({ ...f.scope, file_name: "note.md", data: Buffer.from("saved attachment") }))!;
+    const canonical = { ...f.scope, extension_instance_id: f.owner.extensionId };
+    expect((await f.service.list(canonical))?.map((file) => file.id)).toEqual([file.id]);
+    const found = await f.service.getOwnedFile({ ...canonical, file_id: file.id });
+    expect(await new Response(await f.service.read(found!)).text()).toBe("saved attachment");
+    expect(await f.service.getOwnedFile({ ...canonical, project_id: "other-workbench", file_id: file.id })).toBeNull();
+    expect(
+      await f.service.getOwnedFile({ ...canonical, extension_instance_id: "other.extension", file_id: file.id }),
+    ).toBeNull();
+    expect(await f.service.remove({ ...canonical, file_id: file.id })).toBe(true);
+    expect(await f.service.getOwnedFile({ ...canonical, file_id: file.id })).toBeNull();
+    expect(await f.service.list(canonical)).toEqual([]);
+  } finally {
+    await f.close();
+  }
 });
 
-const ownershipScope = {
-  project_id: "project-1",
-  extension_instance_id: "instance-1",
-  scope_type: "resource",
-  scope_id: "ticket-1",
-};
-
-const makeHarness = (options?: {
-  instance?: typeof projectInstance | null;
-  ownedFile?: ReturnType<typeof fileRow>;
-}) => {
-  const attached: unknown[] = [];
-  const detached: unknown[] = [];
-  const uploaded: unknown[] = [];
-  const removed: string[] = [];
-
-  const deps: ExtensionFileServiceDeps = {
-    extensionFilesDBService: {
-      attach: async (input) => {
-        attached.push(input);
-        return { ...input, id: crypto.randomUUID(), created_at: "2026-01-01T00:00:00.000Z" };
+test("existing local attachments import once with their scope, then a tombstone prevents resurrection", async () => {
+  const f = await blobFilesFixture();
+  try {
+    const file = await f.fileService.upload(
+      {
+        project_id: f.scope.project_id,
+        file_name: "legacy.txt",
+        file_kind: "extension",
+        data: Buffer.from("existing local bytes"),
       },
-      list: async () => [fileRow("file-1")],
-      getOwnedFile: async () => options?.ownedFile ?? null,
-      detach: async (input) => {
-        detached.push(input);
-        return true;
+      async (file) => {
+        await f.extensionFilesDBService.attach({
+          ...f.scope,
+          scope_type: "resource",
+          scope_id: "note",
+          file_id: file.id,
+        });
       },
-    },
-    extensionInstancesDBService: {
-      get: async () => (options?.instance === undefined ? projectInstance : options.instance),
-    },
-    fileService: {
-      upload: async (input, initialize) => {
-        uploaded.push(input);
-        const file = { ...fileRow("file-1"), file_name: input.file_name };
-        await initialize?.(file);
-        return file;
+    );
+    const files = await f.service.list({ ...f.scope, scope_type: "resource", scope_id: "note" });
+    expect(files?.map((file) => file.id)).toEqual([file.id]);
+    expect((await f.storage.readState()).pending).toHaveLength(1);
+    const found = (await f.service.getOwnedFile({ ...f.scope, file_id: file.id }))!;
+    expect(await new Response(await f.service.read(found)).text()).toBe("existing local bytes");
+    expect(await f.service.list(f.scope)).toEqual([]);
+    expect(await f.service.remove({ ...f.scope, file_id: file.id })).toBe(true);
+    expect(await f.service.list({ ...f.scope, scope_type: "resource", scope_id: "note" })).toEqual([]);
+  } finally {
+    await f.close();
+  }
+});
+
+test("uploads reject instances outside their workbench before writing bytes", async () => {
+  const f = await blobFilesFixture();
+  try {
+    expect(
+      await f.service.upload({
+        ...f.scope,
+        project_id: "other",
+        file_name: "private.txt",
+        data: Buffer.from("private"),
+      }),
+    ).toBeNull();
+    expect((await f.storage.readState()).journal).toEqual([]);
+  } finally {
+    await f.close();
+  }
+});
+
+test("interrupted legacy cleanup keeps ownership until the durable replacement can be retried", async () => {
+  const f = await blobFilesFixture();
+  try {
+    const file = await f.fileService.upload(
+      {
+        project_id: f.scope.project_id,
+        file_name: "legacy.txt",
+        file_kind: "extension",
+        data: Buffer.from("durable bytes"),
       },
-      remove: async (fileId) => {
-        removed.push(fileId);
-        return true;
+      async (file) => {
+        await f.extensionFilesDBService.attach({ ...f.scope, file_id: file.id });
       },
-    },
-  };
-
-  return { service: createExtensionFileService(deps), attached, detached, uploaded, removed };
-};
-
-describe("ExtensionFileService", () => {
-  test("upload stores bytes, attaches ownership", async () => {
-    const harness = makeHarness();
-
-    const file = await harness.service.upload({
-      ...ownershipScope,
-      file_name: "notes.txt",
-      data: Buffer.from("hello"),
-      mime_type: "text/plain",
+    );
+    const interrupted = createExtensionFileService({
+      ...f.fileDeps,
+      fileService: {
+        ...f.fileService,
+        remove: async () => {
+          throw new Error("storage interrupted");
+        },
+      },
     });
-
-    expect(file?.id).toBe("file-1");
-    expect(harness.uploaded).toEqual([
-      expect.objectContaining({ project_id: "project-1", file_name: "notes.txt", file_kind: "extension" }),
-    ]);
-    expect(harness.attached).toEqual([expect.objectContaining({ ...ownershipScope, file_id: "file-1" })]);
-  });
-
-  test("upload refuses instances that are not project instances of the project", async () => {
-    const harness = makeHarness({ instance: { ...projectInstance, scope_id: "other-project" } });
-
-    const file = await harness.service.upload({
-      ...ownershipScope,
-      file_name: "notes.txt",
-      data: Buffer.from("hello"),
-    });
-
-    expect(file).toBeNull();
-    expect(harness.uploaded).toEqual([]);
-    expect(harness.attached).toEqual([]);
-  });
-
-  test("list returns owned files for a valid instance and null otherwise", async () => {
-    const valid = makeHarness();
-    await expect(valid.service.list(ownershipScope)).resolves.toEqual([expect.objectContaining({ id: "file-1" })]);
-
-    const invalid = makeHarness({ instance: null });
-    await expect(invalid.service.list(ownershipScope)).resolves.toBeNull();
-  });
-
-  test("remove detaches ownership, deletes the file", async () => {
-    const harness = makeHarness({ ownedFile: fileRow("file-1") });
-
-    const result = await harness.service.remove({
-      project_id: "project-1",
-      extension_instance_id: "instance-1",
-      file_id: "file-1",
-    });
-
-    expect(result).toBe(true);
-    expect(harness.detached).toEqual([
-      expect.objectContaining({ project_id: "project-1", extension_instance_id: "instance-1", file_id: "file-1" }),
-    ]);
-    expect(harness.removed).toEqual(["file-1"]);
-  });
-
-  test("remove leaves state untouched when the file is not owned by the instance", async () => {
-    const harness = makeHarness();
-
-    const result = await harness.service.remove({
-      project_id: "project-1",
-      extension_instance_id: "instance-1",
-      file_id: "missing",
-    });
-
-    expect(result).toBe(false);
-    expect(harness.detached).toEqual([]);
-    expect(harness.removed).toEqual([]);
-  });
+    await expect(interrupted.list(f.scope)).rejects.toThrow("storage interrupted");
+    expect(await f.extensionFilesDBService.getOwnedFile({ ...f.scope, file_id: file.id })).not.toBeNull();
+    expect((await f.service.list(f.scope))?.map((file) => file.id)).toEqual([file.id]);
+    expect(await f.extensionFilesDBService.getOwnedFile({ ...f.scope, file_id: file.id })).toBeNull();
+    expect((await f.storage.readState()).pending).toHaveLength(1);
+    const saved = (await f.service.getOwnedFile({ ...f.scope, file_id: file.id }))!;
+    expect(await new Response(await f.service.read(saved)).text()).toBe("durable bytes");
+  } finally {
+    await f.close();
+  }
 });

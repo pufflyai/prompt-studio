@@ -4,14 +4,18 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderWorkspaceCapabilities } from "pstdio-db";
+import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
+import { blobFilesFixture } from "../../../services/shared-files/blob-files.fixture";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
 import { createSessionsApi } from "./sessions";
 
 const tempRoots: string[] = [];
+const cleanups: (() => Promise<void>)[] = [];
 
-afterEach(() => {
+afterEach(async () => {
+  for (const close of cleanups.splice(0).reverse()) await close();
   for (const root of tempRoots.splice(0)) {
     rmSync(root, { recursive: true, force: true });
   }
@@ -441,6 +445,8 @@ describe("createCommandEnvironment", () => {
   });
 
   test("mounts declared artifact roots under the default repo", async () => {
+    const f = await artifactFilesFixture();
+    cleanups.push(f.close);
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-artifact-mount-test-"));
     tempRoots.push(root);
     const repoPath = join(root, "repo");
@@ -449,12 +455,12 @@ describe("createCommandEnvironment", () => {
     const env = createCommandEnvironment(
       {
         artifactMountWrites: createArtifactMountWriteLedger(),
-        extensionStorageService: makeStorageService(),
+        ...f.deps,
         workspaceService: {
           setInitializing: async () => null,
           getDefault: async () => ({
             id: "home",
-            project_id: "project-1",
+            project_id: f.owner.workbenchId,
             root_path: repoPath,
             execution_kind: "local",
             provider_id: "pstdio.root",
@@ -482,7 +488,7 @@ describe("createCommandEnvironment", () => {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
         project: projectContext,
-        projectId: "project-1",
+        projectId: f.owner.workbenchId,
       },
     );
 
@@ -715,103 +721,33 @@ describe("createCommandEnvironment project boundaries", () => {
 });
 
 describe("createCommandEnvironment storage files", () => {
-  test("exposes extension-owned blob storage to command handlers", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-storage-files-test-"));
-    tempRoots.push(root);
-    const files = new Map<
-      string,
-      {
-        id: string;
-        project_id: string;
-        file_name: string;
-        file_kind: string;
-        storage_path: string;
-        mime_type: string | null;
-        size_bytes: number;
-        hash: string | null;
-        created_at: string;
-        updated_at: string;
-      }
-    >();
-    const uploaded: unknown[] = [];
-    const removed: unknown[] = [];
-
-    const env = createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-        extensionFileService: {
-          upload: async (input: {
-            data: Buffer;
-            extension_instance_id: string;
-            file_name: string;
-            mime_type?: string | null;
-            project_id: string;
-            scope_id: string | null;
-            scope_type: string;
-          }) => {
-            uploaded.push(input);
-            const id = `file-${(files.size + 1).toString()}`;
-            const storagePath = join(root, id);
-            writeFileSync(storagePath, input.data);
-            const file = {
-              id,
-              project_id: input.project_id,
-              file_name: input.file_name,
-              file_kind: "extension",
-              storage_path: storagePath,
-              mime_type: input.mime_type ?? null,
-              size_bytes: input.data.byteLength,
-              hash: "hash",
-              created_at: "2026-01-01T00:00:00.000Z",
-              updated_at: "2026-01-01T00:00:00.000Z",
-            };
-            files.set(id, file);
-            return file;
-          },
-          list: async () => [...files.values()],
-          getOwnedFile: async (input: { file_id: string }) => files.get(input.file_id) ?? null,
-          remove: async (input: { file_id: string }) => {
-            removed.push(input);
-            return files.delete(input.file_id);
-          },
-        },
-      } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-      },
-    );
-
+  test("exposes shared extension blobs and scoped attachments through ordinary command APIs", async () => {
+    const f = await blobFilesFixture();
+    cleanups.push(f.close);
+    const enabled = makeEnabledSources();
+    enabled[0]!.instance.id = f.scope.extension_instance_id;
+    enabled[0]!.installedSource.extension_id = f.owner.extensionId;
+    const env = createCommandEnvironment({ ...f.deps, extensionFileService: f.service } as never, enabled as never, {
+      extensionId: f.owner.extensionId,
+      name: "example-documents",
+      project: projectContext,
+      projectId: f.owner.workbenchId,
+    });
     const projectFile = await env.storage.files.put({
       name: "notes.txt",
       data: Buffer.from("hello"),
       mimeType: "text/plain",
     });
-    const ticketFile = await env.storage
-      .collection("tickets")
-      .attachments("ticket-1")
-      .put({
-        name: "screen.png",
-        data: Buffer.from("image"),
-        mimeType: "image/png",
-      });
-
+    const attachments = env.storage.collection("tickets").attachments("ticket-1");
+    const ticketFile = await attachments.put({ name: "screen.png", data: Buffer.from("image"), mimeType: "image/png" });
     expect(Buffer.from(await env.storage.files.getBytes(projectFile.id)).toString("utf8")).toBe("hello");
-    await expect(env.storage.files.list()).resolves.toEqual([projectFile, ticketFile]);
-    await env.storage.collection("tickets").attachments("ticket-1").delete(ticketFile.id);
-
-    expect(projectFile).toMatchObject({ name: "notes.txt", mimeType: "text/plain", size: 5 });
-    expect(ticketFile.url).toContain(`/v1/projects/project-1/extensions/instance-1/files/${ticketFile.id}/content`);
-    expect(uploaded).toEqual([
-      expect.objectContaining({ scope_type: "project", scope_id: "project-1", file_name: "notes.txt" }),
-      expect.objectContaining({ scope_type: "collection:tickets", scope_id: "ticket-1", file_name: "screen.png" }),
-    ]);
-    expect(removed).toEqual([
-      expect.objectContaining({ project_id: "project-1", extension_instance_id: "instance-1", file_id: ticketFile.id }),
-    ]);
+    expect(await env.storage.files.list()).toEqual([projectFile]);
+    expect(await attachments.list()).toEqual([ticketFile]);
+    expect(ticketFile.url).toContain(`/extensions/${f.owner.extensionId}/files/${ticketFile.id}/content`);
+    expect(attachments.urlFor(ticketFile.id)).toBe(ticketFile.url);
+    await attachments.delete(ticketFile.id);
+    expect(await attachments.list()).toEqual([]);
+    expect((await f.storage.readState()).pending).toHaveLength(3);
   });
 });
 

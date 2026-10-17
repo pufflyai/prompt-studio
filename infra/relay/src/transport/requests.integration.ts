@@ -56,7 +56,7 @@ test("real HTTP groups retain duplicate receipts and contiguous replay", async (
   }
 });
 
-test("current authority rejects foreign mutation identities and never initializes an unknown scope", async () => {
+test("current authority rejects foreign mutations and invalid scope registration", async () => {
   const context = await fixture.context();
   const server = startRelay({ hostname: "127.0.0.1", port: 0 }, context);
   const base = `/v1/workbenches/~${context.scope.workbenchId}/extensions/~notes/`;
@@ -89,7 +89,8 @@ test("current authority rejects foreign mutation identities and never initialize
     }
     const unknown = base.replace("/~notes/", "/~unknown/");
     expect((await call(`${unknown}snapshot`, `Bearer ${context.token}`)).status).toBe(409);
-    expect((await call(`${unknown}initialize`, `Bearer ${context.token}`, {})).status).toBe(404);
+    expect((await call(`${unknown}initialize`, `Bearer ${context.token}`, {})).status).toBe(400);
+    expect((await call(`${unknown}snapshot`, `Bearer ${context.token}`)).status).toBe(409);
     expect((await context.storage.owner(context.scope).snapshot()).records).toEqual({});
     await context.manager.revoke({
       requestId: "revoke",

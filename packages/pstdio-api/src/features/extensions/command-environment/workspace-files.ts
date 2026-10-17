@@ -6,7 +6,7 @@ import { resolveLocalWorkspaceTarget, type WorkspaceTargetInput } from "./worksp
 export type FileAccess = "read" | "write";
 
 export const resolveWorkspaceFilesPath = async (
-  deps: ExtensionsRouteDeps,
+  deps: Pick<ExtensionsRouteDeps, "workspaceService">,
   input: WorkspaceTargetInput,
   access: FileAccess,
 ) => {

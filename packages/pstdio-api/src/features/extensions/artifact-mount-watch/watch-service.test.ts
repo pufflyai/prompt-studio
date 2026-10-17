@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { createProjectsDBService } from "pstdio-db";
+import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { EventBus } from "../../sync/event-bus";
 import { createProjectExtensionRuntimeCatalog } from "../project-extension-runtime-catalog";
 import { createArtifactMountWatchService } from "./watch-service";
@@ -12,12 +14,12 @@ type HookCall = { mount: string; paths: string[]; projectId: string; workspaceId
 type WatchState = { calls: HookCall[]; hookGate?: Promise<void> };
 
 const services: Array<{ dispose: () => Promise<void> }> = [];
-const cleanups: Array<() => void> = [];
+const cleanups: Array<() => void | Promise<void>> = [];
 
 afterEach(async () => {
   // Windows cannot remove a folder while a watch handle on it is open.
   for (const service of services.splice(0)) await service.dispose();
-  for (const cleanup of cleanups.splice(0)) cleanup();
+  for (const cleanup of cleanups.splice(0)) await cleanup();
   delete (globalThis as Record<string, unknown>).__artifactWatchState;
 });
 
@@ -75,7 +77,10 @@ const writeDashboardsExtension = () => {
   return sourcePath;
 };
 
-const createHarness = (listProjectIds = async () => ["project-1"]) => {
+const createHarness = async (listProjectIds = async () => ["project-1"]) => {
+  const shared = await artifactFilesFixture();
+  cleanups.push(() => shared.close());
+  await createProjectsDBService(shared.db).create({ id: "project-1", name: "Watched files" });
   const state: WatchState = { calls: [] };
   (globalThis as Record<string, unknown>).__artifactWatchState = state;
   const sourcePath = writeDashboardsExtension();
@@ -114,6 +119,7 @@ const createHarness = (listProjectIds = async () => ["project-1"]) => {
   });
   const service = createArtifactMountWatchService({
     deps: {
+      ...shared.deps,
       artifactMountWrites: createArtifactMountWriteLedger(),
       eventBus,
       extensionRuntimeCatalog: catalog,
@@ -148,7 +154,7 @@ const createHarness = (listProjectIds = async () => ["project-1"]) => {
 
 describe("artifact mount watch service", () => {
   test("runs hooks and notifies views once per burst of direct edits to a watched mount", async () => {
-    const harness = createHarness();
+    const harness = await createHarness();
     await harness.service.refresh();
     // macOS FSEvents drops changes made right after a stream starts.
     await Bun.sleep(100);
@@ -173,7 +179,7 @@ describe("artifact mount watch service", () => {
   });
 
   test("moves watches with the default workspace and closes them when the extension is disabled", async () => {
-    const harness = createHarness();
+    const harness = await createHarness();
     await harness.service.refresh();
     const firstBoards = harness.boards();
 
@@ -194,7 +200,7 @@ describe("artifact mount watch service", () => {
   });
 
   test("does not watch when the default workspace has no local root", async () => {
-    const harness = createHarness();
+    const harness = await createHarness();
     const localRoot = harness.workspace.root_path;
     harness.workspace.root_path = null;
     await harness.service.refresh();
@@ -206,7 +212,7 @@ describe("artifact mount watch service", () => {
   });
 
   test("does not create the folder of a default workspace that is gone", async () => {
-    const harness = createHarness();
+    const harness = await createHarness();
     const missingRoot = join(harness.workspace.root_path ?? "", "moved-away");
     harness.workspace.root_path = missingRoot;
 
@@ -217,7 +223,7 @@ describe("artifact mount watch service", () => {
 
   test("dispose waits for a running reconcile and starts no watch after it", async () => {
     const projects = Promise.withResolvers<string[]>();
-    const harness = createHarness(() => projects.promise);
+    const harness = await createHarness(() => projects.promise);
     let disposed = false;
 
     const disposing = harness.service.dispose().then(() => {
@@ -232,7 +238,7 @@ describe("artifact mount watch service", () => {
   });
 
   test("dispose waits for hooks that are still handling a change", async () => {
-    const harness = createHarness();
+    const harness = await createHarness();
     const gate = Promise.withResolvers<void>();
     harness.state.hookGate = gate.promise;
     await harness.service.refresh();

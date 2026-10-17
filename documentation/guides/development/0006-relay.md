@@ -102,7 +102,7 @@ No live Spaces endpoint, bucket or credentials are configured here. RustFS succe
 
 Use `relayPath({ workbenchId, extensionId }, operation)` from `pstdio-sync-contracts`. Paths are `/v1/workbenches/~<encoded-id>/extensions/~<encoded-id>/<operation>`. The prefix keeps opaque dot identities from becoming traversal segments. Account identity and credentials never enter URLs. Native clients send `Authorization: Bearer <environment-token>`. The scheme is case-insensitive; credential bytes stay exact. URL queries are rejected.
 
-Every protected operation verifies a signed environment access token locally against trusted manager public keys, issuer and relay audience. The verified account/workbench/environment scopes the existing data owners. A submitted mutation must already contain exactly that scope and environment; the relay rejects mismatches without rewriting its fingerprint. Only initialized published scopes exist. No network initialization, restore, administrative issuance, Google login or arbitrary revision setter is exposed.
+Every protected operation verifies a signed environment access token locally against trusted manager public keys, issuer and relay audience. The verified account/workbench/environment scopes the existing data owners. A submitted mutation must already contain exactly that scope and environment; the relay rejects mismatches without rewriting its fingerprint. An authenticated `initialize` request creates the selected extension scope once using the installed package revision. The token must authorize its account and workbench. Retrying initialization leaves an existing published revision unchanged. No restore, administrative issuance, Google login or arbitrary revision setter is exposed.
 
 | Operation | Method and input | Result |
 | --- | --- | --- |
@@ -166,7 +166,7 @@ Build from the repository root:
 docker build -f infra/relay/Dockerfile -t pstdio-relay:local .
 ```
 
-The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations and initialize published scopes before use. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
+The final runtime target contains Bun, the built service/storage library and generated relay migrations. It runs as the unprivileged bun user, without a source checkout or runtime install. Operator tooling must apply migrations before use. An enrolled native host initializes enabled extension scopes through the authenticated transport. The default build remains this production target; test-only authority code, private keys and fixture initialization exist only in separate smoke stages.
 
 Trusted deployment settings supply `DATABASE_URL` for the relay role; `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`; and `RELAY_ACCESS_TRUST_FILE`, a JSON file with manager `issuer`, relay `audience` and public Ed25519 `jwks`. Keys come from the manager's `/api/auth/jwks` endpoint through an operator-controlled update. Key rotation must distribute new public keys before issuing access with them and retain old public keys through their tokens' expiry. Relay receives no manager database, signing secret, renewal grant or private service credential. Configuration errors discard sensitive original errors and causes.
 

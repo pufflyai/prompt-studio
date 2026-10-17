@@ -1,7 +1,6 @@
 export interface LocalRelayConnection {
   accountId: string;
   workbenchId: string;
-  extensionId: string;
   environmentId: string;
   managerOrigin: string;
   relayOrigin: string;
@@ -14,7 +13,6 @@ export const sameRelayOwner = (
 ) =>
   left.accountId === right.accountId &&
   left.workbenchId === right.workbenchId &&
-  left.extensionId === right.extensionId &&
   left.environmentId === right.environmentId;
 
 export const upsertLocalRelayConnection = (connections: LocalRelayConnection[], replacement: LocalRelayConnection) => {

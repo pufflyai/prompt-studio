@@ -31,18 +31,22 @@ export const createCoreDomainServices = (input: {
   const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
 
   const syncService = createSyncService({ db });
+  const assetTransferService = createAssetTransferService({
+    transfers: dbs.assetTransfersDBService,
+    bytes: createAssetBytesStorage(storageRoot),
+  });
 
   return {
     fileService,
-    assetTransferService: createAssetTransferService({
-      transfers: dbs.assetTransfersDBService,
-      bytes: createAssetBytesStorage(storageRoot),
-    }),
+    assetTransferService,
     projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),
     extensionFileService: createExtensionFileService({
       extensionFilesDBService: dbs.extensionFilesDBService,
       extensionInstancesDBService: dbs.extensionInstancesDBService,
       fileService,
+      assetTransferService,
+      installedExtensionSourcesDBService: dbs.installedExtensionSourcesDBService,
+      extensionStorageService: dbs.extensionStorageDBService,
     }),
     syncService,
     notificationService: createNotificationService({

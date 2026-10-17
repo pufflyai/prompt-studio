@@ -47,7 +47,7 @@ import { registerLiveQuestionSmokeTests } from "./packaged-live-question-smoke";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 // Shared record contracts remain covered through the compiled host. The separate relay
 // image checks authenticated HTTP, immutable asset ranges and finite native sockets.
-// The compiled client also restores foreign journal work using proof retained across a host restart.
+// Native relay coverage hydrates artifact mounts and attachment URLs, and restores foreign journal work after restart.
 import { registerNativeRelaySmokeTests } from "./packaged-native-relay-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
@@ -73,6 +73,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 // Includes the declared clipboard permission on the packaged webview fixture.
 // The paired browser smoke also keeps one mount during repeated and overlapping guest initialization.
 // The paired browser smoke retains live views, drops tabs onto webviews, and shows fixed tabs beside menu openers.
+// Its native Notes editor persists Select All heading changes across preserved blank lines and reload.
 // packaged-statistics-loading.spec.ts keeps row activation during delayed statistics loading.
 // It also checks extension names, assigned palette shortcuts, idle labels, and persisted Sidenav groups.
 

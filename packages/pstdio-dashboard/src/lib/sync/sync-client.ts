@@ -23,6 +23,10 @@ export const createDashboardSyncWriterProvider = (collections = getRuntimeCollec
       truncateAndWrite: () => undefined,
       upsert: (row) => {
         const eventId = typeof row.eventId === "string" ? row.eventId : undefined;
+        if (eventId === "pstdio.event.storage-changed") {
+          publishExtensionEventReset(collections);
+          return;
+        }
         const projectId = typeof row.projectId === "string" ? row.projectId : undefined;
         if (eventId) publishExtensionEvent({ id: eventId, projectId }, collections);
       },

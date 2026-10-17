@@ -1,5 +1,7 @@
 import type { CommandRunnerEnvironment, RuntimeArtifactMount } from "pstdio-extensions";
-import { createArtifactMount, createReadBoundary } from "pstdio-extensions";
+import { createReadBoundary } from "pstdio-extensions";
+import { createSharedArtifactMount } from "../../../services/shared-files/artifact-mount";
+import type { ExtensionsRouteDeps } from "../deps";
 import type { FileAccess } from "./workspace-files";
 
 export const createArtifactsApi = (
@@ -12,6 +14,7 @@ export const createArtifactsApi = (
     projectId: string;
     signal?: AbortSignal;
   },
+  deps: Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService">,
 ): CommandRunnerEnvironment["artifacts"] => {
   const resolveMount = (key: string) => {
     const mount = (input.artifactMounts ?? []).find(
@@ -26,13 +29,18 @@ export const createArtifactsApi = (
       access === "read"
         ? await createReadBoundary(input.signal)(() => resolveProjectPath(access))
         : await resolveProjectPath(access);
-    return createArtifactMount({
+    return createSharedArtifactMount(deps, {
+      projectId: input.projectId,
+      extensionId: input.extensionId,
       repoRoot: root,
       name: mount.name,
       mountPath: mount.relativePath,
-      signal: input.signal,
-      // Only a watched mount needs to tell its own writes from direct edits.
-      onWrite: mount.watch ? input.onWrite : undefined,
+      mountPaths: (input.artifactMounts ?? [])
+        .filter((candidate) => candidate.extensionId === input.extensionId)
+        .map((candidate) => candidate.relativePath),
+      signal: access === "read" ? input.signal : undefined,
+      onWrite: input.onWrite,
+      resolveWriteRoot: () => resolveProjectPath("write"),
     });
   };
 

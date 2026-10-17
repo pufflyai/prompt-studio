@@ -1,30 +1,26 @@
 import { readFile } from "node:fs/promises";
-import type { createEnvironmentDBService, createExtensionStorageDBService } from "pstdio-db";
-import { createRelayAccess, createRelayAdapter, createRelayConnection, relayOrigin } from "pstdio-sync/relay";
-import { canonicalJson, identitySchema } from "pstdio-sync-contracts";
+import type { createEnvironmentDBService } from "pstdio-db";
+import { createRelayAccess, relayOrigin } from "pstdio-sync/relay";
+import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
-import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
-import type { EventBus } from "../../features/sync/event-bus";
+import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
-import type { createAssetTransferService } from "../asset-transfer-service";
+import { startRelayExtension } from "./extension-owner";
 
-const connectionSchema = z.strictObject({
+const workbenchSchema = z.strictObject({
   accountId: identitySchema,
   workbenchId: identitySchema,
-  extensionId: identitySchema,
   environmentId: identitySchema,
   relayOrigin: z.string().transform(relayOrigin),
   managerOrigin: z.string().transform(relayOrigin),
   renewalGrant: z.string().min(1),
 });
-const configSchema = z.strictObject({ connections: z.array(connectionSchema) });
-
+const configSchema = z.strictObject({ connections: z.array(workbenchSchema) });
+export type RelayWorkbench = z.infer<typeof workbenchSchema>;
 export const startRelayRuntime = async (input: {
   path?: string;
   environment: ReturnType<typeof createEnvironmentDBService>;
-  storage: ReturnType<typeof createExtensionStorageDBService>;
-  assets: ReturnType<typeof createAssetTransferService>;
-  eventBus: EventBus;
+  deps: ExtensionsRouteDeps;
 }) => {
   if (!input.path) return { close: async () => {} };
   let config: z.infer<typeof configSchema>;
@@ -33,80 +29,124 @@ export const startRelayRuntime = async (input: {
   } catch {
     throw new Error("Invalid native relay configuration");
   }
-  const environment = await input.environment.get();
-  const keys = new Set<string>();
+  const identity = await input.environment.get();
+  const workbenches = new Map<string, RelayWorkbench>();
   for (const connection of config.connections) {
-    const key = JSON.stringify([connection.workbenchId, connection.extensionId]);
-    if (connection.environmentId !== environment.environmentId || keys.has(key))
+    if (connection.environmentId !== identity.environmentId || workbenches.has(connection.workbenchId))
       throw new Error("Native relay owner mismatch");
-    keys.add(key);
+    workbenches.set(connection.workbenchId, connection);
   }
   const controller = new AbortController();
-  const signal = controller.signal;
-  const connections = await Promise.all(
-    config.connections.map(async (config) => {
-      const owner = { workbenchId: config.workbenchId, extensionId: config.extensionId };
-      const local = await input.storage.open({ owner, assets: createRecordAssets(input.assets, owner, signal) });
-      const access = createRelayAccess({
-        managerOrigin: config.managerOrigin,
-        renewalGrant: config.renewalGrant,
-        workbenchId: owner.workbenchId,
-        signal,
-      });
-      const scope = { ...owner, accountId: config.accountId };
-      const connection = createRelayConnection({
-        origin: config.relayOrigin,
-        scope,
-        access,
-        signal,
-        synchronize: async (signal) => {
-          const adapter = createRelayAdapter({
-            origin: config.relayOrigin,
-            scope,
-            token: async () => (await access()).token,
-            signal,
-          });
-          const before = await local.readState();
-          await local.synchronize(adapter);
-          const after = await local.readState();
-          if (canonicalJson(before.accepted) !== canonicalJson(after.accepted))
-            input.eventBus.emit("extension_events", "set", {
-              id: crypto.randomUUID(),
-              projectId: owner.workbenchId,
-              eventId: `${owner.extensionId}.event.storage-changed`,
-            });
-        },
-        onError: () =>
-          apiLogger.warn(
-            { event: "relay.reconnecting", workbenchId: owner.workbenchId, extensionId: owner.extensionId },
-            "Relay connection will retry",
-          ),
-      });
-      return { owner, ...connection };
-    }),
+  const { deps } = input;
+  const connections = new Map<string, Awaited<ReturnType<typeof startRelayExtension>>>();
+  let running: Promise<void> | undefined;
+  let dirty = false;
+  const notify = (workbenchId: string) =>
+    deps.eventBus.emit("extension_events", "set", {
+      id: crypto.randomUUID(),
+      projectId: workbenchId,
+      eventId: "pstdio.event.storage-changed",
+    });
+  const access = new Map(
+    [...workbenches].map(([id, config]) => [id, createRelayAccess({ ...config, signal: controller.signal })]),
   );
-  const unsubscribe = input.storage.watch((owner) => {
-    for (const connection of connections)
-      if (connection.owner.workbenchId === owner.workbenchId && connection.owner.extensionId === owner.extensionId)
-        connection.wake();
+  let retry: ReturnType<typeof setTimeout> | undefined;
+  const reconcileWorkbench = async (workbenchId: string, config: RelayWorkbench) => {
+    const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
+    if (controller.signal.aborted) return;
+    const workspace = await deps.workspaceService.getDefault(workbenchId);
+    const contextKey = JSON.stringify([
+      snapshot.generation,
+      workspace?.id,
+      workspace?.root_path,
+      workspace?.provider_capabilities_json,
+    ]);
+    const desired = new Set(snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id));
+    for (const [key, connection] of connections)
+      if (
+        connection.owner.workbenchId === workbenchId &&
+        (!desired.has(connection.owner.extensionId) || connection.contextKey !== contextKey)
+      ) {
+        connection.close();
+        await connection.done;
+        connections.delete(key);
+      }
+    for (const source of snapshot.enabledSources) {
+      const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
+      if (connections.has(key)) continue;
+      const connection = await startRelayExtension({
+        config,
+        source,
+        snapshot,
+        contextKey,
+        access: access.get(workbenchId)!,
+        deps,
+        signal: controller.signal,
+        notify: () => notify(workbenchId),
+      });
+      if (controller.signal.aborted) {
+        connection.close();
+        await connection.done;
+        return;
+      }
+      connections.set(key, connection);
+    }
+  };
+  const reconcile = async () => {
+    for (const [workbenchId, config] of workbenches)
+      await reconcileWorkbench(workbenchId, config).catch(() => {
+        apiLogger.warn({ event: "relay.discovery.failed", workbenchId }, "Relay extension discovery will retry");
+        if (!retry && !controller.signal.aborted)
+          retry = setTimeout(() => {
+            retry = undefined;
+            void refresh();
+          }, 1000);
+      });
+  };
+  const refresh = () => {
+    dirty = true;
+    if (!running)
+      running = (async () => {
+        try {
+          while (dirty && !controller.signal.aborted) {
+            dirty = false;
+            await reconcile();
+          }
+        } finally {
+          running = undefined;
+        }
+      })();
+    return running;
+  };
+  const stopStorage = deps.extensionStorageService.watch((owner) => {
+    if (!workbenches.has(owner.workbenchId)) return;
+    notify(owner.workbenchId);
+    const connection = connections.get(JSON.stringify([owner.workbenchId, owner.extensionId]));
+    if (connection) connection.wake();
+    else void refresh();
   });
+  const stopCatalog = deps.extensionRuntimeCatalog.subscribeInvalidation(() => void refresh());
+  const stopEvents = deps.eventBus.subscribe((event) => {
+    if (["extension_instances", "installed_extension_sources", "projects", "workspaces"].includes(event.table))
+      void refresh();
+  });
+  await refresh();
   return {
     async close() {
-      unsubscribe();
+      stopStorage();
+      stopCatalog();
+      stopEvents();
+      clearTimeout(retry);
       controller.abort();
-      await Promise.all(connections.map((connection) => connection.done));
+      for (const connection of connections.values()) connection.close();
+      await running;
+      await Promise.all([...connections.values()].map((connection) => connection.done));
     },
   };
 };
-
 export const connectAppRelay = async <
   T extends {
-    deps: {
-      environmentService: ReturnType<typeof createEnvironmentDBService>;
-      extensionStorageService: ReturnType<typeof createExtensionStorageDBService>;
-      assetTransferService: ReturnType<typeof createAssetTransferService>;
-    };
-    eventBus: EventBus;
+    deps: ExtensionsRouteDeps & { environmentService: ReturnType<typeof createEnvironmentDBService> };
     close: () => Promise<void>;
   },
 >(
@@ -114,13 +154,7 @@ export const connectAppRelay = async <
   path?: string,
 ) => {
   try {
-    const relay = await startRelayRuntime({
-      path,
-      environment: app.deps.environmentService,
-      storage: app.deps.extensionStorageService,
-      assets: app.deps.assetTransferService,
-      eventBus: app.eventBus,
-    });
+    const relay = await startRelayRuntime({ path, environment: app.deps.environmentService, deps: app.deps });
     return {
       ...app,
       close: async () => {

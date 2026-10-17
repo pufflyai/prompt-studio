@@ -62,6 +62,8 @@ export interface FileRendererContribution {
     resource: ResourceRef | undefined,
     content: string,
     origin?: FileRendererRefreshOrigin,
+    /** The loaded document that the editor started from. */
+    loaded?: FileRendererContent,
     // biome-ignore lint/suspicious/noConfusingVoidType: Existing synchronous save callbacks return void.
   ): Promise<FileRendererSaveResult | undefined> | FileRendererSaveResult | void;
 }

@@ -1,10 +1,24 @@
 import {
+  defineArtifactMount,
   defineCommand,
   defineExtension,
   params,
   type StorageGroup,
   type StorageResolution,
 } from "@pstdio/sdk/extensions";
+
+const documents = defineArtifactMount({ id: "documents", path: "documents", label: "Documents" });
+const readFiles = defineCommand({
+  id: "read-files",
+  title: "Read ordinary extension files",
+  async run(ctx) {
+    return {
+      document: await ctx.artifacts.mount(documents.id).readText("remote.txt"),
+      attachment: new TextDecoder().decode(await ctx.storage.files.getBytes("remote-attachment")),
+      reference: await ctx.storage.files.get("remote-attachment"),
+    };
+  },
+});
 
 const read = defineCommand({
   id: "read",
@@ -60,4 +74,7 @@ const outcome = defineCommand({
   run: (ctx, { operationId }) => ctx.storage.records.outcome(operationId),
 });
 
-export default defineExtension({ commands: [read, stage, commit, inspect, resolve, outcome] });
+export default defineExtension({
+  artifactMounts: [documents],
+  commands: [read, readFiles, stage, commit, inspect, resolve, outcome],
+});

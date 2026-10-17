@@ -3,6 +3,7 @@ import {
   checkpointSchema,
   mutationSchema,
   type RelayOperation,
+  relayInitializeSchema,
   relayRecoverySchema,
   type Scope,
   validateMutation,
@@ -20,6 +21,12 @@ export const handleRelayData = async (
 ) => {
   const owner = owners.storage.owner(scope);
   try {
+    if (operation === "initialize") {
+      const registration = relayInitializeSchema.safeParse(body);
+      if (!registration.success) return relayResponse({ error: "Invalid request" }, 400);
+      const registered = await owners.storage.initialize(scope, registration.data.publishedRevision, signal);
+      return relayResponse(owners.recovery.snapshot(await registered.snapshot(signal)));
+    }
     if (operation === "snapshot") return relayResponse(owners.recovery.snapshot(await owner.snapshot(signal)));
     if (operation === "replay") {
       const after = checkpointSchema.safeParse(body);

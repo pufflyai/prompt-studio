@@ -1,5 +1,7 @@
-import type { CommandExecuteBody, JsonObject, JsonValue } from "pstdio-api-contracts";
+import type { CommandExecuteBody, CommandExecuteResponse, JsonObject, JsonValue } from "pstdio-api-contracts";
 import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
+import { z } from "zod";
+import { withStorageObservation } from "../../services/shared-files/storage-observation";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
 
@@ -61,20 +63,39 @@ export const executeProjectExtensionCommand = async (
         settings: snapshot.runtime.settings,
       }),
   });
-  const outcome = await runner.execute({
-    commandId,
-    projectId,
-    workspaceId: workspace?.id,
-    workspaceDir: workspace ? resolveCommandWorkspaceDir(workspace) : undefined,
-    params: body.params as JsonObject | undefined,
-    resource: body.resource as never,
-    attachment: body.attachment as never,
-    slot: body.slot as never,
-    source: body.source ?? "api",
-    metadata: body.metadata as JsonObject | undefined,
-    signal: input.signal,
-    onChunk: input.onChunk,
-  });
+  const versions = body.metadata?.fileStorageVersions;
+  const expected = versions === undefined ? undefined : z.record(z.string(), z.string()).parse(versions);
+  const execute = () =>
+    runner.execute({
+      commandId,
+      projectId,
+      workspaceId: workspace?.id,
+      workspaceDir: workspace ? resolveCommandWorkspaceDir(workspace) : undefined,
+      params: body.params as JsonObject | undefined,
+      resource: body.resource as never,
+      attachment: body.attachment as never,
+      slot: body.slot as never,
+      source: body.source ?? "api",
+      metadata: body.metadata as JsonObject | undefined,
+      signal: input.signal,
+      onChunk: input.onChunk,
+    });
+  const observed = expected
+    ? await withStorageObservation(expected, execute)
+    : { value: await execute(), versions: undefined, conflicted: false };
+  let outcome: typeof observed.value & { data?: CommandExecuteResponse["outcome"]["data"] } = observed.value;
+  if (observed.conflicted)
+    outcome = {
+      ok: false,
+      status: "error",
+      reason:
+        "This file changed in another environment. Your draft is kept here and its saved version is retained as a conflict.",
+    };
+  if (observed.versions && outcome.ok)
+    outcome = {
+      ...outcome,
+      data: { ...outcome.data, fileStorageVersions: { ...expected, ...observed.versions } },
+    };
   if (body.source !== "dashboard") {
     for (const eventId of eventIds)
       deps.eventBus.emit("extension_events", "set", { id: crypto.randomUUID(), projectId, eventId });

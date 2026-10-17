@@ -1,6 +1,8 @@
 import { extname } from "node:path";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { createArtifactMount, normalizeMountRelativePath } from "pstdio-extensions";
+import { normalizeMountRelativePath } from "pstdio-extensions";
+import { createSharedArtifactMount } from "../../services/shared-files/artifact-mount";
+import { resolveWorkspaceFilesPath } from "./command-environment/workspace-files";
 import type { ExtensionsRouteDeps } from "./deps";
 
 // The image allowlist deliberately excludes SVG: it can carry script.
@@ -30,7 +32,10 @@ export const artifactMediaType = (path: string) =>
 
 export const artifactImageMediaType = (path: string) => ARTIFACT_IMAGE_MEDIA_TYPES[extname(path).toLowerCase()];
 
-type ArtifactMountDeps = Pick<ExtensionsRouteDeps, "extensionRuntimeCatalog" | "workspaceService">;
+type ArtifactMountDeps = Pick<
+  ExtensionsRouteDeps,
+  "extensionRuntimeCatalog" | "workspaceService" | "extensionStorageService" | "assetTransferService"
+>;
 
 type ResolveArtifactMountInput = { projectId: string; mountId: string } & (
   | { extensionInstanceId: string }
@@ -64,7 +69,17 @@ export const resolveExtensionArtifactMount = async (deps: ArtifactMountDeps, inp
 
   return {
     installedExtensionId: enabled.installedSource.id,
-    mount: createArtifactMount({ repoRoot: rootPath, name: runtimeMount.name, mountPath: runtimeMount.relativePath }),
+    mount: createSharedArtifactMount(deps, {
+      projectId: input.projectId,
+      extensionId: runtimeMount.extensionId,
+      repoRoot: rootPath,
+      name: runtimeMount.name,
+      mountPath: runtimeMount.relativePath,
+      mountPaths: snapshot.runtime.artifactMounts
+        .filter((candidate) => candidate.extensionId === runtimeMount.extensionId)
+        .map((candidate) => candidate.relativePath),
+      resolveWriteRoot: () => resolveWorkspaceFilesPath(deps, { projectId: input.projectId }, "write"),
+    }),
     runtimeMount,
   };
 };

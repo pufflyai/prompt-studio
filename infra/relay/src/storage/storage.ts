@@ -124,22 +124,24 @@ export const createRelayStorage = (databaseUrl: string, assets: RelayAssets) => 
   };
   return {
     owner,
-    async initialize(input: Scope, publishedRevision: string) {
+    async initialize(input: Scope, publishedRevision: string, signal?: AbortSignal) {
       const scope = scopeSchema.parse(input);
       if (!publishedRevision) throw new Error("Relay scope initialization requires its published revision");
-      await connection.run(async (db) =>
-        db
-          .insert(relayScopes)
-          .values({
-            id: await fingerprint(scope),
-            scope,
-            epoch: crypto.randomUUID(),
-            acceptedSequence: 0,
-            journalSequence: 0,
-            replayFrom: 0,
-            publishedRevision,
-          })
-          .onConflictDoNothing(),
+      await connection.run(
+        async (db) =>
+          db
+            .insert(relayScopes)
+            .values({
+              id: await fingerprint(scope),
+              scope,
+              epoch: crypto.randomUUID(),
+              acceptedSequence: 0,
+              journalSequence: 0,
+              replayFrom: 0,
+              publishedRevision,
+            })
+            .onConflictDoNothing(),
+        signal,
       );
       return owner(scope);
     },
