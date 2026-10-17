@@ -28,6 +28,7 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
   };
   await expect(side).toHaveCount(0);
   await page.reload();
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Project folder");
   await expect(side).toHaveCount(0);
   await revealPlacedPreview();
   await reset();

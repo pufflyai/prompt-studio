@@ -99,6 +99,8 @@ export const verifyPackagedSessionMenus = async (
   await expect(createdTab).toHaveAttribute("aria-selected", "true");
   await leaveWorkspace();
   await expect(preview).toBeHidden();
+  await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
   await expect(createdTab).toBeVisible();
   await reopenWorkspace();
   const bottomHeader = page.locator('[data-workbench-panel-header="secondary"]');
