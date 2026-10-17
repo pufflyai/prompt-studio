@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Add resource-owned related openings that remember related panel choices, keep other panel state global, and pin dragged tabs without replacing previews
+Add resource-owned related tabs with global panel state, remembered closures, temporary automatic reveal, and pin-on-drop retention

@@ -25,37 +25,28 @@ export const registerRelatedResourcePreviews = (
     string,
     {
       owner: RegisteredResourceKind;
-      request: { controller: AbortController; present: boolean };
+      controller: AbortController;
       promise: Promise<void>;
     }
   >();
   const abortAll = () => {
-    for (const { request } of pending.values()) request.controller.abort();
-  };
-  const cancelPresentation = () => {
-    for (const { request } of pending.values()) request.present = false;
+    for (const { controller } of pending.values()) controller.abort();
   };
   const cancelOtherSelections = (selectedKey?: string) => {
     const source = ctx.pages.store.getState().location?.resource;
     const pageResource = source && canonicalize(source);
-    for (const [key, { request }] of pending) {
+    for (const [key, { controller }] of pending) {
       if (key === selectedKey) continue;
-      request.present = false;
       // A manual panel selection must not discard the routed page's declaration
       // lookup: its result still determines which user choices belong to the page.
-      if (key !== resourceKey(pageResource)) request.controller.abort();
+      if (key !== resourceKey(pageResource)) controller.abort();
     }
   };
   let openingPreviews = false;
   let disposed = false;
-  const preferences = createRelatedResourcePreferences(ctx, canonicalize, cancelPresentation);
+  const preferences = createRelatedResourcePreferences(ctx, canonicalize);
   const enabled = () => ctx.preferences.getValue(openRelatedResourcesPreference) !== false;
-  const load = async (
-    resource: ResourceRef,
-    owner: RegisteredResourceKind,
-    request: { controller: AbortController; present: boolean },
-  ) => {
-    const { controller } = request;
+  const load = async (resource: ResourceRef, owner: RegisteredResourceKind, controller: AbortController) => {
     const current = () => !controller.signal.aborted && enabled() && ctx.resources.getKind(resource.type) === owner;
     try {
       const entries = await owner.relatedOpenings!(resource, controller.signal);
@@ -69,23 +60,20 @@ export const registerRelatedResourcePreviews = (
             resourceKey(entry.resource) !== resourceKey(resource),
         ),
       );
-      if (!request.present) return;
-      preferences.run(() => preferences.restoreVisibility(resource));
       if (!openings.length) return;
       const resolved = await options.createService(resource).resolve(
         openings.map((entry) => entry.resource),
         controller.signal,
       );
-      if (!current() || !request.present) return;
+      if (!current()) return;
       const targets = new Map(resolved.map((entry) => [resourceKey(entry.resource), entry.target]));
       openingPreviews = true;
       try {
         preferences.run(() => {
           for (const entry of openings) {
             const target = targets.get(resourceKey(entry.resource));
-            if (target && preferences.allows(resource, entry)) opener.open(target, resource, entry);
+            if (target) opener.open(target, resource, entry, preferences.shouldReveal(resource, entry));
           }
-          preferences.select(resource);
         });
       } finally {
         openingPreviews = false;
@@ -94,7 +82,7 @@ export const registerRelatedResourcePreviews = (
       if (current()) console.warn("Could not open related resources", error);
     }
   };
-  const evaluate = (source: ResourceRef, present: boolean) => {
+  const open = (source: ResourceRef) => {
     const resource = canonicalize(source);
     const owner = resource && ctx.resources.getKind(resource.type);
     cancelOtherSelections(resourceKey(resource));
@@ -104,20 +92,18 @@ export const registerRelatedResourcePreviews = (
     }
     const key = resourceKey(resource);
     const existing = pending.get(key);
-    if (existing?.owner === owner && !existing.request.controller.signal.aborted) {
-      existing.request.present ||= present;
+    if (existing?.owner === owner && !existing.controller.signal.aborted) {
       return existing.promise;
     }
-    existing?.request.controller.abort();
+    existing?.controller.abort();
     preferences.enter(resource);
-    const request = { controller: new AbortController(), present };
-    const promise = load(resource, owner, request).finally(() => {
-      if (pending.get(key)?.request === request) pending.delete(key);
+    const controller = new AbortController();
+    const promise = load(resource, owner, controller).finally(() => {
+      if (pending.get(key)?.controller === controller) pending.delete(key);
     });
-    pending.set(key, { owner, request, promise });
+    pending.set(key, { owner, controller, promise });
     return promise;
   };
-  const open = (source: ResourceRef) => evaluate(source, true);
   const primary = ctx.pageLocations.onDidNavigate((location) => {
     if (openingPreviews) return;
     if (location.resource) {
@@ -132,12 +118,11 @@ export const registerRelatedResourcePreviews = (
       preferences.run(() => opener.closePagePreviews(previousKey));
       const resource = ctx.pages.store.getState().location?.resource;
       cancelOtherSelections(resourceKey(resource));
-      // Saved-route boot restores its layout without replaying automatic opens.
-      // Read the owner only to classify subsequent user edits to related trays.
+      // Evaluate after the new page layout settles, including saved-route boot.
       if (resource) {
         preferences.enter(resource);
         void Promise.resolve().then(() => {
-          if (!disposed && relatedResourcePageKey(ctx) === key) void evaluate(resource, false);
+          if (!disposed && relatedResourcePageKey(ctx) === key) void open(resource);
         });
       }
     },
@@ -150,8 +135,8 @@ export const registerRelatedResourcePreviews = (
   });
   const project = ctx.pages.store.subscribeSelector((state) => state.projectId, abortAll);
   const owners = ctx.resources.store.subscribe(() => {
-    for (const { owner, request } of pending.values()) {
-      if (ctx.resources.getKind(owner.kind) !== owner) request.controller.abort();
+    for (const { owner, controller } of pending.values()) {
+      if (ctx.resources.getKind(owner.kind) !== owner) controller.abort();
     }
   });
   const preference = ctx.preferences.onDidChangeValue((name) => {
@@ -159,6 +144,9 @@ export const registerRelatedResourcePreviews = (
   });
   const selection = ctx.layout.onDidActivatePanel((panel) => {
     if (openingPreviews) return;
+    const routed = ctx.pages.store.getState().location?.resource;
+    if (panel.resource && resourceKey(canonicalize(panel.resource)) === resourceKey(routed && canonicalize(routed)))
+      return;
     if (panel.resource) void open(panel.resource);
     else cancelOtherSelections();
   });
@@ -171,7 +159,6 @@ export const registerRelatedResourcePreviews = (
       if (!openingPreviews) cancelOtherSelections(key);
     },
   );
-  const restoration = ctx.layout.onWillRestoreLayout(cancelPresentation);
   const scope = ctx.layout.onWillChangePersistenceScope(() => {
     if (!openingPreviews) {
       // The registry has prepared the incoming page; clear the outgoing rendered
@@ -195,7 +182,6 @@ export const registerRelatedResourcePreviews = (
       preference.dispose();
       selection.dispose();
       selectionState();
-      restoration.dispose();
       scope.dispose();
       preferences.dispose();
       opener.dispose();

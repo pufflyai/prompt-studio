@@ -235,7 +235,7 @@ test("closing a background automatic tab keeps the user's selected pin on return
   s.controller.dispose();
 });
 
-test("a manual panel closure cancels an in-flight related opening", async () => {
+test("a manual panel closure keeps an in-flight related tab hidden", async () => {
   const s = setupPage("side");
   s.workbench.shell.setRegionOpen("side", true);
   let finish!: (entries: ReturnType<typeof opening>[]) => void;
@@ -250,14 +250,14 @@ test("a manual panel closure cancels an in-flight related opening", async () => 
   finish([opening("late")]);
   await pending;
   expect(s.workbench.shell.getRegionState("side").open).toBe(false);
-  expect(s.workbench.layout.listPanelInstances("side")).toHaveLength(0);
+  expect(s.workbench.layout.listPanelInstances("side").map((p) => p.resource?.id)).toEqual(["late"]);
   s.controller.dispose();
 });
 
 test.each([
   "side",
   "secondary",
-] as const)("returning to a resource restores its selected pinned %s tab", async (region) => {
+] as const)("returning keeps a remembered pinned %s resource without taking the global selection", async (region) => {
   const s = setupPage(region);
   await s.controller.open(s.source);
   s.workbench.shellPlacements.openPlacement({ placementId: "manual", resource: ref("session", "chosen"), open: "pin" });
@@ -268,8 +268,10 @@ test.each([
     open: "pin",
   });
   await s.visit("source");
-  expect(s.workbench.layout.getActivePanel(region)?.resource?.id).toBe("chosen");
-  expect(s.workbench.layout.getActivePanel(region)?.tabRetention).toBe("persistent");
+  expect(s.workbench.layout.getActivePanel(region)?.resource?.id).toBe("elsewhere");
+  expect(s.workbench.layout.listPanelInstances(region).find((p) => p.resource?.id === "chosen")?.tabRetention).toBe(
+    "persistent",
+  );
   s.controller.dispose();
 });
 

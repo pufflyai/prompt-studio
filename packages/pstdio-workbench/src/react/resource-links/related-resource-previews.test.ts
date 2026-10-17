@@ -260,7 +260,7 @@ test("restoring a snapshot keeps its closed related tabs closed", async () => {
   s.controller.dispose();
 });
 
-test("direct page navigation opens related resources but restoring cancels pending results", async () => {
+test("layout reconciliation during a page entry does not cancel its related tab placement", async () => {
   const s = setup([opening("related")]);
   s.workbench.pageLocations.navigate(s.target(s.source));
   await s.controller.open(s.source);
@@ -277,7 +277,7 @@ test("direct page navigation opens related resources but restoring cancels pendi
   s.workbench.host.restoreSnapshot(snapshot);
   finish([opening("late")]);
   await pending;
-  expect(s.workbench.layout.listPanelInstances("side").some((p) => p.resource?.id === "late")).toBe(false);
+  expect(s.workbench.layout.listPanelInstances("side").some((p) => p.resource?.id === "late")).toBe(true);
   s.controller.dispose();
 });
 

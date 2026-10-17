@@ -10,6 +10,11 @@ const tabAction = async (page: Page, tab: Locator, name: string) => {
 
 export const verifyClosedSidePreference = async (page: Page, preview: Locator, leave: Navigate, reopen: Navigate) => {
   const side = page.locator('[data-workbench-panel="side"]:visible');
+  const revealPlacedPreview = async () => {
+    await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+    await expect(preview).toBeVisible();
+    await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
+  };
   const reset = async () => {
     const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
     if (await showBottom.isVisible()) await showBottom.click();
@@ -24,11 +29,13 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
   await expect(side).toHaveCount(0);
   await page.reload();
   await expect(side).toHaveCount(0);
+  await revealPlacedPreview();
   await reset();
   await page.getByRole("button", { name: "Hide Side Panel", exact: true }).click();
   await leave();
   await reopen();
   await expect(side).toHaveCount(0);
+  await revealPlacedPreview();
   await reset();
   await verifyTabDropPinning(page, preview);
 };

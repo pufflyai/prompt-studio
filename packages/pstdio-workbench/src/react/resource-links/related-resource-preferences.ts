@@ -6,7 +6,6 @@ const regions = ["side", "secondary"] as const;
 interface PanelChoice {
   visible: boolean;
   resource?: ResourceRef;
-  intent?: "preview" | "pin";
 }
 type PageChoices = Partial<Record<(typeof regions)[number], PanelChoice>>;
 const selected = (region: WorkbenchRegionState) =>
@@ -22,7 +21,6 @@ const choiceChanged = (before: WorkbenchRegionState, after: WorkbenchRegionState
 export const createRelatedResourcePreferences = (
   ctx: WorkbenchModuleContext,
   canonicalize: (source: ResourceRef) => ResourceRef | undefined,
-  changed: () => void,
 ) => {
   // Only the current owner's automatic destinations have page-specific choices.
   // Other trays keep the project's live layout, including closures made elsewhere.
@@ -118,13 +116,11 @@ export const createRelatedResourcePreferences = (
       const panel = selected(region);
       choices[id] = {
         visible: region.visible,
-        resource: panel?.resource,
-        intent: panel?.tabRetention === "persistent" ? "pin" : "preview",
+        resource: panel?.resource ?? selected(before.layout.regions[id])?.resource,
       };
     }
     if (!relatedRegions) pendingChoices = choices;
     else if (relatedChanges.length) void write(choices);
-    changed();
   });
   const reset = ctx.onDidResetLayout(() => {
     void write({});
@@ -151,38 +147,18 @@ export const createRelatedResourcePreferences = (
         if (Object.keys(edits).length) void write({ ...forSource(source), ...edits });
       }
       const choices = forSource(source);
-      return [
-        ...defaults.filter((entry) => !(entry.region in choices)),
-        ...regions.flatMap((region) => {
-          const choice = choices[region];
-          return choice?.visible && choice.resource
-            ? [{ resource: choice.resource, region, autoOpen: true, open: choice.intent }]
-            : [];
-        }),
-      ];
+      return defaults.map((entry) => {
+        const choice = entry.region === "side" || entry.region === "secondary" ? choices[entry.region] : undefined;
+        return choice?.resource ? { ...entry, resource: choice.resource } : entry;
+      });
     },
-    restoreVisibility(source: ResourceRef) {
-      const choices = forSource(source);
-      for (const region of regions) {
-        const choice = choices[region];
-        if (choice && (!choice.visible || !choice.resource)) ctx.shell.setRegionOpen(region, choice.visible);
-      }
-    },
-    allows(source: ResourceRef, entry: RelatedResourceOpening) {
+    shouldReveal(source: ResourceRef, entry: RelatedResourceOpening) {
       const choices = forSource(source);
       const actual = Object.values(ctx.layout.getLayout().regions).find((region) =>
         region.widgets.some((panel) => resourceKey(panel.resource) === resourceKey(entry.resource)),
       );
-      return !regions.some((region) => region === (actual?.id ?? entry.region) && choices[region]?.visible === false);
-    },
-    select(source: ResourceRef) {
-      for (const choice of Object.values(forSource(source))) {
-        if (!choice.visible || !choice.resource) continue;
-        for (const region of Object.values(ctx.layout.getLayout().regions)) {
-          const panel = region.widgets.find((panel) => resourceKey(panel.resource) === resourceKey(choice.resource));
-          if (panel) ctx.layout.setRegionActiveWidget(region.id, panel.widgetId);
-        }
-      }
+      const region = actual?.id ?? entry.region;
+      return (region !== "side" && region !== "secondary") || choices[region]?.visible !== false;
     },
     dispose() {
       unsubscribe();

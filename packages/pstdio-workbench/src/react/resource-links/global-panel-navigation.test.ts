@@ -142,7 +142,7 @@ test("a closure during the first owner lookup is remembered only for its related
   s.controller.dispose();
 });
 
-test("a session selected during the owner lookup remains the page's chosen session", async () => {
+test("a session chosen during lookup returns without taking selection from another pinned tab", async () => {
   const s = setup([], {
     resolvePagePersistenceScope: ({ resource, pageId }) => ({
       scope: resource?.id ?? pageId,
@@ -177,6 +177,7 @@ test("a session selected during the owner lookup remains the page's chosen sessi
   });
   s.workbench.pageLocations.navigate(s.target(s.source));
   await s.controller.open(s.source);
-  expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("chosen");
+  expect(s.workbench.layout.getActivePanel("side")?.resource?.id).toBe("elsewhere");
+  expect(s.workbench.layout.listPanelInstances("side").some((p) => p.resource?.id === "chosen")).toBe(true);
   s.controller.dispose();
 });
