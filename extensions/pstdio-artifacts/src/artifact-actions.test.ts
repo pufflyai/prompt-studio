@@ -40,3 +40,16 @@ test("deletes only the selected artifact and its saved revisions", async () => {
   expect(await commands.list.run(ctx, {})).toEqual([]);
   expect(await snapshots.list()).toEqual([]);
 });
+
+test("resolves an unknown artifact as missing", async () => {
+  const { ctx } = await fixture();
+
+  expect(await resolveResource.run(ctx, { artifactId: "missing" })).toBeNull();
+});
+
+test("resolves a deleted artifact as missing", async () => {
+  const { ctx, artifact } = await fixture();
+  await deleteResource.run(ctx, { artifactId: artifact.artifactId });
+
+  expect(await resolveResource.run(ctx, { artifactId: artifact.artifactId })).toBeNull();
+});
