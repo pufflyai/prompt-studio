@@ -116,13 +116,13 @@ test("retains Side chat and the editor draft during repeated file-position navig
     const composerNode = await composer.elementHandle();
     const first = side.getByRole("link", { name: "First", exact: true }).last();
     await expect(first).toHaveAttribute("href", /document=src%2Fapp.ts/);
-    const popupPromise = page.waitForEvent("popup");
+    const newTabPromise = page.context().waitForEvent("page");
     await first.click({ modifiers: ["ControlOrMeta"] });
-    const popup = await popupPromise;
-    await popup.waitForLoadState();
-    expect(popup.url()).toContain("document=src%2Fapp.ts");
+    const newTab = await newTabPromise;
+    await newTab.waitForLoadState();
+    expect(newTab.url()).toContain("document=src%2Fapp.ts");
     expect(page.url()).not.toContain("document=");
-    await popup.close();
+    await newTab.close();
     await side.getByRole("link", { name: "Second", exact: true }).last().click();
     const editor = page.locator(".monaco-editor:visible");
     await expect(editor).toContainText("secondLine");
