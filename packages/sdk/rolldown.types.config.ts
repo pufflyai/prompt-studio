@@ -14,7 +14,11 @@ export default defineConfig({
   ),
   tsconfig,
   external: (id) =>
-    !id.startsWith(".") && !isAbsolute(id) && !id.startsWith("@/") && !id.startsWith("pstdio-api-contracts"),
+    !id.startsWith(".") &&
+    !isAbsolute(id) &&
+    !id.startsWith("@/") &&
+    !id.startsWith("pstdio-api-contracts") &&
+    !id.startsWith("pstdio-sync-contracts"),
   // Type files have no runtime, so imports kept only for side effects (such as CSS) must not survive.
   treeshake: { moduleSideEffects: "no-external" },
   plugins: [dts({ emitDtsOnly: true, tsconfig })],

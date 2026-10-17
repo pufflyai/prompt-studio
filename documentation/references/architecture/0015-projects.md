@@ -4,7 +4,19 @@ A project owns tools, settings, and saved data. A workspace identifies where wor
 
 For the user view, see [Projects and workspaces](../../guides/concepts/0001-projects-and-workspaces.md).
 
-A project has one default workspace. That relationship owns the project's home location. Projects do not store another path or link a list of repositories. Workspace records store a local `root_path` or a remote provider reference.
+A project has one default workspace in each local runtime. That relationship owns the project's home location in that environment. Projects do not store another path or link a list of repositories. Workspace records store a local `root_path` or a remote provider reference.
+
+## Workbench and environment identity
+
+The existing project ID is the stable workbench ID used by the synchronization contract. There is no second shared identity. A runtime's local database owns one persistent `environmentId`, stored in `local_environment`. Restarting the runtime keeps it. A separately initialized runtime gets a different identity. The process `instanceId` and authentication tokens can change on restart; they are not environment identities.
+
+`GET /v1/environment` returns this identity. `PUT /v1/projects/{id}/environment-binding` binds a known workbench ID to an existing local folder. Its body contains `environmentId`, `name`, and `initial_workspace` using `pstdio.root`. The expected environment must match this runtime. An existing workbench or folder binding cannot be replaced. Repeating the same binding keeps its workspace ID. Existing project creation, discovery, and initial-workspace APIs remain supported.
+
+The CLI exposes `pst projects environment` and `pst projects bind <id> --environment <environment-id> --name <name> --path <folder>`. The SDK provides `client.runtime.environment()`, `client.projects.bindEnvironment(id, input)`, and `client.runtime.resolveTarget({ environmentId, workbenchId, workspaceId })`. Target resolution requires all three identities and never substitutes a default workspace.
+
+Binding creates local metadata. It does not connect to a relay, prove account ownership, or grant hosted access. Caller-supplied account IDs are not accepted as authorization. The account layer will authorize shared content before replication. Local-only projects and bindings to a shared identity can coexist without changing each other's state or config.
+
+Each environment owns its workspaces, folders, sessions, processes, terminals, credentials, caches, and development overrides. Those rows stay in its local database. Two runtimes can bind the same project ID to different folders and workspace IDs. See [local and remote ownership](0012-local-and-remote.md) and the [relay ownership boundary](0026-synchronization-contracts.md#local-ui-sync-and-relay-ownership).
 
 ## Open a folder
 

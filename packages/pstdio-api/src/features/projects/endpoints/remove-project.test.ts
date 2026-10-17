@@ -147,9 +147,9 @@ describe("DELETE /v1/projects/:id", () => {
     }
   });
 
-  test("removes project storage directory on disk", async () => {
+  test("removes the project's owned file bytes on disk", async () => {
     const project = await createProject("file-cleanup");
-    await appHandle.deps.fileService.upload({
+    const file = await appHandle.deps.fileService.upload({
       project_id: project.id,
       file_name: "test.txt",
       file_kind: "extension",
@@ -157,12 +157,12 @@ describe("DELETE /v1/projects/:id", () => {
       mime_type: "text/plain",
     });
 
-    const projectDir = join(storageRoot, project.id);
-    expect(existsSync(projectDir)).toBe(true);
+    expect(existsSync(file.storage_path)).toBe(true);
 
-    await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+    const response = await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
 
-    expect(existsSync(projectDir)).toBe(false);
+    expect(response.status).toBe(204);
+    expect(existsSync(file.storage_path)).toBe(false);
   });
 
   test("removes worktree directories on disk", async () => {

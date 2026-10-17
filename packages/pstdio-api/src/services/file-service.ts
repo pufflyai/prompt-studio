@@ -4,7 +4,10 @@ import type { EventBus } from "../features/sync/event-bus";
 
 export type FileServiceDeps = {
   filesDBService: ReturnType<typeof createFilesDBService>;
-  filesStorageService: ReturnType<typeof createFilesStorageService>;
+  filesStorageService: Pick<
+    ReturnType<typeof createFilesStorageService>,
+    "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash"
+  >;
   eventBus: EventBus;
 };
 
@@ -14,22 +17,33 @@ export const createFileService = (deps: FileServiceDeps) => {
 
   const get = db.get;
   const list = db.list;
-  const removeProjectStorage = storage.removeProjectStorage;
+  const removeProjectStorage = async (projectId: string) => {
+    for (const file of await db.list(projectId)) storage.deleteFile(file.storage_path);
+  };
 
   const upload = async (
     input: {
       project_id: string;
       file_name: string;
       file_kind: string;
-      data: Buffer;
+      data: Buffer | ReadableStream<Uint8Array>;
       mime_type?: string | null;
+      signal?: AbortSignal;
     },
     initialize?: (file: NonNullable<Awaited<ReturnType<typeof db.get>>>) => Promise<void>,
   ) => {
     // Widen to the persisted column type so upload's inferred row matches reads.
     const id: string = crypto.randomUUID();
-    const storagePath = storage.writeFile(input.project_id, id, input.data);
-    const hash = storage.computeHash(input.data);
+    const data =
+      input.data instanceof ReadableStream
+        ? input.data
+        : new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(input.data as Buffer);
+              controller.close();
+            },
+          });
+    const stored = await storage.writeStream(input.project_id, id, data, input.signal);
     const timestamp = new Date().toISOString();
 
     const file = {
@@ -37,10 +51,10 @@ export const createFileService = (deps: FileServiceDeps) => {
       project_id: input.project_id,
       file_name: input.file_name,
       file_kind: input.file_kind,
-      storage_path: storagePath,
+      storage_path: stored.storagePath,
       mime_type: input.mime_type ?? null,
-      size_bytes: input.data.byteLength,
-      hash,
+      size_bytes: stored.byteLength,
+      hash: stored.hash,
       created_at: timestamp,
       updated_at: timestamp,
     };
@@ -50,7 +64,7 @@ export const createFileService = (deps: FileServiceDeps) => {
       await initialize?.(file);
     } catch (error) {
       await db.remove(file.id);
-      storage.deleteFile(storagePath);
+      storage.deleteFile(stored.storagePath);
       throw error;
     }
     deps.eventBus.emit("files", "set", file);
@@ -63,7 +77,7 @@ export const createFileService = (deps: FileServiceDeps) => {
     if (!existing) return null;
 
     // Overwrite the file at the existing storage path
-    storage.writeFile(existing.project_id, fileId, input.data);
+    storage.writeFileAtPath(existing.storage_path, input.data);
 
     const hash = storage.computeHash(input.data);
     const updated = {
@@ -107,12 +121,12 @@ export const createFileService = (deps: FileServiceDeps) => {
       try {
         storage.deleteFile(file.storage_path);
       } catch (error) {
-        if (data) storage.writeFile(file.project_id, file.id, data);
+        if (data) storage.writeFileAtPath(file.storage_path, data);
         throw error;
       }
       return {
         rollback: () => {
-          if (data) storage.writeFile(file.project_id, file.id, data);
+          if (data) storage.writeFileAtPath(file.storage_path, data);
         },
         commit: () => deps.eventBus.emit("files", "delete", { id: file.id }),
       };

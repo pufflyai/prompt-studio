@@ -18,10 +18,10 @@ export const createProjectsDBService = (db: DbClient) => {
     return project ?? null;
   };
 
-  const create = async (input: { name: string }) => {
+  const create = async (input: { id?: string; name: string }) => {
     const timestamp = nowTimestamp();
     const project: ProjectRecord = {
-      id: crypto.randomUUID(),
+      id: input.id ?? crypto.randomUUID(),
       name: input.name,
       shorthand: deriveShorthand(input.name),
       default_agent_id: null,

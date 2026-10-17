@@ -49,25 +49,8 @@ describe("resolveSessionAttachments", () => {
       expect(await Bun.file(attachment.localPath).exists()).toBe(false);
       expect(await Bun.file(updated.localPath).exists()).toBe(false);
     } finally {
-      storage.removeProjectStorage("project-1");
+      storage.deleteFile(storagePath);
     }
-  });
-
-  it("removes readable attachments when project storage is deleted", async () => {
-    const root = await temporaryRoot();
-    const storage = createFilesStorageService(root);
-    const fileId = crypto.randomUUID();
-    const storagePath = storage.writeFile("project-1", fileId, Buffer.from("data"));
-    const file = {
-      id: fileId,
-      project_id: "project-1",
-      file_kind: "session_attachment",
-      file_name: "note.txt",
-      storage_path: storagePath,
-    };
-    const [attachment] = await resolveSessionAttachments(depsWith(file), "project-1", [{ file_id: fileId }]);
-    storage.removeProjectStorage("project-1");
-    expect(await Bun.file(attachment.localPath).exists()).toBe(false);
   });
 
   it("exposes the bytes through a path that keeps the original filename extension", async () => {

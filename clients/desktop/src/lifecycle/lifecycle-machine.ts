@@ -18,7 +18,6 @@ export type DesktopRecoveryCode =
   | "target_mismatch"
   | "unsupported_target"
   | "version_mismatch"
-  | "runtime_timeout"
   | "port_bind_failure"
   | "pglite_ownership_conflict"
   | "pglite_recovery_failure"
@@ -31,8 +30,18 @@ export type DesktopRecoveryError = {
   actions: Array<"retry" | "open_logs" | "copy_diagnostics" | "quit">;
 };
 
+export type DesktopStartupPhase =
+  | "discovery"
+  | "verification"
+  | "environment"
+  | "spawning"
+  | "database"
+  | "migrations"
+  | "extensions"
+  | "readiness";
+
 export type DesktopState =
-  | { kind: "starting"; phase: "discovery" | "spawning" | "readiness" }
+  | { kind: "starting"; phase: DesktopStartupPhase }
   | { kind: "workbench"; runtime: DesktopRuntimeIdentity }
   | { kind: "confirming_active_work"; runtime: DesktopRuntimeIdentity; activity: RuntimeActivity }
   | { kind: "closing" }

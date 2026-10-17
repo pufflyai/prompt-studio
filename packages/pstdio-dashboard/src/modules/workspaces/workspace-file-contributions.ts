@@ -1,6 +1,6 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getApiClient } from "@/lib/api";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { workspaceFileQueryOptions } from "@/shared/workspaces/workspace-file-query";
@@ -26,25 +26,31 @@ const filePathArg = (rawArgs: unknown) => {
   if (typeof path !== "string" || !path.trim()) throw new Error("File path is required.");
   return path.trim();
 };
-const refreshWorkspaceFiles = async (ctx: WorkbenchModuleContext, workspaceId: string) => {
-  await invalidateWorkspaceFileData(dashboardQueryClient, workspaceId);
+const refreshWorkspaceFiles = async (
+  ctx: WorkbenchModuleContext,
+  workspaceId: string,
+  queryClient: ReturnType<typeof getDashboardQueryClient>,
+) => {
+  await invalidateWorkspaceFileData(queryClient, workspaceId);
   ctx.views.refreshView(dashboardWidgetIds.workspaceFileTree);
 };
 export const createWorkspaceFile = async (ctx: WorkbenchModuleContext, resource: ResourceRef, rawArgs: unknown) => {
+  const queryClient = getDashboardQueryClient();
   const workspaceId = workspaceIdOf(resource);
   if (!workspaceId) throw new Error("Workspace details are missing.");
   const path = filePathArg(rawArgs);
   const created = await getApiClient().workspaces.createFile(workspaceId, path, { content: "" });
-  dashboardQueryClient.setQueryData(workspaceFileQueryOptions(workspaceId, path).queryKey, created);
-  await refreshWorkspaceFiles(ctx, workspaceId);
+  queryClient.setQueryData(workspaceFileQueryOptions(workspaceId, path).queryKey, created);
+  await refreshWorkspaceFiles(ctx, workspaceId, queryClient);
   ctx.treeViews.setSelectedNode(dashboardWidgetIds.workspaceFileTree, path);
   openWorkspacesPage(ctx, workspaceFileResource(resource, path));
 };
 const createWorkspaceDirectory = async (ctx: WorkbenchModuleContext, resource: ResourceRef, path: string) => {
+  const queryClient = getDashboardQueryClient();
   const workspaceId = workspaceIdOf(resource);
   if (!workspaceId) throw new Error("Workspace details are missing.");
   await getApiClient().workspaces.createDirectory(workspaceId, path);
-  await refreshWorkspaceFiles(ctx, workspaceId);
+  await refreshWorkspaceFiles(ctx, workspaceId, queryClient);
   ctx.treeViews.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, path, true);
 };
 const remapEntryPath = (path: string | undefined, sourcePath: string, destinationPath: string) => {
@@ -58,6 +64,7 @@ const moveWorkspaceEntry = async (
   sourcePath: string,
   destinationPath: string,
 ) => {
+  const queryClient = getDashboardQueryClient();
   const workspaceId = workspaceIdOf(resource);
   if (!workspaceId) throw new Error("Workspace details are missing.");
   if (destinationPath === sourcePath) return;
@@ -72,7 +79,7 @@ const moveWorkspaceEntry = async (
     .map((path) => remapEntryPath(path, sourcePath, destinationPath))
     .filter((path): path is string => Boolean(path));
   await getApiClient().workspaces.moveEntry(workspaceId, sourcePath, destinationPath);
-  dashboardQueryClient.removeQueries({
+  queryClient.removeQueries({
     predicate: (query) => {
       const [scope, queryWorkspaceId, kind, queryPath] = query.queryKey;
       return (
@@ -86,7 +93,7 @@ const moveWorkspaceEntry = async (
   });
   const parentPath = destinationPath.split("/").slice(0, -1).join("/");
   if (parentPath) movedExpandedPaths.push(parentPath);
-  await refreshWorkspaceFiles(ctx, workspaceId);
+  await refreshWorkspaceFiles(ctx, workspaceId, queryClient);
   for (const path of expandedSourcePaths) {
     ctx.treeViews.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, path, false);
   }
@@ -115,6 +122,7 @@ const entryNameArg = (rawArgs: unknown, type: "file" | "directory") => {
   return name;
 };
 export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  const queryClient = getDashboardQueryClient();
   const workspaceId = workspaceIdOf(resource);
   const path = workspaceMetadataString(resource, "workspaceDeletePath");
   const type = workspaceMetadataString(resource, "workspaceDeleteType");
@@ -122,7 +130,7 @@ export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource
     throw new Error("Workspace entry details are missing.");
   }
   await getApiClient().workspaces.deleteEntry(workspaceId, path);
-  dashboardQueryClient.removeQueries({
+  queryClient.removeQueries({
     predicate: (query) => {
       const [scope, queryWorkspaceId, kind, queryPath] = query.queryKey;
       return (
@@ -134,7 +142,7 @@ export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource
       );
     },
   });
-  await refreshWorkspaceFiles(ctx, workspaceId);
+  await refreshWorkspaceFiles(ctx, workspaceId, queryClient);
   // Tree actions can outlive the query that created them. Selection belongs to
   // the current page, not the resource captured by that earlier query.
   const selected = ctx.getPrimaryResource();
@@ -225,12 +233,13 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
         };
       },
       save: async (resource, content) => {
+        const queryClient = getDashboardQueryClient();
         const workspaceId = workspaceIdOf(resource);
         const path = workspaceMetadataString(resource, "workspaceFilePath");
         if (!workspaceId || !path) return;
         const updated = await getApiClient().workspaces.writeFile(workspaceId, path, { content });
-        dashboardQueryClient.setQueryData(workspaceFileQueryOptions(workspaceId, path).queryKey, updated);
-        await invalidateWorkspaceFileData(dashboardQueryClient, workspaceId);
+        queryClient.setQueryData(workspaceFileQueryOptions(workspaceId, path).queryKey, updated);
+        await invalidateWorkspaceFileData(queryClient, workspaceId);
         ctx.views.refreshView(dashboardWidgetIds.workspaceFileTree);
       },
     },

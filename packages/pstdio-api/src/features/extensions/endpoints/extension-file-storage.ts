@@ -1,7 +1,5 @@
 import type { ExtensionsRouteDeps } from "../deps";
 
-const MAX_EXTENSION_FILE_UPLOAD_BYTES = 25 * 1024 * 1024;
-
 type FileRow = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["extensionFileService"]["getOwnedFile"]>>>;
 
 export const resolveExtensionFileScope = (projectId: string, query: { scope_type?: string; scope_id?: string }) => {
@@ -36,20 +34,16 @@ const readUploadName = (headers: Headers) => {
   }
 };
 
-export const readExtensionFileUpload = async (request: { arrayBuffer: () => Promise<ArrayBuffer> }) => {
-  const data = Buffer.from(await request.arrayBuffer());
-  return data.byteLength > MAX_EXTENSION_FILE_UPLOAD_BYTES ? null : data;
-};
-
 export const storeExtensionFile = (
   deps: ExtensionsRouteDeps,
   input: {
-    data: Buffer;
+    data: ReadableStream<Uint8Array>;
     extensionInstanceId: string;
     headers: Headers;
     projectId: string;
     scopeId: string | null;
     scopeType: string;
+    signal: AbortSignal;
   },
 ) =>
   deps.extensionFileService.upload({
@@ -60,4 +54,5 @@ export const storeExtensionFile = (
     file_name: readUploadName(input.headers),
     data: input.data,
     mime_type: input.headers.get("content-type"),
+    signal: input.signal,
   });

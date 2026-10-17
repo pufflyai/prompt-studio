@@ -5,19 +5,15 @@ import type {
   ExtensionStorageCollectionApi,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
+import { createMemoryAssets } from "./memory-assets";
+import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record-owner";
 
-export const createMemoryStorage = (): ExtensionStorageApi => {
-  const kv = new Map<string, unknown>();
-  const collections = new Map<string, Map<string, unknown>>();
+export type { MemoryStorageSeed } from "./memory-record-owner";
+
+export const createMemoryStorage = (seed?: MemoryStorageSeed): ExtensionStorageApi => {
+  const assets = createMemoryAssets();
+  const owner = createMemoryRecordOwner(assets, seed);
   const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
-
-  const collectionStore = (name: string) => {
-    const existing = collections.get(name);
-    if (existing) return existing;
-    const created = new Map<string, unknown>();
-    collections.set(name, created);
-    return created;
-  };
 
   const blobStore = (name: string) => {
     const existing = blobStores.get(name);
@@ -69,59 +65,65 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
     };
   };
 
-  const api: ExtensionStorageApi = {
-    files: blobsApi("project"),
-    scope(_scope: StorageScope) {
-      return api;
-    },
-    async get(key) {
-      return kv.get(key) as never;
-    },
-    async set(key, value) {
-      kv.set(key, value);
-    },
-    async delete(key) {
-      kv.delete(key);
-    },
-    collection<TItem>(name: string): ExtensionStorageCollectionApi<TItem> {
-      const store = collectionStore(name);
-      return {
-        async get(id) {
-          return store.get(id) as TItem | undefined;
-        },
-        async list() {
-          return [...store.values()] as TItem[];
-        },
-        async put(id, value) {
-          store.set(id, value);
-        },
-        async update(id, value) {
-          if (!store.has(id)) throw new Error(`Item not found: ${id}`);
-          store.set(id, value);
-        },
-        async createIfAbsent(id, value) {
-          if (store.has(id)) return false;
-          store.set(id, value);
-          return true;
-        },
-        async deleteIfValue(id, value) {
-          if (store.get(id) !== value && JSON.stringify(store.get(id)) !== JSON.stringify(value)) return false;
-          return store.delete(id);
-        },
-        async create(value) {
-          const id = crypto.randomUUID();
-          store.set(id, value);
-          return { ...(typeof value === "object" && value !== null ? value : {}), id } as TItem & { id: string };
-        },
-        async delete(id) {
-          store.delete(id);
-        },
-        attachments(itemId) {
-          return blobsApi(`${name}:${itemId}`);
-        },
-      };
-    },
+  const scopedApi = (scopeType: string, scopeId: string) => {
+    const { records, legacy } = owner.scope(scopeType, scopeId);
+    const blobKey = JSON.stringify([scopeType, scopeId]);
+    const api: ExtensionStorageApi = {
+      records,
+      assets,
+      files: blobsApi(blobKey),
+      scope(scope: StorageScope) {
+        if (scope.type === "project") return scopedApi("project", owner.workbenchId);
+        if (scope.type === "resource" && "resource" in scope) return scopedApi("resource", scope.resource.id);
+        if (!("id" in scope)) throw new Error("Storage scope requires an ID");
+        return scopedApi(scope.type, scope.id);
+      },
+      async get(key) {
+        return (await legacy.kv.get(key)) as never;
+      },
+      async set(key, value) {
+        await legacy.kv.set(key, value as never);
+      },
+      async delete(key) {
+        await legacy.kv.delete(key);
+      },
+      collection<TItem>(name: string): ExtensionStorageCollectionApi<TItem> {
+        const store = legacy.collection(name);
+        return {
+          async get(id) {
+            return (await store.get(id))?.value as TItem | undefined;
+          },
+          async list() {
+            return (await store.list()).map((record) => record.value) as TItem[];
+          },
+          async put(id, value) {
+            await store.set(id, value as never);
+          },
+          async update(id, value) {
+            if (!(await store.update(id, value as never))) throw new Error(`Item not found: ${id}`);
+          },
+          async createIfAbsent(id, value) {
+            return store.createIfAbsent(id, value as never);
+          },
+          async deleteIfValue(id, value) {
+            return store.deleteIfValue(id, value as never);
+          },
+          async create(value) {
+            const id = crypto.randomUUID();
+            await store.set(id, value as never);
+            return { ...(typeof value === "object" && value !== null ? value : {}), id } as TItem & { id: string };
+          },
+          async delete(id) {
+            await store.delete(id);
+          },
+          attachments(itemId) {
+            return blobsApi(JSON.stringify([blobKey, name, itemId]));
+          },
+        };
+      },
+    };
+    return api;
   };
 
-  return api;
+  return scopedApi("project", owner.workbenchId);
 };

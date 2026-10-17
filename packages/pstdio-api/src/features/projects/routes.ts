@@ -3,6 +3,7 @@ import type { AppBindings } from "../../types";
 import type { ProjectsRouteDeps } from "./deps";
 import { attachWorkspaceHandler, attachWorkspaceRoute } from "./endpoints/attach-workspace";
 import { createProjectHandler, createProjectRoute } from "./endpoints/create-project";
+import { bindEnvironmentHandler, bindEnvironmentRoute } from "./endpoints/environment-binding";
 import { getProjectHandler, getProjectRoute } from "./endpoints/get-project";
 import {
   getHarnessParamDefaultsHandler,
@@ -19,6 +20,7 @@ export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   routes.openapi(listProjectsRoute, listProjectsHandler(deps));
+  routes.openapi(bindEnvironmentRoute, bindEnvironmentHandler(deps));
   routes.openapi(attachWorkspaceRoute, attachWorkspaceHandler(deps));
   routes.openapi(createProjectRoute, createProjectHandler(deps));
   routes.openapi(retryProjectSetupRoute, retryProjectSetupHandler(deps));

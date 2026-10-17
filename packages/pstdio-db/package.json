@@ -23,6 +23,7 @@
     "@types/bun": "1.4.2",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
+    "pstdio-storage": "workspace:*",
     "typescript": "6.0.2"
   },
   "dependencies": {
@@ -32,6 +33,8 @@
     "pg": "^8.20.0",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-paths": "workspace:*",
+    "pstdio-sync": "workspace:*",
+    "pstdio-sync-contracts": "workspace:*",
     "zod": "^4.3.6"
   }
 }

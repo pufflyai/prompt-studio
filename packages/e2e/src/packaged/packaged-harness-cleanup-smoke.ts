@@ -3,6 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expect as expectEventually } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { registerHarnessDetectionSmokeTests } from "./packaged-harness-detection-smoke";
@@ -108,6 +109,7 @@ export const registerHarnessCleanupSmokeTests = () => {
           prompt: "Hello",
           agent: "test.cleanup-smoke.harness.worker",
         });
+        await expectEventually.poll(async () => (await request(`/sessions/${session.id}`)).status).toBe("completed");
         const state = await request(`/sessions/${session.id}/harness-commands`);
         expect(state.commands[0].name).toBe("/goal");
         expect(state.modes[0]).toMatchObject({ tagText: "paused: Native objective", closeActionId: "clear" });

@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
-import { execFileSync } from "node:child_process";
 import { folderProjectInput } from "../helpers/folder-project";
+import { runTestCommand } from "../scripts/run-test-command";
 
 export async function expectBriefSupervisorWakes(input: { baseUrl: string; headers: Record<string, string> }) {
   const { baseUrl, headers } = input;
@@ -18,19 +18,23 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     agents: ["pstdio.workbench-fixture.harness.fake"],
   });
   const folder = projectInput.initial_workspace.params.path;
-  execFileSync("git", ["init", "-b", "main", folder]);
-  execFileSync("git", [
-    "-C",
-    folder,
-    "-c",
-    "user.name=Smoke",
-    "-c",
-    "user.email=smoke@example.com",
-    "commit",
-    "--allow-empty",
-    "-m",
-    "Initialize smoke repository",
-  ]);
+  await runTestCommand("git", ["init", "-b", "main", folder], {});
+  await runTestCommand(
+    "git",
+    [
+      "-C",
+      folder,
+      "-c",
+      "user.name=Smoke",
+      "-c",
+      "user.email=smoke@example.com",
+      "commit",
+      "--allow-empty",
+      "-m",
+      "Initialize smoke repository",
+    ],
+    {},
+  );
   const project = await request("/projects", "POST", projectInput);
   const execute = async (name: string, params: unknown = {}) => {
     const result = await request(
@@ -125,6 +129,7 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     });
     await expectStatus("blocked");
     await execute("review", { requestId: human.id, response: { confirmed: true } });
+    expect((await execute("get-ticket", { id: ticket.id })).statusId).toBe("ready");
     await expectStatus("ready");
     expect(
       (await execute("list-attempts")).filter((row: { ticketId: string }) => row.ticketId === ticket.id),

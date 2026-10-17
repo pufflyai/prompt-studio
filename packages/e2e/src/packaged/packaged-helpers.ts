@@ -3,6 +3,7 @@ import { existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
+import { runTestCommand } from "../scripts/run-test-command";
 
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 export const PACKAGED_BINARY_PATH = process.env.E2E_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dist/pstdio");
@@ -41,6 +42,15 @@ export const runPackaged = (args: string, cwd: string, env: Record<string, strin
     encoding: "utf8",
     timeout: TEST_TIMEOUT,
   });
+
+export const runPackagedAsync = async (args: string[], cwd: string, env: Record<string, string>) => {
+  const { stdout } = await runTestCommand(PACKAGED_BINARY_PATH, args, {
+    cwd,
+    env: { ...process.env, PSTDIO_DEFAULT_EXTENSIONS: "[]", ...env },
+    timeout: TEST_TIMEOUT,
+  });
+  return stdout;
+};
 
 export const runPackagedSafe = (args: string, cwd: string, env: Record<string, string>) => {
   try {

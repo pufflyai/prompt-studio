@@ -469,6 +469,7 @@
     "packages/pstdio-api-contracts": {
       "name": "pstdio-api-contracts",
       "dependencies": {
+        "pstdio-sync-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
       "devDependencies": {
@@ -532,12 +533,15 @@
         "pg": "^8.20.0",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-paths": "workspace:*",
+        "pstdio-sync": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "zod": "^4.3.6",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
         "@types/pg": "^8.18.0",
         "drizzle-kit": "^0.31.9",
+        "pstdio-storage": "workspace:*",
         "typescript": "6.0.2",
       },
     },
@@ -627,6 +631,18 @@
       "name": "pstdio-storage",
       "dependencies": {
         "pstdio-paths": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "typescript": "6.0.2",
+      },
+    },
+    "packages/pstdio-sync": {
+      "name": "pstdio-sync",
+      "dependencies": {
+        "pstdio-sync-contracts": "workspace:*",
+        "yjs": "^13.6.29",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -676,6 +692,7 @@
         "cross-env": "10.1.0",
         "pstdio-api-contracts": "workspace:*",
         "pstdio-extensions": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "rolldown": "^1.2.11",
@@ -706,6 +723,7 @@
       "name": "@pstdio/sdk",
       "version": "0.43.1",
       "dependencies": {
+        "@noble/hashes": "^2.4.0",
         "mustache": "^4.2.0",
         "zod": "^4.3.6",
       },
@@ -715,6 +733,8 @@
         "@types/mustache": "^4.2.6",
         "@types/react": "^19.2.0",
         "pstdio-api-contracts": "workspace:*",
+        "pstdio-sync": "workspace:*",
+        "pstdio-sync-contracts": "workspace:*",
         "react": "^19.0.0",
         "rolldown": "^1.2.11",
         "rolldown-plugin-dts": "^0.28.6",
@@ -1526,6 +1546,8 @@
     "@monaco-editor/react": ["@monaco-editor/react@4.7.0", "", { "dependencies": { "@monaco-editor/loader": "^1.5.0" }, "peerDependencies": { "monaco-editor": ">= 0.25.0 < 1", "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-cyzXQCtO47ydzxpQtCGSQGOC8Gk3ZUeBXFAxD+CWXYFo5OqZyZUonFl0DwUlTyAfRHntBfw2p3w4s9R6oe1eCA=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.4", "", { "dependencies": { "@emnapi/core": "^1.1.0", "@emnapi/runtime": "^1.1.0", "@tybys/wasm-util": "^0.9.0" } }, "sha512-9zESzOO5aDByvhIAsOy9TbpZ0Ur2AJbUI7UT73kcUTS2mxAMHOBaa1st/jAymNoCtvrit99kkzT1FZuXVcgfIQ=="],
+
+    "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
 
     "@nodelib/fs.scandir": ["@nodelib/fs.scandir@2.1.5", "", { "dependencies": { "@nodelib/fs.stat": "2.0.5", "run-parallel": "^1.1.9" } }, "sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g=="],
 
@@ -4180,6 +4202,8 @@
     "pstdio-skills": ["pstdio-skills@workspace:extensions/pstdio-skills"],
 
     "pstdio-storage": ["pstdio-storage@workspace:packages/pstdio-storage"],
+
+    "pstdio-sync": ["pstdio-sync@workspace:packages/pstdio-sync"],
 
     "pstdio-sync-contracts": ["pstdio-sync-contracts@workspace:packages/pstdio-sync-contracts"],
 

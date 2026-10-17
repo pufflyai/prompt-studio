@@ -6,6 +6,7 @@ import {
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import { buildAbsoluteApiUrl } from "@/lib/api";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import {
@@ -83,10 +84,13 @@ export const withDashboardWebviewUrls = (
   }),
 });
 
-export const localizeDashboardExtensionCommandResponse = <T extends { extensionId: string }>(response: T) =>
-  localizeExtensionValue(response, response.extensionId) as ResolvedLocalizable<T>;
+export const localizeDashboardExtensionCommandResponse = <T extends { extensionId: string }>(
+  response: T,
+  owner = getRuntimeCollections(),
+) => localizeExtensionValue(response, response.extensionId, owner) as ResolvedLocalizable<T>;
 
 export const registerExtensionContributions = (input: RegisterExtensionContributionsInput) => {
+  const owner = getRuntimeCollections();
   const disposables: Disposable[] = [];
   try {
     disposables.push({
@@ -119,7 +123,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
           const treeId = body.slot?.context?.treeId;
           const decoratedResponse =
             typeof treeId === "string" ? await withWorkspaceDiffMetadata(rawResponse, undefined, signal) : rawResponse;
-          const response = localizeDashboardExtensionCommandResponse(decoratedResponse);
+          const response = localizeDashboardExtensionCommandResponse(decoratedResponse, owner);
           for (const notification of collectExtensionCommandNotifications(response)) {
             input.ctx.notifications.show({
               level: notification.level,
@@ -128,10 +132,14 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
               metadata: notification.metadata,
             });
           }
-          publishExtensionCommandEvent(response, {
-            ...fileRendererRefreshEnvelopeFromCommand(body, response),
-            projectId: input.projectId,
-          });
+          publishExtensionCommandEvent(
+            response,
+            {
+              ...fileRendererRefreshEnvelopeFromCommand(body, response),
+              projectId: input.projectId,
+            },
+            owner,
+          );
           if (!response.outcome.ok || !response.outcome.navigationRequests?.length) {
             await openSessionCommandResult(input.ctx, input.projectId, response);
           }

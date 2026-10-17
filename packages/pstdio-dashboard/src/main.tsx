@@ -3,7 +3,6 @@ import "@pstdio/ui/style.css";
 import { PstdioApiError } from "@pstdio/sdk/client";
 import { HostStorageProvider } from "@pstdio/ui";
 import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { apiRequest } from "@/lib/api";
@@ -12,7 +11,6 @@ import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
-import { dashboardQueryClient } from "@/lib/query-client";
 import { createConnectionStatusSettings } from "@/lib/sync/connection-status-settings";
 import { SyncProvider } from "@/lib/sync/sync-provider";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
@@ -95,26 +93,24 @@ const renderDashboard = async () => {
   });
   root.render(
     <StrictMode>
-      <QueryClientProvider client={dashboardQueryClient}>
-        <HostStorageProvider storage={storage}>
-          <SyncProvider workbench={dashboardWorkbench} connectionStatusSettings={connectionStatusSettings}>
-            <Workbench
-              workbench={dashboardWorkbench}
-              themeStorage={storage}
-              titleBar={
-                <>
-                  <DashboardHostPreferences workbench={dashboardWorkbench} />
-                  {projectTabs && <DesktopProjectTabs workbench={dashboardWorkbench} {...projectTabs} />}
-                  {desktopLifecycle && <DesktopStartupAppearance bridge={desktopLifecycle} />}
-                  {desktopLifecycle && <DesktopQuitConfirmation bridge={desktopLifecycle} />}
-                </>
-              }
-              renderParamField={renderParamField}
-              onOpenSidePanel={() => void openDashboardSidePanel(dashboardWorkbench)}
-            />
-          </SyncProvider>
-        </HostStorageProvider>
-      </QueryClientProvider>
+      <HostStorageProvider storage={storage}>
+        <SyncProvider workbench={dashboardWorkbench} connectionStatusSettings={connectionStatusSettings}>
+          <Workbench
+            workbench={dashboardWorkbench}
+            themeStorage={storage}
+            titleBar={
+              <>
+                <DashboardHostPreferences workbench={dashboardWorkbench} />
+                {projectTabs && <DesktopProjectTabs workbench={dashboardWorkbench} {...projectTabs} />}
+                {desktopLifecycle && <DesktopStartupAppearance bridge={desktopLifecycle} />}
+                {desktopLifecycle && <DesktopQuitConfirmation bridge={desktopLifecycle} />}
+              </>
+            }
+            renderParamField={renderParamField}
+            onOpenSidePanel={() => void openDashboardSidePanel(dashboardWorkbench)}
+          />
+        </SyncProvider>
+      </HostStorageProvider>
     </StrictMode>,
   );
 };
