@@ -1,5 +1,32 @@
 # @pstdio/ui
 
+## 0.44.0
+
+_2026-10-17_
+
+### Minor Changes
+
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- 6e404ed: Export the chat question form controls and state hook from `@pstdio/ui/chat-ui` so other views can ask questions with the same tabs and choices.
+- 452aeb8: Allow reordering saved views in Kanban boards and data tables with drag and keyboard controls.
+
+### Patch Changes
+
+- 8b1511f: Fix long user message collapsing with a taller borderless preview, a smooth fade above the solid footer, and shared scrolling for expanded messages.
+- 56e1228: Keep typed folder paths when directory loading finishes.
+- 25b1747: Keep Monaco code and diff editors in sync with the app color mode.
+- 49f752b: Keep table rows still while statistics load so clicks open the intended resource.
+- a86ca88: Bound chat responses within long turns, keep user context sticky during scrolling, and avoid redundant rich message updates.
+- fb0c413: Show full tab titles on hover and keyboard focus.
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- d5acfdd: Keep the right-click menu on list rows that also show a tooltip.
+- fc1a846: Remove resting borders from tabs and chat composers while preserving the input focus highlight, align main and side chat insets, and match the workspace shell to the selected tab background without a header gap.
+- 1ec80dd: Keep startup waiting with progress and a 20-second notice, wait for cleanup on Quit, and hide project search below eight projects.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+- c02abd6: Keep Escape available to cancel project tab drags while tooltips are visible.
+
 ## 0.43.1
 
 _2026-10-13_

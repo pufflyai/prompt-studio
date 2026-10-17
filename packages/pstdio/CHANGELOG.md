@@ -1,5 +1,57 @@
 # pstdio
 
+## 0.44.0
+
+_2026-10-17_
+
+### Minor Changes
+
+- 64aff9e: Move allocated files to publisher-isolated extension storage in extension API 0.2.
+- 6e404ed: Export the chat question form controls and state hook from `@pstdio/ui/chat-ui` so other views can ask questions with the same tabs and choices.
+- 6655795: Add extension-owned data migration versions and scoped access to retained legacy records.
+- e2b23f5: Add typed page params and persist extension-owned webview preferences on the server.
+- 39d5ddf: Add durable grouped storage with guarded saves, retained conflicts, and public SDK access.
+- 26bb359: Add stable workbench bindings and isolate local runtime identities, connections, and caches.
+- bc13b78: Add resumable verified asset storage with streaming uploads and retained immutable versions.
+- 452aeb8: Allow reordering saved views in Kanban boards and data tables with drag and keyboard controls.
+
+### Patch Changes
+
+- 8b1511f: Fix long user message collapsing with a taller borderless preview, a smooth fade above the solid footer, and shared scrolling for expanded messages.
+- 56e1228: Keep typed folder paths when directory loading finishes.
+- 0abbc68: Record project setup and extension installation phases in runtime diagnostics.
+- e1ce734: Keep the app responsive while copying, relocating and cleaning up extension updates.
+- 25b1747: Keep Monaco code and diff editors in sync with the app color mode.
+- 8fe8702: Preserve empty CLI option values so ticket blockers and other text fields can be cleared.
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- a86ca88: Reuse completed session history and load active conversations from one authoritative stream.
+- 49f752b: Keep table rows still while statistics load so clicks open the intended resource.
+- c606207: Preserve resolved ancestry and validate replay cursors for shared storage.
+- d9b060f: Record harness detection phases and distinguish deadline expiry from provider errors.
+- a86ca88: Bound chat responses within long turns, keep user context sticky during scrolling, and avoid redundant rich message updates.
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- fb0c413: Show full tab titles on hover and keyboard focus.
+- 0abbc68: Wait for Windows process cleanup and report only surviving target process IDs.
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- ec972ab: Recover desktop automatically once when its local backend exits, including backends started by the CLI.
+- d5acfdd: Keep the right-click menu on list rows that also show a tooltip.
+- 0b86513: Add labeled resource menu sections and disabled action contracts.
+- 6ed0c40: Preserve current webview build failures when Reload changes the source registration.
+- fc1a846: Remove resting borders from tabs and chat composers while preserving the input focus highlight, align main and side chat insets, and match the workspace shell to the selected tab background without a header gap.
+- a145162: Avoid fetching installed default extensions again during project setup.
+- 1dc235f: Keep navigation visible without load-error notices in the nav panel.
+- 310e039: Fix Linux runtime descriptor leaks, OpenCode worker cleanup, and startup readiness.
+- 4b3c6cb: Expose execution exit evidence and guard automatic session continuation against changed runs.
+- 1ec80dd: Keep startup waiting with progress and a 20-second notice, wait for cleanup on Quit, and hide project search below eight projects.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- f85d388: Share concurrent extension loads until their bundle build finishes.
+- bee67a9: Align extra theme contrast and interaction colors, support application color roles in theme assets, and add a development-only component comparison Storybook.
+- 83d67ff: Let extension tree rows show a tooltip anywhere on the row with the new `tooltip` field, such as a file's full path.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+- 2ff0b7b: Define versioned synchronization contracts and reusable isolated protocol conformance cases.
+- c02abd6: Keep Escape available to cancel project tab drags while tooltips are visible.
+
 ## 0.43.1
 
 _2026-10-13_

@@ -1,5 +1,14 @@
 # harness-open-code
 
+## 0.44.0
+
+_2026-10-17_
+
+### Patch Changes
+
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- 310e039: Fix Linux runtime descriptor leaks, OpenCode worker cleanup, and startup readiness.
+
 ## 0.43.1
 
 _2026-10-13_
