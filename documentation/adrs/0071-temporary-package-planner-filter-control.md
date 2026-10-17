@@ -2,6 +2,8 @@
 
 Proposed: 2026-10-12
 
+Status: Superseded on 2026-10-17. Published UI 0.43.1 exports `CollectionFilter`, so Planner imports that public entry directly. The generated module, declaration, build script, Nx dependency, and related tool configuration have been removed.
+
 ## Intended design
 
 Planner imports `CollectionFilter` from the public `@pstdio/ui/collection-view` entry. The UI package owns the picker, criteria bubbles, styling, and interactions. Planner owns the ignore filter value.
