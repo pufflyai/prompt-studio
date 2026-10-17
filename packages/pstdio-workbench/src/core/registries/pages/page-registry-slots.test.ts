@@ -100,7 +100,7 @@ describe("page primary slot lifecycle", () => {
     expect(registry.store.getState().reconciliation.remove).toEqual([]);
     expect(registry.store.getState().reconciliation.add).toEqual([]);
   });
-  test("owns preview replacement and pinning inside one many slot", () => {
+  test("retains each instance and its pin intent for host tray composition", () => {
     const registry = createRegistry();
     registerPage(registry, {
       id: "files",
@@ -128,8 +128,8 @@ describe("page primary slot lifecycle", () => {
     activatePage(registry, { pageId: "files", resource: { type: "file", id: "B" }, open: "pin" });
     activatePage(registry, { pageId: "files", resource: { type: "file", id: "C" } });
     const placements = activePagePlacements(registry, "$main");
-    expect(placements.map((candidate) => candidate.identity.instanceKey)).toEqual(["file:B", "file:C"]);
-    expect(placements.map((candidate) => candidate.value.open)).toEqual(["pin", "preview"]);
+    expect(placements.map((candidate) => candidate.identity.instanceKey)).toEqual(["file:A", "file:B", "file:C"]);
+    expect(placements.map((candidate) => candidate.value.open)).toEqual(["preview", "pin", "preview"]);
   });
   test("updates one existing resource instance when metadata or section changes", () => {
     const registry = createRegistry();

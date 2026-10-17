@@ -13,7 +13,7 @@ test("shared mode resources restore on reload and keep their owner state on anot
   await restored.navigation.openTarget(navigate("beta"));
   expect(restored.layout.getLayout().regions.side.widgets.map((item) => item.resource?.id)).toEqual(["shared"]);
   await restored.navigation.openTarget({ kind: "panel", panel, resource: resource("next"), open: "preview" });
-  expect(restored.layout.getLayout().regions.side.widgets.map((item) => item.resource?.id)).toEqual(["shared", "next"]);
+  expect(restored.layout.getLayout().regions.side.widgets.map((item) => item.resource?.id)).toEqual(["next", "shared"]);
 });
 
 test("closing a shared mode panel persists for every page owned by that mode", async () => {

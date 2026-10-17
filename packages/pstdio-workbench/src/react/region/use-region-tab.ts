@@ -18,7 +18,7 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   const { workbench, placement, disabled = false, sortable = false, region, nextWidgetId, previousWidgetId } = props;
   const snapshot = usePlacementTab(placement, workbench);
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0, triggerId: "" });
   const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const start = useRef({ x: 0, y: 0 });
   const suppressClick = useRef(false);
@@ -34,7 +34,7 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
   const show = (element: HTMLElement) => {
     if (disabled) return;
     const rect = element.getBoundingClientRect();
-    setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+    setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height, triggerId: element.id });
     setOpen(true);
   };
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
@@ -85,6 +85,7 @@ export const useRegionTab = (props: WorkbenchRegionTabProps) => {
     drag,
     target,
     drop: context.drop?.widgetId === placement.widgetId ? context.drop : undefined,
+    replacementStyle: context.drop?.replacing?.widgetId === placement.widgetId ? "tabDropZone" : undefined,
     onContextMenu,
     onKeyDown,
     onPointerDown,

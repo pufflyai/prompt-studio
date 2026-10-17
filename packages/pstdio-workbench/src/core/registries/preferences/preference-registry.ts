@@ -1,6 +1,7 @@
 import type { ContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 
 export type PreferenceScope = "default" | "user" | "project" | "repo" | "workspace" | "extension" | "session";
 export type PreferenceValue = boolean | number | string | string[] | number[] | boolean[] | Record<string, unknown>;
@@ -43,6 +44,7 @@ export interface PreferenceValueAdapter {
 }
 
 export interface PreferenceRegistry {
+  onDidChangeValue(listener: (name: string) => void): Disposable;
   registerValueAdapter(name: string, adapter: PreferenceValueAdapter): Disposable;
   store: WorkbenchStore<PreferenceRegistryStoreState>;
   registerSchema(schema: PreferenceSchemaContribution, metadata?: ContributionMetadata): Disposable;
@@ -76,9 +78,21 @@ export const createPreferenceRegistry = (input: CreatePreferenceRegistryInput = 
   });
   const adapters = new Map<string, PreferenceValueAdapter>();
   const persistence = input.persistence ?? createMemoryPreferencePersistence();
+  const listeners = new Set<(name: string) => void>();
+  const notify = (name: string, result: void | Promise<void>) => {
+    const emit = () => {
+      for (const listener of listeners) runWorkbenchEffect("preference change", () => listener(name));
+    };
+    if (result instanceof Promise) return result.then(emit);
+    emit();
+  };
 
   return {
     store,
+    onDidChangeValue(listener) {
+      listeners.add(listener);
+      return createDisposable(() => listeners.delete(listener));
+    },
     registerValueAdapter(name, adapter) {
       adapters.set(name, adapter);
       return createDisposable(() => {
@@ -124,7 +138,8 @@ export const createPreferenceRegistry = (input: CreatePreferenceRegistryInput = 
     },
     setOwnedValue(ownerId, name, value, scope) {
       if (scope.scope === "default") throw new Error("preference_scope_read_only");
-      return persistence.setValue(JSON.stringify([ownerId, name]), value, scope);
+      const key = JSON.stringify([ownerId, name]);
+      return notify(key, persistence.setValue(key, value, scope));
     },
     getSchema(name) {
       const schemas = store.getState().schemas;
@@ -134,8 +149,8 @@ export const createPreferenceRegistry = (input: CreatePreferenceRegistryInput = 
     setValue(name, value, scope) {
       if (!Object.hasOwn(store.getState().schemas, name)) throw new Error(`Preference schema not registered: ${name}`);
       const adapter = adapters.get(name);
-      if (adapter) return adapter.set(value);
-      return persistence.setValue(name, value, scope);
+      if (adapter) return notify(name, adapter.set(value));
+      return notify(name, persistence.setValue(name, value, scope));
     },
 
     getValue(name, scope) {

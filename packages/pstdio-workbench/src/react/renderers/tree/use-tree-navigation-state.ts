@@ -9,7 +9,7 @@ export const useTreeNavigationState = (workbench: WorkbenchCore) => {
     state.activePageId ? state.pages[state.activePageId] : undefined,
   );
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolveTreeActiveResource(state.layout, activePage),
+    resolveTreeActiveResource(state.layout, activePage, activeLocation?.resource),
   );
   return { projectId, activeLocation, activeResource };
 };

@@ -12,6 +12,7 @@ import {
   workbenchRegions,
 } from "./layout-types";
 import { composeOwnedPlacements, placementIdentityKey, type ResolvedOwnedPlacement } from "./placement-reconciliation";
+import { planTrayTabs } from "./tray-tabs";
 
 export type WorkbenchOwnedWidgetPlacement = ResolvedOwnedPlacement<WorkbenchWidgetPlacement>;
 
@@ -45,7 +46,7 @@ const resolveOwnerResourceKey = (
     ? (desired.value.ownerResourceKey ?? exact?.ownerResourceKey ?? transfer?.ownerResourceKey)
     : desired.value.ownerResourceKey;
 
-const indexCurrentOwnedPlacements = (layout: WorkbenchLayout) => {
+export const indexCurrentOwnedPlacements = (layout: WorkbenchLayout) => {
   const indexed = new Map<string, { region: WorkbenchRegion; placement: WorkbenchWidgetPlacement }>();
   for (const region of Object.values(layout.regions)) {
     for (const placement of region.widgets) {
@@ -124,7 +125,7 @@ const restoreModeWidgets = (
   return ordered.map((widget) => (widget.placementIdentity?.kind === "mode" ? modes[modeIndex++]! : widget));
 };
 
-const renderDesiredPlacements = (
+export const renderDesiredPlacements = (
   input: ReconcileOwnedWidgetLayoutInput,
   current: ReturnType<typeof indexCurrentOwnedPlacements>,
 ) => {
@@ -229,7 +230,11 @@ const reconcileRegions = (
       region.widgets.length === 0 && widgets.some((placement) => !placement.hiddenByDefault);
     regions[regionId] = {
       ...region,
-      widgets,
+      widgets: planTrayTabs(
+        widgets,
+        desired.find((entry) => entry.region === regionId && entry.placement.tabRetention === "preview")?.placement
+          .widgetId ?? activeWidgetId,
+      ).widgets,
       savedWidgetOrder: undefined,
       activeWidgetId,
       ...(docked.has(regionId) ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),

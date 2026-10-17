@@ -1,10 +1,23 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { ParamEditorRow, type SelectionParam } from "@pstdio/ui/param-editor";
+import type { WorkbenchCore } from "@pstdio/workbench";
+import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // Lists every registered theme, light themes first, like the Change Theme picker.
-export const AppearanceSettingsPanel = () => {
+export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => {
+  const { workbench } = props;
+  const [openRelated, setOpenRelated] = useState(
+    () => workbench.preferences.getValue(openRelatedResourcesPreference) !== false,
+  );
+  useEffect(() => {
+    const subscription = workbench.preferences.onDidChangeValue((name) => {
+      if (name === openRelatedResourcesPreference) setOpenRelated(workbench.preferences.getValue(name) !== false);
+    });
+    return () => subscription.dispose();
+  }, [workbench]);
   const { t } = useTranslation("settings");
   const { chosenThemePreference, themePreferences, setThemePreference } = useThemePreference();
   const themes = [...themePreferences].sort((a, b) => {
@@ -34,6 +47,19 @@ export const AppearanceSettingsPanel = () => {
           param={themeParam}
           onChange={(_id, value) => {
             if (typeof value === "string") setThemePreference(value);
+          }}
+        />
+        <ParamEditorRow
+          param={{
+            id: "open-related-resources",
+            name: t("appearance.openRelatedResources"),
+            description: t("appearance.openRelatedResourcesHelper"),
+            type: "boolean",
+            defaultValue: openRelated,
+          }}
+          onChange={(_id, value) => {
+            if (typeof value !== "boolean") return;
+            workbench.preferences.setValue(openRelatedResourcesPreference, value, { scope: "user" });
           }}
         />
       </Stack>

@@ -100,7 +100,9 @@
     "title": "Appearance",
     "description": "Choose how Prompt Studio looks. You can also change the theme with Alt+Shift+T.",
     "theme": "Theme",
-    "themeHelper": "Applies to every project."
+    "themeHelper": "Applies to every project.",
+    "openRelatedResources": "Open related resources",
+    "openRelatedResourcesHelper": "Automatically open a recent related resource of each kind as an unpinned preview."
   },
   "connectionStatus": {
     "description": "Show the backend connection status in the status bar.",

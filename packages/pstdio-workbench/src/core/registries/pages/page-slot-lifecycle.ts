@@ -29,12 +29,7 @@ const nextResourceInstances = (
   if (slot.item.kind !== "binding" || slot.item.binding.cardinality !== "many") return [instance];
   const existing = current.find((candidate) => candidate.instanceKey === instance.instanceKey);
   const open: PageOpenIntent = existing?.open === "pin" || instance.open === "pin" ? "pin" : "preview";
-  return [
-    ...current.filter(
-      (candidate) => candidate.instanceKey !== instance.instanceKey && (open === "pin" || candidate.open === "pin"),
-    ),
-    { ...instance, open },
-  ];
+  return [...current.filter((candidate) => candidate.instanceKey !== instance.instanceKey), { ...instance, open }];
 };
 
 export const openResourceSlot = (input: {
