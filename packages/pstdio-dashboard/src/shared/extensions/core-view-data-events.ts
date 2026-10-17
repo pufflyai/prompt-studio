@@ -1,13 +1,13 @@
 import { viewDataEvents } from "@pstdio/sdk/extensions";
-import { getCollection, type SyncedRow, subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeCollections, type SyncedRow } from "@/lib/sync/collections";
 import { type ExtensionRefreshEvent, publishExtensionEvent } from "./extension-webview-broadcast";
 import { subscribeToResourceAnchorChanges } from "./resource-anchor-feed";
 
 const projectOf = (row: SyncedRow | undefined) => (typeof row?.project_id === "string" ? row.project_id : undefined);
 
-export const subscribeCoreViewDataEvents = (
-  publish: (event: ExtensionRefreshEvent) => void = publishExtensionEvent,
-) => {
+export const subscribeCoreViewDataEvents = (publish?: (event: ExtensionRefreshEvent) => void) => {
+  const owner = getRuntimeCollections();
+  const publishOwned = publish ?? ((event: ExtensionRefreshEvent) => publishExtensionEvent(event, owner));
   const pending = new Map<string, ExtensionRefreshEvent>();
   let scheduled = false;
   let disposed = false;
@@ -18,16 +18,17 @@ export const subscribeCoreViewDataEvents = (
     scheduled = true;
     queueMicrotask(() => {
       scheduled = false;
-      if (disposed) return;
+      if (disposed || owner.isDisposed()) return;
       const events = [...pending.values()];
       pending.clear();
-      for (const event of events) publish(event);
+      for (const event of events) publishOwned(event);
     });
   };
-  const unsubscribeAnchors = subscribeToResourceAnchorChanges((event) =>
-    enqueue(viewDataEvents.resourceAnchorsChanged.id, event.projectId),
+  const unsubscribeAnchors = subscribeToResourceAnchorChanges(
+    (event) => enqueue(viewDataEvents.resourceAnchorsChanged.id, event.projectId),
+    owner,
   );
-  const unsubscribe = subscribeCollections((change) => {
+  const unsubscribe = owner.subscribeCollections((change) => {
     if (!change) return;
     for (const { value, previousValue } of change.changes) {
       for (const row of [previousValue, value]) {
@@ -43,11 +44,11 @@ export const subscribeCoreViewDataEvents = (
           case "workspace_sessions":
             enqueue(
               viewDataEvents.sessionsChanged.id,
-              projectOf(getCollection("sessions").get(String(row.session_id))),
+              projectOf(owner.getCollection("sessions").get(String(row.session_id))),
             );
             enqueue(
               viewDataEvents.sessionsChanged.id,
-              projectOf(getCollection("workspaces").get(String(row.workspace_id))),
+              projectOf(owner.getCollection("workspaces").get(String(row.workspace_id))),
             );
             break;
           case "workspaces":

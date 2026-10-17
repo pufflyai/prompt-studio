@@ -204,9 +204,13 @@ the target artifacts are eligible for publication:
   within three seconds with project data and the selected workbench resource
   intact;
 - `pst close` announces an intentional shutdown, removes the matching descriptor,
-  and closes the connected desktop; and
-- an injected sidecar exit displays recovery within 500 milliseconds, then Retry
-  starts a replacement runtime in the existing Electron process.
+  and closes the connected desktop;
+- an unexpected backend exit gets one automatic recovery attempt in the existing
+  Electron process, including when desktop attached to a CLI-started backend.
+  The restarting view appears within 500 milliseconds; and
+- an injected exit of that replacement displays recovery within 500 milliseconds,
+  then Retry starts another runtime in the same Electron process. Live but
+  unreachable owners and intentional shutdowns never trigger automatic replacement.
 
 Startup, recovery, and renderer budgets run as packaged benchmarks in a separate
 step before the packaged suite ([ADR 0067](../../adrs/0067-separate-performance-budgets-from-execution-allowances.md)).

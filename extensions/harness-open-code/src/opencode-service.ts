@@ -29,6 +29,7 @@ type OpencodeServiceDeps = {
 };
 
 type OpencodeSessionStartInput = {
+  signal?: AbortSignal;
   prompt: string;
   attachments?: HarnessAttachment[];
   model?: string | null;
@@ -42,6 +43,7 @@ type OpencodeSessionStartResult = {
 };
 
 type OpencodeSessionMessageInput = {
+  signal?: AbortSignal;
   sessionId: string;
   prompt: string;
   attachments?: HarnessAttachment[];
@@ -125,7 +127,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     fetcher: overrides.fetcher ?? fetch,
   };
 
-  const { withServerUrl } = createServerConnection(deps);
+  const { withServerUrl, dispose, cancelPendingStartup } = createServerConnection(deps);
 
   const postSessionMessage = async (
     baseUrl: string,
@@ -135,6 +137,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     attachments?: HarnessAttachment[],
     model?: string | null,
     params?: HarnessParams,
+    signal?: AbortSignal,
   ) => {
     const headers = buildHeaders(directory);
     const selectedModel = toOpencodeModelInput(model);
@@ -144,6 +147,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     const messageResponse = await requestJson<Record<string, unknown>>(deps.fetcher, messageUrl, {
       method: "POST",
       headers,
+      signal,
       body: {
         // Keep the no-attachment path synchronous so it does not reorder against the poll loop.
         parts:
@@ -183,6 +187,10 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
 
       const sessionId = createResponse.parsed?.id;
       if (!sessionId) throw new Error("Opencode session id not found.");
+      if (input.signal?.aborted) {
+        await abortSession(sessionId, directory);
+        input.signal.throwIfAborted();
+      }
 
       const messageComplete = postSessionMessage(
         baseUrl,
@@ -192,6 +200,7 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
         input.attachments,
         input.model,
         input.params,
+        input.signal,
       );
 
       return { sessionId, messageComplete };
@@ -205,7 +214,16 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
     const prompt = input.prompt.trim();
 
     const messageComplete = withServerUrl((baseUrl) =>
-      postSessionMessage(baseUrl, input.sessionId, directory, prompt, input.attachments, input.model, input.params),
+      postSessionMessage(
+        baseUrl,
+        input.sessionId,
+        directory,
+        prompt,
+        input.attachments,
+        input.model,
+        input.params,
+        input.signal,
+      ),
     );
 
     return { messageComplete };
@@ -254,6 +272,8 @@ export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = 
   const { listPendingQuestions, replyQuestion } = createQuestionApi({ fetcher: deps.fetcher, withServerUrl });
 
   return {
+    dispose,
+    cancelPendingStartup,
     startSession,
     sendSessionMessage,
     getSessionMessages,

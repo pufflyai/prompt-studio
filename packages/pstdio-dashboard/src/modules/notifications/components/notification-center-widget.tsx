@@ -7,7 +7,7 @@ import { useWorkbenchStore } from "@pstdio/workbench/react";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
 import { useSyncExternalStore } from "react";
 import { apiRequest } from "@/lib/api";
-import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collections";
+import { getCollectionsVersion, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
@@ -87,6 +87,7 @@ export const surfaceNotificationCommandResponse = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
   response: CommandExecuteResponse,
   projectId: string,
+  owner = getRuntimeCollections(),
 ) => {
   for (const commandNotification of collectExtensionCommandNotifications(response)) {
     input.workbench.notifications.show({
@@ -96,10 +97,11 @@ export const surfaceNotificationCommandResponse = (
       metadata: commandNotification.metadata,
     });
   }
-  publishExtensionCommandEvent(response, { projectId });
+  publishExtensionCommandEvent(response, { projectId }, owner);
 };
 
 export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) => {
+  const owner = getRuntimeCollections();
   const { input } = props;
   useSyncExternalStore(subscribeCollections, getCollectionsVersion, getCollectionsVersion);
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
@@ -135,7 +137,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
           resource: notification.target ?? undefined,
           source: "dashboard",
         });
-        surfaceNotificationCommandResponse(input, response, notification.projectId);
+        surfaceNotificationCommandResponse(input, response, notification.projectId, owner);
       }
 
       close();

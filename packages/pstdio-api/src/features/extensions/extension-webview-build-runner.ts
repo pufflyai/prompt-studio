@@ -6,80 +6,53 @@ import { EXTENSION_INSTALLING_MARKER } from "./install-extension-source";
 export type InstalledSourceWithManifest = {
   id: string;
   install_name: string;
+  updated_at: string;
   source_hash?: string | null;
   source_path: string;
 };
 
-type ExpectedWebviewBuildSource = {
-  sourceHash?: string | null;
-  sourcePath: string;
-};
-
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
-
-const isSourceChanging = (sourcePath: string) => existsSync(join(sourcePath, EXTENSION_INSTALLING_MARKER));
-
-export const webviewBuildFailure = (installName: string, webviewId: string, details: string) =>
-  new Error(`Webview build failed for ${installName}/${webviewId}${details ? `: ${details}` : ""}`);
-
 export const expectedWebviewBuildSource = (row: InstalledSourceWithManifest) => ({
   sourceHash: row.source_hash,
   sourcePath: row.source_path,
+  updatedAt: row.updated_at,
 });
+
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const isSourceChanging = (sourcePath: string) => existsSync(join(sourcePath, EXTENSION_INSTALLING_MARKER));
+export const webviewBuildFailure = (installName: string, webviewId: string, details: string) =>
+  new Error(`Webview build failed for ${installName}/${webviewId}${details ? `: ${details}` : ""}`);
 
 export const runExtensionWebviewBuild = async (input: {
   activeBuilds: Set<AbortController>;
-  building: Map<string, string>;
   buildWebview: ExtensionWebviewBuilder;
   distDir: string;
   entryPath: string;
-  isDisposed: () => boolean;
-  key: string;
-  reportFailure: (
-    installedExtensionId: string,
-    webviewId: string,
-    error: unknown,
-    expectedSource: ExpectedWebviewBuildSource,
-  ) => Promise<unknown>;
+  isCurrent: () => boolean;
   row: InstalledSourceWithManifest;
-  signature: string;
   webviewId: string;
 }) => {
-  if (input.isDisposed()) return "failure";
-
+  if (!input.isCurrent()) return { status: "unavailable" as const };
   const controller = new AbortController();
   input.activeBuilds.add(controller);
-  let result: Awaited<ReturnType<ExtensionWebviewBuilder>>;
   try {
-    result = await input.buildWebview({
+    const result = await input.buildWebview({
       entryPath: input.entryPath,
       outdir: input.distDir,
       signal: controller.signal,
     });
+    if (result.success) return { status: "success" as const };
+    if (!input.isCurrent() || isSourceChanging(input.row.source_path)) return { status: "unavailable" as const };
+    return {
+      status: "failure" as const,
+      error: webviewBuildFailure(input.row.install_name, input.webviewId, result.details),
+    };
   } catch (error) {
-    if (isSourceChanging(input.row.source_path)) return "source-changing";
-    if (!input.isDisposed() && input.building.get(input.key) === input.signature) {
-      await input.reportFailure(
-        input.row.id,
-        input.webviewId,
-        webviewBuildFailure(input.row.install_name, input.webviewId, errorMessage(error)),
-        expectedWebviewBuildSource(input.row),
-      );
-    }
-    return "failure";
+    if (!input.isCurrent() || isSourceChanging(input.row.source_path)) return { status: "unavailable" as const };
+    return {
+      status: "failure" as const,
+      error: webviewBuildFailure(input.row.install_name, input.webviewId, errorMessage(error)),
+    };
   } finally {
     input.activeBuilds.delete(controller);
   }
-
-  if (result.success) return "success";
-  if (isSourceChanging(input.row.source_path)) return "source-changing";
-  if (!input.isDisposed() && input.building.get(input.key) === input.signature) {
-    await input.reportFailure(
-      input.row.id,
-      input.webviewId,
-      webviewBuildFailure(input.row.install_name, input.webviewId, result.details),
-      expectedWebviewBuildSource(input.row),
-    );
-  }
-  return "failure";
 };

@@ -1,9 +1,10 @@
 import { dirname } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { extensionLoadKey } from "pstdio-extensions";
 import {
   checkExtensionSource,
   hashExtensionSource,
-  type LoadedExtension,
+  type LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
 
 type JsonRecord = Record<string, unknown>;
@@ -11,7 +12,7 @@ type JsonRecord = Record<string, unknown>;
 type ReloadDeps = {
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitInstalledSource: (source: unknown) => void;
-  notifyInstalledSourcesChanged: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void>;
+  notifyInstalledSourcesChanged: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
   hashExtension?: typeof hashExtensionSource;
   checkExtension?: typeof checkExtensionSource;
 };
@@ -23,6 +24,7 @@ type InstalledSource = NonNullable<
 export type ExpectedWebviewBuildSource = {
   sourceHash?: string | null;
   sourcePath: string;
+  updatedAt: string;
 };
 
 export const buildErrorJson = (code: string, error: unknown, details: JsonRecord = {}) => {
@@ -67,6 +69,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
 
   try {
     nextSourceHash = hash(existing.source_path);
+    const loadKey = extensionLoadKey(existing.source_path);
     const result = await check(existing.source_path, dirname(existing.source_path));
     if (!result.loaded || result.check.errorCount > 0) throw validationError(result.check.diagnostics);
 
@@ -82,7 +85,7 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     });
     if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
 
-    await deps.notifyInstalledSourcesChanged(existing.source_path, result.loaded);
+    await deps.notifyInstalledSourcesChanged(existing.source_path, { loaded: result.loaded, loadKey });
     const refreshed = await deps.installedExtensionSourcesService.get(existing.id);
     if (!refreshed) throw new Error(`Installed extension not found: ${existing.id}`);
 
@@ -150,23 +153,23 @@ export const reportWebviewBuildFailure = async (
   installedExtensionId: string,
   webviewId: string,
   error: unknown,
-  expectedSource?: ExpectedWebviewBuildSource,
+  expectedSource: ExpectedWebviewBuildSource,
 ) => {
   const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
   if (!existing) throw new Error(`Installed extension not found: ${installedExtensionId}`);
-  if (
-    expectedSource &&
-    (existing.source_hash !== (expectedSource.sourceHash ?? null) || existing.source_path !== expectedSource.sourcePath)
-  ) {
-    return existing;
-  }
+  if (existing.source_path !== expectedSource.sourcePath) return { status: "obsolete" as const };
+  if (existing.source_hash !== (expectedSource.sourceHash ?? null)) return { status: "source-changed" as const };
 
   const currentErrorJson = buildErrorJson("extension_webview_build_failed", error, { webviewId });
-  const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
-    status: "error",
-    last_error_json: currentErrorJson,
-  });
-  if (!updated) throw new Error(`Installed extension not found: ${installedExtensionId}`);
+  const updated = await deps.installedExtensionSourcesService.updateLoadStateIfUnchanged(
+    existing.id,
+    expectedSource.updatedAt,
+    {
+      status: "error",
+      last_error_json: currentErrorJson,
+    },
+  );
+  if (!updated) return { status: "source-changed" as const };
 
   await deps.installedExtensionSourcesService.recordReload({
     installed_extension_id: existing.id,
@@ -179,24 +182,19 @@ export const reportWebviewBuildFailure = async (
   });
 
   deps.emitInstalledSource(updated);
-  return updated;
+  return { status: "reported" as const, source: updated };
 };
 
 export const reportWebviewBuildSuccess = async (
   deps: ReloadDeps,
   installedExtensionId: string,
   webviewId: string,
-  expectedSource?: ExpectedWebviewBuildSource,
+  expectedSource: ExpectedWebviewBuildSource,
 ) => {
   const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
   if (!existing) throw new Error(`Installed extension not found: ${installedExtensionId}`);
-  if (
-    expectedSource &&
-    (existing.source_path !== expectedSource.sourcePath ||
-      (expectedSource.sourceHash !== undefined && existing.source_hash !== expectedSource.sourceHash))
-  ) {
-    return existing;
-  }
+  if (existing.source_path !== expectedSource.sourcePath) return { status: "obsolete" as const };
+  if (existing.source_hash !== (expectedSource.sourceHash ?? null)) return { status: "source-changed" as const };
 
   const currentError = existing.last_error_json;
   const shouldClear =
@@ -207,12 +205,16 @@ export const reportWebviewBuildSuccess = async (
     "webviewId" in currentError &&
     currentError.webviewId === webviewId;
 
-  const updated = await deps.installedExtensionSourcesService.updateLoadState(existing.id, {
-    loaded_revision: crypto.randomUUID(),
-    ...(shouldClear ? { status: "loaded" as const, last_error_json: null } : {}),
-  });
-  if (!updated) throw new Error(`Installed extension not found: ${installedExtensionId}`);
+  const updated = await deps.installedExtensionSourcesService.updateLoadStateIfUnchanged(
+    existing.id,
+    expectedSource.updatedAt,
+    {
+      loaded_revision: crypto.randomUUID(),
+      ...(shouldClear ? { status: "loaded" as const, last_error_json: null } : {}),
+    },
+  );
+  if (!updated) return { status: "source-changed" as const };
 
   deps.emitInstalledSource(updated);
-  return updated;
+  return { status: "reported" as const, source: updated };
 };

@@ -1,3 +1,4 @@
+export type * from "./assets";
 export type * from "./automation";
 export type * from "./collection-view";
 export type * from "./commands";
@@ -24,6 +25,7 @@ export type * from "./resources";
 export type * from "./saved-views";
 export type * from "./slots";
 export type * from "./statuses";
+export type * from "./storage-records";
 export type * from "./tree-renderer";
 export type * from "./view-toolbar-action";
 export type * from "./views";

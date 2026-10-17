@@ -1,4 +1,10 @@
-import { CreateBucketCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { canonicalJson } from "../fingerprint";
 import type { Asset, Scope } from "../wire";
 
@@ -36,6 +42,9 @@ export function createObjects(endpoint: string) {
         if (error instanceof Error && error.name === "NoSuchKey") return null;
         throw error;
       }
+    },
+    async remove(scope: Scope, asset: Asset) {
+      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key(scope, asset.sha256) }));
     },
     close() {
       s3.destroy();

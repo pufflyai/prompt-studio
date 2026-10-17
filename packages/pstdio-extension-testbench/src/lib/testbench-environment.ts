@@ -1,5 +1,5 @@
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
-import { createMemoryResources } from "@pstdio/sdk/testing";
+import { createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 
 export type BenchStorageSeed = {
@@ -61,74 +61,17 @@ const createStorageFiles = (seedBlobs?: BenchStorageSeed["blobs"]): CommandRunne
 };
 
 const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["storage"] => {
-  const kv = new Map(Object.entries(seed.kv ?? {}));
-  const collections = new Map<string, Map<string, unknown>>();
-
-  for (const [name, values] of Object.entries(seed.collections ?? {})) {
-    collections.set(name, new Map(Object.entries(values)));
-  }
-
-  const collectionMap = (name: string) => {
-    const existing = collections.get(name);
-    if (existing) return existing;
-    const next = new Map<string, unknown>();
-    collections.set(name, next);
-    return next;
+  const files = createStorageFiles(seed.blobs);
+  const wrap = (storage: CommandRunnerEnvironment["storage"]) => {
+    const api: CommandRunnerEnvironment["storage"] = {
+      ...storage,
+      files,
+      scope: (scope) => wrap(storage.scope(scope)),
+      collection: (name) => ({ ...storage.collection(name), attachments: () => files }),
+    };
+    return api;
   };
-
-  const api: CommandRunnerEnvironment["storage"] = {
-    files: createStorageFiles(seed.blobs),
-    scope: () => api,
-    async get(key) {
-      return kv.get(key) as never;
-    },
-    async set(key, value) {
-      kv.set(key, value);
-    },
-    async delete(key) {
-      kv.delete(key);
-    },
-    collection(name) {
-      const items = collectionMap(name);
-      return {
-        attachments: () => api.files,
-        async create(value) {
-          const id = crypto.randomUUID();
-          const next = typeof value === "object" && value !== null ? { ...value, id } : { id, value };
-          items.set(id, next);
-          return next as never;
-        },
-        async createIfAbsent(id, value) {
-          if (items.has(id)) return false;
-          items.set(id, value);
-          return true;
-        },
-        async delete(id) {
-          items.delete(id);
-        },
-        async deleteIfValue(id, value) {
-          if (items.get(id) !== value && JSON.stringify(items.get(id)) !== JSON.stringify(value)) return false;
-          items.delete(id);
-          return true;
-        },
-        async get(id) {
-          return items.get(id) as never;
-        },
-        async list() {
-          return [...items.values()] as never;
-        },
-        async update(id, value) {
-          if (!items.has(id)) throw new Error(`Item not found: ${id}`);
-          items.set(id, value);
-        },
-        async put(id, value) {
-          items.set(id, value);
-        },
-      };
-    },
-  };
-
-  return api;
+  return wrap(createMemoryStorage(seed));
 };
 
 export const createBenchEnvironment = (

@@ -33,12 +33,22 @@ const setup = () => {
   const managers: ReturnType<typeof createExtensionWebviewBuildManager>[] = [];
   const createManager = () => {
     const manager = createExtensionWebviewBuildManager({
-      listInstalledSources: async () => [{ id: "lab", install_name: "lab", source_path: source }],
+      listInstalledSources: async () => [
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+
+          id: "lab",
+          install_name: "lab",
+          source_path: source,
+        },
+      ],
       reportBuildFailure: async (_name, _id, error) => {
         state.error = error;
+        return "reported";
       },
       reportBuildSuccess: async () => {
         state.error = null;
+        return "reported";
       },
       buildWebview: async (input) => {
         state.builds++;

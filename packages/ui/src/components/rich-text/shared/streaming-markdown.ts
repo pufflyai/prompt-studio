@@ -1,5 +1,7 @@
 import { $getRoot, $isElementNode, $isTextNode, type ElementNode, type LexicalNode, type TextNode } from "lexical";
 import { ChatCodeLinkNode } from "../../chat-ui/links/chat-code-link-node";
+import { ChatResourceLinkNode } from "../../chat-ui/links/chat-resource-link-node";
+import { splitChatTextPaths } from "../../chat-ui/links/chat-text-paths";
 import { createMarkdownLexicalNodes } from "./markdown-import";
 import type { MarkdownUrlResolver } from "./markdown-url";
 import { $createStreamingTextNode } from "./nodes/streaming-text-node";
@@ -72,8 +74,13 @@ const reconcileChildren = (parent: ElementNode, nextNodes: LexicalNode[], animat
   const previous = parent.getChildren();
   const result: LexicalNode[] = [];
   let cursor = 0;
-  for (const next of nextNodes) {
+  for (const next of nextNodes.flatMap(splitChatTextPaths)) {
     const old = previous[cursor];
+    if (old instanceof ChatResourceLinkNode && old.matchesSource(next)) {
+      result.push(old);
+      cursor += 1;
+      continue;
+    }
     if (isChunkText(next)) {
       const text = reconcileText(next, previous, cursor, animate);
       result.push(...text.nodes);

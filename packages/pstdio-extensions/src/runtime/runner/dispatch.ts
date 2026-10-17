@@ -21,8 +21,10 @@ export const refId = (ref: CommandRef | EventRef | string, ownerExtensionId?: st
 export const lifecycleEventId = (phase: CommandLifecyclePhase, commandId: string) => `command.${phase}:${commandId}`;
 
 export interface EventDispatcher {
-  dispatch(eventId: string, payload: Struct): Promise<EventDeliveryResult>;
+  dispatch(eventId: string, payload: Struct, origin: EventOrigin): Promise<EventDeliveryResult>;
 }
+
+type EventOrigin = Pick<BuildEnvironmentInput, "projectId" | "workspaceDir" | "workspaceId">;
 
 export interface DispatcherDeps {
   runtime: ExtensionRuntime;
@@ -41,7 +43,7 @@ const findExtension = (runtime: ExtensionRuntime, id: string): NormalizedExtensi
   runtime.extensions.find((ext) => ext.id === id);
 
 export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher => {
-  const dispatch = async (eventId: string, payload: Struct): Promise<EventDeliveryResult> => {
+  const dispatch = async (eventId: string, payload: Struct, origin: EventOrigin): Promise<EventDeliveryResult> => {
     input.deps.onWillDispatchEvent?.(eventId);
     const subs = input.runtime.hooks.filter((h) => h.eventId === eventId);
     let delivered = 0;
@@ -54,15 +56,11 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
       // One delivery owns the host resources its handler creates.
       const scope = createInvocationScope({ logger: input.logger });
       try {
-        const workspaceDir = (payload as { workspaceDir?: string }).workspaceDir;
-        const workspaceId = (payload as { workspaceId?: string }).workspaceId;
         const ctx = await input.buildEventContext(
           {
-            projectId: (payload as { projectId?: string })?.projectId ?? "",
+            ...origin,
             extensionId: sub.extensionId,
             name: sub.name,
-            workspaceDir,
-            workspaceId,
           },
           eventId,
           input.generateId(),

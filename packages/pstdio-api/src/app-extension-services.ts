@@ -13,7 +13,7 @@ import {
   createExtensionConnectionsApi,
 } from "./features/extensions/extension-connection-service";
 import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
-import type { LoadedExtension } from "./features/extensions/extension-runtime";
+import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
@@ -46,10 +46,12 @@ export const productionAppDependencies: AppDependencies = {
   installExtensionSource,
 };
 
-export const wireAppExtensionServices = async (input: WireExtensionServicesInput) => {
-  let refreshInstalledExtensionProcesses: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> =
-    async () => {};
-  const refreshInstalledSources = async (sourcePath?: string, validatedSource?: LoadedExtension) => {
+export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
+  let refreshInstalledExtensionProcesses: (
+    sourcePath?: string,
+    validatedSource?: LoadedExtensionSnapshot,
+  ) => Promise<void> = async () => {};
+  const refreshInstalledSources = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     harnessRegistry.invalidate();
     await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
   };
@@ -110,13 +112,12 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
         "Extension connection request completed",
       ),
   });
-  await extensionConnectionService.reconcile();
   const harnessRegistry = input.dependencies.createHarnessRegistry({
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
   });
-  const extensionRuntime = await createInstalledExtensionRuntime({
+  const extensionRuntime = createInstalledExtensionRuntime({
     extensionService,
     harnessRegistry,
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
@@ -141,9 +142,20 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     eventBus: input.eventBus,
     invalidate: extensionRuntimeCatalog.invalidate,
   });
-  logStartupPhase("extensions_ready");
+  const extensionStartup = Promise.allSettled([extensionRuntime.ready, extensionConnectionService.reconcile()])
+    .then((results) => {
+      const failures = results.filter((result) => result.status === "rejected");
+      if (failures.length)
+        throw new AggregateError(
+          failures.map((result) => result.reason),
+          "Extension startup failed",
+        );
+      logStartupPhase("extensions_ready");
+    })
+    .catch((err) => apiLogger.error({ err, event: "extensions.startup.error" }, "Extension startup failed"));
 
   return {
+    extensionStartup,
     extensionRuntime,
     extensionRuntimeCatalog,
     extensionConnectionService,

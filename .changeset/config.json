@@ -46,6 +46,7 @@
     "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",
+    "pstdio-sync",
     "pstdio-sync-contracts",
     "pstdio-wt",
     "workbench-fixture",

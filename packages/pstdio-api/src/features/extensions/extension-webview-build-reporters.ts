@@ -1,11 +1,10 @@
+import type { ExpectedWebviewBuildSource } from "../../services/extension-reload";
 import type { LoadedExtension } from "./extension-runtime";
+import type { ManagedWebviewBuildResult } from "./extension-webview-build-attempt";
 import type { InstalledSourceWithManifest } from "./extension-webview-build-runner";
 import type { ExtensionWebviewBuilder } from "./extension-webview-builder";
 
-type ExpectedWebviewBuildSource = {
-  sourceHash?: string | null;
-  sourcePath: string;
-};
+export type WebviewBuildReport = "reported" | "source-changed" | "obsolete";
 
 export type CreateExtensionWebviewBuildManagerInput = {
   buildWebview?: ExtensionWebviewBuilder;
@@ -17,16 +16,16 @@ export type CreateExtensionWebviewBuildManagerInput = {
     webviewId: string,
     error: unknown,
     expectedSource: ExpectedWebviewBuildSource,
-  ) => Promise<unknown>;
+  ) => Promise<WebviewBuildReport>;
   reportBuildSuccess: (
     installedExtensionId: string,
     webviewId: string,
     expectedSource: ExpectedWebviewBuildSource,
-  ) => Promise<unknown>;
+  ) => Promise<WebviewBuildReport>;
   webviewCacheRoot?: string;
 };
 
-// Reporting is best effort: a failed report must not stop the remaining builds.
+// Reporting failures cannot stop the other views, but an unwritten failure is never accepted.
 export const createBuildReporters = (input: CreateExtensionWebviewBuildManagerInput) => {
   const reportFailure = async (
     installedExtensionId: string,
@@ -35,25 +34,33 @@ export const createBuildReporters = (input: CreateExtensionWebviewBuildManagerIn
     expectedSource: ExpectedWebviewBuildSource,
   ) => {
     try {
-      await input.reportBuildFailure(installedExtensionId, webviewId, error, expectedSource);
+      return await input.reportBuildFailure(installedExtensionId, webviewId, error, expectedSource);
     } catch (reportError) {
       input.onError?.(reportError);
+      return "failed" as const;
     }
   };
-
   const reportSuccess = async (
     installedExtensionId: string,
     webviewId: string,
     expectedSource: ExpectedWebviewBuildSource,
   ) => {
     try {
-      await input.reportBuildSuccess(installedExtensionId, webviewId, expectedSource);
-      return true;
+      return await input.reportBuildSuccess(installedExtensionId, webviewId, expectedSource);
     } catch (reportError) {
       input.onError?.(reportError);
-      return false;
+      return "failed" as const;
     }
   };
-
-  return { reportFailure, reportSuccess };
+  const reportResult = (
+    installedExtensionId: string,
+    webviewId: string,
+    result: Exclude<ManagedWebviewBuildResult, { status: "unavailable" }>,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) => {
+    if (result.status === "failure")
+      return reportFailure(installedExtensionId, webviewId, result.error, expectedSource);
+    return reportSuccess(installedExtensionId, webviewId, expectedSource);
+  };
+  return { reportResult };
 };

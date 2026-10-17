@@ -1,9 +1,11 @@
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { WorkbenchConnectionProvider } from "@pstdio/workbench/react";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { buildApiUrl } from "@/lib/api";
+import { apiClientOptions } from "@/lib/api";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { BackendConnectionStatus } from "./backend-connection-status";
-import { getAllCollections, markInitialCollectionsSyncComplete } from "./collections";
+import { getRuntimeCollections, releaseRuntimeCollections, retainRuntimeCollections } from "./collections";
 import { ConnectionStatusSettingsContext } from "./connection-status-context";
 import type { ConnectionStatusSettings } from "./connection-status-settings";
 import { startSync } from "./sync-client";
@@ -16,6 +18,8 @@ interface SyncProviderProps {
 
 export const SyncProvider = (props: SyncProviderProps) => {
   const { children, workbench, connectionStatusSettings } = props;
+  const { baseUrl, token } = apiClientOptions();
+  const connectionKey = JSON.stringify({ baseUrl, token });
   const [connected, setConnected] = useState(true);
   const showStatus = useSyncExternalStore(connectionStatusSettings.subscribe, connectionStatusSettings.getEnabled);
   useEffect(() => {
@@ -34,25 +38,34 @@ export const SyncProvider = (props: SyncProviderProps) => {
   }, [workbench, connected, showStatus]);
 
   useEffect(() => {
-    getAllCollections();
-    const apiUrl = buildApiUrl("").replace(/\/$/, "");
-    const client = startSync(apiUrl, {
-      onConnected: () => {
-        setConnected(true);
-        markInitialCollectionsSyncComplete();
+    const connection = { baseUrl, token };
+    const collections = retainRuntimeCollections(connection);
+    collections.getAllCollections();
+    const apiUrl = connection.baseUrl;
+    const client = startSync(
+      apiUrl,
+      {
+        onConnected: () => {
+          setConnected(true);
+          collections.markInitialCollectionsSyncComplete();
+        },
+        onDisconnected: () => setConnected(false),
+        onConnectionLost: () => setConnected(false),
       },
-      onDisconnected: () => setConnected(false),
-      onConnectionLost: () => setConnected(false),
-    });
+      connection,
+    );
 
     return () => {
       client.close();
+      void releaseRuntimeCollections(connection);
     };
-  }, []);
+  }, [baseUrl, token]);
 
   return (
-    <ConnectionStatusSettingsContext value={connectionStatusSettings}>
-      <WorkbenchConnectionProvider connected={connected}>{children}</WorkbenchConnectionProvider>
+    <ConnectionStatusSettingsContext key={connectionKey} value={connectionStatusSettings}>
+      <QueryClientProvider client={getDashboardQueryClient(getRuntimeCollections({ baseUrl, token }))}>
+        <WorkbenchConnectionProvider connected={connected}>{children}</WorkbenchConnectionProvider>
+      </QueryClientProvider>
     </ConnectionStatusSettingsContext>
   );
 };

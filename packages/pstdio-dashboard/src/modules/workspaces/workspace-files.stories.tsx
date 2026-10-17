@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -102,10 +102,14 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
   };
 };
 const seedWorkspaceQueries = () => {
-  dashboardQueryClient.clear();
-  dashboardQueryClient.setQueryDefaults(["workspace-files", WORKSPACE_ID], { staleTime: Number.POSITIVE_INFINITY });
-  dashboardQueryClient.setQueryDefaults(["workspace-diffs", WORKSPACE_ID], { staleTime: Number.POSITIVE_INFINITY });
-  dashboardQueryClient.setQueryData(workspaceFilesQueryKey(WORKSPACE_ID, { limit: 500 }), {
+  getDashboardQueryClient().clear();
+  getDashboardQueryClient().setQueryDefaults(["workspace-files", WORKSPACE_ID], {
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  getDashboardQueryClient().setQueryDefaults(["workspace-diffs", WORKSPACE_ID], {
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  getDashboardQueryClient().setQueryData(workspaceFilesQueryKey(WORKSPACE_ID, { limit: 500 }), {
     workspace_id: WORKSPACE_ID,
     path: "",
     entries: [
@@ -115,7 +119,7 @@ const seedWorkspaceQueries = () => {
     ],
     truncated: false,
   });
-  dashboardQueryClient.setQueryData(workspaceFileQueryKey(WORKSPACE_ID, "README.md"), {
+  getDashboardQueryClient().setQueryData(workspaceFileQueryKey(WORKSPACE_ID, "README.md"), {
     workspace_id: WORKSPACE_ID,
     path: "README.md",
     file_name: "README.md",
@@ -135,7 +139,7 @@ const seedWorkspaceQueries = () => {
     ].join("\n"),
     editable: true,
   });
-  dashboardQueryClient.setQueryData(workspaceFileQueryKey(WORKSPACE_ID, "assets/logo.png"), {
+  getDashboardQueryClient().setQueryData(workspaceFileQueryKey(WORKSPACE_ID, "assets/logo.png"), {
     workspace_id: WORKSPACE_ID,
     path: "assets/logo.png",
     file_name: "logo.png",
@@ -155,11 +159,11 @@ const seedWorkspaceQueries = () => {
     newPath: "README.md",
   };
   for (const mode of ["current", "fork_point"] as const) {
-    dashboardQueryClient.setQueryData(workspaceDiffFilesQueryKey(WORKSPACE_ID, mode), {
+    getDashboardQueryClient().setQueryData(workspaceDiffFilesQueryKey(WORKSPACE_ID, mode), {
       workspace_id: WORKSPACE_ID,
       files: [readmeDiff],
     });
-    dashboardQueryClient.setQueryData(workspaceDiffFileQueryKey(WORKSPACE_ID, mode, "README.md"), {
+    getDashboardQueryClient().setQueryData(workspaceDiffFileQueryKey(WORKSPACE_ID, mode, "README.md"), {
       ...readmeDiff,
       oldContent: "# Prompt Studio\n\nThe old workspace diff view.\n",
       newContent: "# Prompt Studio\n\nFiles and Changes are workspace tabs.\n\nText opens in Monaco.\n",
@@ -185,7 +189,7 @@ const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
   const { state } = props;
   const [workbench] = useState(() => createStoryWorkbench(state));
   return (
-    <QueryClientProvider client={dashboardQueryClient}>
+    <QueryClientProvider client={getDashboardQueryClient()}>
       <Box h="100dvh" w="full" display="flex" flexDirection="column">
         {state === "changes-recovery" ? (
           <Button onClick={() => setResourceBreadcrumb(workbench, workspaceResource("diffs"))}>

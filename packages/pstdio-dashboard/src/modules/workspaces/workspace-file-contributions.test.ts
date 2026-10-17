@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef, type TreeNode } from "@pstdio/workbench";
-import { dashboardQueryClient } from "@/lib/query-client";
+import { getDashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
@@ -38,12 +38,12 @@ const treeContext = (workbench: ReturnType<typeof createWorkbench>, resource: Re
 const jsonResponse = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
 beforeEach(() => {
-  dashboardQueryClient.clear();
+  getDashboardQueryClient().clear();
   apiBaseUrlId += 1;
   runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: `http://workspace-files-${apiBaseUrlId}.test` };
 });
 afterEach(() => {
-  dashboardQueryClient.clear();
+  getDashboardQueryClient().clear();
   globalThis.fetch = originalFetch;
   delete runtime.__PSTDIO_CONFIG__;
 });

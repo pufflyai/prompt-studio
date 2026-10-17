@@ -1,7 +1,35 @@
 import { expect, test } from "bun:test";
-import { getWriter } from "@/lib/sync/collections";
+import { getRuntimeCollections, getWriter } from "@/lib/sync/collections";
 import { subscribeCoreViewDataEvents } from "./core-view-data-events";
+import { subscribeToExtensionEventFeed } from "./extension-webview-broadcast";
 import { publishResourceAnchorChange } from "./resource-anchor-feed";
+
+test("queued view events retain their runtime when the active connection changes before flush", async () => {
+  const runtime = globalThis as { __PSTDIO_CONFIG__?: { apiBaseUrl: string } };
+  const original = runtime.__PSTDIO_CONFIG__;
+  const firstEvents: unknown[] = [];
+  const secondEvents: unknown[] = [];
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: "http://queued-events-a" };
+  const first = getRuntimeCollections();
+  const unsubscribeFirst = subscribeToExtensionEventFeed((event) => firstEvents.push(event));
+  const dispose = subscribeCoreViewDataEvents();
+  first.getWriter("workspaces")!.upsert({ id: "same", project_id: "shared" });
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: "http://queued-events-b" };
+  const second = getRuntimeCollections();
+  const unsubscribeSecond = subscribeToExtensionEventFeed((event) => secondEvents.push(event));
+  try {
+    await Promise.resolve();
+    expect(firstEvents).toEqual([{ id: "view.workspaces.changed", projectId: "shared" }]);
+    expect(secondEvents).toEqual([]);
+  } finally {
+    dispose();
+    unsubscribeFirst();
+    unsubscribeSecond();
+    await first.dispose();
+    await second.dispose();
+    runtime.__PSTDIO_CONFIG__ = original;
+  }
+});
 
 test("committed anchor changes refresh owner views once per project and stop after disposal", async () => {
   const events: { id: string; projectId?: string }[] = [];

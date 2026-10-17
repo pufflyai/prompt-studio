@@ -105,7 +105,7 @@ describe("installed extension runtime skills", () => {
     const skillFile = join(sourcePath, "skills", "lab-skill", "SKILL.md");
     let onSourceChanged: (sourcePath: string) => Promise<unknown> = async () => {};
     const provisioned: string[] = [];
-    const runtime = await createInstalledExtensionRuntime({
+    const runtime = createInstalledExtensionRuntime({
       ...handle.deps,
       createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
       createSourceWatcher: async (watcherInput) => {
@@ -118,6 +118,7 @@ describe("installed extension runtime skills", () => {
       },
       webviewBuilds: false,
     });
+    await runtime.ready;
 
     try {
       await onSourceChanged(sourcePath);
@@ -129,7 +130,7 @@ describe("installed extension runtime skills", () => {
       await onSourceChanged(sourcePath);
       expect(provisioned).toEqual([sourcePath, sourcePath]);
     } finally {
-      runtime.dispose();
+      await runtime.dispose();
     }
   });
 });
