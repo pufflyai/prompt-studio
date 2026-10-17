@@ -116,7 +116,7 @@ const validateResourceKindResolvers = (runtime: Accumulator) => {
       );
       return false;
     });
-    for (const key of ["resolveCommandId", "resolveManyCommandId"] as const) {
+    for (const key of ["resolveCommandId", "resolveManyCommandId", "relatedOpeningsCommandId"] as const) {
       const commandId = kind[key];
       if (!commandId || commands.get(commandId)?.extensionId === kind.extensionId) continue;
       addDiagnostic(

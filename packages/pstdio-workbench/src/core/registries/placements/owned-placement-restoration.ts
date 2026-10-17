@@ -37,6 +37,9 @@ export const restoreOwnedPlacementState = (input: {
             binding.cardinality === "one" ? SINGLE_RESOURCE_INSTANCE_KEY : candidate.placementIdentity.instanceKey,
           resource: candidate.resource,
           title: candidate.title,
+          ...(candidate.tabRetention === "preview" && candidate.relatedSource
+            ? { relatedSource: candidate.relatedSource }
+            : {}),
           ...(binding.cardinality === "many"
             ? { open: candidate.tabRetention === "preview" ? ("preview" as const) : ("pin" as const) }
             : {}),

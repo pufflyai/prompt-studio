@@ -1,4 +1,4 @@
-import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, RelatedResourceOpenings, ResourceRef } from "@pstdio/sdk/extensions";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import { createResourcePreview } from "./resource-preview";
 
@@ -81,6 +81,11 @@ export const getWorkbenchSelectionResourceKeys = (resource: ResourceRef | undefi
 };
 export interface ResourceKindContribution {
   kind: string;
+  extensionId?: string;
+  relatedOpenings?(
+    resource: ResourceRef,
+    signal: AbortSignal,
+  ): RelatedResourceOpenings | Promise<RelatedResourceOpenings>;
   label: string;
   icon?: string;
 }

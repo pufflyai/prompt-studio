@@ -26,7 +26,6 @@ import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/w
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
-import { relatedSessionResources } from "./session-related-resources";
 import { registerSessionResourceActions } from "./session-resource-actions";
 import { registerSessionResourceSync } from "./session-resource-sync";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
@@ -251,7 +250,6 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       ctx.resources.registerProvider({
         id: "dashboard-workbench.sessions",
         kind: "session",
-        related: (resource) => relatedSessionResources(ctx, resource),
         list: () =>
           createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource }) => ({
             resource,

@@ -46,6 +46,7 @@ interface OpenModePlacementTarget {
   panel: PlacementRef;
   resource?: ResourceRef;
   open?: PageOpenIntent;
+  relatedSource?: string;
 }
 
 export interface WorkbenchModePlacementRegistry {
@@ -142,6 +143,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
     resource?: ResourceRef,
     open?: PageOpenIntent,
     title?: string,
+    relatedSource?: string,
   ): ResolvedOwnedPlacement<WorkbenchWidgetPlacement> => {
     const view = input.views.getView(placementItemViewId(placement.item));
     if (!view)
@@ -154,18 +156,21 @@ export const createWorkbenchModePlacementRegistry = (input: {
       identity,
       region: placement.region,
       order: placement.order ?? 0,
-      value: createPlacement(
-        `workbench.mode.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
-        panel,
-        {
-          viewId: placementItemViewId(placement.item),
-          role: placement.region === "main" ? "location" : "sub-panel",
-          closable: staticPlacementClosable(placement.item),
-          ...(resource ? { resource } : {}),
-          ...(title ? { title } : {}),
-          ...tabState(open),
-        },
-      ),
+      value: {
+        ...createPlacement(
+          `workbench.mode.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
+          panel,
+          {
+            viewId: placementItemViewId(placement.item),
+            role: placement.region === "main" ? "location" : "sub-panel",
+            closable: staticPlacementClosable(placement.item),
+            ...(resource ? { resource } : {}),
+            ...(title ? { title } : {}),
+            ...tabState(open),
+          },
+        ),
+        ...(relatedSource ? { relatedSource } : {}),
+      },
     };
   };
 
@@ -224,7 +229,14 @@ export const createWorkbenchModePlacementRegistry = (input: {
           return isStaticPlacementOpen(placement.item, current, placement.id) ? [resolve(placement, "default")] : [];
         }
         return (current.resourceInstances.get(placement.id) ?? []).map((instance) =>
-          resolve(placement, instance.instanceKey, instance.resource, instance.open, instance.title),
+          resolve(
+            placement,
+            instance.instanceKey,
+            instance.resource,
+            instance.open,
+            instance.title,
+            instance.relatedSource,
+          ),
         );
       });
     },

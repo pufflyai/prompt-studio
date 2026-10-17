@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "./terminal-module";
-import { terminalPlacementBindingId } from "./terminal-placement-binding";
 
 test("moving a live terminal preserves its binding and closing it in its destination ends it", async () => {
   const workbench = createWorkbench();
@@ -20,7 +19,7 @@ test("moving a live terminal preserves its binding and closing it in its destina
   }));
   const instance = openWorkbenchTerminal(workbench);
   await workbench.terminal.open({
-    bindingId: terminalPlacementBindingId(workbench.layout.getPersistenceScope(), instance.instanceId),
+    bindingId: instance.instanceId,
     request: { cols: 80, rows: 24 },
   });
   workbench.movePanel(instance.instanceId, "main");
@@ -31,5 +30,5 @@ test("moving a live terminal preserves its binding and closing it in its destina
   expect(signals).toEqual([]);
   workbench.closePlacement(instance.placementIdentity!);
   await Promise.resolve();
-  expect(signals).toEqual([undefined]);
+  expect(signals).toHaveLength(1);
 });

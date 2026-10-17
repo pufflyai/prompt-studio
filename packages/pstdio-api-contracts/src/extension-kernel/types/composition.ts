@@ -43,6 +43,8 @@ export interface ResourceKindDefinition extends ContributionDefinition<"resource
   readonly paths?: readonly { readonly prefix: string; readonly resolve: CommandRef }[];
   /** Validate an explicit anchor change. Return ResourceAnchorValidationResult. Must not mutate links. */
   readonly validateAnchors?: CommandRef;
+  /** Select related resources for an explicit source open. Return RelatedResourceOpenings using ctx.resource. */
+  readonly relatedOpenings?: CommandRef;
 }
 
 export interface ResourceHierarchyProvider extends ContributionDefinition<"resource-hierarchy-provider"> {

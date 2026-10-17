@@ -1,5 +1,3 @@
-import { createDisposable } from "../../shared/disposable";
-import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import {
   createDefaultWorkbenchLayout,
   mergeWithDefaultRegions,
@@ -45,16 +43,3 @@ export const resolveScopedLayout = (
   persisted
     ? mergeWithDefaultRegions(persisted, defaultRegionVisibility)
     : createDefaultWorkbenchLayout(defaultRegionVisibility);
-
-export const createScopeEvent = <T>() => {
-  const listeners = new Set<(value: T) => void>();
-  return {
-    notify(value: T) {
-      for (const listener of listeners) runWorkbenchEffect("layout scope subscriber", () => listener(value));
-    },
-    subscribe(listener: (value: T) => void) {
-      listeners.add(listener);
-      return createDisposable(() => listeners.delete(listener));
-    },
-  };
-};

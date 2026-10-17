@@ -1,5 +1,7 @@
 import { defaultPageResourceCodec, type PageLocation } from "@pstdio/sdk/extensions";
-import type { WorkbenchLayout } from "../../registries/layout/layout-types";
+import type { LayoutModel } from "../../registries/layout/layout-model-types";
+import { carryWorkbenchRegionState } from "../../registries/layout/layout-scope";
+import { createDefaultWorkbenchLayout, type WorkbenchLayout } from "../../registries/layout/layout-types";
 import { pageSlots } from "../../registries/pages/page-main";
 import type {
   WorkbenchPageContribution,
@@ -61,9 +63,20 @@ export const pageStateFromLayout = (
 export const loadWorkbenchLocationLayout = (
   input: createWorkbenchInput,
   context: WorkbenchPagePersistenceScopeInput,
+  liveLayout?: Pick<LayoutModel, "getLayout" | "getPersistenceScope">,
 ) => {
-  const scope = input.resolvePagePersistenceScope?.(context).scope;
-  return input.persistence?.getSnapshot(scope)?.layout ?? input.layoutPersistence?.getLayout(scope);
+  const resolved = input.resolvePagePersistenceScope?.({
+    ...context,
+    currentScope: liveLayout?.getPersistenceScope() ?? context.currentScope,
+  });
+  const saved =
+    input.persistence?.getSnapshot(resolved?.scope)?.layout ?? input.layoutPersistence?.getLayout(resolved?.scope);
+  if (!liveLayout || !resolved?.carryRegions?.length) return saved;
+  return carryWorkbenchRegionState(
+    liveLayout.getLayout(),
+    saved ?? createDefaultWorkbenchLayout(),
+    resolved.carryRegions,
+  );
 };
 
 export const createPageStateRestorer =

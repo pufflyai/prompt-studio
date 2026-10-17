@@ -8,7 +8,6 @@ import {
   WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
 } from "./terminal-module";
-import { terminalPlacementBindingId } from "./terminal-placement-binding";
 
 const setup = () => {
   const workbench = createWorkbench();
@@ -235,6 +234,51 @@ describe("createWorkbenchTerminalModule", () => {
   });
 });
 describe("terminal session lifecycle", () => {
+  test("closing a terminal carried to another page ends its original session", async () => {
+    const layouts = new Map<string | undefined, WorkbenchLayout>();
+    const workbench = createWorkbench({
+      layoutPersistence: {
+        getLayout: (scope) => layouts.get(scope),
+        setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
+      },
+      resolvePagePersistenceScope: ({ resource }) => ({ scope: resource?.id, carryRegions: ["secondary"] }),
+    });
+    workbench.registerModule(createWorkbenchTerminalModule());
+    const killSignals: Array<string | undefined> = [];
+    workbench.terminal.setSessionOpener(async () => ({
+      id: "carried-terminal",
+      write() {},
+      resize() {},
+      kill(signal) {
+        killSignals.push(signal);
+      },
+      onData: () => () => undefined,
+      onExit: () => () => undefined,
+      onError: () => () => undefined,
+    }));
+    await openPrimaryWorkspace(workbench, "workspace", workspaceResource);
+    const placement = openWorkbenchTerminal(workbench);
+    await workbench.terminal.open({
+      bindingId: placement.instanceId,
+      request: { cols: 80, rows: 24 },
+    });
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: { extensionId: "pstdio.test", kind: "page", id: "workspace.page" },
+      resource: activeWorkspaceResource,
+    });
+    expect(workbench.layout.getPersistenceScope()).toBe(activeWorkspaceResource.id);
+    await Promise.resolve();
+    expect(workbench.layout.getActivePanel("secondary")?.instanceId).toBe(placement.instanceId);
+    expect(killSignals).toHaveLength(0);
+    expect(workbench.terminal.getSession("carried-terminal")?.status).toBe("running");
+    workbench.closePlacement(placement.placementIdentity!);
+    await Promise.resolve();
+    expect(workbench.layout.getPersistenceScope()).toBe(activeWorkspaceResource.id);
+    expect(killSignals).toHaveLength(1);
+    expect(workbench.terminal.getSession("carried-terminal")?.status).toBe("killed");
+  });
+
   test("keeps a terminal alive across scope changes and kills it when its tab closes", async () => {
     const layouts = new Map<string | undefined, WorkbenchLayout>();
     const workbench = createWorkbench({
@@ -259,7 +303,7 @@ describe("terminal session lifecycle", () => {
     workbench.layout.setPersistenceScope("workspace-1");
     const placement = openWorkbenchTerminal(workbench);
     await workbench.terminal.open({
-      bindingId: terminalPlacementBindingId("workspace-1", placement.instanceId),
+      bindingId: placement.instanceId,
       request: { cols: 80, rows: 24 },
     });
     workbench.layout.setPersistenceScope("workspaces");
@@ -270,7 +314,7 @@ describe("terminal session lifecycle", () => {
       .regions.secondary.widgets.find((candidate) => candidate.widgetId === placement.instanceId)?.placementIdentity;
     if (identity) workbench.shellPlacements.closePlacement(identity);
     await Promise.resolve();
-    expect(killSignals).toEqual([undefined]);
+    expect(killSignals).toHaveLength(1);
   });
   test("restores saved terminal placements through the declared shell placement", async () => {
     let savedLayout: WorkbenchLayout | undefined;

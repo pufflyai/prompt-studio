@@ -47,7 +47,11 @@ export const reconcileAnchors = ({ layout, primary, isInScope }: ReconcileAnchor
       // A moved Location and its owned Sub Panels retain their owner lifecycle.
       // Sharing a region with derived content cannot change that ownership.
       const retained =
-        placement.role === "location" || (placement.role === "sub-panel" && Boolean(placement.ownerResourceKey));
+        placement.role === "location" ||
+        (placement.role === "sub-panel" &&
+          (Boolean(placement.ownerResourceKey) ||
+            placement.placementIdentity?.kind === "shell" ||
+            placement.placementIdentity?.kind === "mode"));
       const keep = retained || (surface.persistence !== "derived" && isInScope(placement.resource, primary));
       actions.push({ region, widgetId: placement.widgetId, action: keep ? "keep" : "clear" });
     }

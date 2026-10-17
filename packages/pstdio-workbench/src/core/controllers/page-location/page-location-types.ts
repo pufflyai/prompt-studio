@@ -74,6 +74,7 @@ export interface WorkbenchPageLocationController {
   getBootLocation(projectId: string): PageLocation | undefined;
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
+  onDidNavigate(listener: (location: PageLocation) => void): { dispose(): void };
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
   updateParams(patch: Readonly<Record<string, PageParamValue | null>>): PageLocation;
   replay(location: PageLocation): WorkbenchPageNavigationResult;

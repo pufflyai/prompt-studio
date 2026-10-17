@@ -1,11 +1,7 @@
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
+import { createWorkbenchEvent } from "../../shared/workbench-event";
 import type { LayoutModel, LayoutPersistenceAdapter, LayoutScope } from "./layout-model-types";
-import {
-  carryPinnedWorkbenchChrome,
-  carryWorkbenchRegionState,
-  createScopeEvent,
-  resolveScopedLayout,
-} from "./layout-scope";
+import { carryPinnedWorkbenchChrome, carryWorkbenchRegionState, resolveScopedLayout } from "./layout-scope";
 import type { WorkbenchLayout, WorkbenchRegion } from "./layout-types";
 
 export interface CreateLayoutScopeMethodsInput {
@@ -25,8 +21,8 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
   // a returning one and never get its defaults.
   let enteredWithLayout =
     runWorkbenchEffect("layout cache read for unscoped", () => input.persistence?.getLayout(undefined)) !== undefined;
-  const willChangeScope = createScopeEvent<LayoutScope | undefined>();
-  const didChangeScope = createScopeEvent<LayoutScope | undefined>();
+  const willChangeScope = createWorkbenchEvent<LayoutScope | undefined>("layout scope subscriber");
+  const didChangeScope = createWorkbenchEvent<LayoutScope | undefined>("layout scope subscriber");
 
   const persistLayout = () =>
     runWorkbenchEffect(`layout cache for ${currentScope ?? "unscoped"}`, () =>
