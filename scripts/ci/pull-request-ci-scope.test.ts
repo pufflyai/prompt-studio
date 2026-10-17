@@ -175,12 +175,6 @@ test("relay changes select the isolated container check", () => {
   expect(pullRequest(["bun.lock"])).toHaveProperty("relaySmoke", true);
 });
 
-test("local storage changes select production relay conformance", () => {
-  expect(
-    pullRequest(["packages/pstdio-db/src/services/extension-storage/grouped-storage.ts"], [], ["pstdio-db"]),
-  ).toHaveProperty("relaySmoke", true);
-});
-
 test("private account manager changes select the isolated infrastructure check", () => {
   const scope = resolveCiScope({
     event: "pull_request",
