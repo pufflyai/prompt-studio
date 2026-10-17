@@ -58,6 +58,7 @@
     "build:types": "rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist",
     "prepack": "bun run build",
     "typecheck": "tsc --noEmit",
+    "prototype:api-clarity": "bun ./prototypes/api-clarity/run.ts",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
     "test": "bun test --silent",
