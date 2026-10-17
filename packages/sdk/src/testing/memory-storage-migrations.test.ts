@@ -9,6 +9,7 @@ test("memory storage keeps data migration versions in their storage scope", asyn
       await scope.set("value", "migrated");
     });
   await migrate(storage);
+  expect((await storage.records.read(storage.records.id("value"))).value).toBe("migrated");
   const resource = storage.scope({ type: "resource", resource: { type: "note", id: "one" } });
   expect(await resource.get<string>("value")).toBeUndefined();
   await migrate(resource);
@@ -16,6 +17,7 @@ test("memory storage keeps data migration versions in their storage scope", asyn
     throw new Error("Must run once per scope");
   });
   expect(await resource.get<string>("value")).toBe("migrated");
+  expect((await resource.records.read(resource.records.id("value"))).value).toBe("migrated");
 });
 
 test("memory storage exposes retained-data fixtures without exposing mutable source records", async () => {

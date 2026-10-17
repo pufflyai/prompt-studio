@@ -8,6 +8,7 @@
       "@pstdio/workbench/react": ["./src/react/index.ts"],
       "pstdio-api-contracts": ["../pstdio-api-contracts/src/index.ts"],
       "pstdio-api-contracts/*": ["../pstdio-api-contracts/src/*"],
+      "pstdio-sync-contracts": ["../pstdio-sync-contracts/src/index.ts"],
       "pstdio-extensions/bridge/contract": ["../pstdio-extensions/src/bridge/contract/index.ts"],
       "pstdio-extensions/bridge/host": ["../pstdio-extensions/src/bridge/host/index.ts"],
       "pstdio-extensions/bridge/webview-runtime-html": [
@@ -15,7 +16,12 @@
       ]
     }
   },
-  "include": ["src", "../pstdio-api-contracts/src", "../pstdio-extensions/src/bridge"],
+  "include": [
+    "src",
+    "../pstdio-api-contracts/src",
+    "../pstdio-sync-contracts/src/*.ts",
+    "../pstdio-extensions/src/bridge"
+  ],
   "exclude": [
     "**/*.test.ts",
     "**/*.test.tsx",
@@ -24,6 +30,7 @@
     "**/*.storybook.ts",
     "src/examples",
     "../pstdio-api-contracts/src/**/*.test.ts",
+    "../pstdio-sync-contracts/src/**/*.test.ts",
     "../pstdio-extensions/src/**/*.test.ts"
   ]
 }

@@ -1,12 +1,51 @@
 import { describe, expect, test } from "bun:test";
 import {
   type CollectionChange,
+  createRuntimeCollections,
   getCollection,
   getIndexedRows,
   getWriter,
+  releaseRuntimeCollections,
+  retainRuntimeCollections,
   SYNCED_TABLES,
   subscribeCollections,
 } from "./collections";
+
+test("an effect remount retains its collection store until the last connection closes", async () => {
+  const connection = { baseUrl: "http://effect-remount", token: "owner" };
+  const initial = retainRuntimeCollections(connection);
+  initial.getWriter("projects")!.upsert({ id: "project" });
+  const closing = releaseRuntimeCollections(connection);
+  const remounted = retainRuntimeCollections(connection);
+  await closing;
+  expect(remounted).toBe(initial);
+  expect(remounted.getCollection("projects").get("project")).toEqual({ id: "project" });
+  await releaseRuntimeCollections(connection);
+  expect(initial.getWriter("projects")).toBeUndefined();
+});
+
+test("runtime collections isolate overlapping IDs, indexes, readiness, and subscriptions", async () => {
+  const first = createRuntimeCollections();
+  const second = createRuntimeCollections();
+  const received: string[] = [];
+  const unsubscribe = first.subscribeCollections((change) => {
+    if (change) received.push(change.table);
+  });
+  first.getWriter("sessions")!.upsert({ id: "same", project_id: "workbench", title: "First environment" });
+  second.getWriter("sessions")!.upsert({ id: "same", project_id: "workbench", title: "Second environment" });
+  first.markInitialCollectionsSyncComplete();
+  expect(first.getIndexedRows("sessions", "project_id", "workbench")[0]?.title).toBe("First environment");
+  expect(second.getIndexedRows("sessions", "project_id", "workbench")[0]?.title).toBe("Second environment");
+  expect(second.isInitialCollectionsSyncComplete()).toBe(false);
+  expect(received).toEqual(["sessions"]);
+  const lateWriter = first.getWriter("sessions")!;
+  unsubscribe();
+  await first.dispose();
+  lateWriter.upsert({ id: "late", project_id: "workbench" });
+  expect(second.getIndexedRows("sessions", "project_id", "workbench")).toHaveLength(1);
+  expect(received).toEqual(["sessions"]);
+  await second.dispose();
+});
 
 test("row changes retain previous ownership and indexes follow reassignment and removal", () => {
   const writer = getWriter("workspace_sessions")!;

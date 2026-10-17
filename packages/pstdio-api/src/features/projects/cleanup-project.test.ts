@@ -74,7 +74,9 @@ describe("cleanupProjectArtifacts", () => {
       "project-1",
       {
         deleteProviderWorkspace: deleteProviderWorkspace as never,
-        removeProjectStorage: () => order.push("storage"),
+        removeProjectStorage: () => {
+          order.push("storage");
+        },
       },
     );
 

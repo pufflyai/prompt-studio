@@ -22,7 +22,8 @@ export const verifyPackagedCollectionBreadcrumb = async (
     },
   );
   expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({ outcome: { status: "success" } });
+  const result = await response.json();
+  expect(result, JSON.stringify(result)).toMatchObject({ outcome: { status: "success" } });
   await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-artifacts/artifacts`);
   const libraryUrl = page.url();
   await page.frameLocator('iframe[title="Artifacts"]').getByText(title, { exact: true }).click();

@@ -9,7 +9,7 @@ import {
   type WorkbenchModuleContext,
 } from "@pstdio/workbench";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/extensions";
-import { apiRequest } from "@/lib/api";
+import { createApiRequest } from "@/lib/api";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { canonicalDashboardPageTarget, canonicalDashboardResource } from "@/shared/extensions/resource-identity";
@@ -139,7 +139,7 @@ const uploadCreatedFile = async (input: {
   resourceId: string;
 }) => {
   const query = new URLSearchParams({ scope_type: "resource", scope_id: input.resourceId });
-  return apiRequest<Record<string, unknown>>(
+  return createApiRequest()<Record<string, unknown>>(
     `/v1/projects/${encodeURIComponent(input.projectId)}/extensions/${encodeURIComponent(input.extensionInstanceId)}/files?${query.toString()}`,
     {
       method: "POST",

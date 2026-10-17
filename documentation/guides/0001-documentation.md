@@ -148,6 +148,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 ### Use the SDK
 
 - [0001 — Client](sdk/0001-client.md)
+- [0003 — Save related records](sdk/0003-storage.md)
 
 ## References
 
@@ -216,6 +217,7 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0001 — Overview](../references/sdk/0001-overview.md)
 - [0002 — Resource types](../references/sdk/0002-resources.md)
 - [0003 — Method reference](../references/sdk/0003-api.md)
+- [0004 — Grouped storage](../references/sdk/0004-storage.md)
 
 ### Workbench
 

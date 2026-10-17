@@ -1,7 +1,7 @@
 import { PstdioApiError } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { apiClientOptions, buildApiUrl } from "./api";
+import { apiClientOptions } from "./api";
 import { safeApiFileBlob } from "./api-file-blob";
 
 export const API_FILE_URL_QUERY_KEY = "api-file-url";
@@ -10,16 +10,23 @@ export const API_FILE_URL_QUERY_KEY = "api-file-url";
 // files it shows from the API with the header and shows them as blob URLs (ADR 0057).
 const isApiFilePath = (url: string) => url.startsWith("/v1/");
 
-const apiFileUrlQuery = (url: string) => ({
-  queryKey: [API_FILE_URL_QUERY_KEY, url],
-  queryFn: async () => {
-    const { token } = apiClientOptions();
-    const response = await fetch(buildApiUrl(url), { headers: token ? { authorization: `Bearer ${token}` } : {} });
-    if (!response.ok) throw new PstdioApiError(`Request failed: ${response.status}`, response.status);
-    return URL.createObjectURL(safeApiFileBlob(await response.blob()));
-  },
-  staleTime: Number.POSITIVE_INFINITY,
-});
+const apiFileUrlQuery = (url: string) => {
+  const { baseUrl, token } = apiClientOptions();
+  return {
+    queryKey: [API_FILE_URL_QUERY_KEY, url],
+    queryFn: async ({ signal }: { signal: AbortSignal }) => {
+      const response = await fetch(`${baseUrl}${url}`, {
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+        signal,
+      });
+      if (!response.ok) throw new PstdioApiError(`Request failed: ${response.status}`, response.status);
+      const blob = await response.blob();
+      signal.throwIfAborted();
+      return URL.createObjectURL(safeApiFileBlob(blob));
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  };
+};
 
 /** Returns a URL an <img> can load. API files resolve to a blob URL, other URLs stay as they are. */
 export const useApiFileUrl = (url: string) => {

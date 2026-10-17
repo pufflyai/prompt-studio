@@ -1,6 +1,8 @@
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
+import { createExtensionAssetsApi } from "./assets";
 import { createExtensionBlobsApi } from "./blobs";
+import { createExtensionRecordsApi } from "./records";
 
 type StorageApiInput = {
   extensionInstanceId: string;
@@ -49,6 +51,8 @@ export const createStorageApi = (
           extensionInstanceId: input.extensionInstanceId,
         }),
       ),
+    records: createExtensionRecordsApi(deps, { ...input, scopeType: scope.scope_type, scopeId: scope.scope_id }),
+    assets: createExtensionAssetsApi(deps, input),
     files: createExtensionBlobsApi(deps, {
       extensionInstanceId: input.extensionInstanceId,
       signal: input.signal,

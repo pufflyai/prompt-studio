@@ -1,8 +1,9 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
-import { createFilesStorageService, ensureStorageRoot } from "pstdio-storage";
+import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase } from "./app-database";
+import { createCoreDomainServices } from "./app-domain-services";
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
 import {
@@ -17,7 +18,6 @@ import { createAutomationService } from "./features/automation/automation-servic
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWriteLedger } from "./features/extensions/artifact-mount-watch/write-ledger";
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
-import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import type { SessionHookDeps } from "./features/hooks/session-hooks";
@@ -27,18 +27,11 @@ import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
-import { createExtensionFileService } from "./services/extension-file-service";
-import { createFileService } from "./services/file-service";
-import { createNotificationService } from "./services/notification-service";
-import { createProjectService } from "./services/project-service";
 import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
 import { createSessionQueueService } from "./services/session-queue-service";
 import { createSessionService } from "./services/session-service";
 import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
-import { createSyncService } from "./services/sync-service";
-import { createWorkspaceService } from "./services/workspace-service";
-import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import type { AppBindings } from "./types";
 
 const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -49,49 +42,6 @@ export { resolveAppConfig } from "./app-config";
 export type { AppDependencies, AppHost, AppLifecycle, CreateAppInput } from "./app-contracts";
 export { closeBeforeFatalExit } from "./app-runtime";
 export { assertListenHostAllowed } from "./listen-host";
-
-const createCoreDomainServices = (input: {
-  getCommandDeps: () => RouteDeps;
-  db: Parameters<typeof createAppDatabaseServices>[0];
-  dbs: ReturnType<typeof createAppDatabaseServices>;
-  eventBus: EventBus;
-  storageRoot: string;
-}) => {
-  const { db, dbs, eventBus, storageRoot } = input;
-  const filesStorageService = createFilesStorageService(storageRoot);
-  const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
-
-  const syncService = createSyncService({ db });
-
-  return {
-    fileService,
-    projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),
-    extensionFileService: createExtensionFileService({
-      extensionFilesDBService: dbs.extensionFilesDBService,
-      extensionInstancesDBService: dbs.extensionInstancesDBService,
-      fileService,
-    }),
-    syncService,
-    notificationService: createNotificationService({
-      notificationsDb: dbs.notificationsDBService,
-      activityEventsService: dbs.activityEventsDBService,
-      eventBus,
-    }),
-    extensionSettingsService: createExtensionSettingsService({
-      extensionSettingsDBService: dbs.extensionSettingsDBService,
-    }),
-    workspaceSessionService: createWorkspaceSessionService({
-      workspaceSessionsDBService: dbs.workspaceSessionsDBService,
-      eventBus,
-    }),
-    workspaceService: createWorkspaceService({
-      workspacesDb: dbs.workspacesDBService,
-      sessionsDb: dbs.sessionsDBService,
-      eventBus,
-      validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(input.getCommandDeps(), source, anchors),
-    }),
-  };
-};
 
 const createAppAutomationService = async (input: {
   automationDBService: ReturnType<typeof createAppDatabaseServices>["automationDBService"];
@@ -159,6 +109,7 @@ const buildApp = async (
   });
 
   const {
+    assetTransferService,
     extensionFileService,
     extensionSettingsService,
     fileService,
@@ -212,6 +163,7 @@ const buildApp = async (
 
   const sessionQueueLifecycle = createSessionQueueLifecycle();
   const sessionHookDeps = (): SessionHookDeps => ({
+    assetTransferService,
     artifactMountWrites,
     boardViewsService: boardViewsDBService,
     automationService,
@@ -259,6 +211,8 @@ const buildApp = async (
   const terminalSupervisor = createAppTerminalSupervisor();
 
   deps = {
+    assetTransferService,
+    environmentService: dbs.environmentDBService,
     artifactMountWrites,
     resourceLinksService: dbs.resourceLinksDBService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesDBService,

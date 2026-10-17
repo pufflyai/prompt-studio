@@ -52,6 +52,7 @@ export const registerStorageMigrationSmokeTests = () => {
             await ctx.storage.set("previous", previous);
           });
           return { attempts: await ctx.storage.get("attempts"), previous: await ctx.storage.get("previous"),
+            recordAttempts: (await ctx.storage.records.read(ctx.storage.records.id("attempts"))).value,
             legacy: await ctx.storage.readLegacy("missing") ?? null };
         }
       }] };`,
@@ -68,19 +69,19 @@ export const registerStorageMigrationSmokeTests = () => {
         request(`/v1/projects/${project.id}/extensions/commands/test.migrations.command.import/execute`, { params });
       expect(await execute({ version: 1, fail: true })).toMatchObject({ outcome: { ok: false } });
       expect(await execute({ version: 1 })).toMatchObject({
-        outcome: { ok: true, value: { attempts: 2, previous: 0, legacy: null } },
+        outcome: { ok: true, value: { attempts: 2, recordAttempts: 2, previous: 0, legacy: null } },
       });
       const concurrent = await Promise.all([execute({ version: 2 }), execute({ version: 2 })]);
       for (const result of concurrent)
         expect(result).toMatchObject({
-          outcome: { ok: true, value: { attempts: 3, previous: 1 } },
+          outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1 } },
         });
       await stopProcess(child);
       child = undefined;
       runtime = await startPackagedServe(root);
       child = runtime.child;
       expect(await execute({ version: 2 })).toMatchObject({
-        outcome: { ok: true, value: { attempts: 3, previous: 1 } },
+        outcome: { ok: true, value: { attempts: 3, recordAttempts: 3, previous: 1 } },
       });
     } finally {
       if (child) await stopProcess(child);

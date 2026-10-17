@@ -7,14 +7,18 @@ import type {
   JsonObject,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
+import { createMemoryAssets } from "./memory-assets";
+import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record-owner";
 
-interface MemoryStorageOptions {
+export type { MemoryStorageSeed } from "./memory-record-owner";
+
+interface MemoryStorageOptions extends MemoryStorageSeed {
   legacyData?: Record<string, { version: string; records: JsonObject[] }>;
 }
 
 export const createMemoryStorage = (options: MemoryStorageOptions = {}): ExtensionStorageApi => {
-  const kv = new Map<string, unknown>();
-  const collections = new Map<string, Map<string, unknown>>();
+  const assets = createMemoryAssets();
+  const owner = createMemoryRecordOwner(assets, options);
   const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
   const migrations = new Map<string, ReturnType<typeof createDataMigrationRunner>>();
   const migrateFor = (scope: string) => {
@@ -29,14 +33,6 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
     });
     migrations.set(scope, migrate);
     return migrate;
-  };
-
-  const collectionStore = (name: string) => {
-    const existing = collections.get(name);
-    if (existing) return existing;
-    const created = new Map<string, unknown>();
-    collections.set(name, created);
-    return created;
   };
 
   const blobStore = (name: string) => {
@@ -89,66 +85,67 @@ export const createMemoryStorage = (options: MemoryStorageOptions = {}): Extensi
     };
   };
 
-  const createScopedApi = (prefix: string): ExtensionStorageApi => ({
-    migrate: migrateFor(prefix),
-    readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
-    files: blobsApi(prefix),
-    scope(scope: StorageScope) {
-      if (scope.type === "project") return createScopedApi("project");
-      let id: string | undefined;
-      if ("resource" in scope) id = scope.resource.id;
-      else if ("id" in scope) id = scope.id;
-      if (!id) throw new Error("Storage scope requires an id.");
-      return createScopedApi(JSON.stringify([scope.type, id]));
-    },
-    async get(key) {
-      return kv.get(JSON.stringify([prefix, key])) as never;
-    },
-    async set(key, value) {
-      kv.set(JSON.stringify([prefix, key]), value);
-    },
-    async delete(key) {
-      kv.delete(JSON.stringify([prefix, key]));
-    },
-    collection<TItem>(name: string): ExtensionStorageCollectionApi<TItem> {
-      const store = collectionStore(JSON.stringify([prefix, name]));
-      return {
-        async get(id) {
-          return store.get(id) as TItem | undefined;
-        },
-        async list() {
-          return [...store.values()] as TItem[];
-        },
-        async put(id, value) {
-          store.set(id, value);
-        },
-        async update(id, value) {
-          if (!store.has(id)) throw new Error(`Item not found: ${id}`);
-          store.set(id, value);
-        },
-        async createIfAbsent(id, value) {
-          if (store.has(id)) return false;
-          store.set(id, value);
-          return true;
-        },
-        async deleteIfValue(id, value) {
-          if (store.get(id) !== value && JSON.stringify(store.get(id)) !== JSON.stringify(value)) return false;
-          return store.delete(id);
-        },
-        async create(value) {
-          const id = crypto.randomUUID();
-          store.set(id, value);
-          return { ...(typeof value === "object" && value !== null ? value : {}), id } as TItem & { id: string };
-        },
-        async delete(id) {
-          store.delete(id);
-        },
-        attachments(itemId) {
-          return blobsApi(JSON.stringify([prefix, name, itemId]));
-        },
-      };
-    },
-  });
+  const scopedApi = (scopeType: string, scopeId: string) => {
+    const { records, legacy } = owner.scope(scopeType, scopeId);
+    const blobKey = JSON.stringify([scopeType, scopeId]);
+    const api: ExtensionStorageApi = {
+      migrate: migrateFor(blobKey),
+      readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
+      records,
+      assets,
+      files: blobsApi(blobKey),
+      scope(scope: StorageScope) {
+        if (scope.type === "project") return scopedApi("project", owner.workbenchId);
+        if (scope.type === "resource" && "resource" in scope) return scopedApi("resource", scope.resource.id);
+        if (!("id" in scope)) throw new Error("Storage scope requires an ID");
+        return scopedApi(scope.type, scope.id);
+      },
+      async get(key) {
+        return (await legacy.kv.get(key)) as never;
+      },
+      async set(key, value) {
+        await legacy.kv.set(key, value as never);
+      },
+      async delete(key) {
+        await legacy.kv.delete(key);
+      },
+      collection<TItem>(name: string): ExtensionStorageCollectionApi<TItem> {
+        const store = legacy.collection(name);
+        return {
+          async get(id) {
+            return (await store.get(id))?.value as TItem | undefined;
+          },
+          async list() {
+            return (await store.list()).map((record) => record.value) as TItem[];
+          },
+          async put(id, value) {
+            await store.set(id, value as never);
+          },
+          async update(id, value) {
+            if (!(await store.update(id, value as never))) throw new Error(`Item not found: ${id}`);
+          },
+          async createIfAbsent(id, value) {
+            return store.createIfAbsent(id, value as never);
+          },
+          async deleteIfValue(id, value) {
+            return store.deleteIfValue(id, value as never);
+          },
+          async create(value) {
+            const id = crypto.randomUUID();
+            await store.set(id, value as never);
+            return { ...(typeof value === "object" && value !== null ? value : {}), id } as TItem & { id: string };
+          },
+          async delete(id) {
+            await store.delete(id);
+          },
+          attachments(itemId) {
+            return blobsApi(JSON.stringify([blobKey, name, itemId]));
+          },
+        };
+      },
+    };
+    return api;
+  };
 
-  return createScopedApi("project");
+  return scopedApi("project", owner.workbenchId);
 };

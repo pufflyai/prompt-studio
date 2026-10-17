@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { createDb, type DbClient } from "../../db/connection.pglite";
-import { projects } from "../../db/schemas.pg";
-import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
-import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
-import { createExtensionStorageDBService } from "./extension-storage";
+import { scopeRecordStorage } from "pstdio-sync";
+import { extension_kv, extension_storage_journal } from "../../db/schemas.pg";
+import type { createExtensionStorageDBService } from "./extension-storage";
+import { createExtensionStorageFixture } from "./extension-storage.fixture";
+
+type StorageFixture = Awaited<ReturnType<typeof createExtensionStorageFixture>>;
 
 let close: (() => Promise<void>) | undefined;
-let storageDb: DbClient;
+let db: StorageFixture["db"];
 let svc: ReturnType<typeof createExtensionStorageDBService>;
 let projectAId: string;
 let projectBId: string;
@@ -16,45 +17,77 @@ let instanceBId: string;
 const nowTimestamp = () => new Date().toISOString();
 
 beforeEach(async () => {
-  const result = await createDb({ path: ":memory:" });
-  storageDb = result.db;
-  close = result.close;
-  svc = createExtensionStorageDBService(result.db);
-  const sources = createInstalledExtensionSourcesDBService(result.db);
-  const instances = createExtensionInstancesDBService(result.db);
-
-  const timestamp = nowTimestamp();
-  projectAId = crypto.randomUUID();
-  projectBId = crypto.randomUUID();
-  await result.db.insert(projects).values([
-    { id: projectAId, name: "A", shorthand: "A", created_at: timestamp, updated_at: timestamp },
-    { id: projectBId, name: "B", shorthand: "B", created_at: timestamp, updated_at: timestamp },
-  ]);
-
-  const installed = await sources.register({
-    install_name: "ext.example",
-    extension_id: "ext.example",
-    display_name: "Example",
-    source_kind: "local_path",
-    source_path: "/builtin/example",
-  });
-
-  const a = await instances.create({
-    installed_extension_id: installed.id,
-    scope_type: "project",
-    scope_id: projectAId,
-  });
-  const b = await instances.create({
-    installed_extension_id: installed.id,
-    scope_type: "project",
-    scope_id: projectBId,
-  });
-  instanceAId = a.id;
-  instanceBId = b.id;
+  ({ db, close, svc, projectAId, projectBId, instanceAId, instanceBId } = await createExtensionStorageFixture());
 });
 
 afterEach(async () => {
   await close?.();
+});
+
+test("legacy writes and guarded records use one journal and retain the caller's original revision", async () => {
+  const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
+  await svc.setKv({ ...scope, key: "setting", value_json: "legacy", project_id: projectAId });
+  const storage = await svc.open({ owner: { workbenchId: projectAId, extensionId: "ext.example" } });
+  const records = scopeRecordStorage(storage.records, ["project", projectAId, "kv"]);
+  const observed = await records.read(records.id("setting"));
+  expect(observed.value).toBe("legacy");
+  await svc.setKv({ ...scope, key: "setting", value_json: "newer", project_id: projectAId });
+  expect(
+    (
+      await records.commit({
+        operationId: "stale",
+        edits: [{ recordId: observed.recordId, expectedRevision: observed.revision, replace: "open caller" }],
+      })
+    ).status,
+  ).toBe("conflict");
+  expect((await svc.getKv(scope, "setting"))?.value_json).toBe("newer");
+  expect(await db.select().from(extension_storage_journal)).toHaveLength(3);
+  expect(await db.select().from(extension_kv)).toHaveLength(0);
+});
+
+test("existing KV rows move atomically into the owner journal without a second writable copy", async () => {
+  const scope = { extension_instance_id: instanceAId, scope_type: "project", scope_id: projectAId };
+  const timestamp = nowTimestamp();
+  await db.insert(extension_kv).values({
+    ...scope,
+    key: "existing",
+    value_json: { saved: true },
+    project_id: projectAId,
+    created_at: timestamp,
+    updated_at: timestamp,
+  });
+  const storage = await svc.open({ owner: { workbenchId: projectAId, extensionId: "ext.example" } });
+  const records = scopeRecordStorage(storage.records, ["project", projectAId, "kv"]);
+  expect((await records.read(records.id("existing"))).value).toEqual({ saved: true });
+  expect((await svc.getKv(scope, "existing"))?.value_json).toEqual({ saved: true });
+  expect(await db.select().from(extension_kv)).toHaveLength(0);
+  expect(await db.select().from(extension_storage_journal)).toHaveLength(1);
+});
+
+test("legacy structured writes preserve JSON serialization of optional object and array values", async () => {
+  const input = {
+    project_id: projectAId,
+    extension_instance_id: instanceAId,
+    scope_type: "project",
+    scope_id: projectAId,
+    collection: "revisions",
+    item_id: "revision",
+  };
+  const value = { title: "Artifact", favicon: undefined, nested: { label: undefined }, values: ["first", undefined] };
+  expect(await svc.createCollectionItemIfAbsent({ ...input, value_json: value })).toBe(true);
+  expect((await svc.getCollectionItem(input, input.item_id))?.value_json).toEqual({
+    title: "Artifact",
+    nested: {},
+    values: ["first", null],
+  });
+  expect(await svc.updateCollectionItem({ ...input, value_json: { ...value, title: "Renamed" } })).toBe(true);
+  expect(await svc.deleteCollectionItemIfValue(input, input.item_id, { ...value, title: "Renamed" })).toBe(true);
+  await svc.setKv({ ...input, key: "optional", value_json: value });
+  expect((await svc.getKv(input, "optional"))?.value_json).toEqual({
+    title: "Artifact",
+    nested: {},
+    values: ["first", null],
+  });
 });
 
 describe("extensionStorageService", () => {
@@ -230,80 +263,4 @@ test("update-only collection writes preserve deletion and scope", async () => {
   ]);
   expect(await svc.getCollectionItem(scope, "alpha")).toBeNull();
   expect(await svc.updateCollectionItem({ ...scope, value_json: {} })).toBe(false);
-});
-test("migration checkpoints cannot read or overwrite the public custom-scope namespace", async () => {
-  const scope = {
-    project_id: projectAId,
-    extension_instance_id: instanceAId,
-    scope_type: "project",
-    scope_id: projectAId,
-  };
-  const custom = { ...scope, scope_type: "migration:project" };
-  await svc.setKv({ ...custom, key: "version", value_json: 1 });
-  let runs = 0;
-  await svc.migrate(scope, 1, async (previous) => {
-    expect(previous).toBe(0);
-    runs++;
-  });
-  await svc.migrate(scope, 2, async () => {
-    runs++;
-  });
-  expect(runs).toBe(2);
-  expect((await svc.getKv(custom, "version"))?.value_json).toBe(1);
-});
-
-test("data migrations serialize concurrent requests and survive service recreation", async () => {
-  const scope = {
-    project_id: projectAId,
-    extension_instance_id: instanceAId,
-    scope_type: "project",
-    scope_id: projectAId,
-  };
-  const entered = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
-  const previous: number[] = [];
-  const first = svc.migrate(scope, 1, async (version) => {
-    previous.push(version);
-    entered.resolve();
-    await release.promise;
-  });
-  await entered.promise;
-  const second = svc.migrate(scope, 1, async () => {
-    throw new Error("Concurrent migration ran twice");
-  });
-  release.resolve();
-  await Promise.all([first, second]);
-  const restarted = createExtensionStorageDBService(storageDb);
-  await restarted.migrate(scope, 2, async (version) => {
-    previous.push(version);
-  });
-  expect(previous).toEqual([0, 1]);
-});
-
-test("failed imports retain their previous data version and other storage scopes stay independent", async () => {
-  const scope = {
-    project_id: projectAId,
-    extension_instance_id: instanceAId,
-    scope_type: "project",
-    scope_id: projectAId,
-  };
-  await expect(
-    svc.migrate(scope, 1, async () => {
-      throw new Error("Import interrupted");
-    }),
-  ).rejects.toThrow("Import interrupted");
-  await svc.migrate(scope, 1, async (version) => {
-    expect(version).toBe(0);
-  });
-  await svc.migrate({ ...scope, scope_type: "resource", scope_id: "note" }, 1, async (version) => {
-    expect(version).toBe(0);
-  });
-  await svc.migrate(
-    { extension_instance_id: instanceBId, scope_type: "project", scope_id: projectBId },
-    1,
-    async (version) => {
-      expect(version).toBe(0);
-    },
-  );
-  await expect(svc.migrate(scope, 0.5, async () => {})).rejects.toThrow("positive");
 });

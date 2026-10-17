@@ -1,5 +1,5 @@
 {
-  "id": "f6d4c4d4-bf2f-446c-9c3b-c11ae6bf6631",
+  "id": "7bbb6fdb-5e07-4a98-8e40-ee020eadf037",
   "prevId": "50c98d70-c6a3-400a-8525-2681bf27e02e",
   "version": "7",
   "dialect": "postgresql",
@@ -784,6 +784,36 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.local_environment": {
+      "name": "local_environment",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "environment_id": {
+          "name": "environment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "local_environment_single_owner": {
+          "name": "local_environment_single_owner",
+          "value": "\"local_environment\".\"id\" = 'local'"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.extension_connections": {
       "name": "extension_connections",
       "schema": "",
@@ -903,58 +933,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.extension_data_versions": {
-      "name": "extension_data_versions",
-      "schema": "",
-      "columns": {
-        "extension_instance_id": {
-          "name": "extension_instance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_type": {
-          "name": "scope_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_id": {
-          "name": "scope_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "extension_data_versions_extension_instance_id_extension_instances_id_fk": {
-          "name": "extension_data_versions_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "extension_data_versions",
-          "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "extension_data_versions_extension_instance_id_scope_type_scope_id_pk": {
-          "name": "extension_data_versions_extension_instance_id_scope_type_scope_id_pk",
-          "columns": ["extension_instance_id", "scope_type", "scope_id"]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

@@ -1,0 +1,21 @@
+{
+  "name": "pstdio-sync",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test src",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run typecheck && biome check ."
+  },
+  "dependencies": {
+    "pstdio-sync-contracts": "workspace:*",
+    "yjs": "^13.6.29"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "typescript": "6.0.2"
+  }
+}

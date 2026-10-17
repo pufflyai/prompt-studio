@@ -5,8 +5,25 @@ import {
   workbenchCommandPaletteMenuPath,
   workbenchTopHeaderTrailingMenuPath,
 } from "@pstdio/workbench";
-import { buildDashboardExtensionMenuRegistrations } from "./workbench-extension-contributions";
+import { createRuntimeCollections } from "@/lib/sync/collections";
+import {
+  buildDashboardExtensionMenuRegistrations,
+  getCachedDashboardExtensionMetadata,
+  setCachedDashboardExtensionMetadata,
+} from "./workbench-extension-contributions";
 import { extensionLabMetadata as metadata } from "./workbench-extension-metadata.fixture";
+
+test("the same workbench keeps its extension metadata in its runtime connection", async () => {
+  const first = createRuntimeCollections();
+  const second = createRuntimeCollections();
+  const other = { ...metadata, commands: [] };
+  setCachedDashboardExtensionMetadata("shared", metadata, first);
+  setCachedDashboardExtensionMetadata("shared", other, second);
+  expect(getCachedDashboardExtensionMetadata("shared", first)).toBe(metadata);
+  expect(getCachedDashboardExtensionMetadata("shared", second)).toBe(other);
+  await first.dispose();
+  await second.dispose();
+});
 
 const labViewWhenExpression = 'workbench.view.id == "pstdio.extension-lab.view.labPage"';
 const ticketResourceContextMenuPath = resourceContextMenuPath("ticket");
