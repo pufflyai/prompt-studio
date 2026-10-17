@@ -1,7 +1,8 @@
 # PRD: Bound client storage and isolate sync failures
 
 Status: Proposed. Created: 2026-10-17. Part of the
-[storage standardization PRD](0009-standardize-storage-api.md), targeting Prompt Studio 0.44.0.
+[storage standardization PRD](0009-standardize-storage-api.md). Platform safety features ship in 0.44;
+0.45 updates all extensions, and 0.46 removes old APIs and deprecated paths in a breaking release.
 This PRD records design flaws and requirements. It does not implement their fixes or select unmeasured limits.
 
 ## Problem and release requirement
@@ -11,9 +12,13 @@ referenced by retained operations before applying a snapshot or submitting local
 Disk use can grow with all historical content, and a missing old file can stop current work syncing.
 Reducing the number of public storage APIs does not fix either problem.
 
-The 0.44 storage rollout requires bounded client storage, recoverable cleanup and failure isolation.
+The 0.44 platform release requires bounded client storage, recoverable cleanup and failure isolation.
 Treat these as prerequisites for expanding records/assets adoption. Documenting them does not clear
 the release requirement. Do not report this design as ready while limits and recovery remain undefined.
+
+The relay has no deployed users during alpha. All extensions are patched before relay rollout.
+Supporting old extension builds and translating their queued schema writes over relay are outside scope.
+Local data conversion, open editor drafts and offline work made with the supported contract remain protected.
 
 ## What is versioned
 
@@ -67,6 +72,8 @@ cost as history grows; current file size alone does not predict those costs.
 | A historical asset is missing, corrupt or unavailable remotely. | Snapshot asset download throws before snapshot application and before pending local operations are submitted. The extension's sync attempt stops. | Fail that history request explicitly. Current metadata and unrelated operations must continue without requiring all historical bytes. |
 | Current file bytes are unavailable. | A reference exists but the file cannot open or be verified. | Show that the file is unavailable and support retry. Do not report it ready, discard local edits or stall unrelated records. |
 | Upload completes but record commit fails. | Completed bytes remain without a successful content reference. There is no automatic reclamation. | Track safe reclamation of abandoned completed uploads, including crashes and concurrent commits. |
+| Cleanup evicts an old asset before an identical save retry. | Current commit code checks local bytes before looking up the known operation, so the retry can fail despite a retained outcome. | Return the retained outcome for an identical request without requiring evicted bytes. Reject changed payloads using the same ID. |
+| Compaction removes the base of an open editor. | Revision tokens name journal operations; saving after their removal can throw `Unknown record revision`, even when no pending save exists. | Preserve a usable captured base or define an explicit expired-revision result that preserves the draft and requires a decision. Never substitute a later read silently. |
 | Connection drops during transfer or after relay commit. | Partial bytes remain, or the client cannot know whether publication succeeded. | Resume with the original operation ID and identical request. Inspect its outcome. Do not rerun a command that starts external work. |
 | Local save succeeds while the relay is unavailable. | Another environment cannot see it. Losing the only local copy before replication can lose that work. | Distinguish local durability from relay acceptance. Preserve the queue across restart and show pending work. |
 | Concurrent edits or stale conflict resolution collide. | Complete alternatives and their bytes remain; dependent work may wait. | Keep the draft and exact revision, expose the conflict and let unrelated work progress. Never silently choose a winner to save space. |
@@ -82,6 +89,8 @@ Separate required local data from downloadable history and disposable caches. Pe
 unsent bytes, unsaved drafts and unresolved work must remain protected. A user may explicitly pin
 content for offline use. Published history can remain retained remotely without being pinned on
 every client; evict a local copy only when another verified durable copy can serve it again.
+That guarantee must include asset catalog metadata, backup/restore coverage and permission to retrieve
+the bytes. A prior successful upload alone does not prove that the copy remains recoverable.
 
 Specify actual byte limits for local history/cache and staging, accounting for database and file
 usage. Define the total admission policy, free-space reserve, concurrent transfer limits and behavior
@@ -120,7 +129,16 @@ safe against concurrent writes, and report how much space is actually reclaimabl
 Compact journals and snapshots only with verified coverage that preserves operation identity,
 outcomes, revision lineage, deletion markers, dependency ancestry and restore recovery. The current
 protocol requires that material to survive. Changing retention requires an explicit contract design
-and evidence for returning environments, including old offline writes. A TTL alone is insufficient.
+and evidence for patched environments returning with durable work saved before compaction or restore.
+A TTL alone is insufficient.
+
+Captured revisions held by open editors must also survive the chosen compaction policy. Current read
+tokens include the contributing operation IDs, and a save reconstructs its base from journal entries.
+Define the retained base or explicit expiry contract before removing those entries. Bound revision-token
+size and metadata growth too. Protecting only already-queued writes misses an editor's first save.
+
+An identical retry of a known operation returns its retained outcome before requiring evicted historical
+bytes. Preserve payload fingerprint checks and define how a genuinely new operation reacquires bytes.
 
 Define project deletion, retained backups and published-history deletion separately. State whether
 each action frees local space, removes remote content or affects an existing persistent link.
@@ -133,9 +151,13 @@ results. When a save cannot proceed, explain whether space, bytes, permission, p
 a conflict is blocking it. Preserve the draft and provide an action that can resolve the condition.
 Keep these outcomes available through public APIs for both UI and agent callers.
 
-## Acceptance evidence before the 0.44 storage rollout
+## Acceptance evidence for 0.44 platform features and 0.45 adoption
 
 - Publish exact limits, retention rules, protected-data rules and the offline-ready definition.
+- Hold current record count and current asset size fixed while increasing historical operations.
+  Measure journals, snapshots, receipts, indexes, revision tokens, cache and staging separately, and
+  prove their configured local bounds. Asset eviction alone does not prove bounded metadata use.
+- Receive remote metadata when its owner lacks capacity. Preserve saved work and let other owners progress.
 - Measure 100 distinct 10 MB versions and repeated uploads of identical content. Show asset bytes,
   database growth, editable copies and temporary peaks separately. No historical bytes download
   merely because a current metadata update arrives, except content explicitly required by policy.
@@ -149,7 +171,11 @@ Keep these outcomes available through public APIs for both UI and agent callers.
   A mixed record/asset operation does not falsely publish or report complete local bytes.
 - Interrupt upload, record commit and cleanup at each durable boundary. Restart and resume without
   duplicate publication, premature deletion or permanent accumulation of safely reclaimable files.
-- Reconnect an old offline environment after compaction and after relay restore. Preserve pending
+- Read a record, compact its history, then save with the original revision. Cover JSON, text, lists
+  and assets. Preserve the draft and base guarantees, including a defined expired-revision outcome.
+- Commit an asset, replace it, evict its historical bytes, then retry the original identical commit.
+  Return its retained outcome; a changed request with the same operation ID still fails.
+- Reconnect an offline environment using the supported contract after compaction and relay restore. Preserve pending
   and newer accepted work, recover required ancestry and retain conflicts for explicit resolution.
 - Exercise local-only workbenches, expired credentials, unsupported peers and migrations that exceed
   the available budget. Preserve local content and show the required next action.
@@ -168,5 +194,8 @@ Runtime implementation and the acceptance evidence above remain outstanding.
 - [Assets download before snapshot application and local submission](../../../packages/pstdio-sync/src/synchronize.ts)
 - [Journal retention and restore rules](../../references/architecture/0026-synchronization-contracts.md#replay-snapshots-retention-and-restore)
 - [Local save and synchronization outcomes](../../references/sdk/0004-storage.md#edits-and-outcomes)
+- [Read revisions name journal operations](../../../packages/pstdio-sync/src/projection.ts)
+- [Saving reconstructs the captured revision](../../../packages/pstdio-sync/src/authoring.ts)
+- [Asset verification currently precedes retry lookup](../../../packages/pstdio-sync/src/storage.ts)
 - [Connection-owned browser collections](../../../packages/pstdio-dashboard/src/lib/sync/collections.ts)
 - [PS-735 workload and production work still required](0007-synchronization-contracts.md#handoff-and-remaining-work)

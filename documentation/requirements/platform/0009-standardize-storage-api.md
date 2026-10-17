@@ -2,10 +2,10 @@
 
 Status: Proposed. Created: 2026-10-17. This document plans the changes; it does not change the API.
 
-Target release: **Prompt Studio 0.44.0** for the new API, maintained extension migrations and
-Artifacts storage changes. Removal of the replaced APIs follows in a later breaking release.
-The storage changes are blocked on bounded client storage and isolated synchronization failures.
-API consolidation alone does not meet this release requirement.
+Target releases: **0.44.0** adds the APIs, deprecations and storage safety features. **0.45.0**
+updates all maintained extensions. **0.46.0** removes old APIs and deprecated paths in a breaking release.
+The storage rollout requires bounded client storage and isolated synchronization failures.
+The [API simplification PRD](0011-simplify-extension-apis.md) uses the same release sequence.
 
 Extensions currently choose between deprecated structured storage calls, versioned records,
 uploads addressed by file IDs, and several filesystem interfaces. Standardize file access,
@@ -15,8 +15,8 @@ migrate callers to records and assets, then remove the replaced APIs in a coordi
 
 ### How much the API shrinks
 
-After deprecated APIs are removed, the storage authoring surface falls from **11 API families to 3**:
-8 fewer, or about **73%**. The migration table below defines the counted families.
+After removal in 0.46, **11 grouped entry points become 3 recommended entry points**:
+8 fewer, or about **73%**. The migration table below defines the groups.
 
 | Purpose | Current API families | Proposed API | Count |
 | --- | --- | --- | --- |
@@ -29,9 +29,10 @@ The count groups related calls; it does not count individual methods or underlyi
 The five entry points for file paths shrink by **80%**. Shared files, local files, the current
 workspace, the default workspace and package files remain explicit choices.
 
-In **0.44**, the three families become the recommended API and maintained extensions adopt them.
-The old calls remain available during deprecation. The public surface shrinks when those calls are
-removed in the later release; adding `files.open` initially increases it.
+In **0.44**, the three entry points become available and the old calls remain deprecated.
+In **0.45**, all maintained extensions adopt the replacements. **0.46** removes the old calls.
+Most file operations already share types. Compare author code for ticket saves, uploads and template
+reads before claiming fewer methods, adapters or lines of extension code.
 
 ### What becomes easier
 
@@ -71,23 +72,23 @@ This is a design flaw, not an acceptable cost of a smaller API.
 
 The [capacity and recovery PRD](0010-bound-client-storage-and-isolate-sync-failures.md) records the
 versioning boundary, client disk costs, failure cases, required changes and acceptance evidence.
-It is part of this plan. The 0.44 storage rollout must provide bounded client storage, safe cleanup,
+It is part of this plan. The 0.44 platform features must provide bounded client storage, safe cleanup,
 and progress for unrelated work when an asset is unavailable. Keep local durability, conflict
 preservation, published URLs and restore recovery. Do not resolve capacity by silently deleting them.
 
 ## Release scope and sequence
 
 The [0.44 version PR](https://github.com/pufflyai/prompt-studio/pull/1078) is open as of
-2026-10-17. Keep the following work in the 0.44 release scope:
+2026-10-17. Ship additions in 0.44, all extension updates in 0.45 and breaking cleanup in 0.46.
 
 | Change | Release |
 | --- | --- |
 | Bound client storage, reclaim safe temporary/orphan data and isolate missing-asset failures. | 0.44.0; prerequisite for the storage rollout. |
 | Add `ctx.files.open` with host, SDK, browser and testing support. | 0.44.0 |
-| Migrate maintained extensions and authoring examples to records, assets and explicit file roots. | 0.44.0 |
-| Store Artifacts' published revision contents through immutable asset references and migrate existing revisions. | 0.44.0 |
+| Migrate all maintained extensions and authoring examples to records, assets and explicit file roots. | 0.45.0, before API removal. |
+| Store Artifacts' published revision contents through immutable asset references and migrate existing revisions. | 0.45.0, before API removal. |
 | Deprecate replaced APIs and publish the upgrade guide. | 0.44.0 |
-| Remove the replaced public APIs and their unused adapters. | A later breaking release, after the deprecations ship. |
+| Remove all old APIs, deprecated public paths and unused adapters after callers migrate. | 0.46.0 breaking release. |
 
 The [compatibility rule](../../references/extensions/0014-api-versioning.md#deprecate-first-remove-together)
 requires the replacement to ship before removal. Product version `0.44.0` does not set the separate
@@ -95,21 +96,19 @@ extension API version; the API report checks determine the required change from 
 
 Extension adoption requires an SDK that is already published. Use this order:
 
-1. Merge the host and SDK contract first, with old APIs still working.
-2. Publish a candidate containing that contract through the existing
-   [nightly release workflow](0005-versioning-and-releases.md#nightly-builds).
-   Use its actual published SDK version; do not invent a candidate version or publish packages by hand.
-3. Set each adopting extension's SDK dependency range to include that published candidate and stable
-   `0.44.0`. Keep `engines.pstdio` on the separate plain API version. Verify each extension with an
-   isolated install from the registry before merging its adoption PR.
-4. Complete the capacity and recovery requirements, merge the migrations and run the completion
-   checks below before merging the 0.44 version PR.
-   Changesets and the existing release workflow version and publish the fixed package group together.
+1. Merge and release compatible host/SDK additions, deprecations and capacity fixes in 0.44.
+2. Update every maintained extension against the published 0.44 SDK. Verify registry installs and
+   migrate persisted data and release every maintained extension update in 0.45.
+3. Remove deprecated public paths in the 0.46 host/SDK after all callers migrate. Check extensions
+   against both published dependencies and the cleaned candidate contract; do not use workspace aliases
+   to bypass `published_extensions`. Use an official nightly if a published cleaned candidate is needed.
+4. Update `engines.pstdio` for the separate breaking API version and release 0.46 after cleanup and
+   regression checks pass. Use Changesets and the existing fixed-group release workflow.
 
-SDK publication and failing adoption checks block this release scope. Planner's existing
-[adoption PR 1157](https://github.com/pufflyai/prompt-studio/pull/1157) already has this publication
-dependency. Do not bypass `published_extensions`, substitute a workspace SDK, or count blocked
-adoption as delivered. The supported nightly publication must succeed before the dependent PRs qualify.
+The relay has no deployed users during this alpha rollout. Patch all extensions before enabling it.
+Do not add relay schema translation or schema fences for old extension builds.
+Existing local data still needs a verified, resumable conversion. Planner's
+[PR 1157](https://github.com/pufflyai/prompt-studio/pull/1157) remains subject to published-SDK checks.
 
 ## Proposed API
 
@@ -204,12 +203,12 @@ Record IDs, asset references and published resource URLs remain distinct from fi
 - Migrate collection data through the owning extension's migration version. Preserve resource IDs,
   ordering, `createIfAbsent` and `deleteIfValue` conditions. Do not turn those conditions into claims
   that an extension holds a distributed lock.
-- Guard migration against concurrent old-format writes. Make interrupted migration resumable,
-  use stable migration operation IDs, and switch reads after verified conversion. Avoid ongoing dual writes.
+- Pause local commands during conversion, use stable migration operation IDs and resume interrupted
+  migration. Verify conversion and switch reads before admitting commands. Avoid ongoing dual writes.
 - Preserve attachment IDs, names, media types, parent associations and existing download links.
   Resolve old project-wide file ownership from stored references; do not assign an ambiguous file
-  to whichever extension first reads it. Leave unresolved files readable through the existing route
-  until their ownership is resolved.
+  to whichever extension first reads it. Unresolved files stay readable through a private migration
+  reader or promised URL; they do not justify keeping file-ID authoring APIs in 0.46.
 - Browser upload, image and download helpers must use the same owner checks and asset references.
   Supply a supported display/download helper before retiring blob URLs. Keep credentials and local
   paths out of portable references. Browser transfers must retain streaming and cancellation.
@@ -219,7 +218,7 @@ Record IDs, asset references and published resource URLs remain distinct from fi
 
 ## Implementation order
 
-Steps 0–4 target 0.44.0. Step 5 follows after 0.44.0 has shipped the deprecations.
+Steps 0–2 ship in 0.44. Steps 3–4 ship every extension update in 0.45. Step 5 ships in 0.46.
 
 ### 0. Resolve storage capacity and synchronization failures
 
@@ -238,8 +237,6 @@ current and default workspaces; publish a shared file; upload and render an atta
 record; synchronize a shared file between environments. Keep shared-file editing protections in the
 contract. Do not claim stronger guarantees for direct external filesystem edits.
 
-Deliverable: public types, the migration map, ownership rules and focused contract evidence.
-
 ### 2. Add host and SDK support
 
 Add `open` to the existing `ctx.files` object without changing its old file-ID methods.
@@ -250,9 +247,7 @@ Mark replaced context properties and direct file-ID methods deprecated with thei
 Keep their behavior during the migration. Update the public API report and release notes.
 Publish the SDK before any extension adopts it, following the
 [extension API versioning rules](../../references/extensions/0014-api-versioning.md).
-For the 0.44 target, publish the contract in a nightly candidate before merging the adoption PRs.
-
-Deliverable: a released SDK and compatible host that run old and new callers against the same data.
+Publish the stable 0.44 contract before the 0.45 adoption PRs.
 
 ### 3. Migrate Notes and Artifacts
 
@@ -264,9 +259,6 @@ Import existing revision files without changing artifact URLs, revision IDs, lab
 Read older published HTML through its asset reference. Materialize a file only when the extension
 actually exposes an editable output. Remove redundant revision files only after verifying their
 asset contents, references and any direct-file consumers. Keep source drafts and published revisions separate.
-
-Deliverable: existing Notes and Artifacts data open correctly, and publishing does not require a
-separate materialized HTML file for every historical revision.
 
 ### 4. Migrate the remaining extensions
 
@@ -283,19 +275,15 @@ Preserve existing folder locations during API adoption. Any later layout migrati
 data requirements. Update create-extension skills and generated examples to teach the new API.
 Verify that each adoption PR passes its published-dependency check without an unpublished SDK alias.
 
-Deliverable: maintained extensions and generated examples use the standardized APIs.
+### 5. Remove old APIs and deprecated paths in 0.46
 
-### 5. Remove the deprecated authoring APIs in a later release
-
-After a release containing the deprecations and after maintained callers migrate, remove the old
+After 0.44 ships the deprecations and 0.45 ships all maintained caller updates, remove the old
 context properties, KV/collection authoring methods and blob/file-ID authoring methods together
-in a coordinated breaking release. Keep migration access and resolution of promised persistent URLs.
+in the 0.46 breaking release. Keep data migration access and promised persistent URLs.
 Remove adapters once their remaining migration and URL readers have been accounted for.
 
 Publish a complete upgrade map for external extensions and update their API version requirements.
 Use Changesets and the existing version checks; do not choose or edit release versions by hand.
-
-Deliverable: public authoring documentation and types expose records, assets and selected file roots.
 
 ## Dependencies and separate work
 
@@ -312,7 +300,8 @@ retention must prove returning-client and restore recovery before deleting retai
 
 - Pass the capacity and recovery PRD's checks, including bounded growth, interrupted cleanup,
   missing historical assets, unrelated save progress and returning offline environments.
-- Old and new APIs address the same data during migration; interrupted migration preserves it.
+- Existing local data converts without losing IDs, ordering, attachments or promised URLs.
+  Interrupted conversion resumes without duplicates; patched extensions use only the converted format.
 - Package files are read-only; traversal, foreign-owner access and unintended workspace fallback fail.
 - Default/current workspace selection, read-only and remote providers, provisioning and cancellation work.
 - Shared edits reach the other environment, refresh views and preserve stale editor drafts and conflicts.
@@ -321,10 +310,10 @@ retention must prove returning-client and restore recovery before deleting retai
 - Notes, Artifacts, Planner, Reports, harnesses, testbench, CLI and browser consumers pass affected checks.
 - SDK consumer/type checks, API report/version checks and package boundaries pass. Run the packaged
   verifier for changed runtime inclusion and compiled behavior. Validate affected UI with Playwright.
-- Maintained extensions pass against published dependencies before the 0.44 version PR merges.
-- In 0.44, deprecated APIs still work and authoring examples use their replacements. In the later
-  removal release, old adapters remain only where required to read retained legacy data or resolve
-  persistent URLs, outside the new authoring surface.
+- In 0.44, deprecated APIs still work and the new contracts and storage safety features pass checks.
+- In 0.45, all maintained extensions and examples use replacements and pass published-dependency checks.
+- Before 0.46, extensions pass cleaned-contract checks and their API ranges accept the breaking API.
+  Old APIs and deprecated public paths are gone. Required data and URL readers remain private.
 
 For this planning change, validate documentation links, numbering and formatting only.
 
