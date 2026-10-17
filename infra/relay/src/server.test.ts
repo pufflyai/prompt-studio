@@ -9,6 +9,8 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
     const directory = await mkdtemp(join(tmpdir(), "relay-public-trust-"));
     const key = (await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"])) as CryptoKeyPair;
     const trustFile = join(directory, "trust.json");
+    const recoveryFile = join(directory, "recovery-key");
+    await writeFile(recoveryFile, crypto.getRandomValues(new Uint8Array(32)), { mode: 0o600 });
     const publicKey = await crypto.subtle.exportKey("jwk", key.publicKey);
     await writeFile(
       trustFile,
@@ -31,6 +33,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
         S3_ACCESS_KEY_ID: "idle",
         S3_SECRET_ACCESS_KEY: "idle",
         RELAY_ACCESS_TRUST_FILE: trustFile,
+        RELAY_RECOVERY_KEY_FILE: recoveryFile,
       },
       stdout: "pipe",
       stderr: "pipe",
