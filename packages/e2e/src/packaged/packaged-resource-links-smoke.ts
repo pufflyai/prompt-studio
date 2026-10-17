@@ -43,9 +43,10 @@ export const registerResourceLinksSmokeTests = () => {
         writeFileSync(
           join(sourcePath, "extension.ts"),
           `export default {
-          resourceKinds: [{id:"item", ref:{kind:"resource-kind",id:"item"}, resolveMany:{kind:"command",id:"resolve-many"}}],
+          resourceKinds: [{id:"item", ref:{kind:"resource-kind",id:"item"}, resolveMany:{kind:"command",id:"resolve-many"}, paths:[{prefix:"items/",resolve:{kind:"command",id:"resolve-path"}}]}],
           commandPaletteResources: [{id:"items", ref:{kind:"command-palette-resource",id:"items"}, title:"Items", resourceKind:{kind:"resource-kind",id:"item"}, refreshEvents:["view.resource-anchors.changed"], query:async () => ({items:[]})}],
           commands: [
+            {id:"resolve-path", ref:{kind:"command",id:"resolve-path"}, title:"Resolve path", async run(_ctx, params) { return {resource:{type:"item",id:params.path,label:params.workspaceId},target:{kind:"page",page:{kind:"page",id:"items"}}}; }},
             {id:"resolve-many", ref:{kind:"command",id:"resolve-many"}, title:"Resolve resources", async run(_ctx, params) { return params.resources.map(resource => ({resource:{...resource,label:resource.id}})); }},
             {id:"link", ref:{kind:"command",id:"link"}, title:"Link", async run(ctx) { await ctx.resources.addAnchors({type:"item",id:"one"}, [{type:"item",id:"two",extensionId:"test.art",role:"result",metadata:{revision:2}}]); }},
             {id:"read", ref:{kind:"command",id:"read"}, title:"Read", async run(ctx) { return ctx.resources.listAnchors({resource:{type:"item",id:"two"},direction:"incoming"}); }},
@@ -82,7 +83,21 @@ export const registerResourceLinksSmokeTests = () => {
       }).then((response) => response.json());
       expect(
         metadata.resourceKinds.find((kind: { extensionId: string }) => kind.extensionId === "test.art"),
-      ).toMatchObject({ resolveManyCommand: "test.art.command.resolve-many" });
+      ).toMatchObject({
+        resolveManyCommand: "test.art.command.resolve-many",
+        paths: [{ prefix: "items/", resolveCommand: "test.art.command.resolve-path" }],
+      });
+      expect(
+        await request(`/v1/projects/${project.id}/extensions/commands/test.art.command.resolve-path/execute`, {
+          params: { path: "items/two.md", workspaceId: "workspace" },
+          source: "api",
+        }),
+      ).toMatchObject({
+        outcome: {
+          ok: true,
+          value: { resource: { id: "items/two.md", label: "workspace" }, target: { kind: "page" } },
+        },
+      });
       expect(
         metadata.commandPaletteResources.find(
           (provider: { extensionId: string }) => provider.extensionId === "test.art",

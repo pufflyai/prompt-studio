@@ -33,7 +33,7 @@ describe("request timeouts", () => {
   test("POST timeout on cached URL does not retry the request", async () => {
     let postCalls = 0;
     const service = createOpencodeService({
-      startServer: async () => "http://127.0.0.1:4900",
+      startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
       serverStore: { read: async () => "http://127.0.0.1:4900", write: async () => {}, clear: async () => {} },
       isPortOpen: async () => true,
       pingServer: async () => true,
@@ -63,7 +63,7 @@ describe("request timeouts", () => {
   test("connection failure on cached URL retries with a fresh server", async () => {
     let getCalls = 0;
     const service = createOpencodeService({
-      startServer: async () => "http://127.0.0.1:4900",
+      startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
       serverStore: { read: async () => "http://127.0.0.1:4900", write: async () => {}, clear: async () => {} },
       isPortOpen: async () => true,
       pingServer: async () => true,
@@ -90,7 +90,7 @@ describe("request timeouts", () => {
 
   test("POST timeout does not produce a terminal error", async () => {
     const service = createOpencodeService({
-      startServer: async () => "http://127.0.0.1:4900",
+      startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
       serverStore: noopServerStore,
       isPortOpen: async () => false,
       pingServer: async () => false,
@@ -119,7 +119,7 @@ describe("request timeouts", () => {
 
   test("POST explicit HTTP error remains terminal", async () => {
     const service = createOpencodeService({
-      startServer: async () => "http://127.0.0.1:4900",
+      startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
       serverStore: noopServerStore,
       isPortOpen: async () => false,
       pingServer: async () => false,
@@ -153,7 +153,7 @@ test("the harness server store persists through host state", async () => {
     delete: async (key) => void values.delete(key),
   });
   const service = createOpencodeService({
-    startServer: async () => "http://127.0.0.1:4900",
+    startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
     isPortOpen: async () => false,
     pingServer: async () => false,
     serverStore: store,
@@ -181,7 +181,7 @@ test("startSession applies selected model to session creation and initial prompt
   const createBodies: unknown[] = [];
   const promptBodies: unknown[] = [];
   const service = createOpencodeService({
-    startServer: async () => "http://127.0.0.1:4900",
+    startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
     serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
     isPortOpen: async () => false,
     pingServer: async () => false,
@@ -222,7 +222,7 @@ test("startSession applies selected model to session creation and initial prompt
 test("startSession forwards the model thinking variant on the initial prompt", async () => {
   const promptBodies: unknown[] = [];
   const service = createOpencodeService({
-    startServer: async () => "http://127.0.0.1:4900",
+    startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
     serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
     isPortOpen: async () => false,
     pingServer: async () => false,
@@ -263,7 +263,7 @@ test("startSession forwards the model thinking variant on the initial prompt", a
 test("abortSession posts to the opencode abort endpoint", async () => {
   const requests: Array<{ url: string; method: string }> = [];
   const service = createOpencodeService({
-    startServer: async () => "http://127.0.0.1:4900",
+    startServer: async () => ({ url: "http://127.0.0.1:4900", dispose: async () => {} }),
     serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
     isPortOpen: async () => false,
     pingServer: async () => false,

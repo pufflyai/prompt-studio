@@ -29,6 +29,10 @@ If you removed the extension, install it again from **Settings → Project → E
 
 ## Choose OpenCode
 
+Prompt Studio shares one OpenCode server across projects that use this extension. It reuses a healthy server you started yourself. If Prompt Studio starts the server, disabling the extension in its last active project or shutting down the runtime stops that server. Disabling one project stops its turns while other projects can keep working. Servers started outside Prompt Studio stay running.
+
+Native command definitions are cached for up to 30 seconds per working directory and refreshed after a native command runs. An untouched new conversation does not keep polling command discovery.
+
 - In a new session, open the model menu in the message box, switch the harness to **OpenCode**, and pick a model. Prompt Studio remembers your choice for the next session in the project. A session keeps its agent once it has started.
 - To make it the project default, open **Settings → Workbench → Runtime** and choose it under **Default model**.
 - Planner actions that start agent work, such as **Run attempt**, let you choose the agent in their form.

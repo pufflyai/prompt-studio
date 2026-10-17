@@ -63,6 +63,10 @@ export const collectCompositionContributions = (
       // A resource kind keeps the plain name it was declared with. See
       // `resolveResourceKindReference` for why the host must not namespace it.
       id: localId,
+      paths: contribution.paths?.map((path) => ({
+        prefix: path.prefix,
+        resolveCommand: contributionRefId(path.resolve, ext.id),
+      })),
       ...(isRecord(contribution.resolve)
         ? { resolveCommandId: contributionRefId(contribution.resolve as ResourceKindResolver, ext.id) }
         : {}),

@@ -29,7 +29,7 @@ const MonacoDiffEditor = lazy(async () => {
   return { default: DiffEditor };
 });
 
-export const customTheme = {
+const darkTheme = {
   base: "vs-dark" as const,
   inherit: true,
   rules: [],
@@ -42,6 +42,21 @@ export const customTheme = {
     "editorWhitespace.foreground": psTheme.token("colors.codeEditor.whitespace"),
     "editorIndentGuide.background": psTheme.token("colors.codeEditor.indentGuide"),
     "editorIndentGuide.activeBackground": psTheme.token("colors.codeEditor.indentGuideActive"),
+  },
+} satisfies MonacoThemeData;
+
+const lightTheme = {
+  base: "vs",
+  inherit: true,
+  rules: [],
+  colors: {
+    "editor.background": psTheme.token("colors.blacks.50"),
+    "editor.foreground": psTheme.token("colors.blacks.800"),
+    "editor.lineHighlightBackground": psTheme.token("colors.blacks.100"),
+    "editorCursor.foreground": psTheme.token("colors.blacks.600"),
+    "editorWhitespace.foreground": psTheme.token("colors.blacks.300"),
+    "editorIndentGuide.background": psTheme.token("colors.blacks.300"),
+    "editorIndentGuide.activeBackground": psTheme.token("colors.blacks.450"),
   },
 } satisfies MonacoThemeData;
 
@@ -60,7 +75,8 @@ const EDITOR_THEME_NAME = "ps-theme";
 const useEditorTheme = () => {
   const { themePreference, themePreferences } = useThemePreference();
   const preference = themePreferences.find((theme) => theme.id === themePreference);
-  return isMonacoTheme(preference?.monacoTheme) ? preference.monacoTheme : customTheme;
+  if (isMonacoTheme(preference?.monacoTheme)) return preference.monacoTheme;
+  return preference?.mode === "dark" ? darkTheme : lightTheme;
 };
 
 const useApplyEditorTheme = (editorTheme: MonacoThemeData) => {

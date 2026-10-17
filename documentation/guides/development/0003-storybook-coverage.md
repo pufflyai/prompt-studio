@@ -35,3 +35,5 @@ Build the static Storybook with `bun run --cwd packages/ui build-storybook`. Use
 For changes visible in the application, also use [manual Playwright validation](0001-setup.md#playwright-validation). Check actual sizing, focus, navigation, themes, and resource switching. Passing a component story does not replace the affected installed-product walkthrough.
 
 See [design rules](../../../design/DESIGN.md), [UI package guidance](../../../packages/ui/README.md), and [testing](0002-testing.md).
+
+For side-by-side extra theme comparisons, use the [theme package Storybook](0007-extra-theme-comparison.md).

@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createCommandApi } from "./opencode-commands";
 import { createOpencodeService } from "./opencode-service";
 
 test("native commands use the session command endpoint and compaction uses summarize", async () => {
@@ -14,7 +15,7 @@ test("native commands use the session command endpoint and compaction uses summa
     },
   });
   const service = createOpencodeService({
-    startServer: async () => server.url.origin,
+    startServer: async () => ({ url: server.url.origin, dispose: async () => {} }),
     serverStore: { read: async () => server.url.origin, write: async () => {}, clear: async () => {} },
     pingServer: async () => true,
     isPortOpen: async () => false,
@@ -29,5 +30,42 @@ test("native commands use the session command endpoint and compaction uses summa
     ]);
   } finally {
     server.stop(true);
+  }
+});
+
+test("unchanged command definitions are reused, expire, and refresh after a native action", async () => {
+  let reads = 0;
+  let now = 0;
+  let name = "review";
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      if (new URL(request.url).pathname === "/command") {
+        reads += 1;
+        return Response.json([{ name }]);
+      }
+      return Response.json(true);
+    },
+  });
+  const api = createCommandApi({
+    fetcher: fetch,
+    withServerUrl: (action) => action(server.url.origin),
+    now: () => now,
+  });
+  try {
+    await api.getCommands("/project");
+    await api.getCommands("/project");
+    expect(reads).toBe(1);
+    name = "updated";
+    now += 30_001;
+    expect(await api.getCommands("/project")).toEqual([{ name: "/updated", description: "Native OpenCode command" }]);
+    expect(reads).toBe(2);
+    await api.runCommand({ sessionId: "session", cwd: "/project", text: "/updated" });
+    await api.getCommands("/project");
+    expect(reads).toBe(3);
+    await api.getCommands("/other-project");
+    expect(reads).toBe(4);
+  } finally {
+    await server.stop(true);
   }
 });

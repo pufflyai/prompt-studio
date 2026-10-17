@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       stage: ${{ steps.scope.outputs.stage }}
+      docker_build: ${{ steps.scope.outputs.dockerBuild }}
       lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
       database_tests: ${{ steps.scope.outputs.databaseTests }}
       license: ${{ steps.scope.outputs.license }}
@@ -160,7 +161,7 @@ jobs:
       - name: Test built relay with disposable PostgreSQL and object storage
         run: bun run --cwd infra/relay test:isolated
 
-      - name: Install dependencies for storage conformance
+      - name: Install dependencies for storage and private account authority checks
         run: bun install --frozen-lockfile
 
       - name: Test PostgreSQL publication and process recovery
@@ -176,6 +177,7 @@ jobs:
         env:
           SYNC_TEST_ENTRY: ../pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts
         run: bun run --cwd packages/pstdio-sync-contracts test:conformance
+
       - name: Test private account authority and its built image with disposable PostgreSQL
         run: bun run --cwd infra/account-manager test:isolated
 
@@ -663,7 +665,7 @@ jobs:
 
   build_docker:
     needs: scope
-    if: needs.scope.outputs.stage != 'pull_request'
+    if: needs.scope.outputs.docker_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:

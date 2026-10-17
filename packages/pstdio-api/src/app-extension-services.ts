@@ -46,7 +46,7 @@ export const productionAppDependencies: AppDependencies = {
   installExtensionSource,
 };
 
-export const wireAppExtensionServices = async (input: WireExtensionServicesInput) => {
+export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   let refreshInstalledExtensionProcesses: (
     sourcePath?: string,
     validatedSource?: LoadedExtensionSnapshot,
@@ -112,13 +112,12 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
         "Extension connection request completed",
       ),
   });
-  await extensionConnectionService.reconcile();
   const harnessRegistry = input.dependencies.createHarnessRegistry({
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
   });
-  const extensionRuntime = await createInstalledExtensionRuntime({
+  const extensionRuntime = createInstalledExtensionRuntime({
     extensionService,
     harnessRegistry,
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
@@ -143,9 +142,20 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     eventBus: input.eventBus,
     invalidate: extensionRuntimeCatalog.invalidate,
   });
-  logStartupPhase("extensions_ready");
+  const extensionStartup = Promise.allSettled([extensionRuntime.ready, extensionConnectionService.reconcile()])
+    .then((results) => {
+      const failures = results.filter((result) => result.status === "rejected");
+      if (failures.length)
+        throw new AggregateError(
+          failures.map((result) => result.reason),
+          "Extension startup failed",
+        );
+      logStartupPhase("extensions_ready");
+    })
+    .catch((err) => apiLogger.error({ err, event: "extensions.startup.error" }, "Extension startup failed"));
 
   return {
+    extensionStartup,
     extensionRuntime,
     extensionRuntimeCatalog,
     extensionConnectionService,

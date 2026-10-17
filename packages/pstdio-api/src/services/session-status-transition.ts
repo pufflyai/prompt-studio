@@ -6,6 +6,7 @@ export type TransitionStatusOptions = {
   exitCause?: SessionExitCause;
   expectedOwner?: ActiveSession | null;
   expectedLastRequestStarted?: string | null;
+  expectedStatus?: SessionStatus;
 };
 
 export const releasesCapacity = (status: SessionStatus) =>
@@ -23,16 +24,21 @@ export const writeSessionTransition = async (
   if (!ownsRun()) return null;
   const current = await raw.get(id);
   if (!ownsRun()) return null;
+  if (options.expectedStatus !== undefined && current?.status !== options.expectedStatus) return null;
   if (
     options.expectedLastRequestStarted !== undefined &&
     current?.last_request_started !== options.expectedLastRequestStarted
   )
     return null;
   const expectedRun = current?.last_request_started;
-  const guarded = options.expectedOwner !== undefined || options.expectedLastRequestStarted !== undefined;
+  const guarded =
+    options.expectedOwner !== undefined ||
+    options.expectedLastRequestStarted !== undefined ||
+    options.expectedStatus !== undefined;
   return guarded
     ? await raw.updateStatus(id, status, {
         expectedLastRequestStarted: expectedRun ?? null,
+        ...(options.expectedStatus ? { expectedStatus: options.expectedStatus } : {}),
         ...(options.exitCause ? { exitCause: options.exitCause } : {}),
       })
     : await raw.updateStatus(id, status, ...(options.exitCause ? [{ exitCause: options.exitCause }] : []));

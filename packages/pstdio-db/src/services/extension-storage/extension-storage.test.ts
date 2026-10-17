@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { scopeRecordStorage } from "pstdio-sync";
-import { createDb, type DbClient } from "../../db/connection.pglite";
-import { extension_kv, extension_storage_journal, projects } from "../../db/schemas.pg";
-import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
-import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
-import { createExtensionStorageDBService } from "./extension-storage";
+import { extension_kv, extension_storage_journal } from "../../db/schemas.pg";
+import type { createExtensionStorageDBService } from "./extension-storage";
+import { createExtensionStorageFixture } from "./extension-storage.fixture";
+
+type StorageFixture = Awaited<ReturnType<typeof createExtensionStorageFixture>>;
 
 let close: (() => Promise<void>) | undefined;
-let db: DbClient;
+let db: StorageFixture["db"];
 let svc: ReturnType<typeof createExtensionStorageDBService>;
 let projectAId: string;
 let projectBId: string;
@@ -17,41 +17,7 @@ let instanceBId: string;
 const nowTimestamp = () => new Date().toISOString();
 
 beforeEach(async () => {
-  const result = await createDb({ path: ":memory:" });
-  db = result.db;
-  close = result.close;
-  svc = createExtensionStorageDBService(result.db);
-  const sources = createInstalledExtensionSourcesDBService(result.db);
-  const instances = createExtensionInstancesDBService(result.db);
-
-  const timestamp = nowTimestamp();
-  projectAId = crypto.randomUUID();
-  projectBId = crypto.randomUUID();
-  await result.db.insert(projects).values([
-    { id: projectAId, name: "A", shorthand: "A", created_at: timestamp, updated_at: timestamp },
-    { id: projectBId, name: "B", shorthand: "B", created_at: timestamp, updated_at: timestamp },
-  ]);
-
-  const installed = await sources.register({
-    install_name: "ext.example",
-    extension_id: "ext.example",
-    display_name: "Example",
-    source_kind: "local_path",
-    source_path: "/builtin/example",
-  });
-
-  const a = await instances.create({
-    installed_extension_id: installed.id,
-    scope_type: "project",
-    scope_id: projectAId,
-  });
-  const b = await instances.create({
-    installed_extension_id: installed.id,
-    scope_type: "project",
-    scope_id: projectBId,
-  });
-  instanceAId = a.id;
-  instanceBId = b.id;
+  ({ db, close, svc, projectAId, projectBId, instanceAId, instanceBId } = await createExtensionStorageFixture());
 });
 
 afterEach(async () => {
