@@ -76,6 +76,27 @@ const NestedVisibilityMenu = () => {
   );
 };
 
+const LongVisibilityMenu = () => {
+  const [selected, setSelected] = useState("Nothing selected");
+  return (
+    <Stack>
+      <ResourceContextMenu
+        closeOnSelect={false}
+        actions={[
+          {
+            key: "visibility",
+            label: "Hide/show items",
+            items: createActions(60).map((action) => ({ ...action, onClick: () => setSelected(action.label) })),
+          },
+        ]}
+      >
+        {menuTarget}
+      </ResourceContextMenu>
+      <Text>{selected}</Text>
+    </Stack>
+  );
+};
+
 const meta: Meta<typeof ResourceContextMenu> = {
   title: "Components/Overlays/Resource Context Menu",
   component: ResourceContextMenu,
@@ -191,6 +212,28 @@ export const LongMenuScrolls: Story = {
     const menu = await screen.findByRole("menu");
     await waitFor(() => expect(menu.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
     await expect(screen.getByRole("menuitem", { name: "Sidenav entry 60" })).toBeInTheDocument();
+  },
+};
+
+export const LongSubmenuScrolls: Story = {
+  tags: ["!manifest"],
+  render: () => <LongVisibilityMenu />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    fireEvent.contextMenu(canvas.getByText("Right-click here"));
+    await userEvent.hover(await screen.findByRole("menuitem", { name: "Hide/show items" }));
+    const last = await screen.findByRole("menuitem", { name: "Sidenav entry 60" });
+    const menu = last.closest('[role="menu"]')!;
+    await waitFor(() => expect(menu.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight));
+    last.scrollIntoView({ block: "nearest" });
+    await waitFor(() => {
+      const bounds = last.getBoundingClientRect();
+      const surface = menu.getBoundingClientRect();
+      expect(bounds.top).toBeGreaterThanOrEqual(surface.top);
+      expect(bounds.bottom).toBeLessThanOrEqual(surface.bottom);
+    });
+    await userEvent.click(last);
+    await expect(canvas.getByText("Sidenav entry 60")).toBeVisible();
   },
 };
 

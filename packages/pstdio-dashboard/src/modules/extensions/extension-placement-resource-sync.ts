@@ -60,7 +60,10 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       if (location.resource) result.push(location.resource);
       location = location.parent;
     }
-    return result;
+    // The primary watcher owns refreshes as soon as a placement becomes the page resource.
+    const primary = ctx.getPrimaryResource();
+    const primaryKey = primary ? referenceKey(primary) : undefined;
+    return result.filter((resource) => referenceKey(resource) !== primaryKey);
   };
   const applyResource = (resource: ResourceRef, result: unknown) => {
     const value = toDashboardExtensionResource(result, input.projectId, input.metadata.resourceKinds);
@@ -113,28 +116,23 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       }
     const added = [...current].filter(([key]) => !identities.has(key));
     identities = new Set(current.keys());
-    const primary = ctx.getPrimaryResource();
-    for (const [key, resource] of added) if (!primary || referenceKey(primary) !== key) void resolve(resource);
+    for (const [, resource] of added) void resolve(resource);
   };
   sync();
   const unsubscribeLayout = ctx.layout.store.subscribe(sync);
   const unsubscribePages = ctx.pages.store.subscribe(sync);
+  const primarySubscription = ctx.onDidChangePrimaryResource(sync);
   const unsubscribeEvents = subscribeToExtensionEventFeed((event) => {
     if (event.projectId !== input.projectId) return;
-    const primary = ctx.getPrimaryResource();
     for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values()) {
-      if (
-        resource.extensionId &&
-        isResourceRefreshEvent(event.id, resource.extensionId) &&
-        (!primary || referenceKey(primary) !== referenceKey(resource))
-      )
-        void resolve(resource);
+      if (resource.extensionId && isResourceRefreshEvent(event.id, resource.extensionId)) void resolve(resource);
     }
   });
   return {
     dispose() {
       unsubscribeLayout();
       unsubscribePages();
+      primarySubscription.dispose();
       unsubscribeEvents();
       for (const request of pending.values()) request.abort();
     },
