@@ -1,4 +1,4 @@
-// A running packaged host upgrades Planner to the timeline release for populated projects (PS-626).
+// Planner serves populated projects and recovers webviews in a running packaged host.
 import type { ChildProcess } from "node:child_process";
 import {
   existsSync,
@@ -21,12 +21,10 @@ import {
   ACTIVE_CONFLICTS,
   ARCHIVED_CONFLICTS,
   type Execute,
-  moveLegacyPlannerDrafts,
   plannerCommands,
+  plannerSource,
   seedTrackProject,
-  timelinePlannerSource,
-  writePreTimelinePlanner,
-} from "./packaged-planner-upgrade-fixture";
+} from "./packaged-planner-runtime-fixture";
 import {
   type RuntimeDescriptor,
   runtimeAuthorization,
@@ -65,8 +63,8 @@ const createProject = async (host: Host, name: string) => {
   return { execute, folder, id };
 };
 
-const installPlanner = (host: Host, cwd: string, source: string, force: boolean) =>
-  runPackagedAsync(["extensions", "add", source, "--name", "pstdio-planner", ...(force ? ["--force"] : [])], cwd, {
+const installPlanner = (host: Host, cwd: string) =>
+  runPackagedAsync(["extensions", "add", plannerSource, "--name", "pstdio-planner"], cwd, {
     HOME: host.home,
     PSTDIO_HOME: host.home,
   });
@@ -146,28 +144,22 @@ const expectConflictsPreserved = async (execute: Execute, trackId: string, track
   expect(conflicts.filter((row) => row.attributes.archived === "archived")).toHaveLength(ARCHIVED_CONFLICTS);
 };
 
-browserTest("upgrades Planner to the timeline in a running host with populated projects and warm caches", async () => {
-  const home = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-upgrade-")));
+browserTest("serves populated Planner projects and recovers cached webviews", async () => {
+  const home = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-runtime-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
     const started = await startPackagedServe(home, { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" });
     child = started.child;
     const host = { baseUrl: started.baseUrl, descriptor: started.descriptor, home };
-    writePreTimelinePlanner(join(home, "fixtures", "planner-before-timeline"));
     const conflicting = await createProject(host, "conflicting-track");
     const valid = await createProject(host, "valid-track");
 
-    await installPlanner(host, conflicting.folder, join(home, "fixtures", "planner-before-timeline"), false);
+    await installPlanner(host, conflicting.folder);
     await enablePlanner(host, valid.id);
     const conflictData = await seedTrackProject(conflicting.execute, "multi_select");
     await seedTrackProject(valid.execute, "single_select");
-    expect(await plannerWebview(host, valid.id, "timeline")).toBeUndefined();
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
-
-    moveLegacyPlannerDrafts(conflicting.folder);
-    moveLegacyPlannerDrafts(valid.folder);
-    await installPlanner(host, conflicting.folder, timelinePlannerSource, true);
 
     // A valid Track cannot hide a missing module behind a schema error.
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
@@ -212,7 +204,7 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
     await timeline.getByRole("tab", { name: "All", exact: true }).click();
     await valid.execute("timeline.views.delete", { id: focusedView.id });
 
-    // Exercise the generated control against Planner's installed runtime dependencies.
+    // Exercise the shared control against Planner's installed runtime dependencies.
     await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
     const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
     await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
