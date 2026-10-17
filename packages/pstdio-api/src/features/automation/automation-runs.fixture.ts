@@ -71,7 +71,7 @@ const writeAutomationExtension = (root: string) => {
                 providerId: "pstdio.automation-test.workspace-type.remote",
                 providerRef: { version: 1, data: { remoteId: input.workspaceId } },
               },
-              capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: true, delete: true },
+              capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
             };
           },
           async resolve(_ctx, input) {
@@ -84,7 +84,7 @@ const writeAutomationExtension = (root: string) => {
                 providerId: "pstdio.automation-test.workspace-type.remote",
                 providerRef: input.providerRef,
               },
-              capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: true, delete: true },
+              capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
             };
           },
           async cancel(_ctx, input) {
@@ -93,7 +93,7 @@ const writeAutomationExtension = (root: string) => {
               providerRef: input.providerRef,
               state: "cancelled",
               executionKind: "remote",
-              capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: true, delete: true },
+              capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
             };
           },
         },
@@ -171,7 +171,7 @@ const writeAutomationExtension = (root: string) => {
               cancelledSideEffect,
               providerCreateStarted,
               providerCancelCount,
-              sessionCount: (await ctx.sessions.list()).length,
+              sessionCount: (await ctx.sessions.query()).items.length,
             };
           },
         },

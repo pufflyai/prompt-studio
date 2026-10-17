@@ -64,7 +64,6 @@ describe("command environment project scope", () => {
         diff: true,
         merge: true,
         rebase: true,
-        archive: false,
         delete: false,
       },
       execution_kind: "local",
@@ -91,7 +90,7 @@ describe("command environment project scope", () => {
     workspace = {
       ...workspace,
       is_default: true,
-      provider_capabilities_json: { ...workspace.provider_capabilities_json, archive: true, delete: true },
+      provider_capabilities_json: { ...workspace.provider_capabilities_json, delete: true },
     };
     await expect(workspaces.delete(workspace.id)).rejects.toThrow("Default workspace");
   });

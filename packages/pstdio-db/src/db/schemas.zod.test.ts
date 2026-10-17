@@ -23,7 +23,6 @@ describe("schemas.zod", () => {
       name: "Main",
       project_id: "project-1",
       provider_capabilities_json: {
-        archive: true,
         delete: true,
         diff: true,
         files: "write",
