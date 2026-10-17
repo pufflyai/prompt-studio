@@ -166,7 +166,6 @@ describe("pstdio planner extension contributions", () => {
         cancel: { $l10n: "kanbanRenderers.tickets.createRow.cancel", default: "Cancel" },
       },
     });
-    expect(extension.statuses?.[0]?.title).toBe("Ticket status");
   });
 });
 describe("pstdio planner workspace contributions", () => {
@@ -262,11 +261,14 @@ describe("pstdio planner workspace contributions", () => {
   test("opens the Tickets list and ticket detail as separate pages", async () => {
     const tickets = extension.views?.find((view) => view.id === "tickets");
     if (tickets?.body.kind !== "kanban") throw new Error("Tickets view must use a Kanban body");
-    expect(tickets.body.defaultFilters).toEqual({ archived: ["active"] });
+    expect(tickets.body.defaultFilter).toEqual({
+      conjunction: "and",
+      rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }],
+    });
+    expect(tickets.body.defaultSorts).toEqual([{ attributeId: "created", direction: "desc" }]);
     expect(tickets.body.defaultSettings).toMatchObject({
       viewMode: "board",
       columnGrouping: "status",
-      ordering: { attributeId: "created", direction: "desc" },
       displayProperties: ["id", "workspace", "type", "priority"],
     });
     expect(tickets.body.onColumnAction).toBeFunction();
@@ -325,8 +327,11 @@ describe("pstdio planner workspace contributions", () => {
     });
     expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toBeUndefined();
   });
-  test("provides Planner's shared status fields", () => {
-    expect(extension.statuses?.map((provider) => provider.id)).toEqual(["ticket-statuses"]);
+  test("provides Planner status settings", () => {
+    expect(extension.settingsPanels?.find((panel) => panel.id === "ticket-status")?.view).toEqual({
+      kind: "view",
+      id: "ticket-status-settings",
+    });
   });
 });
 describe("pstdio planner notification hooks", () => {

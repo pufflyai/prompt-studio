@@ -31,7 +31,7 @@ metadata:
    - Use `placements` for mode-wide views or resource bindings outside a page.
    - Use `navigationItems` for explicit navigation. Compound targets contain page and panel steps only; commands and links are standalone actions.
    - Use `viewMenus` to attach one view to another. Use `settingsPanels` and `statusBarItems` to place existing view refs in host chrome.
-   - Use `statuses` for workflow status providers shared by Kanban views and the host settings editor.
+   - Keep workflow values in extension-owned records. Return enum options and `boardColumnConfigs` from board queries, and edit them with commands and a settings panel.
    - Use built-in refs from `workbenchModes`, `workbenchPages`, `workbenchPanels`, and `workbenchSlots` when targeting host-owned contributions.
    - Keep every extension-owned project file under `.pstdio/extension-storage/<package-name>/`. Use declared artifact mounts. This includes configuration, caches, drafts, prototypes, evidence, and backups; never create another data folder directly under `.pstdio/`.
    - Use Harnesses and workspace types only when adding a new execution or workspace provider.

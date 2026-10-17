@@ -16,7 +16,7 @@ The host scopes values to the extension and the active `PSTDIO_HOME`. Project da
 
 Use `ctx.workspaces.removeWorktree(id)` to free the worktree and branch while keeping the workspace and its sessions. The host updates the workspace and emits `worktree.removed`.
 
-Use `archive(id)` (deprecated; use `delete(id)`; archive now deletes) to stop using a workspace but keep it readable. Use `delete(id)` to remove it completely.
+Use `delete(id)` to remove a workspace and its provider-owned resources.
 
 ## Resolve the active workspace
 

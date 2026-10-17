@@ -5,6 +5,7 @@ import { putAttempt } from "../data/attempt-storage";
 import { createTicketWorkspaceLookup } from "../data/mappers";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
+import { sessionQuery } from "./session-query.fixture";
 import { linkTicketCommand, unlinkTicketCommand } from "./ticket-links";
 import { ticketWorkspacesCommand } from "./ticket-workspaces";
 
@@ -40,7 +41,10 @@ const setup = async () => {
     sessions: {
       ...anchorsApi(session),
       get: async (id: string) => (id === session.id ? session : null),
-      listByWorkspace: async () => [],
+      query: sessionQuery(
+        async () => [],
+        async () => [],
+      ),
     },
   };
   const args = (params: { id: string; workspace?: string; session?: string }) =>

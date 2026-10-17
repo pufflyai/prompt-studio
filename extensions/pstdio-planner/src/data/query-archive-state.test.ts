@@ -33,7 +33,18 @@ describe("runTicketsQuery archive filtering", () => {
     await putTicket(storage, makeTicket({ shorthand: "T-1", title: "Active", archived: false, sortOrder: 0 }));
     await putTicket(storage, makeTicket({ shorthand: "T-2", title: "Archived", archived: true, sortOrder: 1 }));
 
-    const result = await runTicketsQuery({ storage, projectId: "proj-1", filters });
+    const result = await runTicketsQuery({
+      storage,
+      projectId: "proj-1",
+      filter: {
+        conjunction: "and",
+        rules: Object.entries(filters ?? {}).map(([attributeId, value]) => ({
+          attributeId,
+          condition: "is-any-of",
+          value: value as string[],
+        })),
+      },
+    });
 
     expect(result.rows.map((row) => row.title)).toEqual(expectedTitles);
   });

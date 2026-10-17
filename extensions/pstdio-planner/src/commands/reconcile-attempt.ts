@@ -11,6 +11,7 @@ import {
 import type { AttemptBlocker, AttemptRecord, AttemptReview } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
 import { createReviewRequest, handoffRequest } from "../data/review-request-create";
+import { readSessionHistory } from "../data/session-history";
 import { renderOwnedTemplate } from "../data/template-store";
 import { withWriteGuard } from "../data/write-guard";
 
@@ -277,7 +278,7 @@ const reconcileReview = async (ctx: CommandContext, attempt: AttemptRecord) => {
   const review = attempt.revisions.at(-1)?.reviews.at(-1);
   if (!review) return { decision: "review-missing-session" as const, attempt };
   if (!review.sessionId) {
-    const session = (await ctx.sessions.listByWorkspace(attempt.workspaceId)).find((candidate) =>
+    const session = (await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).find((candidate) =>
       candidate.anchors_json?.some((anchor) => anchor.type === "planner-review" && anchor.id === review.id),
     );
     if (!session) {

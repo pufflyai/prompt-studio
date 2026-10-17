@@ -7,11 +7,11 @@ import {
   type TreeNode,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
-
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
+import { readSessionHistory } from "../data/session-history";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
@@ -279,10 +279,12 @@ export const listTicketFilesTree = async (
   // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
   // to its workspaces. The ticket shows the whole conversation history either way.
   const workspaceSessions = (
-    await Promise.all(linkedWorkspaces.map((workspace) => ctx.sessions.listByWorkspace(workspace.id)))
+    await Promise.all(
+      linkedWorkspaces.map((workspace) => readSessionHistory(ctx.sessions, { workspaceId: workspace.id })),
+    )
   ).flat();
   const sessionsSection = buildSessionsSection({
-    sessions: await ctx.sessions.list(),
+    sessions: await readSessionHistory(ctx.sessions),
     ticketId: ticket.id,
     workspaceSessions,
   });

@@ -4,6 +4,7 @@ import { autoBuildDispatchCommand } from "./auto-build-dispatch";
 import { configureAutoBuildCommand } from "./auto-build-mode";
 import { submitChangeRequestCommand } from "./change-requests";
 import { nextTicketsCommand } from "./next-tickets";
+import { sessionQuery } from "./session-query.fixture";
 import { expectProcessFailure, stackSubmissionFixture } from "./stack-submission.fixture";
 import { readStackRepair, updateStackCommand } from "./update-stack";
 
@@ -61,10 +62,13 @@ test("stack update refuses stale HEAD or another active workspace writer", async
   const f = await staleStack();
   try {
     await expectProcessFailure(updateStackCommand.run(f.ctx, { ...f.input, expectedHeadSha: f.base }), "HEAD changed");
-    f.ctx.sessions.listByWorkspace = async () => [
-      { type: "session", id: "owner", title: "Owner", status: "completed" },
-      { type: "session", id: "other", title: "Other", status: "in_progress" },
-    ];
+    f.ctx.sessions.query = sessionQuery(
+      async () => [],
+      async () => [
+        { type: "session", id: "owner", title: "Owner", status: "completed" },
+        { type: "session", id: "other", title: "Other", status: "in_progress" },
+      ],
+    );
     await expectProcessFailure(updateStackCommand.run(f.ctx, f.input), "Another session");
     expect(await f.git("rev-parse", "HEAD")).toBe(f.head);
   } finally {

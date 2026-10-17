@@ -22,6 +22,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
       views: { list: async () => ({ views: [], defaultViewId: "default" }) },
       logger: { info: () => {}, warn: () => {}, error: () => {} },
       ...input.overrides,
+      sessions: { ...makeContext(input).sessions, ...input.overrides?.sessions },
       workspaces: {
         ...makeContext(input).workspaces,
         getDefault: async () => ({

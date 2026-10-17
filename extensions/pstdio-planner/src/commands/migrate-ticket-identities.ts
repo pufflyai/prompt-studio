@@ -7,6 +7,7 @@ import {
   ticketMarkdownPath,
   ticketToMarkdown,
 } from "../data/draft-storage";
+import { readSessionHistory } from "../data/session-history";
 import { IDENTITY_MIGRATION, identityMigrations } from "../data/ticket-identity";
 import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 
@@ -63,7 +64,7 @@ export const migrateTicketIdentitiesCommand = defineCommand({
       for (const file of ticket.files ?? [])
         await projectFiles.writeText(`${ticketFilesDir(ticket.shorthand)}/${file.name}`, file.content);
     }
-    for (const session of await ctx.sessions.list()) {
+    for (const session of await readSessionHistory(ctx.sessions)) {
       const anchors = (session.anchors_json ?? []).flatMap((anchor) => {
         const ticket = anchor.type === "ticket" ? byId.get(anchor.id) : undefined;
         return ticket ? [{ ...anchor, ...ticketResourceIdentity(ticket, byId) }] : [];

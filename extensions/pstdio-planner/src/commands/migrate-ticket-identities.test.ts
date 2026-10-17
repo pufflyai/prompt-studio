@@ -4,6 +4,7 @@ import { putTicket, ticketsCollection } from "../data/collections";
 import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
+import { sessionQuery } from "./session-query.fixture";
 
 test("migration renumbers saved tickets, backs up local files, refreshes anchors, and resumes safely", async () => {
   const storage = createMemoryStorage();
@@ -31,14 +32,14 @@ test("migration renumbers saved tickets, backs up local files, refreshes anchors
     overrides: {
       projectFiles,
       sessions: {
-        list: async () => [
+        query: sessionQuery(async () => [
           {
             id: "session",
             title: "Session",
             status: "completed",
             anchors_json: [{ type: "ticket", id: original.id, label: original.shorthand }],
           },
-        ],
+        ]),
         addAnchors: async (_id, next) => {
           anchors.push(...next);
         },

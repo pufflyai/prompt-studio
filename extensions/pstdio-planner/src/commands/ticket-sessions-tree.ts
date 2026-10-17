@@ -1,6 +1,6 @@
 import { type ResourceAnchor, type TreeNode, type TreeViewSection, workbenchPanels } from "@pstdio/sdk/extensions";
 
-// The shape the host's `ctx.sessions.list()` returns; only the fields the sidenav needs.
+// Session query fields used by the sidenav.
 export interface TicketSession {
   id: string;
   title: string;
