@@ -27,6 +27,26 @@ const metadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("buildWorkbenchExtensionMenuRegistrations", () => {
+  test("retains resource mutation semantics on contributed command aliases", () => {
+    const mutation = { kind: "rename" as const, resourceType: "note", idParam: "noteId", labelParam: "title" };
+    const result = buildWorkbenchExtensionMenuRegistrations({
+      metadata: { ...metadata, commands: [{ ...metadata.commands[0], resourceMutation: mutation }] },
+      menuSlotsById: new Map([["note.headerPrimary", { menuPath: ["header"] }]]),
+    });
+    expect(result.registrations[0]?.command.resourceMutation).toEqual(mutation);
+  });
+  test("keeps each declaration's identity when another declaration is inserted", () => {
+    const original = metadata.menuContributions[0];
+    const build = (contributions: typeof metadata.menuContributions) =>
+      buildWorkbenchExtensionMenuRegistrations({
+        metadata: { ...metadata, menuContributions: contributions },
+        menuSlotsById: new Map([["note.headerPrimary", { menuPath: ["header"] }]]),
+      }).registrations;
+    const before = build([original]);
+    const after = build([{ ...original, id: "lab.other", label: "Other note" }, original]);
+    expect(after[1]?.menuItem.id).toBe(before[0]?.menuItem.id);
+    expect(after[0]?.menuItem.id).not.toBe(before[0]?.menuItem.id);
+  });
   test("resolves option command references on menu action parameters", () => {
     const result = buildWorkbenchExtensionMenuRegistrations({
       metadata: {

@@ -58,7 +58,6 @@ const createBreadcrumbWorkbench = (target: {
                   {
                     id: "panel",
                     rows: [
-                      { id: "archive", label: "Archive", action: { kind: "command", commandId: "archive" } },
                       {
                         id: "details",
                         label: "Panel details",

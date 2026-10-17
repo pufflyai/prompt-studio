@@ -61,6 +61,7 @@ import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-s
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
+// Packaged browser coverage also checks shared Session action groups and lazy title search in the tab menu.
 // Includes cancellation and graceful shutdown after follow-ups steer existing native goal turns.
 import { registerSharedCodexSmokeTests } from "./packaged-shared-codex-smoke";
 import { registerPackagedShowcaseSmokeTests } from "./packaged-showcase-smoke";

@@ -68,7 +68,14 @@ const setup = (resolve: (resource: ResourceRef) => Promise<NavigationTargetPage>
     executeCommand: async (_project, commandId, body) => {
       const resource = (body as { params: { resources: ResourceRef[] } }).params.resources[0]!;
       calls.push(resource);
-      const target = await resolve(resource);
+      const target = resource.metadata?.documentId
+        ? await resolve(resource)
+        : {
+            kind: "page" as const,
+            page: ticketPage,
+            resource: { ...resource, label: "T-1 Ticket" },
+            parent: { kind: "page" as const, page: ticketsPage },
+          };
       return {
         commandId,
         extensionId,
@@ -87,7 +94,7 @@ test("a document link with identity only resolves its filename and ticket ancest
   try {
     open("notes");
     await settle();
-    expect(calls).toHaveLength(1);
+    expect(calls.filter((resource) => resource.metadata?.documentId)).toHaveLength(1);
     expect(workbench.pages.store.getState().location).toMatchObject({
       resource: { label: "notes.md", metadata: { documentId: "notes" } },
       parent: { resource: { id: "t1", label: "T-1 Ticket" }, parent: { page: ticketsPage } },
@@ -140,7 +147,7 @@ test("switching documents on one ticket resolves the new document and drops a la
     await settle();
     finishFirst(fileTarget(fileResource("first"), "first.md"));
     await settle();
-    expect(calls).toHaveLength(2);
+    expect(calls.filter((resource) => resource.metadata?.documentId)).toHaveLength(2);
     expect(workbench.getPrimaryResource()).toMatchObject({ label: "second.md", metadata: { documentId: "second" } });
   } finally {
     subscription.dispose();
@@ -165,5 +172,51 @@ test("owner targets cannot move the open page or switch its selected document", 
     } finally {
       subscription.dispose();
     }
+  }
+});
+
+test("each document on the same resource refreshes its own title and keeps its selector", async () => {
+  let suffix = "";
+  const { workbench, open, calls, subscription } = setup((resource) =>
+    fileTarget(resource, `${resource.metadata?.documentId ?? "ticket"}${suffix}.md`),
+  );
+  const panel = { kind: "placement" as const, extensionId, id: "files" };
+  workbench.modePlacements.registerPlacement({
+    id: "files",
+    ref: panel,
+    modeId: "project",
+    region: "side",
+    item: {
+      kind: "binding",
+      binding: {
+        kinds: [{ kind: "resource-kind", id: "ticket", extensionId }],
+        view: { kind: "view", id: "editor" },
+        cardinality: "many",
+      },
+    },
+  });
+  try {
+    open("first");
+    await settle();
+    workbench.modePlacements.openPlacement({ panel, resource: fileResource("second"), open: "pin" });
+    await settle();
+    const selected = workbench.layout.getLayout().activeWidgetId;
+    suffix = "-renamed";
+    calls.length = 0;
+    publishExtensionEvent({ id: `${extensionId}.event.changed`, projectId });
+    await settle();
+    expect(workbench.getPrimaryResource()).toMatchObject({
+      label: "first-renamed.md",
+      metadata: { documentId: "first" },
+    });
+    expect(workbench.layout.getLayout().regions.side.widgets[0]?.resource).toMatchObject({
+      label: "second-renamed.md",
+      metadata: { documentId: "second" },
+    });
+    expect(workbench.pages.store.getState().location?.parent?.resource?.metadata?.documentId).toBeUndefined();
+    expect(calls.some((resource) => resource.metadata?.documentId === "second")).toBe(true);
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(selected);
+  } finally {
+    subscription.dispose();
   }
 });

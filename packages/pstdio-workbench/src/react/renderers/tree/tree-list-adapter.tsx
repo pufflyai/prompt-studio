@@ -13,6 +13,7 @@ import {
   type TreeViewSection,
   type WorkbenchCore,
 } from "../../../core";
+import { createWorkbenchResourceActions } from "../../menus/resource-actions";
 import { WorkbenchIcon } from "../../shared/icon";
 import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParamsRequest } from "./tree-actions";
 
@@ -220,14 +221,37 @@ const toTreeListNode = (
   const navigationIntent = resolveTreeNodeNavigationIntent(node);
   const resource = resolveTreeNodeResource(node);
   const commandContext = resource ? { resource } : undefined;
-  const contextMenuItems = createTreeContextMenuItems({
-    actions: node.contextMenuActions,
-    menuPath: node.contextMenuPath ?? node.menuPath ?? (resource ? resourceContextMenuPath(resource.type) : undefined),
-    workbench: context.workbench,
-    context: commandContext,
-    onCommandError: context.onCommandError,
-    onRequestParams: context.onRequestParams,
-  });
+  const customPath = node.contextMenuPath ?? node.menuPath;
+  const resourcePath = resource ? resourceContextMenuPath(resource.type) : undefined;
+  const sharedActions = resource
+    ? createWorkbenchResourceActions(context.workbench, resource, {
+        onRequestParams: context.onRequestParams,
+        onCommandError: context.onCommandError,
+      }).map((action) => ({
+        id: action.key,
+        label: action.label,
+        commandId: action.commandId,
+        icon: action.icon,
+        group: action.group,
+        disabled: action.isDisabled,
+        endContent: action.endContent,
+        separatorBefore: action.separatorBefore,
+        onAction: () => {
+          void action.onClick?.();
+        },
+      }))
+    : [];
+  const contextMenuItems = [
+    ...sharedActions,
+    ...createTreeContextMenuItems({
+      actions: node.contextMenuActions,
+      menuPath: customPath?.join("/") !== resourcePath?.join("/") ? customPath : undefined,
+      workbench: context.workbench,
+      context: commandContext,
+      onCommandError: context.onCommandError,
+      onRequestParams: context.onRequestParams,
+    }),
+  ];
   const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
   const treeNode: TreeListNode = {
     id: node.id,

@@ -69,6 +69,7 @@ export interface WorkbenchTabMenuRow {
 
 export interface WorkbenchTabMenuGroup {
   id: string;
+  label?: string;
   rows: readonly WorkbenchTabMenuRow[];
 }
 

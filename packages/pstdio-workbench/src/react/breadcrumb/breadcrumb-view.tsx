@@ -5,8 +5,9 @@ import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
+import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
+import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
-import { placementMenuActions } from "../shared/placement-menu-actions";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -66,6 +67,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
     resolvePageActivePlacement(state.layout, page),
   );
   const snapshot = usePlacementTab(placement, workbench);
+  useWorkbenchResourceActionResolver(workbench);
   if (items.length === 0) return null;
   const resource = placement?.resource;
   const crumbs = items.flatMap((item) => {
@@ -85,12 +87,16 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
       resource,
     });
   }
-  const actions = placementMenuActions(workbench, snapshot);
-
   return (
     <Breadcrumb
       items={buildWorkbenchBreadcrumbItems(crumbs, (item) =>
-        resource && item.resource && resourceKey(item.resource) === resourceKey(resource) ? actions : undefined,
+        item.resource
+          ? createWorkbenchResourceMenu(
+              workbench,
+              item.resource,
+              resource && resourceKey(item.resource) === resourceKey(resource) ? snapshot : {},
+            )
+          : undefined,
       )}
       separator="/"
       separatorGap="xs"

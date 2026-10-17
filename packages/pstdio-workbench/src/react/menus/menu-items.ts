@@ -6,8 +6,9 @@ import type {
   ResourceRef,
   WorkbenchCore,
 } from "../../core";
-import { matchesContextExpression, scopeWorkbenchResourceContextValues } from "../../core";
+import { scopeWorkbenchResourceContextValues } from "../../core";
 import { byContributionPriority } from "../../core/shared/contributions/metadata";
+import { resolveMenuItemState } from "./menu-item-state";
 
 export interface WorkbenchMenuItem {
   id: string;
@@ -52,28 +53,26 @@ export const listWorkbenchMenuItemsFromState = (
       const rightOrder = right.order ?? 0;
       return leftOrder - rightOrder || byContributionPriority(left, right);
     })
-    .filter((action) => matchesContextExpression(contextValues, action.when))
-    .map((action, index) => {
+    .map((action) => {
       const record = state.commands[action.commandId];
       if (!record) return null;
 
       const args = action.args;
-      if (record.handler.isVisible?.(args) === false) return null;
+      const availability = resolveMenuItemState(action, record, contextValues, context);
+      if (!availability) return null;
 
       return {
-        id: `${action.commandId}:${index}`,
+        id: action.id,
         commandId: record.command.id,
         label: action.label ?? record.command.label,
-        ...((action.description ?? record.command.description)
-          ? { description: action.description ?? record.command.description }
-          : {}),
+        ...(availability.description ? { description: availability.description } : {}),
         icon: action.icon ?? record.command.icon,
         ...(action.iconSrc ? { iconSrc: action.iconSrc } : {}),
         ...(action.overflowLabel ? { overflowLabel: action.overflowLabel } : {}),
         group: action.group,
         args,
-        disabled: action.readOnly === true || record.handler.isEnabled?.(args) === false,
-        ...(action.readOnly ? { readOnly: true } : {}),
+        disabled: availability.disabled,
+        ...(availability.readOnly ? { readOnly: true } : {}),
       } satisfies WorkbenchMenuItem;
     })
     .filter((item): item is WorkbenchMenuItem => item !== null);

@@ -86,7 +86,7 @@ export const buildDashboardSessionsFromRows = (
   return rows.sessions
     .filter((session) => isVisibleDashboardRow(session) && isDashboardProjectRow(session, options.projectId))
     .map((session) => createSession(session, workspaceBySessionId.get(session.id)))
-    .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
+    .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt) || a.id.localeCompare(b.id));
 };
 export const createDashboardSessions = (projectId?: string) =>
   buildDashboardSessionsFromRows(

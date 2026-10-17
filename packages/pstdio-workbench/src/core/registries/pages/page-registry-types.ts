@@ -129,6 +129,8 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
+  resourceReferenceKey(resource: ResourceRef): string;
+  refreshResource(resource: ResourceRef): void;
   pinPlacement(identity: PlacementIdentity, open?: PageOpenIntent): void;
   openSlot(input: WorkbenchPageSlotOpenInput): void;
 }

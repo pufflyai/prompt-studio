@@ -95,19 +95,24 @@ const menuSlotConfig = (
   resourceKind: ResourceKindMenuMetadata,
   slot: NonNullable<ResourceKindMenuMetadata["menuSlots"]>[number],
 ): WorkbenchExtensionMenuSlotConfig => {
+  const resourceGroup = slot.label
+    ? { id: `${resourceKind.extensionId ?? "pstdio"}:${resourceKind.id}:${slot.id}`, label: slot.label }
+    : undefined;
   if (slot.placement === "context-menu") {
     return {
       menuPath: resourceContextMenuPath(resourceKind.id),
       group: "overflow",
+      resourceGroup,
       overflowLabel: slot.label ?? `${resourceKind.label ?? "Resource"} actions`,
     };
   }
   if (slot.placement === "header-primary") {
-    return { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" };
+    return { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary", resourceGroup };
   }
   return {
     menuPath: workbenchTopHeaderTrailingMenuPath,
     group: "overflow",
+    resourceGroup,
     overflowLabel: slot.label ?? `${resourceKind.label ?? "Resource"} actions`,
   };
 };

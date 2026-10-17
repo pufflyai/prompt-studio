@@ -43,7 +43,7 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
     {
       id: "new-conversation",
       label: "New conversation",
-      icon: "message-square",
+      icon: "message-square-plus",
       run: () => void input.workbench.commands.executeCommand(dashboardCommandIds.createSession),
     },
     {

@@ -1,4 +1,3 @@
-import { Box } from "@chakra-ui/react";
 import { Palette, type PaletteEntry, PaletteShortcut, useThemePreference } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import {
@@ -16,11 +15,11 @@ import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { workbenchCommandPaletteBackground } from "../theme/workbench-theme-background";
 import { hasCommandParameters } from "./command-palette-params";
 import { useWorkbenchCommandPaletteResourceEntries } from "./command-palette-resources";
 import type { CommandParamFieldRenderer, CommandParamsRequest } from "./command-params-dialog";
 import { PaletteParamsDialog } from "./palette-params-dialog";
+import { WorkbenchPaletteSurface } from "./palette-surface";
 import {
   COMMAND_MODE_ID,
   getPaletteInitialActiveIndex,
@@ -32,6 +31,7 @@ import {
 } from "./palette-view";
 import { createWorkbenchPanelWidgetPaletteEntries } from "./panel-widget-palette";
 import { createWorkbenchResourcePaletteEntries } from "./resource-palette";
+import { WorkbenchResourceSearch } from "./resource-search";
 import {
   createWorkbenchThemePreferencePaletteEntries,
   getThemePaletteEntryIndex,
@@ -180,6 +180,13 @@ export const createWorkbenchCommandPaletteEntries = (input: {
 };
 
 export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => {
+  const { workbench, open, onClose } = props;
+  const request = useWorkbenchStore(workbench.commandPalette.store, (state) => state.resourceSearch);
+  if (request && open) return <WorkbenchResourceSearch workbench={workbench} request={request} onClose={onClose} />;
+  return <WorkbenchMainCommandPalette {...props} />;
+};
+
+const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const {
     workbench,
     open,
@@ -257,24 +264,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
 
   return (
     <>
-      <Box
-        display="contents"
-        css={{
-          "& [data-scope=dialog][data-part=backdrop], & [data-scope=dialog][data-part=positioner]": {
-            position: "absolute",
-            inset: "0",
-          },
-          "& [data-scope=dialog][data-part=positioner]": {
-            alignItems: "center",
-            justifyContent: "center",
-            h: "full",
-            minH: "0",
-            padding: "md",
-            w: "full",
-          },
-          "& [data-scope=dialog][data-part=content]": { background: workbenchCommandPaletteBackground },
-        }}
-      >
+      <WorkbenchPaletteSurface>
         <Palette
           open={open}
           entries={entries}
@@ -312,7 +302,7 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
             return true;
           }}
         />
-      </Box>
+      </WorkbenchPaletteSurface>
       <PaletteParamsDialog workbench={workbench} renderParamField={renderParamField} />
     </>
   );

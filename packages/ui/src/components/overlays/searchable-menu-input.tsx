@@ -1,6 +1,6 @@
 import { Input, InputGroup } from "@chakra-ui/react";
 import { Search } from "lucide-react";
-import type { Ref } from "react";
+import type { KeyboardEventHandler, Ref } from "react";
 import { Header } from "@/components/layout/header";
 
 interface SearchableMenuInputProps {
@@ -8,10 +8,11 @@ interface SearchableMenuInputProps {
   value: string;
   placeholder: string;
   onValueChange: (value: string) => void;
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
 }
 
 export const SearchableMenuInput = (props: SearchableMenuInputProps) => {
-  const { inputRef, value, placeholder, onValueChange } = props;
+  const { inputRef, value, placeholder, onValueChange, onKeyDown } = props;
 
   return (
     <Header variant="input" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0}>
@@ -25,7 +26,10 @@ export const SearchableMenuInput = (props: SearchableMenuInputProps) => {
           aria-label={placeholder}
           autoComplete="off"
           onChange={(event) => onValueChange(event.target.value)}
-          onKeyDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            onKeyDown?.(event);
+            if (!onKeyDown || event.key !== "Escape") event.stopPropagation();
+          }}
         />
       </InputGroup>
     </Header>

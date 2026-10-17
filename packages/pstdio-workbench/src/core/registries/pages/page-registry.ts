@@ -1,4 +1,5 @@
 import { validatePageParamDefinitions } from "@pstdio/sdk/extensions";
+import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
@@ -19,6 +20,7 @@ import type {
   WorkbenchPageRegistryStoreState,
   WorkbenchPageResourceCodec,
 } from "./page-registry-types";
+import { refreshPageResources, refreshResourceLocation } from "./page-resource-refresh";
 import { pageStateKey } from "./page-state-key";
 
 export type {
@@ -95,6 +97,31 @@ export const createWorkbenchPageRegistry = <Value>(
 
     listPages() {
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
+    },
+
+    resourceReferenceKey(resource) {
+      const normalized = normalizeResource(resource);
+      const keys = new Set(
+        Object.values(store.getState().pages).flatMap((page) =>
+          page.document && page.resource && resourceMatchesConstraint(page.resource, normalized)
+            ? [page.document.metadataKey]
+            : [],
+        ),
+      );
+      return JSON.stringify([
+        resourceKey(normalized),
+        [...keys].sort().map((key) => [key, normalized.metadata?.[key] ?? null]),
+      ]);
+    },
+
+    refreshResource(resource) {
+      const state = store.getState();
+      commit({
+        ...state,
+        location: refreshResourceLocation(state.location, resource, registry.resourceReferenceKey),
+        pageStates: refreshPageResources(state.pageStates, resource, registry.resourceReferenceKey),
+        action: "refreshPageResource",
+      });
     },
 
     pinPlacement(identity, open) {
