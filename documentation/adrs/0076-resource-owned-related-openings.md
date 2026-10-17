@@ -26,7 +26,7 @@ Resource owners control domain defaults. People retain normal pinning, movement,
 
 Several returned previews aimed at one tray replace in order, leaving the last eligible result. No conflict editor is needed. Existing targets retain their actual tray and pins.
 
-Publish the additive SDK contract before adopting it in independently released extensions. See the [API reference](../references/extensions/0018-related-resource-openings.md).
+Publish the additive SDK contract before adopting it in independently released extensions. See the [API reference](../references/extensions/0019-related-resource-openings.md).
 
 ## Alternatives
 
