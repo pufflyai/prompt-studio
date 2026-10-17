@@ -66,7 +66,7 @@ const LinkConversation = (props: { streaming?: boolean }) => {
 };
 
 const EditableLinkMessage = () => {
-  const source = '[Source](src/app.ts "Original title") after.';
+  const source = '[Source](src/app.ts "Original title") after README.md.';
   const [markdown, setMarkdown] = useState(source);
   return (
     <>
@@ -102,6 +102,7 @@ export const FileLinks: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const source = await canvas.findByRole("link", { name: "Source" });
+    await expect(source.querySelector("svg.lucide-file-code")).not.toBeNull();
     source.focus();
     await expect(source).toHaveFocus();
     await userEvent.keyboard("{Enter}");
@@ -111,6 +112,63 @@ export const FileLinks: Story = {
   },
 };
 export const StreamingLinks: Story = { args: { streaming: true } };
+export const ExternalReferences: Story = {
+  render: () => (
+    <RichMessage
+      defaultState="Open {{link('https://example.com')}}."
+      linkHandler={{ resolveHref: () => null, resolveResource: async () => null, open: () => {} }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const reference = await within(canvasElement).findByRole("link", { name: "example.com" });
+    await expect(reference).toHaveAttribute("href", "https://example.com");
+    await expect(reference).toHaveAttribute("target", "_blank");
+    await expect(reference).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(reference.querySelector('[data-scope="tooltip"]')).toBeNull();
+    reference.focus();
+    await expect(reference).toHaveFocus();
+  },
+};
+export const ResourceBubbles: Story = {
+  render: () => {
+    const [opened, setOpened] = useState<string>();
+    return (
+      <>
+        <RichMessage
+          defaultState="Review tickets/T-1/ticket.md, [ticket](tickets/T-1/ticket.md), `tickets/T-1/ticket.md`, and {{link('tickets/T-1/ticket.md')}}. Read tickets/T-1/files/notes.md. [Website](https://example.com) stays a web link."
+          linkHandler={{
+            resolveHref: () => null,
+            resolveResource: async (candidate) => ({
+              label: candidate.source.endsWith("notes.md") ? "notes.md" : "T-1 Fix resource links",
+              icon: candidate.source.endsWith("notes.md") ? "file-text" : "component",
+              href: "/projects/demo/ticket/T-1",
+            }),
+            open: (candidate) => setOpened(candidate.source),
+          }}
+        />
+        {opened ? <Text>{opened}</Text> : null}
+      </>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const links = await canvas.findAllByRole("link", { name: "T-1 Fix resource links" });
+    await expect(links).toHaveLength(4);
+    for (const link of links) {
+      await expect(link.querySelector("svg.lucide-component")).not.toBeNull();
+      await expect(link.querySelector('[data-scope="tooltip"]')).toBeNull();
+      await expect(link.closest('[data-scope="tooltip"]')).toBeNull();
+    }
+    const document = await canvas.findByRole("link", { name: "notes.md" });
+    await expect(document.querySelector("svg.lucide-file-text")).not.toBeNull();
+    await userEvent.hover(links[0]!);
+    await expect(getComputedStyle(links[0]!).textDecorationLine).toBe("none");
+    links[0]!.focus();
+    await userEvent.keyboard("{Enter}");
+    await expect(canvas.getByText("tickets/T-1/ticket.md")).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "Website" })).toHaveAttribute("href", "https://example.com");
+  },
+};
 export const StandaloneRichMessage: Story = {
   render: () => (
     <RichMessage
@@ -122,6 +180,33 @@ export const StandaloneRichMessage: Story = {
     />
   ),
 };
+export const ParenthesizedPaths: Story = {
+  render: () => {
+    const [opened, setOpened] = useState<string>();
+    return (
+      <>
+        <RichMessage
+          defaultState="Read src/app/(dashboard)/page.ts and (src/app/[id]/page.ts)."
+          linkHandler={{
+            resolveHref: (candidate) => `/projects/demo/workspace?document=${encodeURIComponent(candidate.source)}`,
+            open: (candidate) => setOpened(candidate.source),
+          }}
+        />
+        <Text data-testid="opened-path">{opened}</Text>
+      </>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const path = "src/app/(dashboard)/page.ts";
+    const link = await canvas.findByRole("link", { name: path, exact: true });
+    await expect(link).toHaveAttribute("href", `/projects/demo/workspace?document=${encodeURIComponent(path)}`);
+    await userEvent.click(link);
+    await expect(canvas.getByTestId("opened-path")).toHaveTextContent(path);
+    await expect(canvas.getByRole("link", { name: "src/app/[id]/page.ts", exact: true })).toBeVisible();
+    await expect(canvas.queryByRole("link", { name: "/page.ts", exact: true })).toBeNull();
+  },
+};
 export const EditableSource: Story = {
   render: () => <EditableLinkMessage />,
   play: async ({ canvasElement }) => {
@@ -131,6 +216,7 @@ export const EditableSource: Story = {
     await userEvent.type(editor, " updated", { skipClick: true });
     await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent('"Original title"');
     await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent("updated");
+    await expect(canvas.getByTestId("exported-markdown")).toHaveTextContent("README.md");
     await expect(canvas.getByTestId("exported-markdown")).not.toHaveTextContent("Workspace demo");
   },
 };

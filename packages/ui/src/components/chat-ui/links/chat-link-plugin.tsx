@@ -6,6 +6,8 @@ import { StreamingTextNode } from "@/components/rich-text/shared/nodes/streaming
 import { resolveChatCodeLink } from "./chat-code-link-transform";
 import { type ChatLinkCandidate, type ChatLinkHandler, parseChatLink } from "./chat-link";
 import { useChatLinkHandler } from "./chat-link-context";
+import { ChatResourceLinkNode } from "./chat-resource-link-node";
+import { resolveChatTextLinks } from "./chat-text-link-transform";
 
 const isModifiedClick = (event: MouseEvent | KeyboardEvent) =>
   event instanceof MouseEvent &&
@@ -41,6 +43,10 @@ export const ChatLinkPlugin = () => {
       const candidate: ChatLinkCandidate = { source: node.getSource(), origin: "markdown" };
       const parsed = parseChatLink(candidate, window.location.origin);
       if (parsed && (parsed.kind !== "external" || handler.resolveHref(candidate))) {
+        if (!editor.isEditable()) {
+          node.replace(new ChatResourceLinkNode(candidate, node.getTextContent()));
+          return;
+        }
         node.setResolvedURL(handler.resolveHref(candidate) ?? "#");
       }
     });
@@ -56,7 +62,10 @@ export const ChatLinkPlugin = () => {
           anchor.title = handler.describe?.(candidate) ?? `Open file or document: ${source}`;
       }
     });
-    const transformCode = (node: TextNode) => resolveChatCodeLink(node, handler, window.location.origin);
+    const transformCode = (node: TextNode) => {
+      resolveChatCodeLink(node, handler, window.location.origin, !editor.isEditable());
+      if (!editor.isEditable() && node.isAttached()) resolveChatTextLinks(node);
+    };
     const removeCode = editor.registerNodeTransform(TextNode, transformCode);
     const removeStreamingCode = editor.registerNodeTransform(StreamingTextNode, transformCode);
     const activate = (event: MouseEvent | KeyboardEvent) => activateChatLink(handler, event);

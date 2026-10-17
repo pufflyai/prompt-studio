@@ -3655,6 +3655,10 @@ interface ResourceKindDefinition extends ContributionDefinition<"resource-kind">
   readonly menuSlots?: readonly ResourceMenuSlotDefinition[];
   readonly resolve?: CommandRef;
   readonly resolveMany?: CommandRef;
+  readonly paths?: readonly {
+    readonly prefix: string;
+    readonly resolve: CommandRef;
+  }[];
   readonly validateAnchors?: CommandRef;
 }
 interface ResourceHierarchyProvider extends ContributionDefinition<"resource-hierarchy-provider"> {

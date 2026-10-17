@@ -48,12 +48,14 @@ import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";
 // Chat setup checks retained chunks, bounded responses, continuous sticky context and cached reopening.
+// Composer coverage preserves route-group file paths and keeps web references natively clickable in packaged messages.
 // Queue drag targets follow live-input support and retain padded delete actions.
 import { registerQueuedRequestSmokeTests } from "./packaged-queued-requests-smoke";
 // Queued request browser checks also cover pending submissions and failed-send draft recovery.
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { registerResourceChoicesSmokeTests } from "./packaged-resource-choices-smoke";
 // Resource links include owner batch-resolution commands and their public workbench metadata.
+// Includes resource path prefixes, owner resolver commands, and resolution through HTTP.
 import { registerResourceLinksSmokeTests } from "./packaged-resource-links-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { registerSessionQuerySmokeTests } from "./packaged-session-query-smoke";
