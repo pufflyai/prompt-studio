@@ -1,5 +1,5 @@
 import { settleReadBatch } from "@pstdio/workbench";
-import { createApiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { getRuntimeCollections, type RuntimeCollections } from "@/lib/sync/collections";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { workspaceState } from "./workspace-state";
@@ -44,11 +44,7 @@ const fetchDashboardWorkspaceDiffSummary = async (
   owner: RuntimeCollections,
   signal?: AbortSignal,
 ) => {
-  const apiRequest = createApiRequest(owner.connection);
-  const response = await apiRequest<DashboardWorkspaceDiffSummaryResponse | null>(
-    `/v1/workspaces/${workspaceId}/diff-summary?mode=fork_point`,
-    { allowNotFound: true, signal },
-  );
+  const response = await getApiClient(owner.connection).workspaces.diffSummary(workspaceId, "fork_point", signal);
 
   return response ? toDashboardWorkspaceDiffSummary(response) : null;
 };

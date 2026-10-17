@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
@@ -6,7 +7,7 @@ import { dts } from "rolldown-plugin-dts";
 // The report must not change unless the API does. `stableTypeOrdering` in tsconfig.build.json makes TypeScript
 // order union members and inferred properties the same way on every build, instead of in the order it happened
 // to create their types.
-const entries = ["extensions", "extensions/react"];
+const entries = JSON.parse(readFileSync(new URL("./api-report-entries.json", import.meta.url), "utf8")) as string[];
 const tsconfig = resolve(import.meta.dirname, "tsconfig.build.json");
 
 export default entries.map((entry) =>

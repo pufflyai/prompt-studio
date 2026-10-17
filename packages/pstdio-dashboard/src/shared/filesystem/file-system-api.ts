@@ -1,22 +1,7 @@
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 
-export interface DirectoryEntry {
-  name: string;
-  path: string;
-  isDirectory: boolean;
-}
-
-export interface DirectoryListResponse {
-  currentPath: string;
-  entries: DirectoryEntry[];
-}
-
-export const listDirectory = async (path?: string) => {
-  const trimmedPath = path?.trim();
-  const query = trimmedPath ? `?path=${encodeURIComponent(trimmedPath)}` : "";
-
-  return apiRequest<DirectoryListResponse>(`/v1/filesystem/list${query}`);
-};
-
+export type { DirectoryEntry } from "@pstdio/sdk/client";
+export type DirectoryListResponse = Awaited<ReturnType<ReturnType<typeof getApiClient>["filesystem"]["list"]>>;
+export const listDirectory = (path?: string) => getApiClient().filesystem.list(path?.trim() || undefined);
 export const createDirectory = (parent_path: string, name: string) =>
-  apiRequest<{ path: string }>("/v1/filesystem/directories", { method: "POST", body: { parent_path, name } });
+  getApiClient().filesystem.createDirectory({ parent_path, name });

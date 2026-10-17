@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { parsePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { parsePageUrl } from "pstdio-api-contracts";
 import { makeWorkspace } from "@/features/workspaces/workspace.test-fixture";
 import { createHandler } from "./file-link";
 

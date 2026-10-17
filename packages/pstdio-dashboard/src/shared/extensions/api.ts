@@ -1,40 +1,18 @@
-import type {
-  CommandExecuteResponse,
-  ExtensionSettingValueRecord,
-  InstallExtensionResponse,
-  ListExtensionAppearanceResponse,
-  ListProjectExtensionsResponse,
-  ProjectExtensionInstance,
-  UpgradeProjectExtensionResponse,
-  WorkbenchExtensionAutomationRecord,
-} from "@pstdio/sdk/api";
-import { apiRequest, createApiRequest } from "@/lib/api";
-import type { DashboardExtensionMetadata } from "./types";
+import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import { getApiClient } from "@/lib/api";
 
-export const getProjectExtensionMetadata = (projectId: string) =>
-  apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/ui`);
-
+export const getProjectExtensionMetadata = (projectId: string) => getApiClient().extensions.metadata(projectId);
 export const getExtensionContributions = (projectId: string, instanceId: string) =>
-  apiRequest<DashboardExtensionMetadata>(`/v1/projects/${projectId}/extensions/${instanceId}/contributions`);
-
+  getApiClient().extensions.contributions(projectId, instanceId);
 export const getMarketplaceExtensionContributions = (projectId: string, installName: string) =>
-  apiRequest<DashboardExtensionMetadata>(
-    `/v1/projects/${projectId}/extensions/marketplace/${encodeURIComponent(installName)}/contributions`,
-  );
-
-export const getProjectExtensionAppearance = (projectId: string) =>
-  apiRequest<ListExtensionAppearanceResponse>(`/v1/projects/${projectId}/extensions/appearance`);
-
-export const executeExtensionCommand = (projectId: string, commandId: string, body: unknown, signal?: AbortSignal) =>
-  apiRequest<CommandExecuteResponse>(
-    `/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/execute`,
-    {
-      method: "POST",
-      body,
-      signal,
-    },
-  );
-
+  getApiClient().extensions.marketplaceContributions(projectId, installName);
+export const getProjectExtensionAppearance = (projectId: string) => getApiClient().extensions.listAppearance(projectId);
+export const executeExtensionCommand = (
+  projectId: string,
+  commandId: string,
+  body: Omit<CommandExecuteRequest, "projectId">,
+  signal?: AbortSignal,
+) => getApiClient().extensions.execute(commandId, { ...body, projectId }, { signal });
 // Returns the command's value, or throws its failure.
 export const executeExtensionCommandValue = async <T = unknown>(
   projectId: string,
@@ -50,57 +28,25 @@ export const executeExtensionCommandValue = async <T = unknown>(
 };
 
 export const uploadExtensionCommandFile = async (projectId: string, commandId: string, file: File) =>
-  createApiRequest()<{ id: string }>(
-    `/v1/projects/${projectId}/extensions/commands/${encodeURIComponent(commandId)}/files`,
-    {
-      method: "POST",
-      body: await file.arrayBuffer(),
-      headers: {
-        "content-type": file.type || "application/octet-stream",
-        "x-file-name": encodeURIComponent(file.name),
-      },
-    },
-  );
-
-export interface ExtensionArtifactFile {
-  path: string;
-  size: number;
-  mediaType: string;
-}
-
-const artifactBasePath = (projectId: string, instanceId: string, mountId: string) =>
-  `/v1/projects/${projectId}/extensions/${instanceId}/artifacts/${encodeURIComponent(mountId)}`;
-
+  getApiClient().extensions.uploadCommandFile(projectId, commandId, {
+    name: file.name,
+    data: await file.arrayBuffer(),
+    mimeType: file.type || undefined,
+  });
 export const listExtensionArtifacts = (projectId: string, instanceId: string, mountId: string, prefix?: string) =>
-  apiRequest<{ files: ExtensionArtifactFile[] }>(
-    `${artifactBasePath(projectId, instanceId, mountId)}/files${prefix ? `?prefix=${encodeURIComponent(prefix)}` : ""}`,
-  );
-
+  getApiClient().extensions.artifacts.list(projectId, instanceId, mountId, prefix);
 export const readExtensionArtifactText = (projectId: string, instanceId: string, mountId: string, path: string) =>
-  apiRequest<{ content: string }>(
-    `${artifactBasePath(projectId, instanceId, mountId)}/text?path=${encodeURIComponent(path)}`,
-  );
-
+  getApiClient().extensions.artifacts.readText(projectId, instanceId, mountId, path);
 export const getExtensionArtifactImageUrl = (
   projectId: string,
   instanceId: string,
   mountId: string,
   path: string,
   webviewId: string,
-) =>
-  apiRequest<{ url: string }>(
-    `${artifactBasePath(projectId, instanceId, mountId)}/image-url?path=${encodeURIComponent(path)}&webviewId=${encodeURIComponent(webviewId)}`,
-  );
-
-export const listProjectExtensions = (projectId: string) =>
-  apiRequest<ListProjectExtensionsResponse>(`/v1/projects/${projectId}/extensions`);
-
+) => getApiClient().extensions.artifacts.imageUrl(projectId, instanceId, mountId, path, webviewId);
+export const listProjectExtensions = (projectId: string) => getApiClient().extensions.listProject(projectId);
 export const installMarketplaceExtension = (projectId: string, installName: string, force = false) =>
-  apiRequest<InstallExtensionResponse>(`/v1/projects/${projectId}/extensions/install`, {
-    method: "POST",
-    body: { source: { kind: "catalog", name: installName }, force },
-  });
-
+  getApiClient().extensions.install(projectId, { source: { kind: "catalog", name: installName }, force });
 export interface DroppedExtensionFolder {
   name: string;
   force?: boolean;
@@ -109,89 +55,41 @@ export interface DroppedExtensionFolder {
 }
 
 export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder) => {
-  const body = new FormData();
-  body.append("kind", "upload");
-  if (folder.force) body.append("force", "true");
-  body.append("folderName", folder.name);
-  body.append("installName", folder.name);
-  for (const file of folder.files) body.append("files", file, file.name);
-  return apiRequest<InstallExtensionResponse>(`/v1/projects/${projectId}/extensions/install`, {
-    method: "POST",
-    body,
-  });
+  const upload = new FormData();
+  upload.append("kind", "upload");
+  if (folder.force) upload.append("force", "true");
+  upload.append("folderName", folder.name);
+  upload.append("installName", folder.name);
+  for (const file of folder.files) upload.append("files", file, file.name);
+  return getApiClient().extensions.install(projectId, { upload });
 };
-
 export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
-  apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}`, {
-    method: "PATCH",
-    body: { enabled },
-  });
-
+  getApiClient().extensions.setEnabled(projectId, instanceId, enabled);
 export const setExtensionAutomationEnabled = (
   projectId: string,
   instanceId: string,
   automationId: string,
   enabled: boolean,
-) =>
-  apiRequest<WorkbenchExtensionAutomationRecord>(
-    `/v1/projects/${projectId}/extensions/${instanceId}/automations/${encodeURIComponent(automationId)}`,
-    { method: "PATCH", body: { enabled } },
-  );
-
+) => getApiClient().extensions.setAutomationEnabled(projectId, instanceId, automationId, enabled);
 export const reloadProjectExtension = (projectId: string, instanceId: string) =>
-  apiRequest<ProjectExtensionInstance>(`/v1/projects/${projectId}/extensions/${instanceId}/reload`, {
-    method: "POST",
-  });
-
+  getApiClient().extensions.reload(projectId, instanceId);
 export const upgradeProjectExtension = (projectId: string, instanceId: string) =>
-  apiRequest<UpgradeProjectExtensionResponse>(`/v1/projects/${projectId}/extensions/${instanceId}/upgrade`, {
-    method: "POST",
-  });
-
+  getApiClient().extensions.upgradeProject(projectId, instanceId);
 export const uninstallProjectExtension = (projectId: string, instanceId: string, deleteUserData = false) =>
-  apiRequest<void>(
-    `/v1/projects/${projectId}/extensions/${instanceId}${deleteUserData ? "?deleteUserData=true" : ""}`,
-    { method: "DELETE" },
-  );
-
+  getApiClient().extensions.uninstall(projectId, instanceId, deleteUserData);
 export const listProjectExtensionSettings = (projectId: string, instanceId: string) =>
-  apiRequest<{ settings: ExtensionSettingValueRecord[] }>(
-    `/v1/projects/${projectId}/extensions/${instanceId}/settings`,
-  );
-
+  getApiClient().extensions.projectSettings.all(projectId, instanceId);
 export const getProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>
-  apiRequest<ExtensionSettingValueRecord>(
-    `/v1/projects/${projectId}/extensions/${instanceId}/settings/${encodeURIComponent(key)}`,
-  );
-
+  getApiClient().extensions.projectSettings.get(projectId, instanceId, key);
 export const updateProjectExtensionSetting = (projectId: string, instanceId: string, key: string, value: unknown) =>
-  apiRequest<ExtensionSettingValueRecord>(
-    `/v1/projects/${projectId}/extensions/${instanceId}/settings/${encodeURIComponent(key)}`,
-    { method: "PUT", body: { value } },
-  );
-
+  getApiClient().extensions.projectSettings.set(projectId, instanceId, key, value);
 export const deleteProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>
-  apiRequest<void>(`/v1/projects/${projectId}/extensions/${instanceId}/settings/${encodeURIComponent(key)}`, {
-    method: "DELETE",
-  });
-
+  getApiClient().extensions.projectSettings.delete(projectId, instanceId, key);
 export const listGlobalExtensionSettings = (installName: string) =>
-  apiRequest<{ settings: ExtensionSettingValueRecord[] }>(
-    `/v1/extensions/installed/${encodeURIComponent(installName)}/settings`,
-  );
-
+  getApiClient().extensions.installedSettings.all(installName);
 export const getGlobalExtensionSetting = (installName: string, key: string) =>
-  apiRequest<ExtensionSettingValueRecord>(
-    `/v1/extensions/installed/${encodeURIComponent(installName)}/settings/${encodeURIComponent(key)}`,
-  );
-
+  getApiClient().extensions.installedSettings.get(installName, key);
 export const updateGlobalExtensionSetting = (installName: string, key: string, value: unknown) =>
-  apiRequest<ExtensionSettingValueRecord>(
-    `/v1/extensions/installed/${encodeURIComponent(installName)}/settings/${encodeURIComponent(key)}`,
-    { method: "PUT", body: { value } },
-  );
-
+  getApiClient().extensions.installedSettings.set(installName, key, value);
 export const deleteGlobalExtensionSetting = (installName: string, key: string) =>
-  apiRequest<void>(`/v1/extensions/installed/${encodeURIComponent(installName)}/settings/${encodeURIComponent(key)}`, {
-    method: "DELETE",
-  });
+  getApiClient().extensions.installedSettings.delete(installName, key);

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import { parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "@pstdio/sdk/extensions";
+import { parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 
 const resources: WorkbenchPageResourceCodec = {

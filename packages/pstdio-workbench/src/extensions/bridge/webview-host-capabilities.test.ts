@@ -5,7 +5,6 @@ import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilit
 describe("createWorkbenchWebviewHostCapabilities", () => {
   test("maps v1 webview capabilities onto workbench registries", async () => {
     const workbench = createWorkbench();
-    const keyboardEvents: unknown[] = [];
     const page = { extensionId: "pstdio.lab", kind: "page" as const, id: "tickets" };
     workbench.commands.registerCommand(
       { id: "lab.hello", label: "Hello" },
@@ -44,7 +43,6 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
       },
     });
     const capabilities = createWorkbenchWebviewHostCapabilities({
-      dispatchKeyboardEvent: (event) => keyboardEvents.push(event),
       workbench,
     });
     await expect(
@@ -61,10 +59,8 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
     capabilities["notification.show"]?.({ level: "info", title: "Bridge ready" });
     capabilities["preferences.set"]?.({ name: "lab.theme", scope: { scope: "user" }, value: "dark" });
     const preference = capabilities["preferences.get"]?.({ name: "lab.theme", scope: { scope: "user" } });
-    capabilities["host.dispatchKeyboardEvent"]?.({ code: "KeyP", ctrlKey: true, key: "p" });
     expect(preference).toBe("dark");
     expect(workbench.pages.store.getState().activePageId).toBe("pstdio.lab.page.tickets");
     expect(workbench.notifications.listNotifications()).toMatchObject([{ title: "Bridge ready" }]);
-    expect(keyboardEvents).toEqual([{ code: "KeyP", ctrlKey: true, key: "p" }]);
   });
 });

@@ -5,7 +5,7 @@ import { HostStorageProvider } from "@pstdio/ui";
 import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { storeBrowserSession, takeBrowserLoginCode } from "@/lib/browser-session";
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
@@ -32,10 +32,7 @@ const signInFromLoginLink = async () => {
   if (!code) return;
   window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}${hash}`);
   try {
-    const { secret } = await apiRequest<{ secret: string }>("/runtime/browser-session", {
-      method: "POST",
-      body: { code },
-    });
+    const { secret } = await getApiClient().runtime.claimBrowserSession(code);
     storeBrowserSession(secret);
   } catch {
     // A used or expired code leaves the browser signed out, and the sign-in page explains what to do.
@@ -46,7 +43,7 @@ const signInFromLoginLink = async () => {
 // A server without auth has no runtime routes and answers 404.
 const isBrowserSignedOut = async () => {
   try {
-    await apiRequest("/runtime/ready", { allowNotFound: true });
+    await getApiClient().runtime.ready();
     return false;
   } catch (error) {
     return error instanceof PstdioApiError && error.status === 401;

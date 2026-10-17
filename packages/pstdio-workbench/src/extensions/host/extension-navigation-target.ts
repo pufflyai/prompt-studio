@@ -1,8 +1,5 @@
-import {
-  type NavigationTarget as ExtensionNavigationTarget,
-  isNavigationTarget,
-  qualifyNavigationTarget,
-} from "@pstdio/sdk/extensions";
+import { type NavigationTarget as ExtensionNavigationTarget, isNavigationTarget } from "@pstdio/sdk/extensions";
+import { qualifyNavigationTarget } from "pstdio-api-contracts";
 import type { NavigationTarget, NavigationTargetCommand } from "../../core";
 
 export interface ToWorkbenchNavigationTargetInput {

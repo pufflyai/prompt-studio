@@ -1,4 +1,3 @@
-export type { AssetReference, AssetTransfer } from "pstdio-api-contracts";
 export type { AgentClient } from "./agents";
 export type { AssetClientOwner, AssetsClient, AssetUploadInput } from "./assets";
 export type { AutomationClient } from "./automation";
@@ -18,6 +17,7 @@ export {
   type RequestOptions,
 } from "./request";
 export type { ResourceAnchorsClient } from "./resource-anchors";
+export type { AssetReference, AssetTransfer } from "./resource-compat";
 export { createRuntimeClient, type RuntimeClient } from "./runtime";
 export type { ListSessionsInput, SessionClient, SessionStreamConnection, SessionStreamHandlers } from "./sessions";
 export type { SettingsClient } from "./settings";

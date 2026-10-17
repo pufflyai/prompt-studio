@@ -14,13 +14,15 @@ import type {
 } from "pstdio-api-contracts";
 import type { Workspace, WorkspaceListItem } from "../resources";
 import type { RequestFn } from "./request";
+import { createWorkspaceDiffClient } from "./workspace-diffs";
 
-export type WorkspaceClient = {
-  listProviders(projectId: string): Promise<WorkspaceProviderDescriptor[]>;
+export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
+  listProviders(projectId: string, options?: { signal?: AbortSignal }): Promise<WorkspaceProviderDescriptor[]>;
   list(projectId: string): Promise<WorkspaceListItem[]>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
   create(input: CreateWorkspaceInput): Promise<Workspace>;
   rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
+  /** @deprecated No maintained client caller. Use `GET /v1/workspaces/{id}/activity` for this operation; the convenience method is removed in 0.45. */
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
   listFiles(
     workspaceId: string,
@@ -38,7 +40,9 @@ export type WorkspaceClient = {
 };
 
 export const createWorkspaceClient = (request: RequestFn): WorkspaceClient => ({
-  listProviders: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers`),
+  ...createWorkspaceDiffClient(request),
+  listProviders: (projectId, options) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/workspace-providers`, options),
   listFiles: (workspaceId, input = {}, options) => {
     const params = new URLSearchParams();
     if (input.path !== undefined) params.append("path", input.path);

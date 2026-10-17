@@ -1,12 +1,10 @@
-import type { Project, WorkspaceListItem } from "@pstdio/sdk/resources";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 
 export const createProject = async (input: { path: string }) => {
-  const project = await apiRequest<Project>("/v1/projects", {
-    method: "POST",
-    body: { initial_workspace: { provider_id: "pstdio.root", params: { path: input.path } } },
+  const project = await getApiClient().projects.create({
+    initial_workspace: { provider_id: "pstdio.root", params: { path: input.path } },
   });
-  const workspaces = await apiRequest<WorkspaceListItem[]>(`/v1/workspaces?project_id=${project.id}`);
+  const workspaces = await getApiClient().workspaces.list(project.id);
   const home = workspaces.find((workspace) => workspace.is_default);
   if (home?.setup_error) throw new Error(home.setup_error);
   if (!home?.root_path || home.initializing || home.provider_state !== "ready")

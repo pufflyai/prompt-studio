@@ -7,7 +7,7 @@ import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webvie
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
-import { apiRequest, buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
+import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
@@ -35,7 +35,6 @@ import { useWebviewPageProps } from "../use-webview-page-props";
 import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
 import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
-import { notificationStatusRouteVerb } from "./notification-transition-route";
 import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
@@ -125,29 +124,23 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
 
   const requireProjectId = () => requireProject(projectId);
 
-  const notificationPath = (suffix = "") =>
-    `/v1/projects/${encodeURIComponent(requireProjectId())}/notifications${suffix}`;
-
-  const extensionNotificationPath = () =>
-    `/v1/projects/${encodeURIComponent(requireProjectId())}/extensions/${encodeURIComponent(extensionId)}/notifications`;
-
   const resolveNotification = async (params: unknown) => {
     const input = params as { id?: string; dedupeKey?: string; status?: "done" | "dismissed" | "expired" };
     const status = input.status ?? "done";
 
     if (input.dedupeKey) {
-      return apiRequest(notificationPath("/resolve-by-dedupe-key"), {
-        method: "POST",
-        body: { dedupeKey: input.dedupeKey, status },
+      return getApiClient().notifications.resolveByDedupeKey(requireProjectId(), {
+        dedupeKey: input.dedupeKey,
+        status,
       });
     }
 
     if (!input.id) throw new Error("notification.resolve requires id or dedupeKey.");
     if (status === "expired") throw new Error("notification.resolve by id does not support expired.");
 
-    return apiRequest(notificationPath(`/${encodeURIComponent(input.id)}/${notificationStatusRouteVerb(status)}`), {
-      method: "POST",
-    });
+    return status === "dismissed"
+      ? getApiClient().notifications.dismiss(requireProjectId(), input.id)
+      : getApiClient().notifications.markDone(requireProjectId(), input.id);
   };
 
   const baseCapabilities = {
@@ -204,10 +197,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       toaster.create({ type: notification.level, title: notification.title, description: notification.message });
     },
     "notification.action": (params: unknown) =>
-      apiRequest(extensionNotificationPath(), {
-        method: "POST",
-        body: params,
-      }),
+      getApiClient().extensions.createNotification(
+        requireProjectId(),
+        extensionId,
+        params as import("@pstdio/sdk/extensions").WebviewNotificationActionParams,
+      ),
     "notification.resolve": resolveNotification,
     "notification.dismiss": (params: unknown) => {
       const input = params as { id?: string; dedupeKey?: string };
@@ -228,14 +222,6 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     "extension.settings.delete": async (params: unknown) => {
       const { key } = params as { key: string };
       await deleteSettingValue(key);
-    },
-    "host.dispatchKeyboardEvent": (params: unknown) => {
-      const event = new KeyboardEvent("keydown", {
-        ...(params as KeyboardEventInit),
-        bubbles: true,
-        cancelable: true,
-      });
-      document.dispatchEvent(event);
     },
     ...(terminal ? { "terminal.session": createTerminalSessionCapability({ terminal, hostEvents }) } : {}),
   };

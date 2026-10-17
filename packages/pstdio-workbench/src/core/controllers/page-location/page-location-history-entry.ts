@@ -1,5 +1,5 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import { serializeWorkbenchPageUrl } from "@pstdio/sdk/extensions";
+import { serializeWorkbenchPageUrl } from "pstdio-api-contracts";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 import { workbenchPageLocationRouteKey } from "./page-location-normalization";
 import type { WorkbenchPageHistoryState, WorkbenchPageLocationDiagnostic } from "./page-location-types";

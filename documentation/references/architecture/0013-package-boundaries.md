@@ -54,7 +54,9 @@ layer-map change.
 4. **API host**
    `pstdio-api-runtime-host` and `pstdio-api` own runtime execution and HTTP/API
    orchestration. They consume contracts and extension runtime packages, but they
-   do not import public SDK authoring-only types.
+   do not import public SDK authoring-only types. API integration tests declare
+   `@pstdio/sdk` as a development dependency to verify the public HTTP client
+   against the real routes. Production API code does not import the SDK.
 
    Host tests use fake harnesses, such as the one from
    `writeProvisionHarnessExtension` or `workbench-fixture`. They never load the
@@ -73,7 +75,8 @@ layer-map change.
    `@pstdio/ui` owns reusable React primitives, visual components, theme tokens,
    editor widgets, and terminal-specific React UI through its `./terminal`
    subpath. UI packages consume public terminal contracts through `@pstdio/sdk`
-   and must not own router wiring, React Query fetching policy, dashboard
+   and bundle shared table field helpers from `pstdio-api-contracts` rather than
+   depending on deprecated SDK host helpers. They must not own router wiring, React Query fetching policy, dashboard
    project/repo concepts, or host persistence policy.
 
 6. **Workbench**
@@ -106,6 +109,8 @@ layer-map change.
 
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled runtime artifacts.
+   The CLI consumes runtime and capability contracts directly from
+   `pstdio-api-contracts`, rather than deprecated SDK host exports.
    The host embeds the default extension catalog as data. Extension source is fetched
    from each entry's pinned Git origin and is not embedded in the host binary.
    Cross-package relative imports are only allowed for the

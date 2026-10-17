@@ -3,10 +3,9 @@ import {
   isNavigationTarget,
   type NavigationTarget,
   type NavigationTargetPage,
-  qualifyNavigationTarget,
   type ResourceResolution,
 } from "@pstdio/sdk/extensions";
-import { extensionResourceRefSchema } from "pstdio-api-contracts";
+import { extensionResourceRefSchema, qualifyNavigationTarget } from "pstdio-api-contracts";
 
 interface ResourcePathKind {
   id: string;

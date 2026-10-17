@@ -1,5 +1,5 @@
 import type { NavigationTargetPage, PageLocation, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
-import { isWorkbenchProjectUrl, normalizePageParams } from "@pstdio/sdk/extensions";
+import { isWorkbenchProjectUrl, normalizePageParams } from "pstdio-api-contracts";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type {
   CreateWorkbenchPageLocationControllerInput,

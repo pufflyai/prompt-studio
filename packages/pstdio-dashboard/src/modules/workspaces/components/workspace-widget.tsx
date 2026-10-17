@@ -41,7 +41,7 @@ const useWorkspaceDiffs = (request: { workspaceId: string; mode: WorkspaceDiffMo
   const bodiesByPath = new Map(
     bodyQueries
       .map((query) => query.data)
-      .filter((body): body is WorkspaceDiffSummaryFile => Boolean(body))
+      .filter((body) => body !== null && body !== undefined)
       .map((body) => [workspaceDiffFilePath(body), body]),
   );
   const files = summary.data?.files ?? [];

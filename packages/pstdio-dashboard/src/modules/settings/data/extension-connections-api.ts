@@ -1,27 +1,13 @@
-import type { ConfigureExtensionConnectionInput, ExtensionConnectionRecord } from "@pstdio/sdk/api";
-import { apiRequest } from "@/lib/api";
-
-const connectionPath = (projectId: string, extensionId: string, connectionId: string) =>
-  `/v1/projects/${projectId}/extension-connections/${encodeURIComponent(extensionId)}/${encodeURIComponent(connectionId)}`;
-
-export const listExtensionConnections = (projectId: string) =>
-  apiRequest<{ connections: ExtensionConnectionRecord[] }>(`/v1/projects/${projectId}/extension-connections`);
-
+import type { ConfigureExtensionConnectionInput } from "@pstdio/sdk/api";
+import { getApiClient } from "@/lib/api";
+export const listExtensionConnections = (projectId: string) => getApiClient().extensions.listConnections(projectId);
 export const configureExtensionConnection = (
   projectId: string,
   extensionId: string,
   connectionId: string,
   input: ConfigureExtensionConnectionInput,
-) =>
-  apiRequest<ExtensionConnectionRecord>(connectionPath(projectId, extensionId, connectionId), {
-    method: "PUT",
-    body: input,
-  });
-
+) => getApiClient().extensions.configureConnection(projectId, extensionId, connectionId, input);
 export const checkExtensionConnection = (projectId: string, extensionId: string, connectionId: string) =>
-  apiRequest<ExtensionConnectionRecord>(`${connectionPath(projectId, extensionId, connectionId)}/check`, {
-    method: "POST",
-  });
-
+  getApiClient().extensions.checkConnection(projectId, extensionId, connectionId);
 export const deleteExtensionConnection = (projectId: string, extensionId: string, connectionId: string) =>
-  apiRequest<void>(connectionPath(projectId, extensionId, connectionId), { method: "DELETE" });
+  getApiClient().extensions.deleteConnection(projectId, extensionId, connectionId);

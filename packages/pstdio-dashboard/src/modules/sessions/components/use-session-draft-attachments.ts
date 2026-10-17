@@ -1,24 +1,18 @@
 import type { SessionAttachment } from "pstdio-api-contracts";
 import { useRef, useSyncExternalStore } from "react";
-import { apiRequest, createApiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { uploadDraftAttachmentFiles } from "./session-draft-attachment-upload";
 import { createClipboardAttachmentFile } from "./session-draft-clipboard-attachment";
 
 const uploadSessionAttachment = async (projectId: string, file: File) =>
-  createApiRequest()<SessionAttachment>(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments`, {
-    method: "POST",
-    body: await file.arrayBuffer(),
-    headers: {
-      "content-type": file.type || "application/octet-stream",
-      "x-file-name": encodeURIComponent(file.name),
-    },
+  getApiClient().sessions.uploadAttachment(projectId, {
+    name: file.name,
+    data: await file.arrayBuffer(),
+    mimeType: file.type,
   });
-
 export const deleteSessionAttachment = (projectId: string, fileId: string) =>
-  apiRequest<void>(`/v1/projects/${encodeURIComponent(projectId)}/session-attachments/${encodeURIComponent(fileId)}`, {
-    method: "DELETE",
-  });
+  getApiClient().sessions.deleteAttachment(projectId, fileId);
 
 const emptySnapshot = { attachments: [] as SessionAttachment[], uploading: false };
 const getEmptySnapshot = () => emptySnapshot;

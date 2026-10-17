@@ -63,6 +63,7 @@ export type SessionClient = {
   followUp(sessionId: string, input: FollowUpInput): Promise<FollowUpResponse>;
   approve(sessionId: string, input: ApprovalInput): Promise<void>;
   getConversation(sessionId: string, signal?: AbortSignal): Promise<SessionConversationResponse>;
+  /** @deprecated No maintained client caller. Use `GET /v1/sessions/{id}/conversation/sources` for this operation; the convenience method is removed in 0.45. */
   getConversationSources(sessionId: string, signal?: AbortSignal): Promise<SessionConversationSources>;
   getQueuedMessages(sessionId: string, options?: { signal?: AbortSignal }): Promise<SessionQueuedMessagesResponse>;
   steerQueuedFollowUp(
@@ -81,9 +82,21 @@ export type SessionClient = {
     queuePosition: number,
     input: CombineQueuedFollowUpsInput,
   ): Promise<QueuedFollowUpUpdateResponse>;
+  removeQueuedFollowUp(sessionId: string, queuePosition: number, expectedRevision?: string): Promise<{ ok: true }>;
+  moveQueuedFollowUp(
+    sessionId: string,
+    queuePosition: number,
+    input: {
+      direction: "up" | "down";
+      expectedRevision?: string;
+      steps?: number;
+      expectedOrder?: { queuePosition: number; revision: string }[];
+    },
+  ): Promise<{ ok: true; queuePosition: number }>;
   resolveSessionId(input: ResolveSessionIdInput): Promise<ResolveSessionIdResponse>;
   updateStatus(sessionId: string, status: string): Promise<Session>;
   rename(sessionId: string, title: string): Promise<Session>;
+  /** @deprecated No maintained client caller. Use `GET /v1/sessions/{id}/activity` for this operation; the convenience method is removed in 0.45. */
   listActivity(sessionId: string, input?: ListSessionActivityInput): Promise<ListSessionActivityResponse>;
   stream(sessionId: string, onEvent: (event: SseEvent) => void, options?: { signal?: AbortSignal }): Promise<void>;
   connectStream(sessionId: string, handlers: SessionStreamHandlers): SessionStreamConnection;
@@ -194,6 +207,13 @@ export const createSessionClient = (
       request(`/v1/sessions/${sessionId}/queued-follow-ups/${queuePosition}`, { method: "PATCH", body: input }),
     combineQueuedFollowUps: (sessionId, queuePosition, input) =>
       request(`/v1/sessions/${sessionId}/queued-follow-ups/${queuePosition}/combine`, { method: "POST", body: input }),
+    removeQueuedFollowUp: (id, position, expectedRevision = "") =>
+      request(
+        `/v1/sessions/${encodeURIComponent(id)}/queued-follow-ups/${position}?expectedRevision=${encodeURIComponent(expectedRevision)}`,
+        { method: "DELETE" },
+      ),
+    moveQueuedFollowUp: (id, position, body) =>
+      request(`/v1/sessions/${encodeURIComponent(id)}/queued-follow-ups/${position}/move`, { method: "POST", body }),
     resolveSessionId: (input) => request("/v1/sessions/resolve-session-id", { method: "POST", body: input }),
     updateStatus: (sessionId, status) =>
       request(`/v1/sessions/${sessionId}/status`, { method: "PATCH", body: { status } }),

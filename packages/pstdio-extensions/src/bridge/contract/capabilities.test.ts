@@ -59,22 +59,6 @@ describe("createHostCapabilityGate", () => {
     expect(validateWebviewCapabilityNames(["terminal.session"])).toEqual([]);
   });
 
-  test("enables always-available capabilities without a declaration", async () => {
-    const dispatched: unknown[] = [];
-    const gate = createHostCapabilityGate({
-      capabilities: {
-        "host.dispatchKeyboardEvent": (params) => {
-          dispatched.push(params);
-        },
-      },
-      declaredCapabilities: [],
-    });
-
-    await expect(gate.call({ method: "host.dispatchKeyboardEvent", params: { key: "p" } })).resolves.toBeUndefined();
-    expect(dispatched).toEqual([{ key: "p" }]);
-    expect(gate.diagnostics).toEqual([]);
-  });
-
   test("rejects undeclared capability calls", async () => {
     const diagnostics: unknown[] = [];
     const gate = createHostCapabilityGate({

@@ -1,10 +1,6 @@
-import {
-  isNavigationTarget,
-  type PageLocation,
-  qualifyNavigationTarget,
-  type ResourceResolution,
-} from "@pstdio/sdk/extensions";
+import { isNavigationTarget, type PageLocation, type ResourceResolution } from "@pstdio/sdk/extensions";
 import type { Disposable, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
+import { qualifyNavigationTarget } from "pstdio-api-contracts";
 import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -162,7 +158,6 @@ export const watchOpenExtensionResource = (
         input.projectId,
         resolver.commandId,
         {
-          projectId: input.projectId,
           resource: open,
           source: "dashboard",
           ...(resolver.batch ? { params: { resources: [open] } } : {}),

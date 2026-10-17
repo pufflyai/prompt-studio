@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { BROWSER_LOGIN_FRAGMENT_PARAM } from "pstdio-api-contracts";
+import { BROWSER_LOGIN_FRAGMENT_PARAM, type RuntimeReadyResponse } from "pstdio-api-contracts";
 import type { AppBindings } from "../../types";
 import {
   type BrowserSessions,
@@ -106,7 +106,7 @@ export const createRuntimeRoutes = (deps: RuntimeRouteDeps) => {
       ok: true as const,
       ownerType: deps.host.ownerType(),
       protocolVersion: 1 as const,
-    }),
+    } satisfies RuntimeReadyResponse),
   );
 
   routes.get("/activity", async (c) => c.json(await deps.activity()));

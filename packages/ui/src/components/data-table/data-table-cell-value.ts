@@ -1,4 +1,4 @@
-export { resolveDataTableComparableValue } from "@pstdio/sdk/extensions";
+export { resolveDataTableComparableValue } from "pstdio-api-contracts";
 
 import type { DataTableDiffValue } from "./types";
 

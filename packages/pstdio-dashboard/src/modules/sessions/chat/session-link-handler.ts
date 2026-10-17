@@ -1,12 +1,8 @@
-import {
-  defaultPageResourceCodec,
-  parseWorkbenchPageUrl,
-  serializeWorkbenchPageUrl,
-  workbenchPages,
-} from "@pstdio/sdk/extensions";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { type ChatLinkCandidate, type ChatLinkHandler, parseChatLink } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
+import { defaultPageResourceCodec, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";

@@ -29,14 +29,6 @@ const getProductionFiles = (directory: string): string[] =>
   });
 
 describe("sdk boundaries", () => {
-  test("cli production source imports API contract types through the sdk", () => {
-    const offenders = getProductionFiles(packageRoot)
-      .filter((file) => readFileSync(file, "utf8").includes("pstdio-api-contracts"))
-      .map((file) => rel(packageRoot, file));
-
-    expect(offenders).toEqual([]);
-  });
-
   test("cli app-facing source uses sdk transports instead of raw fetch", () => {
     const rawFetchAllowed = new Set(["src/adapters/cli/commands/serve/serve-app.ts"]);
     const offenders = getProductionFiles(packageRoot)

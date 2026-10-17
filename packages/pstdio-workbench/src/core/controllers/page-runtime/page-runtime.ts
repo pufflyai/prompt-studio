@@ -1,4 +1,5 @@
-import { contributionRefId, defaultPageResourceCodec, resourceKey } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
+import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
 import { createPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";

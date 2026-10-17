@@ -20,7 +20,9 @@ interface SharedViewsInput {
   };
   metadata: ResolvedWorkbenchExtensionMetadata;
 }
-const createSharedViews = <TSettings>(input: SharedViewsInput) => {
+const createSharedViews = <TSettings extends NonNullable<import("@pstdio/sdk/api").BoardView["settings"]>>(
+  input: SharedViewsInput,
+) => {
   const { projectId, record, metadata } = input;
   const extensionInstanceId = metadata.extensions.find(
     (extension) => extension.id === record.extensionId,

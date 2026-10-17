@@ -1,4 +1,5 @@
-import { EXTENSION_EVENTS_SCOPE, type WebviewExtensionEvent } from "@pstdio/sdk/extensions";
+import type { WebviewExtensionEvent } from "@pstdio/sdk/extensions";
+import { EXTENSION_EVENTS_SCOPE } from "pstdio-api-contracts";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { subscribeToExtensionEventFeed, subscribeToExtensionEventReset } from "./extension-webview-broadcast";
 

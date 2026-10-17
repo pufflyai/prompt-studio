@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DraftHarnessCommandInput, HarnessCommandState, HarnessOperation } from "pstdio-api-contracts";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { assertCurrentNativeAction } from "../chat/native-action-state";
 
 export const useHarnessCommands = (
@@ -21,10 +21,9 @@ export const useHarnessCommands = (
     // polling so modes created by the agent become visible.
     refetchInterval: (query) => (sessionId || query.state.status === "error" ? 2000 : false),
     queryFn: ({ signal }) =>
-      apiRequest<HarnessCommandState & { harnessId: string }>(
-        sessionId ? `/v1/sessions/${sessionId}/harness-commands` : "/v1/sessions/harness-command-state",
-        sessionId ? { signal } : { method: "POST", body: draft, signal },
-      ),
+      sessionId
+        ? getApiClient().sessions.getHarnessCommands(sessionId, signal)
+        : getApiClient().sessions.getDraftHarnessCommands(draft!, signal),
   });
   const invoke = useMutation<
     { status: "started" | "completed"; message?: string; sessionId?: string },
@@ -44,13 +43,7 @@ export const useHarnessCommands = (
       }
       return !sessionId
         ? createCommand(operation)
-        : apiRequest<{ status: "started" | "completed"; message?: string; sessionId?: string }>(
-            `/v1/sessions/${sessionId}/harness-commands`,
-            {
-              method: "POST",
-              body: { operation, harnessId },
-            },
-          );
+        : getApiClient().sessions.invokeHarnessOperation(sessionId, operation, harnessId);
     },
     onSettled: async () => {
       await client.invalidateQueries({ queryKey });

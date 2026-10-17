@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { resolvePageParams } from "@pstdio/sdk/extensions";
+import { resolvePageParams } from "pstdio-api-contracts";
 import { createWorkbenchPageBreadcrumbItems } from "./page-breadcrumbs";
 import { createPageLocationHarness, pageRef } from "./page-location-controller.test-support";
 
