@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { serializePageUrl, workbenchPages } from "@pstdio/sdk/extensions";
-import { verifyBottomPageChoices, verifyClosedSidePreference } from "./packaged-related-resource-preferences";
+import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
 
 export const verifyPackagedSessionMenus = async (
   page: Page,
@@ -102,7 +102,8 @@ export const verifyPackagedSessionMenus = async (
   await expect(createdTab).toBeVisible();
   await reopenWorkspace();
   const bottomHeader = page.locator('[data-workbench-panel-header="secondary"]');
-  await expect(page.locator(".xterm:visible .xterm-rows")).not.toBeEmpty();
+  await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
   const terminalConnection = page.waitForEvent(
     "websocket",
     (socket) => new URL(socket.url()).pathname === "/v1/terminal",
@@ -121,7 +122,7 @@ export const verifyPackagedSessionMenus = async (
   await leaveWorkspace();
   await expect(terminalTab).toBeVisible();
   await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
-  await verifyBottomPageChoices(page, terminalTab, reopenWorkspace, leaveWorkspace);
+  await verifyGlobalBottomState(page, terminalTab, reopenWorkspace, leaveWorkspace);
   await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
   await terminalInput.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__navigation_retained__");

@@ -20,10 +20,7 @@ getWriter("workspace_sessions")?.truncateAndWrite([{ id: "link", workspace_id: "
 markInitialCollectionsSyncComplete();
 assert.deepEqual(
   (await pending)?.map((entry) => ({ type: entry.resource.type, region: entry.region })),
-  [
-    { type: "terminal", region: "secondary" },
-    { type: "session", region: "side" },
-  ],
+  [{ type: "session", region: "side" }],
 );
 
 console.log("Initial sync and cancellation passed");

@@ -11,6 +11,10 @@ const tabAction = async (page: Page, tab: Locator, name: string) => {
 export const verifyClosedSidePreference = async (page: Page, preview: Locator, leave: Navigate, reopen: Navigate) => {
   const side = page.locator('[data-workbench-panel="side"]:visible');
   const reset = async () => {
+    const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
+    if (await showBottom.isVisible()) await showBottom.click();
+    await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
+    await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
     const bottomTab = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab").first();
     await tabAction(page, bottomTab, "Reset layout");
     await leave();
@@ -29,23 +33,15 @@ export const verifyClosedSidePreference = async (page: Page, preview: Locator, l
   await verifyTabDropPinning(page, preview);
 };
 
-export const verifyBottomPageChoices = async (page: Page, terminalTab: Locator, reopen: Navigate, leave: Navigate) => {
-  const sessionTab = page.getByRole("tab", { name: /Packaged created session/ });
-  await tabAction(page, sessionTab, "Move to Secondary");
-  await page.getByRole("button", { name: "Hide Secondary Panel", exact: true }).click();
+export const verifyGlobalBottomState = async (page: Page, terminalTab: Locator, reopen: Navigate, leave: Navigate) => {
   await reopen();
-  await expect(terminalTab).toHaveAttribute("aria-selected", "true");
-  await sessionTab.click();
+  await expect(terminalTab).toBeVisible();
   await leave();
-  await terminalTab.click();
-  await reopen();
-  await expect(sessionTab).toHaveAttribute("aria-selected", "true");
-  await expect(terminalTab).toHaveAttribute("aria-selected", "false");
   await page.getByRole("button", { name: "Hide Secondary Panel", exact: true }).click();
-  await leave();
   await reopen();
   await expect(page.locator('[data-workbench-panel="secondary"]:visible')).toHaveCount(0);
   await page.getByRole("button", { name: "Show Secondary Panel", exact: true }).click();
+  await expect(terminalTab).toBeVisible();
   await leave();
-  await tabAction(page, sessionTab, "Move to Side");
+  await expect(terminalTab).toBeVisible();
 };

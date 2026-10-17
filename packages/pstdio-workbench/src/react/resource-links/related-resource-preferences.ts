@@ -24,6 +24,10 @@ export const createRelatedResourcePreferences = (
   canonicalize: (source: ResourceRef) => ResourceRef | undefined,
   changed: () => void,
 ) => {
+  // Only the current owner's automatic destinations have page-specific choices.
+  // Other trays keep the project's live layout, including closures made elsewhere.
+  let relatedRegions: Set<string> | undefined;
+  let pendingChoices: PageChoices = {};
   const writes = new Map<string, { value: PageChoices; promise: Promise<void> }>();
   const currentResource = () => {
     const source = ctx.pages.store.getState().location?.resource;
@@ -61,8 +65,13 @@ export const createRelatedResourcePreferences = (
           widgets[panel.contributionId] !== ctx.layout.getWidget(panel.contributionId) ||
           (panel.viewId && !ctx.views.getView(panel.viewId))),
     );
-  const forSource = (source: ResourceRef) =>
-    resourceKey(canonicalize(source)) === resourceKey(currentResource()) ? read() : {};
+  const forSource = (source: ResourceRef) => {
+    const choices: PageChoices =
+      resourceKey(canonicalize(source)) === resourceKey(currentResource())
+        ? Object.fromEntries(Object.entries(read()).filter(([region]) => relatedRegions?.has(region)))
+        : {};
+    return choices;
+  };
   const isResourcePage = () => {
     const source = currentResource();
     const owner = source && ctx.resources.getKind(source.type);
@@ -96,24 +105,26 @@ export const createRelatedResourcePreferences = (
     }
     if (observing !== previous.key) return;
     if (!isResourcePage()) return;
-    const choices = { ...read() };
-    let edited = false;
-    for (const id of regions) {
+    const changedRegions = regions.filter((id) => {
       const old = before.layout.regions[id];
       const region = previous.layout.regions[id];
+      return !removedOwner(old, region, before.widgets) && choiceChanged(old, region);
+    });
+    if (!changedRegions.length) return;
+    const choices = { ...forSource(currentResource()!), ...pendingChoices };
+    const relatedChanges = changedRegions.filter((id) => !relatedRegions || relatedRegions.has(id));
+    for (const id of relatedChanges) {
+      const region = previous.layout.regions[id];
       const panel = selected(region);
-      if (removedOwner(old, region, before.widgets) || !choiceChanged(old, region)) continue;
       choices[id] = {
         visible: region.visible,
         resource: panel?.resource,
         intent: panel?.tabRetention === "persistent" ? "pin" : "preview",
       };
-      edited = true;
     }
-    if (edited) {
-      void write(choices);
-      changed();
-    }
+    if (!relatedRegions) pendingChoices = choices;
+    else if (relatedChanges.length) void write(choices);
+    changed();
   });
   const reset = ctx.onDidResetLayout(() => {
     void write({});
@@ -123,10 +134,22 @@ export const createRelatedResourcePreferences = (
     run,
     enter(source: ResourceRef) {
       if (resourceKey(canonicalize(source)) !== resourceKey(currentResource())) return;
+      if (observing !== pageKey()) {
+        relatedRegions = undefined;
+        pendingChoices = {};
+      }
       observing = pageKey();
       previous = snapshot();
     },
     openings(source: ResourceRef, defaults: RelatedResourceOpening[]) {
+      if (resourceKey(canonicalize(source)) === resourceKey(currentResource())) {
+        relatedRegions = new Set(defaults.map((entry) => entry.region));
+        const edits = Object.fromEntries(
+          Object.entries(pendingChoices).filter(([region]) => relatedRegions?.has(region)),
+        );
+        pendingChoices = {};
+        if (Object.keys(edits).length) void write({ ...forSource(source), ...edits });
+      }
       const choices = forSource(source);
       return [
         ...defaults.filter((entry) => !(entry.region in choices)),

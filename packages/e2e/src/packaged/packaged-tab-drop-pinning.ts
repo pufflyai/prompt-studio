@@ -12,8 +12,16 @@ const dragTab = async (page: Page, tab: Locator, target: Locator, region: "side"
 };
 
 export const verifyTabDropPinning = async (page: Page, preview: Locator) => {
+  const showBottom = page.getByRole("button", { name: "Show Secondary Panel", exact: true });
+  if (await showBottom.isVisible()) await showBottom.click();
+  await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
+  await page.getByRole("menuitem", { name: "Terminal", exact: true }).click();
   const bottomTabs = page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab");
   await expect(bottomTabs).toHaveCount(1);
+  await bottomTabs.first().focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Unpin tab", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
   const original = await bottomTabs.first().textContent();
   await expect(preview).toHaveCSS("font-style", "italic");
   await dragTab(page, preview, bottomTabs.first(), "secondary");
@@ -33,4 +41,8 @@ export const verifyTabDropPinning = async (page: Page, preview: Locator) => {
   await preview.focus();
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Unpin tab", exact: true }).click();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await bottomTabs.first().focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
 };

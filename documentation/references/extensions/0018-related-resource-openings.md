@@ -56,7 +56,7 @@ const ticket = defineResourceKind({ id: "ticket", relatedOpenings: related.ref }
 export default defineExtension({ commands: [related], resourceKinds: [ticket] });
 ```
 
-One command can return several targets. Workspace's owner returns its terminal in Bottom and its latest session in Side. Owners select candidates using their domain data. Selection commands must not navigate or create sessions.
+One command can return several targets. Workspace's owner returns its latest session in Side. Terminals open through the normal manual panel controls. Owners select candidates using their domain data. Selection commands must not navigate or create sessions.
 
 ## Opening and tab selection
 
@@ -80,13 +80,15 @@ Dragging and dropping an unpinned tab pins it, including a reorder within the sa
 
 ## Remembered page choices
 
-Resource pages remember the user's Side and Bottom choices. Choosing another session or resource, selecting a different tab, pinning it, or manually opening, closing or hiding a panel updates that page's choice. Returning through navigation or browser history restores the chosen resource and selected tab instead of the owner's default. For example, choosing an older session on a ticket keeps that session selected when returning, even after another page shows a different session.
+Resource pages remember the user's choices only in Side or Bottom destinations returned by their owner's current automatic openings. Other panels use the project's global state. Choosing another session or resource, selecting a different tab, pinning it, or manually opening, closing or hiding a panel updates that page's choice. Returning through navigation or browser history restores the chosen resource and selected tab instead of the owner's default. For example, choosing an older session on a ticket keeps that session selected when returning, even after another page shows a different session.
 
 Closing a tab records the remaining selection, or an empty closed panel when the last tab closes. Hiding the panel records it as closed. Returning to that resource page does not reopen a manually closed panel. Manually reopening it updates the choice again. An explicitly opened empty panel stays open and suppresses that page's automatic default; manually kept project tabs can still carry into it.
 
+If a page has no automatic opening for Bottom, manually opening a terminal there does not give the page its own Bottom preference. Opening it on Workspace, leaving for Tickets, closing Bottom, and returning keeps Bottom closed. The same rule applies to Side when the owner has no automatic Side opening. Old saved choices for destinations no longer returned by the owner are ignored.
+
 Choices belong to the user and the qualified resource page, including its project and resource owner. Changing one resource's choices does not change another's. They use the existing workbench preference storage and survive reloads. There is no settings editor or extension API change. **Reset layout** clears the current page's remembered choices. Turning off **Open related resources** skips related openings without deleting the choices.
 
-Only user edits override the owner's defaults. Automatic preview cleanup, automatic panel reveal, metadata refresh, and extension teardown do not record a new choice. A page with no user changes can still open the owner's latest related resources on a later visit. Manual edits also cancel pending automatic openings so late results cannot undo a closure or selection.
+Only user edits override the owner's defaults. Automatic preview cleanup, automatic panel reveal, metadata refresh, and extension teardown do not record a new choice. A page with no user changes can still open the owner's latest related resources on a later visit. Manual edits cancel pending presentation so late results cannot undo a closure or selection. If the owner lookup is still pending, only edits for its returned automatic destinations become page preferences; edits to other panels remain global.
 
 ## Navigation and cleanup
 
@@ -103,7 +105,7 @@ Leaving the source page closes every unpinned tab newly opened automatically for
 
 In the dashboard, manual Side and Bottom panels and tabs follow the project across page and mode navigation and browser history. This includes terminals added through the panel menu: leaving Workspace for Ticket or Tickets keeps the tab and the same running terminal process. Closing the terminal tab ends that process. Each mode still controls which regions it supports. Panel state does not carry into another project.
 
-Automatic page ownership survives saved-layout restoration. Restoring layout and refreshing resource metadata do not run the owner's command again or reopen closed related tabs. Source or project changes, disabling **Open related resources**, and owner removal discard pending results.
+Automatic page ownership survives saved-layout restoration. Restoring layout does not replay automatic openings or change the restored selection. Saved-route boot reads the current owner's destinations so later user edits can be classified, without opening related tabs. Refreshing resource metadata does not reopen closed related tabs. Source or project changes, disabling **Open related resources**, and owner removal discard pending results.
 
 Kinds without a command open nothing automatically. Existing manual links still work. Returning an entry does not store a relationship or add a manual action. There is no per-kind customization UI or new preference store.
 
