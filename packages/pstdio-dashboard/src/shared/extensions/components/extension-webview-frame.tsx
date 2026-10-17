@@ -33,7 +33,7 @@ import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
 import { useWebviewPageProps } from "../use-webview-page-props";
 import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
-import { executeWebviewCommand } from "./extension-webview-command";
+import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { notificationStatusRouteVerb } from "./notification-transition-route";
 import { PausedExtensionView } from "./paused-extension-view";
@@ -49,10 +49,15 @@ interface ExtensionWebviewFrameProps {
   title?: string;
   webview?: WebviewDescriptor;
   webviewId: string;
+  slotKind?: "panel" | "settings";
   workbench?: WorkbenchCore;
 }
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
+const requireProject = (projectId: string | undefined) => {
+  if (!projectId) throw new Error("Notification capabilities require a project.");
+  return projectId;
+};
 
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const owner = getRuntimeCollections();
@@ -118,10 +123,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     throw new Error("Extension settings are unavailable without an extension owner.");
   };
 
-  const requireProjectId = () => {
-    if (!projectId) throw new Error("Notification capabilities require a project.");
-    return projectId;
-  };
+  const requireProjectId = () => requireProject(projectId);
 
   const notificationPath = (suffix = "") =>
     `/v1/projects/${encodeURIComponent(requireProjectId())}/notifications${suffix}`;
@@ -173,6 +175,8 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       return withFrameSignal(hostEvents, (signal) =>
         executeWebviewCommand({
           ...commandInput,
+          resource: commandInput.resource ?? resource ?? props.placement?.resource,
+          slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
           workbench: props.workbench,
           projectId,
           executeExtensionCommand: (input) =>
@@ -184,6 +188,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
                 params: input.params,
                 workspaceId: input.workspaceId,
                 resource: input.resource,
+                slot: input.slot,
                 source: "dashboard",
               },
             }),
@@ -192,7 +197,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     },
     "notification.show": (params: unknown) => {
       const notification = params as {
-        level: "error" | "info" | "loading" | "success" | "warning";
+        level: "error" | "info" | "success" | "warning";
         message?: string;
         title?: string;
       };

@@ -407,6 +407,6 @@ for (const session of sessions) {
 
 Without a workspace filter, `workspace_id` is the earliest linked workspace, with link ID breaking timestamp ties. With a workspace filter it is the selected workspace. Multiple links do not duplicate session items.
 
-`get()`, `list()`, `listByWorkspace()` and `create()` also expose the typed harness ID as `agent`. `list()` and `listByWorkspace()` remain available but are deprecated; use `query()` and `query({ workspaceId })`. The old methods keep their existing ordering and archive behavior.
+`get()` and `create()` also expose the typed harness ID as `agent`. Use `query()` or `query({ workspaceId })` to list sessions. Read every `nextCursor` page when a command needs the full history. Results are newest first and exclude archived sessions unless `includeArchived: true` is set.
 
 Views can refresh on `viewDataEvents.sessionsChanged` (`view.sessions.changed`). Query with `updatedFrom` and merge by session ID. Webviews read sessions through an extension command using `commands.execute`.

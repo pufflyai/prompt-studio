@@ -2,6 +2,7 @@ import type { CommandExecuteBody, JsonObject, JsonValue } from "pstdio-api-contr
 import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
+import { createExtensionLogger } from "./extension-logger";
 
 export class ExtensionCommandNotFoundError extends Error {
   constructor(readonly commandId: string) {
@@ -52,6 +53,7 @@ export const executeProjectExtensionCommand = async (
     throw new CommandWorkspaceNotFoundError(body.workspaceId);
   const eventIds = new Set<string>();
   const runner = createCommandRunner(snapshot.runtime, {
+    createLogger: createExtensionLogger,
     onDidDispatchEvent: (eventId) => eventIds.add(eventId),
     buildEnvironment: (environment) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {

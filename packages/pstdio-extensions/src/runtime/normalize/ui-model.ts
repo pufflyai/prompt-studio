@@ -7,7 +7,6 @@ import type {
   SettingsPanelContribution,
   SettingsSectionContribution,
   StatusBarItemContribution,
-  StatusContribution,
   ViewContribution,
   ViewMenuContribution,
 } from "@pstdio/sdk/extensions";
@@ -19,10 +18,8 @@ import type {
   RuntimeSettingsPanelRecord,
   RuntimeSettingsSectionRecord,
   RuntimeStatusBarItemRecord,
-  RuntimeStatusRecord,
   RuntimeViewRecord,
 } from "../../types/runtime";
-import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator, RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
@@ -30,7 +27,6 @@ import { validateDeclaration } from "./declaration-diagnostic";
 import { normalizeNavigationAction } from "./navigation-action";
 import { navigationItemDeclarationSchema } from "./navigation-declaration";
 import { registerPlacements } from "./placements";
-import { registerPrivateHandler } from "./private-handlers";
 import { normalizeContributionRef } from "./references";
 import { normalizeViewBody } from "./view-body";
 import { viewDeclarationSchema } from "./view-declaration";
@@ -172,68 +168,6 @@ const registerStatusBarItems = (ext: NormalizedExtension, source: LoadedExtensio
   }
 };
 
-const registerStatuses = (
-  ext: NormalizedExtension,
-  source: LoadedExtensionSource,
-  runtime: Accumulator,
-  index: RegistryIndex,
-) => {
-  const contributions = uniqueContributions({
-    ext,
-    source,
-    runtime,
-    kind: "status",
-    contributions: contributionArray<StatusContribution>(source.definition.statuses),
-  });
-  for (const contribution of contributions) {
-    const base = recordBase(ext, source, "status", contribution.id);
-    const queryHandlerId = registerPrivateHandler({
-      ext,
-      source,
-      runtime,
-      index,
-      rendererId: base.id,
-      rendererKind: "status",
-      rendererLocalId: contribution.id,
-      operation: "query",
-      handler: contribution.query,
-    });
-    if (!queryHandlerId) continue;
-    const saveHandlerId = registerPrivateHandler({
-      ext,
-      source,
-      runtime,
-      index,
-      rendererId: base.id,
-      rendererKind: "status",
-      rendererLocalId: contribution.id,
-      operation: "save",
-      handler: contribution.save,
-    });
-    const record = {
-      ...base,
-      contribution: {
-        ...contribution,
-        ref: normalizeRef(ext, contribution.ref),
-        queryHandlerId,
-        saveHandlerId,
-      },
-    } as RuntimeStatusRecord;
-    index.statusIds.set(record.id, record);
-    runtime.statuses.push(record);
-    runtime.diagnostics.push(
-      createDiagnostic({
-        code: "deprecated_status_contribution",
-        severity: "warning",
-        message: `Contribution "${record.id}" uses deprecated status.v1. Use extension-owned records and commands, a settings.panel.v1 editor, and query-owned enum attributes with boardColumnConfigs. The legacy provider remains supported until the shared breaking release.`,
-        extensionId: ext.id,
-        sourcePath: source.sourcePath,
-        metadata: { contributionId: record.id, capability: "status.v1" },
-      }),
-    );
-  }
-};
-
 const registerActivityItems = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const contributions = uniqueContributions({
     ext,
@@ -307,7 +241,6 @@ export const registerUiModel = (
   registerNavigationItems(ext, source, runtime);
   registerNavigationTrees(ext, source, runtime);
   registerStatusBarItems(ext, source, runtime);
-  registerStatuses(ext, source, runtime, index);
   registerActivityItems(ext, source, runtime);
   registerSettingsSections(ext, source, runtime);
   registerSettingsPanels(ext, source, runtime);

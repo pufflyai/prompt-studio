@@ -21,17 +21,23 @@ describe("executeWebviewCommand", () => {
         extensionCalls.push(input);
       },
     });
-    expect(result).toEqual({
-      context: {
-        resource: {
-          id: "PS-1",
-          type: "ticket",
-          label: "Ticket",
-          metadata: { status: "open" },
+    expect(result).toMatchObject({
+      outcome: {
+        ok: true,
+        status: "success",
+        value: {
+          context: {
+            resource: {
+              id: "PS-1",
+              type: "ticket",
+              label: "Ticket",
+              metadata: { status: "open" },
+            },
+          },
+          params: { modeId: "lab" },
+          source: "workbench",
         },
       },
-      params: { modeId: "lab" },
-      source: "workbench",
     });
     expect(extensionCalls).toEqual([]);
   });
@@ -115,4 +121,18 @@ test("applies extension navigation once and preserves the webview response", asy
   });
   expect(navigations).toBe(1);
   expect(result).toBe(response);
+});
+
+test("dashboard webviews receive structured command rejections", async () => {
+  const response = {
+    outcome: { ok: false, status: "rejected", code: "needs_review", reason: "Review first", data: { revision: 2 } },
+  };
+  expect(
+    await executeWebviewCommand({
+      commandId: "notes.command.save",
+      projectId: "project",
+      workbench: createWorkbench(),
+      executeExtensionCommand: async () => response,
+    }),
+  ).toEqual(response);
 });

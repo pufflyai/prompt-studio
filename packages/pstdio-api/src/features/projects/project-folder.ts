@@ -89,9 +89,11 @@ const initializeLocalProjectWorkspace = async (
       }),
     );
     deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
-    return await traceSetupPhase("project.provision", context, () =>
+    const provisioned = await traceSetupPhase("project.provision", context, () =>
       runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath }),
     );
+    await deps.extensionRuntimeCatalog.activate(projectId);
+    return provisioned;
   } catch (error) {
     return (
       (await deps.workspaceService.setSetupError(
@@ -135,8 +137,10 @@ export const initializeProjectWorkspace = async (
           }),
         );
   if (remoteSetupError) return (await deps.workspaceService.setSetupError(workspace.id, remoteSetupError)) ?? workspace;
-  if (workspace.execution_kind === "remote")
+  if (workspace.execution_kind === "remote") {
+    await deps.extensionRuntimeCatalog.activate(projectId);
     return (await deps.workspaceService.setSetupError(workspace.id, null)) ?? workspace;
+  }
   if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
     return workspace;
   return initializeLocalProjectWorkspace(

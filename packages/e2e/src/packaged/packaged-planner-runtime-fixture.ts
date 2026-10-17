@@ -1,36 +1,8 @@
-// Pinned Planner revisions and project data for the packaged Planner upgrade check (PS-626).
-import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+// Project data for packaged Planner runtime checks.
 import { join, resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
-
-// The current Planner imports the timeline and standalone filter from published @pstdio/ui 0.43.1.
-export const timelinePlannerSource = join(repoRoot, "extensions", "pstdio-planner");
-
-// The last release before the timeline. Its Planner uses @pstdio/ui 0.41, which has no
-// collection-view export, so upgrading replaces the installed UI package as the incident did.
-const PRE_TIMELINE_RELEASE = "pstdio@0.42.0";
-
-export const writePreTimelinePlanner = (target: string) => {
-  mkdirSync(target, { recursive: true });
-  const archive = execFileSync("git", ["archive", PRE_TIMELINE_RELEASE, "extensions/pstdio-planner"], {
-    cwd: repoRoot,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  execFileSync("tar", ["-x", "--strip-components=2", "-C", target], { input: archive });
-  const path = join(target, "package.json");
-  const manifest = JSON.parse(readFileSync(path, "utf8"));
-  // This historical fixture does not use ctx.extensionFiles. Its relative file APIs still work on 0.2.
-  manifest.engines.pstdio += " || ^0.2.0";
-  writeFileSync(path, JSON.stringify(manifest));
-};
-
-export const moveLegacyPlannerDrafts = (projectFolder: string) => {
-  const owner = join(projectFolder, ".pstdio/extension-storage/pstdio-planner");
-  mkdirSync(owner, { recursive: true });
-  renameSync(join(projectFolder, ".pstdio/tickets"), join(owner, "tickets"));
-};
+export const plannerSource = join(repoRoot, "extensions", "pstdio-planner");
 
 // Most seeding commands return the stored record with its id.
 export type Execute = <T = { id: string }>(command: string, params?: Record<string, unknown>) => Promise<T>;

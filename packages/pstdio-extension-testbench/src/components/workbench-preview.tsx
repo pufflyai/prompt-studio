@@ -5,7 +5,6 @@ import { getThemePreferenceMode, type ThemePreference, type ThemePreferenceOptio
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
 import { createWorkbench } from "@pstdio/workbench";
 import {
-  createWorkbenchWebviewHostCapabilities,
   refreshOpenWorkbenchExtensionWebviews,
   registerWorkbenchExtensionContributions,
   registerWorkbenchExtensionRendererRefreshEvents,
@@ -153,12 +152,6 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
     },
     metadata: bench.metadata,
     projectId: bench.projectId,
-    createWebviewHostCapabilityOverrides: (context) =>
-      createWorkbenchWebviewHostCapabilities({
-        workbench: context.workbench,
-        placement: context.placement,
-        extensionId: context.extensionId,
-      }),
     createWebviewProps: ({ placement }) => ({
       lastCommand: getLastCommand() ?? undefined,
       placement,

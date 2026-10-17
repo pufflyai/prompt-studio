@@ -28,7 +28,6 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   activityItems: [],
   settingsSections: [],
   settingsPanels: [],

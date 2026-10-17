@@ -11,7 +11,7 @@ const ready = (extensionId: string, providerRef: WorkspaceProviderRef): Workspac
   executionKind: "remote",
   providerRef,
   executionTarget: { kind: "remote", providerId: extensionId + ".workspace-type.remote", providerRef },
-  capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: false, delete: true },
+  capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
 });
 
 const remote = {

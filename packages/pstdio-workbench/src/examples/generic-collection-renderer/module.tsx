@@ -6,7 +6,13 @@ const attributes = [
   {
     id: "status",
     label: "Status",
-    type: { kind: "status" as const, statuses: { kind: "status" as const, id: "workflow" } },
+    type: {
+      kind: "enum" as const,
+      options: [
+        { value: "draft", label: "Draft", color: "orange" },
+        { value: "published", label: "Published", color: "green" },
+      ],
+    },
     groupable: true,
   },
   {
@@ -53,7 +59,6 @@ const defaultSettings = {
   viewMode: "board" as const,
   columnGrouping: "status",
   rowGrouping: "none",
-  ordering: { attributeId: "manual", direction: "asc" as const },
   displayProperties: ["contributors"],
 };
 const configuredRecord = {
@@ -84,14 +89,6 @@ const fallbackRecord = {
 export const createGenericCollectionRendererModule = (): WorkbenchModuleContribution => ({
   id: "generic-collection-renderer.story",
   activate(ctx) {
-    ctx.statuses.registerStatusSet({
-      id: "example.recipes.status.workflow",
-      title: "Recipe workflow",
-      query: () => [
-        { id: "draft", label: "Draft", color: "orange", sortOrder: 0 },
-        { id: "published", label: "Published", color: "green", sortOrder: 1 },
-      ],
-    });
     registerWorkbenchExtensionKanbanRenderers(
       {
         projectId: "story-project",

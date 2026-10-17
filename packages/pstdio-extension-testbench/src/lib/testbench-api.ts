@@ -8,12 +8,7 @@ import type {
   WorkbenchAttachmentInvocationContext,
 } from "@pstdio/sdk/extensions";
 import type { ResourceBrowseEntry } from "@pstdio/workbench";
-import {
-  EMPTY_VIEW_FILTER,
-  extensionResourceRefSchema,
-  legacyFiltersFromViewFilter,
-  legacyOrderingFromSorts,
-} from "pstdio-api-contracts";
+import { EMPTY_VIEW_FILTER, extensionResourceRefSchema } from "pstdio-api-contracts";
 import {
   createCommandRunner,
   type ExtensionRuntime,
@@ -127,8 +122,7 @@ const collectBenchResources = async (input: {
         },
         filter: view.body.defaultFilter ?? EMPTY_VIEW_FILTER,
         sorts: view.body.defaultSorts ?? [],
-        filters: legacyFiltersFromViewFilter(view.body.defaultFilter ?? EMPTY_VIEW_FILTER),
-        settings: { ...view.body.defaultSettings, ordering: legacyOrderingFromSorts(view.body.defaultSorts ?? []) },
+        settings: view.body.defaultSettings ?? {},
       },
       source: "dashboard",
     });

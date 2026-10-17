@@ -18,7 +18,6 @@ const baseMetadata = {
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   activityItems: [],
   settingsSections: [],
   settingsDefinitions: [],

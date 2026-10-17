@@ -1,8 +1,37 @@
 import type { CommandContext, ExtensionStorageApi } from "pstdio-api-contracts/extension-kernel";
+import { createCommandContextDefaults } from "./command-context-defaults";
 import { createMemoryResourceLinks } from "./memory-resource-links";
 import { createMemoryResources } from "./memory-resources";
 
-export type CommandContextOverrides = { [K in keyof CommandContext]?: Partial<CommandContext[K]> };
+type ContextNamespace =
+  | "project"
+  | "storage"
+  | "resources"
+  | "views"
+  | "navigation"
+  | "artifacts"
+  | "projectFiles"
+  | "packageFiles"
+  | "extensionFiles"
+  | "files"
+  | "skills"
+  | "sessions"
+  | "workspaces"
+  | "commands"
+  | "events"
+  | "activity"
+  | "notify"
+  | "automation"
+  | "process"
+  | "net"
+  | "connections"
+  | "logger"
+  | "settings"
+  | "stream"
+  | "invocation";
+export type CommandContextOverrides = Partial<Omit<CommandContext, ContextNamespace>> & {
+  [K in ContextNamespace]?: Partial<CommandContext[K]>;
+};
 export interface CommandContextInput<TParams extends Record<string, unknown>> {
   storage: ExtensionStorageApi;
   params: TParams;
@@ -33,35 +62,36 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     sequences,
     createMemoryResourceLinks({ projectId, extensionId: overrides?.extensionId ?? "test.extension", edges }),
   );
-  const context = {
-    extensionId: "test.extension",
-    name: "test-extension",
-    projectId,
-    project: { id: projectId, name: "Test Project", shorthand: "T" },
-    storage,
-    resources,
-    navigation: { open: () => {} },
-    invocation: { params },
-    events: { emit: async () => ({ delivered: 0 }) },
-    notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
-    workspaces: {
-      addAnchors: async () => {},
-      removeAnchors: async () => {},
-      listProviders: async () => [],
-      getDefault: async () => null,
-      list: async () => [],
-      get: async () => null,
-      getByShorthand: async () => null,
-    },
-    sessions: {
-      query: async () => ({ items: [], nextCursor: null }),
-      list: async () => [],
-      listByWorkspace: async () => [],
-      addAnchors: async () => {},
-      removeAnchors: async () => {},
-    },
+  const base = createCommandContextDefaults({ projectId, storage, resources });
+  const context: CommandContext = {
+    ...base,
     ...overrides,
-  } as unknown as CommandContext;
+    project: { ...base.project, ...overrides?.project },
+    storage: { ...base.storage, ...overrides?.storage },
+    resources: { ...base.resources, ...overrides?.resources },
+    views: { ...base.views, ...overrides?.views },
+    navigation: { ...base.navigation, ...overrides?.navigation },
+    artifacts: { ...base.artifacts, ...overrides?.artifacts },
+    projectFiles: { ...base.projectFiles, ...overrides?.projectFiles },
+    packageFiles: { ...base.packageFiles, ...overrides?.packageFiles },
+    extensionFiles: { ...base.extensionFiles, ...overrides?.extensionFiles },
+    files: { ...base.files, ...overrides?.files },
+    skills: { ...base.skills, ...overrides?.skills },
+    sessions: { ...base.sessions, ...overrides?.sessions },
+    workspaces: { ...base.workspaces, ...overrides?.workspaces },
+    commands: { ...base.commands, ...overrides?.commands },
+    events: { ...base.events, ...overrides?.events },
+    activity: { ...base.activity, ...overrides?.activity },
+    notify: { ...base.notify, ...overrides?.notify },
+    automation: { ...base.automation, ...overrides?.automation },
+    process: { ...base.process, ...overrides?.process },
+    net: { ...base.net, ...overrides?.net },
+    connections: { ...base.connections, ...overrides?.connections },
+    logger: { ...base.logger, ...overrides?.logger },
+    settings: { ...base.settings, ...overrides?.settings },
+    stream: { ...base.stream, ...overrides?.stream },
+    invocation: { ...base.invocation, ...overrides?.invocation },
+  };
   paramsByContext.set(context, params);
   return context;
 };

@@ -59,7 +59,6 @@ export const emptyWorkbenchExtensionMetadata = {
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   settingsPanels: [],
   settingsDefinitions: [],
 } satisfies WorkbenchExtensionMetadata;

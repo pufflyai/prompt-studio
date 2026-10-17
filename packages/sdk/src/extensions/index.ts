@@ -107,7 +107,6 @@ export {
   defineSettingsSection,
   defineSkill,
   defineStatusBarItem,
-  defineStatuses,
   defineTemplate,
   defineTemplateType,
   defineTheme,

@@ -294,8 +294,6 @@ function TimelineItemRow({
 
 interface TimelineFromJSONProps extends ChatLinkProps {
   data: TimelineDoc;
-  /** @deprecated Use linkHandler. */
-  onOpenFile?: (filePath: string) => void;
 }
 
 export function TimelineFromJSON(props: TimelineFromJSONProps) {
@@ -308,13 +306,13 @@ export function TimelineFromJSON(props: TimelineFromJSONProps) {
 }
 
 function TimelineContent(props: TimelineFromJSONProps) {
-  const { data, onOpenFile } = props;
+  const { data } = props;
   const handler = useChatLinkHandler();
   const openFile = handler
     ? (path: string) => {
         void handler.open({ source: path, origin: "tool" });
       }
-    : onOpenFile;
+    : undefined;
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const getKey = (it: Item, idx: number) => (it.id ? `id:${it.id}` : `idx:${idx}`);

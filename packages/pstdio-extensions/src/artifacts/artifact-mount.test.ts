@@ -234,3 +234,28 @@ describe("createFileMount", () => {
     await expect(mount.list("/etc/**")).rejects.toThrow(/escapes/);
   });
 });
+
+test("memory files follow the same globs, directories, and metadata as a real mount", async () => {
+  const { createMemoryRepoFiles } = await import("@pstdio/sdk/testing");
+  const real = createFileMount(createTempDir());
+  const memory = createMemoryRepoFiles();
+  for (const mount of [real, memory]) {
+    await mount.writeText(".folders/one/title.txt", "One");
+    await mount.writeText(".folders/two/title.txt", "Two");
+    await mount.writeText(".folders/one/nested/title.txt", "Nested");
+    await mount.writeText(".folders/one/note.md", "Note");
+  }
+  for (const pattern of [undefined, ".folders/*/title.txt", "**/title.txt", ".folders/**", "*.txt"]) {
+    const diskFiles = await real.list(pattern);
+    const fakeFiles = await memory.list(pattern);
+    expect(fakeFiles.map(({ path, size }) => ({ path, size }))).toEqual(
+      diskFiles.map(({ path, size }) => ({ path, size })),
+    );
+    for (const file of fakeFiles) expect(Number.isFinite(Date.parse(file.updatedAt!))).toBe(true);
+  }
+  expect(await memory.listDirs()).toEqual(await real.listDirs());
+  expect(await memory.listDirs(".folders")).toEqual(await real.listDirs(".folders"));
+  await real.delete(".folders/one");
+  await memory.delete(".folders/one");
+  expect(await memory.listDirs(".folders")).toEqual(await real.listDirs(".folders"));
+});

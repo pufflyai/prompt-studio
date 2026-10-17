@@ -111,17 +111,9 @@ const toNativeViewBody = (
   return {
     kind: "kanban",
     ...common,
-    attributes: body.attributes?.map((attribute) =>
-      attribute.type.kind === "status"
-        ? {
-            ...attribute,
-            type: { ...attribute.type, statuses: normalizedRef(attribute.type.statuses, view.extensionId) },
-          }
-        : attribute,
-    ),
+    attributes: body.attributes,
     queryHandlerId: String(handlers.queryHandlerId),
     attributeChangeHandlerId: handlers.attributeChangeHandlerId as string | undefined,
-    reorderHandlerId: handlers.reorderHandlerId as string | undefined,
     moveHandlerId: handlers.moveHandlerId as string | undefined,
     schemaRefreshEventIds:
       body.schemaRefreshEvents === undefined

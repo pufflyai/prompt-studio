@@ -6,7 +6,7 @@ export default defineConfig({
     "packaged-extension-startup.spec.ts",
     "packaged-webview-browsers.spec.ts",
     "packaged-statistics-loading.spec.ts",
-    "packaged-planner-upgrade.spec.ts",
+    "packaged-planner-runtime.spec.ts",
     "packaged-native-settings.spec.ts",
   ],
   timeout: 120_000,
