@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { sortedBySortOrder } from "../utils/sort";
 import { statusesCollection, tagsCollection } from "./collections";
 import { DEFAULT_STATUSES, DEFAULT_TAGS, HUMAN_REQUESTED_TAG, seedDefaultStatuses, seedDefaultTags } from "./seed";
 
@@ -97,7 +98,7 @@ describe("seedDefaultTags", () => {
     await Promise.all([seedDefaultTags(storage), seedDefaultTags(storage)]);
 
     const stored = await tagsCollection(storage).list();
-    expect(stored.map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "Flags"]);
+    expect(sortedBySortOrder(stored).map((tag) => tag.name)).toEqual(["Priority", "Type", "Complexity", "Flags"]);
     expect(stored.find((tag) => tag.id === "default-type")?.type).toBe("single_select");
   });
 
@@ -193,7 +194,7 @@ describe("seedDefaultTags", () => {
     ]);
     for (const seeded of results) expect(seeded.find((tag) => tag.id === customized.id)).toEqual(customized);
     expect(await tagsCollection(storage).get(customized.id)).toEqual(customized);
-    expect(await seedDefaultTags(storage)).toEqual(results[0]);
+    expect(sortedBySortOrder(await seedDefaultTags(storage))).toEqual(results[0]);
   });
 
   test("repairs the required handoff option during an incomplete tag seed", async () => {
