@@ -67,5 +67,6 @@ export const LosslessEditing: Story = {
 };
 
 export const SelectAllHeadings: Story = {
+  tags: ["!manifest"],
   render: () => <LosslessSourceStory source={"First paragraph.\n\n\n\nSecond paragraph.\n\n\n\nThird paragraph."} />,
 };
