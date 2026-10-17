@@ -1,7 +1,8 @@
 import type { ExtensionSessionsApi, ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import { readSessionHistory } from "./session-history";
 import { ticketShorthandsFromWorkspace } from "./workspace-ticket-link";
 
-type WorkspaceSession = Awaited<ReturnType<ExtensionSessionsApi["listByWorkspace"]>>[number];
+type WorkspaceSession = Awaited<ReturnType<ExtensionSessionsApi["query"]>>["items"][number];
 
 export type TicketWorkspaceSession = Pick<WorkspaceSession, "id" | "status">;
 export type TicketWorkspaceSessionLookup = Map<string, TicketWorkspaceSession>;
@@ -16,12 +17,12 @@ const linkedWorkspaceIds = (workspaces: ExtensionWorkspace[]) =>
 
 // Sessions are oldest-first. Prefer ongoing work before falling back to the latest result.
 export const loadLatestWorkspaceSessions = async (
-  sessions: Pick<ExtensionSessionsApi, "listByWorkspace">,
+  sessions: Pick<ExtensionSessionsApi, "query">,
   workspaces: ExtensionWorkspace[],
 ): Promise<TicketWorkspaceSessionLookup> => {
   const entries = await Promise.all(
     [...linkedWorkspaceIds(workspaces)].map(async (workspaceId) => {
-      const all = await sessions.listByWorkspace(workspaceId);
+      const all = await readSessionHistory(sessions, { workspaceId });
       const ongoing = all.filter(
         (session) =>
           session.status === "queued" || session.status === "in_progress" || session.status === "awaiting_input",

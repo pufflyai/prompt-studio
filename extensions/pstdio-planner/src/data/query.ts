@@ -1,15 +1,16 @@
 import type {
   ExtensionStorageApi,
   ExtensionWorkspace,
-  KanbanRendererFilterState,
   KanbanRendererQueryResult,
+  ViewFilterGroup,
 } from "@pstdio/sdk/extensions";
-import { ticketStatuses } from "../ticket-status-provider";
 import { readStoredPlan } from "../timeline/commands/plan-store";
 import { buildPlan } from "../timeline/model/build-plan";
 import { resolvePlan } from "../timeline/model/resolve-plan";
 import { timelineTicketProperties } from "../timeline/model/ticket-properties";
 import { sortedBySortOrder } from "../utils/sort";
+import { cleanupLegacyTicketFields } from "./cleanup-legacy-ticket-fields";
+import { cleanupLegacyWorkspaceStatus } from "./cleanup-legacy-workspace-status";
 import { ticketsCollection } from "./collections";
 import {
   buildTicketAttributes,
@@ -28,21 +29,22 @@ import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 interface TicketsQueryInput {
   storage: ExtensionStorageApi;
   projectId: string;
-  filters?: KanbanRendererFilterState;
+  filter?: ViewFilterGroup;
   workspaces?: ExtensionWorkspace[];
   workspaceSessions?: TicketWorkspaceSessionLookup;
 }
 
 // The renderer re-applies filter, sort, and grouping locally. The query returns the
-// requested archive set and tag schema. Workflow status data comes from the referenced
-// status provider, which keeps its storage and board rules in one place.
+// requested archive set, enum options, and board rules from Planner storage.
 export const runTicketsQuery = async ({
   storage,
   projectId,
-  filters,
+  filter,
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
+  await cleanupLegacyWorkspaceStatus(storage);
+  await cleanupLegacyTicketFields(storage);
   const [storedTickets, tags, statuses, storedPlan, requests] = await Promise.all([
     ticketsCollection(storage).list(),
     seedDefaultTags(storage),
@@ -71,7 +73,13 @@ export const runTicketsQuery = async ({
     createTicketWorkspaceLookup(workspaces, workspaceSessions),
     createTicketParentLookup(tickets),
   );
-  const selectedArchiveStates = filters?.[TICKET_ARCHIVE_STATE_ATTRIBUTE_ID];
+  const archiveRule =
+    filter?.conjunction === "and"
+      ? filter.rules.find(
+          (rule) => rule.attributeId === TICKET_ARCHIVE_STATE_ATTRIBUTE_ID && rule.condition === "is-any-of",
+        )
+      : undefined;
+  const selectedArchiveStates = Array.isArray(archiveRule?.value) ? archiveRule.value : undefined;
   const requestedArchiveStates = new Set(
     selectedArchiveStates?.length
       ? selectedArchiveStates
@@ -99,7 +107,7 @@ export const runTicketsQuery = async ({
 
   return {
     rows,
-    attributes: [...buildTicketAttributes(ticketStatuses.ref, tags), ...timeline.attributes],
+    attributes: [...buildTicketAttributes(statuses, tags), ...timeline.attributes],
     boardColumnConfigs: Object.fromEntries(statuses.map((status) => [status.id, statusToColumnConfig(status)])),
   };
 };

@@ -9,6 +9,7 @@ import { configureAutoBuildCommand } from "./auto-build-mode";
 import { createTicketCommand } from "./create-ticket";
 import { requestHumanCommand } from "./review-requests";
 import { runAttemptCommand } from "./run-attempt";
+import { sessionQuery } from "./session-query.fixture";
 
 const dispatch = (ctx: Awaited<ReturnType<typeof fixture>>["ctx"], ticket: string, revision = "test") =>
   autoBuildDispatchCommand.run(ctx, { ticket, revision });
@@ -54,9 +55,9 @@ test("tickets assigned to an ordinary live session are not dispatched", async ()
   const { ctx, ticket } = await fixture();
   const assigned = await ticket("Already working");
   const ready = await ticket("Ready");
-  ctx.sessions.list = async () => [
+  ctx.sessions.query = sessionQuery(async () => [
     { id: "ordinary", title: "Work", status: "in_progress", anchors_json: [{ type: "ticket", id: assigned.id }] },
-  ];
+  ]);
   expect((await autoBuildCandidatesCommand.run(ctx, {})).candidates.map(({ id }) => id)).toEqual([ready.id]);
   expect(await dispatch(ctx, assigned.id)).toMatchObject({ decision: "wait" });
 });

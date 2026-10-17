@@ -1,6 +1,7 @@
 import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { readSessionHistory } from "../data/session-history";
 import { withWriteGuard } from "../data/write-guard";
 import { initialSupervisorPrompt, supervisorWakePrompt } from "./auto-build-prompts";
 import { isLiveSession } from "./auto-build-sessions";
@@ -29,7 +30,7 @@ async function wakeSupervisor(ctx: CommandContext) {
     const session = supervisor.sessionId ? await ctx.sessions.get(supervisor.sessionId) : null;
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
     const { tickets: candidates, capacity, snapshot, progressAt, active } = await readNextTickets(ctx, mode);
-    const history = session ? (await ctx.sessions.list()).find(({ id }) => id === session.id) : undefined;
+    const history = session ? (await readSessionHistory(ctx.sessions)).find(({ id }) => id === session.id) : undefined;
     const lastPromptAt = Date.parse(history?.last_request_started ?? "1970-01-01T00:00:00Z");
     const stalled = Boolean(session && Date.now() - Math.max(progressAt, lastPromptAt) >= 60 * 60 * 1000);
     if (
