@@ -8,10 +8,14 @@ import {
   refreshLegacyAnchorSources,
 } from "./resource-anchor-events";
 
+type WorkspaceRecord = NonNullable<Awaited<ReturnType<ReturnType<typeof createWorkspacesDBService>["get"]>>>;
+
 export type WorkspaceServiceDeps = {
   sessionsDb: { get: (id: string) => Promise<{ id: string } | null> };
   workspacesDb: ReturnType<typeof createWorkspacesDBService>;
   eventBus: EventBus;
+  onCreated?: (workspace: WorkspaceRecord) => void;
+  onDeleted?: (workspace: WorkspaceRecord) => void;
   validateCreatedAnchors?: (source: ResourceRef & { projectId: string }, anchors: ResourceAnchor[]) => Promise<void>;
 };
 
@@ -52,6 +56,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     );
     deps.eventBus.emit("workspaces", "set", workspace);
     publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
+    deps.onCreated?.(workspace);
     return workspace;
   };
 
@@ -66,6 +71,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     );
     deps.eventBus.emit("workspaces", "set", workspace);
     publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
+    deps.onCreated?.(workspace);
     return workspace;
   };
 
@@ -78,6 +84,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     const workspace = await raw.createDefault(input);
     deps.eventBus.emit("workspaces", "set", workspace);
     publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
+    deps.onCreated?.(workspace);
     return workspace;
   };
 
@@ -90,10 +97,13 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   };
 
   const softDelete = async (id: string) => {
-    const changes = await raw.softDelete(id);
+    const deleted = await raw.softDelete(id);
+    if (!deleted) return;
+    const { changes, workspace } = deleted;
     publishResourceAnchorChanges(deps.eventBus, changes, "remove");
     await refreshLegacyAnchorSources(deps.eventBus, changes, { workspace: raw.get, session: deps.sessionsDb.get });
     deps.eventBus.emit("workspaces", "delete", { id });
+    deps.onDeleted?.(workspace);
   };
 
   const rename = async (id: string, name: string) => {

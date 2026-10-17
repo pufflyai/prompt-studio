@@ -357,20 +357,20 @@ Data table columns can declare `type` (`"string"`, `"number"`, or `"date"`) and 
 
 The query receives `filter`, `sorts`, and the display `settings`. Use them only to narrow what you load. The renderer always applies the full filter and sorts to the rows you return, so returning more rows than the view shows is always correct.
 
-Deprecated fields still work and are converted where the host reads the contribution. When both are set, the new field wins. They are removed together in the next breaking extension API release.
+API 0.2.0 removes the fields deprecated in published package version 0.43.1. Migrate declarations and query handlers to the replacements below.
 
-| Deprecated | Replacement |
+| Removed | Replacement |
 | --- | --- |
 | `defaultFilters: { status: ["todo"] }` | `defaultFilter` with an `is-any-of` rule (`has-any-of` for `enum-multi`) |
 | `defaultSettings.ordering`, `settings.ordering` in `defaultViews` | `defaultSorts`, `sorts`; manual ordering is an empty list |
 | `filters` in `defaultViews` | `filter` |
 | `params.filters` and `params.settings.ordering` in a kanban query | `params.filter` and `params.sorts` |
 
-The host keeps sending `params.filters`, derived from root `is-any-of` and `has-any-of` rules when the root joins with `"and"`, and `params.settings.ordering`, the first sort or `manual`.
+The host sends only `params.filter`, `params.sorts`, and display settings. Historical saved-view migration still converts old stored filters and ordering; new declarations and requests must use the current fields.
 
 ## Shared views
 
-`defaultViews` defines the starting views for a collection with no saved views. The host saves them as ordinary project views that people and agents can edit, rename, reorder, and delete. At least one view must remain. `defaultActiveViewId` chooses the initial default. The deprecated `isDefault` flag remains a fallback when `defaultActiveViewId` is absent; use `defaultActiveViewId` in new extensions. Saved project views and their shared default take precedence after initialization. Do not store a second copy in extension storage.
+`defaultViews` defines the starting views for a collection with no saved views. The host saves them as ordinary project views that people and agents can edit, rename, reorder, and delete. At least one view must remain. `defaultActiveViewId` chooses the initial default. Saved project views and their shared default take precedence after initialization. Do not store a second copy in extension storage.
 
 The host saves user-created views for kanban and data table views per project, extension instance and local view ID. Query-returned attributes, columns, and status options are used to validate settings, rules, and sorts. Keep field IDs stable across releases. A successful query can clean rules for removed fields and options from saved views; a failed query never removes them.
 

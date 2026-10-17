@@ -34,7 +34,6 @@ const modeRefSchema = contributionRefSchema("mode");
 const pageRefSchema = contributionRefSchema("page");
 const resourceKindRefSchema = contributionRefSchema("resource-kind");
 const settingsSectionRefSchema = contributionRefSchema("settings-section");
-const statusRefSchema = contributionRefSchema("status");
 const viewRefSchema = contributionRefSchema("view");
 
 const normalizedWhenSchema = z.object({
@@ -221,18 +220,6 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
   when: normalizedWhenSchema.optional(),
 });
 
-const workbenchExtensionStatusRecordSchema = z.object({
-  id: z.string(),
-  localId: z.string(),
-  extensionId: z.string(),
-  title: localizableStringSchema,
-  actions: z
-    .array(z.object({ id: z.string(), label: localizableStringSchema, icon: z.string().optional() }))
-    .optional(),
-  queryHandlerId: z.string(),
-  saveHandlerId: z.string().optional(),
-});
-
 export const workbenchExtensionMetadataSchema = z.object({
   extensions: z.array(extensionRecordSchema),
   commands: z.array(extensionCommandRecordSchema),
@@ -250,7 +237,6 @@ export const workbenchExtensionMetadataSchema = z.object({
   navigationItems: z.array(workbenchExtensionNavigationItemRecordSchema),
   navigationTrees: z.array(workbenchExtensionNavigationTreeRecordSchema),
   statusBarItems: z.array(workbenchExtensionStatusBarItemRecordSchema),
-  statuses: z.array(workbenchExtensionStatusRecordSchema),
   activityItems: z
     .array(
       z.object({
@@ -331,6 +317,4 @@ export const workbenchExtensionMetadataSchema = z.object({
 export type WorkbenchExtensionMetadata = z.infer<typeof workbenchExtensionMetadataSchema>;
 export type WorkbenchExtensionViewRecord = z.infer<typeof workbenchExtensionViewRecordSchema>;
 export type WorkbenchExtensionViewBody = z.infer<typeof workbenchExtensionViewBodySchema>;
-export type WorkbenchExtensionStatusRecord = z.infer<typeof workbenchExtensionStatusRecordSchema>;
-export type WorkbenchExtensionStatusRef = z.infer<typeof statusRefSchema>;
 export type WorkbenchExtensionHarnessRecord = NonNullable<WorkbenchExtensionMetadata["harnesses"]>[number];

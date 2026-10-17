@@ -1,16 +1,5 @@
-import { defineExtension, definePage, defineStatuses, defineView, workbenchModes } from "@pstdio/sdk/extensions";
+import { defineExtension, definePage, defineView, workbenchModes } from "@pstdio/sdk/extensions";
 
-const workflow = defineStatuses({
-  id: "workflow",
-  title: "Ticket workflow",
-  query: async () => ({
-    statuses: [
-      { id: "todo", label: "To do", color: "gray", sortOrder: 0, isDefault: true },
-      { id: "doing", label: "Doing", color: "blue", sortOrder: 1 },
-      { id: "done", label: "Done", color: "green", sortOrder: 2 },
-    ],
-  }),
-});
 const tickets = defineView({
   id: "tickets",
   title: "Tickets",
@@ -20,7 +9,14 @@ const tickets = defineView({
       {
         id: "status",
         label: "Status",
-        type: { kind: "status", statuses: workflow.ref },
+        type: {
+          kind: "enum",
+          options: [
+            { value: "todo", label: "To do", color: "gray" },
+            { value: "doing", label: "Doing", color: "blue" },
+            { value: "done", label: "Done", color: "green" },
+          ],
+        },
         groupable: true,
         displayable: true,
       },
@@ -29,9 +25,9 @@ const tickets = defineView({
       viewMode: "board",
       columnGrouping: "status",
       rowGrouping: "none",
-      ordering: { attributeId: "status", direction: "asc" },
       displayProperties: [],
     },
+    defaultSorts: [{ attributeId: "status", direction: "asc" }],
     query: async () => ({
       rows: [
         { id: "one", title: "Write the guide", attributes: { status: "doing" } },
@@ -54,7 +50,6 @@ export const ticketsPage = definePage({
   slots: [],
 });
 export default defineExtension({
-  statuses: [workflow],
   views: [tickets],
   pages: [ticketsPage],
 });

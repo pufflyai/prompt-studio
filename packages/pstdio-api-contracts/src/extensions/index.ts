@@ -3,7 +3,7 @@ export * from "./artifacts";
 export * from "./check";
 export * from "./collection-view";
 export * from "./collection-view-builtins";
-export * from "./collection-view-legacy";
+export * from "./collection-view-defaults";
 export * from "./commands";
 export * from "./common";
 export * from "./connections";

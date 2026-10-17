@@ -36,7 +36,11 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   };
 
   const dispatcher = createEventDispatcher({ runtime, deps, generateId, logger, buildEventContext });
-  const factory = createContextFactory(dispatcher, logger, executeBuilder);
+  const factory = createContextFactory(
+    dispatcher,
+    (extensionId) => deps.createLogger?.(extensionId) ?? logger,
+    executeBuilder,
+  );
   const state: RunnerState = { runtime, deps, logger, maxDepth, generateId, dispatcher, factory };
   const executeInternal = async (input: InternalExecuteInput) => {
     const hasUi = input.source === "dashboard" || input.source === "command-panel";

@@ -1,15 +1,12 @@
 # Workflow status migration
 
-Extensions own workflow values and editing. Use query-owned enum attributes to display those values in shared collections. The deprecation release advances the extension API to 0.1.3 after the published 0.1.2 release.
+Extensions own workflow values and editing. Use query-owned enum attributes to display those values in shared collections. The deprecation release introduced these replacements before their removal in extension API 0.2.0. See the [0.2.0 migration](0019-api-0-2-migration.md).
 
-## Deprecated APIs
+## Removed APIs
 
 `defineStatuses`, `StatusContribution`, `WorkflowStatus`, `StatusActionDefinition`,
 `ExtensionDefinition.statuses`, `StatusRef`, the `status` attribute kind, and the
-`status.v1` host capability are deprecated. They still load and run during the
-deprecation window. A status contribution produces a warning that names the
-replacement. Removal happens together in a later breaking release, never in this
-deprecation release. See [API versioning](0014-api-versioning.md).
+`status.v1` host capability were deprecated in published package version 0.43.1 and are removed together in extension API 0.2.0. See [API versioning](0014-api-versioning.md).
 
 | Old API | Replacement |
 | --- | --- |
@@ -62,8 +59,7 @@ Defaults, ordering, deletion fallback, ticket reassignment, and bulk-save rules
 belong in the extension operations called by those commands. A default remains
 extension data; it is not an enum option property.
 
-During migration, keep the legacy provider until the replacement is validated.
-Then stop declaring it. Do not delete or copy its stored records merely to change
+Validate the replacement on the published 0.43.1 packages, then stop declaring the legacy provider before upgrading the host. Do not delete or copy its stored records merely to change
 the rendering contract.
 
 ## Delivery order

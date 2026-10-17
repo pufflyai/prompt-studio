@@ -304,7 +304,15 @@ export const createNotificationsDBService = (db: DbClient) => {
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(notifications)
-      .set({ ...input, updated_at: timestamp })
+      .set({
+        ...input,
+        updated_at: timestamp,
+        status:
+          input.status ??
+          (input.snoozed_until === null
+            ? sql`case when ${notifications.status} = 'snoozed' then 'open' else ${notifications.status} end`
+            : undefined),
+      })
       .where(and(eq(notifications.project_id, projectId), eq(notifications.id, id)))
       .returning();
     return updated ?? null;

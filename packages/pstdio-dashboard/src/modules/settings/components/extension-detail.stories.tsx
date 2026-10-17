@@ -88,7 +88,6 @@ const metadata = {
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   settingsPanels: [],
   diagnostics: [],
 } as never;

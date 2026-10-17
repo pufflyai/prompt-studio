@@ -27,6 +27,14 @@ export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "ins
     installName: extension?.installName,
     projectId,
     view,
+    slotKind: metadata?.settingsPanels.some(
+      (panel) =>
+        panel.id === input.instance.panelId &&
+        panel.view.id === view.localId &&
+        panel.view.extensionId === view.extensionId,
+    )
+      ? ("settings" as const)
+      : ("panel" as const),
     webview: view.body.webview,
   };
 };
@@ -46,7 +54,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
     );
   }
 
-  const { extensionInstanceId, installName, projectId, view, webview } = derived;
+  const { extensionInstanceId, installName, projectId, view, webview, slotKind } = derived;
 
   return (
     <Box position="relative" w="full" h="full" minH="0">
@@ -62,6 +70,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
           title={resolveLocalizableString(view.title, view.extensionId)}
           webview={webview}
           webviewId={view.id}
+          slotKind={slotKind}
           workbench={input.workbench}
         />
       </Box>

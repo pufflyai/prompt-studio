@@ -31,7 +31,6 @@ export const metadata: InternalWorkbenchExtensionMetadata = {
   controlsRenderers: [],
   keybindings: [],
   settingsDefinitions: [],
-  statuses: [],
   statusBarItems: [],
   diagnostics: [],
 };

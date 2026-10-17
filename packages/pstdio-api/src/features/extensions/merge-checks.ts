@@ -117,7 +117,6 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.navigationItems.push(...source.navigationItems);
   target.navigationTrees.push(...source.navigationTrees);
   target.statusBarItems.push(...source.statusBarItems);
-  target.statuses.push(...source.statuses);
   target.activityItems?.push(...(source.activityItems ?? []));
   target.settingsSections?.push(...(source.settingsSections ?? []));
   target.settingsPanels.push(...source.settingsPanels);

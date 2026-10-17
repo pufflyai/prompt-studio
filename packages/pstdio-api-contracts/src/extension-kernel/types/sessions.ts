@@ -124,33 +124,6 @@ export interface ExtensionSessionsApi {
 
   query(input?: ExtensionSessionQuery): Promise<ExtensionSessionPage>;
 
-  /** @deprecated Use query() for filters, paging and session details. */
-  list(): Promise<
-    Array<{
-      id: string;
-      title: string;
-      status: SessionStatus;
-      agent?: string | null;
-      last_request_started?: string | null;
-      last_request_ended?: string | null;
-      updated_at?: string | null;
-      anchors_json?: ResourceAnchor[];
-    }>
-  >;
-
-  /** @deprecated Use query({ workspaceId }). query() orders newest first. */
-  listByWorkspace(workspaceId: string): Promise<
-    Array<{
-      id: string;
-      title: string;
-      status: SessionStatus;
-      agent?: string | null;
-      created_at?: string | null;
-      updated_at?: string | null;
-      anchors_json?: ResourceAnchor[];
-    }>
-  >;
-
   create(input: {
     title: string;
     prompt?: string;

@@ -20,7 +20,6 @@ import type {
   SettingsSectionContribution,
   SkillContribution,
   StatusBarItemContribution,
-  StatusContribution,
   TemplateContribution,
   TemplateTypeContribution,
   ThemeContribution,
@@ -125,15 +124,6 @@ export interface RuntimeStatusBarItemRecord {
   name: string;
   sourcePath: string;
   contribution: StatusBarItemContribution;
-}
-
-export interface RuntimeStatusRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: StatusContribution;
 }
 
 export interface RuntimeResourceKindRecord {

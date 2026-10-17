@@ -17,8 +17,6 @@ export interface CollectionSavedView<TSettings> {
   settings: TSettings;
   filter: ViewFilterGroup;
   sorts: ViewSort[];
-  /** @deprecated Use defaultActiveViewId instead. */
-  isDefault?: boolean;
 }
 
 export interface CollectionViewState<TSettings> {

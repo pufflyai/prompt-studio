@@ -107,6 +107,8 @@ export interface CommandRunnerHostDeps {
   onDidDispatchEvent?: (eventId: string) => void;
   /** Optional logger forwarded to extension contexts. */
   logger?: ExtensionLoggerApi;
+  /** Binds each command, middleware and hook context to its owning extension. */
+  createLogger?: (extensionId: string) => ExtensionLoggerApi;
   /** Maximum nested command depth. Defaults to 10. */
   maxDepth?: number;
   /** Generates invocation/delivery ids. Defaults to crypto.randomUUID(). */

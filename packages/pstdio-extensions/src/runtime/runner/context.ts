@@ -132,7 +132,7 @@ export const createExecuteBuilder = (runRef: {
 
 export const createContextFactory = (
   dispatcher: EventDispatcher,
-  logger: ExtensionLoggerApi,
+  createLogger: (extensionId: string) => ExtensionLoggerApi,
   createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
 ): ContextFactory => ({
   buildExtensionContext(env, ids, depth, scope, navigationScope) {
@@ -179,7 +179,7 @@ export const createContextFactory = (
       net: env.net,
       connections: hostApis.connections ?? unavailableConnections,
       terminal: hostApis.terminal,
-      logger,
+      logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
     };
   },

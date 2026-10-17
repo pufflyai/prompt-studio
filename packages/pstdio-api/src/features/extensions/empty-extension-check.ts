@@ -31,7 +31,6 @@ export const emptyCheck = (
     navigationItems: [],
     navigationTrees: [],
     statusBarItems: [],
-    statuses: [],
     activityItems: [],
     settingsSections: [],
     keybindings: [],

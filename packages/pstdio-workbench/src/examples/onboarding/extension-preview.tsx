@@ -53,17 +53,10 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
     } else if (body.kind === "kanban") {
       metadataBody = {
         kind: "kanban",
-        attributes: body.attributes?.map((attribute) =>
-          attribute.type.kind === "status"
-            ? {
-                ...attribute,
-                type: { ...attribute.type, statuses: normalizedRef(attribute.type.statuses) },
-              }
-            : attribute,
-        ),
+        attributes: body.attributes,
         queryHandlerId: handler(id, "kanban", "query", body.query)!,
         attributeChangeHandlerId: handler(id, "kanban", "onAttributeChange", body.onAttributeChange),
-        reorderHandlerId: handler(id, "kanban", "onReorder", body.onReorder),
+        moveHandlerId: handler(id, "kanban", "onMove", body.onMove),
         ...normalizeKanbanViewDefaults(body),
         defaultActiveViewId: body.defaultActiveViewId,
         hideToolbar: body.hideToolbar,
@@ -96,19 +89,6 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
       title: view.title,
       icon: view.icon,
       body: metadataBody,
-    };
-  });
-
-  const statuses = (definition.statuses ?? []).map((status) => {
-    const id = contributionId("status", status.id);
-    return {
-      id,
-      localId: status.id,
-      extensionId,
-      title: status.title,
-      actions: status.actions,
-      queryHandlerId: handler(id, "status", "query", status.query)!,
-      saveHandlerId: handler(id, "status", "save", status.save),
     };
   });
 
@@ -157,7 +137,6 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
       },
     ],
     views,
-    statuses,
     pages,
     navigationItems,
     navigationTrees,

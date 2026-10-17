@@ -51,7 +51,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     expect(renderer?.defaultActiveViewId).toBe("all");
   });
 
-  test("sends the view to the query, with the deprecated filters and ordering derived from it", async () => {
+  test("sends the current filter, sorts, and display settings to the query", async () => {
     const workbench = createWorkbench();
     const params: unknown[] = [];
     registerWorkbenchExtensionKanbanRenderers(
@@ -83,8 +83,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     expect(params[0]).toMatchObject({
       filter,
       sorts: [{ attributeId: "updated", direction: "desc" }],
-      filters: { archived: ["active"] },
-      settings: { columnGrouping: "status", ordering: { attributeId: "updated", direction: "desc" } },
+      settings: queryState.settings,
     });
   });
 
@@ -231,7 +230,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
       attributeChangeHandlerId: "pstdio-planner.tickets.onAttributeChange",
-      reorderHandlerId: "pstdio-planner.tickets.onReorder",
+      moveHandlerId: "pstdio-planner.tickets.onMove",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
 
     getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
@@ -244,7 +243,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
         executeCommand: async (commandId) => {
           calls.push(commandId);
           if (commandId === record.attributeChangeHandlerId) await updateDeferred.promise;
-          if (commandId === record.reorderHandlerId) await reorderDeferred.promise;
+          if (commandId === record.moveHandlerId) await reorderDeferred.promise;
           return undefined;
         },
       },
@@ -266,12 +265,12 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
 
     expect(refreshes).toEqual(["tickets"]);
 
-    const reorder = renderer?.onReorder?.("ticket-1", "ticket-2");
+    const reorder = renderer?.onMove?.({ rowId: "ticket-1", attributes: {}, order: { beforeRowId: "ticket-2" } });
 
     await Promise.resolve();
 
     expect(reorder).toBeInstanceOf(Promise);
-    expect(calls).toEqual([record.attributeChangeHandlerId, record.reorderHandlerId]);
+    expect(calls).toEqual([record.attributeChangeHandlerId, record.moveHandlerId]);
     expect(refreshes).toEqual(["tickets"]);
 
     reorderDeferred.resolve();

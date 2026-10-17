@@ -27,7 +27,7 @@ const makeStorageService = () => ({
   deleteCollectionItem: async () => {},
 });
 
-test("archive cascades to the workspace's active sessions", async () => {
+test("deletion archives the workspace's active sessions", async () => {
   const archivedWorkspaces: string[] = [];
   const archivedSessions: string[] = [];
   const env = createCommandEnvironment(
@@ -95,7 +95,7 @@ test("archive cascades to the workspace's active sessions", async () => {
     },
   );
 
-  await env.workspaces.archive("ws-1");
+  await env.workspaces.delete("ws-1");
 
   expect(archivedWorkspaces).toEqual(["ws-1"]);
   expect(archivedSessions).toEqual(["session-1"]);

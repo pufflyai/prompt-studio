@@ -54,7 +54,6 @@ export const executeWorkbenchExtensionCommandResponse = async (
     },
     input.signal,
   );
-  unwrapCommandValue(response);
   const outcome = (response as Partial<CommandExecuteResponse> | undefined)?.outcome;
   if (outcome?.status === "success") {
     for (const target of outcome.navigationRequests ?? []) {

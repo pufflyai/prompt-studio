@@ -24,20 +24,6 @@ const queryState: KanbanRendererQueryState = {
 
 test("keeps rows and query metadata from the latest overlapping request", async () => {
   const workbench = createWorkbench();
-  workbench.statuses.registerStatusSet({
-    id: "example.recipes.status.workflow",
-    title: "Workflow",
-    query: () => [{ id: "todo", label: "Todo", color: "blue", sortOrder: 0 }],
-  });
-  workbench.statuses.registerStatusSet({
-    id: "example.recipes.status.review",
-    title: "Review",
-    query: () => [{ id: "todo", label: "Todo", color: "purple", sortOrder: 0 }],
-  });
-  await Promise.all([
-    workbench.statuses.query("example.recipes.status.workflow"),
-    workbench.statuses.query("example.recipes.status.review"),
-  ]);
   const record = {
     id: "recipes",
     extensionId: "example.recipes",
@@ -75,10 +61,10 @@ test("keeps rows and query metadata from the latest overlapping request", async 
       {
         id: "review",
         label: "Review",
-        type: { kind: "status", statuses: { kind: "status", id: "review" } },
+        type: { kind: "enum", options: [{ value: "todo", label: "Todo", color: "purple" }] },
       },
     ],
-    boardColumnConfigs: { "review-only": { canCreate: true } },
+    boardColumnConfigs: { todo: { color: "purple" }, "review-only": { canCreate: true } },
   });
   expect(await reviewQuery).toMatchObject([{ id: "latest" }]);
 
@@ -88,7 +74,7 @@ test("keeps rows and query metadata from the latest overlapping request", async 
       {
         id: "workflow",
         label: "Workflow",
-        type: { kind: "status", statuses: { kind: "status", id: "workflow" } },
+        type: { kind: "enum", options: [{ value: "todo", label: "Todo", color: "blue" }] },
       },
     ],
     boardColumnConfigs: { "workflow-only": { canCreate: true } },

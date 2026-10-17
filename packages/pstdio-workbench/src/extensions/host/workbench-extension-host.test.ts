@@ -10,7 +10,6 @@ const treeViewId = `${extensionId}.view.outline`;
 const controlsViewId = `${extensionId}.view.filters`;
 const detailViewId = `${extensionId}.view.detail`;
 const statusViewId = `${extensionId}.view.sync-status`;
-const statusesId = `${extensionId}.status.workflow`;
 const metadata = {
   extensions: [{ id: extensionId, name: "lab", displayName: "Lab", sourcePath: "/extensions/lab" }],
   commands: [],
@@ -140,20 +139,11 @@ const metadata = {
       when: { mode: { extensionId, kind: "mode", id: "review" } },
     },
   ],
-  statuses: [
-    {
-      id: statusesId,
-      localId: "workflow",
-      extensionId,
-      title: "Workflow",
-      queryHandlerId: `${statusesId}.query`,
-    },
-  ],
   settingsPanels: [],
   diagnostics: [],
 } satisfies WorkbenchExtensionMetadata;
 describe("registerWorkbenchExtensionContributions", () => {
-  test("groups extension settings by owner and keeps statuses in the Project section", async () => {
+  test("groups extension settings by owner", async () => {
     const workbench = createWorkbench();
     for (const [id, title] of [
       ["host.extensions.settings", "Extension settings"],
@@ -269,14 +259,9 @@ describe("registerWorkbenchExtensionContributions", () => {
       matchesWhen: (when) => workbench.context.matches(when),
     });
     expect(tree.map((section) => ({ label: section.label, nodes: section.nodes.map((node) => node.label) }))).toEqual([
-      { label: "Project", nodes: ["Extensions", "Repositories", "Statuses", "Danger zone"] },
+      { label: "Project", nodes: ["Extensions", "Repositories", "Danger zone"] },
       { label: "Lab", nodes: ["Alpha settings", "Filters", "Zebra settings"] },
     ]);
-    expect(workbench.settings.getPanel("workbench.statuses")).toMatchObject({
-      icon: "list-checks",
-      order: 25,
-      section: "project",
-    });
   });
   test("prepares extension command arguments through the host adapter", async () => {
     const workbench = createWorkbench();
@@ -349,9 +334,6 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
         registerWorkbenchExtensionContributions({
           executeCommand: (commandId) => {
             calls.push(commandId);
-            if (commandId.endsWith(".query")) {
-              return { statuses: [{ id: "todo", label: "Todo", color: "blue", sortOrder: 0 }] };
-            }
             return [];
           },
           metadata,
@@ -398,9 +380,5 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
     expect(workbench.views.getView(statusViewId)).toBeDefined();
     expect(workbench.layout.getWidget(statusViewId)).toBeUndefined();
     expect(workbench.layout.listPanelInstances().some((panel) => panel.panelId === statusViewId)).toBe(false);
-    await expect(workbench.statuses.query(statusesId)).resolves.toEqual([
-      { id: "todo", label: "Todo", color: "blue", sortOrder: 0 },
-    ]);
-    expect(calls).toContain(`${statusesId}.query`);
   });
 });

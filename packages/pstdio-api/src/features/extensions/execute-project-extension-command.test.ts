@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
+import { apiLogger } from "../../lib/logger";
 import { executeProjectExtensionCommand } from "./execute-project-extension-command";
 import { createWorkspaceContextFixture } from "./workspace-context.test-fixture";
 
@@ -100,4 +101,21 @@ test("ordinary execution drops chunks from a streaming command", async () => {
     return "done";
   };
   expect((await execute()).outcome).toMatchObject({ ok: true, value: "done" });
+});
+
+test("command warnings reach the host log with the command owner", async () => {
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  snapshot.runtime.commands[0]!.run = async (ctx) => {
+    ctx.logger.warn("command warning", { detail: "saved" });
+  };
+  const warn = spyOn(apiLogger, "warn");
+  try {
+    await execute();
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ extensionId: "example.context", metadata: { detail: "saved" } }),
+      "command warning",
+    );
+  } finally {
+    warn.mockRestore();
+  }
 });

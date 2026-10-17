@@ -224,3 +224,20 @@ describe("project extension runtime catalog", () => {
     expect(harness.publishes.map((entry) => entry.generation)).toEqual([1, 2, 3, 4]);
   });
 });
+
+test("activates a project once even when its runtime is refreshed", async () => {
+  const activated: string[] = [];
+  const catalog = createProjectExtensionRuntimeCatalog({
+    extensionService: { listEnabledSourcesForProject: async () => [] } as never,
+    projectService: { get: async (id: string) => ({ id, name: id, shorthand: "P" }) } as never,
+    workspaceService: { getDefault: async () => null } as never,
+  });
+  catalog.subscribeActivation((id) => {
+    activated.push(id);
+  });
+  await Promise.all([catalog.activate("one"), catalog.activate("one")]);
+  catalog.invalidate({ projectId: "one", reason: "runtime_refresh" });
+  await catalog.activate("one");
+  await catalog.activate("two");
+  expect(activated).toEqual(["one", "two"]);
+});

@@ -20,7 +20,7 @@ const buildDeps = () => {
       display_path: null,
       root_path: null,
     })),
-    softDelete: mock(async (_id: string) => []),
+    softDelete: mock(async (_id: string) => ({ workspace: { id: "ws_1", project_id: "project_1" }, changes: [] })),
     rename: mock(async (id: string, name: string) => ({
       id,
       project_id: "project_1",

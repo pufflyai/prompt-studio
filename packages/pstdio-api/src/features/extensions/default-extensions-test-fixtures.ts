@@ -41,7 +41,6 @@ export const installed = {
     navigationItems: [],
     navigationTrees: [],
     statusBarItems: [],
-    statuses: [],
     activityItems: [],
     settingsSections: [],
     settingsPanels: [],

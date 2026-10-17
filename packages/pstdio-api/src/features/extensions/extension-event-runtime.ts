@@ -1,24 +1,14 @@
-import type { EventRef, ExtensionLoggerApi, JsonObject, Struct } from "pstdio-api-contracts/extension-kernel";
+import type { EventRef, JsonObject, Struct } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
+import { createExtensionLogger } from "./extension-logger";
 
 export type ExtensionEventDeps = ExtensionsRouteDeps;
+type WorkspaceSnapshot = NonNullable<Awaited<ReturnType<ExtensionsRouteDeps["workspaceService"]["get"]>>>;
 
 const eventIdFor = (event: EventRef | string) => (typeof event === "string" ? event : event.id);
-
-const extensionEventLogger: ExtensionLoggerApi = {
-  info: (message, metadata) => {
-    apiLogger.info({ event: "extension.event.log", metadata: metadata ?? {} }, message);
-  },
-  warn: (message, metadata) => {
-    apiLogger.warn({ event: "extension.event.log", metadata: metadata ?? {} }, message);
-  },
-  error: (message, metadata) => {
-    apiLogger.error({ event: "extension.event.log", metadata: metadata ?? {} }, message);
-  },
-};
 
 const stringValue = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
 
@@ -26,13 +16,18 @@ const resolveEventContext = async <TPayload extends Struct>(
   deps: ExtensionEventDeps,
   projectId: string,
   payload: TPayload,
+  workspaceSnapshot?: WorkspaceSnapshot,
 ) => {
   const home = await deps.workspaceService.getDefault(projectId);
   const requestedWorkspaceId = stringValue((payload as { workspaceId?: unknown }).workspaceId);
-  const workspace = requestedWorkspaceId ? await deps.workspaceService.get(requestedWorkspaceId) : home;
-  if (requestedWorkspaceId && (!workspace || workspace.project_id !== projectId))
+  const workspace =
+    workspaceSnapshot ?? (requestedWorkspaceId ? await deps.workspaceService.get(requestedWorkspaceId) : home);
+  if ((requestedWorkspaceId || workspaceSnapshot) && (!workspace || workspace.project_id !== projectId))
     throw new Error("Workspace not found for project.");
-  const workspaceDir = workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined;
+  const workspaceDir =
+    workspace && !workspace.deleted_at && workspace.execution_kind === "local"
+      ? (workspace.root_path ?? undefined)
+      : undefined;
   const trustedPayload = { ...payload, projectId } as JsonObject;
   for (const key of ["workspaceId", "workspace", "workspaceDir", "projectDir", "repoPath", "branch"])
     delete trustedPayload[key];
@@ -43,7 +38,10 @@ const resolveEventContext = async <TPayload extends Struct>(
     if (workspaceDir) trustedPayload.workspaceDir = workspaceDir;
     if (workspace.branch) trustedPayload.branch = workspace.branch;
   }
-  if (home?.root_path) trustedPayload.projectDir = home.root_path;
+  if (home?.root_path) {
+    trustedPayload.projectDir = home.root_path;
+    trustedPayload.repoPath = home.root_path;
+  }
   return { trustedPayload, workspaceDir, workspaceId: workspace?.id };
 };
 
@@ -52,12 +50,13 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
   projectId: string,
   event: EventRef<TPayload> | string,
   payload: TPayload,
+  workspaceSnapshot?: WorkspaceSnapshot,
 ) => {
   const eventId = eventIdFor(event);
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const context = await resolveEventContext(deps, projectId, payload);
+  const context = await resolveEventContext(deps, projectId, payload, workspaceSnapshot);
   const runner = createCommandRunner(snapshot.runtime, {
-    logger: extensionEventLogger,
+    createLogger: createExtensionLogger,
     onWillDispatchEvent: (eventId) =>
       deps.eventBus.emit("extension_events", "set", { id: crypto.randomUUID(), projectId, eventId }),
     buildEnvironment: (input) =>
@@ -86,9 +85,10 @@ export const fireExtensionEventAsync = <TPayload extends Struct>(
   projectId: string,
   event: EventRef<TPayload> | string,
   payload: TPayload,
+  workspaceSnapshot?: WorkspaceSnapshot,
 ) => {
   const eventId = eventIdFor(event);
-  void fireExtensionEvent(deps, projectId, event, payload).catch((err) => {
+  void fireExtensionEvent(deps, projectId, event, payload, workspaceSnapshot).catch((err) => {
     apiLogger.warn(
       { err, event: "extension.event.dispatch_failed", event_id: eventId, project_id: projectId },
       "Extension event dispatch failed",

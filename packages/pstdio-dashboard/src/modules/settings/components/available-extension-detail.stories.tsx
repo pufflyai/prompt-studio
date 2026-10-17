@@ -31,7 +31,6 @@ const metadata = {
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   settingsPanels: [],
   skills: [
     {

@@ -100,15 +100,6 @@ export const createSessionsApi = (
       );
       return { items: page.rows.map((row) => toExtensionSession(row, row.workspace_id)), nextCursor: page.nextCursor };
     },
-    list: async () => {
-      const sessions = await read(() => deps.sessionService.list(input.projectId));
-      return sessions.map((session) => toExtensionSession(session));
-    },
-    listByWorkspace: async (workspaceId) => {
-      const workspace = await requireProjectWorkspace(workspaceId);
-      const sessions = await read(() => deps.workspaceSessionService.listByWorkspace(workspace.id));
-      return sessions.map((session) => toExtensionSession(session, workspace.id));
-    },
     create: async (sessionInput) => {
       input.signal?.throwIfAborted();
       const workspace = sessionInput.workspaceId
