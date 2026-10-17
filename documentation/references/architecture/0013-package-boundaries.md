@@ -23,7 +23,8 @@ layer-map change.
    `pstdio-logging`, `pstdio-scheduler`, `pstdio-wt`, `pstdio-db`, and
    `pstdio-storage` define stable contracts, file-type metadata, paths, logging,
    scheduling, git, persistence, and filesystem storage primitives.
-   `pstdio-storage` does not depend on `pstdio-db`. They do not
+   `pstdio-storage` reuses asset reference types from `pstdio-sync-contracts`
+   and does not depend on `pstdio-db`. They do not
    depend on SDK, UI, workbench, dashboard, or API host packages.
 
 2. **Public authoring SDK**

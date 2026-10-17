@@ -1,4 +1,6 @@
+export type { AssetReference, AssetTransfer } from "pstdio-api-contracts";
 export type { AgentClient } from "./agents";
+export type { AssetClientOwner, AssetsClient, AssetUploadInput } from "./assets";
 export type { AutomationClient } from "./automation";
 export type { BoardViewsClient } from "./board-views";
 export { createClient, type PstdioClient } from "./client";

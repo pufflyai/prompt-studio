@@ -22,11 +22,35 @@ test-only export. Its development dependencies are not a runtime implementation.
 | Account manager | Account lifecycle and current environment grants; independent from content restore. |
 | Extensions | Data models, domain validation and pure local handlers from published packages. |
 
-The existing [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts),
-[SDK entry point](../../../packages/sdk/src/extensions/index.ts), and
-[host adapter](../../../packages/pstdio-api/src/features/extensions/command-environment/storage.ts)
-remain unchanged. The SDK implementation must add replacement APIs and deprecate
-old methods under [API versioning](../extensions/0014-api-versioning.md).
+The [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts)
+now adds `storage.assets` through the public SDK and host adapter. Existing blob and collection methods remain supported.
+The grouped-storage child must follow [API versioning](../extensions/0014-api-versioning.md) when adding replacements.
+
+## Local staged assets
+
+The local runtime implements immutable `{sha256, byteLength, mediaType}` references through
+`pstdio-storage` and the API's asset-transfer service. The storage package owns streamed bytes and integrity checks;
+the API owns persisted operation identities and cancellation. It resolves ownership from the actual project extension instance
+to stable workbench and extension IDs. Local paths and credentials never enter portable references.
+
+An operation binds its expected reference once. Temporary file size supplies its resumable offset, including after restart.
+Only a fully verified file can be linked atomically into the immutable version store. A retry finds the same version;
+it cannot replace its bytes or change the operation's expected reference. No duplicate progress or completion flag must be kept in sync.
+Reads stream and verify content, and consumers must reach the end before marking a download verified.
+
+Disconnection preserves partial bytes. Explicit cancellation first interrupts active writes, persists cancellation,
+and removes eligible temporary bytes. Retrying reads after restart finishes any interrupted cancellation cleanup.
+Completed versions are retained without automatic expiry or garbage collection. This makes verification safe from
+temporary-upload cleanup while the grouped-storage child commits references. Future manual cleanup must account for
+accepted content, pending work, unresolved alternatives, and backups before deleting any completed version.
+
+`ctx.storage.assets.stage`, `getTransfer`, `cancel`, `read`, and `verifyComplete` are the narrow extension boundary.
+`client.assets.upload` owns chunking and mechanical transport retries. Existing buffered blob calls remain supported;
+their HTTP adapter now streams local persistence and download. See the [asset guide](../../guides/sdk/0002-assets.md).
+New legacy blobs encode workbench and file IDs under a separate `files` directory. Existing rows keep their stored paths
+for reads, updates, and rollback. Project cleanup deletes only its database-owned file paths and readable siblings;
+it never derives a recursive directory from an opaque identity or removes retained asset versions.
+This does not implement grouped commits, relay storage, hosted grants, backup scheduling, or full offline readiness.
 
 ## Local UI sync and relay ownership
 

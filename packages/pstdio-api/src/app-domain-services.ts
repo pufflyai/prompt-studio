@@ -1,0 +1,61 @@
+import { createAssetBytesStorage, createFilesStorageService } from "pstdio-storage";
+import type { createAppDatabaseServices } from "./app-database";
+import type { RouteDeps } from "./features/deps";
+import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
+import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
+import type { EventBus } from "./features/sync/event-bus";
+import { createAssetTransferService } from "./services/asset-transfer-service";
+import { createExtensionFileService } from "./services/extension-file-service";
+import { createFileService } from "./services/file-service";
+import { createNotificationService } from "./services/notification-service";
+import { createProjectService } from "./services/project-service";
+import { createSyncService } from "./services/sync-service";
+import { createWorkspaceService } from "./services/workspace-service";
+import { createWorkspaceSessionService } from "./services/workspace-session-service";
+
+export const createCoreDomainServices = (input: {
+  getCommandDeps: () => RouteDeps;
+  db: Parameters<typeof createAppDatabaseServices>[0];
+  dbs: ReturnType<typeof createAppDatabaseServices>;
+  eventBus: EventBus;
+  storageRoot: string;
+}) => {
+  const { db, dbs, eventBus, storageRoot } = input;
+  const filesStorageService = createFilesStorageService(storageRoot);
+  const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
+
+  const syncService = createSyncService({ db });
+
+  return {
+    fileService,
+    assetTransferService: createAssetTransferService({
+      transfers: dbs.assetTransfersDBService,
+      bytes: createAssetBytesStorage(storageRoot),
+    }),
+    projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),
+    extensionFileService: createExtensionFileService({
+      extensionFilesDBService: dbs.extensionFilesDBService,
+      extensionInstancesDBService: dbs.extensionInstancesDBService,
+      fileService,
+    }),
+    syncService,
+    notificationService: createNotificationService({
+      notificationsDb: dbs.notificationsDBService,
+      activityEventsService: dbs.activityEventsDBService,
+      eventBus,
+    }),
+    extensionSettingsService: createExtensionSettingsService({
+      extensionSettingsDBService: dbs.extensionSettingsDBService,
+    }),
+    workspaceSessionService: createWorkspaceSessionService({
+      workspaceSessionsDBService: dbs.workspaceSessionsDBService,
+      eventBus,
+    }),
+    workspaceService: createWorkspaceService({
+      workspacesDb: dbs.workspacesDBService,
+      sessionsDb: dbs.sessionsDBService,
+      eventBus,
+      validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(input.getCommandDeps(), source, anchors),
+    }),
+  };
+};

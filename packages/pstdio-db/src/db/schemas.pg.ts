@@ -1,4 +1,5 @@
 export * from "./schemas/activity-events";
+export * from "./schemas/asset-transfers";
 export * from "./schemas/automation";
 export * from "./schemas/board-views";
 export * from "./schemas/enums";

@@ -252,6 +252,10 @@ Set `pstdio.projectFiles.tracked` in the package manifest to control the allocat
 
 ## Artifact Mounts And Storage
 
+Commands and hooks also have `ctx.storage.assets` for immutable versioned bytes. `stage({ operationId, source })` accepts a `Blob` or `File`, resumes interrupted uploads, and returns `{ sha256, byteLength, mediaType }` only after verification. `getTransfer`, `cancel`, `read`, and `verifyComplete` expose progress, explicit cleanup, streamed reads, and reference verification. The owner is the current workbench and installed extension, shared across that extension's storage scopes. Completed versions remain retained. See the [asset guide](../../guides/sdk/0002-assets.md) and [public types](../../../packages/pstdio-api-contracts/src/extension-kernel/types/assets.ts).
+
+Existing `ctx.storage.files`, collection attachments, and webview file calls remain supported. Their HTTP bytes stream through local storage. `getBytes` still returns a full byte array by request. Blob IDs and asset references remain different contracts; no blob migration or API removal is required.
+
 Keep every extension-owned project file under `.pstdio/extension-storage/<package-name>/`,
 including configuration, caches, drafts, prototypes, evidence, and migration backups.
 Use `ctx.extensionFiles` or artifact mounts for these files. See

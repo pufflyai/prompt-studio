@@ -7,6 +7,17 @@ import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 export const makeStorage = () => {
   const state = new Map<string, unknown>();
   const api: CommandRunnerEnvironment["storage"] = {
+    assets: {
+      stage: async () => {
+        throw new Error("Asset staging requires the host runtime");
+      },
+      getTransfer: async () => undefined,
+      cancel: async () => undefined,
+      read: async () => {
+        throw new Error("Asset reads require the host runtime");
+      },
+      verifyComplete: async () => {},
+    },
     scope: () => api,
     files: {
       put: async () => ({}) as never,

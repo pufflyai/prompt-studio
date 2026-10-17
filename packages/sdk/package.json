@@ -64,6 +64,7 @@
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "mustache": "^4.2.0",
     "zod": "^4.3.6"
   },

@@ -9,6 +9,7 @@ import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
+import { registerAssetStorageSmokeTests } from "./packaged-assets-smoke";
 // Includes retained creation drafts, backdrop protection, and creation without row activation.
 import { registerBoardPanningSmokeTests } from "./packaged-board-panning-smoke";
 // Includes native Workspaces, flat And/Or filters, CLI edits, sync defaults and a runtime restart.
@@ -89,6 +90,7 @@ registerConcurrentExtensionSmokeTests();
 registerExtensionViewsSmokeTests();
 registerCollectionViewOrderSmokeTests();
 registerConnectionStatusSmokeTests();
+registerAssetStorageSmokeTests();
 
 // extension-browser-install.test.ts installs the cached Playwright package and visits a smoke page.
 

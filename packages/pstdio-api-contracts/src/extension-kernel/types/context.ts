@@ -1,6 +1,7 @@
 import type { TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
 import type { Skill } from "../../skills";
+import type { ExtensionAssetsApi } from "./assets";
 import type { ExtensionAutomationApi } from "./automation";
 import type {
   CommandHelpersApi,
@@ -38,6 +39,7 @@ export type StorageScope =
   | { type: string; id: string };
 
 export interface ExtensionStorageApi {
+  assets: ExtensionAssetsApi;
   scope(scope: StorageScope): ExtensionStorageApi;
   files: ExtensionBlobsApi;
   get<T = unknown>(key: string): Promise<T | undefined>;

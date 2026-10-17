@@ -302,6 +302,13 @@
       "when": 1792094529755,
       "tag": "0042_known_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792103073932,
+      "tag": "0043_groovy_diamondback",
+      "breakpoints": true
     }
   ]
 }
