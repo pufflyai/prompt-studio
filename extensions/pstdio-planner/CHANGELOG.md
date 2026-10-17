@@ -1,5 +1,22 @@
 # pstdio-planner
 
+## 0.44.0
+
+_2026-10-17_
+
+### Minor Changes
+
+- 8fe8702: Query current work, verify Done dependency commits and combine independent stacks, let implementation owners reconcile Git conflicts and repair existing workspaces before resuming, derive dependency waiting without stale text blockers, keep Tickets and Project Timeline views independent, reflect stopped workers and pending input in managed ticket statuses, show complexity-weighted milestone ETA, navigate the timeline with map-style pan and pinch gestures, and align supervisor wake checks and dispatch with the requested work scope while using short follow-ups and keeping unchanged active work asleep until progress stalls for an hour.
+
+### Patch Changes
+
+- d3a0941: Keep extension configuration, drafts, prototypes, tickets, reports, and backups in extension-storage.
+- 452aeb8: Package Planner's shared filter with its declared runtime dependencies.
+- 28e81d6: Start a fresh Auto Build supervisor after stopping.
+- 77fa5d8: Write ticket and PR titles that say what gets better for people instead of naming the code change.
+- d5acfdd: Refresh Planner's bundled filter control with the list row tooltip fix.
+- 5fc8f1d: Keep saved Auto Build failures in the status popover instead of repeating them in the timeline and restart form.
+
 ## 0.43.1
 
 _2026-10-13_

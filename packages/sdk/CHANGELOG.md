@@ -1,5 +1,29 @@
 # @pstdio/sdk
 
+## 0.44.0
+
+_2026-10-17_
+
+### Minor Changes
+
+- 64aff9e: Move allocated files to publisher-isolated extension storage in extension API 0.2.
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- 6655795: Add extension-owned data migration versions and scoped access to retained legacy records.
+- e2b23f5: Add typed page params and persist extension-owned webview preferences on the server.
+- 0b86513: Add labeled resource menu sections and disabled action contracts.
+- 39d5ddf: Add durable grouped storage with guarded saves, retained conflicts, and public SDK access.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- 26bb359: Add stable workbench bindings and isolate local runtime identities, connections, and caches.
+- bc13b78: Add resumable verified asset storage with streaming uploads and retained immutable versions.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+
+### Patch Changes
+
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- 4b3c6cb: Expose execution exit evidence and guard automatic session continuation against changed runs.
+- 83d67ff: Let extension tree rows show a tooltip anywhere on the row with the new `tooltip` field, such as a file's full path.
+
 ## 0.43.1
 
 _2026-10-13_

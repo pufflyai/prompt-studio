@@ -1,5 +1,27 @@
 # @pstdio/workbench
 
+## 0.44.0
+
+_2026-10-17_
+
+### Minor Changes
+
+- e2b23f5: Add typed page params and persist extension-owned webview preferences on the server.
+- 452aeb8: Allow reordering saved views in Kanban boards and data tables with drag and keyboard controls.
+
+### Patch Changes
+
+- bcb38f8: Add linked count badges and restore document breadcrumb ancestry through owner resource resolution.
+- fb0c413: Show full tab titles on hover and keyboard focus.
+- 3157d46: Let resource owners open claimed file paths and show resource bubbles in rich messages.
+- e419d9d: Add virtual board rendering, complete move callbacks, and schema-only view refresh.
+- 310e039: Open core pages while extension startup continues in the background.
+- 1dc235f: Keep navigation visible without load-error notices in the nav panel.
+- 0325001: Add shared session rename, archive, and guarded deletion actions with synced navigation and public SDK support.
+- 26bb359: Add stable workbench bindings and isolate local runtime identities, connections, and caches.
+- 83d67ff: Let extension tree rows show a tooltip anywhere on the row with the new `tooltip` field, such as a file's full path.
+- 4b3c6cb: Place native extension controls in their Settings tab, save rapid edits in order, preserve status colors, and validate resource links against the enabled extension owner.
+
 ## 0.43.1
 
 _2026-10-13_

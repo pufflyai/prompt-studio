@@ -1,5 +1,14 @@
 # @pstdio/desktop
 
+## 0.44.0
+
+_2026-10-17_
+
+### Patch Changes
+
+- d4a9bbc: Move Settings into the macOS Prompt Studio menu with its Command+Comma shortcut.
+- 1ec80dd: Keep startup waiting with progress and a 20-second notice, wait for cleanup on Quit, and hide project search below eight projects.
+
 ## 0.43.1
 
 _2026-10-13_
