@@ -1,0 +1,1 @@
+ALTER TABLE "extension_storage_journal" ADD COLUMN "recovery_proof" text;

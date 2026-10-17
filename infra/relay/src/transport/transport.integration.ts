@@ -15,6 +15,7 @@ test("a current environment reads its initialized relay scope through real HTTP 
       storage: context.storage,
       assets: context.assets,
       verifyAccess: context.verifyAccess,
+      recovery: context.recovery,
     },
   );
   try {

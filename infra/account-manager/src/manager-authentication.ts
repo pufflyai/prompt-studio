@@ -8,6 +8,7 @@ import * as authSchema from "./auth-schema";
 import { digestCredential } from "./credential";
 import { connectManager } from "./database";
 import { createOwnerAccess } from "./owner-access";
+import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { accounts, credentials } from "./schema";
 import { withAccountTransaction } from "./transactions";
 
@@ -42,13 +43,14 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
       ),
     jwks: () => auth.api.getJwks(),
     async renew(token: string, workbenchId: string) {
+      identitySchema.parse(workbenchId);
+      let category: "database" | "signing" = "database";
       try {
-        identitySchema.parse(workbenchId);
         const [candidate] = await connection.db
           .select({ accountId: credentials.accountId })
           .from(credentials)
           .where(eq(credentials.digest, digestCredential(token)));
-        if (!candidate) throw new Error("Unavailable grant");
+        if (!candidate) throw new EnvironmentAccessDenied();
         return await withAccountTransaction(connection.db, candidate.accountId, async (transaction) => {
           const [grant] = await transaction
             .select({
@@ -68,10 +70,11 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
                 sql`${credentials.expiresAt} > clock_timestamp()`,
               ),
             );
-          if (!grant) throw new Error("Unavailable grant");
+          if (!grant) throw new EnvironmentAccessDenied();
           const iat = Math.floor(Date.now() / 1000);
           const exp = Math.min(iat + config.accessLifetimeSeconds, Math.floor(grant.expiresAt.getTime() / 1000));
-          if (exp <= iat) throw new Error("Expired grant");
+          if (exp <= iat) throw new EnvironmentAccessDenied();
+          category = "signing";
           const signed = await auth.api.signJWT({
             body: {
               payload: {
@@ -87,8 +90,9 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
           });
           return { token: signed.token, expiresAt: new Date(exp * 1000).toISOString() };
         });
-      } catch {
-        throw new Error("Environment access unavailable");
+      } catch (error) {
+        if (error instanceof EnvironmentAccessDenied) throw error;
+        throw new EnvironmentAccessFailure(category);
       }
     },
     close: connection.close,

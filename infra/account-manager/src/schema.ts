@@ -1,4 +1,4 @@
-import { foreignKey, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { foreignKey, index, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { Json } from "pstdio-sync-contracts";
 
 export const accounts = pgTable("manager_accounts", {
@@ -34,6 +34,7 @@ export const credentials = pgTable(
   },
   (table) => [
     uniqueIndex("manager_credentials_digest").on(table.digest),
+    index("manager_credentials_account_environment").on(table.accountId, table.environmentId),
     foreignKey({
       columns: [table.accountId, table.workbenchId],
       foreignColumns: [workbenches.accountId, workbenches.id],

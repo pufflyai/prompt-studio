@@ -14,6 +14,7 @@ import {
 assert.equal(process.env.DATABASE_URL, undefined);
 assert.equal(process.env.MANAGER_DATABASE_URL, undefined);
 assert.equal(process.env.MANAGER_SERVICE_SECRET, undefined);
+assert.equal(process.env.RELAY_RECOVERY_KEY_FILE, undefined);
 const scope = {
   accountId: process.env.SMOKE_ACCOUNT_ID!,
   workbenchId: process.env.SMOKE_WORKBENCH_ID!,
@@ -87,6 +88,7 @@ try {
   });
   const receipt = receiptSchema.parse(await (await call("submit", mutation)).json());
   assert.equal(receipt.status, "accepted");
+  assert.match(receipt.recoveryProof!, /^[0-9a-f]{64}$/);
   assert.deepEqual(await (await call("submit", mutation)).json(), receipt);
   await changed.promise;
   const replay = relayReplayResultSchema.parse(await (await call("replay", initial.checkpoint)).json());

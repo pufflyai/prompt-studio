@@ -11,7 +11,7 @@ COPY infra/relay/scripts ./infra/relay/scripts
 COPY infra/account-manager/src ./infra/account-manager/src
 COPY packages/pstdio-sync/src ./packages/pstdio-sync/src
 COPY packages/pstdio-sync-contracts/src ./packages/pstdio-sync-contracts/src
-RUN bun build infra/relay/src/server.ts infra/relay/src/index.ts infra/relay/scripts/smoke.ts infra/relay/scripts/initialize.fixture.ts infra/relay/scripts/transport-client-smoke.ts --target bun --outdir dist
+RUN bun build infra/relay/src/server.ts infra/relay/src/index.ts infra/relay/scripts/smoke.ts infra/relay/scripts/initialize.fixture.ts infra/relay/scripts/transport-client-smoke.ts infra/relay/scripts/recovery-key.fixture.ts --target bun --outdir dist
 
 RUN bun build infra/account-manager/src/server.ts --target bun --outfile dist/manager.js
 
@@ -39,10 +39,11 @@ CMD ["bun", "smoke.js"]
 
 FROM base AS fixture
 COPY --from=build --chown=bun:bun /build/dist/scripts/initialize.fixture.js ./initialize.js
+COPY --from=build --chown=bun:bun /build/dist/scripts/recovery-key.fixture.js ./recovery-key.js
 COPY --from=build --chown=bun:bun /build/dist/manager.js ./manager.js
 COPY --chown=bun:bun infra/account-manager/drizzle ./manager-drizzle
 USER root
-RUN mkdir /fixture /access-trust && chown bun:bun /fixture /access-trust
+RUN mkdir /fixture /access-trust /recovery && chown bun:bun /fixture /access-trust /recovery
 USER bun
 CMD ["bun", "initialize.js"]
 

@@ -1,6 +1,7 @@
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { createManagerAuthentication } from "./manager-authentication";
+import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
 const renewal = z.strictObject({ workbenchId: identitySchema });
@@ -11,15 +12,27 @@ const json = (body: unknown, status = 200, headers?: ConstructorParameters<typeo
   });
 const unauthorized = () => json({ error: "Authentication unavailable" }, 401, { "www-authenticate": "Bearer" });
 
-const renewAccess = async (auth: Authentication, request: Request) => {
+type RenewalLog = (event: { event: "environment_access.failed"; category: "database" | "signing" | "service" }) => void;
+
+const renewAccess = async (auth: Authentication, request: Request, log: RenewalLog) => {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, { allow: "POST" });
+  const token = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
+  if (!token) return unauthorized();
+  let workbenchId: string;
   try {
-    const token = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
-    if (!token) return unauthorized();
-    const { workbenchId } = renewal.parse(await request.json());
-    return json(await auth.renew(token, workbenchId));
+    workbenchId = renewal.parse(await request.json()).workbenchId;
   } catch {
     return unauthorized();
+  }
+  try {
+    return json(await auth.renew(token, workbenchId));
+  } catch (error) {
+    if (error instanceof EnvironmentAccessDenied) return unauthorized();
+    log({
+      event: "environment_access.failed",
+      category: error instanceof EnvironmentAccessFailure ? error.category : "service",
+    });
+    return json({ error: "Environment access service unavailable" }, 503);
   }
 };
 
@@ -48,13 +61,17 @@ const manageEnvironments = async (
   }
 };
 
-export const createManagerHandler = (auth: Authentication, origin: string) => {
+export const createManagerHandler = (
+  auth: Authentication,
+  origin: string,
+  log: RenewalLog = (event) => console.error(JSON.stringify(event)),
+) => {
   const canonicalOrigin = new URL(origin).origin;
   return async (request: Request) => {
     const path = new URL(request.url).pathname;
     if (path.startsWith("/api/auth/")) return auth.handler(request);
     if (path === "/health") return json({ ok: true });
-    if (path === "/v1/environment-access") return renewAccess(auth, request);
+    if (path === "/v1/environment-access") return renewAccess(auth, request, log);
     const management = /^\/v1\/accounts\/([^/]+)\/environments(?:\/(replace|revoke))?$/.exec(path);
     if (management) return manageEnvironments(auth, canonicalOrigin, request, management);
     return json({ error: "Not found" }, 404);
