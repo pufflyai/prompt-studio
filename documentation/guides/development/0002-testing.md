@@ -52,7 +52,7 @@ Test and Build runs one stage per event. The `scope` job runs `scripts/ci/pull-r
 
 | Stage | Event | Runs | `ci_passed` requires |
 | --- | --- | --- | --- |
-| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI, license and Docker checks run when their files change. | No job failed |
+| Pull request | Opening, reopening, a new push, or a new label on a pull request | Linux only: static checks, and lint and unit tests scoped to the changed packages. The published extension, harness CLI and license checks run when their files change. | No job failed |
 | Merge queue | `merge_group` | Static checks and an unsigned build of every client. No tests and no lint. | The static check, client build and Docker jobs passed |
 | Full | A push to `main`, a manual run, or a pull request with the `ci:full` label | Every job, including Windows, e2e, the desktop tests and the packaged toolchain check | Every job passed |
 
@@ -66,10 +66,9 @@ The pull request stage is meant to finish in a few minutes, so it runs only Linu
 - `lint_and_test` builds, lints and tests the changed packages and the packages that depend on them. It compares the merge commit with the target branch.
 - `database_tests` runs the `pstdio-api` tests in four shards and the `pstdio-db` tests in three, when a change affects either package. Together these suites took 6 to 8 minutes in one job, so each shard runs on its own runner. The `pstdio-db` shards use `bun test --shard`; the API test runner accepts the same `--shard=<index>/<count>` argument.
 - `published_extensions` runs for extension, SDK, UI, and API contract changes. `harness_cli_support` runs the minimum supported agent CLIs for harness changes. `license_check` runs when a `package.json` or `bun.lock` changes.
-- `build_docker` builds both images when a `package.json`, `bun.lock`, or `Dockerfile` changes. This catches container install failures before the merge queue.
-- A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the checks above, including Docker builds. This covers `.dockerignore`, `bunfig.toml`, and `.npmrc`. Markdown files, files under `design/`, and `LICENSE` do not count.
+- A change under `scripts/` or any other file outside the workspace packages lints and tests every package and runs the three checks above. Markdown files, files under `design/`, and `LICENSE` do not count.
 
-Windows, e2e, packaged, and desktop jobs do not run in the scoped pull request stage. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
+Windows, e2e, packaged, desktop, and Docker jobs do not run on a pull request. Add the `ci:full` label to a risky pull request to run the full stage, for example a change to process launching, the database, a harness, or packaging. Adding the label starts a full run, and each later push to the pull request runs the full stage too. Removing the label starts no run; the next push runs the scoped checks.
 
 ### Merge queue stage
 
@@ -156,7 +155,7 @@ Tests install local fixture extensions from `packages/e2e/src/default-extensions
 
 Playwright uses one worker and no retries. CI rejects focused Playwright tests (`test.only`). UI and Vite traces are recorded on the first run and retained on failure. This follows [Playwright's trace modes](https://playwright.dev/docs/test-use-options#recording-options).
 
-CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds run in the merge queue and full stages, and on pull requests that change their inputs. Both images copy the root Bun configuration and every workspace manifest so frozen installs use the same workspace graph and linking rules as the checkout. Local extension source stays outside the build context.
+CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Docker builds run in the merge queue and full stages, next to the other jobs.
 
 Evidence artifact names end in `-attempt-<run_attempt>` so a manual rerun keeps the earlier evidence. UI shards upload `ui-e2e-results-<shard>-attempt-<run_attempt>`; packaged/Vite uploads `packaged-vite-e2e-results-attempt-<run_attempt>`. Desktop test rows upload `desktop-test-results-<target>-attempt-<run_attempt>`; release rows upload `test-results-desktop-<target>-attempt-<run_attempt>`. Windows update checks upload `windows-installation-readiness-attempt-<run_attempt>`. Failed native toolchain checks upload `packaged-toolchain-<platform_pkg>-attempt-<run_attempt>`, including a timestamped `verification.log`.
 

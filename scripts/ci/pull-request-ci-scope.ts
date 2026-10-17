@@ -34,7 +34,6 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
   if (event === "merge_group") {
     return {
       stage: "merge_queue",
-      dockerBuild: true,
       relaySmoke: true,
       lernaFilter: "",
       license: false,
@@ -44,7 +43,6 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
     };
   }
   const everyCheck = {
-    dockerBuild: true,
     relaySmoke: true,
     lernaFilter: "",
     license: true,
@@ -61,7 +59,6 @@ export function resolveCiScope({ event, labels, changedFiles, packageDirs, affec
 
   return {
     stage: "pull_request",
-    dockerBuild: changedFiles.some((file) => ["package.json", "bun.lock", "Dockerfile"].includes(basename(file))),
     lernaFilter: `--since ${PULL_REQUEST_BASE}`,
     relaySmoke: affectedPackages.includes("pstdio-relay"),
     databaseTests: affectedPackages.some((name) => SHARDED_TEST_PACKAGES.includes(name)),

@@ -23,7 +23,6 @@ const pullRequest = (changedFiles: string[], labels: string[] = [], affectedPack
 
 const full = {
   stage: "full",
-  dockerBuild: true,
   relaySmoke: true,
   lernaFilter: "",
   license: true,
@@ -36,7 +35,6 @@ const everyLinuxCheck = { ...full, stage: "pull_request" };
 
 const scoped = {
   stage: "pull_request",
-  dockerBuild: false,
   relaySmoke: false,
   lernaFilter: "--since HEAD~1",
   license: false,
@@ -69,7 +67,6 @@ describe("CI stage", () => {
 
     expect(scope).toEqual({
       stage: "merge_queue",
-      dockerBuild: true,
       relaySmoke: true,
       lernaFilter: "",
       license: false,
@@ -95,21 +92,6 @@ describe("pull request CI scope", () => {
 
   test("a manifest change runs the license check", () => {
     expect(pullRequest(["packages/ui/package.json"]).license).toBe(true);
-  });
-
-  test("container and dependency inputs build Docker images before entering the merge queue", () => {
-    for (const file of [
-      ".dockerignore",
-      "bunfig.toml",
-      "bun.lock",
-      "package.json",
-      "packages/ui/package.json",
-      "extensions/pstdio-planner/bun.lock",
-      "clients/landing-page/Dockerfile",
-      "packages/pstdio-api/Dockerfile",
-    ]) {
-      expect(pullRequest([file]).dockerBuild, file).toBe(true);
-    }
   });
 
   test("documentation outside packages runs no extra jobs", () => {
