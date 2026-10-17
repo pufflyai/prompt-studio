@@ -1,0 +1,65 @@
+import { expect } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { e2eExtensions } from "../default-extensions";
+import { folderProjectInput } from "../helpers/folder-project";
+import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+
+export interface PackagedPlanner {
+  baseUrl: string;
+  projectId: string;
+  headers: Record<string, string>;
+  metadata: WorkbenchExtensionMetadata;
+}
+
+// Run a Planner command through the packaged HTTP API and return its value.
+export const commandRunner =
+  (input: { baseUrl: string; projectId: string; headers: Record<string, string> }) =>
+  async (command: string, params: unknown) => {
+    const { baseUrl, projectId, headers } = input;
+    const response = await fetch(
+      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      {
+        method: "POST",
+        headers: { ...headers, "content-type": "application/json" },
+        body: JSON.stringify({ params }),
+      },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.outcome.status, JSON.stringify(body)).toBe("success");
+    return body.outcome.value;
+  };
+
+export async function withPackagedPlanner(check: (input: PackagedPlanner) => Promise<void>) {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-"));
+  let host: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
+  try {
+    host = await startPackagedServe(root, {
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+        "workbench-fixture",
+        "extension-lab",
+        "pstdio-artifacts",
+        "pstdio-planner",
+        "pstdio-reports",
+      ),
+      PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
+    });
+    const headers = runtimeAuthorization(host.descriptor);
+    const response = await fetch(`${host.baseUrl}/v1/projects`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "packaged-workspace-action-project" })),
+    });
+    expect(response.status).toBe(201);
+    const project = (await response.json()) as { id: string };
+    const metadata = await fetch(`${host.baseUrl}/v1/projects/${project.id}/extensions/ui`, { headers });
+    expect(metadata.status).toBe(200);
+    await check({ baseUrl: host.baseUrl, projectId: project.id, headers, metadata: await metadata.json() });
+  } finally {
+    if (host) await stopProcess(host.child);
+    rmSync(root, { recursive: true, force: true });
+  }
+}

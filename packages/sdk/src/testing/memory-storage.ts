@@ -1,8 +1,10 @@
+import { createDataMigrationRunner } from "pstdio-api-contracts";
 import type {
   ExtensionBlobRef,
   ExtensionBlobsApi,
   ExtensionStorageApi,
   ExtensionStorageCollectionApi,
+  JsonObject,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
 import { createMemoryAssets } from "./memory-assets";
@@ -10,10 +12,28 @@ import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record
 
 export type { MemoryStorageSeed } from "./memory-record-owner";
 
-export const createMemoryStorage = (seed?: MemoryStorageSeed): ExtensionStorageApi => {
+interface MemoryStorageOptions extends MemoryStorageSeed {
+  legacyData?: Record<string, { version: string; records: JsonObject[] }>;
+}
+
+export const createMemoryStorage = (options: MemoryStorageOptions = {}): ExtensionStorageApi => {
   const assets = createMemoryAssets();
-  const owner = createMemoryRecordOwner(assets, seed);
+  const owner = createMemoryRecordOwner(assets, options);
   const blobStores = new Map<string, Map<string, ExtensionBlobRef & { data: Uint8Array }>>();
+  const migrations = new Map<string, ReturnType<typeof createDataMigrationRunner>>();
+  const migrateFor = (scope: string) => {
+    const existing = migrations.get(scope);
+    if (existing) return existing;
+    let version = 0;
+    const migrate = createDataMigrationRunner({
+      readVersion: async () => version,
+      writeVersion: async (next) => {
+        version = next;
+      },
+    });
+    migrations.set(scope, migrate);
+    return migrate;
+  };
 
   const blobStore = (name: string) => {
     const existing = blobStores.get(name);
@@ -69,6 +89,8 @@ export const createMemoryStorage = (seed?: MemoryStorageSeed): ExtensionStorageA
     const { records, legacy } = owner.scope(scopeType, scopeId);
     const blobKey = JSON.stringify([scopeType, scopeId]);
     const api: ExtensionStorageApi = {
+      migrate: migrateFor(blobKey),
+      readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
       records,
       assets,
       files: blobsApi(blobKey),

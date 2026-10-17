@@ -1,4 +1,5 @@
 import type { ExtensionAssetsApi } from "./assets";
+import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
 import type { ExtensionRecordsApi } from "./storage-records";
 
@@ -23,6 +24,10 @@ export type StorageScope =
   | { type: string; id: string };
 
 export interface ExtensionStorageApi {
+  /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */
+  migrate(version: number, run: (previousVersion: number) => Promise<void>): Promise<void>;
+  /** Read retained records from a removed schema, restricted to this project and instance. */
+  readLegacy(source: string): Promise<{ version: string; records: JsonObject[] } | undefined>;
   records: ExtensionRecordsApi;
   assets: ExtensionAssetsApi;
   scope(scope: StorageScope): ExtensionStorageApi;

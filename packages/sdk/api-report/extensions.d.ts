@@ -2590,6 +2590,11 @@ type StorageScope = {
   id: string;
 };
 interface ExtensionStorageApi {
+  migrate(version: number, run: (previousVersion: number) => Promise<void>): Promise<void>;
+  readLegacy(source: string): Promise<{
+    version: string;
+    records: JsonObject[];
+  } | undefined>;
   records: ExtensionRecordsApi;
   assets: ExtensionAssetsApi;
   scope(scope: StorageScope): ExtensionStorageApi;
