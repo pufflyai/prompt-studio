@@ -133,17 +133,14 @@ const start = async () => {
               if (isEditableTarget(event.target) && !event.shiftKey) return;
 
               connection.remote
-                .call({
-                  method: "host.dispatchKeyboardEvent",
-                  params: {
-                    key: event.key,
-                    code: event.code,
-                    ctrlKey: event.ctrlKey,
-                    metaKey: event.metaKey,
-                    altKey: event.altKey,
-                    shiftKey: event.shiftKey,
-                    repeat: event.repeat,
-                  },
+                .dispatchKeyboardEvent({
+                  key: event.key,
+                  code: event.code,
+                  ctrlKey: event.ctrlKey,
+                  metaKey: event.metaKey,
+                  altKey: event.altKey,
+                  shiftKey: event.shiftKey,
+                  repeat: event.repeat,
                 })
                 .catch(() => {});
             },

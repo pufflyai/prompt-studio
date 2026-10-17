@@ -1,8 +1,7 @@
 import { Button, Dialog, Input, Stack, Text } from "@chakra-ui/react";
-import type { Workspace } from "@pstdio/sdk/resources";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { FolderPicker } from "@/shared/filesystem/folder-picker";
 import { ProjectSetupStatus } from "@/shared/projects/project-setup-status";
 import { useProject } from "@/shared/projects/use-project";
@@ -18,7 +17,7 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
   const queryKey = ["project-workspaces", projectId];
   const query = useQuery({
     queryKey,
-    queryFn: () => apiRequest<Workspace[]>(`/v1/workspaces?project_id=${projectId}`),
+    queryFn: () => getApiClient().workspaces.list(projectId!),
     enabled: Boolean(projectId),
   });
   const home = query.data?.find((workspace) => workspace.is_default);
@@ -27,17 +26,14 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
   }, [project?.name]);
   const attach = useMutation({
     mutationFn: (path: string) =>
-      apiRequest(`/v1/projects/${projectId}/initial-workspace`, {
-        method: "POST",
-        body: { provider_id: "pstdio.root", params: { path } },
-      }),
+      getApiClient().projects.attachInitialWorkspace(projectId!, { provider_id: "pstdio.root", params: { path } }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey });
       setAttaching(false);
     },
   });
   const retry = useMutation({
-    mutationFn: () => apiRequest<Workspace>(`/v1/projects/${projectId}/retry-setup`, { method: "POST" }),
+    mutationFn: () => getApiClient().projects.retrySetup(projectId!),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey });
     },

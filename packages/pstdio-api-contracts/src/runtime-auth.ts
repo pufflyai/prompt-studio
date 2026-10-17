@@ -9,3 +9,10 @@ export const RUNTIME_WEBSOCKET_PROTOCOL = "pstdio";
  * subprotocol with this prefix (ADR 0057).
  */
 export const WEBSOCKET_CREDENTIAL_PROTOCOL_PREFIX = "pstdio.bearer.";
+
+export interface RuntimeReadyResponse {
+  ok: true;
+  instanceId: string;
+  ownerType: "desktop" | "persistent";
+  protocolVersion: 1;
+}

@@ -13,7 +13,9 @@ import { checkExtensionApiReleaseStep } from "./extension-api-release-step";
 const ROOT = path.resolve(import.meta.dir, "../..");
 const SDK_DIR = path.join(ROOT, "packages/sdk");
 const REPORT_DIR = "packages/sdk/api-report";
-const REPORT_FILES = ["extensions.d.ts", "extensions-react.d.ts"];
+const REPORT_FILES = (JSON.parse(readFileSync(path.join(SDK_DIR, "api-report-entries.json"), "utf8")) as string[]).map(
+  (entry) => `${entry.replaceAll("/", "-")}.d.ts`,
+);
 const VERSION_FILE = "packages/pstdio-api-contracts/src/extension-kernel/types/extension.ts";
 
 const run = (command: string[], cwd = ROOT) => {

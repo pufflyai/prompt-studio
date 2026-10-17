@@ -320,6 +320,18 @@ come from `/api` and `/extensions`. Give each type one export path.
 
 Change level: deprecations are additive in 0.44. Removing exports is breaking in 0.45.
 
+### Public-surface decision for 0.44
+
+`/extensions`, `/extensions/react`, `/testing`, `/data`, `/prompts`, `/client`, `/api` and
+`/resources` are public and reported. `/hooks` is host-only and deprecated. External scripts and
+published host packages are supported consumers too. `/resources` is the canonical path for asset
+and notification types; old export paths stay as deprecated aliases. See the complete policy in
+[API versioning](../../references/extensions/0014-api-versioning.md#public-sdk-subpaths).
+
+The dashboard uses typed SDK methods for JSON requests. Methods with no repository caller must
+still be deprecated before removal because `/client` is public. They cannot be deleted during
+the 0.44 adoption step. The 0.45 removal inventory owns their final removal.
+
 ## Delivery and acceptance
 
 Follow the plan in [0011](0011-simplify-extension-apis.md#delivery-and-acceptance):

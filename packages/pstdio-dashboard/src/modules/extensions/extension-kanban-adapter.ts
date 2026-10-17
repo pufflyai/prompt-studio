@@ -9,7 +9,7 @@ import {
   type WorkbenchModuleContext,
 } from "@pstdio/workbench";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/extensions";
-import { createApiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { canonicalDashboardPageTarget, canonicalDashboardResource } from "@/shared/extensions/resource-identity";
@@ -138,18 +138,12 @@ const uploadCreatedFile = async (input: {
   projectId: string;
   resourceId: string;
 }) => {
-  const query = new URLSearchParams({ scope_type: "resource", scope_id: input.resourceId });
-  return createApiRequest()<Record<string, unknown>>(
-    `/v1/projects/${encodeURIComponent(input.projectId)}/extensions/${encodeURIComponent(input.extensionInstanceId)}/files?${query.toString()}`,
-    {
-      method: "POST",
-      body: await input.file.arrayBuffer(),
-      headers: {
-        "content-type": input.file.type || "application/octet-stream",
-        "x-file-name": encodeURIComponent(input.file.name),
-      },
-    },
-  );
+  return getApiClient().extensions.files.upload(input.projectId, input.extensionInstanceId, {
+    name: input.file.name,
+    data: await input.file.arrayBuffer(),
+    mimeType: input.file.type || undefined,
+    scope: { type: "resource", id: input.resourceId },
+  });
 };
 const attachCreatedFiles = async (input: {
   created: unknown;

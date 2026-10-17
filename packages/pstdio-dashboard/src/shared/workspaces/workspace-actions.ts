@@ -1,11 +1,5 @@
 import type { CreateWorkspaceCommandParams } from "@pstdio/sdk/extensions";
-import { apiRequest } from "@/lib/api";
-
-interface DashboardWorkspaceResponse {
-  id: string;
-  workspace_shorthand: string;
-  name: string;
-}
+import { getApiClient } from "@/lib/api";
 
 interface CreateDashboardWorkspaceInput extends CreateWorkspaceCommandParams {
   projectId: string;
@@ -14,19 +8,15 @@ interface CreateDashboardWorkspaceInput extends CreateWorkspaceCommandParams {
 }
 
 export const createDashboardWorkspace = (input: CreateDashboardWorkspaceInput) =>
-  apiRequest<DashboardWorkspaceResponse>("/v1/workspaces", {
-    method: "POST",
-    body: {
-      project_id: input.projectId,
-      provider_id: input.providerId,
-      params: input.params,
-      anchors: input.anchors,
-      shorthand_base: input.shorthand_base,
-    },
+  getApiClient().workspaces.create({
+    project_id: input.projectId,
+    provider_id: input.providerId,
+    params: input.params,
+    anchors: input.anchors,
+    shorthand_base: input.shorthand_base,
   });
 
-export const deleteDashboardWorkspace = (workspaceId: string) =>
-  apiRequest(`/v1/workspaces/${workspaceId}`, { method: "DELETE" });
+export const deleteDashboardWorkspace = (workspaceId: string) => getApiClient().workspaces.delete(workspaceId);
 
 export const renameDashboardWorkspace = (workspaceId: string, name: string) =>
-  apiRequest<DashboardWorkspaceResponse>(`/v1/workspaces/${workspaceId}`, { method: "PATCH", body: { name } });
+  getApiClient().workspaces.rename(workspaceId, { name });

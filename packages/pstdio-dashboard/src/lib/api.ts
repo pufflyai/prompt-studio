@@ -1,14 +1,5 @@
-import { createClient, createRequest, PstdioApiError, type PstdioClient } from "@pstdio/sdk/client";
+import { createClient, type PstdioClient } from "@pstdio/sdk/client";
 import { readBrowserSession } from "./browser-session";
-
-type ApiRequestOptions = {
-  method?: string;
-  body?: unknown;
-  signal?: AbortSignal;
-  headers?: HeadersInit;
-  cache?: RequestCache;
-  allowNotFound?: boolean;
-};
 
 import { resolveApiBaseUrl } from "./runtime-config";
 
@@ -70,21 +61,3 @@ export const getApiClient = (options = apiClientOptions()) => {
 
   return apiClientInstance;
 };
-
-export const createApiRequest =
-  (connection = apiClientOptions()) =>
-  async <T>(path: string, options: ApiRequestOptions = {}) => {
-    const { allowNotFound, ...requestOptions } = options;
-    const request = createRequest(connection);
-
-    try {
-      return await request<T>(path, requestOptions);
-    } catch (error) {
-      if (allowNotFound && error instanceof PstdioApiError && error.status === 404) {
-        return null as T;
-      }
-
-      throw error;
-    }
-  };
-export const apiRequest = <T>(path: string, options: ApiRequestOptions = {}) => createApiRequest()<T>(path, options);

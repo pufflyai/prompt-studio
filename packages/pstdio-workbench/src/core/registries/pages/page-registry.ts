@@ -1,4 +1,4 @@
-import { validatePageParamDefinitions } from "@pstdio/sdk/extensions";
+import { validatePageParamDefinitions } from "pstdio-api-contracts";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";

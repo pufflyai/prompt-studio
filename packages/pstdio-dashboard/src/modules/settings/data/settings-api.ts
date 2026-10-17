@@ -1,7 +1,4 @@
-import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
-import { apiRequest } from "@/lib/api";
-
-export const getSettings = () => apiRequest<Settings>("/v1/settings");
-
-export const updateSettings = (input: UpdateSettingsInput) =>
-  apiRequest<Settings>("/v1/settings", { method: "PATCH", body: input });
+import type { UpdateSettingsInput } from "@pstdio/sdk/api";
+import { getApiClient } from "@/lib/api";
+export const getSettings = () => getApiClient().settings.get();
+export const updateSettings = (input: UpdateSettingsInput) => getApiClient().settings.update(input);

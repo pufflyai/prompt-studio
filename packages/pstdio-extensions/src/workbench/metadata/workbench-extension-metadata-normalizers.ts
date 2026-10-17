@@ -6,7 +6,7 @@ import type {
   NavigationTarget,
   RendererEventReference,
 } from "@pstdio/sdk/extensions";
-import { resolveEventReferenceId } from "@pstdio/sdk/extensions";
+import { resolveEventReferenceId } from "pstdio-api-contracts";
 
 export const normalizedRef = <Kind extends ContributionKind>(
   ref: ContributionRef<Kind>,

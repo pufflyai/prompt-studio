@@ -6,7 +6,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
 import { useSyncExternalStore } from "react";
-import { apiRequest } from "@/lib/api";
+import { getApiClient } from "@/lib/api";
 import { getCollectionsVersion, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -67,12 +67,9 @@ const actionByItem = (notification: Notification, itemAction: NotificationCenter
 const primaryAction = (notification: Notification) =>
   notification.actions.find((action) => action.primary) ?? notification.actions[0];
 
-const notificationPath = (notification: Notification, action: "read" | "dismiss") =>
-  `/v1/projects/${encodeURIComponent(notification.projectId)}/notifications/${encodeURIComponent(notification.id)}/${action}`;
-
 const markRead = async (notification: Notification) => {
   if (notification.status !== "open") return;
-  await apiRequest(notificationPath(notification, "read"), { method: "POST" });
+  await getApiClient().notifications.markRead(notification.projectId, notification.id);
 };
 
 const showError = (input: WorkbenchPanelRenderInput, title: string, error: unknown) => {
@@ -161,7 +158,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
     const notification = notificationByItem(notifications, item);
     if (!notification) return;
     try {
-      await apiRequest(notificationPath(notification, "dismiss"), { method: "POST" });
+      await getApiClient().notifications.dismiss(notification.projectId, notification.id);
     } catch (error) {
       showError(input, "Notification update failed", error);
     }
