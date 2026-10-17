@@ -22,6 +22,7 @@ import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
+import { verifyPackagedPreviewSelection } from "./packaged-preview-selection";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyPackagedSessionMenus } from "./packaged-session-menus";
 import { verifyPackagedShortcutReference } from "./packaged-shortcut-reference";
@@ -198,6 +199,7 @@ test.describe("packaged extension webviews", () => {
               project.id,
               runtimeAuthorization(started.descriptor),
             );
+            await verifyPackagedPreviewSelection(page, project.id, started.descriptor);
             await verifyPackagedPanelMenuTabs(page, started.baseUrl, project.id);
             await verifyPackagedCollectionBreadcrumb(
               page,
