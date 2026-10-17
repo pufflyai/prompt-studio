@@ -1,5 +1,6 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { reportTemplateAssets } from "../../report-templates";
+import { migrateReportTemplates } from "./migrate-templates";
 
 interface StoredTemplate {
   name: string;
@@ -21,6 +22,7 @@ const normalizeName = (name: string) => name.replaceAll("_", "-");
 const assetByName = (name: string) => reportTemplateAssets.find((asset) => normalizeName(asset.id) === name);
 
 export const listReportTemplates = async (ctx: CommandContext) => {
+  await migrateReportTemplates(ctx);
   const [storedTemplates, defaultNames] = await Promise.all([
     collection(ctx).list(),
     ctx.storage.get<Record<string, string>>("template-defaults"),
@@ -51,6 +53,7 @@ export const listReportTemplates = async (ctx: CommandContext) => {
 };
 
 export const readReportTemplate = async (ctx: CommandContext, name: string) => {
+  await migrateReportTemplates(ctx);
   const [stored, preference] = await Promise.all([collection(ctx).get(name), preferences(ctx).get(name)]);
   if (preference?.enabled === false) return null;
   if (stored?.deleted) return null;
@@ -72,6 +75,7 @@ export const saveReportTemplate = async (
   ctx: CommandContext,
   input: { name: string; title?: string; content: string },
 ) => {
+  await migrateReportTemplates(ctx);
   const current = await collection(ctx).get(input.name);
   const attachments = collection(ctx).attachments(input.name);
   const blob = await attachments.put({
@@ -98,6 +102,7 @@ export const saveReportTemplate = async (
 };
 
 export const deleteReportTemplate = async (ctx: CommandContext, name: string) => {
+  await migrateReportTemplates(ctx);
   const current = await collection(ctx).get(name);
   const asset = assetByName(name);
   if (asset) {

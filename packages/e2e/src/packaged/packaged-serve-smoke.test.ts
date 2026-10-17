@@ -18,7 +18,7 @@ import { registerConcurrentExtensionSmokeTests } from "./packaged-concurrent-ext
 // Independent hosts also bind one workbench identity to their own environment and folder.
 import { registerConcurrentHostsSmokeTests } from "./packaged-concurrent-hosts-smoke";
 import { registerConnectionStatusSmokeTests } from "./packaged-connection-status-smoke";
-// Core extension checks cover extension-owned draft storage and allocated file roots.
+// Core extension checks cover extension-owned draft storage, versioned template edits, and allocated file roots.
 // Theme assets carry app colors through the packaged appearance endpoint without UI runtime dependencies.
 // Core extension checks cover Notes ownership, Planner archive filters and commands,
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
