@@ -81,6 +81,7 @@ export const observeRuntimeShutdown = async (
   onShutdown: () => void,
   fetcher: RuntimeFetcher = fetch,
   signal?: AbortSignal,
+  onDisconnect?: () => void,
 ) => {
   let failures = 0;
   while (!signal?.aborted) {
@@ -94,6 +95,9 @@ export const observeRuntimeShutdown = async (
       onShutdown();
       return;
     }
+    if (signal?.aborted) return;
+    onDisconnect?.();
+    if (signal?.aborted) return;
     failures += 1;
     if (failures === 2) {
       createLogger({ service: "pstdio", component: "runtime-events" }).error(

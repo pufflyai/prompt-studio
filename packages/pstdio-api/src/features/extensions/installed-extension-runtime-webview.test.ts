@@ -18,7 +18,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     const targetedBuildReleased = new Promise<void>((resolve) => {
       releaseTargetedBuild = resolve;
     });
-    const runtime = await createInstalledExtensionRuntime({
+    const runtime = createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
       projectRuntimeCatalog: { invalidate: () => {} } as never,
       provisionWorkspacesUsingSource: async () => {},
@@ -38,6 +38,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
           if (sourcePath) await targetedBuildReleased;
         }),
     });
+    await runtime.ready;
 
     try {
       const targetedRefresh = runtime.refresh("/extensions/lab").then(() => {
@@ -52,7 +53,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       await targetedRefresh;
       expect(targetedRefreshFinished).toBe(true);
     } finally {
-      runtime.dispose();
+      await runtime.dispose();
     }
   });
 
@@ -63,7 +64,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       releaseUnexpectedRootRefresh = resolve;
     });
     const webviewRefreshes: Array<string | undefined> = [];
-    const runtime = await createInstalledExtensionRuntime({
+    const runtime = createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
       projectRuntimeCatalog: { invalidate: () => {} } as never,
       provisionWorkspacesUsingSource: async () => {},
@@ -86,6 +87,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
           webviewRefreshes.push(sourcePath);
         }),
     });
+    await runtime.ready;
     const targetedRefresh = runtime.refresh("/extensions/lab");
 
     try {
@@ -96,7 +98,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     } finally {
       releaseUnexpectedRootRefresh();
       await targetedRefresh;
-      runtime.dispose();
+      await runtime.dispose();
     }
   });
 });

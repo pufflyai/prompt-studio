@@ -111,7 +111,7 @@ export interface ResourceBadgeProps extends Omit<HTMLChakraProps<"span">, "onSel
   size?: ResourceBadgeSize;
   tone?: ResourceBadgeTone;
   icon?: ReactNode;
-  tooltip?: string;
+  tooltip?: string | false;
 }
 
 const DEFAULT_SIZE: ResourceBadgeSize = "md";
@@ -143,7 +143,7 @@ export const ResourceBadge = (props: ResourceBadgeProps) => {
       <chakra.span display="inline-flex" flexShrink={0}>
         {icon ?? <IconComp size={sizeStyles.iconSize} />}
       </chakra.span>
-      <Tooltip content={tooltip ?? fileName}>
+      <Tooltip content={tooltip ?? fileName} disabled={tooltip === false}>
         <Text
           maxW={{ base: "14rem" }}
           textOverflow="ellipsis"

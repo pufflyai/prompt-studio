@@ -2590,6 +2590,11 @@ type StorageScope = {
   id: string;
 };
 interface ExtensionStorageApi {
+  migrate(version: number, run: (previousVersion: number) => Promise<void>): Promise<void>;
+  readLegacy(source: string): Promise<{
+    version: string;
+    records: JsonObject[];
+  } | undefined>;
   records: ExtensionRecordsApi;
   assets: ExtensionAssetsApi;
   scope(scope: StorageScope): ExtensionStorageApi;
@@ -3650,6 +3655,10 @@ interface ResourceKindDefinition extends ContributionDefinition<"resource-kind">
   readonly menuSlots?: readonly ResourceMenuSlotDefinition[];
   readonly resolve?: CommandRef;
   readonly resolveMany?: CommandRef;
+  readonly paths?: readonly {
+    readonly prefix: string;
+    readonly resolve: CommandRef;
+  }[];
   readonly validateAnchors?: CommandRef;
 }
 interface ResourceHierarchyProvider extends ContributionDefinition<"resource-hierarchy-provider"> {

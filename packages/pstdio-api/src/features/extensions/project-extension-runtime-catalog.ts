@@ -177,7 +177,8 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       if (state.revision !== context.startRevision) throw discardStaleLoad(context);
       return publishSnapshot(state, context, loaded);
     } catch (error) {
-      if (!(error instanceof ExtensionRuntimeGenerationStaleError)) logLoadFailure(context, error);
+      if (error instanceof ExtensionRuntimeProjectMissingError) states.delete(projectId);
+      else if (!(error instanceof ExtensionRuntimeGenerationStaleError)) logLoadFailure(context, error);
       throw error;
     }
   };

@@ -1,10 +1,11 @@
 export interface ChatLinkCandidate {
   source: string;
-  origin: "markdown" | "inline-code" | "reference" | "tool";
+  origin: "markdown" | "inline-code" | "reference" | "tool" | "text";
 }
 
 export interface ChatLinkHandler {
   resolveHref(candidate: ChatLinkCandidate): string | null;
+  resolveResource?(candidate: ChatLinkCandidate): Promise<{ label: string; icon?: string; href: string | null } | null>;
   resolveImageSource?(source: string): Promise<string | null>;
   describe?(candidate: ChatLinkCandidate): string;
   open(candidate: ChatLinkCandidate): void | Promise<void>;

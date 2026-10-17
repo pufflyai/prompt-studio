@@ -21,6 +21,26 @@ const descriptor: RuntimeDescriptor = {
 };
 
 describe("runtime client", () => {
+  test("reports a disconnected stream so the owner can stop observing a dead runtime", async () => {
+    const abort = new AbortController();
+    let disconnected = 0;
+    await observeRuntimeShutdown(
+      descriptor,
+      () => {
+        throw new Error("Unexpected intentional shutdown");
+      },
+      async () => {
+        throw new Error("Connection refused");
+      },
+      abort.signal,
+      () => {
+        disconnected += 1;
+        abort.abort();
+      },
+    );
+    expect(disconnected).toBe(1);
+  });
+
   test("stops reconnecting when the attachment is aborted", async () => {
     const abort = new AbortController();
     let requests = 0;

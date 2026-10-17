@@ -4,23 +4,26 @@ import { existsSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import {
   discoverRuntime,
+  isRuntimePidAlive,
   observeRuntimeShutdown,
   type RuntimeDescriptor,
   readRuntimeDescriptor,
+  readRuntimeShutdown,
   requestRuntimeShutdown,
   waitForRuntimeExit,
 } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
+import type { DesktopStartupPhase } from "../lifecycle/lifecycle-machine";
 import {
   classifyRuntimeFailure,
   createSidecarLaunchArguments,
-  DESKTOP_RUNTIME_TIMEOUT_MS,
   reconcileRuntimeOwnership,
   verifyExternalRuntime,
   waitForDesktopRuntime,
 } from "./runtime-controller";
 import { resolveRuntimeEnvironment } from "./runtime-environment";
 import { spawnRuntimeProcess } from "./runtime-process";
+import { observeRuntimeStartup } from "./runtime-startup-progress";
 
 const SIDECAR_TERMINATION_GRACE_MS = 2_000;
 
@@ -35,7 +38,7 @@ type RuntimeManagerOptions = {
   resolveSidecarPath: (signal: AbortSignal) => string | Promise<string>;
   onIntentionalShutdown: () => void;
   onUnexpectedExit: (detail: string) => void;
-  onPhase: (phase: "discovery" | "spawning" | "readiness") => void;
+  onPhase: (phase: DesktopStartupPhase) => void;
 };
 
 type RuntimeProcess = {
@@ -53,6 +56,7 @@ type RuntimeManagerDeps = {
   createInstanceId: () => string;
   discoverRuntime: typeof discoverRuntime;
   existsSync: typeof existsSync;
+  isRuntimePidAlive: typeof isRuntimePidAlive;
   observeRuntimeShutdown: typeof observeRuntimeShutdown;
   readRuntimeDescriptor: typeof readRuntimeDescriptor;
   resolveEnvironment: typeof resolveRuntimeEnvironment;
@@ -67,6 +71,7 @@ const defaultDeps: RuntimeManagerDeps = {
   createInstanceId: randomUUID,
   discoverRuntime,
   existsSync,
+  isRuntimePidAlive,
   observeRuntimeShutdown,
   readRuntimeDescriptor,
   resolveEnvironment: resolveRuntimeEnvironment,
@@ -94,6 +99,8 @@ const terminateSpawnedRuntime = async (
 };
 
 export class DesktopRuntimeManager {
+  #startupAbort: AbortController | null = null;
+  #startupTask: Promise<ManagedRuntime> | null = null;
   #eventAbort: AbortController | null = null;
   #intentional = false;
   #readOutput = () => "";
@@ -137,14 +144,21 @@ export class DesktopRuntimeManager {
     return redactSensitiveText(this.#readOutput(), token ? [token] : []);
   }
 
-  async start() {
-    const signal = AbortSignal.timeout(DESKTOP_RUNTIME_TIMEOUT_MS);
-    try {
-      return await this.#start(signal);
-    } catch (error) {
-      if (signal.aborted) throw new Error("runtime_timeout: Runtime readiness timed out.");
-      throw error;
-    }
+  start() {
+    if (this.#startupTask) return this.#startupTask;
+    const startup = new AbortController();
+    this.#startupAbort = startup;
+    this.#startupTask = this.#start(startup.signal).finally(() => {
+      startup.abort();
+      this.#startupAbort = null;
+      this.#startupTask = null;
+    });
+    return this.#startupTask;
+  }
+
+  async cancelStart() {
+    this.#startupAbort?.abort();
+    await this.#startupTask?.catch(() => {});
   }
 
   async #start(signal: AbortSignal) {
@@ -155,17 +169,27 @@ export class DesktopRuntimeManager {
       const descriptor = this.#deps.readRuntimeDescriptor(this.#options.descriptorPath);
       if (!descriptor) throw new Error("External runtime descriptor is missing or invalid");
       await this.#deps.verifyExternalRuntime(descriptor, signal);
+      signal.throwIfAborted();
       return this.#attach(descriptor, true);
     }
 
-    const discover = (path: string) => this.#deps.discoverRuntime(path, { signal });
+    const initialShutdown = readRuntimeShutdown(this.#options.descriptorPath);
+    const discover = async (path: string) => {
+      signal.throwIfAborted();
+      const discovery = await this.#deps.discoverRuntime(path, { signal });
+      signal.throwIfAborted();
+      return discovery;
+    };
     const discovery = await discover(this.#options.descriptorPath);
-    if (discovery.state === "healthy") return this.#attach(discovery.descriptor, false);
+    if (discovery.state === "healthy") return this.#attach(discovery.descriptor, false, { initialShutdown });
     if (discovery.state === "unsafe") {
       throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
     }
+    this.#options.onPhase("verification");
     const sidecarPath = await this.#options.resolveSidecarPath(signal);
+    signal.throwIfAborted();
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
+    this.#options.onPhase("environment");
     const env = await this.#deps.resolveEnvironment(signal);
     signal.throwIfAborted();
     // Agents inherit this PATH, so they can run the bundled pst even when the person never installed the
@@ -181,7 +205,7 @@ export class DesktopRuntimeManager {
     });
     this.#readOutput = child.readOutput;
 
-    let ready = false;
+    let ready: RuntimeDescriptor | null = null;
     let markChildTerminated: () => void = () => {};
     const childTerminated = new Promise<void>((resolve) => {
       markChildTerminated = resolve;
@@ -193,7 +217,7 @@ export class DesktopRuntimeManager {
           child.readOutput() || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
         if (!ready) reject(new Error(detail));
         // A clean owned-process exit can arrive before its HTTP shutdown event.
-        else if (code === 0) this.#handleIntentionalShutdown();
+        else if (code === 0 || this.#wasShutdown(ready, initialShutdown)) this.#handleIntentionalShutdown();
         else if (!this.#intentional) {
           this.#forgetRuntime();
           this.#options.onUnexpectedExit(detail);
@@ -204,22 +228,26 @@ export class DesktopRuntimeManager {
     });
 
     this.#options.onPhase("readiness");
+    const stopProgress = observeRuntimeStartup(child.readOutput, this.#options.onPhase);
     try {
       const descriptor = await Promise.race([
         waitForDesktopRuntime(this.#options.descriptorPath, instanceId, {
           discover,
-          now: Date.now,
+          signal,
           sleep: this.#deps.sleep,
         }),
         childExit,
       ]);
-      ready = true;
+      signal.throwIfAborted();
+      ready = descriptor;
       return this.#attach(descriptor, false);
     } catch (error) {
       await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
       const detail = child.readOutput() || (error instanceof Error ? error.message : String(error));
       const failure = classifyRuntimeFailure(detail);
       throw new Error(`${failure.code}: ${failure.message}`);
+    } finally {
+      stopProgress();
     }
   }
 
@@ -238,9 +266,10 @@ export class DesktopRuntimeManager {
     });
   }
 
-  detach() {
+  async detach() {
     this.#intentional = true;
     this.#eventAbort?.abort();
+    await this.cancelStart();
   }
 
   // A runtime that is gone has nothing left to shut down, so quitting must not wait for it.
@@ -252,15 +281,55 @@ export class DesktopRuntimeManager {
   #handleIntentionalShutdown() {
     if (this.#intentional) return;
     this.#intentional = true;
+    this.#eventAbort?.abort();
     this.#options.onIntentionalShutdown();
   }
 
-  #attach(descriptor: RuntimeDescriptor, external: boolean) {
+  #wasShutdown(descriptor: RuntimeDescriptor, initialShutdown: ReturnType<typeof readRuntimeShutdown>) {
+    const shutdown = readRuntimeShutdown(this.#options.descriptorPath);
+    // A later stop of this home also applies to an old disconnected desktop, even if
+    // a replacement backend has already overwritten the previous shutdown receipt.
+    return (
+      shutdown !== null &&
+      ((shutdown.pid === descriptor.pid && shutdown.instanceId === descriptor.instanceId) ||
+        shutdown.pid !== initialShutdown?.pid ||
+        shutdown.instanceId !== initialShutdown?.instanceId)
+    );
+  }
+
+  #attach(
+    descriptor: RuntimeDescriptor,
+    external: boolean,
+    attachment?: { initialShutdown: ReturnType<typeof readRuntimeShutdown> },
+  ) {
     this.#runtime = { descriptor, external };
     this.#lastDescriptor = descriptor;
     this.#eventAbort = new AbortController();
+    const signal = this.#eventAbort.signal;
+    const disconnected = () => {
+      // Spawned children have an exit event, including their clean-exit status. An attached
+      // backend needs a PID check: a broken connection alone must never replace a live owner.
+      if (external || !attachment || signal.aborted || this.#intentional) return;
+      // Read intent after checking the process: shutdown can be announced just before it exits.
+      const alive = this.#deps.isRuntimePidAlive(descriptor.pid);
+      if (this.#wasShutdown(descriptor, attachment.initialShutdown)) {
+        this.#handleIntentionalShutdown();
+        return;
+      }
+      if (alive) return;
+      this.#forgetRuntime();
+      this.#options.onUnexpectedExit("The attached backend process exited unexpectedly.");
+    };
     void this.#deps
-      .observeRuntimeShutdown(descriptor, () => this.#handleIntentionalShutdown(), fetch, this.#eventAbort.signal)
+      .observeRuntimeShutdown(
+        descriptor,
+        () => {
+          if (!signal.aborted) this.#handleIntentionalShutdown();
+        },
+        fetch,
+        signal,
+        disconnected,
+      )
       .catch(() => {});
     return this.#runtime;
   }

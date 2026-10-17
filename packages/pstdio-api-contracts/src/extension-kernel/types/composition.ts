@@ -39,6 +39,8 @@ export interface ResourceKindDefinition extends ContributionDefinition<"resource
   readonly resolve?: CommandRef;
   /** Resolve params.resources as a bounded ResourceRef[] batch. Return ResourceResolution[] with owner navigation; omit missing resources. */
   readonly resolveMany?: CommandRef;
+  /** Claim workspace-relative path prefixes. The owner command receives params.path and params.workspaceId and returns ResourceResolution or null. Longest matching prefix wins. */
+  readonly paths?: readonly { readonly prefix: string; readonly resolve: CommandRef }[];
   /** Validate an explicit anchor change. Return ResourceAnchorValidationResult. Must not mutate links. */
   readonly validateAnchors?: CommandRef;
 }

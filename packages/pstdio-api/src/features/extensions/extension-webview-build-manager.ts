@@ -191,6 +191,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       !backoff.hasFailure(processKey(installedExtensionId, webviewId)) &&
       !isWebviewPublished(webviewCacheRoot, installedExtensionId, webviewId);
     if (checked.has(installedExtensionId) && !repair) return Promise.resolve();
+    checked.delete(installedExtensionId);
     check(installedExtensionId);
     return pending.get(installedExtensionId)!;
   };

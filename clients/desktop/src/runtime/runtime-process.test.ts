@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnRuntimeProcess } from "./runtime-process";
 
 test("a runtime can write output after its Node owner exits", async () => {
@@ -13,7 +14,7 @@ test("a runtime can write output after its Node owner exits", async () => {
   const completed = join(root, "completed");
   const outputPath = join(root, "desktop-runtime.log");
   const script = join(root, "owner.mts");
-  const helper = new URL("./runtime-process.ts", import.meta.url).href;
+  const helper = fileURLToPath(new URL("./runtime-process.ts", import.meta.url));
   const childSource = `
 import { existsSync, writeFileSync } from "node:fs";
 process.on("uncaughtException", (error) => { writeFileSync(${JSON.stringify(completed)}, String(error)); process.exit(1); });
@@ -30,12 +31,14 @@ const timer = setInterval(() => {
     `
 import { writeFileSync } from "node:fs";
 import { spawnRuntimeProcess } from ${JSON.stringify(helper)};
-const child = spawnRuntimeProcess(process.execPath, ["-e", ${JSON.stringify(childSource)}], { env: process.env, outputPath: ${JSON.stringify(outputPath)} });
+const child = spawnRuntimeProcess(${JSON.stringify(process.execPath)}, ["-e", ${JSON.stringify(childSource)}], { env: process.env, outputPath: ${JSON.stringify(outputPath)} });
 child.once("spawn", () => { writeFileSync(${JSON.stringify(pidFile)}, String(child.pid)); process.exit(0); });
 `,
   );
   try {
-    const owner = Bun.spawn([node, script], { stdout: "pipe", stderr: "pipe" });
+    const built = await Bun.build({ entrypoints: [script], outdir: root, target: "node", naming: "owner.mjs" });
+    expect(built.success).toBe(true);
+    const owner = Bun.spawn([node, join(root, "owner.mjs")], { stdout: "pipe", stderr: "pipe" });
     const [code, stderr] = await Promise.all([owner.exited, new Response(owner.stderr).text()]);
     expect(stderr).toBe("");
     expect(code).toBe(0);
@@ -55,6 +58,37 @@ child.once("spawn", () => { writeFileSync(${JSON.stringify(pidFile)}, String(chi
   }
 });
 
+test("runtime launch preserves PID, arguments, environment, and its standard output", async () => {
+  const root = mkdtempSync(join(tmpdir(), "desktop-runtime-arguments-"));
+  const outputPath = join(root, "runtime.log");
+  const args = ["serve", "a path with spaces", "$(literal)`argument`", "--owner", "desktop"];
+  try {
+    const child = spawnRuntimeProcess(
+      process.execPath,
+      [
+        "-e",
+        `console.log(JSON.stringify({ pid: process.pid, args: process.argv.slice(1), value: process.env.RUNTIME_TEST_VALUE, bootstrap: process.env.BUN_BE_BUN ?? null }))`,
+        "--",
+        ...args,
+      ],
+      {
+        env: { ...process.env, RUNTIME_TEST_VALUE: "literal runtime value" },
+        outputPath,
+      },
+    );
+    const code = await new Promise<number | null>((resolve) => child.once("exit", resolve));
+    expect(code, child.readOutput()).toBe(0);
+    expect(JSON.parse(child.readOutput())).toEqual({
+      pid: child.pid,
+      args,
+      value: "literal runtime value",
+      bootstrap: null,
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("keeps the latest launch failure in bounded diagnostics", async () => {
   const node = Bun.which("node");
   if (!node) throw new Error("Desktop runtime tests require Node.js");
@@ -63,7 +97,7 @@ test("keeps the latest launch failure in bounded diagnostics", async () => {
   writeFileSync(outputPath, "previous launch failure");
   try {
     const child = spawnRuntimeProcess(
-      node,
+      process.execPath,
       [
         "-e",
         'process.stdout.write("x".repeat(70 * 1024)); process.stderr.write("database startup failed"); process.exitCode = 42;',

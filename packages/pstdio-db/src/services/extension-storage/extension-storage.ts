@@ -8,6 +8,8 @@ import {
 } from "pstdio-sync";
 import type { Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { readRetiredData } from "../../db/retired-data";
+import { createStorageMigrations } from "./data-migrations";
 import { createGroupedStorageDBService } from "./grouped-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
 import { getExtensionStorageOwner } from "./storage-owner";
@@ -38,6 +40,9 @@ export const createExtensionStorageDBService = (db: DbClient, observer?: Storage
   };
   return {
     watch: grouped.watch,
+    migrate: createStorageMigrations(db),
+    readLegacy: (source: string, scope: { projectId: string; extensionInstanceId: string }) =>
+      readRetiredData(db, source, scope),
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore }) => {
       const { environmentId } = await grouped.getEnvironment();
