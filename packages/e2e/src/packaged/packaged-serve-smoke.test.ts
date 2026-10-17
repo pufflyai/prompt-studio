@@ -190,6 +190,7 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
+// Showcase resource checks include resolving an unknown Artifact without a failed command.
 registerPackagedShowcaseSmokeTests();
 registerPackagedPlannerSmokeTests();
 
