@@ -5,6 +5,7 @@ import { toaster } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAgents } from "@/shared/agents/use-agents";
 import { useActionError } from "@/shared/components/use-action-error";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
@@ -32,6 +33,8 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { t } = useTranslation("projects");
   const extensionsQuery = useProjectExtensions(projectId);
   const metadataQuery = useProjectExtensionMetadata(projectId);
+  const agentsQuery = useAgents(projectId);
+  const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setEnabled = useSetProjectExtensionEnabled(projectId);
   const upgrade = useUpgradeProjectExtension(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
@@ -106,6 +109,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         projectId={projectId}
         extension={selected}
         metadata={metadataQuery.data}
+        agents={agents}
         settingsInput={settingsInput}
         onBack={() => setSelectedInstanceId(null)}
       />
@@ -231,6 +235,8 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}
         automations={metadataQuery.data?.automations ?? []}
+        harnesses={metadataQuery.isSuccess ? metadataQuery.data?.harnesses : undefined}
+        agents={agents}
         togglingInstanceId={setEnabled.isPending ? (setEnabled.variables?.instanceId ?? undefined) : undefined}
         upgradingInstanceIds={upgradingInstanceIds}
         installingMarketplaceNames={installingMarketplaceNames}

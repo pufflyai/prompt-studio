@@ -49,7 +49,7 @@ const meta = {
     await expect(editable(canvasElement)).not.toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: "Upload files" })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: "Message settings" })).not.toBeInTheDocument();
-    await expect(canvas.queryByRole("button", { name: "Select workspace" })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "Select workspace" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Toggle messaging availability" }));
     const editor = editable(canvasElement)!;
     await expect(editor).toHaveTextContent("Keep this unsent draft.");

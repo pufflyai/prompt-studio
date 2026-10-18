@@ -4,6 +4,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import type { Meta, StoryObj } from "@storybook/react";
+import type { AgentInfo } from "pstdio-api-contracts";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
 const installedExtensions: ProjectExtensionInstance[] = [
@@ -157,6 +158,41 @@ export const Populated: Story = {
     diagnostics,
     automations,
   },
+};
+
+const remote = {
+  ...installedExtensions[0]!,
+  extensionId: "example.remote",
+  displayName: "Remote helper",
+  canUpgrade: false,
+};
+const remoteAgent: AgentInfo = {
+  id: "arbitrary-remote-provider-id",
+  name: "Remote helper",
+  supportsModels: false,
+  capabilities: [],
+  availability: { type: "NOT_FOUND", reason: "Connect a machine in this extension's settings." },
+};
+
+export const HarnessUnavailable: Story = {
+  args: {
+    extensions: [remote],
+    marketplace: [],
+    diagnostics: [],
+    automations: [],
+    harnesses: [{ id: remoteAgent.id, localId: "helper", extensionId: remote.extensionId }],
+    agents: [remoteAgent],
+  },
+};
+export const HarnessCheckUnknown: Story = { args: { ...HarnessUnavailable.args, agents: undefined } };
+export const LongHarnessReason: Story = {
+  args: {
+    ...HarnessUnavailable.args,
+    agents: [{ ...remoteAgent, availability: { type: "NOT_FOUND", reason: `RemoteEndpoint/${"a".repeat(280)}` } }],
+  },
+};
+export const HarnessDisabled: Story = {
+  args: { ...HarnessUnavailable.args, extensions: [{ ...remote, enabled: false, status: "disabled" }] },
 };
 
 export const Empty: Story = {

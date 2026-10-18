@@ -141,6 +141,30 @@ export default meta;
 
 type Story = StoryObj<typeof ExtensionDetail>;
 
+export const HarnessUnavailable: Story = {
+  args: {
+    extension: { ...extension, displayName: "Remote helper", extensionId: "example.remote" },
+    unavailableHarnesses: [
+      {
+        id: "arbitrary-remote-provider-id",
+        name: "Remote helper",
+        supportsModels: false,
+        capabilities: [],
+        availability: { type: "NOT_FOUND", reason: "Connect a machine in this extension's settings." },
+      },
+    ],
+  },
+};
+export const LongHarnessReason: Story = {
+  args: {
+    ...HarnessUnavailable.args,
+    unavailableHarnesses: HarnessUnavailable.args!.unavailableHarnesses!.map((harness) => ({
+      ...harness,
+      availability: { type: "NOT_FOUND", reason: `RemoteEndpoint/${"a".repeat(280)}` },
+    })),
+  },
+};
+
 export const Loaded: Story = {};
 export const CustomWorkflowSettings: Story = {
   args: {

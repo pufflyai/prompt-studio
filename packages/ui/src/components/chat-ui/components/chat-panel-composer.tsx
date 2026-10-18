@@ -74,7 +74,6 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
   } = props;
   const styles = useSlotRecipe({ recipe: queuedFollowUpRecipe })();
   const composerStyles = useSlotRecipe({ recipe: chatComposerRecipe })({ workspace: hasWorkspaceHub });
-  if (composerFallback) return <Box p="xs">{composerFallback}</Box>;
   const hasQueuedFollowUps = queuedFollowUps.length > 0;
 
   const editing = queuedComposer.isEditing && !chatInputQuestionPrompt && !composerDecision;
@@ -84,28 +83,32 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
       <Box className="ps-chat-composer__workspace" css={composerStyles.workspace}>
         {workspaceHub}
         {composerHeader}
-        <QueuedFollowUpList
-          items={queuedFollowUps}
-          editor={editing ? editor : undefined}
-          retainedEditor={editing && queuedComposer.createNew ? editor : undefined}
-          retainedEditorPosition={queuedComposer.editingItem?.position}
-          dirtyItemIds={[...queuedComposer.dirtyItemIds, ...unsavedQueueItemIds]}
-          steeringUnavailableReason={queueSteeringUnavailableReason}
-          onSteer={onQueuedFollowUpSteer}
-          onCombine={onQueuedFollowUpCombine}
-          editingItemId={queuedComposer.editingItemId}
-          onEdit={onQueuedFollowUpUpdate ? queuedComposer.edit : undefined}
-          onRemove={onQueuedFollowUpRemove}
-          onMove={onQueuedFollowUpMove}
-        />
-        {editing ? (
-          <Box css={styles.draft} asChild>
-            <button type="button" onClick={queuedComposer.selectDraft} aria-label="Edit saved draft">
-              {queuedComposer.draftValue || "Saved draft · select to edit"}
-            </button>
-          </Box>
-        ) : (
-          editor
+        {composerFallback || (
+          <>
+            <QueuedFollowUpList
+              items={queuedFollowUps}
+              editor={editing ? editor : undefined}
+              retainedEditor={editing && queuedComposer.createNew ? editor : undefined}
+              retainedEditorPosition={queuedComposer.editingItem?.position}
+              dirtyItemIds={[...queuedComposer.dirtyItemIds, ...unsavedQueueItemIds]}
+              steeringUnavailableReason={queueSteeringUnavailableReason}
+              onSteer={onQueuedFollowUpSteer}
+              onCombine={onQueuedFollowUpCombine}
+              editingItemId={queuedComposer.editingItemId}
+              onEdit={onQueuedFollowUpUpdate ? queuedComposer.edit : undefined}
+              onRemove={onQueuedFollowUpRemove}
+              onMove={onQueuedFollowUpMove}
+            />
+            {editing ? (
+              <Box css={styles.draft} asChild>
+                <button type="button" onClick={queuedComposer.selectDraft} aria-label="Edit saved draft">
+                  {queuedComposer.draftValue || "Saved draft · select to edit"}
+                </button>
+              </Box>
+            ) : (
+              editor
+            )}
+          </>
         )}
       </Box>
     </Stack>

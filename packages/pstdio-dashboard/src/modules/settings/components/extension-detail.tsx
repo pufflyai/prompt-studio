@@ -8,6 +8,7 @@ import type {
 import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
 import { ArrowLeft, ArrowUpCircle, Blocks, Puzzle, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
+import type { AgentInfo } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -15,6 +16,7 @@ import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDetailHealth } from "./extension-detail-health";
+import { ExtensionHarnessWarnings } from "./extension-harness-warnings";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
 
@@ -24,6 +26,7 @@ export interface ExtensionDetailProps {
   metadata: DashboardExtensionMetadata | undefined;
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
+  unavailableHarnesses?: AgentInfo[];
   settings: ExtensionSettingValueRecord[];
   settingsViews?: ReactNode;
   toggling?: boolean;
@@ -50,6 +53,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     metadata,
     automations,
     diagnostics,
+    unavailableHarnesses = [],
     settings,
     settingsViews,
     toggling,
@@ -173,6 +177,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         </Stack>
 
         {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
+        <ExtensionHarnessWarnings harnesses={unavailableHarnesses} />
 
         {!failed && diagnostics.length > 0 && (
           <AlertMessage

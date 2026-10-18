@@ -190586,7 +190586,7 @@
       "x": 50458,
       "y": 0,
       "name": "Session · Harness unavailable",
-      "context": "A single shared warning row replaces the composer and its controls when a successful project availability check finds no available harness. Drafts are retained. Active runs keep Stop in the alert action slot.",
+      "context": "Keep the shared workspace container and header visible. A compact alert and Extensions action replace only the message input and its toolbar. Active runs also keep Stop.",
       "width": 896,
       "fill": "$ds-bg",
       "layout": "vertical",
@@ -190594,10 +190594,84 @@
       "padding": 32,
       "children": [
         {
-          "id": "OhR2H",
+          "id": "YtCt0",
+          "type": "ref",
+          "ref": "JGKK1",
+          "name": "Workspace with unavailable composer",
+          "width": "fill_container",
+          "layout": "vertical",
+          "descendants": {
+            "J3u0Q": {
+              "id": "O42R5",
+              "type": "ref",
+              "ref": "So6vB",
+              "name": "Unavailable composer with Extensions action",
+              "width": "fill_container",
+              "theme": {
+                "status": "warning"
+              },
+              "layout": "horizontal",
+              "descendants": {
+                "sAoE1": {
+                  "icon": "triangle-alert"
+                },
+                "R8clK": {
+                  "layout": "vertical"
+                },
+                "GL4gS": {
+                  "content": "No agent available"
+                },
+                "B8etL": {
+                  "enabled": false,
+                  "width": 0,
+                  "textGrowth": "auto"
+                },
+                "dJT4D": {
+                  "enabled": true
+                },
+                "x7Usi7": {
+                  "enabled": true
+                },
+                "x7Usi7/Hf4GT": {
+                  "content": "Extensions"
+                },
+                "dqGb1": {
+                  "enabled": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "CkbRc",
+      "x": 51434,
+      "y": 0,
+      "name": "Extensions · Harness availability",
+      "context": "Show extension-owned availability warnings under the installed extension description and in its detail header. Match explicit harness ownership metadata. Disabled extensions and unknown checks do not imply connection failure.",
+      "width": 896,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 32,
+      "children": [
+        {
+          "type": "text",
+          "id": "gIwS1",
+          "name": "Extension display name",
+          "fill": "$ds-fg",
+          "content": "Remote helper",
+          "fontFamily": "$font-label",
+          "fontSize": 12,
+          "fontWeight": "500"
+        },
+        {
+          "id": "mgG13",
           "type": "ref",
           "ref": "So6vB",
-          "name": "No available harness composer replacement",
+          "name": "Extension-provided harness failure",
           "width": "fill_container",
           "theme": {
             "status": "warning"
@@ -190611,12 +190685,10 @@
               "layout": "vertical"
             },
             "GL4gS": {
-              "content": "No agent available"
+              "content": "Remote helper is unavailable"
             },
             "B8etL": {
-              "enabled": false,
-              "width": 0,
-              "textGrowth": "auto"
+              "content": "Connect a machine in this extension’s settings."
             },
             "dJT4D": {
               "enabled": false

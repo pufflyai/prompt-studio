@@ -2,7 +2,7 @@ import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import { type ChatInputQuestionResponse, ChatSkeleton } from "@pstdio/ui/chat-ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { useWorkbenchStore } from "@pstdio/workbench/react";
+import { useWorkbenchStore, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import type { SessionAttachment } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
@@ -199,6 +199,8 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
     draftAttachments.clearSubmittedAttachments();
   });
   const interrupt = sessionId && canInterrupt ? () => stopSession.mutate(sessionId) : undefined;
+  const reviewExtensions = () =>
+    void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "extensions" });
 
   return (
     // The widget host sizes itself to its content, so the chat panel is pinned
@@ -251,7 +253,11 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
             onChatInputChange={chatDraft.change}
             chatInputCommands={commandComposer.suggestions}
             composerDecision={decision}
-            composerFallback={noHarnessAvailable ? <SessionHarnessUnavailable onInterrupt={interrupt} /> : undefined}
+            composerFallback={
+              noHarnessAvailable ? (
+                <SessionHarnessUnavailable onInterrupt={interrupt} onReviewExtensions={reviewExtensions} />
+              ) : undefined
+            }
             attachedResources={attachedResources}
             projectId={projectId}
             sessionId={sessionId}
