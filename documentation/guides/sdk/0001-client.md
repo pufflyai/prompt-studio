@@ -86,7 +86,10 @@ await client.projects.delete(projectId);
 ## Sessions
 
 ```ts
-const sessions = await client.sessions.list(projectId);
+const firstPage = await client.sessions.query(projectId, { limit: 50 });
+for await (const session of client.sessions.iterate(projectId, { includeArchived: true })) {
+  console.log(session.id, session.status);
+}
 const session = await client.sessions.get(sessionId);
 const attachment = await client.sessions.uploadAttachment(projectId, {
   name: "notes.txt",
@@ -118,6 +121,16 @@ await client.sessions.deleteAttachment(projectId, unusedUpload.file_id);
 
 const conversation = await client.sessions.getConversation(sessionId);
 ```
+
+`query` returns `{ items, nextCursor }`. `iterate` reads each page on demand; breaking the loop
+does not fetch another page. Both accept the [command query filters](../../references/extensions/0003-command-and-process-api.md#sessions),
+including status arrays, archive state, workspace and inclusive timestamp bounds. An empty status array matches nothing.
+Pass `{ signal }` as the third argument to cancel a query or stop iteration, including during a cached page.
+The unpaged `list` method and `GET /v1/sessions` are deprecated through 0.44.
+
+The paged HTTP route is `GET /v1/projects/:projectId/sessions`. It uses camelCase query names,
+comma-separated statuses, and paired `anchorType`/`anchorId` fields. Cursors keep their creation-time
+and ID position when newer rows arrive. Rows archived during paging are skipped unless `includeArchived` is true.
 
 ## Workspaces
 

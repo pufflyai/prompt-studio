@@ -6,7 +6,8 @@ import { sessionResponseSchema } from "../dto";
 export const listSessionsRoute = createRoute({
   method: "get",
   path: "/sessions",
-  description: "List sessions for a project.",
+  description: "List sessions for a project. Deprecated: use GET /projects/{projectId}/sessions for bounded queries.",
+  deprecated: true,
   tags: ["Sessions"],
   request: {
     query: z

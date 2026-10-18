@@ -10,9 +10,9 @@ test("cancelled command readers do not dispatch host work", async () => {
   let reads = 0;
   const deps = {
     sessionService: {
-      list: async () => {
+      query: async () => {
         reads++;
-        return [];
+        return { rows: [], nextCursor: null };
       },
     },
     workspaceService: {
@@ -23,12 +23,6 @@ test("cancelled command readers do not dispatch host work", async () => {
       get: async (id: string) => {
         reads++;
         return { id, project_id: "p" };
-      },
-    },
-    workspaceSessionService: {
-      listByWorkspace: async () => {
-        reads++;
-        return [];
       },
     },
   } as never;
@@ -47,10 +41,10 @@ test("cancellation during workspace resolution prevents the next session lookup"
   const sessions = createSessionsApi(
     {
       workspaceService: { get: () => workspace.promise },
-      workspaceSessionService: {
-        listByWorkspace: async () => {
+      sessionService: {
+        query: async () => {
           childReads++;
-          return [];
+          return { rows: [], nextCursor: null };
         },
       },
     } as never,
@@ -76,9 +70,9 @@ test("a cancelled real command invocation cannot continue into later host reader
       },
     },
     sessionService: {
-      list: async () => {
+      query: async () => {
         laterReads++;
-        return [];
+        return { rows: [], nextCursor: null };
       },
     },
     extensionStorageService: {
