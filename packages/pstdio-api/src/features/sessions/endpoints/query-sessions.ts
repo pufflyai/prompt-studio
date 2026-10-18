@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { sessionSchema, sessionStatusSchema, sessionUsageSchema } from "pstdio-api-contracts";
+import { extensionSessionSchema, sessionSchema, sessionStatusSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { queryExtensionSessions, SessionQueryWorkspaceNotFound } from "../query-sessions";
@@ -45,7 +45,7 @@ const summarySchema = sessionSchema
     anchors_json: true,
     cwd: true,
   })
-  .extend({ workspace_id: z.string().nullable(), usage: sessionUsageSchema.nullable() });
+  .extend({ workspace_id: z.string().nullable(), ...extensionSessionSchema.shape });
 export const querySessionsRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/sessions",

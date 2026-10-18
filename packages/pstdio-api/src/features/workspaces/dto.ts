@@ -1,6 +1,8 @@
 import { z } from "@hono/zod-openapi";
 import {
   createWorkspaceInputSchema,
+  extensionWorkspaceCreateInputSchema,
+  extensionWorkspaceFields,
   moveWorkspaceEntryInputSchema,
   renameWorkspaceInputSchema,
   workspaceFileContentSchema,
@@ -11,9 +13,18 @@ import {
   writeWorkspaceFileInputSchema,
 } from "pstdio-api-contracts";
 
-export const workspaceResponseSchema = workspaceSchema;
-export { workspaceListItemSchema };
-export const createWorkspaceBodySchema = createWorkspaceInputSchema.strict();
+export const workspaceResponseSchema = workspaceSchema.extend(extensionWorkspaceFields);
+export const workspaceListItemResponseSchema = workspaceListItemSchema.extend(extensionWorkspaceFields);
+export const createWorkspaceBodySchema = z.union([
+  createWorkspaceInputSchema.strict(),
+  extensionWorkspaceCreateInputSchema.strict().transform((input) => ({
+    project_id: input.projectId,
+    provider_id: input.providerId,
+    shorthand_base: input.shorthandBase,
+    params: input.params,
+    anchors: input.anchors,
+  })),
+]);
 export const renameWorkspaceBodySchema = renameWorkspaceInputSchema.strict();
 export const listWorkspaceFilesQuerySchema = z
   .object({

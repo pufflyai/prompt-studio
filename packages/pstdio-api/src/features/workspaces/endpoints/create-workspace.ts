@@ -3,6 +3,7 @@ import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
+import { toExtensionWorkspace } from "../extension-workspace";
 import { runWorkspaceProvisioning } from "../provision-coordinator";
 import { InvalidWorkspaceParamsError } from "../workspace-provider-params";
 import { createProviderBackedWorkspace, WorkspaceSourceNotFoundError } from "../workspace-provider-service";
@@ -62,6 +63,6 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
     }
 
     const status = workspace.provider_state === "ready" && workspace.execution_kind === "local" ? 201 : 202;
-    return c.json(workspace, status);
+    return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, status);
   };
 };

@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
+import { toExtensionWorkspace } from "../extension-workspace";
 
 const getWorkspaceQuerySchema = z
   .object({
@@ -39,6 +40,6 @@ export const getWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<
       return c.json({ error: `Workspace not found: ${shorthand}` }, 404);
     }
 
-    return c.json(workspace, 200);
+    return c.json({ ...workspace, ...toExtensionWorkspace(workspace) }, 200);
   };
 };

@@ -47,6 +47,21 @@ export const workspaceProviderErrorSchema = z.object({
   occurred_at: z.string(),
 });
 
+export const extensionWorkspaceFields = {
+  projectId: z.string(),
+  isDefault: z.boolean(),
+  shorthand: z.string(),
+  rootPath: z.string().nullable(),
+  providerId: z.string(),
+  providerState: workspaceProviderStateSchema,
+  executionKind: workspaceExecutionKindSchema,
+  displayPath: z.string().nullable(),
+  capabilities: workspaceCapabilitiesSchema,
+  setupError: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+};
+
 const workspaceAnchorSchema = extensionResourceRefSchema.extend({
   role: z.enum(["primary", "context", "source", "result"] satisfies ResourceRole[]).optional(),
 });
@@ -93,6 +108,14 @@ export const createWorkspaceInputSchema = z.object({
   anchors: z.array(workspaceAnchorSchema).optional(),
   /** Prefix for related workspace names; omitted workspaces use project-scoped WS-N names. */
   shorthand_base: z.string().trim().min(1).optional(),
+});
+
+export const extensionWorkspaceCreateInputSchema = z.object({
+  projectId: z.string().min(1),
+  providerId: z.string().min(1),
+  shorthandBase: z.string().trim().min(1).optional(),
+  params: jsonObjectSchema.optional(),
+  anchors: z.array(workspaceAnchorSchema).optional(),
 });
 
 export const renameWorkspaceInputSchema = z.object({

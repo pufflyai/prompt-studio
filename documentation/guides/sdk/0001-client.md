@@ -65,6 +65,10 @@ client.sync; // SSE sync helpers
 client.runtime; // Browser login links
 ```
 
+Session and workspace results share the extension context's camelCase fields. For example, read
+`session.workspaceId` and `workspace.rootPath`. Snake-case aliases remain deprecated through 0.44.
+Create a workspace with `client.workspaces.create({ projectId, providerId: "pstdio.worktree", params: { base: "main" } })`.
+
 Processes that hold the descriptor token can sign a browser in with `client.runtime.createBrowserLogin()`. It returns
 `{ url }`, a dashboard link with a single-use code in the URL fragment that expires after 60 seconds. Open that link
 in the browser. Do not forward the descriptor token into renderer JavaScript.

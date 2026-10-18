@@ -4,6 +4,7 @@ import type { AppRouteHandler } from "../../../types";
 import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema } from "../dto";
+import { toExtensionSession } from "../extension-session";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
@@ -130,7 +131,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
           onCreated,
           c.req.raw.signal,
         );
-        return c.json(session, 201);
+        return c.json({ ...session, ...toExtensionSession(session, resolvedWorkspaceId) }, 201);
       }
       const session = await withResolvedSubmittingSessionAttachments(
         deps,
@@ -152,7 +153,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
             onCreated: onCreated,
           }),
       );
-      return c.json(session, 201);
+      return c.json({ ...session, ...toExtensionSession(session, resolvedWorkspaceId) }, 201);
     } catch (error) {
       const failure = creationFailure(error);
       return c.json({ error: failure.error }, failure.status);

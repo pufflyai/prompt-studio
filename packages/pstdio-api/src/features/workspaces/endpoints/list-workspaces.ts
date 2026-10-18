@@ -1,7 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
-import { workspaceListItemSchema } from "../dto";
+import { workspaceListItemResponseSchema } from "../dto";
+import { toExtensionWorkspace } from "../extension-workspace";
 
 const listWorkspacesQuerySchema = z
   .object({
@@ -20,7 +21,7 @@ export const listWorkspacesRoute = createRoute({
   responses: {
     200: {
       description: "List of workspaces.",
-      content: { "application/json": { schema: z.array(workspaceListItemSchema) } },
+      content: { "application/json": { schema: z.array(workspaceListItemResponseSchema) } },
     },
   },
 });
@@ -29,6 +30,9 @@ export const listWorkspacesHandler = (deps: WorkspacesRouteDeps): AppRouteHandle
   return async (c) => {
     const { project_id } = c.req.valid("query");
     const workspaces = await deps.workspaceService.list(project_id);
-    return c.json(workspaces, 200);
+    return c.json(
+      workspaces.map((workspace) => ({ ...workspace, ...toExtensionWorkspace(workspace) })),
+      200,
+    );
   };
 };

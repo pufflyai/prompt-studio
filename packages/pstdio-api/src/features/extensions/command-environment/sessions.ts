@@ -68,9 +68,11 @@ export const createSessionsApi = (
         const session = await getProjectSession(id);
         if (!session) return null;
         const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+        const lastExit = await readSessionExit(deps.activityEventsService, { ...session, project_id: input.projectId });
         return {
           ...toExtensionSession(session, workspace?.project_id === input.projectId ? workspace.id : null),
-          last_exit: await readSessionExit(deps.activityEventsService, { ...session, project_id: input.projectId }),
+          lastExit,
+          last_exit: lastExit,
         };
       }),
     query: (query = {}) => queryExtensionSessions(deps, input.projectId, query, input.signal),

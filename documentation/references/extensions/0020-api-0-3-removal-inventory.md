@@ -22,6 +22,8 @@ in their owning PRs.
 | HTTP notification `/read`, `/done`, `/dismiss`, `/snooze`, `/resolve-by-dedupe-key`; matching SDK methods | POST `/:id/status` and `/status-by-key`; SDK `setStatus` and `setStatusByKey` | CLI and dashboard compatibility callers; external consumers unknown | None | 0.45 |
 | HTTP `PATCH notifications/:id` `snoozedUntil`, `UpdateNotificationInput.snoozedUntil` | Status route with `status: "snoozed"` and a timestamp | External consumers unknown | None | 0.45 |
 | Unpaged HTTP `GET /v1/sessions`, SDK `sessions.list` and `ListSessionsInput` | `GET /v1/projects/:projectId/sessions`; SDK `query` or `iterate` with `ExtensionSessionQuery` | CLI session listing; external consumers unknown | None | 0.45 |
+| `ExtensionSessionSummary`, `ExtensionSessionResource` and returned snake-case session fields, `last_exit`, snake-case usage totals | `ExtensionSession` and camelCase fields | Planner, Reports, CLI and external callers retain aliases until adoption | No stored conversion; explicit host projection | 0.45 |
+| Snake-case `ExtensionWorkspace` fields and `anchors_json`; `CreateExtensionWorkspaceInput` | CamelCase workspace fields, `ExtensionWorkspaceCreateInput`, and `resources` for links | Planner, Reports and external callers | No stored conversion in this PR; stored provider data conversion stays separate | 0.45 |
 
 `host.dispatchKeyboardEvent` is private guest plumbing, outside the public capability union.
 Keyboard forwarding continues through the private runtime path and requires no declaration.

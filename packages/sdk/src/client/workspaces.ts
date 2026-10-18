@@ -12,16 +12,19 @@ import type {
   WorkspaceProviderDescriptor,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
+import type { ExtensionWorkspace, ExtensionWorkspaceCreateInput } from "pstdio-api-contracts/extension-kernel";
 import type { Workspace, WorkspaceListItem } from "../resources";
 import type { RequestFn } from "./request";
 import { createWorkspaceDiffClient } from "./workspace-diffs";
 
 export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   listProviders(projectId: string, options?: { signal?: AbortSignal }): Promise<WorkspaceProviderDescriptor[]>;
-  list(projectId: string): Promise<WorkspaceListItem[]>;
-  getByShorthand(projectId: string, shorthand: string): Promise<Workspace>;
-  create(input: CreateWorkspaceInput): Promise<Workspace>;
-  rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace>;
+  list(projectId: string): Promise<(WorkspaceListItem & ExtensionWorkspace)[]>;
+  getByShorthand(projectId: string, shorthand: string): Promise<Workspace & ExtensionWorkspace>;
+  create(
+    input: CreateWorkspaceInput | (ExtensionWorkspaceCreateInput & { projectId: string }),
+  ): Promise<Workspace & ExtensionWorkspace>;
+  rename(workspaceId: string, input: RenameWorkspaceInput): Promise<Workspace & ExtensionWorkspace>;
   /** @deprecated No maintained client caller. Use `GET /v1/workspaces/{id}/activity` for this operation; the convenience method is removed in 0.45. */
   listActivity(workspaceId: string, input?: ListWorkspaceActivityInput): Promise<ListWorkspaceActivityResponse>;
   listFiles(

@@ -107,3 +107,34 @@ test("SDK session iteration cancels before fetching and while yielding a cached 
   await expect(iterator.next()).rejects.toThrow();
   expect(requests).toBe(1);
 });
+
+test("SDK reads and command queries share camelCase session fields and legacy aliases", async () => {
+  const project = await handle.deps.projectService.create({ name: "Session shapes" });
+  const workspace = await handle.deps.workspaceService.createStandalone({ project_id: project.id });
+  const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Mapped", agent: "worker" });
+  await handle.deps.workspaceSessionService.link(workspace.id, session.id);
+  const commands = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "P" } });
+  const command = await commands.get(session.id);
+  const read = await client.sessions.get(session.id);
+  expect(read).toMatchObject(command!);
+  expect(read).toMatchObject({
+    workspaceId: workspace.id,
+    workspace_id: workspace.id,
+    createdAt: session.created_at,
+    lastRequestStarted: session.last_request_started,
+    cwd: null,
+  });
+  const page = await client.sessions.query(project.id);
+  expect(page.items).toEqual((await commands.query()).items);
+});
+
+test("session readers omit a linked workspace owned by another project", async () => {
+  const project = await handle.deps.projectService.create({ name: "Session owner" });
+  const foreign = await handle.deps.projectService.create({ name: "Foreign workspace" });
+  const workspace = await handle.deps.workspaceService.createStandalone({ project_id: foreign.id });
+  const session = await handle.deps.sessionService.create({ project_id: project.id, title: "Mapped", agent: "worker" });
+  await handle.deps.workspaceSessionService.link(workspace.id, session.id);
+  const commands = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "P" } });
+  expect(await commands.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });
+  expect(await client.sessions.get(session.id)).toMatchObject({ workspaceId: null, workspace_id: null });
+});
