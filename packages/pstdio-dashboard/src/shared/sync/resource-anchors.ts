@@ -3,6 +3,8 @@ import type { SyncedRow } from "@/lib/sync/collections";
 export interface DashboardResourceAnchor {
   type: string;
   id: string;
+  extensionId?: string;
+  projectId?: string;
   label?: string;
   metadata?: Record<string, unknown>;
 }

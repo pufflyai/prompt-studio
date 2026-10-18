@@ -2,7 +2,7 @@ import { HStack, Text } from "@chakra-ui/react";
 import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
-import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
+import { resolvePageBreadcrumbPlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
@@ -63,8 +63,9 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   const page = useWorkbenchStore(workbench.pages.store, (state) =>
     state.activePageId ? state.pages[state.activePageId] : undefined,
   );
+  const routedResource = useWorkbenchStore(workbench.pages.store, (state) => state.location?.resource);
   const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageActivePlacement(state.layout, page),
+    resolvePageBreadcrumbPlacement(state.layout, page, routedResource),
   );
   const snapshot = usePlacementTab(placement, workbench);
   useWorkbenchResourceActionResolver(workbench);

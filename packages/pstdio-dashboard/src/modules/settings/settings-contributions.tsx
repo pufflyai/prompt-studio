@@ -87,7 +87,7 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
   ctx.views.registerView({
     id: settingsViewIds.appearance,
     title: "Appearance",
-    body: { kind: "react", render: () => <AppearanceSettingsPanel /> },
+    body: { kind: "react", render: ({ workbench }) => <AppearanceSettingsPanel workbench={workbench} /> },
   });
   ctx.views.registerView({
     id: settingsViewIds.extensions,

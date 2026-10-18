@@ -4,9 +4,9 @@ import {
   removeLocationSubPanelSelection,
   selectRegionActiveWidget,
 } from "../../registries/layout/layout-operations";
-import { insertAtPosition } from "../../registries/layout/layout-tab-lifecycle";
 import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registries/layout/layout-types";
 import { workbenchPanelRegions } from "../../registries/layout/layout-types";
+import { planTrayDrop } from "../../registries/layout/tray-tabs";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
@@ -31,6 +31,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
     const source = layout.regions[found.regionId];
     const remaining = source.widgets.filter((t) => t.widgetId !== instanceId);
     const target = layout.regions[destination];
+    const plan = planTrayDrop(destination === found.regionId ? remaining : target.widgets, found.placement, position);
     const next = {
       ...removeLocationSubPanelSelection(layout, instanceId),
       regions: {
@@ -46,11 +47,7 @@ export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
         [destination]: {
           ...target,
           visible: true,
-          widgets: insertAtPosition(
-            destination === found.regionId ? remaining : target.widgets,
-            found.placement,
-            position,
-          ),
+          widgets: plan.widgets,
         },
       },
     };

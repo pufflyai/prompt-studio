@@ -22,6 +22,7 @@ interface PageLocationControllerActionsInput<Value> {
   normalizeTarget(target: NavigationTargetPage): ResolvedPageLocation;
   normalizeStored(location: PageLocation): ResolvedPageLocation;
   locationsEqual(left: PageLocation | undefined, right: PageLocation | undefined): boolean;
+  replay(projectId: string, resolved: ResolvedPageLocation): WorkbenchPageNavigationResult;
   commit(
     projectId: string,
     resolved: ResolvedPageLocation,
@@ -114,7 +115,7 @@ export const createPageLocationControllerActions = <Value>(
       const projectId = input.registry.store.getState().projectId;
       if (!projectId) return actions.fail("history", new Error("Cannot replay a page before a project is active"));
       try {
-        return actions.commit(projectId, actions.normalizeStored(location), "replace", "replayWorkbenchPageHistory");
+        return actions.replay(projectId, actions.normalizeStored(location));
       } catch (error) {
         return actions.fail("history", error);
       }

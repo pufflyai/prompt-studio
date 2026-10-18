@@ -27,8 +27,8 @@ import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createSessionTabPresentation } from "./bubble/session-tab-presentation";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
-import { openResourceSessionPreview } from "./session-auto-open";
 import { createSessionIndicator } from "./session-indicator";
+import { relatedSessionResources } from "./session-related-resources";
 import { registerSessionResourceActions } from "./session-resource-actions";
 import { registerSessionResourceSync } from "./session-resource-sync";
 import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
@@ -255,20 +255,18 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         order: 30,
       });
       const unsubscribeDashboardData = subscribeSessionListData(() => syncSessionsPageSelection(ctx));
-      // Workspaces and extension-owned resources can carry a conversation; opening one brings it along.
-      ctx.onDidChangePrimaryResource((resource) => {
-        if (resource) openResourceSessionPreview(ctx, resource);
-      });
       // Persist the Side Panel's actual active session. Main-panel session navigation uses
       // the same in-memory selection context, but must not create a duplicate panel on boot.
       const unsubscribeSelection = registerSidePanelSessionPersistence(ctx, input.sessionSelectionPersistence);
       ctx.resources.registerProvider({
         id: "dashboard-workbench.sessions",
         kind: "session",
+        related: (resource) => relatedSessionResources(ctx, resource),
         list: () =>
           createDashboardSessions(getDashboardSelectedProjectId(ctx)).map(({ resource, status }) => ({
             resource,
             indicator: createSessionIndicator(status),
+            target: { kind: "panel", panel: workbenchPanels.projectSession, resource },
             group: "Sessions",
             activate: () =>
               ctx.navigation.openTarget({

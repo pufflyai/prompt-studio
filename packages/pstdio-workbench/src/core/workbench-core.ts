@@ -213,6 +213,13 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const pages = createLiveWorkbenchPageRegistry({
+    loadPageLayout: (state) =>
+      loadWorkbenchLocationLayout(cachedInput, {
+        modeId: state.activeModeId,
+        pageId: state.activePageId,
+        projectId: state.projectId,
+        resource: state.location?.resource,
+      }),
     loadModeLayout: layoutCache.readMode,
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
     restorePageState: createPageStateRestorer(cachedInput),

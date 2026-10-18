@@ -73,9 +73,7 @@ const retainResourceInstances = (
   if (item.binding.cardinality === "one") return [next];
   const existing = current.find((candidate) => candidate.instanceKey === next.instanceKey);
   const open: PageOpenIntent = existing?.open === "pin" || next.open === "pin" ? "pin" : "preview";
-  const retained = current.filter(
-    (candidate) => candidate.instanceKey !== next.instanceKey && (open === "pin" || candidate.open === "pin"),
-  );
+  const retained = current.filter((candidate) => candidate.instanceKey !== next.instanceKey);
   return [...retained, { ...next, open }];
 };
 // An instance keeps the key it opened with while updates change its resource, so an open
@@ -153,20 +151,16 @@ export const updateResourcePlacementInstance = (input: {
   const instances = state.resourceInstances.get(id) ?? [];
   state.resourceInstances.set(
     id,
-    instances
-      .filter(
-        (instance) => input.open !== "preview" || instance.open === "pin" || instance.instanceKey === input.instanceKey,
-      )
-      .map((instance) =>
-        instance.instanceKey === input.instanceKey
-          ? {
-              ...instance,
-              ...(input.open ? { open: input.open } : {}),
-              ...(input.resource ? { resource: input.resource } : {}),
-              ...(input.title === undefined ? {} : { title: input.title }),
-            }
-          : instance,
-      ),
+    instances.map((instance) =>
+      instance.instanceKey === input.instanceKey
+        ? {
+            ...instance,
+            ...(input.open ? { open: input.open } : {}),
+            ...(input.resource ? { resource: input.resource } : {}),
+            ...(input.title === undefined ? {} : { title: input.title }),
+          }
+        : instance,
+    ),
   );
 };
 export const clearOwnedPlacementState = (state: OwnedPlacementState, id: string) => {

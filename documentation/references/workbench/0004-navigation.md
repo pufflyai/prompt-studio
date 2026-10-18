@@ -16,11 +16,21 @@ The workbench navigates only to explicit targets. This page lists the target kin
 
 A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
 
+## Related resources
+
+Appearance's **Open related resources** setting is on by default. Opening a resource or selecting its tab opens one recent related resource per owner and kind as an unpinned preview. This includes direct incoming and outgoing resource links and relationships supplied by resource providers. Previews do not recursively open their own links. Selecting a preview explicitly can open its related resources.
+
+Sessions relate to their anchors and workspace. Workspaces can open their latest session and terminal. A terminal can open its workspace. These relationships use the same workbench policy as extension resources; tickets have no special session-opening policy.
+
+Owners return recent-first `ResourceBrowseEntry` values through `ResourceProvider.related(resource)`. Each entry carries the owner's page or panel `target`. Linked extension resources use their resource kind's `resolveManyCommand` target. Unavailable owners are skipped. The workbench renders the owner view as a preview without changing the initiating page, browser history, or keyboard focus. Each tray keeps at most one unpinned preview, always at the left. Opening, unpinning, or moving another preview into that tray replaces the previous preview across page, mode, and shell owners. Previews in other trays stay open. Automatic related opening skips a destination that would replace its initiating preview. Pinned resources stay pinned. While dragging a preview, the destination highlights and names the preview that will be replaced. Late results are discarded after another resource is selected, the project changes, or the setting is disabled. The setting persists across reloads.
+
 ## Validation and history
 
 Navigation validates the complete target before changing state. An unresolved page or inactive panel owner produces one error and leaves location, history, breadcrumbs, page instances, mode placements, selection, and visibility unchanged. Commands and external links remain standalone actions. It does not search by resource kind or fall back to `main`.
 
-Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry.
+Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry. Refreshing metadata for the same logical location preserves the selected panel; replaying a different document or location activates its destination.
+
+The routed page owns its breadcrumb and page actions. A collection page uses Main's selected document for its document context. Focusing Side or Secondary does not replace that context. A resource-bound page keeps its routed resource as the breadcrumb subject, even when Main renders another resource.
 
 ## Mounted views
 
@@ -32,7 +42,7 @@ The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, regi
 
 Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.
 
-Tree selection follows the active resource and page. A node's declared `selected` value distinguishes documents that share a resource identity, but applies only while that resource or page is active. Rows without a resource or navigation target keep their declared selection. Contextual parent trees remain visible without overriding the current workspace selection. Returning to the parent restores its active document selection.
+Tree selection follows Main's selected document or the routed page resource when Main has no document. A node's declared `selected` value distinguishes documents that share a resource identity, but applies only while that resource or page is active. Rows without a resource or navigation target keep their declared selection. Contextual parent trees remain visible without overriding the current workspace selection. Returning to the parent restores its active document selection.
 
 Tree reads belong to the mounted placement. Changing its resource or navigation level refreshes its data while keeping the current rows until the complete replacement arrives. Rows with the same identity keep their DOM, focus, and scroll position. A changed read scope cancels older reads and ignores their late results. Opening a different tree or project starts a new snapshot. A changed search filter also starts a new snapshot, so results from the previous query cannot be clicked while its replacement loads.
 

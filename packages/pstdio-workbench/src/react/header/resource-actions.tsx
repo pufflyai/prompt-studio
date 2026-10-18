@@ -1,7 +1,7 @@
 import { IconButton } from "@chakra-ui/react";
 import { ResourceActionMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
-import { resolvePageActivePlacement } from "../../core/registries/pages/page-active-placement";
+import { resolvePageBreadcrumbPlacement } from "../../core/registries/pages/page-active-placement";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { createWorkbenchLocationActions, useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
@@ -16,7 +16,7 @@ export const WorkbenchBreadcrumbActions = (props: { workbench: WorkbenchCore }) 
     state.activePageId ? state.pages[state.activePageId] : undefined,
   );
   const placement = useWorkbenchStore(workbench.layout.store, (state) =>
-    resolvePageActivePlacement(state.layout, page),
+    resolvePageBreadcrumbPlacement(state.layout, page),
   );
   const snapshot = usePlacementTab(placement, workbench);
   useWorkbenchResourceActionResolver(workbench);

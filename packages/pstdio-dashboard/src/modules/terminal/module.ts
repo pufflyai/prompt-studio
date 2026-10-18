@@ -2,12 +2,20 @@ import type { WorkbenchModuleContribution } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { openDashboardTerminalSession } from "@/shared/terminal/api-terminal-session-opener";
 import { createDashboardWorkspaceOptions } from "@/shared/workspaces/workspace-options";
+import { relatedTerminalResources } from "./terminal-related-resources";
 
 /** Backs workbench terminal sessions with the API PTY transport. */
 export const createTerminalModule = () =>
   ({
     id: "dashboard.terminal",
     activate(ctx) {
+      ctx.resources.registerKind({ kind: "terminal", label: "Terminal", icon: "SquareTerminal" });
+      ctx.resources.registerProvider({
+        id: "dashboard.terminals",
+        kind: "terminal",
+        list: () => [],
+        related: (resource) => relatedTerminalResources(ctx, resource),
+      });
       ctx.terminal.setSessionOpener((request) => {
         if (request.cwd) return openDashboardTerminalSession(request);
         // The host process may run from any folder (`/` for the desktop app), so a

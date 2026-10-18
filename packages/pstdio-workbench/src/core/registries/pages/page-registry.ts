@@ -47,10 +47,14 @@ export const createWorkbenchPageRegistry = <Value>(
     input.resources.toUri(normalizeResource(resource));
   const store = createPageRegistryStore(input);
   let runtime: ((state: WorkbenchPageRegistryStoreState<Value>) => void) | undefined;
+  let normalizeState:
+    | ((state: WorkbenchPageRegistryStoreState<Value>) => WorkbenchPageRegistryStoreState<Value>)
+    | undefined;
   let publishingState: WorkbenchPageRegistryStoreState<Value> | undefined;
 
   const publishState = (state: WorkbenchPageRegistryStoreState<Value>, action: string) =>
     batchWorkbenchChanges(() => {
+      state = normalizeState?.(state) ?? state;
       const storeBeforeRuntime = store.getState();
       const previousPublishingState = publishingState;
       publishingState = state;
@@ -139,17 +143,22 @@ export const createWorkbenchPageRegistry = <Value>(
     publish: publishState,
     onDidCommit: (listener) => createDisposable(store.api.subscribe(listener)),
     getPublishingState: () => publishingState ?? store.getState(),
-    connectRuntime(apply) {
+    connectRuntime(apply, normalize) {
       if (runtime) throw new Error("Workbench page registry already has a runtime");
       runtime = apply;
+      normalizeState = normalize;
       try {
-        apply(store.getState());
+        publishState(store.getState(), "connectPageRuntime");
       } catch (error) {
         runtime = undefined;
+        normalizeState = undefined;
         throw error;
       }
       return createDisposable(() => {
-        if (runtime === apply) runtime = undefined;
+        if (runtime === apply) {
+          runtime = undefined;
+          normalizeState = undefined;
+        }
       });
     },
     refreshModePlacements() {

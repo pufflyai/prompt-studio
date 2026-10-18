@@ -1,41 +1,13 @@
 import { getActivePlacement, removeLocationSubPanelSelection, replaceRegionWidgets } from "./layout-operations";
 import type { WorkbenchLayout, WorkbenchTabPosition, WorkbenchWidgetPlacement } from "./layout-types";
-
-export const insertAtPosition = (
-  widgets: WorkbenchWidgetPlacement[],
-  placement: WorkbenchWidgetPlacement,
-  position: WorkbenchTabPosition = "end",
-) => {
-  const next = [...widgets];
-  if (position === "start") {
-    next.unshift(placement);
-    return next;
-  }
-  if (position === "end") {
-    next.push(placement);
-    return next;
-  }
-
-  const targetWidgetId = "beforeWidgetId" in position ? position.beforeWidgetId : position.afterWidgetId;
-  const targetIndex = next.findIndex((candidate) => candidate.widgetId === targetWidgetId);
-  if (targetIndex < 0) {
-    next.push(placement);
-    return next;
-  }
-  next.splice(targetIndex + ("afterWidgetId" in position ? 1 : 0), 0, placement);
-  return next;
-};
+import { planTrayDrop } from "./tray-tabs";
 
 export const placeWidget = (
   widgets: WorkbenchWidgetPlacement[],
   placement: WorkbenchWidgetPlacement,
   position?: WorkbenchTabPosition,
 ) => {
-  if (placement.tabRetention !== "preview") return insertAtPosition(widgets, placement, position);
-  const persistentWidgets = widgets.filter(
-    (candidate) => candidate.tabRetention !== "preview" && candidate.widgetId !== placement.widgetId,
-  );
-  return insertAtPosition(persistentWidgets, placement, position);
+  return planTrayDrop(widgets, placement, position).widgets;
 };
 
 export const reorderWidgetPlacement = (
@@ -46,7 +18,7 @@ export const reorderWidgetPlacement = (
   const placement = widgets.find((candidate) => candidate.widgetId === widgetId);
   if (!placement) return widgets;
   const remaining = widgets.filter((candidate) => candidate.widgetId !== widgetId);
-  return insertAtPosition(remaining, placement, position);
+  return planTrayDrop(remaining, placement, position).widgets;
 };
 
 const removePlacements = (layout: WorkbenchLayout, shouldRemove: (placement: WorkbenchWidgetPlacement) => boolean) => {

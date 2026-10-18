@@ -1,4 +1,3 @@
-import { resourceKey } from "@pstdio/sdk/extensions";
 import {
   type ResourceRef,
   resourceContextMenuPath,
@@ -16,15 +15,6 @@ import {
   createDashboardWorkspaceOptions,
 } from "@/shared/workspaces/workspace-options";
 
-const autoOpenedWorkspaceTerminalUris = new WeakMap<WorkbenchModuleContext, Set<string>>();
-const getAutoOpenedWorkspaceTerminalUris = (ctx: WorkbenchModuleContext) => {
-  let uris = autoOpenedWorkspaceTerminalUris.get(ctx);
-  if (!uris) {
-    uris = new Set();
-    autoOpenedWorkspaceTerminalUris.set(ctx, uris);
-  }
-  return uris;
-};
 const workspaceLabel = (resource: ResourceRef) => {
   const shorthand = resource.metadata?.workspaceShorthand;
   return typeof shorthand === "string" ? shorthand : (resource.label ?? resource.id ?? "workspace");
@@ -77,63 +67,6 @@ export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resou
   const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
   if (!isLocalReadyWorkspace(terminalResource)) return;
   return openWorkbenchTerminal(ctx, { resource: terminalResource });
-};
-export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  if (!resource.id) return;
-  if (!ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)) return;
-  const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
-  if (!isLocalReadyWorkspace(terminalResource)) return;
-  const autoOpenedUris = getAutoOpenedWorkspaceTerminalUris(ctx);
-  const existing = ctx.layout
-    .getLayout()
-    .regions.secondary.widgets.find(
-      (placement) =>
-        placement.placementIdentity?.kind === "shell" &&
-        placement.placementIdentity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
-        placement.resource?.type === "terminal" &&
-        placement.resource.metadata?.workspaceId === resource.id,
-    );
-  if (existing) {
-    if (existing.resource?.metadata?.workspacePath === terminalResource.metadata?.workspacePath) return existing;
-    const identity = existing.placementIdentity;
-    if (!identity || identity.kind !== "shell") return;
-    const updatedTerminal = existing.resource
-      ? { ...existing.resource, metadata: { ...existing.resource.metadata, ...terminalResource.metadata } }
-      : undefined;
-    return ctx.shellPlacements.updatePlacement(identity, {
-      resource: updatedTerminal,
-      title: existing.title,
-    });
-  }
-  const owned = ctx.shellPlacements
-    .resolvePlacements()
-    .find(
-      (placement) =>
-        placement.identity.kind === "shell" &&
-        placement.identity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
-        placement.value.resource?.type === "terminal" &&
-        placement.value.resource.metadata?.workspaceId === resource.id,
-    );
-  if (owned?.identity.kind === "shell") {
-    const updatedTerminal = owned.value.resource
-      ? { ...owned.value.resource, metadata: { ...owned.value.resource.metadata, ...terminalResource.metadata } }
-      : terminalResource;
-    ctx.shellPlacements.updatePlacement(owned.identity, {
-      resource: updatedTerminal,
-      title: owned.value.title,
-    });
-    return ctx.layout
-      .getLayout()
-      .regions.secondary.widgets.find(
-        (placement) =>
-          placement.placementIdentity?.kind === "shell" &&
-          placement.placementIdentity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
-          placement.resource?.metadata?.workspaceId === resource.id,
-      );
-  }
-  if (autoOpenedUris.has(resourceKey(resource))) return;
-  autoOpenedUris.add(resourceKey(resource));
-  return openWorkbenchTerminal(ctx, { resource: terminalResource, reveal: false });
 };
 // The default workspace (root repo) is permanent: hide every action when the active or
 // right-clicked resource is the default workspace.
