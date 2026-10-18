@@ -6,7 +6,7 @@ export const SITE_LINKS = {
   github: siteMetadata.repositoryUrl,
   issues: `${siteMetadata.repositoryUrl}/issues`,
   discord: "https://discord.gg/3RxwUEk8fW",
-  install: "/docs/guides/getting-started/install/",
+  installCli: "/docs/guides/getting-started/install/#install-only-the-command-line-tool",
   harnessClaudeCode: "/docs/extensions/claude-code/",
   harnessCodex: "/docs/extensions/codex/",
   harnessOpenCode: "/docs/extensions/opencode/",
