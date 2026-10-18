@@ -18,6 +18,8 @@ export const registerCommandStreamSmokeTests = () => {
       const started = await startPackagedServe(root);
       child = started.child;
       const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
+      const documentation = await fetch(`${started.baseUrl}/openapi.json`, { headers });
+      expect(documentation.status).toBe(200);
       const created = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers,

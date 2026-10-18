@@ -59,6 +59,7 @@ export const dispatchExtensionEventBodySchema = z
   })
   .strict();
 
+export { commandJsonValueSchema } from "./command-outcome";
 export { validatedCommandOutcomeSchema };
 
 const responseNavigationTargetSchema: z.ZodType<NavigationTarget> = navigationTargetSchema;

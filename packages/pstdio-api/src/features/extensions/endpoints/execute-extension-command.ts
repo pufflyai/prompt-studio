@@ -1,6 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
-import { type CommandExecuteBody, commandExecuteBodySchema, commandExecutionResultSchema } from "pstdio-api-contracts";
+import {
+  type CommandExecuteBody,
+  commandExecuteBodySchema,
+  commandExecutionResultSchema,
+  commandJsonValueSchema,
+} from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -11,6 +16,9 @@ import {
 } from "../execute-project-extension-command";
 
 export { resolveCommandWorkspaceDir } from "../execute-project-extension-command";
+
+// Name the recursive JSON schema so OpenAPI emits references instead of expanding it forever.
+commandJsonValueSchema.openapi("CommandJsonValue");
 
 const errorSchema = z.object({
   error: z.string(),

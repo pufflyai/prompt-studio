@@ -17,11 +17,13 @@ const diagnostic = z.object({
   commandId: z.string().optional(),
   metadata: serializableJsonObjectSchema.optional(),
 });
+export const commandJsonValueSchema = z.json();
+
 const error = z.object({
   name: z.string().optional(),
   message: z.string(),
   stack: z.string().optional(),
-  cause: z.json().optional(),
+  cause: commandJsonValueSchema.optional(),
 });
 const annotations = {
   notices: z.array(notice).optional(),
@@ -33,7 +35,7 @@ const failure = {
   code: z.string().optional(),
   reason: z.string(),
   data: serializableJsonObjectSchema.optional(),
-  cause: z.json().optional(),
+  cause: commandJsonValueSchema.optional(),
   error: error.optional(),
 };
 const navigation: z.ZodType<NavigationTarget> = navigationTargetSchema;
