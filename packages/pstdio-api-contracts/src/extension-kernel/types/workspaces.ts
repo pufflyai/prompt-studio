@@ -89,7 +89,9 @@ export interface ExtensionWorkspacesApi {
   get(id: string): Promise<ExtensionWorkspace | null>;
   getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
   create(input: ExtensionWorkspaceCreateInput | CreateExtensionWorkspaceInput): Promise<ExtensionWorkspace>;
+  /** @deprecated Use resources.addAnchors with a workspace reference. */
   addAnchors(workspaceId: string, anchors: ResourceAnchor[]): Promise<void>;
+  /** @deprecated Use resources.removeAnchors with a workspace reference. */
   removeAnchors(workspaceId: string, refs: ResourceRef[]): Promise<void>;
   resolve(id: string): Promise<WorkspaceProviderResult>;
   cancel(id: string): Promise<ExtensionWorkspace>;

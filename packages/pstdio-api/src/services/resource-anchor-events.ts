@@ -36,13 +36,15 @@ export const publishCreatedResourceAnchors = (
   );
 };
 
-export const refreshLegacyAnchorSources = async (
+export const refreshResourceAnchorSources = async (
   bus: EventBus,
   items: Array<{ source: ResourceRef; target: ResourceAnchor }>,
-  readers: {
-    workspace: (id: string) => Promise<{ id: string; deleted_at?: string | null } | null>;
-    session: (id: string) => Promise<{ id: string } | null>;
-  },
+  readers: Partial<
+    Record<
+      "project" | "workspace" | "session",
+      (id: string) => Promise<{ id: string; deleted_at?: string | null } | null>
+    >
+  >,
 ) => {
   const sources = new Map(
     items
@@ -50,9 +52,10 @@ export const refreshLegacyAnchorSources = async (
       .map(({ source }) => [JSON.stringify([source.type, source.id]), source]),
   );
   for (const source of sources.values()) {
-    if (source.type !== "workspace" && source.type !== "session") continue;
-    const row = await readers[source.type](source.id);
-    if (row && !("deleted_at" in row && row.deleted_at))
-      bus.emit(source.type === "workspace" ? "workspaces" : "sessions", "set", row);
+    if (source.type !== "project" && source.type !== "workspace" && source.type !== "session") continue;
+    const read = readers[source.type];
+    if (!read) continue;
+    const row = await read(source.id);
+    if (row && !("deleted_at" in row && row.deleted_at)) bus.emit(`${source.type}s`, "set", row);
   }
 };

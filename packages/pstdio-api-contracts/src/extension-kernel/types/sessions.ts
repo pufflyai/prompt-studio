@@ -168,7 +168,9 @@ export interface ExtensionSessionsApi {
     expectedRun?: SessionRunSnapshot;
   }): Promise<void>;
 
+  /** @deprecated Use resources.addAnchors with a session reference. */
   addAnchors(sessionId: string, anchors: ResourceAnchor[]): Promise<void>;
+  /** @deprecated Use resources.removeAnchors with a session reference. */
   removeAnchors(sessionId: string, refs: ResourceRef[]): Promise<void>;
 }
 
