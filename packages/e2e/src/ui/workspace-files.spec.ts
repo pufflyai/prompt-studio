@@ -108,7 +108,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     await search.fill("README");
     await expect(filesTree.getByRole("option")).toHaveCount(1);
     await page.getByRole("option", { name: "README.md" }).click();
-    const editor = page.locator(".monaco-editor");
+    const editor = page.locator(".monaco-editor").filter({ visible: true });
     await expect(editor).toBeVisible();
     await expect(page.getByLabel("File path README.md")).toBeVisible();
     await page.waitForTimeout(900);
@@ -159,7 +159,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
 
     await search.fill("LICENSE");
     await page.getByRole("option", { name: "LICENSE" }).click();
-    await expect(page.locator(".monaco-editor")).toBeVisible();
+    await expect(editor).toBeVisible();
 
     await search.fill("");
     await exerciseWorkspaceFileOperations({ page, filesTree, assets, worktreePath });

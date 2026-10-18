@@ -154,7 +154,7 @@ export const exerciseWorkspaceFileOperations = async (input: {
   await newFileInput.press("Enter");
   expect((await createResponse).status()).toBe(201);
   await expect.poll(() => existsSync(join(worktreePath, "created.md"))).toBe(true);
-  await expect(page.locator(".monaco-editor")).toBeVisible();
+  await expect(page.locator(".monaco-editor").filter({ visible: true })).toBeVisible();
   await expect(page.getByText("Created created.md", { exact: true })).toHaveCount(0);
 
   const createdFile = page.getByRole("option").filter({ hasText: "created.md" }).first();

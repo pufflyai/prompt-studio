@@ -165,8 +165,10 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await installPlanner(host, conflicting.folder);
     await enablePlanner(host, valid.id);
     phase("install complete; seed start");
-    const conflictData = await seedTrackProject(conflicting.execute, "multi_select");
-    await seedTrackProject(valid.execute, "single_select");
+    const [conflictData] = await Promise.all([
+      seedTrackProject(conflicting.execute, "multi_select"),
+      seedTrackProject(valid.execute, "single_select"),
+    ]);
     phase("seed complete");
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
@@ -242,13 +244,15 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await expectConflictsPreserved(conflicting.execute, conflictData.track.id, trackOptions);
 
     phase("repair start");
-    for (const ticket of [...conflictData.active, ...conflictData.archived]) {
-      await conflicting.execute("set-ticket-attribute", {
-        rowId: ticket.id,
-        attributeId: conflictData.track.id,
-        value: conflictData.product.id,
-      });
-    }
+    await Promise.all(
+      [...conflictData.active, ...conflictData.archived].map((ticket) =>
+        conflicting.execute("set-ticket-attribute", {
+          rowId: ticket.id,
+          attributeId: conflictData.track.id,
+          value: conflictData.product.id,
+        }),
+      ),
+    );
     await conflicting.execute("update-ticket", {
       id: conflictData.draft.shorthand,
       tagIds: [conflictData.platform.id],
