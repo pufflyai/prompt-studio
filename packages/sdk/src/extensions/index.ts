@@ -3,6 +3,15 @@ export type {
   HistoryRecoveryInput,
   HistoryRecoveryResult,
 } from "pstdio-api-contracts";
+export {
+  HistoryConflict,
+  historyMessageKey,
+  historyValueKey,
+  mergeHistoryMetadata,
+  reconcileMessageHistory,
+  splitHistoryTurns,
+  submittedPrompt,
+} from "pstdio-api-contracts/collections";
 export type * from "pstdio-api-contracts/extension-kernel";
 export type {
   CommitPayload,
@@ -51,15 +60,6 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
-export {
-  HistoryConflict,
-  historyMessageKey,
-  historyValueKey,
-  mergeHistoryMetadata,
-  reconcileMessageHistory,
-  splitHistoryTurns,
-  submittedPrompt,
-} from "pstdio-api-contracts/collections";
 export { SDK_VERSION } from "../version";
 export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
