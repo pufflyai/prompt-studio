@@ -19,6 +19,7 @@ import { acquirePgliteLock } from "./pglite-lock";
 import { snapshotLegacyQueuedRequests } from "./queued-request-migration";
 import * as schema from "./schemas.pg";
 import { removeSharedWorkspaceFolders } from "./shared-workspace-folders";
+import { migrateWorkspaceCapabilities } from "./workspace-capabilities-migration";
 import { prepareWorkspaceLocations } from "./workspace-location-migration";
 
 type EmbeddedFile = Blob & { name: string };
@@ -168,6 +169,7 @@ export const createDb = async (options?: { path?: string; onPhase?: (phase: DbOp
       await removeArchivedWorkspaces(openedPglite);
       await migrateThrough(db, migrationsFolder);
       await finishBoardViewRules(openedPglite);
+      await migrateWorkspaceCapabilities(openedPglite);
       await snapshotLegacyQueuedRequests(db);
     });
     onPhase("database_migrated");

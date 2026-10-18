@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
+import { migrateWorkspaceCapabilities } from "./workspace-capabilities-migration";
 
 test("workspace capability upgrades preserve explicit deletion policy", async () => {
   const db = new PGlite();
@@ -12,8 +12,8 @@ test("workspace capability upgrades preserve explicit deletion policy", async ()
       allowed: { archive: false, delete: true, diff: true },
     }))
       await db.query("INSERT INTO workspaces VALUES ($1, $2)", [id, capabilities]);
-    const migration = await readFile(new URL("../../drizzle/0046_lean_adam_warlock.sql", import.meta.url), "utf8");
-    await db.exec(migration);
+    await migrateWorkspaceCapabilities(db);
+    await migrateWorkspaceCapabilities(db);
     const result = await db.query<{ id: string; provider_capabilities_json: unknown }>(
       "SELECT * FROM workspaces ORDER BY id",
     );
