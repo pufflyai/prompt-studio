@@ -23,6 +23,11 @@ test("command value errors retain the complete rejected outcome", () => {
   }
 });
 
+test("command value errors keep a serialized failure message when the reason is empty", () => {
+  const outcome = { ok: false, status: "error", reason: "", error: { message: "Create failed" } } as const;
+  expect(() => getCommandValue(outcome)).toThrow("Create failed");
+});
+
 describe("unwrapCommandOutcome", () => {
   test("returns the command value on success", () => {
     expect(unwrapCommandOutcome({ outcome: { ok: true, status: "success", value: "done" } })).toBe("done");

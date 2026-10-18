@@ -8,7 +8,7 @@ export class CommandOutcomeError extends Error {
   readonly code;
   readonly outcome;
   constructor(outcome: Extract<CommandOutcome, { ok: false }>) {
-    super(outcome.reason || "Command failed.", { cause: outcome.cause });
+    super(outcome.reason || outcome.error?.message || "Command failed.", { cause: outcome.cause });
     this.name = "CommandOutcomeError";
     this.code = outcome.code;
     this.outcome = outcome;
