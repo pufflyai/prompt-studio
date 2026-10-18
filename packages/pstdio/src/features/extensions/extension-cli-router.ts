@@ -82,6 +82,17 @@ const localizeCommands = (
     ...command,
     title: resolveTranslatedString(command.title, command.extensionId, translations, locale) ?? command.id,
     description: resolveTranslatedString(command.description, command.extensionId, translations, locale),
+    params:
+      command.params &&
+      Object.fromEntries(
+        Object.entries(command.params).map(([name, descriptor]) => [
+          name,
+          {
+            ...descriptor,
+            description: resolveTranslatedString(descriptor.description, command.extensionId, translations, locale),
+          },
+        ]),
+      ),
   }));
 
 const commandCliPaths = (command: ExtensionCommandRecord) => {
@@ -228,7 +239,7 @@ export const renderCommandHelp = (command: ExtensionCommandRecord) => {
     lines.push("", "Options:");
     for (const [name, descriptor] of params) {
       lines.push(
-        `  ${formatParamName(name)}${describeParamValue(descriptor)}  ${descriptor.description ?? ""}`.trimEnd(),
+        `  ${formatParamName(name)}${describeParamValue(descriptor)}  ${displayString(descriptor.description)}`.trimEnd(),
       );
     }
   }
