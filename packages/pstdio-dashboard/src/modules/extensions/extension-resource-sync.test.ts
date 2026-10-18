@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import type { CommandExecutionResult } from "@pstdio/sdk/api";
 import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { watchOpenExtensionResource } from "./extension-resource-sync";
 
 import { extensionId, openNoteWorkbench, page, projectId, settle } from "./extension-resource-sync.fixture";
-
 
 describe("open extension resource sync", () => {
   test.each([
