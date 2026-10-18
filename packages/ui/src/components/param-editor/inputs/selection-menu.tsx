@@ -37,9 +37,6 @@ export interface SelectionMenuProps {
   onGroupChange?: (optionId: string) => void;
 }
 
-const SelectionIndicator = (props: { selected: boolean }) =>
-  props.selected ? <Icon as={Check} boxSize="3.5" color="fg" /> : null;
-
 const selectionIconComponent = (option: SelectionMenuOption | undefined) =>
   option?.icon ? getIconComponent(option.icon) : undefined;
 
@@ -221,7 +218,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                     tooltip={option.description}
                     disabled={option.disabled}
                     isSelected={selected}
-                    endContent={<SelectionIndicator selected={selected} />}
+                    endContent={selected ? <Icon as={Check} boxSize="3.5" color="fg" /> : undefined}
                   />
                 </Menu.Item>
               );
