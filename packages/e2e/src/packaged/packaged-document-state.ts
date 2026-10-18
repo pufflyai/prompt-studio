@@ -77,7 +77,12 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
   await expect(side).toBeVisible();
+  const fallback = page.locator('[data-workbench-panel="main"] [data-workbench-instance]:visible').first();
+  await expect(fallback).toBeVisible();
+  const fallbackB = await fallback.getAttribute("data-workbench-instance");
+  expect(fallbackB).not.toBeNull();
   await navigate("a");
+  await expect(fallback).not.toHaveAttribute("data-workbench-instance", fallbackB!);
   await expect(optional).toHaveCount(0);
   await side.focus();
   await page.keyboard.press("Shift+F10");
