@@ -15,7 +15,6 @@ test("a default local workspace owns its folder without Git capabilities", () =>
     diff: false,
     merge: false,
     rebase: false,
-    archive: false,
     delete: false,
   });
 });

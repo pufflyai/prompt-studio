@@ -1,6 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { viewFilterFromLegacyFilters, viewSortsFromLegacyOrdering } from "pstdio-api-contracts";
-import type { KanbanRendererFilterState, KanbanRendererSettings } from "pstdio-api-contracts/extension-kernel";
+import type { LegacyFilterMap, LegacyOrdering } from "./board-view-legacy-values";
+import { viewFilterFromLegacyFilters, viewSortsFromLegacyOrdering } from "./board-view-legacy-values";
 
 // Convert values before the generated migration renames the column. Keeping the
 // original column until then makes a failed startup safe to retry.
@@ -11,9 +11,7 @@ export const prepareBoardViewRules = async (db: PGlite) => {
   ) AS legacy`);
   if (!shape.rows[0]?.legacy) return;
   await db.transaction(async (tx) => {
-    const views = await tx.query<{ id: string; filters: KanbanRendererFilterState }>(
-      "SELECT id, filters FROM board_views",
-    );
+    const views = await tx.query<{ id: string; filters: LegacyFilterMap }>("SELECT id, filters FROM board_views");
     for (const view of views.rows) {
       if (typeof view.filters.conjunction === "string") continue;
       await tx.query("UPDATE board_views SET filters = $1 WHERE id = $2", [
@@ -28,7 +26,7 @@ export const prepareBoardViewRules = async (db: PGlite) => {
 // remove it together after sorts exists, so an interrupted upgrade loses no order.
 export const finishBoardViewRules = async (db: PGlite) => {
   await db.transaction(async (tx) => {
-    const views = await tx.query<{ id: string; settings: KanbanRendererSettings }>(
+    const views = await tx.query<{ id: string; settings: Record<string, unknown> & { ordering?: LegacyOrdering } }>(
       "SELECT id, settings FROM board_views WHERE settings ? 'ordering'",
     );
     for (const view of views.rows) {

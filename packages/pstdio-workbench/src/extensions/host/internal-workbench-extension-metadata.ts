@@ -106,7 +106,6 @@ export interface InternalWorkbenchExtensionMetadata {
   controlsRenderers: WorkbenchExtensionControlsRendererRecord[];
   keybindings: ExtensionKeybindingRecord[];
   settingsDefinitions: ExtensionSettingDefinitionRecord[];
-  statuses: WorkbenchExtensionMetadata["statuses"];
   statusBarItems: Array<{
     id: string;
     extensionId: string;

@@ -48,12 +48,11 @@ beforeEach(async () => {
     join(source, "extension.ts"),
     `
 let values=[{value:"todo",label:"To do"},{value:"gone",label:"Gone"}], fail=false, inbox=[{id:"a",values:{title:"Mail",score:5}}];
-const legacySettings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",ordering:{attributeId:"manual",direction:"asc"},displayProperties:["state"]};
 const settings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",displayProperties:["state"]};
 const filter={conjunction:"and",rules:[]};
 const extension = {
 commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}},{id:"empty",ref:{kind:"command",id:"empty"},title:"Empty",params:{},run:()=>{inbox=[];return null;}}],
-views:[...["legacy","explicit"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"kanban",defaultActiveViewId:id==="explicit"?"first":undefined,defaultViews:[{id:"first",title:"First",settings:legacySettings,filters:{}},{id:"flagged",title:"Flagged",settings:legacySettings,filters:{},isDefault:true}],query:()=>({rows:[]})}})),{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true,filterable:false},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
+views:[{id:"explicit",ref:{kind:"view",id:"explicit"},title:"Explicit",body:{kind:"kanban",defaultActiveViewId:"second",defaultViews:[{id:"first",title:"First",settings,filter,sorts:[]},{id:"second",title:"Second",settings,filter,sorts:[]}],query:()=>({rows:[]})}},{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true,filterable:false},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
 };
 extension.views.push({id:"badges",ref:{kind:"view",id:"badges"},title:"Badges",body:{kind:"kanban",defaultSettings:{...settings,displayProperties:["badge"]},query:()=>({rows:[],attributes:[{id:"badge",label:"Badge",type:{kind:"enum",options:[{value:"mention",label:"Mention"}]}},{id:"private",label:"Private",type:{kind:"string"},displayable:false}]})}});
 export default extension;
@@ -88,13 +87,11 @@ afterEach(async () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-test("uses deprecated default flags only below explicit and project defaults", async () => {
-  const path = "/boards/test.boards.view.legacy/views";
-  const legacy = await (await request(path)).json();
-  const first = legacy.views.find((view: { title: string }) => view.title === "First");
-  expect(legacy.views.find((view: { id: string }) => view.id === legacy.defaultViewId).title).toBe("Flagged");
-  const explicit = await (await request("/boards/test.boards.view.explicit/views")).json();
-  expect(explicit.views.find((view: { id: string }) => view.id === explicit.defaultViewId).title).toBe("First");
+test("keeps the project default above the extension's initial active view", async () => {
+  const path = "/boards/test.boards.view.explicit/views";
+  const initial = await (await request(path)).json();
+  const first = initial.views.find((view: { title: string }) => view.title === "First");
+  expect(initial.views.find((view: { id: string }) => view.id === initial.defaultViewId).title).toBe("Second");
   expect((await request(`${path}/default`, "PUT", { viewId: first.id })).status).toBe(200);
   expect(await (await request(path)).json()).toMatchObject({ defaultViewId: first.id });
 });

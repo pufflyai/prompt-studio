@@ -45,7 +45,6 @@ test("extension detail settings stay out of project settings navigation", () => 
     statusBarItems: [],
     viewMenus: [],
     diagnostics: [],
-    statuses: [],
   };
   registerWorkbenchExtensionContributions({
     metadata,

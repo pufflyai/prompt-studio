@@ -2,7 +2,6 @@ import type { Localizable } from "../l10n";
 import type { ViewFilterGroup, ViewSort } from "./collection-view";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
-import type { StatusRef } from "./contribution-identity";
 import type { Struct } from "./json";
 import type { NavigationTargetPage } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
@@ -23,8 +22,6 @@ export interface KanbanRendererEnumOption {
 export type KanbanRendererAttributeType =
   | { kind: "enum"; options: KanbanRendererEnumOption[] }
   | { kind: "enum-multi"; options: KanbanRendererEnumOption[] }
-  /** @deprecated Use `kind: "enum"` with options returned in query `attributes`. */
-  | { kind: "status"; statuses: StatusRef }
   /** Maps old enum IDs when saved views are read. Row values must still be booleans. */
   | { kind: "boolean"; legacyValues?: Record<string, boolean> }
   | { kind: "string" }
@@ -60,25 +57,11 @@ export interface KanbanRendererSettings {
   viewMode: KanbanRendererViewMode;
   columnGrouping: string;
   rowGrouping: string;
-  /**
-   * @deprecated Use the view's `sorts`. The host still sends the first sort here, or
-   * `{ attributeId: "manual", direction: "asc" }` when the view has no sorts.
-   */
-  ordering: {
-    attributeId: string;
-    direction: KanbanRendererSortDirection;
-  };
   displayProperties: string[];
 }
 
 /** Display settings stored in a view. Order lives in the view's `sorts`. */
-export type KanbanRendererViewSettings = Omit<KanbanRendererSettings, "ordering"> & {
-  /** @deprecated Use the view's `sorts`. */
-  ordering?: KanbanRendererSettings["ordering"];
-};
-
-/** @deprecated Use `ViewFilterGroup`. */
-export type KanbanRendererFilterState = Record<string, string[]>;
+export type KanbanRendererViewSettings = KanbanRendererSettings;
 
 export interface KanbanRendererSavedView {
   id: string;
@@ -86,10 +69,6 @@ export interface KanbanRendererSavedView {
   settings: KanbanRendererViewSettings;
   filter?: ViewFilterGroup;
   sorts?: ViewSort[];
-  /** @deprecated Use `filter`. When both are set, `filter` wins. */
-  filters?: KanbanRendererFilterState;
-  /** @deprecated Use the renderer's defaultActiveViewId instead. */
-  isDefault?: boolean;
 }
 
 export interface KanbanRendererQueryParams {
@@ -99,11 +78,6 @@ export interface KanbanRendererQueryParams {
   filter: ViewFilterGroup;
   /** The view's sorts, first level first. The renderer applies them to the rows you return. */
   sorts: ViewSort[];
-  /**
-   * @deprecated Read `filter`. Derived from the root "is any of" and "has any of" rules when the root
-   * conjunction is "and".
-   */
-  filters: KanbanRendererFilterState;
 }
 
 export type KanbanRendererResourceRef = ResourceRef;
@@ -182,8 +156,6 @@ export interface KanbanRendererContribution extends RendererContributionBase {
   attributes?: KanbanRendererAttributeDescriptor[];
   query: RendererCallback<KanbanRendererQueryParams, KanbanRendererQueryResult>;
   onAttributeChange?: RendererCallback<{ rowId: string; attributeId: string; value: unknown }, unknown>;
-  /** @deprecated Use onMove to save a complete drop. */
-  onReorder?: RendererCallback<{ rowId: string; beforeRowId?: string }, unknown>;
   onColumnAction?: RendererCallback<{ columnId: string; actionId: string }, unknown>;
   createRow?: KanbanRendererCreateRowContribution;
   rowActions?: KanbanRendererRowAction[];
@@ -191,8 +163,6 @@ export interface KanbanRendererContribution extends RendererContributionBase {
   defaultSettings?: Partial<KanbanRendererSettings>;
   defaultFilter?: ViewFilterGroup;
   defaultSorts?: ViewSort[];
-  /** @deprecated Use `defaultFilter`. When both are set, `defaultFilter` wins. */
-  defaultFilters?: KanbanRendererFilterState;
   defaultViews?: KanbanRendererSavedView[];
   defaultActiveViewId?: string;
   hideToolbar?: boolean;

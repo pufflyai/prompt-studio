@@ -36,8 +36,6 @@ export const stubEnvironment = (
     sessions: {
       query: async () => ({ items: [], nextCursor: null }),
       get: async () => null,
-      list: async () => [],
-      listByWorkspace: async () => [],
       create: async () => createSessionResource(),
       followup: async () => {},
       getQueuedFollowUps: queuedRequestsRequireHost,
@@ -58,7 +56,6 @@ export const stubEnvironment = (
       create: async () => ({ id: "" }),
       resolve: async () => ({}) as never,
       cancel: async () => ({ id: "" }),
-      archive: async () => ({ id: "" }),
       removeWorktree: async () => ({ removed: true }),
       delete: async () => {},
     },

@@ -26,8 +26,6 @@ export type WorkspaceCapabilities = {
   diff: boolean;
   merge: boolean;
   rebase: boolean;
-  /** @deprecated Use delete. */
-  archive: boolean;
   delete: boolean;
 };
 
@@ -36,7 +34,6 @@ export const defaultLocalWorkspaceCapabilities: WorkspaceCapabilities = {
   diff: true,
   merge: true,
   rebase: true,
-  archive: true,
   delete: true,
 };
 
@@ -45,7 +42,6 @@ export const folderWorkspaceCapabilities: WorkspaceCapabilities = {
   diff: false,
   merge: false,
   rebase: false,
-  archive: false,
   delete: false,
 };
 

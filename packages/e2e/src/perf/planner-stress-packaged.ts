@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { buildBinary, PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
-import { timelinePlannerSource } from "../packaged/packaged-planner-upgrade-fixture";
+import { plannerSource } from "../packaged/packaged-planner-runtime-fixture";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "../packaged/packaged-serve-helpers";
 
 export async function startPlannerStressRuntime() {
@@ -27,7 +27,7 @@ export async function startPlannerStressRuntime() {
       body: JSON.stringify(folderProjectInput({ name: "project" }, folder)),
     });
     if (!response.ok) throw new Error(`Creating the stress project failed: HTTP ${response.status}`);
-    execFileSync(PACKAGED_BINARY_PATH, ["extensions", "add", timelinePlannerSource, "--name", "pstdio-planner"], {
+    execFileSync(PACKAGED_BINARY_PATH, ["extensions", "add", plannerSource, "--name", "pstdio-planner"], {
       cwd: folder,
       env: {
         ...process.env,

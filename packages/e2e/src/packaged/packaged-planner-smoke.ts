@@ -1,7 +1,11 @@
 import { test } from "bun:test";
 import { expectPackagedPlannerAutoBuild } from "./packaged-planner-auto-build-smoke";
 import { withPackagedPlanner } from "./packaged-planner-helpers";
-import { expectPackagedDependencyStacks } from "./packaged-planner-stacks-smoke";
+import {
+  expectPackagedDependencyStacks,
+  expectPackagedDraftAdoption,
+  expectPackagedWorkspaceRecovery,
+} from "./packaged-planner-stacks-smoke";
 import { expectPackagedPlannerTimeline } from "./packaged-planner-timeline-smoke";
 import { expectBriefSupervisorWakes } from "./packaged-planner-wakes-smoke";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -25,6 +29,16 @@ export function registerPackagedPlannerSmokeTests() {
   test(
     "packaged Planner reconciles dependency stacks and Git conflicts",
     () => withPackagedPlanner(expectPackagedDependencyStacks),
+    PACKAGED_TEST_TIMEOUT,
+  );
+  test(
+    "packaged Planner recovers missing workspaces without losing submitted work",
+    () => withPackagedPlanner(expectPackagedWorkspaceRecovery),
+    PACKAGED_TEST_TIMEOUT,
+  );
+  test(
+    "packaged Planner adopts a feature draft without changing its Git state",
+    () => withPackagedPlanner(expectPackagedDraftAdoption),
     PACKAGED_TEST_TIMEOUT,
   );
 }

@@ -27,7 +27,6 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   activityItems: [],
   settingsSections: [],
   keybindings: [],

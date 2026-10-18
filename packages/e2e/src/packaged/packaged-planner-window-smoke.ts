@@ -1,5 +1,5 @@
 import { expect, type FrameLocator } from "@playwright/test";
-import type { Execute } from "./packaged-planner-upgrade-fixture";
+import type { Execute } from "./packaged-planner-runtime-fixture";
 
 // A long dependency chain exercises actual installed Planner data and variable card heights.
 export async function expectPlannerWindow(timeline: FrameLocator, execute: Execute, trackId: string) {

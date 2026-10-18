@@ -1,6 +1,8 @@
 import { join } from "node:path";
+import { projectEvents } from "pstdio-api-contracts/extension-kernel";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
+import { fireExtensionEvent } from "./features/extensions/extension-event-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import type { RuntimeHost } from "./features/runtime/routes";
@@ -163,6 +165,9 @@ export const startAppLifecycle = async (input: {
   terminalSupervisor: { dispose(): Promise<void> };
   closeDb: () => Promise<void>;
 }) => {
+  const unsubscribeProjectActivation = input.deps.extensionRuntimeCatalog.subscribeActivation((projectId) =>
+    fireExtensionEvent(input.deps, projectId, projectEvents.opened, { projectId }),
+  );
   const startupAbort = new AbortController();
   // Only sessions present before admission belong to restart recovery. Harness
   // discovery and reattachment can finish later without claiming new requests.
@@ -195,6 +200,10 @@ export const startAppLifecycle = async (input: {
 
   return createAppCloser({
     ...input,
+    unsubscribeExtensionEvents: () => {
+      unsubscribeProjectActivation();
+      input.unsubscribeExtensionEvents();
+    },
     startupAbort,
     stopQueueReadiness,
     sessionQueueLifecycle: input.deps.sessionQueueLifecycle,

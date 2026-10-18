@@ -24,7 +24,7 @@ import { registerConnectionStatusSmokeTests } from "./packaged-connection-status
 // ticket cleanup/merge settings, saved document links, and continuous ticket/workspace navigation.
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { registerExtensionAutomationSmokeTests } from "./packaged-extension-automation-smoke";
-// Includes legacy status provider loading and its migration warning.
+// Includes linked dependency loading and missing dependency diagnostics.
 import { registerExtensionDiagnosticsSmokeTests } from "./packaged-extension-diagnostics-smoke";
 import { registerExtensionInstallSmokeTests } from "./packaged-extension-install-smoke";
 import { registerExtensionStartupSmokeTests } from "./packaged-extension-startup-smoke";

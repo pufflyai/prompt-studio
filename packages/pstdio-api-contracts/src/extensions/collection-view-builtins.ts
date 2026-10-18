@@ -8,7 +8,7 @@ import type {
 import { DEFAULT_DATA_TABLE_SETTINGS } from "../extension-kernel/types/data-table-renderer";
 import { EMPTY_VIEW_FILTER } from "./collection-view";
 
-export type KanbanViewSettings = Omit<KanbanRendererViewSettings, "ordering">;
+export type KanbanViewSettings = KanbanRendererViewSettings;
 
 export const DEFAULT_KANBAN_VIEW_SETTINGS: KanbanViewSettings = {
   viewMode: "board",
@@ -23,7 +23,6 @@ interface DeclaredView<TSettings> {
   settings?: Partial<TSettings>;
   filter?: ViewFilterGroup;
   sorts?: ViewSort[];
-  isDefault?: boolean;
 }
 
 interface DeclaredViews<TSettings> {
@@ -65,13 +64,7 @@ const builtInViews = <TSettings>(base: TSettings, record: DeclaredViews<TSetting
 export const kanbanBuiltInViews = (
   record: DeclaredViews<KanbanViewSettings> & { attributes?: { id: string; type: { kind: string } }[] },
 ) => {
-  const statuses = record.attributes?.filter((field) => field.type.kind === "status") ?? [];
-  // A board with one status field is a status board unless it says otherwise.
-  const base =
-    statuses.length === 1
-      ? { ...DEFAULT_KANBAN_VIEW_SETTINGS, columnGrouping: statuses[0]!.id }
-      : DEFAULT_KANBAN_VIEW_SETTINGS;
-  return builtInViews(base, record);
+  return builtInViews(DEFAULT_KANBAN_VIEW_SETTINGS, record);
 };
 
 /** The views a data table offers before anyone saves one. Titles are returned unlocalized. */

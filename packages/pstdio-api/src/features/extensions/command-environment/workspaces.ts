@@ -191,11 +191,6 @@ export const createWorkspacesApi = (
       const workspace = await requireScopedWorkspace(id);
       return projectWorkspace(await cancelProviderBackedWorkspace(deps, workspace));
     },
-    archive: async (id) => {
-      const workspace = await requireScopedWorkspace(id);
-      await deleteWorkspace(id);
-      return { ...workspace, deleted_at: new Date().toISOString() } as ExtensionWorkspace;
-    },
     removeWorktree: async (id) => {
       const workspace = await requireScopedWorkspace(id);
       const removed = await removeWorkspaceWorktree(deps, workspace, {

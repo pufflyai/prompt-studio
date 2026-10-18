@@ -1,6 +1,6 @@
 import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
-import type { EnumOptions, KanbanRendererCreateField, KanbanRendererCreateFieldType, ResourceRef } from "../../core";
+import type { KanbanRendererCreateField, KanbanRendererCreateFieldType, ResourceRef } from "../../core";
 import type {
   ReactAttributeDescriptor as AttributeDescriptor,
   ReactKanbanRendererContribution as KanbanRendererContribution,
@@ -20,14 +20,6 @@ export interface MutableAttributeSource {
   set(attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined): void;
 }
 type UnknownDisplayReporter = (attributeId: string, kind: string) => void;
-export type ResolveStatusOptions = (
-  statuses: Extract<
-    NonNullable<WorkbenchExtensionKanbanRendererRecord["attributes"]>[number]["type"],
-    {
-      kind: "status";
-    }
-  >["statuses"],
-) => EnumOptions;
 export const isQueryResult = (value: unknown): value is QueryResult =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const localizeAttributes = (
@@ -35,7 +27,6 @@ const localizeAttributes = (
   attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined,
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
-  resolveStatusOptions: ResolveStatusOptions,
   reportUnknownDisplay?: UnknownDisplayReporter,
 ): AttributeDescriptor[] =>
   (attributes ?? []).map((attribute) => {
@@ -47,7 +38,6 @@ const localizeAttributes = (
     if (display && !knownDisplay) reportUnknownDisplay?.(attribute.id, display.kind);
     const resolveType = () => {
       const { type } = attribute;
-      if (type.kind === "status") return { kind: "enum" as const, options: resolveStatusOptions(type.statuses) };
       if (type.kind !== "enum" && type.kind !== "enum-multi") return type;
       return {
         ...type,
@@ -69,10 +59,9 @@ export const createMutableAttributeSource = (
   initial: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined,
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
-  resolveStatusOptions: ResolveStatusOptions = () => [],
   reportUnknownDisplay?: UnknownDisplayReporter,
 ): MutableAttributeSource => {
-  let snapshot = localizeAttributes(record, initial, localize, decorate, resolveStatusOptions, reportUnknownDisplay);
+  let snapshot = localizeAttributes(record, initial, localize, decorate, reportUnknownDisplay);
   const listeners = new Set<() => void>();
   let signature = JSON.stringify(initial);
   return {
@@ -87,7 +76,7 @@ export const createMutableAttributeSource = (
       const nextSignature = JSON.stringify(attributes);
       if (nextSignature === signature) return;
       signature = nextSignature;
-      snapshot = localizeAttributes(record, attributes, localize, decorate, resolveStatusOptions, reportUnknownDisplay);
+      snapshot = localizeAttributes(record, attributes, localize, decorate, reportUnknownDisplay);
       for (const listener of listeners) listener();
     },
   };

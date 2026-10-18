@@ -28,7 +28,6 @@ describe("resolveWorkspaceExecutionTarget", () => {
         diff: false,
         merge: false,
         rebase: false,
-        archive: true,
         delete: true,
       },
     });

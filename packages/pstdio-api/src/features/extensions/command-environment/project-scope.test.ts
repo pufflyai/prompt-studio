@@ -44,7 +44,7 @@ describe("command environment project scope", () => {
     expect(deleteProviderBackedWorkspace).not.toHaveBeenCalled();
 
     expect(await sessions.get("session-other")).toBeNull();
-    await expect(sessions.listByWorkspace("workspace-other")).rejects.toThrow("Workspace not found");
+    await expect(sessions.query({ workspaceId: "workspace-other" })).rejects.toThrow("Workspace not found");
     await expect(sessions.followup({ sessionId: "session-other", prompt: "cross project" })).rejects.toThrow(
       "Session not found",
     );
@@ -64,7 +64,6 @@ describe("command environment project scope", () => {
         diff: true,
         merge: true,
         rebase: true,
-        archive: false,
         delete: false,
       },
       execution_kind: "local",
@@ -85,16 +84,14 @@ describe("command environment project scope", () => {
     } as never);
 
     await expect(workspaces.resolve(workspace.id)).rejects.toThrow("Local workspace execution target");
-    await expect(workspaces.archive(workspace.id)).rejects.toThrow("does not allow deletion");
     await expect(workspaces.delete(workspace.id)).rejects.toThrow("does not allow deletion");
     expect(deleteProviderBackedWorkspace).not.toHaveBeenCalled();
 
     workspace = {
       ...workspace,
       is_default: true,
-      provider_capabilities_json: { ...workspace.provider_capabilities_json, archive: true, delete: true },
+      provider_capabilities_json: { ...workspace.provider_capabilities_json, delete: true },
     };
-    await expect(workspaces.archive(workspace.id)).rejects.toThrow("Default workspace");
     await expect(workspaces.delete(workspace.id)).rejects.toThrow("Default workspace");
   });
 });

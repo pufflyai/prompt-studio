@@ -213,21 +213,6 @@ export const createWorkbenchExtensionMetadata = (
     order: item.contribution.order,
     when: normalizeWhen(item.contribution.when, item.extensionId),
   })),
-  statuses: input.runtime.statuses.map((record) => {
-    const contribution = record.contribution as typeof record.contribution & {
-      queryHandlerId: string;
-      saveHandlerId?: string;
-    };
-    return {
-      id: record.id,
-      localId: record.localId,
-      extensionId: record.extensionId,
-      title: contribution.title,
-      actions: contribution.actions ? [...contribution.actions] : undefined,
-      queryHandlerId: contribution.queryHandlerId,
-      saveHandlerId: contribution.saveHandlerId,
-    };
-  }),
   activityItems: input.runtime.activityItems.map((item) => ({
     id: item.id,
     extensionId: item.extensionId,

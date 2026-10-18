@@ -23,8 +23,6 @@ export interface MessagePartsProps extends ChatLinkProps {
   message: SessionMessage;
   streaming?: boolean;
   hideQuestionForms?: boolean;
-  /** @deprecated Use linkHandler for workspace file references. */
-  onOpenFile?: (filePath: string) => void;
   toolInvocationTimeline?: ToolInvocationTimelineComponent;
 }
 
@@ -50,9 +48,9 @@ const filePartThumbnail = (part: FilePart) =>
     />
   ) : undefined;
 
-const openFilePart = (part: FilePart, onOpenFile?: (filePath: string) => void) => {
-  if (onOpenFile) {
-    onOpenFile(part.url);
+const openFilePart = (part: FilePart, linkHandler?: import("../links/chat-link").ChatLinkHandler) => {
+  if (linkHandler) {
+    void linkHandler.open({ source: part.url, origin: "reference" });
     return;
   }
 
@@ -111,7 +109,7 @@ export function MessagePartsRenderer(props: MessagePartsProps) {
 }
 
 function MessagePartsContent(props: MessagePartsProps) {
-  const { message, streaming = false, hideQuestionForms = false, onOpenFile, toolInvocationTimeline } = props;
+  const { message, streaming = false, hideQuestionForms = false, toolInvocationTimeline } = props;
   const linkHandler = useChatLinkHandler();
   const imageHistory = useChatImageHistory();
   const localImages = indexChatImageSources([message], linkHandler);
@@ -167,7 +165,6 @@ function MessagePartsContent(props: MessagePartsProps) {
               linkHandler={linkHandler}
               labeledBlocks
               hideQuestionForms={hideQuestionForms}
-              onOpenFile={onOpenFile}
             />
           </Box>,
         );
@@ -181,7 +178,7 @@ function MessagePartsContent(props: MessagePartsProps) {
               size="sm"
               tone="neutral"
               icon={filePartThumbnail(part)}
-              onSelect={() => openFilePart(part, onOpenFile)}
+              onSelect={() => openFilePart(part, linkHandler)}
             />
           </Box>,
         );

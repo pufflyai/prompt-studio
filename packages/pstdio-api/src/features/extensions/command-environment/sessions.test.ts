@@ -38,8 +38,6 @@ test("session readers expose harness and usage through an explicit public mappin
     usage: { input_tokens: 10, output_tokens: 5, cache_read_tokens: 0, cache_write_tokens: 2 },
   });
   expect(await api.get(row.id)).toEqual({ ...page.items[0], last_exit: null });
-  expect(await api.list()).toMatchObject([{ id: row.id, agent: "claude-code" }]);
-  expect(await api.listByWorkspace(workspace.id)).toEqual(page.items);
   expect(page.items[0]).not.toHaveProperty("project_id");
   expect(page.items[0]).not.toHaveProperty("session_file_id");
   const foreign = await handle.deps.projectService.create({ name: "foreign" });

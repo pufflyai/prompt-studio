@@ -4,6 +4,7 @@ import { z } from "zod";
 import { withStorageObservation } from "../../services/shared-files/storage-observation";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
+import { createExtensionLogger } from "./extension-logger";
 
 export class ExtensionCommandNotFoundError extends Error {
   constructor(readonly commandId: string) {
@@ -54,6 +55,7 @@ export const executeProjectExtensionCommand = async (
     throw new CommandWorkspaceNotFoundError(body.workspaceId);
   const eventIds = new Set<string>();
   const runner = createCommandRunner(snapshot.runtime, {
+    createLogger: createExtensionLogger,
     onDidDispatchEvent: (eventId) => eventIds.add(eventId),
     buildEnvironment: (environment) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {

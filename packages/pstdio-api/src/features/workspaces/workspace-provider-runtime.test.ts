@@ -28,7 +28,6 @@ const emptyRuntime = {
   settingsSections: [],
   skills: [],
   statusBarItems: [],
-  statuses: [],
   templateTypes: [],
   templates: [],
   themes: [],

@@ -15,14 +15,6 @@ const kanbanRendererEnumOptionSchema = z.object({
 const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("enum"), options: z.array(kanbanRendererEnumOptionSchema) }),
   z.object({ kind: z.literal("enum-multi"), options: z.array(kanbanRendererEnumOptionSchema) }),
-  z.object({
-    kind: z.literal("status"),
-    statuses: z.object({
-      extensionId: z.string().optional(),
-      kind: z.literal("status"),
-      id: z.string(),
-    }),
-  }),
   z.object({ kind: z.literal("boolean"), legacyValues: z.record(z.string(), z.boolean()).optional() }),
   z.object({ kind: z.literal("string") }),
   z.object({ kind: z.literal("date") }),
@@ -64,7 +56,6 @@ export const kanbanRendererSavedViewSchema = z.object({
   settings: kanbanViewSettingsSchema,
   filter: viewFilterGroupSchema,
   sorts: viewSortsSchema,
-  isDefault: z.boolean().optional(),
 });
 
 const extensionKanbanRendererCreateRowSchema = z.object({
@@ -105,7 +96,6 @@ export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSc
   attributes: z.array(kanbanRendererAttributeSchema).optional(),
   queryHandlerId: z.string(),
   attributeChangeHandlerId: z.string().optional(),
-  reorderHandlerId: z.string().optional(),
   moveHandlerId: z.string().optional(),
   schemaRefreshEventIds: z.array(z.string()).optional(),
   columnActionHandlerId: z.string().optional(),

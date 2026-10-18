@@ -198,3 +198,21 @@ describe("notifications service", () => {
     expect(fetched).toMatchObject({ status: "open", snoozed_until: null });
   });
 });
+
+test.each([
+  "snoozed",
+  "done",
+  "dismissed",
+] as const)("clearing the snooze date restores a live notification and preserves %s", async (status) => {
+  const created = await notificationsService.create({
+    project_id: projectId,
+    source: "api",
+    origin: "core",
+    title: "Wake",
+    kind: "needs_review",
+    status,
+    snoozed_until: "2099-01-01T00:00:00.000Z",
+  });
+  const updated = await notificationsService.update(projectId, created.id, { snoozed_until: null });
+  expect(updated).toMatchObject({ status: status === "snoozed" ? "open" : status, snoozed_until: null });
+});

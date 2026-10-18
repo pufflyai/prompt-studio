@@ -126,7 +126,6 @@ describe("createSettingsModule", () => {
       navigationItems: [],
       navigationTrees: [],
       statusBarItems: [],
-      statuses: [],
       activityItems: [],
       settingsSections: [],
       settingsPanels: [
@@ -134,7 +133,7 @@ describe("createSettingsModule", () => {
           id: `${extensionId}.settings-panel.ticket-tags`,
           extensionId,
           view: { extensionId, kind: "view", id: "ticket-tags-settings" },
-          slot: { id: "project.settingsPanels" },
+          slot: { id: "project.settings" },
         },
       ],
       commandPaletteResources: [],

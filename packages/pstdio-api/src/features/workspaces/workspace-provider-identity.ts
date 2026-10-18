@@ -11,6 +11,5 @@ export const remoteReadOnlyCapabilities = {
   diff: false,
   merge: false,
   rebase: false,
-  archive: true,
   delete: true,
 } satisfies WorkspaceCapabilities;

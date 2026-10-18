@@ -20,7 +20,6 @@ test("extension settings retain their owners and warn on deprecated cross-extens
     navigationItems: [],
     navigationTrees: [],
     statusBarItems: [],
-    statuses: [],
     settingsPanels: [],
     diagnostics: [],
     settingsDefinitions: [

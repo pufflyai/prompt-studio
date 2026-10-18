@@ -64,7 +64,6 @@ const metadata = () => ({
   ],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   settingsPanels: [],
   diagnostics: [],
 });

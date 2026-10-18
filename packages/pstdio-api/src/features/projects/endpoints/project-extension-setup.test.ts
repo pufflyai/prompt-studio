@@ -158,3 +158,24 @@ test("remote project creation retains extension setup failures on its initial wo
   expect((await handle.deps.workspaceService.getDefault(project.id))?.setup_error).toContain("missing-dependency");
   expect(await handle.deps.projectService.get(project.id)).not.toBeNull();
 });
+
+test("new projects run opened hooks after installing their default extensions exactly once", async () => {
+  const fixture = await extension("opened-fixture");
+  await writeFile(
+    join(fixture.source, "extension.ts"),
+    `export default { hooks: [{
+    id: "opened", ref: { kind: "hook", id: "opened" }, event: { extensionId: "pstdio", kind: "event", id: "project.opened" },
+    async run(ctx) { const count = (await ctx.storage.get("opened")) ?? 0; await ctx.storage.set("opened", count + 1); await ctx.projectFiles.writeText("opened.txt", String(count + 1)); }
+  }] };`,
+  );
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([fixture]);
+  const folder = join(root, "opened-project");
+  await mkdir(folder);
+  const response = await open({ provider_id: "pstdio.root", params: { path: folder } });
+  expect(response.status).toBe(201);
+  const project = await response.json();
+  expect(await readFile(join(folder, "opened.txt"), "utf8")).toBe("1");
+  handle.deps.extensionRuntimeCatalog.invalidate({ projectId: project.id, reason: "runtime_refresh" });
+  await handle.deps.extensionRuntimeCatalog.activate(project.id);
+  expect(await readFile(join(folder, "opened.txt"), "utf8")).toBe("1");
+});

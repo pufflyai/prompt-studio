@@ -13,7 +13,7 @@ const source = `
 const ready = (providerRef) => ({
   state: "ready", executionKind: "remote", providerRef,
   executionTarget: { kind: "remote", providerId: "example.cloud.workspace-type.remote", providerRef },
-  capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: false, delete: true },
+  capabilities: { files: "none", diff: false, merge: false, rebase: false, delete: true },
 });
 export default { workspaceTypes: [{
   id: "remote", ref: { kind: "workspace-type", id: "remote" }, label: "Cloud workspace",

@@ -62,7 +62,6 @@ export const metadata = {
   ],
   navigationTrees: [],
   statusBarItems: [],
-  statuses: [],
   activityItems: [],
   settingsSections: [],
   settingsPanels: [],

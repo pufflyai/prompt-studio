@@ -38,7 +38,6 @@ const environment: CommandRunnerEnvironment = {
     create: async () => ({ id: "" }),
     resolve: async () => ({}) as never,
     cancel: async () => ({ id: "" }),
-    archive: async () => ({ id: "" }),
     removeWorktree: async () => ({ removed: true }),
     delete: async () => {},
   },

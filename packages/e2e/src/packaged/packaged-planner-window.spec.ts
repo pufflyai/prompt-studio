@@ -6,7 +6,7 @@ import { type Browser, chromium, expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { buildBinary, runPackaged } from "./packaged-helpers";
-import { plannerCommands, timelinePlannerSource } from "./packaged-planner-upgrade-fixture";
+import { plannerCommands, plannerSource } from "./packaged-planner-runtime-fixture";
 import { expectPlannerWindow } from "./packaged-planner-window-smoke";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -32,7 +32,7 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
     });
     expect(response.status).toBe(201);
     const project = await response.json();
-    runPackaged(`extensions add ${timelinePlannerSource} --name pstdio-planner`, folder, {
+    runPackaged(`extensions add ${plannerSource} --name pstdio-planner`, folder, {
       HOME: home,
       PSTDIO_HOME: home,
     });
