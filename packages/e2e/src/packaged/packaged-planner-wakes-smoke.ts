@@ -113,15 +113,9 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     await execute("auto-build.configure", { enabled: false });
     const ticket = await execute("create-ticket", { content: "# Short managed implementation", status: "Todo" });
     const { attempt } = await execute("run-attempt", { ticket: ticket.id });
-    const expectStatus = async (statusId: string) => {
-      for (let check = 0; check < 100; check++) {
-        if ((await execute("get-ticket", { id: ticket.id })).statusId === statusId) return;
-        await Bun.sleep(50);
-      }
-      expect((await execute("get-ticket", { id: ticket.id })).statusId).toBe(statusId);
-    };
-    // The shipped lifecycle hook repairs the status after a real worker completes.
-    await expectStatus("ready");
+    const status = async () => (await execute("get-ticket", { id: ticket.id })).statusId;
+    // Planner leaves progress to the agent: starting, requesting input, and answering keep the chosen status.
+    expect(await status()).toBe("ready");
     const human = await execute("request-human", {
       ticket: ticket.id,
       workspaceId: attempt.workspaceId,
@@ -130,9 +124,9 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
       instructions: "Confirm before resuming the same attempt.",
       request: { kind: "task" },
     });
-    await expectStatus("blocked");
+    expect(await status()).toBe("ready");
     await execute("review", { requestId: human.id, response: { confirmed: true } });
-    await expectStatus("ready");
+    expect(await status()).toBe("ready");
     expect(
       (await execute("list-attempts")).filter((row: { ticketId: string }) => row.ticketId === ticket.id),
     ).toHaveLength(1);

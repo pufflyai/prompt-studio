@@ -38,7 +38,7 @@ export async function expectPackagedPlannerTimeline(input: {
   expect(planningNavigation[1]?.group).toBe(planningNavigation[0]?.group);
   expect(planningNavigation.every((item) => item.icon)).toBe(true);
   const execute = commandRunner(input);
-  await configurePlannerWorkflow(execute);
+  const { statusId } = await configurePlannerWorkflow(execute);
   await expectIndependentPlannerViews({ ...input, execute });
   await expectAgentOwnedStatus(execute);
   const deadline = await execute("timeline.deadline.create", { date: "2026-10-15", name: "Preview" });
@@ -83,8 +83,25 @@ export async function expectPackagedPlannerTimeline(input: {
   await execute("update-ticket", { id: result.ticket.id, status: "Done" });
   // Only this ticket carries the tag, so the saved scope follows it after it is reopened.
   await execute("update-ticket", { id: result.ticket.id, tags: ["Urgent"] });
-  const { revision } = await execute("auto-build.configure", { enabled: true, prompt: "Finish the preview." });
-  await execute("auto-build.scope", { revision, queries: [{ tags: ["Urgent"] }] });
+  // Only completed tickets are eligible, so the run has no new work and starts no supervisor.
+  const { revision } = await execute("auto-build.configure", {
+    enabled: true,
+    prompt: "Finish the preview.",
+    eligible: {
+      conjunction: "and",
+      rules: [{ attributeId: "status", condition: "is-any-of", value: [statusId("Done")] }],
+    },
+  });
+  // The background check that enabling queues can hold the supervisor write guard briefly.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await execute("auto-build.scope", { revision, queries: [{ tags: ["Urgent"] }] });
+      break;
+    } catch (error) {
+      if (attempt >= 50 || !String(error).includes("Another Planner write is running")) throw error;
+      await Bun.sleep(100);
+    }
+  }
   expect(await execute("auto-build.read", {})).toMatchObject({ completed: true });
   await execute("update-ticket", {
     id: result.ticket.id,

@@ -117,7 +117,6 @@ import { writeTicketCommand } from "./write-ticket";
 export const plannerCommands = [
   ticketRelatedOpeningsCommand,
   resolveTicketPathCommand,
-  updateStackCommand,
   submitRevisionCommand,
   listVariantsCommand,
   repairAttemptCommand,

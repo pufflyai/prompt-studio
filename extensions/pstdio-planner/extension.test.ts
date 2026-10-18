@@ -43,6 +43,11 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
     updatedAt: "2026-01-01T00:00:00.000Z",
   } satisfies StoredTicket);
 describe("pstdio planner extension contributions", () => {
+  test("registers each command once", () => {
+    const ids = (extension.commands ?? []).map(({ id }) => id);
+    expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
+  });
+
   test("contributes a routed ticket editor with page-owned navigation", () => {
     expect(extension.modes).toBeUndefined();
     expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket" });
