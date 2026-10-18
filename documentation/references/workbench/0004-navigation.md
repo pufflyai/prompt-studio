@@ -38,7 +38,7 @@ Main tabs belong to the current page, including pinned shell, mode and host tabs
 
 Visited registered views remain mounted when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Docked views have stable portal hosts owned by the workbench. Moving a tab changes the host's DOM parent without remounting its React content. Hidden views do not take layout space or accept user input. A pinned Main terminal keeps its running process while its page is hidden.
 
-A resource binding with `cardinality: "one"` keeps one placement when its resource changes. The host updates that live view's resource and attached menus. A binding with `cardinality: "many"` gives each open resource its own placement.
+An auxiliary resource binding with `cardinality: "one"` keeps one placement when its resource changes. The host updates that live view's resource and attached menus. Main keeps a separate mounted view for each routed resource or declared document, including with `cardinality: "one"`, and restores it on return. A binding with `cardinality: "many"` gives each open resource its own placement.
 
 The host exposes `getPanelDestinations(instanceId)`, `movePanel(instanceId, region, position?)`, and `resetLayout()`. A position is `"start"`, `"end"`, `{ beforeWidgetId }`, or `{ afterWidgetId }`. Moves preserve the current page route and the primary resource anchor. The `workbench.movePanel` and `workbench.resetLayout` commands expose the same operations to commands and agents. `onDidResetLayout` lets host UI clear its active layout preferences after the reset.
 

@@ -77,7 +77,7 @@ export const classifyRuntimeFailure = (detail: string) => {
     return { code: "port_bind_failure" as const, message: "The local runtime could not bind its loopback port." };
   }
   // The runtime's database lock reports another owner with these messages.
-  if (normalized.includes("is in use by pid") || normalized.includes("choosing the pstdio.db lock")) {
+  if (normalized.includes("pstdio.db is in use") || normalized.includes("a legacy pstdio.db lock exists")) {
     return {
       code: "pglite_ownership_conflict" as const,
       message: "Another process still owns the Prompt Studio database.",

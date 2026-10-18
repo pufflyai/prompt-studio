@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
@@ -21,7 +22,7 @@ test("projects accept camelCase create and update fields with legacy response al
     const project = await response.json();
     const retried = await app.request(`/v1/projects/${project.id}/retry-setup`, { method: "POST" });
     expect(retried.status).toBe(200);
-    expect(await retried.json()).toMatchObject({ projectId: project.id, rootPath: realpathSync(root) });
+    expect(await retried.json()).toMatchObject({ projectId: project.id, rootPath: await realpath(root) });
     const updated = await app.request(`/v1/projects/${project.id}`, {
       method: "PATCH",
       headers,

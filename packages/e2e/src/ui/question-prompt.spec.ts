@@ -108,14 +108,14 @@ test("async question replies preserve the draft and files until every request is
     .locator('input[type="file"]')
     .last()
     .setInputFiles({ name: "draft.txt", mimeType: "text/plain", buffer: Buffer.from("Saved context") });
-  await expect(page.getByText("draft.txt", { exact: true })).toBeVisible();
+  await expect(page.getByText("draft.txt", { exact: true }).filter({ visible: true })).toBeVisible();
   await editor.focus();
   await editor.press("Home");
   await editor.press("ArrowRight");
   await editor.press("ArrowRight");
   for (let index = 0; index < 4; index++) await editor.press("Shift+ArrowRight");
   await expect.poll(() => editor.evaluate(() => window.getSelection()?.toString())).toBe("ep m");
-  await page.getByTestId("send-message-button").focus();
+  await page.getByTestId("send-message-button").filter({ visible: true }).focus();
   const asked = await request.post(`${url}/follow-up`, { data: { prompt: "__fake_async_questions__" } });
   expect(asked.ok()).toBe(true);
   const firstBubble = page.getByRole("button", { name: "Which language? → TypeScript. Open question", exact: true });
@@ -128,7 +128,7 @@ test("async question replies preserve the draft and files until every request is
   await expect(editor).toBeHidden();
   await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeHidden();
   await expect(first).toBeChecked();
-  await expect(page.getByTestId("send-message-button")).toBeEnabled();
+  await expect(page.getByTestId("send-message-button").filter({ visible: true })).toBeEnabled();
   await expect
     .poll(async () => {
       const history = await (await request.get(`${url}/conversation`)).json();
@@ -145,16 +145,16 @@ test("async question replies preserve the draft and files until every request is
       body: JSON.stringify({ error: "Provider unavailable" }),
     });
   await page.route(`**/sessions/${session.id}/follow-up`, failReply);
-  await page.getByTestId("send-message-button").click();
-  await expect(page.getByText("Message not sent", { exact: true })).toBeVisible();
+  await page.getByTestId("send-message-button").filter({ visible: true }).click();
+  await expect(page.getByText("Message not sent", { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(first).toBeChecked();
-  await expect(page.getByTestId("send-message-button")).toBeEnabled();
+  await expect(page.getByTestId("send-message-button").filter({ visible: true })).toBeEnabled();
   await page.getByRole("button", { name: "Dismiss", exact: true }).click();
   await page.unroute(`**/sessions/${session.id}/follow-up`, failReply);
   const reply = page.waitForRequest(
     (r) => r.method() === "POST" && r.url().endsWith(`/sessions/${session.id}/follow-up`),
   );
-  await page.getByTestId("send-message-button").click();
+  await page.getByTestId("send-message-button").filter({ visible: true }).click();
   expect((await reply).postDataJSON()).toMatchObject({
     question_response: { callId: "first-question", answers: [["TypeScript"]] },
   });
@@ -166,15 +166,15 @@ test("async question replies preserve the draft and files until every request is
   await expect(page.getByRole("radio", { name: "Browser", exact: true })).toBeChecked();
   await page.getByRole("button", { name: "Back to message", exact: true }).click();
   await expect(editor).toHaveText("Keep my draft");
-  await expect(page.getByText("draft.txt", { exact: true })).toBeVisible();
+  await expect(page.getByText("draft.txt", { exact: true }).filter({ visible: true })).toBeVisible();
   await secondBubble.click();
   await expect(editor).toBeHidden();
   await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeHidden();
-  await expect(page.getByTestId("send-message-button")).toBeEnabled();
+  await expect(page.getByTestId("send-message-button").filter({ visible: true })).toBeEnabled();
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(editor).toHaveText("Keep my draft");
   await expect(page.getByRole("button", { name: "Attach files", exact: true })).toBeVisible();
-  await expect(page.getByText("draft.txt", { exact: true })).toBeVisible();
+  await expect(page.getByText("draft.txt", { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Remove Goal", exact: true })).toBeVisible();
   await editor.focus();
   await expect

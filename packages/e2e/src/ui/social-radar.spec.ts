@@ -74,7 +74,7 @@ test("researches, answers and posts through the radar screens", async ({ page, r
         )
         .replace("defineExtension,", "defineCommand, defineExtension,"),
     );
-    const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Social radar" }, root) });
+    const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Social radar" }) });
     expect(created.ok(), await created.text()).toBe(true);
     projectId = (await created.json()).id as string;
     const enabled = await request.post(`/v1/projects/${projectId}/extensions/installed/${installName}/enable`, {
@@ -91,6 +91,10 @@ test("researches, answers and posts through the radar screens", async ({ page, r
       },
     });
     expect(enabled.ok()).toBe(true);
+    const workspaces = await (await request.get(`/v1/workspaces?project_id=${projectId}`)).json();
+    expect(workspaces).toContainEqual(
+      expect.objectContaining({ is_default: true, initializing: false, setup_error: null, provider_state: "ready" }),
+    );
     await execute(request, projectId, "seed");
     await execute(request, projectId, "set-agent", {
       agent: {

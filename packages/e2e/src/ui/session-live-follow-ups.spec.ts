@@ -2,6 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { switchSession } from "../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const setup = async (page: Page, request: APIRequestContext, prompts = ["Session A", "Session B"]) => {
@@ -34,10 +35,7 @@ const setup = async (page: Page, request: APIRequestContext, prompts = ["Session
       await page.getByRole("menuitem", { name: "Session", exact: true }).click();
     }
     await draft.click({ button: "right" });
-    await page
-      .getByRole("menu", { name: "New session context menu", exact: true })
-      .getByRole("menuitem", { name: session.title, exact: true })
-      .click();
+    await switchSession(page, session.title);
   }
   return { header, sessions };
 };

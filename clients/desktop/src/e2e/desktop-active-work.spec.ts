@@ -148,9 +148,31 @@ test("keeps the first workbench load when a quit arrives while it loads", async 
   const lifecycle = await waitForLifecyclePage(electronApp.context());
   await runtime.dashboardRequested;
 
-  await electronApp.evaluate(({ app }) => app.quit());
-  await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "confirming_active_work" });
-  runtime.releaseDashboard();
+  try {
+    await expect
+      .poll(() =>
+        electronApp
+          .context()
+          .pages()
+          .some((page) => page.url().startsWith(runtime.descriptor.origin)),
+      )
+      .toBe(true);
+    await electronApp.evaluate(({ app }) => app.quit());
+    await expect
+      .poll(async () => {
+        const state = await startupState(lifecycle);
+        if (state.kind === "recovery") console.info("Recovery during first workbench load", state.error);
+        return state;
+      })
+      .toMatchObject({ kind: "confirming_active_work" });
+    expect(
+      await electronApp.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].contentView.children[0].getVisible(),
+      ),
+    ).toBe(false);
+  } finally {
+    runtime.releaseDashboard();
+  }
   const window = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
 
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
