@@ -34,6 +34,7 @@ import {
   startPackagedServe,
   stopProcess,
 } from "./packaged-serve-helpers";
+import { expectImmediateTicketProperty } from "./packaged-ticket-properties";
 
 test.afterEach(stopPendingTestProcesses);
 test.afterAll(stopPendingTestProcesses);
@@ -178,6 +179,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
     await signInBrowser(page, started.descriptor);
+    await expectImmediateTicketProperty(page, valid.execute, host.baseUrl, valid.id);
     let timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
