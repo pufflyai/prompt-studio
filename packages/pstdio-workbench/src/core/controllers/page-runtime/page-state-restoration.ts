@@ -1,4 +1,5 @@
-import { defaultPageResourceCodec, type PageLocation } from "@pstdio/sdk/extensions";
+import type { PageLocation, ResourceRef } from "@pstdio/sdk/extensions";
+import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import type { LayoutModel } from "../../registries/layout/layout-model-types";
 import { carryWorkbenchRegionState } from "../../registries/layout/layout-scope";
 import { createDefaultWorkbenchLayout, type WorkbenchLayout } from "../../registries/layout/layout-types";
@@ -8,6 +9,7 @@ import type {
   WorkbenchPageRuntimeState,
   WorkbenchPageSlotInstance,
 } from "../../registries/pages/page-registry-types";
+import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../../registries/placements/placement-instance-key";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
@@ -18,6 +20,7 @@ import { workbenchPageLocationsEqual } from "../page-location/page-location-norm
 export const pageStateFromLayout = (
   page: WorkbenchPageContribution,
   layout: WorkbenchLayout,
+  resource: ResourceRef | undefined,
 ): WorkbenchPageRuntimeState => {
   const placements = Object.values(layout.regions).flatMap((region) => region.widgets);
   const openStaticSlotIds: string[] = [];
@@ -31,7 +34,12 @@ export const pageStateFromLayout = (
         placement.placementIdentity.slotId === slot.id,
     );
     if (slot.item.kind === "view") {
-      if (matching.length) openStaticSlotIds.push(slot.id);
+      if (
+        matching.some(
+          (placement) => pageResourceContextKey(page, placement.resource) === pageResourceContextKey(page, resource),
+        )
+      )
+        openStaticSlotIds.push(slot.id);
       continue;
     }
     const binding = slot.item.binding;
@@ -85,15 +93,21 @@ export const loadWorkbenchLocationLayout = (
 export const createPageStateRestorer =
   (
     input: createWorkbenchInput,
-    loadLayout = (context: WorkbenchPagePersistenceScopeInput) => loadWorkbenchLocationLayout(input, context),
+    loadLayout: (
+      context: WorkbenchPagePersistenceScopeInput,
+      page: WorkbenchPageContribution,
+    ) => WorkbenchLayout | undefined = (context) => loadWorkbenchLocationLayout(input, context),
   ) =>
   (page: WorkbenchPageContribution, location: PageLocation, projectId: string) => {
-    const layout = loadLayout({
-      modeId: page.modeId,
-      pageId: page.id,
-      projectId,
-      resource: location.resource,
-    });
+    const layout = loadLayout(
+      {
+        modeId: page.modeId,
+        pageId: page.id,
+        projectId,
+        resource: location.resource,
+      },
+      page,
+    );
     const saved = input.pageLocationPersistence?.load(projectId)?.location;
     const restoresSavedLocation = workbenchPageLocationsEqual(saved, location, defaultPageResourceCodec, [page]);
     if (
@@ -107,5 +121,5 @@ export const createPageStateRestorer =
         ))
     )
       return undefined;
-    return pageStateFromLayout(page, layout);
+    return pageStateFromLayout(page, layout, location.resource);
   };

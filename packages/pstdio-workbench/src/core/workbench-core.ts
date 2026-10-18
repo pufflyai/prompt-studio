@@ -15,14 +15,17 @@ import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
-import { pageLayoutContext } from "./controllers/page-runtime/page-main-tabs";
 import { createLiveWorkbenchPageRegistry } from "./controllers/page-runtime/page-runtime";
 import {
   createPageStateRestorer,
   loadWorkbenchLocationLayout,
 } from "./controllers/page-runtime/page-state-restoration";
 import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench-layout-cache";
-import { connectModeLayoutCache, createShellLayoutContext } from "./controllers/page-runtime/workbench-layout-context";
+import {
+  connectModeLayoutCache,
+  createPageLayoutCacheHandlers,
+  createShellLayoutContext,
+} from "./controllers/page-runtime/workbench-layout-context";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
@@ -220,10 +223,9 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const pages = createLiveWorkbenchPageRegistry({
-    loadPageLayout: (state) => layoutCache.loadPageLayout(pageLayoutContext(state)),
+    ...createPageLayoutCacheHandlers(layoutCache),
     loadModeLayout: layoutCache.readMode,
     saveModeLayout: layoutCache.saveMode,
-    savePageMain: (state, layout) => layoutCache.savePageMain(pageLayoutContext(state), layout),
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
     restorePageState: createPageStateRestorer(cachedInput, layoutCache.loadPageLayout),
 

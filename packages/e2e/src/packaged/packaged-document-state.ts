@@ -1,0 +1,50 @@
+import { expect, type Page } from "@playwright/test";
+
+export const verifyPackagedDocumentState = async (page: Page, origin: string, projectId: string) => {
+  const resource = `pstdio://extension-resource/glass-lab-artifact/layout?extensionId=pstdio.workbench-fixture&projectId=${projectId}`;
+  const url = (document: string, route = "document-layout") =>
+    `${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/${route}?resource=${encodeURIComponent(resource)}&document=${document}`;
+  const navigate = (document: string, route = "document-layout") =>
+    page.evaluate(
+      (href) => {
+        history.pushState(null, "", href);
+        dispatchEvent(new PopStateEvent("popstate"));
+      },
+      url(document, route),
+    );
+  await page.goto(url("a"));
+  const main = page.locator('[data-workbench-panel-header="main"]');
+  const optional = main.getByRole("tab", { name: "Lab", exact: true });
+  await expect(optional).toBeVisible();
+  await optional.getByRole("button", { name: "Close Lab", exact: true }).click();
+  await expect(optional).toHaveCount(0);
+  await navigate("b");
+  await expect(optional).toBeVisible();
+  await navigate("a");
+  await expect(optional).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Document layout");
+  await expect(optional).toHaveCount(0);
+  await navigate("b");
+  await expect(optional).toBeVisible();
+  await page.goto(url("a", "document-preview"));
+  await expect(optional).toBeVisible();
+  const a = await optional.locator("xpath=ancestor::*[@data-workbench-tab]").getAttribute("data-workbench-tab");
+  await navigate("b", "document-preview");
+  await expect(optional).toBeVisible();
+  expect(await optional.locator("xpath=ancestor::*[@data-workbench-tab]").getAttribute("data-workbench-tab")).not.toBe(
+    a,
+  );
+  await navigate("a", "document-preview");
+  await optional.focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
+  const side = page
+    .locator('[data-workbench-panel-header="side"]')
+    .getByRole("tab", { name: "Lab", exact: true })
+    .or(page.getByRole("dialog", { name: "Side Panel", exact: true }).getByRole("tab", { name: "Lab", exact: true }));
+  await expect(side).toBeVisible();
+  await navigate("b", "document-preview");
+  await expect(optional).toBeVisible();
+  await expect(side).toBeVisible();
+};

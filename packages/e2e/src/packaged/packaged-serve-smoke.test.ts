@@ -59,6 +59,7 @@ import { registerNotificationStatusSmokeTests } from "./packaged-notification-st
 // Real React Query subscriptions cover matching events, reconnect deduplication and unmount cleanup.
 // Typed settings deletion restores its fallback after reload.
 import { registerPageParamsSmokeTests } from "./packaged-page-params-smoke";
+// The packaged browser suite also checks per-document Main closure and reload through the public fixture page.
 // Planner covers timeline state, dependency recovery and Git conflicts in separate packaged cases.
 import { registerPackagedPlannerSmokeTests } from "./packaged-planner-smoke";
 import { registerPackagedProjectSetupSmokeTests } from "./packaged-project-setup-smoke";

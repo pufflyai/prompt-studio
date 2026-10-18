@@ -20,6 +20,7 @@ import { verifyTreeGroups } from "../helpers/tree-groups";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
+import { verifyPackagedDocumentState } from "./packaged-document-state";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedNoteHeadings } from "./packaged-note-headings";
 import { verifyPackagedPanelMenuTabs } from "./packaged-panel-menu-tabs";
@@ -215,6 +216,7 @@ test.describe("packaged extension webviews", () => {
               projectFolder,
               runtimeAuthorization(started.descriptor),
             );
+            await verifyPackagedDocumentState(page, started.baseUrl, project.id);
             await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
             const sidenav = page.locator('[data-workbench-region="sidenav"]');
             await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));

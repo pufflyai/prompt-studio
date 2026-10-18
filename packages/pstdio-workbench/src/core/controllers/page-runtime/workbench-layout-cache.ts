@@ -8,6 +8,8 @@ import {
   workbenchRegions,
 } from "../../registries/layout/layout-types";
 import { getWorkbenchModePanelForRegion } from "../../registries/modes/mode-layout";
+import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
+import { pageResourceContextKey } from "../../registries/pages/page-resource-context";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
 import { loadWorkbenchLocationLayout } from "./page-state-restoration";
@@ -32,8 +34,8 @@ const selectPlacements = (
 };
 const modeScope = (projectId: string | undefined, modeId: string) =>
   `workbench-mode:${JSON.stringify([projectId ?? null, modeId])}`;
-const mainScope = (context: WorkbenchPagePersistenceScopeInput) =>
-  `workbench-main:${JSON.stringify([context.projectId, context.modeId, context.pageId, resourceKey(context.resource)])}`;
+const mainScope = (context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) =>
+  `workbench-main:${JSON.stringify([context.projectId, context.modeId, context.pageId, pageResourceContextKey(page, context.resource)])}`;
 
 const isModePlacement = (placement: WorkbenchWidgetPlacement, region: (typeof workbenchRegions)[number]) =>
   region !== "main" &&
@@ -70,13 +72,13 @@ export const createWorkbenchLayoutCache = (
     return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => adapter.setLayout(layout, scope));
   };
   return {
-    loadPageLayout(context: WorkbenchPagePersistenceScopeInput) {
+    loadPageLayout(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) {
       const layout = loadWorkbenchLocationLayout(
         { ...input, persistence: undefined, layoutPersistence: { ...adapter, getLayout: read } },
         context,
       );
       if (!context.pageId || !context.modeId) return layout;
-      const main = read(mainScope(context));
+      const main = read(mainScope(context, page));
       if (!layout && !main) return undefined;
       const base = layout ?? createDefaultWorkbenchLayout();
       const mainIds = new Set(main?.regions.main.widgets.map((tab) => tab.widgetId));
@@ -92,11 +94,15 @@ export const createWorkbenchLayoutCache = (
           : base.activeLocationWidgetId,
       };
     },
-    savePageMain(context: WorkbenchPagePersistenceScopeInput, layout: WorkbenchLayout) {
+    savePageMain(
+      context: WorkbenchPagePersistenceScopeInput,
+      layout: WorkbenchLayout,
+      page: WorkbenchPageContribution | undefined,
+    ) {
       if (context.pageId && context.modeId)
         write(
           selectPlacements(layout, (_widget, region) => region === "main"),
-          mainScope(context),
+          mainScope(context, page),
         );
     },
     removeResource(resource: ResourceRef) {

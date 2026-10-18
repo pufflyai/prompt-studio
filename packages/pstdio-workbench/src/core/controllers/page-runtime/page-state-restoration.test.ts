@@ -29,7 +29,7 @@ test("restores the selected primary instance after its presentation moves to Sid
   }));
   layout.regions.side.activeWidgetId = "one";
   layout.activeLocationWidgetId = "one";
-  expect(pageStateFromLayout(page, layout).activePrimaryInstanceKey).toBe("one");
+  expect(pageStateFromLayout(page, layout, undefined).activePrimaryInstanceKey).toBe("one");
 });
 
 test("restored single-resource pages give another resource its own placement", () => {
@@ -52,7 +52,7 @@ test("restored single-resource pages give another resource its own placement", (
     },
   ];
   layout.activeLocationWidgetId = "preview";
-  const restored = pageStateFromLayout(page, layout);
+  const restored = pageStateFromLayout(page, layout, undefined);
   const next = openResourceSlot({
     slot: primarySlot(page)!,
     state: restored,

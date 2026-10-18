@@ -3,6 +3,7 @@ import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { editPagePlacementStates } from "../../registries/pages/page-placement-state";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
+import { pageContextChanged } from "./page-main-tabs";
 import { removeTrayPreviews } from "./tray-preview-retention";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
@@ -12,8 +13,7 @@ export const departingPagePreviews = (next: State, previous: State, layout: Work
     !previous.activePageId ||
     previous.projectId !== next.projectId ||
     previous.activeModeId !== next.activeModeId ||
-    (previous.activePageId === next.activePageId &&
-      resourceKey(previous.location?.resource) === resourceKey(next.location?.resource))
+    !pageContextChanged(next, previous)
   )
     return [];
   return Object.values(layout.regions).flatMap((region) =>

@@ -1,6 +1,7 @@
-import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout } from "../layout/layout-types";
 import type { WorkbenchPageContribution } from "./page-registry";
+import { pageResourceContextKey } from "./page-resource-context";
 
 export const resolvePageActivePlacement = (layout: WorkbenchLayout, page?: WorkbenchPageContribution) => {
   if (!page) return;
@@ -17,6 +18,7 @@ export const resolvePageBreadcrumbPlacement = (
   resource?: ResourceRef,
 ) => {
   const placement = resolvePageActivePlacement(layout, page);
-  if (page?.resource && resourceKey(placement?.resource) !== resourceKey(resource)) return;
+  if (page?.resource && pageResourceContextKey(page, placement?.resource) !== pageResourceContextKey(page, resource))
+    return;
   return placement;
 };
