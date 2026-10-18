@@ -37,7 +37,7 @@ describe("installExtensionSource API version gate", () => {
     const source = join(root, "old-planner");
     makeExtension(source, {
       namespace: "pstdio-planner",
-      name: "Prompt Studio Planner",
+      name: "Project Planner",
       engines: { pstdio: "^0.0.9" },
       version: "0.10.0",
     });

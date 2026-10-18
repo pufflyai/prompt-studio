@@ -9,7 +9,7 @@ export const installed = {
   metadata: {
     id: "pstdio.pstdio-planner",
     name: "pstdio-planner",
-    displayName: "Prompt Studio Planner",
+    displayName: "Project Planner",
     version: "0.1.0",
     enginesPstdio: "^1.0.0",
   },

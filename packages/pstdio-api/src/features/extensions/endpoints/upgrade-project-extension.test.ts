@@ -46,7 +46,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
     const sourcePath = createTestExtensionSource({
       root: process.env.PSTDIO_HOME!,
       name: "pstdio-planner",
-      displayName: "Prompt Studio Planner",
+      displayName: "Project Planner",
       installName: "pstdio-planner",
       version: "1.0.0",
     });

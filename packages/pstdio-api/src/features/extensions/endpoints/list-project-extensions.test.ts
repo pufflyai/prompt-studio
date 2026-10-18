@@ -229,7 +229,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     const seeded = await seedInstance(project.id, {
       name: "pstdio-planner",
       extensionId: "pstdio.pstdio-planner",
-      displayName: "Prompt Studio Planner",
+      displayName: "Project Planner",
       installName: "pstdio-planner",
       enginesPstdio: `^${EXTENSION_API_VERSION}`,
       sourceKind: "local_path",
@@ -287,7 +287,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(body.marketplace).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          displayName: "Prompt Studio Planner",
+          displayName: "Project Planner",
           installName: "pstdio-planner",
           installed: false,
           origin: {

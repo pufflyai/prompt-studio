@@ -4,6 +4,7 @@ import {
   defineNavigationTree,
   definePage,
   defineSettingsPanel,
+  defineSettingsSection,
   defineView,
   defineViewMenu,
   l10n,
@@ -82,9 +83,11 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
 };
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
+  const settingsSection = defineSettingsSection({ id: "planner", title: "Project Planner", order: 25 });
   const statusSettings = defineView({
     id: "ticket-status-settings",
     title: "Ticket status",
+    icon: "status-progress",
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/status-settings-panel.tsx", baseUrl),
@@ -240,12 +243,19 @@ export const createPlannerUi = (baseUrl: string) => {
         view: files.ref,
       }),
     ],
+    settingsSections: [settingsSection],
     settingsPanels: [
-      defineSettingsPanel({ id: "ticket-status", view: statusSettings.ref, slot: workbenchSlots.projectSettings }),
+      defineSettingsPanel({
+        id: "ticket-status",
+        view: statusSettings.ref,
+        slot: workbenchSlots.projectSettings,
+        section: settingsSection.ref,
+      }),
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,
         slot: workbenchSlots.projectSettings,
+        section: settingsSection.ref,
       }),
     ],
   };

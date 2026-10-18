@@ -18,7 +18,7 @@ const installedSource = {
   id: "installed-1",
   install_name: "pstdio-planner",
   extension_id: "pstdio.pstdio-planner",
-  display_name: "Prompt Studio Planner",
+  display_name: "Project Planner",
   source_hash: "old-hash",
   source_kind: "git",
   source_path: "/home/user/.pstdio/extensions/pstdio-planner",
@@ -32,7 +32,7 @@ const installed = {
   metadata: {
     id: "pstdio.pstdio-planner",
     name: "pstdio-planner",
-    displayName: "Prompt Studio Planner",
+    displayName: "Project Planner",
     version: "0.8.0",
     enginesPstdio: "^0.1.0",
   },

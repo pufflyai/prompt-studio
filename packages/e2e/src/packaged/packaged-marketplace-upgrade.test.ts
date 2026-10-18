@@ -59,7 +59,7 @@ const writeExtension = (
 
 const writePlanner = (repo: string, version: string, enginesPstdio: string) => {
   writeExtension(join(repo, "extensions", "pstdio-planner"), {
-    displayName: "Prompt Studio Planner",
+    displayName: "Project Planner",
     enginesPstdio,
     name: "pstdio-planner",
     version,
@@ -202,7 +202,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     const settings = page.getByRole("dialog").last();
     await settings.getByText("Extensions", { exact: true }).first().click();
 
-    const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Planner" });
+    const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Project Planner" });
     await installedRow.waitFor();
     await installedRow.click();
     await page.getByTestId("extension-upgrade").waitFor();
@@ -253,7 +253,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await dialog.getByRole("button", { name: "Delete", exact: true }).click();
     const marketplaceRow = page
       .getByTestId("marketplace-extension-entry")
-      .filter({ has: page.getByText("Prompt Studio Planner", { exact: true }) });
+      .filter({ has: page.getByText("Project Planner", { exact: true }) });
     await marketplaceRow.waitFor();
 
     const reinstallResponse = page.waitForResponse(
@@ -261,7 +261,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     );
     await marketplaceRow.getByTestId("marketplace-extension-install").click();
     await reinstallResponse;
-    await page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Planner" }).waitFor();
+    await page.getByTestId("extension-entry").filter({ hasText: "Project Planner" }).waitFor();
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);

@@ -147,6 +147,7 @@ export default defineExtension({
   ],
   navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,
+  settingsSections: plannerUi.settingsSections,
 
   schedules: [mergedPullRequestsSchedule, autoBuildSchedule],
   hooks: [

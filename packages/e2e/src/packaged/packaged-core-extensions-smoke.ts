@@ -231,8 +231,22 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
               slot: "content",
             }),
           );
-          expect(metadata.settingsPanels).toContainEqual(
-            expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-tags" }),
+          expect(metadata.settingsSections).toContainEqual(
+            expect.objectContaining({ id: "pstdio.pstdio-planner.settings-section.planner" }),
+          );
+          for (const panel of ["ticket-status", "ticket-tags"]) {
+            expect(metadata.settingsPanels).toContainEqual(
+              expect.objectContaining({
+                id: `pstdio.pstdio-planner.settings-panel.${panel}`,
+                section: expect.objectContaining({ id: "planner" }),
+              }),
+            );
+          }
+          expect(metadata.views).toContainEqual(
+            expect.objectContaining({
+              id: "pstdio.pstdio-planner.view.ticket-status-settings",
+              icon: "status-progress",
+            }),
           );
           await expectPlannerCommands(started.baseUrl, project.id, runtimeAuthorization(started.descriptor), metadata);
           await expectNotesResources({

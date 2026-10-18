@@ -81,7 +81,7 @@
     },
     {
       "installName": "pstdio-planner",
-      "displayName": "Prompt Studio Planner",
+      "displayName": "Project Planner",
       "description": "Tickets, managed attempts, reviews, and templates.",
       "origin": {
         "kind": "git",

@@ -10,13 +10,13 @@ export function trackProperty<T extends PlanTag>(tags: T[]) {
   const matches = tags.filter(({ name }) => name.toLowerCase() === "track");
   if (matches.length > 1) {
     throw new Error(
-      "Several properties are named Track. In Settings > Project > Ticket tags, rename or delete the extra ones so one Track property remains.",
+      "Several properties are named Track. In Settings > Project Planner > Ticket tags, rename or delete the extra ones so one Track property remains.",
     );
   }
   const property = matches[0];
   if (property && property.type !== "single_select") {
     throw new Error(
-      "Track must be a single-select property. In Settings > Project > Ticket tags, set Track to Single. Tickets with more than one Track value must keep one value first.",
+      "Track must be a single-select property. In Settings > Project Planner > Ticket tags, set Track to Single. Tickets with more than one Track value must keep one value first.",
     );
   }
   return property;

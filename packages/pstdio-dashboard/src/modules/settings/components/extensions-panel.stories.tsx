@@ -14,7 +14,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
     installedExtensionId: "installed-planner",
     installName: "pstdio-planner",
     name: "pstdio-planner",
-    displayName: "Prompt Studio Planner",
+    displayName: "Project Planner",
     version: "0.4.2",
     description: "Plan and track tickets across workspaces.",
     sourcePath: "/repo/.pstdio/extensions/pstdio-planner",
@@ -118,7 +118,7 @@ const marketplace = [
   },
   {
     installName: "pstdio-planner",
-    displayName: "Prompt Studio Planner",
+    displayName: "Project Planner",
     description: "Tickets, managed attempts, reviews, and templates.",
     installed: false,
     origin: {

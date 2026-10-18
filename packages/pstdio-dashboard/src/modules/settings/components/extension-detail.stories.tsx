@@ -11,7 +11,7 @@ const extension: ProjectExtensionInstance = {
   installedExtensionId: "installed-planner",
   installName: "pstdio-planner",
   name: "pstdio-planner",
-  displayName: "Prompt Studio Planner",
+  displayName: "Project Planner",
   version: "0.7.0",
   description: "Tickets, proposals and planning loops. Contributes the ticket board and planner views.",
   sourcePath: "/repo/.pstdio/extensions/pstdio-planner",
