@@ -1,0 +1,32 @@
+name: Documentation links
+
+# Checks the external sites that documentation, READMEs, extension docs, and skills link to.
+# Remote sites change without a commit, so this never runs on pull requests: an outage elsewhere
+# must not fail unrelated work. Test and Build checks repository links and website routes offline.
+# A failed run lists each broken URL and the files that link to it in the job summary.
+on:
+  schedule:
+    - cron: "41 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external_links:
+    runs-on: ubuntu-latest
+    # A local run checked 95 URLs in under 10 seconds. Requests time out after 20 seconds, so 10 minutes
+    # bounds a hung network while leaving room for slow sites and retries.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # The check uses only Bun and Git, so it needs no dependency install.
+      - name: Check external links
+        run: bun scripts/verify/docs-external-links.ts

@@ -10,6 +10,8 @@ bun add @pstdio/sdk
 
 The package is ESM-only and has no root entry point. Import one of its subpaths.
 
+Install the SDK version that matches your Prompt Studio app, such as `bun add @pstdio/sdk@0.43.1` for app 0.43.1. The SDK provides types and helpers; the app decides which APIs exist at run time. Updating the SDK does not update the app. The SDK reference follows the source on `main` and marks APIs that the current stable release does not have. See [App, SDK, and extension API versions](../extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
+
 ## Entry points
 
 | Entry point | Purpose |

@@ -2,7 +2,8 @@ import { beforeAll, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chromium } from "@playwright/test";
+import { type Browser, chromium } from "@playwright/test";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -11,8 +12,9 @@ beforeAll(buildBinary);
 test("browser sign-in completes authentication before the caller navigates", async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-browser-sign-in-"));
   const runtime = await startPackagedServe(root);
-  const browser = await chromium.launch();
+  let browser: Browser | undefined;
   try {
+    browser = await chromium.launch(PROVISIONED_CHROMIUM);
     const page = await browser.newPage();
     await page.addInitScript(() => {
       const readJson = Response.prototype.json;
@@ -37,7 +39,7 @@ test("browser sign-in completes authentication before the caller navigates", asy
     await page.reload();
     expect(await isAuthenticated()).toBe(200);
   } finally {
-    await browser.close();
+    await browser?.close();
     await stopProcess(runtime.child);
     rmSync(root, { recursive: true, force: true });
   }

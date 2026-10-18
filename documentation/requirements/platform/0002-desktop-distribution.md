@@ -195,10 +195,14 @@ the target artifacts are eligible for publication:
 
 - a clean desktop-owned start reaches the dashboard within eight seconds and
   binds the sidecar to literal `127.0.0.1`;
-- browser REST uses a renderer-inaccessible HttpOnly cookie, while the bundled
-  CLI discovers the same runtime and uses descriptor bearer authentication;
+- the workbench signs in through a single-use, short-lived login link and then
+  sends its browser session secret as a bearer header. The secret lives in the
+  runtime origin's `localStorage`, and the runtime sets no cookies
+  ([ADR 0057](../../adrs/0057-browser-sessions-in-per-origin-storage.md)). The
+  bundled CLI discovers the same runtime and sends the descriptor's runtime token
+  as its bearer credential;
 - arbitrary browser origins and unauthenticated readiness requests are rejected,
-  and the runtime credential is absent from HTML, URLs, and JavaScript cookies;
+  the runtime token is absent from HTML and URLs, and `document.cookie` is empty;
 - `pst serve` promotes ownership without changing the runtime PID, closing the
   desktop detaches, and a warm relaunch reaches the same persistent runtime
   within three seconds with project data and the selected workbench resource
@@ -249,3 +253,25 @@ version.
   after verification.
 - **Wrong architecture:** discard the artifact and download the explicitly named
   target. The application refuses to launch a mismatched sidecar.
+
+## Local runtime and account authentication
+
+The checks above cover the local runtime credential only. The private account
+manager (#1146 and #1163) is a separate authority. It signs people in with Google
+through Better Auth and issues finite environment access for a relay. A runtime
+uses that access only when a relay connection file is configured, and the desktop
+release suite does not exercise it. See [account authority
+development](../../guides/development/0007-account-manager.md).
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is
+`pstdio@0.43.1`, published on 2026-10-14.
+
+| Field | Record |
+| --- | --- |
+| Status | Released. |
+| Implementation | `clients/desktop`, `.github/workflows/release-desktop.yml`, and the publish job in `.github/workflows/release-packages.yml`. Origin-scoped browser sessions came in #941. Release gating came in #1031, the nightly channel in #1018, and backend exit recovery in #1159. |
+| Availability | The `pstdio@0.43.1` release has signed DMG, ZIP, DEB, Setup EXE, nupkg, `RELEASES`, and checksum assets for all four targets. #941 shipped in `pstdio@0.42.0`. #1159 is in the nightly `pstdio@0.44.0-nightly.20261018030230` only. That nightly has no Windows desktop assets, as designed. |
+| Remaining work | Manual Windows validation of native agent sessions, as listed in [cross-platform support](0001-cross-platform-support.md#known-issues). |
+| Evidence | GitHub release assets checked on 2026-10-18. Browser session checks: `clients/desktop/src/e2e/packaged-app.spec.ts` and `desktop-app.spec.ts` (release workflow and full CI stage, not rerun here), and `clients/desktop/src/security/runtime-session.test.ts` plus `packages/pstdio-api/src/features/runtime/runtime-auth.test.ts`, which passed locally on 2026-10-18. Signing and notarization evidence lives in the release runs, not in this record. |

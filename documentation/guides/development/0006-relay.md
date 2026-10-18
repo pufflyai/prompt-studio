@@ -42,6 +42,10 @@ SYNC_TEST_ENTRY=../pstdio-db/src/services/extension-storage/grouped-production-r
 
 The storage checks use disposable PostgreSQL and RustFS. They cover independent connections, grouped conflicts, missing assets, scope isolation, historical asset requirements, replay/restore lineage, and killing a publishing process at the commit boundary. The shared cases also cover real local journals, late branches, resolutions, and recovery. Their Docker runner mounts repository source read-only and removes its own stack; it never opens the application's database.
 
+`SYNC_TEST_ENTRY` selects the test file the runner starts. Without it, `bun run --cwd packages/pstdio-sync-contracts test:conformance` runs the reference relay suite (`src/conformance/reference.integration.ts`). CI runs only `grouped-production-relay.integration.ts` of the three grouped entries in `packages/pstdio-db/src/services/extension-storage/`. No script or CI job runs `grouped-conformance.integration.ts` (the shared cases with local stores against the reference relay) or `grouped-storage-sync.integration.ts` (the grouped storage adapter between three local databases). Run them by hand with the same command and a different `SYNC_TEST_ENTRY`.
+
+The runner waits for `http://objects:9000/health` before it starts the tests. It prints `Test object storage ready at http://objects:9000` when the check passes. When it fails, the error names the endpoint and the last HTTP status or connection error. Docker passes a proxy from Docker Desktop or `~/.docker/config.json` into every container. The runner sets `NO_PROXY` for its services and for loopback addresses, so requests between containers and to the tests' own servers stay on the run's network. An HTTP 403 such as `No approved upstream IPv4 address` in that error means a request went to the proxy instead; check that the runner's `NO_PROXY` still lists the host. The relay fixtures in `compose.test.yaml` set the same list. Do not turn off the proxy or other network controls to get past it.
+
 ## Durable asset owner
 
 `createRelayAssets({ databaseUrl, bucket, s3 })` owns upload intent, acknowledged multipart parts, and verified asset mappings in three additional PostgreSQL tables. `s3` is an AWS SDK `S3ClientConfig`; supply the endpoint, region, credentials and addressing mode for the selected provider. The service sets `maxAttempts: 1` because a consumed stream cannot be replayed automatically. A caller resumes an immutable upload explicitly after a failed request.
@@ -121,6 +125,8 @@ A part supplies `x-pstdio-upload-id` (encodeURIComponent of its ID), `x-pstdio-p
 
 Suffix reads issue a real S3 Range with If-Match. The adapter validates returned status, ETag, media type, Content-Range and remaining length, then checks the streamed suffix length. The POST response uses 200 and explicit x-pstdio-offset / x-pstdio-byte-length metadata, with chunked framing when needed. It does not advertise GET Range semantics; see [HTTP range handling](https://www.rfc-editor.org/rfc/rfc9110.html#section-14.2). No large prefix is downloaded merely to skip it. A suffix cannot prove the full SHA-256: the receiving local store must verify the complete assembled file before publication. Full reads retain full digest checks.
 
+The native client in `packages/pstdio-sync/src/relay/http.ts` uses `initialize`, `submit`, `recover`, `snapshot`, the asset operations, and `changes`. It resynchronizes from a full snapshot and does not call `replay`. Only the relay tests exercise `replay`.
+
 A dedicated PostgreSQL connection commits LISTEN before the initial scope read and socket readiness. Data-owner transactions emit only the scope fingerprint when receipts, conflicts, publication revision or restore change. Notifications arrive after commit and carry no content. They are hints; durable snapshots/replay remain truth. Subscribe before initial synchronization and resynchronize after reconnect. See [NOTIFY](https://www.postgresql.org/docs/16/sql-notify.html) and the [LISTEN setup race](https://www.postgresql.org/docs/16/sql-listen.html).
 
 An unchanged pending retry checks its dependencies again but produces no new hint. Pending operations can advance when their dependencies or assets become available without creating a request loop while they remain blocked.
@@ -150,7 +156,7 @@ The same run initializes separate manager and relay roles and serves the actual 
 
 Each run prints a unique `pstdio-relay-test-<uuid>` Compose project name. Its containers, network, and owned data/log and fixture volumes belong only to that run. The stack uses fixed test credentials, an internal network, no published host ports, and no host or home-directory mounts. It cannot use the local Prompt Studio database. `infra/local/` remains the separate local application stack.
 
-The runner removes containers, volumes, and the network after success, failure, SIGINT, or SIGTERM. Images and the Docker build cache remain for later runs. If the runner is forcibly killed or the Docker daemon stops, replace the name below with the one printed by that run and clean it up:
+The runner removes containers, volumes, and the network after success, failure, SIGINT, or SIGTERM. Its `down` includes the `test` profile, so the volumes that only test services use are removed too. Images and the Docker build cache remain for later runs. If the runner is forcibly killed or the Docker daemon stops, replace the name below with the one printed by that run and clean it up:
 
 ```sh
 docker compose -p pstdio-relay-test-<uuid> -f infra/relay/compose.test.yaml down --volumes --remove-orphans

@@ -8,7 +8,7 @@ The private account manager owns durable account and environment authority separ
 
 The data owner's lifecycle methods remain internal. `createManagerAuthentication(config)` embeds Better Auth 1.7.10 for Google sign-in, persisted human sessions and signing keys. `createManagerHandler(auth, origin)` serves auth and scoped issuance/management. Never expose private lifecycle methods directly to untrusted bodies or send the manager connection to extensions or native clients. A supplied Google subject or account ID is not permission.
 
-The component implements part of PS-735. Live Google configuration, relay integration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
+The component implements part of PS-735. The relay verifies the manager's signed access tokens: `bun run --cwd infra/relay test:transport` and `test:isolated` run the relay against the actual manager with fixture keys and an owned HTTPS fixture. Live Google configuration, deployed role/network isolation, backups and production recovery remain separate proof. See [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
 
 ## Internal operations
 

@@ -55,6 +55,39 @@ The publish job publishes the GitHub release last, so a published GitHub release
 
 Runs of one channel never overlap, so two attempts cannot publish at the same time. A newer run replaces a run of the same channel that is still waiting. Never publish by hand or run the desktop workflow alone.
 
+### Update public docs and skills after a release
+
+The [public docs](https://prompt.studio/docs/) are built from `main`:
+`.github/workflows/publish-containers.yml` builds the website image on every push
+to `main` that changes published docs. Public pages therefore describe `main` and
+label what the current stable release lacks. The step that serves a new image at
+`prompt.studio` is outside this repository.
+
+After the GitHub release `pstdio@<version>` is published, open one PR that updates
+these together:
+
+1. Version labels. In [API versioning](../../references/extensions/0014-api-versioning.md#versions-in-current-releases),
+   set the new stable release and its `EXTENSION_API_VERSION`. Search
+   `documentation/guides`, `documentation/references`, `extensions/*/README.md`,
+   `extensions/*/docs`, and bundled skills in `extensions/*/skills` for
+   "release after <previous>.x", "nightly", and the previous version. Replace each
+   label with the released version. Remove entries from the SDK
+   [release availability](../../references/sdk/0003-api.md#release-availability)
+   list that the release now includes.
+2. Examples. Update pinned versions such as `bun add @pstdio/sdk@<version>` and
+   example `engines.pstdio` ranges. Type-check each maintained example, including
+   `infra/local/extensions/bookmarks`, against the published SDK.
+3. Screenshots and GIFs. Recapture images whose screens changed, following the
+   [documentation guide](../../guides/0001-documentation.md#screenshots-and-gifs).
+   Label captures that show an earlier release.
+4. Public references. Check that new public SDK methods and CLI commands appear in
+   the SDK and CLI references.
+5. Shipped skill links. Check that every public URL and anchor linked from bundled
+   skills exists on the deployed site.
+
+After the docs deploy, open the changed pages on the public site and confirm that
+the labels match the release.
+
 ## Nightly builds
 
 Maintainers use what `main` builds every day, packaged the way users get it. The nightly runs the compiled CLI, the bundled runtime, the updater and migrations on existing data, which a source checkout skips. Because it runs the same verify and publish jobs as a stable release, a red nightly predicts a red release.
@@ -93,3 +126,15 @@ After PS-410 merges, inventory the obsolete extension and private-package tags a
 | No nightly today | Check whether `main` changed since the newest published nightly, then check the nightly run's failed job. |
 | Nightly desktop job failed | Re-run the failed jobs of that run. |
 | Two nightlies are listed | The newest nightly failed before pruning. Older nightlies are pruned after the next complete nightly. |
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb` and the GitHub releases of `pufflyai/prompt-studio`.
+
+| Field | Record |
+| --- | --- |
+| Status | Released and in use. |
+| Implementation | `.github/workflows/release-packages.yml`, `scripts/release/`, and the fixed group in `.changeset/config.json`. All-or-nothing publication came in #1031, the nightly channel in #1018, and post-publication pruning in #1066. See [ADR 0072](../../adrs/0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md). |
+| Availability | The workflow published the stable `pstdio@0.43.1` on 2026-10-14 and the prerelease `pstdio@0.44.0-nightly.20261018030230` on 2026-10-18. Only one nightly release is listed. |
+| Remaining work | None known. The one-time historical cleanup appears complete: the remote tags and GitHub releases now carry only `pstdio@`, `@pstdio/sdk@`, `@pstdio/ui@`, and `@pstdio/workbench@` names. That conclusion comes from the tag and release lists, not from a cleanup record. |
+| Evidence | `gh release list` and `git ls-remote --tags origin` on 2026-10-18. The release run logs were not reviewed for this record. |

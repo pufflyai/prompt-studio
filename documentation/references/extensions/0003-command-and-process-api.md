@@ -248,6 +248,50 @@ Command context resolves the selected project/workspace and exposes typed servic
 
 The [context types](../../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts) define the complete project, workspace, session, file, command, event, notification, activity, storage, automation, connection, and process APIs. The [SDK package guide](../../../packages/sdk/README.md) shows file scopes and authoring boundaries.
 
+### File access
+
+`ctx.projectFiles`, `ctx.workspaceFiles`, and `ctx.extensionFiles` are file mounts (`ArtifactMount`). Paths are relative to the mount root and cannot leave it. `ctx.packageFiles` is a read-only mount of the installed package. All four are in 0.43.x and `main`.
+
+| Method | What it does |
+| --- | --- |
+| `exists(path)` | Returns whether a file or folder exists. |
+| `readText(path)`, `readBytes(path)` | Reads a file as UTF-8 text or as bytes. |
+| `writeText(path, value)`, `writeBytes(path, value)` | Creates or replaces a file. Not on `ctx.packageFiles`. |
+| `updateText(path, value)` | Replaces only an existing file. It fails when the file is missing and never recreates a deleted file. Not on `ctx.packageFiles`. |
+| `list(pattern?)` | Lists files in all subfolders, optionally filtered by a glob pattern. |
+| `listDirs(path?)` | Lists the folders directly inside `path`, or inside the root. |
+| `delete(path)` | Deletes a file, or a folder with its contents. Not on `ctx.packageFiles`. |
+
+- `ctx.projectFiles.exists`, `readText`, `writeText`, `updateText`, `readBytes`, `writeBytes`, `list`, `listDirs`, and `delete` act on the project's default folder.
+- `ctx.workspaceFiles.exists`, `readText`, `writeText`, `updateText`, `readBytes`, `writeBytes`, `list`, `listDirs`, and `delete` act on the invocation workspace. `ctx.workspaceFiles.syncDir` is described below.
+- `ctx.packageFiles.exists`, `readText`, `readBytes`, `list`, and `listDirs` read the installed extension package.
+- `ctx.extensionFiles.exists`, `readText`, `writeText`, `updateText`, `readBytes`, `writeBytes`, `list`, `listDirs`, and `delete` act on the extension's allocated folder. See [Webviews and storage](0005-webview-and-storage-api.md#package-assets) for its location in each release.
+
+`ctx.files` works with project files by file ID, such as uploaded attachments. `ctx.files.readText(fileId)` reads one. `ctx.files.writeText(fileId, value)` replaces the content of an existing file in this project. `ctx.files.createText({ name, content, metadata? })` creates a text file and returns `{ id }`. `ctx.files.delete(fileId)` deletes one.
+
+### Other context services
+
+These are in 0.43.x and `main`:
+
+| Method | What it does |
+| --- | --- |
+| `ctx.resources.allocate({ kind })` | Allocates the next short ID for a resource kind that declares a `prefix`, such as `PS-12`. Returns `{ id, shorthand }`. The `WS` prefix is reserved for workspaces. |
+| `ctx.sessions.addAnchors(sessionId, anchors)` | Links a session to resources. |
+| `ctx.sessions.removeAnchors(sessionId, refs)` | Removes those links. |
+| `ctx.workspaces.get(id)` | Returns a workspace in this project, or `null`. |
+| `ctx.workspaces.addAnchors(workspaceId, anchors)` | Links a workspace to resources. |
+| `ctx.workspaces.removeAnchors(workspaceId, refs)` | Removes those links. |
+| `ctx.workspaces.resolve(id)` | Returns the provider state, execution kind, execution target, capabilities, and any provider error. |
+| `ctx.workspaces.cancel(id)` | Cancels a workspace that is still being created and returns it. A workspace in any other state is returned unchanged. |
+| `ctx.net.findFreePort({ host? })` | Returns a free TCP port on `host`, `127.0.0.1` by default. |
+| `ctx.connections.stream(connectionId, request)` | Sends a request through a named connection and yields `response`, `data`, and `end` events. See [Named connections](#named-connections). |
+| `ctx.logger.info`, `ctx.logger.warn`, `ctx.logger.error` | Write `(message, metadata?)` to the runtime log with event `extension.log`. The default log level, `error`, drops `info` and `warn`. |
+| `ctx.settings.delete(key)` | Removes the stored value of a setting. |
+
+### Agent skill folders
+
+Harness extensions call `ctx.workspaceFiles.syncDir(dir, files)` during workspace setup to copy the skill catalog into an agent folder such as `.claude/skills`. The host records each file it writes, with a hash of its content, outside the workspace. A later sync updates or removes a file only while it still has the recorded content. It adopts an existing file that already has the wanted content. It keeps a file it did not write or that someone edited, and logs a warning with event `extension.workspace_sync.kept_file`. The host log (`logs.jsonl` in the Prompt Studio home folder) records warnings when `PSTDIO_LOG_LEVEL` is `warn`, `info`, or `debug`. The default level, `error`, does not. Deleting a kept file lets the next sync write the current version. `syncDir` does not report kept files to the extension.
+
 ## Command-backed choices
 
 A `select` or `multi-select` parameter can use a fixed option array or a command

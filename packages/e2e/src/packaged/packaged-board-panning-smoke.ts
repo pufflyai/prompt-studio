@@ -9,6 +9,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { verifyBoardEdgeScrolling } from "./packaged-board-edge-scrolling";
 import { verifyBoardPanning } from "./packaged-board-panning";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { verifyTicketCreation } from "./packaged-ticket-creation";
 
@@ -31,7 +32,7 @@ export const registerBoardPanningSmokeTests = () => {
       });
       expect(response.status).toBe(201);
       const { id } = (await response.json()) as { id: string };
-      browser = await chromium.launch();
+      browser = await chromium.launch(PROVISIONED_CHROMIUM);
       const page = await browser.newPage({
         viewport: { width: 1000, height: 720 },
         extraHTTPHeaders: runtimeAuthorization(runtime.descriptor),

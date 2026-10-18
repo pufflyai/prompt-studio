@@ -2,6 +2,12 @@
 
 Save related records together, keep the revision a caller read, and retain competing work for explicit resolution.
 
+## Availability
+
+`ctx.storage.records`, `ctx.storage.assets`, `ctx.storage.migrate`, and `ctx.storage.readLegacy` are on `main` and in `0.44.0-nightly` builds. They ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them. In 0.43.1, `get`, `set`, `delete`, and `collection` are the supported storage methods and are not deprecated.
+
+An extension that uses these methods needs a Prompt Studio app from that release. Updating `@pstdio/sdk` alone gives you the types but not the host methods. See [App, SDK, and extension API versions](../extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
+
 ## Ownership and durability
 
 `ctx.storage.records` belongs to the current extension and workbench. The host
@@ -119,8 +125,7 @@ separate contract.
 `createMemoryStorage({ kv?, collections? })` from `@pstdio/sdk/testing` uses the
 same record and conflict rules. Seeds are ready before the first read. Each
 instance has an isolated owner. It is an in-memory test adapter and provides no
-relay acknowledgment. Real database tests cover durable process restart.
+relay acknowledgment. Real database tests cover durable process restart. In
+`@pstdio/sdk` 0.43.1, `createMemoryStorage()` takes no options and has no records.
 
-See the [save workflow](../../guides/sdk/0003-storage.md) and the
-[synchronization contract](../architecture/0026-synchronization-contracts.md)
-for examples and host protocol rules.
+See the [save workflow](../../guides/sdk/0003-storage.md) for examples.

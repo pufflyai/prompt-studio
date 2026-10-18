@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { resetApiClient } from "@/features/api-client";
 import { installSkillsForAgent } from "./install-skills";
@@ -103,6 +103,11 @@ const mockApi = (availableAgents: unknown[]) => {
   }) as unknown as typeof fetch;
 };
 
+const writeFile = (path: string, content: string) => {
+  mkdirSync(join(path, ".."), { recursive: true });
+  writeFileSync(path, content);
+};
+
 const setup = (name: string) => {
   const dir = join(tmpBase, name);
   mkdirSync(dir, { recursive: true });
@@ -125,56 +130,85 @@ describe("installSkillsForAgent", () => {
     mockApi([CLAUDE_AGENT]);
     const root = setup("agent-project");
 
-    const installed = await installSkillsForAgent({
+    const result = await installSkillsForAgent({
       root,
       agentId: "claude-code",
-
       projectId: TEST_PROJECT_ID,
     });
 
-    expect(installed.length).toBe(SKILL_NAMES.length);
-    for (const skill of SKILL_NAMES) {
-      expect(existsSync(join(root, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
-    }
+    expect(result).toEqual({ installed: SKILL_NAMES, kept: [], replaced: [] });
+    expect(readFileSync(join(root, ".claude", "skills", "create-ticket", "templates", "example.md"), "utf8")).toBe(
+      "# example",
+    );
   });
 
   test("installs skills to global dir when global is true", async () => {
     mockApi([CLAUDE_AGENT]);
     const fakeHome = setup("agent-global-home");
 
-    const installed = await installSkillsForAgent({
+    const result = await installSkillsForAgent({
       root: setup("unused-root"),
       agentId: "claude-code",
-
       projectId: TEST_PROJECT_ID,
       global: true,
       homedir: fakeHome,
     });
 
-    expect(installed.length).toBe(SKILL_NAMES.length);
+    expect(result.installed).toEqual(SKILL_NAMES);
     for (const skill of SKILL_NAMES) {
       expect(existsSync(join(fakeHome, ".claude", "skills", skill, "SKILL.md"))).toBe(true);
     }
   });
 
-  test("returns only newly installed skill names", async () => {
+  test("reinstalling keeps every existing skill folder unchanged", async () => {
     mockApi([CLAUDE_AGENT]);
-    const root = setup("agent-partial");
+    const root = setup("agent-reinstall");
+    await installSkillsForAgent({ root, agentId: "claude-code", projectId: TEST_PROJECT_ID });
 
-    const existingSkillName = SKILL_FIXTURES[0].name;
-    const existingSkillDir = join(root, ".claude", "skills", existingSkillName);
-    mkdirSync(existingSkillDir, { recursive: true });
-    writeFileSync(join(existingSkillDir, "SKILL.md"), "custom");
+    const result = await installSkillsForAgent({ root, agentId: "claude-code", projectId: TEST_PROJECT_ID });
 
-    const installed = await installSkillsForAgent({
+    expect(result).toEqual({ installed: [], kept: SKILL_NAMES, replaced: [] });
+    expect(readFileSync(join(root, ".claude", "skills", "refine-ticket", "SKILL.md"), "utf8")).toBe(
+      SKILL_FIXTURES[1].files[0].content,
+    );
+  });
+
+  test("keeps local edits and same-name folders it did not write", async () => {
+    mockApi([CLAUDE_AGENT]);
+    const root = setup("agent-local-folders");
+    const skillsDir = join(root, ".claude", "skills");
+    await installSkillsForAgent({ root, agentId: "claude-code", projectId: TEST_PROJECT_ID });
+    writeFile(join(skillsDir, "create-ticket", "SKILL.md"), "edited");
+    rmSync(join(skillsDir, "refine-ticket"), { recursive: true });
+    writeFile(join(skillsDir, "refine-ticket", "notes.md"), "own skill");
+
+    const result = await installSkillsForAgent({ root, agentId: "claude-code", projectId: TEST_PROJECT_ID });
+
+    expect(result.kept).toEqual(SKILL_NAMES);
+    expect(readFileSync(join(skillsDir, "create-ticket", "SKILL.md"), "utf8")).toBe("edited");
+    expect(readFileSync(join(skillsDir, "refine-ticket", "notes.md"), "utf8")).toBe("own skill");
+    expect(existsSync(join(skillsDir, "refine-ticket", "SKILL.md"))).toBe(false);
+  });
+
+  test("force replaces enabled skill folders and leaves other folders alone", async () => {
+    mockApi([CLAUDE_AGENT]);
+    const root = setup("agent-force");
+    const skillsDir = join(root, ".claude", "skills");
+    writeFile(join(skillsDir, "create-ticket", "SKILL.md"), "edited");
+    writeFile(join(skillsDir, "create-ticket", "stale.md"), "stale");
+    writeFile(join(skillsDir, "own-skill", "SKILL.md"), "own skill");
+
+    const result = await installSkillsForAgent({
       root,
       agentId: "claude-code",
-
       projectId: TEST_PROJECT_ID,
+      force: true,
     });
 
-    expect(installed).not.toContain(existingSkillName);
-    expect(installed.length).toBe(SKILL_NAMES.length - 1);
+    expect(result).toEqual({ installed: ["refine-ticket", "implement-ticket"], kept: [], replaced: ["create-ticket"] });
+    expect(readFileSync(join(skillsDir, "create-ticket", "SKILL.md"), "utf8")).toBe(SKILL_FIXTURES[0].files[0].content);
+    expect(existsSync(join(skillsDir, "create-ticket", "stale.md"))).toBe(false);
+    expect(readFileSync(join(skillsDir, "own-skill", "SKILL.md"), "utf8")).toBe("own skill");
   });
 
   test("throws for an unknown agent", async () => {
@@ -185,7 +219,6 @@ describe("installSkillsForAgent", () => {
       installSkillsForAgent({
         root,
         agentId: "unknown",
-
         projectId: TEST_PROJECT_ID,
       }),
     ).rejects.toThrow("No installed harness found");
@@ -195,13 +228,12 @@ describe("installSkillsForAgent", () => {
     mockApi([{ id: "pstdio.extension-lab.harness.fake", availability: { type: "INSTALLED" as const } }]);
     const root = setup("no-skills-agent");
 
-    const installed = await installSkillsForAgent({
+    const result = await installSkillsForAgent({
       root,
       agentId: "fake",
-
       projectId: TEST_PROJECT_ID,
     });
 
-    expect(installed).toEqual([]);
+    expect(result).toEqual({ installed: [], kept: [], replaced: [] });
   });
 });

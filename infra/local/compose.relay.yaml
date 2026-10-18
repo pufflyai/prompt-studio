@@ -8,6 +8,9 @@ services:
       BUN_INSTALL_CACHE_DIR: ${CONTAINER_WORKTREE}/node_modules/.cache/bun
       PSTDIO_RELAY_CONFIG_FILE: ${HOST_PSTDIO_HOME}/relay.json
       NODE_EXTRA_CA_CERTS: ${PSTDIO_RELAY_CA_FILE:?PSTDIO_RELAY_CA_FILE is required}
+      # The relay and manager live on the fixture network, never behind a Docker client proxy.
+      NO_PROXY: relay,authority,127.0.0.1,localhost
+      no_proxy: relay,authority,127.0.0.1,localhost
 networks:
   default:
     external: true

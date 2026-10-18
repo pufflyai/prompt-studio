@@ -43,3 +43,15 @@ Use source-load counts, snapshot identities, generations, and diagnostic outcome
 Cover concurrent reads, source replacement, settings/enablement changes, webview rebuilds, project-workspace changes, stale in-flight loads, broken packages, retry after failure, and shutdown cleanup. Metadata and command execution must identify the same adopted source.
 
 A passing cache test does not prove the installed user flow. Check install, use, update, disable/remove, restart, and recovery with the [manual walkthrough](../../lessons-learned/0013-manually-check-installed-user-flows.md).
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`.
+
+| Field | Record |
+| --- | --- |
+| Status | Released. |
+| Implementation | `packages/pstdio-api/src/features/extensions/project-extension-runtime-catalog.ts` owns loading, sharing, and invalidation. The snapshot contract is in `project-extension-runtime-snapshot.ts`. Consumers moved to the catalog in #537; the snapshot type came with #576. |
+| Availability | #537 shipped in `pstdio@0.26.0` and #576 in `pstdio@0.27.0`. |
+| Remaining work | None known in source. A recorded pass of the manual installed-user walkthrough is still missing. |
+| Evidence | Unit tests, passed locally on 2026-10-18: `project-extension-runtime-catalog.test.ts` (same identity on repeated reads, shared cold loads, discarded in-flight loads, per-source invalidation) and `project-extension-runtime-snapshot.test.ts`. |

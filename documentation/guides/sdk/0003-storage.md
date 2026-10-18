@@ -2,6 +2,12 @@
 
 Keep a caller's observed revision and save related changes as one durable group.
 
+## Availability
+
+`ctx.storage.records` and `ctx.storage.assets` are on `main` and in `0.44.0-nightly` builds. They ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them. Updating `@pstdio/sdk` alone does not add them to your app.
+
+On 0.43.x, save data with `ctx.storage.get`, `set`, `delete`, and `collection`. These calls keep working after the release that adds records. That release marks them deprecated; see [Deprecated structured storage](../../references/sdk/0004-storage.md#deprecated-structured-storage).
+
 ## Capture, stage, save
 
 Read records when opening an edit. Keep those revisions with the draft. Stage any

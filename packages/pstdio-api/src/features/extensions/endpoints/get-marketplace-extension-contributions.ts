@@ -57,7 +57,7 @@ export const getMarketplaceExtensionContributionsHandler = (
       const sourcePath = useInstalled ? installed.source_path : prepared!.targetPath;
       const extensionId = useInstalled ? installed.extension_id : prepared!.metadata.id;
       const runtime = useInstalled
-        ? await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(installed)
+        ? await deps.extensionRuntimeCatalog.getSourcesRuntime([installed])
         : await loadExtensionSourceRuntime(sourcePath);
 
       return c.json(

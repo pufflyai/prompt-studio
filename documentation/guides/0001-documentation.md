@@ -58,6 +58,53 @@ Every published page follows these rules. The website build fails when a page br
 
 Link with relative paths to `.md` files, so the same markdown works on GitHub and on the website. A link to a published page becomes a website link. A link to any other repository file, such as an ADR or a source file, becomes a link to that file on GitHub `main`. A relative link to a missing file fails the build. Anchors such as `0006-sessions.md#create-a-session` use GitHub-style heading slugs.
 
+## Links in public pages and skills
+
+Public pages and bundled skills reach readers who do not have the repository. Follow these rules:
+
+- Public pages and skills do not link to PRDs, `references/architecture/`, `guides/development/`, or lessons learned. These describe planned work or contributor setup, not what a released version supports. Link the public reference instead, or a source file for exact types.
+- A public page may cite an ADR to explain a decision or a temporary limitation. The website shows it as a GitHub link. ADRs are never published.
+- The website never publishes PRDs, ADRs, lessons learned, `guides/development/`, or `references/architecture/`, even if someone adds them to the allow-list.
+- A skill is installed by copying its own folder. Relative links in a skill must stay inside that folder and reach files that Git tracks. Symbolic links are not copied, and every file must be UTF-8 text. Link central docs with `https://prompt.studio/docs/...` URLs; those must match a published page and heading.
+- A link to this repository on GitHub `main` must reach an existing path.
+
+## Documentation checks
+
+These checks run in the `static_checks` job of Test and Build on every pull request, in the merge queue, and on `main`. They work offline and finish in a few seconds. They run on every change because renaming a source file can break a documentation link.
+
+- `bun run --cwd scripts verify:docs-links` checks relative links and heading anchors in `documentation/`, every `README.md`, extension docs, and skills. It also checks website docs URLs against the routes the website generates from the allow-list, GitHub links to `main`, the rules above, and exported skill folders.
+- `bun run --cwd scripts verify:sdk-reference` checks that the SDK references name every public method group and method. It reads `PstdioClient` from `@pstdio/sdk/client` for `references/sdk/`, and the extension context, view context, and webview client from the [extension API report](../../packages/sdk/api-report/extensions.d.ts) for `references/extensions/` and `references/sdk/`. A name counts as documented when a code span or code block names it in the same section or table row as its group or type, or as `group.method`. Deprecated methods are skipped.
+
+The weekly **Documentation links** workflow checks external URLs. It never runs on pull requests, so another site's outage cannot fail unrelated work. Failed URLs and the files that link to them appear in its job summary. Sites that refuse scripted requests (HTTP 401 or 403) are listed for a manual check but do not fail the run. Run it with `bun run --cwd scripts verify:docs-external-links`.
+
+Documentation changes do not start application test suites. A Markdown change inside an extension runs that extension's own package checks, but not the published-extension or installed-CLI jobs. Changes to bundled skill assets other than Markdown, or to packaged runtime files, still need the package and packaged checks in the [testing guide](development/0002-testing.md).
+
+## Ownership
+
+Each canonical page has an owner. The owner reviews changes to it and keeps it true for the current release.
+
+| Documentation | Owner |
+| --- | --- |
+| `guides/getting-started/`, `guides/concepts/`, `references/cli/` | CLI and runtime maintainers (`pstdio`) |
+| `guides/extensions/`, `references/extensions/` | Extension platform maintainers (`pstdio-extensions`, `@pstdio/sdk/extensions`) |
+| `guides/sdk/`, `references/sdk/` | SDK maintainers (`@pstdio/sdk`) |
+| `references/workbench/` | Workbench maintainers (`@pstdio/workbench`) |
+| `references/architecture/`, ADRs | Maintainers of the package each page describes |
+| `guides/development/`, CI checks in `scripts/` | Developer tooling maintainers |
+| PRDs | The owner named in each PRD |
+| `extensions/<name>/README.md`, `docs/`, and `skills/` | That extension's maintainers |
+| `create-pstdio-extension` skill | Extension platform and SDK maintainers |
+| `pstdio` skill | CLI and runtime maintainers |
+| This guide and the website allow-list (`docs-topics.json`) | Documentation and website maintainers |
+
+When a public API changes, update these together in the same pull request:
+
+1. The contract reference: the SDK, extension API, or CLI reference page.
+2. The walkthrough or example that uses the API.
+3. The skill that routes agents to it, including its links and offline essentials. See [maintaining skills](development/0009-maintaining-skills.md).
+
+When an authoring contract changes, such as the manifest, a context API, or an extension CLI command, also run a fresh-agent trial with the packaged skill before the release. Use an agent with no earlier context, as described in [PRD 0009](../requirements/platform/0009-documentation-and-skills-reliability.md#w8-final-fresh-agent-and-release-gate).
+
 ## Screenshots and GIFs
 
 Prefer short GIFs when movement explains a feature: entering a sidebar level, choosing an option, dragging a row, or reloading a tool. Use a still screenshot when someone mainly needs to find a control or read a screen. Record real app interactions with sample data; do not animate a mock screen to imply working behavior.
@@ -345,3 +392,4 @@ Follow the [blog instructions](../../clients/landing-page/src/content/blog/AGENT
 - [0014 — Fatal exit skips async cleanup](../lessons-learned/0014-fatal-exit-skips-async-cleanup.md)
 - [0015 — Anchor context menus in their viewport](../lessons-learned/0015-anchor-context-menus-in-their-viewport.md)
 - [0016 — Bun promise assertions can deadlock Windows pipe reads](../lessons-learned/0016-bun-expect-rejects-blocks-pipe-reads.md)
+- [0017 — Unreaped processes look alive](../lessons-learned/0017-unreaped-processes-look-alive.md)

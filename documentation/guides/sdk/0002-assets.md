@@ -2,6 +2,12 @@
 
 Stage large files as immutable assets. Prompt Studio streams their bytes, verifies their size and checksum, and keeps completed versions addressable.
 
+## Availability
+
+`ctx.storage.assets` and `client.assets` are on `main` and in `0.44.0-nightly` builds. They ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them.
+
+You need both a new SDK and a new app. Updating `@pstdio/sdk` alone gives you the types, but the 0.43.x runtime does not provide the methods or their API routes. On 0.43.x, use `ctx.storage.files` and collection attachments, described in [Existing blobs](#existing-blobs). See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
+
 ## Extension commands
 
 Use `ctx.storage.assets` from commands and hooks:

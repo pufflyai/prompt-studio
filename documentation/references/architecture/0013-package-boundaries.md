@@ -14,8 +14,9 @@ layer-map change.
    Its main export depends only on Zod and Web Crypto. Its separate `./conformance`
    export is test-only and uses development dependencies for PGlite, PostgreSQL,
    Yjs, and S3 test storage. It imports no host, SDK, UI, database implementation,
-   or provider code. Future runtime and relay consumers must declare their own
-   dependency and layer-map edge when they integrate it. `pstdio-api-contracts`
+   or provider code. Its consumers, such as `pstdio-sync`, `pstdio-db`,
+   `pstdio-api`, `pstdio-relay`, and `pstdio-account-manager`, declare their own
+   dependency and layer-map edge. `pstdio-api-contracts`
    consumes its identity and exact-target schemas for local environment bindings;
    it adds no host or provider dependency to the synchronization package.
 
@@ -101,8 +102,10 @@ layer-map change.
    `e2e` declares the extensions and `workbench-fixture` it installs at runtime,
    and the `pstdio-dashboard` it builds and serves, as development dependencies. It
    does not import them. The declarations let the
-   package graph treat a change to one of them as an e2e change, so pull request CI
-   runs the e2e jobs for it.
+   package graph treat a change to one of them as an e2e change. A scoped pull
+   request then only lints the e2e package. The e2e jobs run in the full CI stage
+   on `main`, or on a pull request labeled `ci:full`; see
+   [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
 
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled runtime artifacts.
@@ -132,8 +135,8 @@ The private `pstdio-account-manager` workspace lives under `infra/account-manage
 It consumes only the merged `pstdio-sync-contracts` identity and canonical JSON
 contracts. It owns a separate private PostgreSQL database/role and imports no
 relay content implementation, local API host, SDK, UI, client or extension code.
-It is not part of the CLI bundle. Future authenticated manager and relay services
-must preserve that authority boundary. See the
+It is not part of the CLI bundle. Its authenticated HTTP service and the relay's
+access check must preserve that authority boundary. See the
 [account authority guide](../../guides/development/0007-account-manager.md) and
 [ADR 0076](../../adrs/0076-separate-account-authority-from-content.md).
 

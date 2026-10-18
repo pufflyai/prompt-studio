@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-import { open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { open, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join, posix, relative, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { createReadBoundary } from "../runtime/read-boundary";
@@ -7,6 +6,7 @@ import { ARTIFACT_MOUNT_ROOT } from "./extension-storage-path";
 import { normalizeArtifactMountPath } from "./path-normalization";
 import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
 import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
+import { type KeptWorkspaceFile, runAfterPendingSync, syncWorkspaceDir } from "./workspace-sync-dir";
 
 type ArtifactMountLocation = {
   repoRoot: string;
@@ -146,95 +146,30 @@ const createFileMountState = (mountRoot: string, { signal, onWrite }: FileMountO
 export const createFileMount = (mountRoot: string, signal?: AbortSignal): ArtifactMount =>
   createFileMountState(mountRoot, { signal }).mount;
 
-let syncTmpCounter = 0;
-
-// Two syncs of one folder at once race on creating new folders and, on Windows, on renaming over
-// the same file. Syncs of the same folder in this process run one after another.
-const pendingSyncs = new Map<string, Promise<void>>();
-
-const runAfterPendingSync = (key: string, sync: () => Promise<void>) => {
-  const next = (pendingSyncs.get(key) ?? Promise.resolve()).catch(() => {}).then(sync);
-  pendingSyncs.set(key, next);
-  const forget = () => {
-    if (pendingSyncs.get(key) === next) pendingSyncs.delete(key);
-  };
-  void next.then(forget, forget);
-  return next;
-};
-
-type WorkspaceSyncState = {
-  version: 1;
-  dir: string;
-  files: string[];
-};
-
-const workspaceSyncStateFile = (dir: string) => `${createHash("sha256").update(dir).digest("hex")}.json`;
-
-const isPathInSyncDir = (dir: string, path: string) => (dir ? path.startsWith(`${dir}/`) : Boolean(path));
-
-const readWorkspaceSyncState = async (stateMount: ArtifactMount, dir: string) => {
-  const stateFile = workspaceSyncStateFile(dir);
-  if (!(await stateMount.exists(stateFile))) return { stateFile, managedFiles: [] };
-
-  const state = JSON.parse(await stateMount.readText(stateFile)) as WorkspaceSyncState;
-  if (state.version !== 1 || state.dir !== dir || !Array.isArray(state.files)) {
-    throw new Error(`Invalid workspace sync state for "${dir}"`);
-  }
-
-  const managedFiles = state.files.map((path) => normalizeMountRelativePath(path));
-  if (managedFiles.some((path) => !isPathInSyncDir(dir, path))) {
-    throw new Error(`Invalid workspace sync state for "${dir}"`);
-  }
-  return { stateFile, managedFiles };
-};
-
 /**
- * A file mount with {@link WorkspaceFilesMount.syncDir}: writes the given files atomically and prunes only
- * files recorded as managed by an earlier sync. Harness extensions use it to materialize their agent dir
- * (e.g. `.claude/skills`) without deleting repository-owned skills in the same directory.
+ * A file mount with {@link WorkspaceFilesMount.syncDir}. Harness extensions use it to materialize their
+ * agent dir (e.g. `.claude/skills`). It changes only files it owns, so repository skills and local edits
+ * in the same dir stay. See {@link syncWorkspaceDir}.
  */
 export const createWorkspaceFilesMount = (
   mountRoot: string,
-  options: { syncStateRoot?: string; signal?: AbortSignal } = {},
+  options: { syncStateRoot?: string; signal?: AbortSignal; onKeptFile?: (file: KeptWorkspaceFile) => void } = {},
 ): WorkspaceFilesMount & WorkspaceFileAccess => {
   const { mount, safeRoot } = createFileMountState(mountRoot, { signal: options.signal });
 
-  const writeSyncedDir: WorkspaceFilesMount["syncDir"] = async (dir, files) => {
-    if (!options.syncStateRoot) throw new Error("Workspace sync state root is required");
-
-    const dirRel = normalizeMountRelativePath(dir);
-    const stateMount = createFileMount(options.syncStateRoot);
-    const { stateFile, managedFiles } = await readWorkspaceSyncState(stateMount, dirRel);
-    const wanted = new Map<string, string>();
-    for (const file of files) {
-      const rel = normalizeMountRelativePath(posix.join(dirRel, file.path));
-      // normalizeRelativePath only guards the mount root; a path like "../x" stays in the
-      // root but escapes `dir`, so it would be written outside the synced subtree and never
-      // pruned. Reject anything that does not land strictly under `dir`.
-      if (dirRel && !rel.startsWith(`${dirRel}/`)) {
-        throw new Error(`Workspace file path escapes "${dir}": ${file.path}`);
-      }
-      wanted.set(rel, file.content);
-    }
-
-    for (const [rel, content] of wanted) {
-      const absolutePath = (await safeRoot.resolveForWrite(rel)).operationPath;
-      const tmpRelativePath = `${rel}.${process.pid}.${syncTmpCounter++}.tmp`;
-      const tmpPath = (await safeRoot.resolveForWrite(tmpRelativePath)).operationPath;
-      await writeFile(tmpPath, content, "utf8");
-      await rename(tmpPath, absolutePath);
-    }
-
-    for (const path of managedFiles) {
-      if (!wanted.has(path) && (await createFileMount(mountRoot).exists(path))) await mount.delete(path);
-    }
-
-    const state: WorkspaceSyncState = { version: 1, dir: dirRel, files: [...wanted.keys()].sort() };
-    await stateMount.writeText(stateFile, `${JSON.stringify(state)}\n`);
+  const syncDir: WorkspaceFilesMount["syncDir"] = (dir, files) => {
+    const { syncStateRoot } = options;
+    if (!syncStateRoot) return Promise.reject(new Error("Workspace sync state root is required"));
+    return runAfterPendingSync(resolve(mountRoot, normalizeMountRelativePath(dir)), () =>
+      syncWorkspaceDir({
+        safeRoot,
+        stateMount: createFileMount(syncStateRoot),
+        dir,
+        files,
+        onKeptFile: options.onKeptFile,
+      }),
+    );
   };
-
-  const syncDir: WorkspaceFilesMount["syncDir"] = (dir, files) =>
-    runAfterPendingSync(resolve(mountRoot, normalizeMountRelativePath(dir)), () => writeSyncedDir(dir, files));
 
   return { ...mount, ...createWorkspaceFileAccess(safeRoot), syncDir };
 };

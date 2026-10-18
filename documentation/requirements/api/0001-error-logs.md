@@ -1,5 +1,5 @@
 ---
-status: "draft"
+status: "current"
 created: "2026-03-10T20:12:05Z"
 ---
 
@@ -99,3 +99,15 @@ Runtime failures are emitted as structured entries in the shared logger stream (
 - **Where to find artifacts**: `packages/pstdio-logging`, `packages/pstdio-api`, `packages/pstdio-extensions`, `packages/pstdio`
 
 The default `PSTDIO_LOG_LEVEL=error` suppresses informational request and CLI lifecycle records. Raise the level when those diagnostics are needed; a quiet default log does not prove that no requests ran. See [logging configuration](../../../packages/pstdio-logging/src/index.ts).
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`.
+
+| Field | Record |
+| --- | --- |
+| Status | Released. |
+| Implementation | Shared logger in `packages/pstdio-logging` (first added in #94). API error handling in `packages/pstdio-api/src/app-routing.ts`. `pst logs` in `packages/pstdio/src/adapters/cli/commands/logs.ts`. Diagnostic redaction was tightened in #939. |
+| Availability | The logger ships in every stable release since `pstdio@0.5.0`, and `pst logs` since `pstdio@0.16.0`. #939 first shipped in `pstdio@0.42.0`. |
+| Remaining work | None in scope. Remote log shipping and a log viewer are non-goals. |
+| Evidence | Unit tests, passed locally on 2026-10-18: `packages/pstdio-logging/src/index.test.ts` (path and level resolution) and `packages/pstdio-api/src/app.test.ts` (500 payload without a stack). Extension and CLI lifecycle entries were checked by source inspection only. |

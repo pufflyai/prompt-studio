@@ -20,5 +20,7 @@ in Create workspace and nested `workspace` command fields. Providers must valida
 resource ownership in `create`; choice lists do not authorize a resource.
 Use fixed options on harness and kanban create-row forms.
 Those forms do not use the command dialog. For a complete example, see the
-[native toolbar reference](https://github.com/pufflyai/prompt-studio/blob/main/documentation/references/extensions/0004-contribution-api.md#native-view-toolbar-actions)
-and [command-backed choices](https://github.com/pufflyai/prompt-studio/blob/main/documentation/references/extensions/0003-command-and-process-api.md#command-backed-choices).
+[native toolbar reference](https://prompt.studio/docs/references/extensions/contribution-api/#native-view-toolbar-actions)
+and [command-backed choices](https://prompt.studio/docs/references/extensions/command-and-process-api/#command-backed-choices).
+Row and selection actions pass IDs, not rows; see
+[table and board actions](extension-api.md#table-and-board-actions-receive-ids-activation-receives-the-row).

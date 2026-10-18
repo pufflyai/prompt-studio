@@ -4,7 +4,6 @@ import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
 import type { createWorkspaceService } from "../../services/workspace-service";
 import {
-  type EnabledExtensionSource,
   ExtensionRuntimeGenerationStaleError,
   ExtensionRuntimeLoadFailedError,
   ExtensionRuntimeProjectMissingError,
@@ -227,14 +226,6 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     }
   };
 
-  // Loads one installed source's runtime regardless of its enabled state, so the
-  // dashboard can document what a disabled extension would contribute.
-  const getInstalledSourceRuntime = async (installedSource: EnabledExtensionSource["installedSource"]) => {
-    const cached = await sources.load(installedSource);
-    if (!cached) return normalizeExtensionSources([], []);
-    return normalizeExtensionSources([cached.source], cached.diagnostics);
-  };
-
   // Runs before an enable is persisted, so the candidate is described by its manifest
   // and source path rather than by a row.
   const validateResourcePrefixes = async (projectId: string, installedSource: CandidateExtensionSource) => {
@@ -299,7 +290,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
 
   return {
     get,
-    getInstalledSourceRuntime,
+    getSourcesRuntime: sources.loadRuntime,
     invalidate,
     validateResourcePrefixes,
     subscribeInvalidation: (listener: (input: RuntimeInvalidationInput) => void) => {

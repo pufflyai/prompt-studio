@@ -10,7 +10,7 @@ import { bundleEntry } from "./bundle-entry";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import { mirrorNodeModules } from "./mirror-node-modules";
-import { type PackageManifest, readPackageManifest } from "./package-manifest";
+import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
 import {
   collectRuntimeModulePaths,
   hashRuntimeModulePaths,
@@ -43,6 +43,8 @@ export type LoadExtensionSourcesOptions = {
   extensionRoots?: Array<{ path: string; sourceKind?: ExtensionSourceKind }>;
   /** Explicit extension packages to load. */
   extensionPackages?: ExtensionPackageRef[];
+  /** Who compares `engines.pstdio` with this extension API version. Defaults to the host. */
+  apiProvider?: ExtensionApiProvider;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -238,8 +240,9 @@ const importFresh = async (filePath: string, packagePath: string, packageName: s
 export const loadExtensionPackage = async (
   pkg: ExtensionPackageRef,
   diagnostics: ExtensionDiagnostic[],
+  options: { apiProvider?: ExtensionApiProvider } = {},
 ): Promise<LoadedExtensionSource | null> => {
-  const { manifest, entryPath, diagnostics: manifestDiagnostics } = readPackageManifest(pkg.path);
+  const { manifest, entryPath, diagnostics: manifestDiagnostics } = readPackageManifest(pkg.path, options);
   diagnostics.push(...manifestDiagnostics);
 
   if (!manifest || !entryPath) return null;
@@ -293,7 +296,7 @@ export const loadExtensionSources = async (options: LoadExtensionSourcesOptions 
   const explicitPackages = options.extensionPackages ?? [];
 
   for (const pkg of [...rootPackages, ...explicitPackages]) {
-    const loaded = await loadExtensionPackage(pkg, diagnostics);
+    const loaded = await loadExtensionPackage(pkg, diagnostics, { apiProvider: options.apiProvider });
     if (loaded) sources.push(loaded);
   }
 

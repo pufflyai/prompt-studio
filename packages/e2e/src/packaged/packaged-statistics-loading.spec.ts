@@ -6,6 +6,7 @@ import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -31,7 +32,7 @@ test("a table row opens its artifact while statistics assets are delayed", async
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
-    browser = await chromium.launch();
+    browser = await chromium.launch(PROVISIONED_CHROMIUM);
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const loading = new Promise<void>((resolve) => {
       release = resolve;

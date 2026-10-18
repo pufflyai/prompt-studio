@@ -36,6 +36,10 @@ const config = {
         SYNC_TEST_DATABASE_URL: "postgres://test:isolated-test-only@database:5432/conformance",
         SYNC_TEST_OBJECT_ENDPOINT: "http://objects:9000",
         SYNC_TEST_ENTRY: process.env.SYNC_TEST_ENTRY,
+        // Docker injects a configured client proxy into every container. The services and the
+        // tests' own loopback servers are local, so their requests must never go through that proxy.
+        NO_PROXY: "database,objects,127.0.0.1,localhost",
+        no_proxy: "database,objects,127.0.0.1,localhost",
       },
       command: ["bun", "scripts/run-conformance.ts", ...process.argv.slice(2)],
       depends_on: { database: { condition: "service_healthy" }, objects: { condition: "service_started" } },

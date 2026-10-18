@@ -2,6 +2,10 @@
 
 Extensions own the versions and transformations of their stored data. Core provides these public helpers on `ctx.storage`.
 
+## Availability
+
+`ctx.storage.migrate`, `ctx.storage.readLegacy`, and the `legacyData` option of `createMemoryStorage` are on `main` and in `0.44.0-nightly` builds. They ship in the release after 0.43.x. `@pstdio/sdk` 0.43.1 and the 0.43.1 app do not have them; in 0.43.1, `createMemoryStorage()` takes no options. Updating `@pstdio/sdk` alone does not add these methods to your app. See [App, SDK, and extension API versions](0014-api-versioning.md#app-sdk-and-extension-api-versions).
+
 ## Run a migration
 
 ```ts

@@ -270,17 +270,24 @@ Detached-work tests install a small command-only fixture from `packages/workbenc
 
 Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's first `show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. The controller shows the prerendered startup document at DOM readiness, before remaining resources finish loading or the workbench view is created, so a fast attachment cannot cover the startup renderer while the window is still hidden. Runtime discovery and sidecar verification start after the lifecycle page loads, so checksum reads and process startup do not compete with the initial window display. Both timings are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. `packaged-launch.bench.ts` owns these budgets. The limits are 8 seconds for cold startup (10 seconds on Windows), 3 seconds for warm attach, and 500 milliseconds for crash recovery. The startup window must appear in less than 1.5 seconds on Apple Silicon macOS and less than 1 second on Linux and Windows, on both cold launches and warm attachment. Hosted Intel macOS runners start the app two to three times slower, so Intel allows 28 seconds for cold startup and 10 seconds for the startup window. The user approved the Intel and Windows cold-start increases on 2026-10-10, about 20% above the slowest release rehearsal that day (23.3 seconds on Intel, 8.2 seconds on Windows). The Intel startup window includes macOS's first-launch check of the freshly signed app, which has taken up to 9 seconds on hosted runners. Intel CI disables hosted-runner indexing before dependency installation; [ADR 0032](../../adrs/0032-temporary-macos-ci-indexing.md) records the measured contention and temporary isolation.
 
-Native runners are slow and costly, so native desktop tests run only in
-`.github/workflows/release-desktop.yml`, before a release is published. Pull
-requests do not build native desktop apps; run the local commands above to test a
-desktop change before merging. The release workflow runs both Electron suites on
-Linux and Apple Silicon, with packaged benchmarks in a separate step before the
-packaged suite. Intel macOS runs only the benchmark and packaged tests tagged
-`@essential`: cold startup, both transport paths, and project tabs with
-pages and terminals. The workflow configures the SUID sandbox for the source and packaged
-executables, verifies the packaged fuse policy, and uploads readiness and benchmark results
-and browser traces. Trace export removes runtime cookies and bearer
-credentials from every text entry before artifacts are uploaded.
+Native runners are slow and costly, so `.github/workflows/test-and-build.yml`
+limits them by stage. Scoped pull requests build no desktop app; run the local
+commands above to test a desktop change before merging, or add the `ci:full`
+label. The merge queue builds unsigned apps on Linux x64, Apple Silicon, Intel
+macOS, and Windows x64 without running tests. The full stage, which runs after
+each push to `main`, also runs the source Electron suite, the packaged renderer
+benchmark, and the packaged smoke on Linux, Apple Silicon, and Windows.
+
+Signed builds run only in `.github/workflows/release-desktop.yml`, before a
+release is published. It runs both Electron suites on Linux, Apple Silicon, and
+Windows, with packaged benchmarks in a separate step before the packaged suite. Intel macOS
+runs only the benchmark and packaged tests tagged `@essential`: cold startup, both
+transport paths, and project tabs with pages and terminals. The workflow
+configures the SUID sandbox for the source and packaged executables, verifies the
+packaged fuse policy, and uploads readiness and benchmark results and browser
+traces. Trace export removes bearer credentials, `pstdio.bearer.` WebSocket
+protocols, and browser session secrets from every text entry before artifacts are
+uploaded.
 
 Windows signing trusts the `main` branch's GitHub identity and release tags, so
 desktop release builds run only from `release-packages.yml` on `main`. A failed
@@ -290,8 +297,10 @@ release resumes by re-running the failed jobs or with the next push to `main`; s
 The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
 It proves opaque iframe command and project-setting persistence across reloads.
-Chromium also sends a terminal sentinel through the runtime's ephemeral,
-cookie-authenticated WebSocket endpoint and closes the terminal. CI requires
+Chromium also sends a terminal sentinel through the runtime's WebSocket endpoint,
+which authenticates with the `pstdio.bearer.` subprotocol from
+[ADR 0057](../../adrs/0057-browser-sessions-in-per-origin-storage.md), and closes
+the terminal. CI requires
 the browser binaries and fails instead of skipping missing engines. These
 checks complement the Vite browser suite, which covers the development
 transport, and signed native release tests, which cover distribution trust.

@@ -1,6 +1,6 @@
 # Webview patterns
 
-Use a webview for content that native file, tree, table, board, or controls views cannot express. Prefer a native controls view for ordinary parameters: the host provides the parameter editor, form state, and scrolling. Use the public `@pstdio/ui/param-editor` export when a custom webview actually needs an embedded form.
+Use a webview for content that native file, tree, table, board, or controls views cannot express. The public contract is [Webview client](https://prompt.studio/docs/references/extensions/webview-and-storage-api/#webview-client). Prefer a native controls view for ordinary parameters: the host provides the parameter editor, form state, and scrolling. Use the public `@pstdio/ui/param-editor` export when a custom webview actually needs an embedded form.
 
 ## Mount shared UI and own only the content
 

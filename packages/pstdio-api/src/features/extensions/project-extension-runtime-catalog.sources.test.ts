@@ -292,7 +292,7 @@ describe("project extension runtime catalog with real sources", () => {
     });
 
     await catalog.get("p1");
-    const runtime = await catalog.getInstalledSourceRuntime({ source_path: path, source_kind: "local_path" } as never);
+    const runtime = await catalog.getSourcesRuntime([{ source_path: path, source_kind: "local_path" }]);
 
     expect(runtime.commands.map((command) => command.id)).toEqual(["pstdio.hello.command.count"]);
     expect(imports).toBe(1);

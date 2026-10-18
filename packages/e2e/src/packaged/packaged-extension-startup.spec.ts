@@ -6,6 +6,7 @@ import { type Browser, chromium, expect, test } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -33,7 +34,7 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
       });
       expect(created.status).toBe(201);
       const project = (await created.json()) as { id: string };
-      browser = await chromium.launch();
+      browser = await chromium.launch(PROVISIONED_CHROMIUM);
       const page = await browser.newPage();
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await page.route("**/extensions/ui", async (route) => {

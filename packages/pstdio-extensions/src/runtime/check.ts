@@ -51,6 +51,7 @@ export const checkExtensions = async (input: CheckExtensionsInput = {}): Promise
         : []),
     ],
     extensionPackages: input.extensionPackages,
+    apiProvider: input.apiProvider,
   });
 
   const hostCompatibility = checkExtensionHostCompatibility(
@@ -175,7 +176,8 @@ export const formatCheckReport = (result: CheckExtensionsResult): string => {
 
   lines.push("Extensions check");
   lines.push("");
-  lines.push(`Installed extensions: ${runtime.extensions.length}`);
+  // The same report covers a scanned extensions root and a single source folder, so name the location.
+  lines.push(`Extensions found in ${presentPath(extensionsRoot)}: ${runtime.extensions.length}`);
   lines.push(`Errors: ${errorCount}`);
   lines.push(`Warnings: ${warningCount}`);
 

@@ -154,6 +154,19 @@ test("published extensions are checked for extension and public contract changes
   expect(pullRequest(["packages/pstdio-dashboard/src/main.tsx"]).publishedExtensions).toBe(false);
 });
 
+test("extension docs and skill prose run the extension's own checks, not the published or installed CLI checks", () => {
+  for (const file of [
+    "extensions/harness-codex/README.md",
+    "extensions/pstdio-planner/docs/0001-cli.md",
+    "extensions/pstdio-skills/skills/create-pstdio-extension/references/scope.md",
+  ]) {
+    expect(pullRequest([file]), file).toEqual(scoped);
+  }
+  expect(
+    pullRequest(["extensions/pstdio-skills/skills/create-pstdio-extension/references/examples/pigeon.ts"]),
+  ).toHaveProperty("publishedExtensions", true);
+});
+
 test("installed CLI checks run for harness changes", () => {
   expect(pullRequest(["extensions/harness-codex/src/detection.ts"]).harnessCli).toBe(true);
   expect(pullRequest(["extensions/harness-claude-code/src/spawn.ts"]).harnessCli).toBe(true);

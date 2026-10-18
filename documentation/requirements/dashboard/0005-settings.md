@@ -60,3 +60,15 @@ Implementation owners:
 - [Settings module](../../../packages/pstdio-dashboard/src/modules/settings/module.tsx)
 - [Settings API](../../../packages/pstdio-api/src/features/settings/routes.ts)
 - [Session queue](../../references/architecture/0018-session-queue.md)
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`.
+
+| Field | Record |
+| --- | --- |
+| Status | Released. |
+| Implementation | Folder projects and one workspace owner per folder came in #791 and #816. The Developer tools merge and the Machine tokens gate came in #1022, the Update channel panel in #1018, and extension-contributed settings in #1081. Owners are listed under Verification above. |
+| Availability | #791 shipped in `pstdio@0.36.0`, #816 in `pstdio@0.37.0`, #1018 and #1022 in `pstdio@0.43.0`, and #1081 in `pstdio@0.43.1`. |
+| Remaining work | None known. |
+| Evidence | Unit tests, passed locally on 2026-10-18: `packages/pstdio-api/src/features/settings/endpoints/settings.test.ts` (capacity limits and beta switches). `packages/e2e/src/ui/folder-onboarding.spec.ts` runs in the full CI stage on `main`; it was not rerun for this record. No manual Playwright pass is recorded here. |

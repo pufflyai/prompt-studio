@@ -2,7 +2,7 @@
 
 Change an extension so its agent sessions can run on another machine, while credentials stay in the Prompt Studio host.
 
-Read [Local and remote work](../concepts/0004-local-and-remote.md) first. The [extension API](../../references/extensions/0001-api.md) covers the connection, workspace provider, and harness contracts. The [remote execution design](../../references/architecture/0016-remote-execution-and-automation.md) has the full rules for retries, cancellation, and cleanup.
+Read [Local and remote work](../concepts/0004-local-and-remote.md) first. The [extension API](../../references/extensions/0001-api.md) covers the connection, workspace provider, and harness contracts. [Durable work](../../references/extensions/0007-durable-automation.md) describes how runs are retried, cancelled, and recovered after a restart.
 
 For installation, connection setup, and launching remote sessions, see the
 [Remote Workspaces extension](../../../extensions/remote-workspaces/README.md).

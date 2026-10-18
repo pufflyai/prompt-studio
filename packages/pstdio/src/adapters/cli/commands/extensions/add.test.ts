@@ -55,9 +55,20 @@ describe("extensions add", () => {
     );
     expect(deps.install).toHaveBeenCalledWith("project", { upload: expect.any(FormData) });
   });
+  test("uploads the current and parent folder as local sources", async () => {
+    const deps = makeDeps();
+    await createHandler(deps)({ source: "." } as never);
+    await createHandler(deps)({ source: ".." } as never);
+    expect(deps.upload.mock.calls.map((call) => (call as unknown[])[0])).toEqual([".", ".."]);
+  });
   test("asks for a linked project before installing", async () => {
     const deps = { ...makeDeps(), findProjectRoot: () => null };
-    await expect(createHandler(deps)({ source: "tool" } as never)).rejects.toThrow("linked project");
+    await expect(createHandler(deps)({ source: "tool" } as never)).rejects.toThrow("pst projects create");
+    expect(deps.install).not.toHaveBeenCalled();
+  });
+  test("names the absolute source path to install from the project folder", async () => {
+    const deps = { ...makeDeps(), cwd: () => "/author/tool", findProjectRoot: () => null };
+    await expect(createHandler(deps)({ source: "." } as never)).rejects.toThrow("pst extensions add /author/tool");
     expect(deps.install).not.toHaveBeenCalled();
   });
   test("prints the host conflict and exits with code one", async () => {

@@ -19,6 +19,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { verifyTreeGroups } from "../helpers/tree-groups";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedNoteHeadings } from "./packaged-note-headings";
@@ -36,7 +37,7 @@ const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1
 // Package verification does not install Playwright browsers on every release runner.
 // The required CI job opts out of skips through E2E_REQUIRE_WEBVIEW_BROWSERS.
 const webviewBrowsers: { launchOptions?: LaunchOptions; name: string; type: BrowserType }[] = [
-  { name: "Chromium", type: chromium },
+  { launchOptions: PROVISIONED_CHROMIUM, name: "Chromium", type: chromium },
   {
     launchOptions: { firefoxUserPrefs: { "network.cookie.cookieBehavior": 5 } },
     name: "Firefox",

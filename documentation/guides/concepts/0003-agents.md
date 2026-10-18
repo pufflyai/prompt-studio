@@ -35,7 +35,9 @@ A local agent runs as a process on your computer, in the workspace folder. A rem
 
 ## Skills
 
-Extensions can ship skills: instruction files that teach an agent how to use a tool. `pst agents setup <agent-id>` copies the skills of your enabled extensions to the place where that agent reads them. Prompt Studio does not overwrite a skill you already have with the same name.
+Extensions can ship skills: instruction files that teach an agent how to use a tool. `pst agents setup <agent-id>` copies the skills of your enabled extensions to the place where that agent reads them. Prompt Studio also copies them into each workspace it prepares for a session.
+
+These installed folders are copies. The source of a skill is the extension that ships it, so edit the skill there. From the release after 0.43.x, Prompt Studio keeps existing skill folders and files you edited, and `pst agents install-skills <agent-id> --force` replaces them with the source. In 0.43.x, both `pst agents setup` and the automatic copy replace installed skill files with the source. See [Give the agent skills](../getting-started/0004-run-agents.md#give-the-agent-skills).
 
 ## Learn more
 

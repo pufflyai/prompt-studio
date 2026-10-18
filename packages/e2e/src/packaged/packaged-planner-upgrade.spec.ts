@@ -16,6 +16,7 @@ import { type Browser, chromium, expect, type Page, test } from "@playwright/tes
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary, runPackagedAsync } from "./packaged-helpers";
 import {
   ACTIVE_CONFLICTS,
@@ -171,7 +172,7 @@ browserTest("upgrades Planner to the timeline in a running host with populated p
 
     // A valid Track cannot hide a missing module behind a schema error.
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch(PROVISIONED_CHROMIUM);
     const page = await (await browser.newContext()).newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);

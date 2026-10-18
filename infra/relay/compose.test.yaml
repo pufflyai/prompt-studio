@@ -1,3 +1,9 @@
+# Docker injects a configured client proxy into every container. Requests between these services
+# must stay on the run's network, so every service that calls another one bypasses that proxy.
+x-internal-hosts: &internal-hosts
+  NO_PROXY: relay,authority,objects,postgres,127.0.0.1,localhost
+  no_proxy: relay,authority,objects,postgres,127.0.0.1,localhost
+
 services:
   relay:
     build:
@@ -5,6 +11,7 @@ services:
       dockerfile: infra/relay/Dockerfile
       target: runtime
     environment:
+      <<: *internal-hosts
       RELAY_HOST: 0.0.0.0
       RELAY_PORT: "8080"
       DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
@@ -41,6 +48,7 @@ services:
   objects:
     image: rustfs/rustfs:1.0.1
     environment:
+      <<: *internal-hosts
       RUSTFS_ACCESS_KEY: relay_test_access
       RUSTFS_SECRET_KEY: relay_test_secret_key
       RUSTFS_CONSOLE_ENABLE: "false"
@@ -59,6 +67,7 @@ services:
     image: amazon/aws-cli:2.37.13
     profiles: ["test"]
     environment:
+      <<: *internal-hosts
       AWS_ACCESS_KEY_ID: relay_test_access
       AWS_SECRET_ACCESS_KEY: relay_test_secret_key
       AWS_DEFAULT_REGION: us-east-1
@@ -72,6 +81,7 @@ services:
       target: smoke
     profiles: ["test"]
     environment:
+      <<: *internal-hosts
       RELAY_URL: http://relay:8080
       DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
       MANAGER_DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
@@ -108,6 +118,7 @@ services:
       target: fixture
     profiles: ["test"]
     environment:
+      <<: *internal-hosts
       FIXTURE_ADMIN_URL: postgres://relay_test:relay_test_password@postgres:5432/relay_test
       DATABASE_URL: postgres://relay_owner:relay_owner_fixture_only@postgres:5432/relay_owner
       MANAGER_DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
@@ -128,6 +139,7 @@ services:
       target: fixture
     command: ["bun", "manager.js"]
     environment:
+      <<: *internal-hosts
       DATABASE_URL: postgres://manager_owner:manager_owner_fixture_only@postgres:5432/manager_owner
       MANAGER_ORIGIN: https://authority:8443
       RELAY_AUDIENCE: https://relay.fixture.test

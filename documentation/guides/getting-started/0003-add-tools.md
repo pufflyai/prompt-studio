@@ -29,19 +29,27 @@ Use the search field to find a tool by name. **Available** lists extensions you 
 
 ## Install from the terminal
 
-Run `pst extensions add` with the install name, from inside the project folder:
+`pst extensions add` needs a linked project: a folder you opened as a project, which has a `.pstdio/config.json` file. Run the command in that folder or one of its subfolders. If you have no project yet, run `pst projects create` in the folder first. See [Open a project](0002-open-a-project.md). Outside a linked project, the command stops before it installs anything. In 0.43.x the error is "Run `pst extensions add` inside a linked project." From the release after 0.43.x, it starts with `No linked project found from <folder>`, followed by the command to run instead.
+
+Run it with the install name:
 
 ```sh
+cd ~/my-tools
 pst extensions add pstdio-planner
 ```
 
-The command installs the release that matches your Prompt Studio version and turns the extension on for the project. Run it outside a project folder to install without turning it on anywhere.
+The command installs the release that matches your Prompt Studio version and turns the extension on for the project. Prompt Studio uses the `git` command to download first-party extensions from GitHub. Your project folder does not need to be a Git repository.
 
-To install an extension from a folder on your computer, pass a path that starts with `./`, `../`, or `~/`, or an absolute path:
+To install an extension from a folder on your computer, pass a path that starts with `./`, `../`, or `~/`, or an absolute path. The extension folder can be outside the project folder; run the command from the project folder:
 
 ```sh
-pst extensions add ./my-extension
+cd ~/my-tools
+pst extensions add ~/extensions/my-extension
 ```
+
+A source counts as a folder path when it is `.`, `..`, or starts with `./`, `../`, `~/`, or `/` (or a drive letter on Windows). Anything else is an install name from the catalog. From the release after 0.43.x, `pst extensions add .` installs the folder you are in, as long as that folder is inside a linked project. Outside one, the command prints the absolute-path command to run from your project folder. In 0.43.x, a bare `.` is read as an install name and fails with "Project not found: .", so pass the folder's absolute path instead.
+
+The CLI sends the folder to the Prompt Studio runtime it is connected to. The runtime installs the extension in the scope its manifest declares and turns it on for the project. In the dashboard, dropping the same folder uses the same installation path. When files already exist, the dashboard asks before replacing them; the CLI requires `--force`.
 
 ## Turn extensions on and off
 
@@ -97,8 +105,3 @@ Tools can work together when their authors expose commands, events, or resource 
 If you want to write the code yourself, read [Write an extension](../extensions/0001-authoring.md). To learn how extensions load and run, read [Extensions](../concepts/0002-extensions.md).
 
 Next, [run agents](0004-run-agents.md).
-
-
-## Install against another host
-
-Run `pst extensions add` inside a linked project. A local folder is uploaded to the API you are connected to. The host installs and enables it using the scope in its manifest. Your CLI home does not receive another copy. In the dashboard, dropping the same folder uses the same installation path. When files already exist, the dashboard asks before replacing them; the CLI requires `--force`.

@@ -4,14 +4,20 @@ This project is a Bun + TypeScript monorepo using workspaces, Lerna, and Nx cach
 
 ## Prerequisites
 
+- Git. The isolated stack mounts the checkout's Git folder, and core extensions are downloaded with Git.
 - Bun `1.4.2`, matching the root `packageManager` pin, CI, and Docker images
 - Node `24` for native build tooling, desktop development, and Storybook
-- Docker
+- Docker with the Compose v2 plugin (`docker compose version`). The isolated stack needs BuildKit and Compose 2.17 or newer, because its build uses an extra build context. Docker Desktop includes both.
+- Free disk space for Docker. See [Disk space](#disk-space).
 
 ## Install
 
+Clone the repository with Git, then run every command in this guide from the repository root. A Git worktree of the clone also works. A folder copy without Git does not: `bun run dev:isolated` asks Git for the shared Git folder and stops when there is none.
+
 ```bash
-bun install
+git clone https://github.com/pufflyai/prompt-studio.git
+cd prompt-studio
+bun install --frozen-lockfile
 ```
 
 Run `bun run clean` to remove dependencies, build and release output, caches,
@@ -38,6 +44,8 @@ bun run dev:isolated -- --name my-feature --logs
 bun run dev:isolated -- --name my-feature --down
 ```
 
+The first start of a new name builds the image, installs every dependency into empty volumes, and builds the workbench. In three first starts on an Apple Silicon Mac, the container needed 57, 171, and 176 seconds from start to seeded project; the dependency install alone took 25 to 113 seconds. The launcher waits only 90 seconds for the seeded project, so a slow first start ends with `Timed out waiting for the isolated demo project.` while the container keeps working. Watch it with `--logs`. When the log shows `Initialized empty Git repository in /workspace/project/.git/`, run the same `bun run dev:isolated -- --name <name>` command again. The second start reuses the volumes and printed the URLs after 14 to 31 seconds. Use the URLs and token from the second start; the first start's token is not saved.
+
 The API requires a token, created for each run. Open the dashboard URL; the dashboard dev server adds the token for you. To call the API from another tool, read `apiPort` and `apiToken` from `__test-tmp__/dev-isolated/<name>/connection.json` and send `Authorization: Bearer <apiToken>`.
 
 The container runs with your host user and group IDs. Windows uses the image's
@@ -46,6 +54,39 @@ Tools and caches live under `/opt/bun` and `/home/bun`; run the launcher without
 `sudo`.
 
 The container mounts the checkout, including built package files. Stop its container before rebuilding shared packages or running `verify:packages`, then start the same container and reload the browser. A running Vite server can retain imports to deleted build chunks, causing a later action such as enabling table statistics to fail. Use `docker ps` to find the container name, then `docker stop <container-name>` and `docker start <container-name>`. These commands preserve its database and project. Use `--down` only when you intend to discard the isolated state.
+
+### Managed proxy and custom CA
+
+Docker, not the launcher, owns proxy settings. Set the proxy in Docker Desktop (**Settings → Resources → Proxies**) or in the `proxies` section of `~/.docker/config.json`. Docker then passes it to image builds and containers. Add internal names such as `localhost` and `127.0.0.1` to the proxy's no-proxy list.
+
+A proxy that inspects TLS signs traffic with its own certificate authority (CA). Point `NODE_EXTRA_CA_CERTS` at that CA's PEM file in the shell that starts the stack:
+
+```bash
+export NODE_EXTRA_CA_CERTS=/path/to/managed-ca.pem
+bun run dev:isolated -- --name my-feature
+```
+
+The launcher copies each certificate from the file into the stack's build context, and the image adds them to the system trust store with `update-ca-certificates`. curl, Git, Bun, and `bun install` in the image then trust the proxy. The launcher prints how many certificates it added. Changing the file rebuilds the image from that step. Do not edit `infra/local/Dockerfile` for a local proxy.
+
+The image installs Codex, OpenCode, and Claude Code while it builds. Each install needs the network. A failed download now fails its own build step, with the installer command in the error. Before, a failed `curl ... | bash` download ran an empty script and the build failed later at `claude --version`. Fix the proxy or CA setting and start again. The agents are part of the image; do not remove an installer to get past a failed build.
+
+### Disk space
+
+Measured on an Apple Silicon Mac for one new stack name:
+
+| Item | Size | Removed by `--down` |
+| --- | --- | --- |
+| Image `<name>-prompt-studio` | 2.28 GB, of which about 0.4 GB is unique to the name | No |
+| `<name>_node-modules` volume | 1.6 to 1.9 GB | Yes |
+| `<name>_bun-cache` volume | 1.6 GB | Yes |
+| `<name>_project` and agent volumes | Less than 1 MB | Yes |
+| `__test-tmp__/dev-isolated/<name>/` in the checkout | About 110 MB | Yes |
+
+Stacks started before the stack's volumes were named could leave their unnamed `node_modules` volume (about 1.9 GB) behind after `--down`, because Compose keeps unnamed volumes that a recreated container inherited. Find such volumes with `docker volume ls --filter dangling=true`, and check `docker volume inspect <volume>` for a creation time that matches your stack before you remove one.
+
+Plan for about 6 GB of free Docker disk for the first stack and about 4 GB for each further stack. Check Docker's disk with `docker system df`. `--down` keeps the image and the Docker build cache, so later starts are faster. Remove the image of a name you no longer use with `docker image rm <name>-prompt-studio`. Do not run `docker system prune` or remove other stacks' images, volumes, or build cache to free space.
+
+Each stack also gets a Docker network from Docker's default address pools. When many stacks or other projects keep networks, a new stack fails with `all predefined address pools have been fully subnetted`. Stop your own unused stacks with `--down`; do not remove other projects' networks.
 
 ### Sign agents in inside the stack
 
@@ -59,9 +100,11 @@ The isolated stack, including `bun run dev:playwright`, runs agents inside its c
 
 Versions are pinned in [`infra/local/Dockerfile`](../../../infra/local/Dockerfile). OpenCode's free models need OpenCode 1.18.0 or newer.
 
-**Codex.** Run `codex login` on the host. The container mounts `~/.codex/auth.json`, so the file must exist before the stack starts. The seeded project uses Codex but does not pick a model. Sessions start with the model Codex marks as the default for your account. A ChatGPT account can use only the models Codex lists for it.
+The launcher mounts each host login file only when it exists, and prints a `Not mounted, file is missing` line for each file it skips. The stack starts without any login. Docker would otherwise create a missing file path as an empty folder on the host, which breaks a later `codex login` or `opencode auth login`. Add a login later by signing in on the host and running the same `bun run dev:isolated -- --name <name>` command again, or by signing in inside the running container. An agent without a login stays installed but cannot start sessions. Use real logins for agent acceptance checks; empty placeholder files do not prove that sessions work.
 
-**OpenCode.** Run `opencode auth login` on the host. The container mounts `~/.local/share/opencode/auth.json` and `~/.local/share/opencode/mcp-auth.json`, so both files must exist. Create an empty `mcp-auth.json` containing `{}` if you have none. The free `opencode/*` models need no provider login.
+**Codex.** Run `codex login` on the host. The container mounts `~/.codex/auth.json` when it exists. The seeded project uses Codex but does not pick a model. Sessions start with the model Codex marks as the default for your account. A ChatGPT account can use only the models Codex lists for it.
+
+**OpenCode.** Run `opencode auth login` on the host. The container mounts `~/.local/share/opencode/auth.json` and `~/.local/share/opencode/mcp-auth.json` when they exist. The free `opencode/*` models need no provider login.
 
 **Claude Code.** On macOS, Claude Code keeps its login in the Keychain, which the Linux container cannot read. Create a long-lived token on the host with `claude setup-token`, then export it in the shell that starts the stack:
 
@@ -171,6 +214,29 @@ bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
 ```
 
 Agent-specific end-to-end behavior, including `E2E_AGENTS` and when real Claude or OpenCode sessions start, is documented in [Tests](0002-testing.md).
+
+## Run isolated trials
+
+A trial is one validation run, for example a fresh-agent walkthrough or a reproduction. Give every trial its own name and keep everything it creates under that name, so trials cannot share state and cleanup removes only their own resources.
+
+| Resource | How a trial gets its own copy |
+| --- | --- |
+| Runtime home | `bun run dev:isolated -- --name <trial>` uses `__test-tmp__/dev-isolated/<trial>/pstdio-home`. Packaged tests and `pst extensions test` take a temporary `PSTDIO_HOME`. Never use `~/.pstdio`. |
+| Docker stack | The name is the Compose project name. Its containers, network, and volumes start with `<trial>`. Relay and account fixtures print their own run names, `pstdio-relay-test-<uuid>` and `manager-authority-<uuid>`. |
+| Ports | The launcher reserves free loopback ports for each start and writes them to `__test-tmp__/dev-isolated/<trial>/connection.json`. Fixtures publish no host ports. |
+| Fixture networks | Fixtures use fixed subnets: `SYNC_TEST_SUBNET` (default `10.254.236.0/24`), `RELAY_TEST_SUBNET` (`10.254.237.0/24`), and `MANAGER_TEST_SUBNET` (`10.254.234.0/24`). Run one fixture at a time, or give parallel trials different subnets after checking `docker network inspect` for unused ones. |
+| Projects | Each stack seeds its own `project` folder in a volume. Create further projects inside the trial's stack, not in your own folders. |
+| Browsers | Set `PLAYWRIGHT_BROWSERS_PATH` to a new folder to prove a clean browser install. See [Tests](0002-testing.md#extension-smoke-checks). |
+| Agent logins | Mounted from the host only when they exist. Never copy credentials into evidence. |
+
+Before teardown, save what the trial needs as evidence:
+
+1. Save the trial's source changes: `git status` and `git diff` in the checkout, or commit them on a branch.
+2. Save logs: `docker compose -p <trial> logs --no-color > <evidence>/stack.log` and the files under `__test-tmp__/dev-isolated/<trial>/pstdio-home/`.
+3. Copy project files you need: `docker cp <trial>-prompt-studio-1:/workspace/project <evidence>/project`.
+4. Leave out `connection.json` and any login file. They contain tokens.
+
+Then stop the trial with `bun run dev:isolated -- --name <trial> --down`. It removes the trial's containers, network, volumes, and `__test-tmp__/dev-isolated/<trial>/`. Remove its image with `docker image rm <trial>-prompt-studio` when you no longer need it. Fixture runners remove their own stacks after success or failure. List what is left with `docker ps -a --filter label=com.docker.compose.project=<trial>` and `docker volume ls --filter label=com.docker.compose.project=<trial>`. Remove only resources with your trial's name.
 
 ## CLI
 

@@ -23,8 +23,10 @@ Provide `--prompt`. Prompt templates belong to extensions. To use one, render it
 
 ```sh
 pst sessions create --prompt "Review this repository" --agent pstdio.harness-codex.harness.codex --model <model>
-pst sessions create --prompt "Review this workspace" --workspace-id <workspace-id>
+pst sessions create --prompt "Review this workspace" --workspace-id WS-1
 ```
+
+`--workspace-id` accepts a workspace ID or a [workspace shorthand](0005-workspaces.md), such as `WS-1` for a standalone workspace or `PS-12_A1` for the first Planner attempt at ticket `PS-12`.
 
 Other create options are `--title`, `--project-id`, `--attach` (repeat it for more files), and `--original-session-id` (the session that started this one).
 

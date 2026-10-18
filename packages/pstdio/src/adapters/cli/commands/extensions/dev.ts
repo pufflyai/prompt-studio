@@ -12,6 +12,7 @@ import { apiClient } from "@/features/api-client";
 import { findProjectRoot, readConfig } from "@/features/config/config";
 import { ensureApi } from "@/features/ensure-api";
 import { localExtensionSourceRequest } from "@/features/extensions/local-source-request";
+import { linkedProjectRequired } from "./shared";
 
 export type ExtensionsDevArgs = {
   name?: string;
@@ -135,11 +136,10 @@ const formatHostFailure = (extensionId: string, instance: ProjectExtensionInstan
   return lines.join("\n");
 };
 
-const resolveProject = (deps: Pick<Deps, "cwd" | "findProjectRoot" | "readConfig">) => {
+const resolveProject = (deps: Pick<Deps, "cwd" | "findProjectRoot" | "readConfig">, source: string) => {
   const root = deps.findProjectRoot(deps.cwd());
-  if (!root) throw new Error("Run `pst extensions dev` inside a linked git project.");
-  const projectId = deps.readConfig(root)?.project_id;
-  if (!projectId) throw new Error("Run `pst projects create` or link this git project before starting extension dev.");
+  const projectId = root && deps.readConfig(root)?.project_id;
+  if (!root || !projectId) throw linkedProjectRequired({ command: "dev", cwd: deps.cwd(), source });
   return { projectId, root };
 };
 
@@ -202,7 +202,7 @@ const runDevelopmentCycle = async (input: DevelopmentCycleInput) => {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsDevArgs>) => {
-    const { projectId } = resolveProject(deps);
+    const { projectId } = resolveProject(deps, argv.source);
     await deps.ensureApi(process.env.PSTDIO_API_URL);
     const sourcePath = resolve(deps.cwd(), argv.source);
     if (!deps.exists(sourcePath)) throw new Error(`Extension source folder not found: ${sourcePath}`);

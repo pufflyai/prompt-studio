@@ -12,7 +12,7 @@ The local theme extends the shared theme with the landing illustration colors.
 - `src/components/docs` and `src/components/blog` contain the Docs and Blog sidebars and pages.
 - `src/components/downloads` contains the download picker and agent compatibility cards.
 - `src/components/examples` contains the interactive icon set editor and coding agent demos.
-- `src/content` owns the static pages, navigation metadata, example data, building blocks, and the docs allow-list (`docs-topics.ts`).
+- `src/content` owns the static pages, navigation metadata, example data, building blocks, and the docs allow-list (`docs-topics.json`).
 - `src/hooks` connects browser navigation, release loading, and animation to React.
 - `src/services` builds the page catalog, resolves routes, page metadata, and structured data, loads GitHub releases, and selects desktop assets.
 - `src/services/markdown` holds the markdown plugins that rewrite links and read page descriptions.
@@ -223,8 +223,10 @@ renders every document again, so link checks never come from a stale cache.
 
 ## Docs
 
-`DOCS_TOPICS` in `src/content/docs-topics.ts` is the ordered allow-list of published
-folders. It sets each sidebar group's section, label, and URL. A folder that is not
+`src/content/docs-topics.json` is the ordered allow-list of published folders.
+`docs-topics.ts` loads it as `DOCS_TOPICS`. It sets each sidebar group's section, label, and
+URL. It is JSON so that the repository's documentation checks can read it without importing
+website code. A folder that is not
 on the list is never published, so ADRs, PRDs, lessons learned, development guides,
 and architecture notes stay in the repo. Everything else comes from the files:
 

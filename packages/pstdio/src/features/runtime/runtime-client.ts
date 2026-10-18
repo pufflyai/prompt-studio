@@ -1,7 +1,8 @@
 import { setTimeout as delay } from "node:timers/promises";
 import type { RuntimeActivitySummary } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
-import { isRuntimePidAlive, type RuntimeDescriptor, readRuntimeDescriptor } from "./runtime-descriptor";
+import { isRuntimePidAlive } from "./process-liveness";
+import { type RuntimeDescriptor, readRuntimeDescriptor } from "./runtime-descriptor";
 
 type RuntimeFetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 

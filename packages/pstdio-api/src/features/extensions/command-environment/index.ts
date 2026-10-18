@@ -12,6 +12,7 @@ import {
   type ScopedHostApis,
 } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
+import { apiLogger } from "../../../lib/logger";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -40,6 +41,16 @@ const workspaceSyncStateRoot = (input: { projectId: string; workspaceDir: string
     .digest("hex");
   return join(resolvePstdioHome({ env: process.env }), "state", "workspace-files", key);
 };
+
+// syncDir cannot return what it kept, so the host log is where a user finds files that stopped updating.
+const logKeptWorkspaceFile =
+  (extensionId: string, workspaceDir: string) => (file: { path: string; reason: "unmanaged" | "edited" }) => {
+    const path = join(workspaceDir, ...file.path.split("/"));
+    apiLogger.warn(
+      { event: "extension.workspace_sync.kept_file", extensionId, path, reason: file.reason },
+      `Kept ${path} because Prompt Studio did not write its current content. Edit the source instead, or delete the file to get the current version.`,
+    );
+  };
 
 export const createCommandEnvironment = (
   deps: ExtensionsRouteDeps,
@@ -87,6 +98,7 @@ export const createCommandEnvironment = (
       ? createWorkspaceFilesMount(input.workspaceDir, {
           signal,
           syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir: input.workspaceDir }),
+          onKeptFile: logKeptWorkspaceFile(input.extensionId, input.workspaceDir),
         })
       : undefined;
 
@@ -126,6 +138,7 @@ export const createCommandEnvironment = (
                 const workspaceDir = await resolveWorkingPath("write");
                 return createWorkspaceFilesMount(workspaceDir, {
                   syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir }),
+                  onKeptFile: logKeptWorkspaceFile(input.extensionId, workspaceDir),
                 }).syncDir(dir, files);
               },
             }

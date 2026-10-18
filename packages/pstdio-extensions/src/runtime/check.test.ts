@@ -91,8 +91,21 @@ describe("checkExtensions", () => {
     expect(result.errorCount).toBe(0);
     expect(result.warningCount).toBe(0);
     const report = formatCheckReport(result);
-    expect(report).toContain("Installed extensions: 0");
+    expect(report).toContain(`Extensions found in ${join(home, "extensions")}: 0`);
     expect(report).toContain("No extensions found in");
+  });
+  test("names the checked source folder instead of calling it installed", async () => {
+    const home = createTempHome();
+    writeExtension(home, "extension-lab", validExtensionSource);
+    const source = join(home, "extensions", "extension-lab");
+    const result = await checkExtensions({
+      extensionsRoot: source,
+      extensionPackages: [{ path: source, sourceKind: "local_path" }],
+      extensionRoots: [],
+    });
+    const report = formatCheckReport(result);
+    expect(report).toContain(`Extensions found in ${source}: 1`);
+    expect(report).not.toContain("Installed");
   });
   test("loads installed extensions and reports their registrations", async () => {
     const home = createTempHome();

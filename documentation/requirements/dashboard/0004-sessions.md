@@ -1,5 +1,5 @@
 ---
-status: "draft"
+status: "current"
 created: "2026-03-10T20:12:05Z"
 ---
 
@@ -130,3 +130,15 @@ The [sessions module](../../../packages/pstdio-dashboard/src/modules/sessions/mo
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/modules/sessions/`
 
 Choosing New session from a session tab menu replaces that tab with an empty draft. The + button opens an additional tab. Selecting a recent session from a tab menu shows it in that tab, whether the tab holds a draft or a session. The menu never opens another tab. The tab keeps its position and retention. Selecting a session that is already open in another tab focuses that tab. Visible tab status indicators update from synchronized session state, including inactive tabs.
+
+## Delivery record
+
+Checked on 2026-10-18 against main commit `45580feb`. The newest stable release is `pstdio@0.43.1`. The newest nightly, `pstdio@0.44.0-nightly.20261018030230`, was built from `77fa5d81`.
+
+| Field | Record |
+| --- | --- |
+| Status | Released for the core list, chat, queue, approval, and draft flows. Live provider behavior is not proven by automated tests. |
+| Implementation | `packages/pstdio-dashboard/src/modules/sessions/`. Recent changes include durable queued requests and steering (#958), visible queued follow-ups (#1045), shared session actions (#1100), and bounded chat rendering (#1113). |
+| Availability | #958 shipped in `pstdio@0.42.0` and #1045 in `pstdio@0.43.1`. #1100 and #1113 are in the nightly only. |
+| Remaining work | Validate real authenticated sessions, follow-ups, steering, and approvals for each supported provider. This is W6 in the [documentation reliability plan](../platform/0009-documentation-and-skills-reliability.md#w6-close-acceptance-and-usability-gaps). |
+| Evidence | Playwright specs that use the `workbench-fixture` fake harness, for example `session-live-follow-ups.spec.ts`, `session-chat-state.spec.ts`, and `session-panel-restore.spec.ts`, run in the full CI stage on `main`. The provider specs `session-follow-up-ordering-{codex,claude,opencode}.spec.ts` skip unless `E2E_AGENTS` is set, and no CI workflow sets it. None of these were rerun for this record. |

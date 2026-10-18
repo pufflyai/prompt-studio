@@ -1,8 +1,12 @@
 # Synchronization contracts
 
 The private `pstdio-sync-contracts` package defines wire protocol 1 and an executable
-reference for the proposed v0.1 synchronization model. Production integration is
-not implemented by this package. See the [PRD](../../requirements/platform/0007-synchronization-contracts.md).
+reference for the v0.1 synchronization model. Production owners build on it:
+grouped local storage in `pstdio-sync` and `pstdio-db`, the relay in `infra/relay`,
+account authority in `infra/account-manager`, and an opt-in runtime connection in
+`pstdio-api`. They are on `main` but in no release. The
+[PRD delivery record](../../requirements/platform/0007-synchronization-contracts.md#delivery-record)
+lists what is proven.
 
 ## Package and ownership
 
@@ -18,13 +22,15 @@ test-only export. Its development dependencies are not a runtime implementation.
 | Identity, PS-745 | Persist stable IDs, map local folders/environments, isolate credentials and caches. |
 | Assets, PS-747 | Immutable content references, streamed persistence, integrity, completion and recovery. |
 | Storage/SDK, PS-746 | Journal, accepted state, atomic local saves, authoring operations and conflict inspection/resolution. |
-| Relay implementation | Authorization, immutable publication checks, atomic PostgreSQL publication, durable replay/snapshots and restore epochs. |
-| Account manager | Account lifecycle and current environment grants; independent from content restore. |
+| Relay, `infra/relay` | Authorization, immutable publication checks, atomic PostgreSQL publication, durable replay/snapshots and restore epochs. |
+| Account manager, `infra/account-manager` | Account lifecycle and current environment grants; independent from content restore. |
+| Native connection, `pstdio-sync/relay` and `pstdio-api` | Opt-in runtime enrollment, access renewal, snapshot download, submission, recovery and view refresh. |
 | Extensions | Data models, domain validation and pure local handlers from published packages. |
 
-The [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-kernel/types/context.ts)
-now adds `storage.assets` through the public SDK and host adapter. Existing blob and collection methods remain supported.
-The grouped-storage child must follow [API versioning](../extensions/0014-api-versioning.md) when adding replacements.
+The [kernel storage API](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage.ts)
+adds `storage.assets` and grouped `storage.records` through the public SDK and host adapter.
+The older key-value and collection methods remain and are marked `@deprecated`, following
+[API versioning](../extensions/0014-api-versioning.md). Only nightly SDK builds contain the new methods.
 
 PS-758 implements the internal PostgreSQL persistence owner in `infra/relay/src/storage/`.
 It reuses the production record evaluator and pure resolution validator from `pstdio-sync`.
@@ -39,8 +45,9 @@ replaces scoped content in one transaction, and creates a new epoch. Old receipt
 their saved acknowledgments. Replay after restore begins at the restored sequence in
 the new epoch. It does not erase receipt ancestry or use a TTL to discard offline work.
 
-This internal scope is not authorization. The listener still exposes only liveness.
-Authenticated transport must derive current grants and published revisions. PS-760's
+This internal scope is not authorization. PS-768 adds authenticated HTTP and finite
+WebSocket subscriptions in `infra/relay/src/transport/`. They check finite access
+from the account manager and derive current grants and published revisions. PS-760's
 production S3 owner keeps scoped upload intent and acknowledged multipart parts in
 PostgreSQL. Each upload has its own object key. Completion streams the durable object
 through full SHA-256 and length verification before publishing the verified mapping
@@ -49,7 +56,7 @@ recover that intent without accepting unchecked bytes. Conditional ETag reads de
 changed objects. Cancellation commits its durable row and PostgreSQL notification together,
 interrupts writers across owners, and drains the writer before removing only its temporary bytes;
 completed objects stay available through publication and retained history without a TTL.
-The listener still has no authenticated asset transport. RustFS evidence does not
+Asset routes use the same authenticated transport. RustFS evidence does not
 establish live Spaces compatibility. See the [relay guide](../../guides/development/0006-relay.md) for migrations,
 isolated PostgreSQL/process-kill checks, and the built persistence smoke.
 
@@ -77,17 +84,17 @@ their HTTP adapter now streams local persistence and download. See the [asset gu
 New legacy blobs encode workbench and file IDs under a separate `files` directory. Existing rows keep their stored paths
 for reads, updates, and rollback. Project cleanup deletes only its database-owned file paths and readable siblings;
 it never derives a recursive directory from an opaque identity or removes retained asset versions.
-This does not implement grouped commits, relay storage, hosted grants, backup scheduling, or full offline readiness.
+Grouped commits, relay storage, and grants live in the owners above. Backup scheduling and full offline readiness are not implemented.
 
 ## Local UI sync and relay ownership
 
 `environmentIdentitySchema` and `environmentTargetSchema` define stable runtime identities and exact execution targets. The local runtime persists one identity and reuses project IDs for workbenches. Its workspace records supply local folder bindings. See [projects](0015-projects.md#workbench-and-environment-identity).
 
-The exported `dataOwnership` map is the explicit future relay boundary. Workbench content, assets, published extension/catalog revisions, and automation definitions belong to the workbench. Sessions, processes, workspaces, folders, terminals, credentials, caches, and development overrides belong to an environment. Published extension state must be selected explicitly; installed local sources and overrides are not publication records.
+The exported `dataOwnership` map is the explicit relay boundary. Workbench content, assets, published extension/catalog revisions, and automation definitions belong to the workbench. Sessions, processes, workspaces, folders, terminals, credentials, caches, and development overrides belong to an environment. Published extension state must be selected explicitly; installed local sources and overrides are not publication records.
 
-The dashboard's local SSE tables continue to include sessions, workspaces, and their links. They mirror one runtime for its UI and are not a replication allow-list. A relay must never copy those tables as shared workbench content. Dashboard collection data, indexes, readiness, and subscriptions belong to the API connection; disposing a connection closes its stream and releases its collection store. Browser credentials are scoped to the selected API origin, including its port. CLI clients capture their runtime URL and credential together.
+The dashboard's local SSE stream sends 11 tables: `board_views`, `board_default_views`, `settings`, `projects`, `installed_extension_sources`, `notifications`, `extension_instances`, `sessions`, `workspaces`, `files`, and `workspace_sessions` ([source](../../../packages/pstdio-api/src/features/sync/get-full-state.ts)). A delete sends its `sync:delete` events, including rows removed by cascade, only after the database delete succeeds; see [real-time updates](../../requirements/platform/0003-realtime-updates.md). These tables mirror one runtime for its UI and are not a replication allow-list. A relay must never copy those tables as shared workbench content. Dashboard collection data, indexes, readiness, and subscriptions belong to the API connection; disposing a connection closes its stream and releases its collection store. Browser credentials are scoped to the selected API origin, including its port. CLI clients capture their runtime URL and credential together.
 
-This identity work does not start relay synchronization or implement hosted grants. An account ID in a protocol envelope remains data, not proof of authorization.
+A runtime starts relay synchronization only when `PSTDIO_RELAY_CONFIG_FILE` names a connection file with account, workbench, environment, relay origin, manager origin, and renewal grant. Without it, the runtime stays local. An account ID in a protocol envelope remains data, not proof of authorization.
 
 ## Identity and immutable requests
 
@@ -118,10 +125,11 @@ Fingerprints detect identity/content mismatch; they are not signatures or permis
 ## Authoring operations and wire representation
 
 [Authoring inputs](../../../packages/pstdio-sync-contracts/src/authoring.ts) describe
-behavior for the SDK child, not shipped SDK signatures. Commands are scoped through
-an authorized storage context. The SDK must expose grouped edit, revisioned read,
-status inspection, conflict inspection and resolution operations to people, agents
-and extensions without exposing Yjs documents.
+behavior, not SDK signatures. The SDK signatures are `storage.records` in
+[storage records](../../../packages/pstdio-api-contracts/src/extension-kernel/types/storage-records.ts).
+Commands are scoped through an authorized storage context. Grouped edit, revisioned
+read, status inspection, conflict inspection and resolution are available to agents
+and extensions without exposing Yjs documents. The dashboard has no view for them yet.
 
 | Input | Supported reconciliation |
 | --- | --- |
@@ -210,8 +218,9 @@ include the published immutable package revision and handler ID. The relay compa
 that revision with the workbench publication and checks all expected conflict/input
 revisions. It never runs extension code or trusts a local development override.
 Unavailable handlers leave the conflict inspectable. Explicit proposals use the
-same revision checks without requiring a handler field. Authorization and package
-lookup remain production responsibilities; the fixture uses a publication marker.
+same revision checks without requiring a handler field. The relay authorizes callers,
+and the native connection initializes each scope with the installed source revision.
+The fixture uses a publication marker.
 
 ## Replay, snapshots, retention and restore
 
@@ -221,7 +230,8 @@ attempt, including conflicts and pending dependencies. A snapshot contains a
 consistent accepted record set, tombstones, conflict alternatives, receipt index,
 published revision and checkpoint. Incremental production replay must frame whole
 groups and apply them atomically, then advance the local checkpoint in the same
-transaction. Never advance a cursor before its group is durable.
+transaction. Never advance a cursor before its group is durable. The relay serves
+replay, but the current native client downloads snapshots instead.
 
 `replaySchema` validates contiguous complete accepted groups in one scope and epoch, with matching receipt identities and checkpoints. `replayBoundary` requests a snapshot for a different epoch, an out-of-range cursor,
 or a cursor older than retained replay. Production content restore preserves scope
@@ -254,7 +264,8 @@ recovery is incomplete; never label it synchronized.
 
 Current authorization must succeed before a returning environment contributes work.
 Content snapshots never restore grants. Account-manager recovery and credential
-invalidation are separate PS-735 acceptance work.
+invalidation are implemented separately in `infra/account-manager`; see
+[account authority development](../../guides/development/0007-account-manager.md#recovery).
 
 ## Compatibility
 
@@ -283,6 +294,13 @@ bun run verify:boundaries
 bun run verify:lockfile
 ```
 
+The production owners have their own Docker-backed suites. CI runs them in the
+`relay_smoke` job: `bun run --cwd infra/relay test:storage`, `test:assets`,
+`test:transport`, and `test:isolated`, `test:conformance` with
+`SYNC_TEST_ENTRY` set to the production-relay entry
+(`packages/pstdio-db/src/services/extension-storage/grouped-production-relay.integration.ts`),
+and `bun run --cwd infra/account-manager test:isolated`.
+
 `registerConformance` takes a structural adapter factory so later storage/relay
 implementations can reuse the scenarios. `createReferenceFixture` supplies disposable
 PGlite databases for three environments, PostgreSQL row transactions, and RustFS
@@ -305,7 +323,7 @@ tests. That branch's `0026-cloud-sync-prototype.md` is evidence, not a merged
 prerequisite. The fixture ports the protocol failures and adds map/list, third-client,
 handler revision, compatibility, canonical fingerprint and resolution-restore cases.
 It uses throw-based faults immediately before commit and after commit/before receipt,
-and closes/reopens durable client stores. It does not establish OS-kill recovery,
-WebSocket delivery, revocation, production backups or Spaces behavior. Those original
-prototype and production acceptance cases remain with PS-735, not implicit claims
-of this suite. No production service from the prototype is imported.
+and closes/reopens durable client stores. This suite alone does not establish OS-kill
+recovery, WebSocket delivery, or revocation; the relay storage, transport, and account
+manager suites cover those. Production backups and Spaces behavior remain unproven.
+No production service from the prototype is imported.

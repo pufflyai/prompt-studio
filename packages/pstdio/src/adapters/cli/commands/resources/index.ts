@@ -2,12 +2,9 @@ import { createClient } from "@pstdio/sdk/client";
 import type { ResourceAnchorQuery, ResourceRef, ResourceRole } from "@pstdio/sdk/extensions";
 import type { Argv } from "yargs";
 import { resolveApiUrl } from "@/features/api-url";
-import { ensureApi } from "@/features/ensure-api";
+import { defineCommandGroup } from "../../command-group";
 import { resolveProjectId } from "../notifications/project";
 
-export const command = "resources [command]";
-export const describe = "Link resources in a project";
-export const middlewares = [() => ensureApi(process.env.PSTDIO_API_URL)];
 const roles = ["primary", "context", "source", "result"] as const;
 export const parseResource = (value: string): ResourceRef => {
   const ref = JSON.parse(value);
@@ -23,9 +20,11 @@ const endpoints = (argv: Argv) =>
     .option("from", { type: "string", demandOption: true, describe: "Source ResourceRef JSON" })
     .option("to", { type: "string", demandOption: true, describe: "Target ResourceRef JSON" });
 
-export const builder = (argv: Argv) =>
-  argv
-    .command({
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup({
+  name: "resources",
+  describe: "Link resources in a project",
+  subcommands: [
+    {
       command: "link",
       describe: "Add or update a directed resource link",
       builder: (argv) => endpoints(argv).option("role", { choices: roles, default: "context" }),
@@ -37,8 +36,8 @@ export const builder = (argv: Argv) =>
         );
         console.log(JSON.stringify({ linked: true }));
       },
-    })
-    .command({
+    },
+    {
       command: "unlink",
       describe: "Remove a directed resource link",
       builder: endpoints,
@@ -50,8 +49,8 @@ export const builder = (argv: Argv) =>
         );
         console.log(JSON.stringify({ removed: true }));
       },
-    })
-    .command({
+    },
+    {
       command: "links",
       describe: "Query outgoing and incoming resource links",
       builder: (argv) =>
@@ -71,6 +70,6 @@ export const builder = (argv: Argv) =>
         });
         console.log(JSON.stringify(result));
       },
-    })
-    .demandCommand(1);
-export const handler = () => {};
+    },
+  ],
+});

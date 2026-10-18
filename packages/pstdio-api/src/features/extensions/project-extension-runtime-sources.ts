@@ -1,6 +1,11 @@
 import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { extensionLoadKey, type LoadedExtensionSource, loadExtensionSources } from "pstdio-extensions";
+import {
+  extensionLoadKey,
+  type LoadedExtensionSource,
+  loadExtensionSources,
+  normalizeExtensionSources,
+} from "pstdio-extensions";
 import type { EnabledExtensionSource } from "./project-extension-runtime-snapshot";
 
 /** The fields a source needs to be imported, so an unpersisted candidate can be loaded too. */
@@ -69,6 +74,19 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
 
   return {
     load,
+    // Reads installed sources whatever their enabled state. The host-wide harness registry reads
+    // every source this way, so a source that did not change keeps its harnesses and their workers.
+    loadRuntime: async (installedSources: readonly LoadableExtensionSource[]) => {
+      const loaded: CachedSource[] = [];
+      for (const installedSource of installedSources) {
+        const cached = await load(installedSource);
+        if (cached) loaded.push(cached);
+      }
+      return normalizeExtensionSources(
+        loaded.map(({ source }) => source),
+        loaded.flatMap(({ diagnostics }) => diagnostics),
+      );
+    },
     recheck: (sourcePath: string) => {
       const key = canonicalSourcePath(sourcePath);
       if (sourcesByPath.has(key)) uncheckedPaths.add(key);

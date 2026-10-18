@@ -2,10 +2,12 @@
 name: create-proposal
 description: "Create a proposal ticket. Use for new features, large refactors, breaking API or schema changes, architecture changes, security changes, or when the user asks to save a plan as a proposal. Do not use for bug fixes, wording-only changes, non-breaking dependency updates, configuration changes, or tests for existing behavior."
 metadata:
-  version: 0.0.4
+  version: 0.0.5
 ---
 
-A proposal is a Planner ticket built from the `proposal` template. Use the `pst tickets` commands to create and edit it.
+A proposal is a Planner ticket built from the `proposal` template. Use the `pst tickets` commands to create and edit it. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
+
+A proposal ticket is not a document in the user's repository. If the repository keeps its own PRDs or ADRs, read and link them, and add a new one there only when the user asks. Prompt Studio's own product requirements describe Prompt Studio, not the user's product.
 
 ## Workflow
 
@@ -13,7 +15,7 @@ A proposal is a Planner ticket built from the `proposal` template. Use the `pst 
 2. Confirm the `proposal` template exists with `pst tickets templates`.
 3. Run `pst tickets write --title "<title>"`. This returns the absolute `path` of the draft in the default project folder. Edit that file.
 4. Run `pst tickets apply-template --id <shorthand> --template proposal` to apply the template.
-5. Read the relevant code and documentation before editing the ticket. Record concrete findings that a reviewer can check.
+5. Read the relevant code and the repository's documentation before editing the ticket. Record concrete findings that a reviewer can check.
 6. Complete every applicable template section. Use specific, testable statements. Mark unanswered questions with `[MISSING INFORMATION]`.
 7. Create each supporting file required by the table below. Fill it with findings from the research, not placeholders.
 8. If no supporting file applies, add a short "Supporting resources" section that explains why `ticket.md` is enough.
@@ -21,7 +23,7 @@ A proposal is a Planner ticket built from the `proposal` template. Use the `pst 
 
 ## Ticket files
 
-Put planning material in `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in workspace reports instead.
+Put planning material in `.pstdio/extension-storage/pstdio-planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in reports instead; see [Reports](https://prompt.studio/docs/extensions/reports/#write-a-report).
 
 - Create a file as soon as one trigger matches. Do not ask first.
 - Keep each file focused. Do not put every detail in `ticket.md`.
@@ -38,4 +40,4 @@ Put planning material in `.pstdio/extension-storage/pstdio-planner/tickets/<shor
 
 ## Finish condition
 
-Stop after saving the proposal. Do not implement it.
+Stop after saving the proposal. Do not implement it. If the proposal depends on other tickets, list them in `depends_on`; see [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies).

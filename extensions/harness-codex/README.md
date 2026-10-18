@@ -25,7 +25,7 @@ pst agents list
 
 The Codex row should say `yes` under **Installed**. Prompt Studio checks this by running `codex --version`.
 
-If you removed the extension, install it again from **Settings → Project → Extensions**, or with `pst extensions add harness-codex`.
+If you removed the extension, install it again from **Settings → Project → Extensions**, or run `pst extensions add harness-codex` inside a linked project folder.
 
 ## Choose Codex
 
@@ -49,7 +49,14 @@ The **Reasoning effort** option sets how much Codex thinks before it answers: Mi
 
 ## How it runs
 
-- Prompt Studio runs `codex exec` in the session's folder with approvals and the Codex sandbox turned off. Codex can edit files and run commands there without asking first. Use a separate workspace, such as a Git worktree, when you want to keep your project folder unchanged.
-- Before a session starts in a new workspace, Prompt Studio copies the project's skills into `.agents/skills` in that workspace. To add them to the project folder as well, run `pst agents setup pstdio.harness-codex.harness.codex`.
-- Prompt Studio reads the conversation history from Codex's own session files in `~/.codex/sessions`, or in `$CODEX_HOME/sessions` when `CODEX_HOME` is set.
-- The session's environment contains `PSTDIO_SESSION_ID` and `PSTDIO_PROJECT_ID`. When the agent runs `pst` commands, they act for that session and project.
+- Prompt Studio starts `codex app-server` on the computer that runs Prompt Studio and talks to it over standard input and output. Sessions that use the same `codex` command and environment share one app-server process. Each Prompt Studio session has its own Codex thread.
+- Each thread starts in the session's folder with approvals turned off and full file access (`approvalPolicy: "never"`, `sandbox: "danger-full-access"`). Codex can edit files and run commands there without asking first. Use a separate workspace, such as a Git worktree, when you want to keep your project folder unchanged.
+- Prompt Studio saves the conversation itself. When it needs Codex's own record, for example after a restart or before it continues an interrupted turn, it asks the app-server with `thread/read`. It does not read Codex's session files directly.
+- When Prompt Studio prepares a workspace, it copies the project's enabled skills into `.agents/skills` there. These are copies; edit a skill in the extension that ships it. To install them with the CLI, run `pst agents setup pstdio.harness-codex.harness.codex`. See [Give the agent skills](../../documentation/guides/getting-started/0004-run-agents.md#give-the-agent-skills) for how existing skill files are kept or replaced in each release.
+- Commands that Codex runs get `PSTDIO_SESSION_ID` and `PSTDIO_PROJECT_ID` in their environment. When the agent runs `pst` commands, they act for that session and project.
+
+OpenAI labels the Codex app-server as experimental. [ADR 0064](../../documentation/adrs/0064-codex-app-server-runtime.md) explains why Prompt Studio uses it, and how threads, history, and stopping work.
+
+## What is tested
+
+The harness tests replay recorded app-server traffic from Codex 0.157.0 and 0.162.0, and use local test servers for threads, history, questions, goals, and cleanup. CI also starts the installed Codex CLI, at the minimum supported version and, before a release, the latest one, without signing in. These tests check detection and the protocol handling. They do not sign in to OpenAI or prove that a real, signed-in Codex turn works on your computer. A live run needs your own Codex installation and sign-in, as described in [Install Codex first](#install-codex-first).

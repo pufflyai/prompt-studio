@@ -7,7 +7,7 @@ import { getExtensionApiVersionError, readPackageManifest } from "./package-mani
 
 const directories: string[] = [];
 
-const readManifest = (declaration: string) => {
+const readManifest = (declaration: string, options?: Parameters<typeof readPackageManifest>[1]) => {
   const directory = mkdtempSync(join(tmpdir(), "pstdio-api-versions-"));
   directories.push(directory);
   writeFileSync(join(directory, "extension.ts"), "export default {};\n");
@@ -21,7 +21,7 @@ const readManifest = (declaration: string) => {
       engines: { pstdio: declaration },
     }),
   );
-  return readPackageManifest(directory);
+  return readPackageManifest(directory, options);
 };
 
 const [hostMajor, hostMinor, hostPatch] = EXTENSION_API_VERSION.split(".").map(Number);
@@ -44,6 +44,18 @@ describe("extension API version declarations", () => {
     const result = readManifest(declaration);
     expect(result.manifest?.enginesPstdio).toBe(declaration);
     expect(result.diagnostics).toEqual([]);
+  });
+
+  test("names this pst, not a host, when pst checks a source folder", () => {
+    const message = readManifest(`^${nextPatch}`, { apiProvider: "pst" }).diagnostics[0]?.message ?? "";
+
+    expect(message).toContain(`this pst provides ${EXTENSION_API_VERSION}`);
+    expect(message).not.toContain("this host");
+    expect(message).toContain("pst extensions check");
+  });
+
+  test("names the host when the host checks an extension", () => {
+    expect(versionError(`^${nextPatch}`)).toContain(`this host provides ${EXTENSION_API_VERSION}`);
   });
 
   test("tells the user to update Prompt Studio when the extension needs a newer API", () => {

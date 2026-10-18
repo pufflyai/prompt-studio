@@ -58,7 +58,9 @@ An extension's `package.json` sets its scope:
 - A user extension installs into `~/.pstdio/extensions/` and can be turned on in any project.
 - A repo extension installs into `.pstdio/extensions/` inside one project folder. Use it for behavior that belongs to that repository.
 
-Installing makes the extension available. Turning it on is a choice per project, and each project keeps its own settings and data for it.
+Installing makes the extension available. Turning it on is a choice per project, and each project keeps its own settings and data for it. You install from inside a linked project: a folder you opened as a project.
+
+An extension's `package.json` also names the extension API versions it works with, in `engines.pstdio`. Prompt Studio loads the extension only when its own extension API version is in that range. This number is separate from the app version. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions).
 
 A project keeps running the version of an extension it loaded. Editing the installed files does not change what the project runs. The new version is used after you choose **Reload** or **Upgrade** in the extension settings, reinstall it, or run the `pst extensions dev` watcher. Prompt Studio checks the new version first. If the check fails, the previous version keeps running.
 

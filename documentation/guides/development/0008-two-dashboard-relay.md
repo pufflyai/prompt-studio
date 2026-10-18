@@ -1,6 +1,6 @@
 # Test the relay with two dashboards
 
-Run this from the PS-775 stack checkout:
+Run this from the repository root:
 
 ```sh
 bun run dev:relay

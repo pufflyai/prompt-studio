@@ -5,7 +5,7 @@ import { expandHomePath } from "pstdio-paths";
 import { extensionUploadFiles } from "./upload-source-files";
 
 export const isLocalExtensionSource = (source: string) =>
-  isAbsolute(source) || /^\.{1,2}[/\\]/.test(source) || /^~[/\\]/.test(source);
+  isAbsolute(source) || /^\.{1,2}([/\\]|$)/.test(source) || /^~[/\\]/.test(source);
 
 export const uploadExtensionSource = (
   source: string,

@@ -9,6 +9,13 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends bash ca-certificates curl git ripgrep unzip \
   && rm -rf /var/lib/apt/lists/*
 
+# A network whose proxy re-signs TLS needs its CA here. The folder is empty unless one is supplied.
+COPY --from=extra-ca . /usr/local/share/ca-certificates/extra/
+RUN update-ca-certificates
+
+# Fail the layer when a download in a piped installer fails, instead of running an empty script.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN BUN_INSTALL=/opt/bun bun add -g opencode-ai@1.18.34 @openai/codex@0.160.1
 RUN ln -sf /opt/bun/install/global/node_modules/opencode-ai/bin/opencode.exe /usr/local/bin/opencode
 RUN ln -sf /opt/bun/install/global/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex

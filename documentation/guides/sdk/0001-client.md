@@ -7,6 +7,8 @@ more. Planner tickets, ticket statuses, and ticket tags belong to the Planner
 extension. Reach them through extension commands or the `pst tickets` commands,
 not through a core client group.
 
+Install the `@pstdio/sdk` version that matches the Prompt Studio app you call, such as `bun add @pstdio/sdk@0.43.1`. A newer SDK can include methods that your app's API does not answer yet. Updating the SDK does not update the app. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions). The [method reference](../../references/sdk/0003-api.md#release-availability) marks the methods that are not in the current stable release.
+
 ## Creating a Client
 
 ```ts
@@ -50,19 +52,21 @@ runtime records its address as `origin` and its access token as `token` in `$PST
 The client is organized by resource type:
 
 ```ts
+client.assets; // Immutable asset uploads and reads (from the release after 0.43.x)
+client.resources; // Links between resources
 client.views; // Shared board views
 client.projects; // Project CRUD
 client.filesystem; // Folder browsing and creation
 client.workspaces; // Workspace CRUD
-client.sessions; // Session CRUD, follow-up, approval, stream
+client.sessions; // Session CRUD, follow-up, approval, queued requests, stream
 client.skills; // Skill listing and preferences
 client.agents; // Harness availability and models
-client.extensions; // Extension command execution and metadata
+client.extensions; // Extension installation, checks, command execution, and metadata
 client.automation; // Scoped tokens and durable automation runs
 client.notifications; // Project inbox items and resolution
 client.settings; // Global settings
 client.sync; // SSE sync helpers
-client.runtime; // Browser login links
+client.runtime; // Browser login links and, from the release after 0.43.x, environment identity
 ```
 
 Processes that hold the descriptor token can sign a browser in with `client.runtime.createBrowserLogin()`. It returns

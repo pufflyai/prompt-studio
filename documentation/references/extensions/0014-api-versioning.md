@@ -4,6 +4,60 @@ The extension API has its own semver version. This page explains version ranges,
 
 The decision is recorded in [ADR 0047](../../adrs/0047-semantic-versioning-for-the-extension-api.md).
 
+## App, SDK, and extension API versions
+
+Three version numbers matter when you build or install an extension. They answer different questions.
+
+| Version | What it is | Where to see it |
+| --- | --- | --- |
+| App version | The Prompt Studio release you run: the desktop app, the `pstdio` CLI, and the runtime and dashboard inside them. Core extensions install from the same release. | **Help** at the bottom of the dashboard sidebar shows the version of the running runtime. `pst --version` shows the version of the `pst` you ran. |
+| SDK package version | The `@pstdio/sdk` package in your extension's `package.json`. It gives your code its types and helpers. | `version` in `node_modules/@pstdio/sdk/package.json`. |
+| Extension API version | `EXTENSION_API_VERSION`, the extension contract that a host supports. Your manifest's `engines.pstdio` names the API versions your extension works with. | `pst extensions check` prints the API version of the `pst` you ran. The runtime's version is not printed; find it from the app version. `@pstdio/sdk/extensions` exports the constant. |
+
+The app and the SDK are released together with the same number. The extension API has its own number, because it changes only when the contract changes. For example, release 0.43.1 ships extension API 0.1.6.
+
+The host decides what loads. It compares its own extension API version with `engines.pstdio`. Updating `@pstdio/sdk` in your extension does not update the app. A newer SDK can compile code that calls APIs your app does not have yet.
+
+### Versions in current releases
+
+| Release | Extension API | Notes |
+| --- | --- | --- |
+| 0.43.1, the current stable release | 0.1.6 | Use ranges such as `^0.1.0`. A manifest that needs `^0.2.0` does not load. |
+| `main` and `0.44.0-nightly` builds | 0.2.0 | A breaking step. It ships in the release after 0.43.x. See [Extension file storage in API 0.2](#extension-file-storage-in-api-02). |
+
+Pages that describe APIs from `main` say so and name the first release that has them.
+
+### Which version each check uses
+
+| Check | Where it runs | Extension API version it compares with |
+| --- | --- | --- |
+| `pst extensions check <path>` | Inside the `pst` you ran. It does not contact the runtime. | The API version built into that `pst`. Its error says "this pst provides" that version. On 0.43.x it says "this host provides", even when your runtime is a different release. |
+| `pst extensions check` with no path | The connected runtime checks its installed user and repo extensions. | The runtime's API version. The version lines at the top come from the `pst` you ran, not from the runtime. |
+| `pst extensions add`, dashboard install, **Reload**, and **Upgrade** | The connected runtime. | The runtime's API version. |
+| `tsc` in your extension folder | Your computer. | None. It checks your code against the `@pstdio/sdk` types you installed. It cannot tell whether your app has those APIs. |
+
+`pst extensions check` never reports the runtime's own app or extension API version. Read the app version in **Help**, then find its extension API version in [Versions in current releases](#versions-in-current-releases).
+
+From the release after 0.43.x, the check output names what it checked:
+
+| Check | Text output | `--json` |
+| --- | --- | --- |
+| `pst extensions check <path>` | `Checked: source folder <path>`, then `This pst: extension API <version> (pst <version>, SDK <version>)` and `Manifest engines.pstdio: <range>`. When the range rejects this `pst`'s API version, a last line explains what to do. | `target: { kind: "source", path }`, `versions: { cli, extensionApi, sdk, manifestRange }`, and the result in `check`. |
+| `pst extensions check` with no path | `Checked: extensions installed on the host at <URL> for project <id>`, then the `This pst` line and one section per scope. | `target: { kind: "installed", projectId, host }`, `versions: { cli, extensionApi, sdk }`, and one result per checked folder in `checks`, each with its `scope` (`user` or `repo`). |
+
+In 0.43.x, the installed check prints `CLI`, `Extension API`, `SDK`, and `Dashboard (bundled)` lines, which all describe the `pst` you ran. The source check prints only the result in text mode. Its `--json` has `versions` with a `dashboard` field, and the result in `check`. Installed `--json` has no `target`, and its `checks` entries have no `scope`.
+
+When the `pst` you run and the runtime come from the same install, these checks agree. The desktop app includes its own `pst`. If you also installed `pstdio` with Bun, `command -v pst` on macOS and Linux, or `where.exe pst` on Windows, shows which one runs.
+
+### Align the app and your tools
+
+1. Find the app version in **Help**, or with `pst --version` from the same install.
+2. Install the matching SDK in your extension folder, for example `bun add @pstdio/sdk@0.43.1`. Its types then match the APIs your app has.
+3. Declare an `engines.pstdio` range that includes the app's extension API version, such as `^0.1.0` for API 0.1.6.
+4. After you update the app, restart the runtime so the new version runs. Quit and reopen the desktop app. If you started the runtime from a terminal, run `pst close` and then `pst`.
+
+Do not widen `engines.pstdio` to make a check pass. A range is a promise that your extension works with that API version. Add a range only after you ran the extension on a host with that version. If a check says your extension needs a newer API, update Prompt Studio, or use only the APIs your release has.
+
 ## Host version
 
 `EXTENSION_API_VERSION` is a plain semver number with no prerelease or build tag. `@pstdio/sdk/extensions` exports it, and `pst extensions check` prints it.
@@ -113,12 +167,14 @@ Extensions depend on the API, so an API is never removed in the release that rep
 2. Mark the old API `@deprecated` and name the replacement.
 3. Remove deprecated APIs together in one breaking release, either one that already breaks the API or one planned for the removals. List each removal and its replacement in the release notes.
 
-Prompt Studio maintainers follow the release checks in [Extension API version checks](../architecture/0024-extension-api-version-checks.md).
+Repository checks enforce these rules: each tracked manifest must accept the host version, and the API version must move when the public API report changes.
 
 ## Optional queued-input capability
 
 The optional `HarnessSession.steer` capability and host-provided `ctx.sessions` queue methods are additive. Existing adapters keep loading without steering. These additions shipped in API 0.1.2. Publish the SDK contract before adopting it in harness extensions.
 
 ## Extension file storage in API 0.2
+
+API 0.2 is on `main` and in nightly builds. It ships in the release after 0.43.x. Release 0.43.x still provides API 0.1.6 and the old layout.
 
 API 0.2 moves `ctx.extensionFiles` from `.pstdio/ext/<publisher>.<name>/` to `.pstdio/extension-storage/<package-name>/.publishers/<publisher>/`. Publishers with the same package name keep separate files. Artifact mount paths cannot start with the reserved `.publishers` segment, including case variants. This is a breaking filesystem layout change; relative file operations stay the same. Move existing allocated files using the [storage migration guide](../../guides/extensions/0009-allocated-extension-files.md). Extensions that work with both layouts can declare `^0.1.0 || ^0.2.0`.

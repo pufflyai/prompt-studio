@@ -51,6 +51,6 @@ Inside the Prompt Studio repository, watch the extension while you change it:
 pst extensions dev ./extensions/extension-lab
 ```
 
-The dev command copies the extension and installs its own dependencies. To check the dashboard, follow the repository's [Docker development workflow](../../documentation/guides/development/0001-setup.md).
+The dev command copies the extension and installs its own dependencies. To check the dashboard, run the repository's isolated Docker stack with `bun run dev:isolated` from a repository checkout.
 
 The examples' layouts, data, and themes come from the workbench Showcase stories. Host contract fixtures, including the fake agent and the webview that fails on purpose, live in `packages/workbench-fixture`.

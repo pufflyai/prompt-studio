@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { chromium, expect as expectBrowser } from "@playwright/test";
 import { observeTreeRows } from "../helpers/tree-continuity";
+import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { type RuntimeDescriptor, runtimeAuthorization, signInBrowser } from "./packaged-serve-helpers";
 
 export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescriptor, projectId: string) => {
@@ -17,7 +18,7 @@ export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescri
   expect(response.status).toBe(200);
   const { outcome } = await response.json();
   expect(outcome.ok).toBe(true);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   try {
     const page = await browser.newPage();
     await page.addInitScript((projectId) => {

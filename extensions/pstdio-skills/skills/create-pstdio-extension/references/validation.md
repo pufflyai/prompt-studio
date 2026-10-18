@@ -1,140 +1,123 @@
 # Extension validation
 
-## TDD loop
+Run the smallest checks that prove what you changed. Each check below proves one thing; none proves everything. The public guides are [Write an extension](https://prompt.studio/docs/guides/extensions/authoring/) and [Smoke checks](https://prompt.studio/docs/guides/extensions/smoke-checks/).
 
-For behavior changes, reproduce the issue or missing behavior first:
+## Test behavior first
 
-1. Add the smallest test that proves the extension behavior.
-2. Run the focused test and confirm it fails for the expected reason.
-3. Implement the minimum code needed.
-4. Re-run the focused test until green.
-5. Refactor and re-run tests.
+For a behavior change, write the smallest test that shows the missing behavior, confirm it fails for the expected reason, then make it pass. Put the test next to the file it covers. Skip tests for documentation-only, configuration-only, and wording-only changes. Check UI changes by using the UI.
 
-Skip tests for docs-only, config-only, generated wording, and UI-only changes. For UI changes, add or update stories
-and use e2e checks when behavior changes.
+## Choose checks by change
 
-## Focused checks
+| What changed | Check |
+| --- | --- |
+| Command logic or data rules | The focused test file, then a typecheck |
+| `package.json`, IDs, contributions, or references | `pst extensions check <source>` |
+| Anything the host installs or runs | Install with `pst extensions add <absolute-source> --force`, then `pst extensions check` |
+| Pages and views that open without a resource | `pst extensions test <absolute-source>` |
+| A command people and agents call | `pst <name> <command> --help`, then one real call with `--json` |
+| Resource pages, forms, and interactions | Use them in the dashboard; see [manual review](#review-a-resource-tool-manually) |
+| Project data | Add data in one linked project and list it in a second one; see [project separation](extension-api.md#each-project-has-its-own-data) |
 
-Use the Bun runtime included in the installed `pst` executable. Do not assume `bun`, `bunx`, or Node.js is installed separately. In a POSIX shell:
+Do not run a whole repository or monorepo suite for an extension change unless the user asks for it or the project's contributor rules require it. Report each command you ran and its result.
+
+## Run tests and typecheck with the bundled Bun
+
+The installed `pst` executable contains Bun. Do not assume `bun`, `bunx`, or Node.js is installed separately. In a POSIX shell:
 
 ```bash
 BUN_BE_BUN=1 pst test <path-to-test>
 BUN_BE_BUN=1 pst --cwd <path-to-extension> ./node_modules/typescript/bin/tsc --noEmit
 ```
 
-In PowerShell, set `$env:BUN_BE_BUN = "1"`, run the same commands without the environment prefix, and remove it with `Remove-Item Env:BUN_BE_BUN` before running normal `pst` commands. Keep this setting limited to the Bun command.
+In PowerShell, set `$env:BUN_BE_BUN = "1"`, run the same commands without the prefix, and remove it with `Remove-Item Env:BUN_BE_BUN` before running normal `pst` commands.
 
-Run the TypeScript command only when the extension has TypeScript installed and a `tsconfig.json`. Preserve any extra compiler options from its typecheck script. Execute the package's JavaScript entry file directly: package-command wrappers can require a separate runtime on Windows. For first-party extension behavior, prefer tests next to the relevant extension file or in the package that owns the runtime behavior.
+Run the TypeScript command only when the extension has TypeScript installed and a `tsconfig.json`. Keep any extra compiler options from its `typecheck` script. A typecheck proves imports and declarations, not layout or host behavior.
 
-## Choose a check
+## Source checks and installed checks
 
-| Command | What it proves | What still needs review |
+`pst extensions check` has two modes. They check different things.
+
+| Mode | Command | What it checks | Needs |
+| --- | --- | --- | --- |
+| Source check | `pst extensions check <source> --json` | One source folder, against the extension API and dashboard capabilities bundled in the CLI you ran | Nothing; it does not start the host or install files |
+| Installed check | `pst extensions check [--scope repo\|user] --json` | What the running host has installed, in its user root, its repo root, or both | A linked project and a reachable host |
+
+A source check can pass while the host rejects the extension, when `pst` and the host are different releases. Compare `pst --version` with the app version in **Help** at the bottom of the dashboard sidebar.
+
+### JSON results
+
+Both modes print one JSON object:
+
+| Key | Source check | Installed check |
 | --- | --- | --- |
-| `pst extensions check` | Installed declarations, references, and host compatibility pass static checks | The rendered UI and user interactions |
-| `pst extensions dev <source>` | The linked project receives a validated development snapshot and rebuilt webviews | The open view actually loaded that snapshot and behaves correctly |
-| `pst extensions test <source>` | Installation and initial resource-free pages work in an isolated dashboard | Resource pages, optional views, and interactions listed as unexercised |
+| `target` | `{ kind: "source", path }` | `{ kind: "installed", projectId, host }` |
+| `versions` | `cli`, `extensionApi`, `sdk`, and `manifestRange` (your `engines.pstdio`) | `cli`, `extensionApi`, `sdk` |
+| Results | `check`: one result | `checks`: one result per host root, each with `scope` (`user` or `repo`) |
 
-Use the commands available in the target CLI's `extensions --help`; an older host may not include the isolated test command. Report the host version when a required capability is missing. A typecheck validates imports and declarations, not layout or bridge behavior.
+`versions` always describes the `pst` you ran, never the host. A source check compares `manifestRange` with `versions.extensionApi`. An installed check is done by the host with its own API version.
 
-## Local development loop
+Each result has `errorCount`, `warningCount`, and `hostCompatibility` (with `status` `verified` or `unverified`, and its own `diagnostics`). Other diagnostics are in `runtime.diagnostics` for a source check and in `diagnostics` for each installed result. Each diagnostic has a `code`, a `severity`, a `message`, and often the extension ID, source path, and `metadata`. `unverified` means no host description was available, so dashboard support was not proven. Older releases print a different shape, such as no `target` key; read the keys you get.
 
-Run Prompt Studio and start the extension watcher from a linked git project:
+Save large output to a file with `>` instead of piping it, then parse the file. The command exits with an error when any result has errors.
+
+Treat warnings as work to review. Diagnostics name the extension, the contribution, and the field. Fix the named field first. Common codes:
+
+- `extension_manifest_unsupported_api_version`: `engines.pstdio` does not include the host's API version. The message names both versions.
+- `extension_host_capability_missing`: the dashboard does not support a declared surface. Metadata names the missing capability and the host version.
+- `extension_contribution_id_invalid`: a local ID is not lowercase kebab-case segments joined by dots.
+- `extension_command_reference_missing`: a contribution names a command that does not exist.
+- `extension_icon_unknown`: an icon name is not in the host icon set.
+
+## Development loop
+
+From the linked project, start the watcher with an absolute source path:
 
 ```bash
-pst extensions dev <path-to-extension>
+pst extensions dev /path/to/extension
 ```
 
-The first cycle checks the extension contract and dashboard host capabilities, publishes a valid installed snapshot, enables it for the current project, and reports contribution and webview IDs. Later source saves refresh that snapshot. Changes to `package.json`, `bun.lock`, or `bun.lockb` install dependencies with the bundled Bun runtime before refresh. Errors stay in the terminal and do not stop the watcher or replace the last valid snapshot.
+The first cycle checks the extension, publishes it to the project, and lists its contributions and webviews. Each save refreshes it. Changes to `package.json` or the lockfile reinstall dependencies first. Errors stay in the terminal; the last valid version keeps running. Stop with Ctrl+C.
 
-Stop with Ctrl+C. The command removes watchers and temporary staging folders but leaves the last valid extension enabled.
+A successful refresh does not prove that an open webview loaded it. Reopen the view and check the visible result. If the host still serves old content, report the contribution ID and host version as a platform bug. Do not add cache-busting code to the extension.
 
-## Isolated runtime smoke test
-
-Provision Chromium once, then run the installed CLI:
+## Isolated smoke test
 
 ```bash
 pst extensions install-browser
-pst extensions test <path-to-extension>
-pst extensions test <path-to-extension> --json
-pst extensions test <path-to-extension> --project-path <fixture-containing-source> --keep-home
+pst extensions test /path/to/extension
+pst extensions test /path/to/extension --json
 ```
 
-Browser setup uses the installed CLI's bundled Bun runtime with `BUN_BE_BUN=1` to install the matching browser package and execute its JavaScript entry file directly. It reuses downloaded browsers. On Linux, add `--with-deps` to install missing system libraries; this may require administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for setup and smoke runs.
+The test copies the source into a fresh, private Prompt Studio, installs it, checks it, and opens pages that need no resource in a real browser. Exit codes: 0 pass, 1 extension runtime failure, 2 install or declaration error, 3 input or setup failure. It does not run arbitrary commands, create resources, or click through interactions. Read the list of contributions it did not exercise even when it passes. Older CLIs may not have this command; check `pst extensions --help`.
 
-The command copies inputs, installs dependencies, checks declarations, creates a fresh project, and opens resource-free pages in the real dashboard. It observes the initial mounted views and bridge calls. A caught capability denial still fails the run. It does not run arbitrary commands, create domain resources, click optional tabs, or test future interactions. Read the visited and unexercised contributions even when the command passes. An extension without pages can pass with zero UI visits.
+`--project-path <folder>` uses a folder that contains the source and its local dependencies. `--keep-home` keeps the private home, project, and logs for inspection. On Linux, `pst extensions install-browser --with-deps` installs missing system libraries.
 
-Exit codes are 0 for a smoke pass, 1 for an extension runtime failure, 2 for an installation or declaration error, and 3 for inputs or setup failures. JSON mode writes one result to stdout; progress and child logs go to stderr. `--keep-home` retains inputs, project, home, logs and the result; browser and host processes still stop.
+## Install test
 
-A fixture directory must contain the source and all local directory dependencies. Absolute local dependencies and source symlinks are rejected. Use relative paths and ordinary files. Without a fixture the run uses a minimal scratch Git repo, so repo-dependent behavior is outside coverage. The caller's linked project and API configuration are not used.
-
-Chromium is provisioned with Playwright 1.60.0. Supported browser targets are macOS arm64/x64, Windows x64, and Linux x64/arm64 on Playwright-supported distributions. Missing browser binaries or system libraries are setup failures. Build the dashboard before source-development runs; release validation must run the compiled command outside the checkout.
-
-For an existing disposable install, static checking remains available:
+After the development loop, install the source as a user would:
 
 ```bash
-pst extensions check --scope user --json
+cd /path/to/linked-project
+pst extensions add /path/to/extension --force
+pst extensions check
 ```
 
-Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.
-
-Composition diagnostics name the extension, contribution, field path, and expected contract. Fix the named field first. A page declares Main separately from its resource constraint. Every binding needs kinds, view, and cardinality. A page with multiple routed view instances requires a resource; a routed view page requires a parent. A slot's region must be available in its mode. Missing resource kinds, views, owners, and capabilities are reported during extension checking.
-
-Convention diagnostics to expect:
-
-- `extension_icon_unknown`: an icon name is not in the host icon set.
-- `extension_contribution_id_invalid` (error): a local contribution id is outside the grammar — lowercase kebab-case segments separated by dots, such as `ticket-status.create`.
-- `extension_command_reference_missing`: a contribution references a command that does not exist.
-
-Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local
-dependencies under the installed extension root so the packaged runtime does not depend on workspace
-`node_modules` symlinks or repo paths under `~/Documents`.
-
-If the extension contributes CLI commands, inspect the generated help and run a happy-path command:
-
-```bash
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst <extension-name> --help
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst <extension-name> <command> --help
-```
-
-If dashboard UI or webviews must be checked, start the dashboard against the same throwaway home:
-
-```bash
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst
-```
-
-Then exercise the route, menu item, settings panel, renderer, or command palette entry in the dashboard.
-
-Inspect what the host actually loaded before clicking through the UI:
-
-- Open the extension in project settings and check its contributions tab. It lists every declared
-  contribution and its diagnostics, even while the extension is disabled.
-- For scripted checks, the same data is served by
-  `GET /v1/projects/{projectId}/extensions/{instanceId}/contributions`.
+Do not pass `--skip-install`. The install must create the extension's own dependencies on the host. Run `pst <name> --help` and one real command afterwards.
 
 ## Review a resource tool manually
 
-Resource pages need actual resource targets; a smoke run that opens no such page does not validate them. For the [resource reviewer](examples.md#resource-reviewer), open its navigation item, then exercise:
+Resource pages need real resources; the smoke test does not open them. For the [resource reviewer](examples.md#resource-reviewer):
 
-- Select both catalog items in the tree, and open one through command-palette search. Confirm they use the same labels and destination.
-- Edit the heading and details option, then Apply. Confirm the preview changes. Reset from the preview and confirm the native inspector refreshes too.
-- Switch resources during a read and after saving. Each resource must show its own settings; obsolete responses must not replace the selected resource's content.
-- Leave the page and reopen it. Saved settings survive; subscriptions and transient state belong to the current mounted view. Inspect cleanup when a visual check cannot reveal a leaked subscription.
-- Resize Main and its attached menus. The preview stays within Main, its toolbar remains reachable, and scrolling stays in `ScrollArea` or the native inspector. Check light and dark themes.
+- Select both catalog items in the tree, and open one from command-palette search. Both routes reach the same page.
+- Edit the heading and details, then Apply. The preview changes. Reset from the preview; the inspector updates too.
+- Switch resources while a read is running and after saving. Each resource shows its own settings.
+- Leave the page and come back. Saved settings remain.
+- Resize Main and its attached menus. The preview stays inside Main, the toolbar stays reachable, and scrolling stays inside the content. Check light and dark themes.
 
-A successful build is not proof that a currently open webview loaded it. Reopen or reload the affected view and inspect the visible result and runtime errors. If the host still serves stale content, capture the contribution ID and host version as a platform bug; do not add a cache-busting workaround to the example.
+## Changed packaged files
 
-## Packaged artifacts
+When shipped files change, such as skills, templates, prompts, or themes, reinstall with `pst extensions add <absolute-source> --force` and run `pst extensions check` again.
 
-When bundled runtime artifacts change, such as extension skills, templates, prompts, themes, or packaged defaults,
-reinstall the extension and confirm the packaged asset set still loads:
+## If a check cannot run
 
-```bash
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions add <path-to-extension> --force
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
-```
-
-Keep any packaged smoke-test expectations aligned with the current bundled artifact set.
-
-## Final validation
-
-Before handoff for non-documentation changes, run the full validation your project defines. Inspect package scripts and run their JavaScript or TypeScript entry files with bundled Bun as above; check that any additional tools are available before invoking them. Prompt Studio repository contributors use the repository's documented Bun toolchain and `bun run validate`. If validation cannot run, record the exact command, failure, and reason.
+Record the exact command, the error, and why it could not run. Do not report the change as validated.

@@ -49,7 +49,8 @@ try {
   await run([...compose, "logs", "--no-color"]);
   throw error;
 } finally {
-  await run([...compose, "down", "--volumes", "--remove-orphans"]);
+  // The profile includes the test-only services, so their volumes are removed too.
+  await run([...compose, "--profile", "test", "down", "--volumes", "--remove-orphans"]);
   process.off("SIGINT", interrupt);
   process.off("SIGTERM", interrupt);
   console.log(`Removed isolated relay stack: ${project}`);
