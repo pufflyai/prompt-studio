@@ -32,6 +32,8 @@ export type WebviewSettingsClient<TSettings> = {
   all: () => Promise<Partial<TSettings>>;
   get: <K extends keyof TSettings & string>(key: K) => Promise<TSettings[K] | undefined>;
   set: <K extends keyof TSettings & string>(key: K, value: TSettings[K]) => Promise<void>;
+  /** Remove the stored value and restore the declared fallback. */
+  delete: <K extends keyof TSettings & string>(key: K) => Promise<void>;
 };
 
 // Without a settings source the client rejects every key, instead of degrading to
@@ -129,6 +131,9 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     get: (key: string) => host.call("extension.settings.get", { key }),
     set: async (key: string, value: unknown) => {
       await host.call("extension.settings.set", { key, value });
+    },
+    delete: async (key: string) => {
+      await host.call("extension.settings.delete", { key });
     },
   };
 
