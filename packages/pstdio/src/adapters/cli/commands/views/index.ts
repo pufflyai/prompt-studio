@@ -45,62 +45,59 @@ const run =
       JSON.stringify(await fn(createClient({ baseUrl: resolveApiUrl() }).views, project(args), args), null, 2),
     );
   };
-export const { command, describe, subcommands, builder, handler } = defineCommandGroup({
-  name: "views",
-  describe: "Manage shared project board and data table views",
-  subcommands: [
-    {
-      command: "boards",
-      describe: "List boards and data tables with their fields and filter conditions",
-      builder: base,
-      handler: run((api, p) => api.boards(p)),
-    },
-    {
-      command: "list",
-      describe: "List board views or orphaned views",
-      builder: (y) => base(y).option("board", { type: "string" }).option("orphaned", { type: "boolean" }),
-      handler: run((api, p, a) => {
-        if (Boolean(a.board) === Boolean(a.orphaned)) throw new Error("Choose --board or --orphaned");
-        return a.orphaned ? api.orphaned(p) : api.list(p, a.board!);
-      }),
-    },
-    {
-      command: "create",
-      describe: "Create or duplicate a shared view",
-      builder: (y) =>
-        edit(board(y)).option("title", { type: "string", demandOption: true }).option("copy-from", { type: "string" }),
-      handler: run(async (api, p, a) => {
-        const board = await api.board(p, a.board!);
-        return api.create(p, a.board!, { ...buildViewInput(a, board), title: a.title!, copyFrom: a["copy-from"] });
-      }),
-    },
-    {
-      command: "update",
-      describe: "Update a saved view",
-      builder: (y) => edit(id(y)),
-      handler: run(async (api, p, a) => {
-        const view = await api.get(p, a.id!);
-        const board = await api.board(p, view.boardId);
-        return api.update(p, a.id!, buildViewInput(a, board));
-      }),
-    },
-    {
-      command: "delete",
-      describe: "Delete a saved view",
-      builder: id,
-      handler: run((api, p, a) => api.delete(p, a.id!)),
-    },
-    {
-      command: "reorder",
-      describe: "Order saved views",
-      builder: (y) => board(y).option("ids", { type: "string", demandOption: true }),
-      handler: run((api, p, a) => api.reorder(p, a.board!, a.ids!.split(",").filter(Boolean))),
-    },
-    {
-      command: "set-default",
-      describe: "Set the project board default",
-      builder: (y) => board(id(y)),
-      handler: run((api, p, a) => api.setDefault(p, a.board!, a.id === "none" ? null : a.id!)),
-    },
-  ],
-});
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
+  { name: "views", describe: "Manage shared project board and data table views" },
+  {
+    command: "boards",
+    describe: "List boards and data tables with their fields and filter conditions",
+    builder: base,
+    handler: run((api, p) => api.boards(p)),
+  },
+  {
+    command: "list",
+    describe: "List board views or orphaned views",
+    builder: (y) => base(y).option("board", { type: "string" }).option("orphaned", { type: "boolean" }),
+    handler: run((api, p, a) => {
+      if (Boolean(a.board) === Boolean(a.orphaned)) throw new Error("Choose --board or --orphaned");
+      return a.orphaned ? api.orphaned(p) : api.list(p, a.board!);
+    }),
+  },
+  {
+    command: "create",
+    describe: "Create or duplicate a shared view",
+    builder: (y) =>
+      edit(board(y)).option("title", { type: "string", demandOption: true }).option("copy-from", { type: "string" }),
+    handler: run(async (api, p, a) => {
+      const board = await api.board(p, a.board!);
+      return api.create(p, a.board!, { ...buildViewInput(a, board), title: a.title!, copyFrom: a["copy-from"] });
+    }),
+  },
+  {
+    command: "update",
+    describe: "Update a saved view",
+    builder: (y) => edit(id(y)),
+    handler: run(async (api, p, a) => {
+      const view = await api.get(p, a.id!);
+      const board = await api.board(p, view.boardId);
+      return api.update(p, a.id!, buildViewInput(a, board));
+    }),
+  },
+  {
+    command: "delete",
+    describe: "Delete a saved view",
+    builder: id,
+    handler: run((api, p, a) => api.delete(p, a.id!)),
+  },
+  {
+    command: "reorder",
+    describe: "Order saved views",
+    builder: (y) => board(y).option("ids", { type: "string", demandOption: true }),
+    handler: run((api, p, a) => api.reorder(p, a.board!, a.ids!.split(",").filter(Boolean))),
+  },
+  {
+    command: "set-default",
+    describe: "Set the project board default",
+    builder: (y) => board(id(y)),
+    handler: run((api, p, a) => api.setDefault(p, a.board!, a.id === "none" ? null : a.id!)),
+  },
+);

@@ -8,14 +8,15 @@ type Subcommand = CommandModule<any, any> | { readonly command: string };
 interface CommandGroupInput {
   name: string;
   describe: string;
-  subcommands: Subcommand[];
 }
 
 /**
  * A group only routes to its subcommands. Without one it prints its help, so
  * it never needs the API (see `commandGroupPaths`).
  */
-export const defineCommandGroup = ({ name, describe, subcommands }: CommandGroupInput) => {
+// Subcommands are arguments rather than an array field because knip only counts a
+// namespace import's exports as used when the namespace itself is passed to a call.
+export const defineCommandGroup = ({ name, describe }: CommandGroupInput, ...subcommands: Subcommand[]) => {
   let groupYargs: Argv;
   return {
     command: `${name} [command]`,

@@ -5,8 +5,11 @@ import * as fileLinkCommand from "./file-link";
 import * as listCommand from "./list";
 import * as mergeCommand from "./merge";
 
-export const { command, describe, subcommands, builder, handler } = defineCommandGroup({
-  name: "workspaces",
-  describe: "Manage workspaces",
-  subcommands: [createCommand, listCommand, deleteCommand, mergeCommand, fileLinkCommand],
-});
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
+  { name: "workspaces", describe: "Manage workspaces" },
+  createCommand,
+  listCommand,
+  deleteCommand,
+  mergeCommand,
+  fileLinkCommand,
+);

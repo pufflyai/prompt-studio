@@ -6,8 +6,12 @@ import * as environmentCommand from "./environment";
 import * as listCommand from "./list";
 import * as viewCommand from "./view";
 
-export const { command, describe, subcommands, builder, handler } = defineCommandGroup({
-  name: "projects",
-  describe: "Manage projects",
-  subcommands: [createCommand, bindCommand, environmentCommand, deleteCommand, listCommand, viewCommand],
-});
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
+  { name: "projects", describe: "Manage projects" },
+  createCommand,
+  bindCommand,
+  environmentCommand,
+  deleteCommand,
+  listCommand,
+  viewCommand,
+);

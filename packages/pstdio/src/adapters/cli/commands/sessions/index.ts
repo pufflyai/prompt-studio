@@ -13,23 +13,20 @@ import * as stopCommand from "./stop";
 import * as streamCommand from "./stream";
 import * as viewCommand from "./view";
 
-export const { command, describe, subcommands, builder, handler } = defineCommandGroup({
-  name: "sessions",
-  describe: "Manage sessions",
-  subcommands: [
-    approveCommand,
-    archiveCommand,
-    createCommand,
-    denyCommand,
-    followUpCommand,
-    listCommand,
-    queuedCommand,
-    updateQueuedCommand,
-    combineQueuedCommand,
-    steerCommand,
-    resolveSessionIdCommand,
-    streamCommand,
-    stopCommand,
-    viewCommand,
-  ],
-});
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
+  { name: "sessions", describe: "Manage sessions" },
+  approveCommand,
+  archiveCommand,
+  createCommand,
+  denyCommand,
+  followUpCommand,
+  listCommand,
+  queuedCommand,
+  updateQueuedCommand,
+  combineQueuedCommand,
+  steerCommand,
+  resolveSessionIdCommand,
+  streamCommand,
+  stopCommand,
+  viewCommand,
+);

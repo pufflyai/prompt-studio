@@ -64,14 +64,14 @@ Command output reaches its reader in full, whether stdout is a terminal, a file,
 Define every group with `defineCommandGroup` from `packages/pstdio/src/adapters/cli/command-group.ts`:
 
 ```ts
-export const { command, describe, subcommands, builder, handler } = defineCommandGroup({
-  name: "mygroup",
-  describe: "Manage my things",
-  subcommands: [subA, subB],
-});
+export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
+  { name: "mygroup", describe: "Manage my things" },
+  subA,
+  subB,
+);
 ```
 
-The helper declares the optional `[command]` positional, prints the group help for a bare group, and rejects an unknown subcommand. The CLI reads `subcommands` to find group paths, so a bare group never starts the API. Do not use `demandCommand` or a hand-written `showHelp` handler.
+The helper declares the optional `[command]` positional, prints the group help for a bare group, and rejects an unknown subcommand. The CLI reads `subcommands` to find group paths, so a bare group never starts the API. Pass subcommand modules as arguments, not in an array: knip only counts a namespace import's exports as used when the namespace is passed to a call. Do not use `demandCommand` or a hand-written `showHelp` handler.
 
 ## Delivery record
 
